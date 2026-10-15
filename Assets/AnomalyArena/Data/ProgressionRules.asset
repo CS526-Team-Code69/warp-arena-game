@@ -1,0 +1,193 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 99d316746138a8747921243b934d4884, type: 3}
+  m_Name: ProgressionRules
+  m_EditorClassIdentifier: AnomalyArena::AnomalyArena.ProgressionRules
+  startingStats:
+    maxHp: 25
+    regeneration: 0
+    moveSpeed: 6
+    sprintDuration: 0.5
+    sprintRecovery: 1.5
+    damageBonus: 0
+    attackSpeedBonus: 0
+    knockbackBonus: 0
+    impact: 0
+    pickupRange: 2
+    protection: 0.5
+    luck: 0
+    maxEnergy: 100
+    energySiphon: 0
+    elementPenetration: 0
+    critChance: 0
+    critCap: 0.6
+    critMultiplier: 2
+    armor: 0
+    armorConstant: 100
+    armorCap: 300
+    caps:
+    - -1
+    - 5
+    - 8.4
+    - 1.25
+    - -1
+    - 2
+    - 1
+    - -1
+    - 10
+    - 1
+    - 30
+    - 250
+    - 2
+    - 1
+  levelCosts: 0a000000100000001b0000002d0000004a0000007a000000ca0000004d01000025020000i
+  maxLevel: 10
+  xpPerStatDraft: 549
+  energyMax: 100
+  maxHpPerLevel: 6
+  maxEnergyPerLevel: 8
+  voidEnergyRegeneration: 4
+  regenerationInterval: 5
+  epicPityCount: 8
+  rareBasePercent: 25
+  rareCapPercent: 55
+  epicBasePercent: 5
+  epicCapPercent: 20
+  legendaryShareOfHighTier: 0.2
+  legendaryStatMultiplier: 1.2
+  statCards:
+  - stat: 0
+    common: 15
+    rare: 25
+    epic: 40
+    bonus: 2
+    bonusCommon: 1
+    bonusRare: 1.5
+    bonusEpic: 2.5
+    retired: 0
+  - stat: 1
+    common: 1
+    rare: 1.5
+    epic: 2.5
+    bonus: 0
+    bonusCommon: 0
+    bonusRare: 0
+    bonusEpic: 0
+    retired: 1
+  - stat: 2
+    common: 0.08
+    rare: 0.12
+    epic: 0.16
+    bonus: 3
+    bonusCommon: 0.2
+    bonusRare: 0.3
+    bonusEpic: 0.45
+    retired: 0
+  - stat: 3
+    common: 0.15
+    rare: 0.25
+    epic: 0.35
+    bonus: 0
+    bonusCommon: 0
+    bonusRare: 0
+    bonusEpic: 0
+    retired: 1
+  - stat: 4
+    common: 0.12
+    rare: 0.18
+    epic: 0.25
+    bonus: 1
+    bonusCommon: 0.08
+    bonusRare: 0.12
+    bonusEpic: 0.16
+    retired: 0
+  - stat: 5
+    common: 0.15
+    rare: 0.22
+    epic: 0.32
+    bonus: 0
+    bonusCommon: 0
+    bonusRare: 0
+    bonusEpic: 0
+    retired: 0
+  - stat: 6
+    common: 0.2
+    rare: 0.35
+    epic: 0.5
+    bonus: 4
+    bonusCommon: 3
+    bonusRare: 5
+    bonusEpic: 8
+    retired: 0
+  - stat: 7
+    common: 3
+    rare: 5
+    epic: 8
+    bonus: 0
+    bonusCommon: 0
+    bonusRare: 0
+    bonusEpic: 0
+    retired: 1
+  - stat: 8
+    common: 1.5
+    rare: 2.5
+    epic: 4
+    bonus: 0
+    bonusCommon: 0
+    bonusRare: 0
+    bonusEpic: 0
+    retired: 1
+  - stat: 9
+    common: 25
+    rare: 40
+    epic: 60
+    bonus: 0
+    bonusCommon: 0
+    bonusRare: 0
+    bonusEpic: 0
+    retired: 0
+  - stat: 10
+    common: 4
+    rare: 7
+    epic: 10
+    bonus: 0
+    bonusCommon: 0
+    bonusRare: 0
+    bonusEpic: 0
+    retired: 1
+  - stat: 11
+    common: 25
+    rare: 40
+    epic: 60
+    bonus: 5
+    bonusCommon: 0.4
+    bonusRare: 0.7
+    bonusEpic: 1
+    retired: 0
+  - stat: 12
+    common: 0.3
+    rare: 0.6
+    epic: 0.9
+    bonus: 0
+    bonusCommon: 0
+    bonusRare: 0
+    bonusEpic: 0
+    retired: 1
+  - stat: 13
+    common: 0.2
+    rare: 0.35
+    epic: 0.5
+    bonus: 0
+    bonusCommon: 0
+    bonusRare: 0
+    bonusEpic: 0
+    retired: 0

@@ -1,0 +1,195 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9cedbe70c3df99142a46b5b9279f4f81, type: 3}
+  m_Name: WeaponRoster
+  m_EditorClassIdentifier: AnomalyArena::AnomalyArena.WeaponRoster
+  definitions:
+  - form: 0
+    unlockWave: 1
+    damageA: 9
+    damageB: 1.6
+    cooldownA: 0.35
+    cooldownB: 0.12
+    rangeA: 40
+    rangeB: 40
+    backfireA: 
+    backfireB: 
+  - form: 1
+    unlockWave: 1
+    damageA: 6.100529
+    damageB: 12
+    cooldownA: 0.3
+    cooldownB: 0.2
+    rangeA: 12
+    rangeB: 10
+    backfireA: 
+    backfireB: 
+  - form: 2
+    unlockWave: 1
+    damageA: 10
+    damageB: 4
+    cooldownA: 1.5
+    cooldownB: 1
+    rangeA: 20
+    rangeB: 15
+    backfireA: 
+    backfireB: 
+  - form: 3
+    unlockWave: 2
+    damageA: 0
+    damageB: 0
+    cooldownA: 2
+    cooldownB: 2
+    rangeA: 4
+    rangeB: 4
+    backfireA: 
+    backfireB: 
+  - form: 4
+    unlockWave: 2
+    damageA: 8
+    damageB: 0
+    cooldownA: 1
+    cooldownB: 0.25
+    rangeA: 5
+    rangeB: 8
+    backfireA: 
+    backfireB: 
+  - form: 5
+    unlockWave: 3
+    damageA: 5
+    damageB: 8
+    cooldownA: 0.6
+    cooldownB: 1
+    rangeA: 12
+    rangeB: 12
+    backfireA: 
+    backfireB: 
+  - form: 6
+    unlockWave: 4
+    damageA: 12
+    damageB: 12
+    cooldownA: 1.6
+    cooldownB: 1.8
+    rangeA: 12
+    rangeB: 12
+    backfireA: 
+    backfireB: 
+  - form: 7
+    unlockWave: 3
+    damageA: 2
+    damageB: 1
+    cooldownA: 0.25
+    cooldownB: 1.5
+    rangeA: 6
+    rangeB: 10
+    backfireA: 
+    backfireB: 
+  - form: 8
+    unlockWave: 3
+    damageA: 18
+    damageB: 1.5
+    cooldownA: 1
+    cooldownB: 0.25
+    rangeA: 14
+    rangeB: 10
+    backfireA: 
+    backfireB: 
+  - form: 9
+    unlockWave: 3
+    damageA: 6
+    damageB: 15
+    cooldownA: 0.9
+    cooldownB: 1
+    rangeA: 8
+    rangeB: 5
+    backfireA: 
+    backfireB: 
+  - form: 10
+    unlockWave: 3
+    damageA: 1
+    damageB: 2
+    cooldownA: 3
+    cooldownB: 0.125
+    rangeA: 10
+    rangeB: 12
+    backfireA: 
+    backfireB: 
+  - form: 11
+    unlockWave: 11
+    damageA: 36
+    damageB: 24
+    cooldownA: 2.2
+    cooldownB: 1.2
+    rangeA: 30
+    rangeB: 20
+    backfireA: 
+    backfireB: 
+  - form: 12
+    unlockWave: 6
+    damageA: 3
+    damageB: 3
+    cooldownA: 0.25
+    cooldownB: 0.1
+    rangeA: 14
+    rangeB: 14
+    backfireA: 
+    backfireB: 
+  - form: 13
+    unlockWave: 6
+    damageA: 4
+    damageB: 6
+    cooldownA: 1.8
+    cooldownB: 2.5
+    rangeA: 9
+    rangeB: 12
+    backfireA: 
+    backfireB: 
+  - form: 14
+    unlockWave: 3
+    damageA: 4
+    damageB: 4
+    cooldownA: 0.5
+    cooldownB: 0.5
+    rangeA: 2.5
+    rangeB: 2.5
+    backfireA: 
+    backfireB: 
+  - form: 15
+    unlockWave: 3
+    damageA: 5
+    damageB: 5
+    cooldownA: 1.2
+    cooldownB: 5
+    rangeA: 10
+    rangeB: 6
+    backfireA: 
+    backfireB: 
+  - form: 16
+    unlockWave: 3
+    damageA: 0
+    damageB: 1
+    cooldownA: 4
+    cooldownB: 1
+    rangeA: 3
+    rangeB: 3
+    backfireA: 
+    backfireB: 
+  <RifleMinimumChargeDamage>k__BackingField: 2.3333333
+  <StarterBalanceRevision>k__BackingField: 1
+  mkDamage:
+  - 1
+  - 1.4
+  - 1.65
+  - 1.9
+  - 2.1
+  - 2.3
+  mkWaveSpacing: 3

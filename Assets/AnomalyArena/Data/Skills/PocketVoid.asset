@@ -1,0 +1,57 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 10a569c6dc67d2d4b8ed4ef7a354acb1, type: 3}
+  m_Name: PocketVoid
+  m_EditorClassIdentifier: AnomalyArena::AnomalyArena.SkillDefinition
+  id: 13
+  displayName: Pocket Void
+  element: 7
+  greaterVoid: 1
+  cost: 50
+  cooldown: 2
+  advancedCooldown: 4
+  duration:
+  - 4
+  - 4
+  - 4
+  radius:
+  - 3
+  - 3
+  - 3
+  range:
+  - 12
+  - 12
+  - 12
+  strength:
+  - 0
+  - 0
+  - 0
+  hitDamage: 6
+  hitStacks: 3
+  endDamage: 10
+  endKnockback: 10
+  healOnCast: 20
+  energyReward: 20
+  feedRange: 10
+  trailSpacing: 0.5
+  voidGravityWidth: 1
+  voidWalkHoleDiameter: 3
+  singularitySlowMultiplier: 0.5
+  singularityBaseDamage: 10
+  singularityDamagePerEnemy: 4
+  descriptions:
+  - "3\xD73 hole for 4 s, 1-wide gravity. It can swallow you too."
+  - "3\xD73 hole for 4 s."
+  - "3\xD73 hole for 4 s."
+  icon: {fileID: 0}
+  levelDamageGrowth: 1.35
+  shieldScalesWithMaxHp: 1

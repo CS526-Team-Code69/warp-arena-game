@@ -1,0 +1,1113 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e9620f8c34305754d8cc9a7e49e852d9, type: 3}
+  m_Name: ArenaUI_zh-Hans
+  m_EditorClassIdentifier: Unity.Localization::UnityEngine.Localization.Tables.StringTable
+  m_LocaleId:
+    m_Code: zh-Hans
+  m_SharedData: {fileID: 11400000, guid: e68ee8e49a2b367408725956e1cd3bbb, type: 2}
+  m_Metadata:
+    m_Items: []
+  m_TableData:
+  - m_Id: 768217088
+    m_Localized: WARP ARENA
+    m_Metadata:
+      m_Items: []
+  - m_Id: 814354432
+    m_Localized: START RUN
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548736
+    m_Localized: CHOOSE YOUR STARTING WEAPON
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548737
+    m_Localized: "EARTH SUPPLY \xB7 ARMORY"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548738
+    m_Localized: BUILD YOUR RUN
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548739
+    m_Localized: REPLACE A WEAPON
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548740
+    m_Localized: REPLACE A SKILL
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548741
+    m_Localized: BUILD READY
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548742
+    m_Localized: PAUSED
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548743
+    m_Localized: RESUME
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548744
+    m_Localized: RESTART RUN
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548745
+    m_Localized: QUIT TO TITLE
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548746
+    m_Localized: 'NEW RUN [R]'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548747
+    m_Localized: 'START NEXT WAVE [SPACE]'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548748
+    m_Localized: 'RETURN / DECLINE SKILL [SPACE]'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548749
+    m_Localized: SKIP OFFER
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548750
+    m_Localized: 'REROLL [{0}]'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548751
+    m_Localized: BACK
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548752
+    m_Localized: PICK RANDOMLY & START
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548753
+    m_Localized: KEEP CHOOSING
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548754
+    m_Localized: 'ART: WHITEBOX'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548755
+    m_Localized: 'ART: INTERSTELLAR'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548756
+    m_Localized: HP {0} / {1}
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548757
+    m_Localized: STAMINA
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548758
+    m_Localized: ENERGY {0} / {1}
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548759
+    m_Localized: VOID ENERGY {0} / {1}
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548760
+    m_Localized: "LV {0} \xB7 XP {1} / {2} \xB7 DRAFTS {3}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548761
+    m_Localized: "10 \xB7 MAX"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548762
+    m_Localized: "WAVE {0} / {1} \xB7 {2}s"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548763
+    m_Localized: "{0} \xB7 {1} / {2} \xB7 SHIELD {3}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548764
+    m_Localized: BUILD TIME {0}s
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548765
+    m_Localized: '{0} cards remain. Pick the unfinished choices at random and start the next wave?'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548766
+    m_Localized: SLOT {0}
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548767
+    m_Localized: REPLACE
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548768
+    m_Localized: FROZEN
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548769
+    m_Localized: PARALYSED
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548770
+    m_Localized: ICE
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548771
+    m_Localized: STUN
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548772
+    m_Localized: VOID PORTAL
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548773
+    m_Localized: "E \xB7 ENTER\nFAILURE ENDS RUN"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548774
+    m_Localized: '{0} WAVES LEFT'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548775
+    m_Localized: "VOID \xB7 {0} WAVES"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548776
+    m_Localized: BLACK HOLE
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548777
+    m_Localized: ELITE
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548778
+    m_Localized: SHADE
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548779
+    m_Localized: GREATER VOID REWARD
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548780
+    m_Localized: Pick one Greater Void skill, or return without changing your skills. 1 / 2 / 3 select.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548781
+    m_Localized: DRAFT {0} / {1}
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548782
+    m_Localized: Survive the warp. Master every anomaly.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548783
+    m_Localized: 'Pick one familiar form. Its anomaly stays unknown until you use it.
+
+      Every anomaly has a backfire. Aim manually; use the terrain.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548784
+    m_Localized: Take one unrevealed weapon, or skip. Replaced weapons lose their upgrades.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548785
+    m_Localized: Pick a stat, a weapon change, or a skill. 1 / 2 / 3 select; R rerolls.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548786
+    m_Localized: Choose the weapon to replace. Its upgrades will be lost.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548787
+    m_Localized: Choose the skill to replace. The new skill starts at level 1.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548788
+    m_Localized: Build choices complete. Space starts the next wave.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548789
+    m_Localized: The battlefield and the build clock are paused.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548790
+    m_Localized: RUN ENDED
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548791
+    m_Localized: EARTH IS WITHIN REACH
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548792
+    m_Localized: EXPLORER LOST
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548793
+    m_Localized: "Wave {0} \xB7 Level {1} \xB7 {2} kills\n{3} seconds on the Interstellar Battlefield"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548794
+    m_Localized: LEVEL {0}
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548795
+    m_Localized: Energy refilled. Pick the card after the wave.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548796
+    m_Localized: '{0} pending drafts resolved automatically'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548797
+    m_Localized: 'Armory: {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548798
+    m_Localized: 'Tyrant immunities: {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548799
+    m_Localized: Recall point is blocked
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548800
+    m_Localized: Not during a menu
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548801
+    m_Localized: Not ready
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548802
+    m_Localized: World action unavailable
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548803
+    m_Localized: No valid point
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548804
+    m_Localized: No weakened target
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548805
+    m_Localized: No target
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548806
+    m_Localized: No Energy
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548807
+    m_Localized: Fists
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548808
+    m_Localized: Empty
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548809
+    m_Localized: HAND
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548810
+    m_Localized: AUTO
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548811
+    m_Localized: Unknown anomaly
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548812
+    m_Localized: Unknown anomaly. First use may backfire.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548813
+    m_Localized: No eligible weapon
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548814
+    m_Localized: Stat
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548815
+    m_Localized: Weapon
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548816
+    m_Localized: Skill
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548817
+    m_Localized: Common
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548818
+    m_Localized: Rare
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548819
+    m_Localized: Epic
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548820
+    m_Localized: Infuse {0}
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548821
+    m_Localized: Infuse {0}, replaces {1}
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548822
+    m_Localized: Damage +40%
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548823
+    m_Localized: Cooldown, charge and reload -30%
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548824
+    m_Localized: Range, area or targets +40%
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548825
+    m_Localized: Add the anomaly's extra behaviour
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548826
+    m_Localized: Soften this weapon's backfire
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548827
+    m_Localized: Max HP
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548828
+    m_Localized: Regeneration
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548829
+    m_Localized: Move Speed
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548830
+    m_Localized: Stamina
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548831
+    m_Localized: Damage
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548832
+    m_Localized: Attack Speed
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548833
+    m_Localized: Knockback
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548834
+    m_Localized: Impact
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548835
+    m_Localized: Pickup Range
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548836
+    m_Localized: Protection
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548837
+    m_Localized: Luck
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548838
+    m_Localized: Max Energy
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548839
+    m_Localized: Energy Siphon
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548840
+    m_Localized: Element Penetration
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548841
+    m_Localized: Infusion
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548842
+    m_Localized: Power
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548843
+    m_Localized: Tempo
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548844
+    m_Localized: Reach
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548845
+    m_Localized: Twist
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548846
+    m_Localized: Tame
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548847
+    m_Localized: Rifle
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548848
+    m_Localized: Charged Shot
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548849
+    m_Localized: Reverse Shot
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548850
+    m_Localized: Knife
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548851
+    m_Localized: Throwing Knife
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548852
+    m_Localized: Hook
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548853
+    m_Localized: Rocket Launcher
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548854
+    m_Localized: Strike
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548855
+    m_Localized: Launch Yourself
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548856
+    m_Localized: Grav Gun
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548857
+    m_Localized: Attract
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548858
+    m_Localized: Repel
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548859
+    m_Localized: Scatter Cannon
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548860
+    m_Localized: Blast
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548861
+    m_Localized: Suction
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548862
+    m_Localized: Phase Dagger
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548863
+    m_Localized: Swap
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548864
+    m_Localized: Recall
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548865
+    m_Localized: Plasma Launcher
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548866
+    m_Localized: Sticky
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548867
+    m_Localized: Bouncy
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548868
+    m_Localized: Flamethrower
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548869
+    m_Localized: Stream
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548870
+    m_Localized: Wildfire
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548871
+    m_Localized: Cryo Cannon
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548872
+    m_Localized: Shatter
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548873
+    m_Localized: Blizzard
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548874
+    m_Localized: Arc Coil
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548875
+    m_Localized: Chain
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548876
+    m_Localized: Capacitor
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548877
+    m_Localized: Spore Launcher
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548878
+    m_Localized: Cloud
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548879
+    m_Localized: Needler
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548880
+    m_Localized: Railgun
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548881
+    m_Localized: Lance
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548882
+    m_Localized: Execute
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548883
+    m_Localized: Minigun
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548884
+    m_Localized: Spin-up
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548885
+    m_Localized: Meltdown
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548886
+    m_Localized: Swarm Launcher
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548887
+    m_Localized: Barrage
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548888
+    m_Localized: Carpet
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548889
+    m_Localized: Orbit Blades
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548890
+    m_Localized: Saw
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548891
+    m_Localized: Magnet
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548892
+    m_Localized: Sentry Drone
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548893
+    m_Localized: Gunner
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548894
+    m_Localized: Whirl
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548895
+    m_Localized: Shield Ring
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548896
+    m_Localized: Repulsor
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548897
+    m_Localized: Leech
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548898
+    m_Localized: Flame Wake
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548899
+    m_Localized: Contagion
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548900
+    m_Localized: Frost Nova
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548901
+    m_Localized: Storm Call
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548902
+    m_Localized: Bulwark
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548903
+    m_Localized: Radiance
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548904
+    m_Localized: Devour
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548905
+    m_Localized: Blink
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548906
+    m_Localized: Shockwave
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548907
+    m_Localized: Gravity Well
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548908
+    m_Localized: Time Slip
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548909
+    m_Localized: Decoy
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548910
+    m_Localized: Overcharge
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548911
+    m_Localized: Pocket Void
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548912
+    m_Localized: Void Walk
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548913
+    m_Localized: Singularity
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548914
+    m_Localized: Grunt
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548915
+    m_Localized: Brute
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548916
+    m_Localized: Skitter
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548917
+    m_Localized: Spitter
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548918
+    m_Localized: Rammer
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548919
+    m_Localized: Bloater
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548920
+    m_Localized: Warden
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548921
+    m_Localized: Splitter
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548922
+    m_Localized: Spire
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548923
+    m_Localized: Stomper
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548924
+    m_Localized: Shade
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548925
+    m_Localized: THE HOLLOW
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548926
+    m_Localized: THE TYRANT
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548927
+    m_Localized: None
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548928
+    m_Localized: Fire
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548929
+    m_Localized: Poison
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548930
+    m_Localized: Frost
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548931
+    m_Localized: Lightning
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548932
+    m_Localized: Earth
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548933
+    m_Localized: Light
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548934
+    m_Localized: Void
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548935
+    m_Localized: EVERY WEAPON HAS A TWIST.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548936
+    m_Localized: "WASD MOVE \xB7 MOUSE AIM \xB7 LMB USE \xB7 RMB SWITCH \xB7 SHIFT SPRINT \xB7 1/2/3 SKILLS \xB7 E ENTER"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548937
+    m_Localized: 'HAND 1 [LMB]'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548938
+    m_Localized: 'HAND 2 [RMB SWITCH]'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548939
+    m_Localized: AUTO 1
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548940
+    m_Localized: AUTO 2
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548941
+    m_Localized: AUTO 3
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548942
+    m_Localized: 'SKILL 1 [1]'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548943
+    m_Localized: 'SKILL 2 [2]'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548944
+    m_Localized: 'SKILL 3 [3]'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548945
+    m_Localized: Chinese (Team)
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548946
+    m_Localized: English (Showcase)
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548947
+    m_Localized: GREATER VOID REWARD
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548948
+    m_Localized: DRAFT {0} / {1}
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548949
+    m_Localized: 'REROLL [{0}]'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548950
+    m_Localized: Fully charged shots can bounce off walls up to 2 times.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548951
+    m_Localized: Charging no longer slows your movement.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548952
+    m_Localized: Reverse shots can bounce off walls 3 times instead of 1.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548953
+    m_Localized: Firing no longer pushes you forward.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548954
+    m_Localized: The throwing knife can bounce off walls up to 2 times.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548955
+    m_Localized: The returning corpse no longer damages or knocks you back; it still hits others.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548956
+    m_Localized: A hook that hits a wall moves you to the wall.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548957
+    m_Localized: The flung enemy is stunned for 1.5 seconds when it lands.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548958
+    m_Localized: The explosion pulls characters toward its centre instead of knocking them outward.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548959
+    m_Localized: Your explosion no longer damages you, but still displaces you.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548960
+    m_Localized: Ending the flight on open ground pushes enemies within radius 3 outward by 8 units.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548961
+    m_Localized: Hitting a wall no longer damages you; you still bounce back 3 units.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548962
+    m_Localized: Push enemies out by 3 when the pull ends; no extra damage.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548963
+    m_Localized: Your attraction field no longer pulls you.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548964
+    m_Localized: Repel only in the aimed 180-degree half circle.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548965
+    m_Localized: Remove your 2-unit recoil; orbs are still repelled.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548966
+    m_Localized: Push side targets toward the aim line; push centred targets forward.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548967
+    m_Localized: Still move back by 3, using a push without wall-impact damage.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548968
+    m_Localized: On release, push gathered enemies forward by 5 once.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548969
+    m_Localized: Stop suction at a 2-unit body gap; enemies can still walk closer.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548970
+    m_Localized: Pierce the first body and swap with the second valid target; hit each once.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548971
+    m_Localized: Gain 0.5 s hit protection after a swap; no status clear or hole immunity.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548972
+    m_Localized: Blast at departure too; overlapping blasts hit each enemy once.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548973
+    m_Localized: Recall the unused planted dagger after 6 s, without teleporting or exploding.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548974
+    m_Localized: Click again after 0.3 s attached to detonate early.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548975
+    m_Localized: Attached carriers no longer speed up; the blast can still hurt you.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548976
+    m_Localized: Stick to the wall after the third bounce, keeping the original fuse.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548977
+    m_Localized: The blast spares your HP but still displaces you.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548978
+    m_Localized: Reflect the flame once at the first wall; hit each body once per shot.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548979
+    m_Localized: Overheat adds no Fire to you; the 1.5 s lockout stays.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548980
+    m_Localized: Push out by 3 when a fire patch ends; no extra damage.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548981
+    m_Localized: Your patches do not hurt or burn you; other fire still can.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548982
+    m_Localized: 'Frozen bodies can chain-shatter: at most 3 bursts, each body once.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548983
+    m_Localized: Wall shards no longer apply Frost to you.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548984
+    m_Localized: Cloud stays for 2 s after release; only one cloud at a time.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548985
+    m_Localized: Your cloud spares your HP and Frost; holding still slows you to 70%.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548986
+    m_Localized: Later jumps prefer the most Lightning stacks, then the nearest target.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548987
+    m_Localized: Empty jumps end without damaging you.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548988
+    m_Localized: 'Knockback and thrown travel also charge: 1 per unit, cap 30.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548989
+    m_Localized: After 4 s full, drain 1 charge/s instead of self-blasting.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548990
+    m_Localized: Cloud drifts 1 unit/s along its launch direction, blocked by walls and bounds.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548991
+    m_Localized: Your clouds do not hurt or poison you; other poison still can.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548992
+    m_Localized: Needles bounce once off a wall; no body piercing.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548993
+    m_Localized: Reloading no longer slows movement; clip and reload duration stay.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548994
+    m_Localized: Pierce one interior wall, never bounds; body damage still decays.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548995
+    m_Localized: Still move back by 4, using a push without wall-impact damage.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548996
+    m_Localized: On a kill, fire one half-damage follow-up within 4; no execute, kill bonus or repeat follow-up.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548997
+    m_Localized: A failed kill adds no 1.5 s jam; normal cooldown remains.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548998
+    m_Localized: Keep spin-up for 1 s after release; release still restores movement.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548999
+    m_Localized: Keep 70% movement at full heat; firing speed is unchanged.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818549000
+    m_Localized: Enemy blast becomes a forward 90-degree cone; self-damage and lockout remain.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818549001
+    m_Localized: Overheat spares your HP; the 3 s lockout remains.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818549002
+    m_Localized: Wall hit leaves a 1 s mine; blast if an enemy enters 1.5, without making new mines.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818549003
+    m_Localized: Missed rockets disappear instead of returning.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818549004
+    m_Localized: Reverse the six blasts from far to near; other values stay the same.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818549005
+    m_Localized: Carpet blasts spare your HP but still displace you.
+    m_Metadata:
+      m_Items: []
+  references:
+    version: 2
+    RefIds: []

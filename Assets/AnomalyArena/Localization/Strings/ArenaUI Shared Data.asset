@@ -1,0 +1,1116 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b11a58205ec3474ca216360e9fa74a8, type: 3}
+  m_Name: ArenaUI Shared Data
+  m_EditorClassIdentifier: Unity.Localization::UnityEngine.Localization.Tables.SharedTableData
+  m_TableCollectionName: ArenaUI
+  m_TableCollectionNameGuidString: e68ee8e49a2b367408725956e1cd3bbb
+  m_Entries:
+  - m_Id: 768217088
+    m_Key: ui.title
+    m_Metadata:
+      m_Items: []
+  - m_Id: 814354432
+    m_Key: ui.start
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548736
+    m_Key: ui.loadout.heading
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548737
+    m_Key: ui.armory.heading
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548738
+    m_Key: ui.draft.heading
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548739
+    m_Key: ui.replace.weapon
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548740
+    m_Key: ui.replace.skill
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548741
+    m_Key: ui.ready.heading
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548742
+    m_Key: ui.pause
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548743
+    m_Key: ui.resume
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548744
+    m_Key: ui.restart
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548745
+    m_Key: ui.quit
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548746
+    m_Key: ui.newrun
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548747
+    m_Key: ui.nextwave
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548748
+    m_Key: ui.return.reward
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548749
+    m_Key: ui.skip
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548750
+    m_Key: ui.reroll
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548751
+    m_Key: ui.back
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548752
+    m_Key: ui.confirm.random
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548753
+    m_Key: ui.keepchoosing
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548754
+    m_Key: ui.art.whitebox
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548755
+    m_Key: ui.art.illustrated
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548756
+    m_Key: ui.hp
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548757
+    m_Key: ui.stamina
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548758
+    m_Key: ui.energy
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548759
+    m_Key: ui.energy.void
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548760
+    m_Key: ui.xp
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548761
+    m_Key: ui.level.max
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548762
+    m_Key: ui.wave
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548763
+    m_Key: ui.boss.hp
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548764
+    m_Key: ui.build.clock
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548765
+    m_Key: ui.early.question
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548766
+    m_Key: ui.slot
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548767
+    m_Key: ui.replace
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548768
+    m_Key: ui.frozen
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548769
+    m_Key: ui.paralysed
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548770
+    m_Key: ui.freeze.short
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548771
+    m_Key: ui.paralysis.short
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548772
+    m_Key: ui.hole.portal
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548773
+    m_Key: ui.hole.enter
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548774
+    m_Key: ui.hole.remaining
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548775
+    m_Key: ui.hole.offscreen
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548776
+    m_Key: ui.hole.black
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548777
+    m_Key: ui.elite
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548778
+    m_Key: ui.shade.incoming
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548779
+    m_Key: ui.reward.heading
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548780
+    m_Key: ui.reward.body
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548781
+    m_Key: ui.draft.number
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548782
+    m_Key: ui.title.body
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548783
+    m_Key: ui.loadout.body
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548784
+    m_Key: ui.armory.body
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548785
+    m_Key: ui.draft.body
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548786
+    m_Key: ui.replace.weapon.body
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548787
+    m_Key: ui.replace.skill.body
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548788
+    m_Key: ui.ready.body
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548789
+    m_Key: ui.pause.body
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548790
+    m_Key: ui.result.heading
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548791
+    m_Key: ui.result.win
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548792
+    m_Key: ui.result.lose
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548793
+    m_Key: ui.result.details
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548794
+    m_Key: notice.level
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548795
+    m_Key: notice.energy.refilled
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548796
+    m_Key: notice.drafts.auto
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548797
+    m_Key: notice.armory
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548798
+    m_Key: notice.tyrant.immunities
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548799
+    m_Key: notice.recall.blocked
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548800
+    m_Key: notice.menu.blocked
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548801
+    m_Key: notice.not.ready
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548802
+    m_Key: notice.world.unavailable
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548803
+    m_Key: notice.point.invalid
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548804
+    m_Key: notice.target.weakened
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548805
+    m_Key: notice.target.none
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548806
+    m_Key: notice.energy.short
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548807
+    m_Key: weapon.fists
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548808
+    m_Key: weapon.empty
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548809
+    m_Key: weapon.kind.hand
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548810
+    m_Key: weapon.kind.auto
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548811
+    m_Key: weapon.unknown
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548812
+    m_Key: weapon.unknown.warning
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548813
+    m_Key: weapon.offer.none
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548814
+    m_Key: card.kind.Stat
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548815
+    m_Key: card.kind.Weapon
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548816
+    m_Key: card.kind.Skill
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548817
+    m_Key: card.rarity.Common
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548818
+    m_Key: card.rarity.Rare
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548819
+    m_Key: card.rarity.Epic
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548820
+    m_Key: card.infusion
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548821
+    m_Key: card.infusion.replace
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548822
+    m_Key: card.power
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548823
+    m_Key: card.tempo
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548824
+    m_Key: card.reach
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548825
+    m_Key: card.twist
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548826
+    m_Key: card.tame
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548827
+    m_Key: stat.MaxHp
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548828
+    m_Key: stat.Regeneration
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548829
+    m_Key: stat.MoveSpeed
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548830
+    m_Key: stat.Stamina
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548831
+    m_Key: stat.Damage
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548832
+    m_Key: stat.AttackSpeed
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548833
+    m_Key: stat.Knockback
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548834
+    m_Key: stat.Impact
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548835
+    m_Key: stat.PickupRange
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548836
+    m_Key: stat.Protection
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548837
+    m_Key: stat.Luck
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548838
+    m_Key: stat.MaxEnergy
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548839
+    m_Key: stat.EnergySiphon
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548840
+    m_Key: stat.ElementPenetration
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548841
+    m_Key: axis.Infusion
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548842
+    m_Key: axis.Power
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548843
+    m_Key: axis.Tempo
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548844
+    m_Key: axis.Reach
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548845
+    m_Key: axis.Twist
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548846
+    m_Key: axis.Tame
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548847
+    m_Key: weapon.form.Rifle
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548848
+    m_Key: weapon.anomaly.Rifle.0
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548849
+    m_Key: weapon.anomaly.Rifle.1
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548850
+    m_Key: weapon.form.Knife
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548851
+    m_Key: weapon.anomaly.Knife.0
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548852
+    m_Key: weapon.anomaly.Knife.1
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548853
+    m_Key: weapon.form.RocketLauncher
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548854
+    m_Key: weapon.anomaly.RocketLauncher.0
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548855
+    m_Key: weapon.anomaly.RocketLauncher.1
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548856
+    m_Key: weapon.form.GravGun
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548857
+    m_Key: weapon.anomaly.GravGun.0
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548858
+    m_Key: weapon.anomaly.GravGun.1
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548859
+    m_Key: weapon.form.ScatterCannon
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548860
+    m_Key: weapon.anomaly.ScatterCannon.0
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548861
+    m_Key: weapon.anomaly.ScatterCannon.1
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548862
+    m_Key: weapon.form.PhaseDagger
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548863
+    m_Key: weapon.anomaly.PhaseDagger.0
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548864
+    m_Key: weapon.anomaly.PhaseDagger.1
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548865
+    m_Key: weapon.form.PlasmaLauncher
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548866
+    m_Key: weapon.anomaly.PlasmaLauncher.0
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548867
+    m_Key: weapon.anomaly.PlasmaLauncher.1
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548868
+    m_Key: weapon.form.Flamethrower
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548869
+    m_Key: weapon.anomaly.Flamethrower.0
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548870
+    m_Key: weapon.anomaly.Flamethrower.1
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548871
+    m_Key: weapon.form.CryoCannon
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548872
+    m_Key: weapon.anomaly.CryoCannon.0
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548873
+    m_Key: weapon.anomaly.CryoCannon.1
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548874
+    m_Key: weapon.form.ArcCoil
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548875
+    m_Key: weapon.anomaly.ArcCoil.0
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548876
+    m_Key: weapon.anomaly.ArcCoil.1
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548877
+    m_Key: weapon.form.SporeLauncher
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548878
+    m_Key: weapon.anomaly.SporeLauncher.0
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548879
+    m_Key: weapon.anomaly.SporeLauncher.1
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548880
+    m_Key: weapon.form.Railgun
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548881
+    m_Key: weapon.anomaly.Railgun.0
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548882
+    m_Key: weapon.anomaly.Railgun.1
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548883
+    m_Key: weapon.form.Minigun
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548884
+    m_Key: weapon.anomaly.Minigun.0
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548885
+    m_Key: weapon.anomaly.Minigun.1
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548886
+    m_Key: weapon.form.SwarmLauncher
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548887
+    m_Key: weapon.anomaly.SwarmLauncher.0
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548888
+    m_Key: weapon.anomaly.SwarmLauncher.1
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548889
+    m_Key: weapon.form.OrbitBlades
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548890
+    m_Key: weapon.anomaly.OrbitBlades.0
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548891
+    m_Key: weapon.anomaly.OrbitBlades.1
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548892
+    m_Key: weapon.form.SentryDrone
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548893
+    m_Key: weapon.anomaly.SentryDrone.0
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548894
+    m_Key: weapon.anomaly.SentryDrone.1
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548895
+    m_Key: weapon.form.ShieldRing
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548896
+    m_Key: weapon.anomaly.ShieldRing.0
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548897
+    m_Key: weapon.anomaly.ShieldRing.1
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548898
+    m_Key: skill.FlameWake
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548899
+    m_Key: skill.Contagion
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548900
+    m_Key: skill.FrostNova
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548901
+    m_Key: skill.StormCall
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548902
+    m_Key: skill.Bulwark
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548903
+    m_Key: skill.Radiance
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548904
+    m_Key: skill.Devour
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548905
+    m_Key: skill.Blink
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548906
+    m_Key: skill.Shockwave
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548907
+    m_Key: skill.GravityWell
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548908
+    m_Key: skill.TimeSlip
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548909
+    m_Key: skill.Decoy
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548910
+    m_Key: skill.Overcharge
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548911
+    m_Key: skill.PocketVoid
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548912
+    m_Key: skill.VoidWalk
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548913
+    m_Key: skill.Singularity
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548914
+    m_Key: enemy.Grunt
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548915
+    m_Key: enemy.Brute
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548916
+    m_Key: enemy.Skitter
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548917
+    m_Key: enemy.Spitter
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548918
+    m_Key: enemy.Rammer
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548919
+    m_Key: enemy.Bloater
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548920
+    m_Key: enemy.Warden
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548921
+    m_Key: enemy.Splitter
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548922
+    m_Key: enemy.Spire
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548923
+    m_Key: enemy.Stomper
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548924
+    m_Key: enemy.Shade
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548925
+    m_Key: enemy.Hollow
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548926
+    m_Key: enemy.Tyrant
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548927
+    m_Key: element.None
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548928
+    m_Key: element.Fire
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548929
+    m_Key: element.Poison
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548930
+    m_Key: element.Frost
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548931
+    m_Key: element.Lightning
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548932
+    m_Key: element.Earth
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548933
+    m_Key: element.Light
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548934
+    m_Key: element.Void
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548935
+    m_Key: ui.subtitle
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548936
+    m_Key: ui.controls
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548937
+    m_Key: ui.hand1
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548938
+    m_Key: ui.hand2
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548939
+    m_Key: ui.auto1
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548940
+    m_Key: ui.auto2
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548941
+    m_Key: ui.auto3
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548942
+    m_Key: ui.skill1
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548943
+    m_Key: ui.skill2
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548944
+    m_Key: ui.skill3
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548945
+    m_Key: ui.language.zh
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548946
+    m_Key: ui.language.en
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548947
+    m_Key: ui.greater.heading
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548948
+    m_Key: ui.draft.counter
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548949
+    m_Key: ui.reroll.counter
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548950
+    m_Key: upgrade.core.Rifle.0.twist
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548951
+    m_Key: upgrade.core.Rifle.0.tame
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548952
+    m_Key: upgrade.core.Rifle.1.twist
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548953
+    m_Key: upgrade.core.Rifle.1.tame
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548954
+    m_Key: upgrade.core.Knife.0.twist
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548955
+    m_Key: upgrade.core.Knife.0.tame
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548956
+    m_Key: upgrade.core.Knife.1.twist
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548957
+    m_Key: upgrade.core.Knife.1.tame
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548958
+    m_Key: upgrade.core.RocketLauncher.0.twist
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548959
+    m_Key: upgrade.core.RocketLauncher.0.tame
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548960
+    m_Key: upgrade.core.RocketLauncher.1.twist
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548961
+    m_Key: upgrade.core.RocketLauncher.1.tame
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548962
+    m_Key: upgrade.expanded.GravGun.0.twist
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548963
+    m_Key: upgrade.expanded.GravGun.0.tame
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548964
+    m_Key: upgrade.expanded.GravGun.1.twist
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548965
+    m_Key: upgrade.expanded.GravGun.1.tame
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548966
+    m_Key: upgrade.expanded.ScatterCannon.0.twist
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548967
+    m_Key: upgrade.expanded.ScatterCannon.0.tame
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548968
+    m_Key: upgrade.expanded.ScatterCannon.1.twist
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548969
+    m_Key: upgrade.expanded.ScatterCannon.1.tame
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548970
+    m_Key: upgrade.expanded.PhaseDagger.0.twist
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548971
+    m_Key: upgrade.expanded.PhaseDagger.0.tame
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548972
+    m_Key: upgrade.expanded.PhaseDagger.1.twist
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548973
+    m_Key: upgrade.expanded.PhaseDagger.1.tame
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548974
+    m_Key: upgrade.expanded.PlasmaLauncher.0.twist
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548975
+    m_Key: upgrade.expanded.PlasmaLauncher.0.tame
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548976
+    m_Key: upgrade.expanded.PlasmaLauncher.1.twist
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548977
+    m_Key: upgrade.expanded.PlasmaLauncher.1.tame
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548978
+    m_Key: upgrade.expanded.Flamethrower.0.twist
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548979
+    m_Key: upgrade.expanded.Flamethrower.0.tame
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548980
+    m_Key: upgrade.expanded.Flamethrower.1.twist
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548981
+    m_Key: upgrade.expanded.Flamethrower.1.tame
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548982
+    m_Key: upgrade.expanded.CryoCannon.0.twist
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548983
+    m_Key: upgrade.expanded.CryoCannon.0.tame
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548984
+    m_Key: upgrade.expanded.CryoCannon.1.twist
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548985
+    m_Key: upgrade.expanded.CryoCannon.1.tame
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548986
+    m_Key: upgrade.expanded.ArcCoil.0.twist
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548987
+    m_Key: upgrade.expanded.ArcCoil.0.tame
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548988
+    m_Key: upgrade.expanded.ArcCoil.1.twist
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548989
+    m_Key: upgrade.expanded.ArcCoil.1.tame
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548990
+    m_Key: upgrade.expanded.SporeLauncher.0.twist
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548991
+    m_Key: upgrade.expanded.SporeLauncher.0.tame
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548992
+    m_Key: upgrade.expanded.SporeLauncher.1.twist
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548993
+    m_Key: upgrade.expanded.SporeLauncher.1.tame
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548994
+    m_Key: upgrade.expanded.Railgun.0.twist
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548995
+    m_Key: upgrade.expanded.Railgun.0.tame
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548996
+    m_Key: upgrade.expanded.Railgun.1.twist
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548997
+    m_Key: upgrade.expanded.Railgun.1.tame
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548998
+    m_Key: upgrade.expanded.Minigun.0.twist
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818548999
+    m_Key: upgrade.expanded.Minigun.0.tame
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818549000
+    m_Key: upgrade.expanded.Minigun.1.twist
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818549001
+    m_Key: upgrade.expanded.Minigun.1.tame
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818549002
+    m_Key: upgrade.expanded.SwarmLauncher.0.twist
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818549003
+    m_Key: upgrade.expanded.SwarmLauncher.0.tame
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818549004
+    m_Key: upgrade.expanded.SwarmLauncher.1.twist
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818549005
+    m_Key: upgrade.expanded.SwarmLauncher.1.tame
+    m_Metadata:
+      m_Items: []
+  m_Metadata:
+    m_Items: []
+  m_KeyGenerator:
+    rid: 3400522580164346225
+  references:
+    version: 2
+    RefIds:
+    - rid: 3400522580164346225
+      type: {class: DistributedUIDGenerator, ns: UnityEngine.Localization.Tables, asm: Unity.Localization}
+      data:
+        m_CustomEpoch: 1791863898745
