@@ -132,6 +132,44 @@ namespace AnomalyArena
             Assert.That(actor.gameObject.activeSelf, Is.False, "field lifetime completes and returns actor to pool");
         }
 
+        [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
+        public async Task Explode_KillsSplitterIntoUnusedSkitterSlots_HitsEachTargetOnceWithoutListError()
+        {
+            var sandbox = await StartSandbox();
+            var game = sandbox.game;
+            var target = sandbox.targets[0];
+            sandbox.targets[1].DiscardWithoutReward();
+            sandbox.targets[2].DiscardWithoutReward();
+            var skitters = game.waves.preparedEnemies.Where(e => e && e.definition.kind == EnemyKind.Skitter).ToArray();
+            foreach (var used in skitters.Where(e => Combatant.All.Contains(e)))
+            {
+                used.enabled = false;
+                used.gameObject.SetActive(true);
+            }
+            var fresh = skitters.Where(e => !Combatant.All.Contains(e)).ToArray();
+            Assume.That(fresh, Is.Not.Empty, "the saved pool keeps Skitter slots that have never been awake");
+            var splitter = game.waves.preparedEnemies.First(e => e && !e.gameObject.activeSelf && e.definition.kind == EnemyKind.Splitter);
+            splitter.Configure(splitter.definition, 1f, false);
+            splitter.maxHp = 1f;
+            splitter.ResetForSpawn();
+            ElementStatus.For(splitter)?.SetShield(0f);
+            splitter.enabled = false;
+            Teleport(splitter, target.Position + Vector3.right);
+            game.waves.TrackBoss(splitter);
+            Physics.SyncTransforms();
+            var actor = AttackPool.Instance.Acquire();
+            Assert.That(actor, Is.Not.Null, "saved blast actor is available");
+            actor.Configure(AttackMode.Blast, game.player, new RunWeapon { form = WeaponForm.RocketLauncher, variant = 1, revealed = true },
+                target.Position, Vector3.forward, 10f, 0f, 0f, 0f, 2.5f);
+
+            Assert.DoesNotThrow(actor.Explode, "a death that wakes a new enemy must not break the blast loop");
+            actor.Release();
+
+            Assert.That(splitter.IsAlive, Is.False, "blast kills the Splitter");
+            Assert.That(fresh.Any(e => e.gameObject.activeSelf && e.IsAlive), Is.True, "the split wakes a never-used Skitter slot");
+            Assert.That(target.Hp, Is.EqualTo(TargetHp - 10f).Within(.001f), "the other target in range is hit exactly once");
+        }
+
         static RunWeapon Equip(GameManager game, WeaponForm form, int variant)
         {
             game.runWeapons.ClearWaveEffects();
