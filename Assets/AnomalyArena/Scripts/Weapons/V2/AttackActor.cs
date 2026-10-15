@@ -38,6 +38,7 @@ namespace AnomalyArena
         readonly Collider[] knifeContacts = new Collider[128];
         readonly HashSet<Combatant> knifeReturnHits = new();
         readonly HashSet<Collider> passedWalls = new();
+        readonly List<(Combatant body, Vector3 dir)> blastTargets = new();
         float flown, tick, corpseDamage;
         bool returning, hookRetracting, stoppedOnWall, finalFieldPush, knifeCorpseClaimedThisThrow;
         float attachedAge;
@@ -515,6 +516,7 @@ namespace AnomalyArena
         {
             if(mode is not (AttackMode.Field or AttackMode.Pull))PlaySound(WeaponAudioPhase.Explosion);
             if (mode is not (AttackMode.Field or AttackMode.Pull)) point = Query.Flat(transform.position);
+            blastTargets.Clear();
             foreach (var body in Combatant.All)
             {
                 if (!body.IsAlive) continue;
@@ -527,8 +529,10 @@ namespace AnomalyArena
                         owner.Knockback(knock<0?-away:away,Mathf.Abs(knock),KnockKind.Hit);
                     continue;
                 }
-                Hit(body, damage, knock, away.sqrMagnitude > 0 ? away.normalized : direction);
+                blastTargets.Add((body, away.sqrMagnitude > 0 ? away.normalized : direction));
             }
+            foreach (var (body, dir) in blastTargets) Hit(body, damage, knock, dir);
+            blastTargets.Clear();
             Fx.Ring(point, radius, ElementCombat.ColorFor(element));
         }
         public bool TryManualDetonate()
