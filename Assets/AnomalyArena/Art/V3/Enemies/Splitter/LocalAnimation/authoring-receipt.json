@@ -1,0 +1,38 @@
+{
+  "sourceSha256": "afbf505766bfb72d96cf104a43183fa4dd4e6f9055d5b51b170f88ed1645a57f",
+  "sourceRetained": true,
+  "blenderVersion": "5.2.2 LTS",
+  "boneCount": 15,
+  "legPairs": 3,
+  "skinnedVertices": 4250,
+  "sourceBoundsBlender": [
+    0.9763660430908203,
+    1.9012060165405273,
+    0.9920519590377808
+  ],
+  "fps": 30,
+  "durations": {
+    "Idle": 2,
+    "Run": 0.8,
+    "Attack": 0.9
+  },
+  "rootMotion": false,
+  "weightsAndMotion": "candidate geometric region skin; no native visual or locomotion review",
+  "runtimeVerified": false,
+  "bindings": {
+    "id": "Enemy_Splitter",
+    "enemyKind": "Splitter",
+    "riggedFbx": "Assets/AnomalyArena/Art/V3/Enemies/Splitter/LocalAnimation/Rigged.fbx",
+    "idleFbx": "Assets/AnomalyArena/Art/V3/Enemies/Splitter/LocalAnimation/Idle.fbx",
+    "runFbx": "Assets/AnomalyArena/Art/V3/Enemies/Splitter/LocalAnimation/Run.fbx",
+    "attackFbx": "Assets/AnomalyArena/Art/V3/Enemies/Splitter/LocalAnimation/Attack.fbx",
+    "animationRig": "Generic",
+    "genericMotionRoot": "Root",
+    "motionRoute": "local_nonhuman",
+    "rotationOffsetEuler": [
+      0,
+      0,
+      0
+    ]
+  }
+}

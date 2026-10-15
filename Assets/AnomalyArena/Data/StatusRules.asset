@@ -1,0 +1,62 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f0553706a1923eb45ab575157de8bcbf, type: 3}
+  m_Name: StatusRules
+  m_EditorClassIdentifier: AnomalyArena::AnomalyArena.StatusRules
+  damagePerStack: 5
+  builtInElementStackFactor: 2
+  fireInterval: 0.5
+  fireCap: 20
+  fireShieldFactor: 0.5
+  poisonInterval: 1
+  poisonCap: 30
+  poisonDamagePerStack: 0.5
+  frostThreshold: 6
+  frostDuration: 1.5
+  frostDecay: 1
+  frostImmunity: 3
+  lightningThreshold: 6
+  lightningDuration: 4
+  lightningDecay: 1
+  lightningImmunity: 3
+  twitchInterval: 1
+  twitchLength: 0.3
+  lightningJumpRadius: 4
+  lightningJumpDamage: 3
+  frostLightningJumpRadius: 6
+  frostLightningStackMultiplier: 1.5
+  lightningJumpMax: 5
+  earthShare: 0.1
+  lightShare: 0.05
+  voidShare: 0.1
+  lightAgainstVoid: 1.5
+  shieldDirectFactor: 0.7
+  playerShieldCapShare: 0.5
+  shieldDecayDelay: 3
+  shieldDecayPerSecond: 1
+  largeThresholdFactor: 2
+  bossControlStagger: 15
+  playerControlMax: 1
+  playerControlImmunity: 4
+  enemyFireStacks: 3
+  enemyPoisonStacks: 1
+  enemyFrostStacks: 3
+  enemyLightningStacks: 3
+  enemyVoidDrain: 10
+  fireBurnFraction: 0.206
+  fireDamagePerStack: 1.5
+  poisonOnEnemyDamagePerStack: 0.12
+  poisonOnEnemyCap: 20
+  frostChill: 1.5
+  lightningSlow: 0.55
+  lightningChainFalloff: 0.7
+  lightMissingHpBonus: 2

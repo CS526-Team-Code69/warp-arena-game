@@ -1,0 +1,57 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 10a569c6dc67d2d4b8ed4ef7a354acb1, type: 3}
+  m_Name: FlameWake
+  m_EditorClassIdentifier: AnomalyArena::AnomalyArena.SkillDefinition
+  id: 0
+  displayName: Flame Wake
+  element: 1
+  greaterVoid: 0
+  cost: 25
+  cooldown: 2
+  advancedCooldown: 4
+  duration:
+  - 4
+  - 6
+  - 6
+  radius:
+  - 0.75
+  - 0.75
+  - 1.5
+  range:
+  - 12
+  - 12
+  - 12
+  strength:
+  - 3
+  - 3
+  - 3
+  hitDamage: 6
+  hitStacks: 3
+  endDamage: 10
+  endKnockback: 10
+  healOnCast: 20
+  energyReward: 20
+  feedRange: 10
+  trailSpacing: 0.5
+  voidGravityWidth: 1
+  voidWalkHoleDiameter: 3
+  singularitySlowMultiplier: 0.5
+  singularityBaseDamage: 10
+  singularityDamagePerEnemy: 4
+  descriptions:
+  - 'Leave a burning trail for 4 s: 3 Fire/s.'
+  - 'Leave a burning trail for 6 s: 3 Fire/s.'
+  - 'A 6 s trail, twice as wide: 3 Fire/s.'
+  icon: {fileID: 0}
+  levelDamageGrowth: 1.35
+  shieldScalesWithMaxHp: 1

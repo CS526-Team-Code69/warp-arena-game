@@ -1,0 +1,87 @@
+{
+  "quantity": 9,
+  "paidCalls": 0,
+  "assets": [
+    {
+      "id": "biome-wreck-ground",
+      "kind": "ground",
+      "source": "Sources/SVG/biome-wreck-ground.svg",
+      "texture": "Textures/biome-wreck-ground.png",
+      "width": 1024,
+      "height": 1024,
+      "status": "candidate local SVG terrain art, no native visual acceptance"
+    },
+    {
+      "id": "biome-dust-ground",
+      "kind": "ground",
+      "source": "Sources/SVG/biome-dust-ground.svg",
+      "texture": "Textures/biome-dust-ground.png",
+      "width": 1024,
+      "height": 1024,
+      "status": "candidate local SVG terrain art, no native visual acceptance"
+    },
+    {
+      "id": "biome-rift-ground",
+      "kind": "ground",
+      "source": "Sources/SVG/biome-rift-ground.svg",
+      "texture": "Textures/biome-rift-ground.png",
+      "width": 1024,
+      "height": 1024,
+      "status": "candidate local SVG terrain art, no native visual acceptance"
+    },
+    {
+      "id": "biome-wreck-overlay",
+      "kind": "overlay",
+      "source": "Sources/SVG/biome-wreck-overlay.svg",
+      "texture": "Textures/biome-wreck-overlay.png",
+      "width": 1024,
+      "height": 1024,
+      "status": "candidate local SVG terrain art, no native visual acceptance"
+    },
+    {
+      "id": "biome-dust-overlay",
+      "kind": "overlay",
+      "source": "Sources/SVG/biome-dust-overlay.svg",
+      "texture": "Textures/biome-dust-overlay.png",
+      "width": 1024,
+      "height": 1024,
+      "status": "candidate local SVG terrain art, no native visual acceptance"
+    },
+    {
+      "id": "biome-rift-overlay",
+      "kind": "overlay",
+      "source": "Sources/SVG/biome-rift-overlay.svg",
+      "texture": "Textures/biome-rift-overlay.png",
+      "width": 1024,
+      "height": 1024,
+      "status": "candidate local SVG terrain art, no native visual acceptance"
+    },
+    {
+      "id": "biome-wreck-debris",
+      "kind": "debris",
+      "source": "Sources/SVG/biome-wreck-debris.svg",
+      "texture": "Textures/biome-wreck-debris.png",
+      "width": 1024,
+      "height": 1024,
+      "status": "candidate local SVG terrain art, no native visual acceptance"
+    },
+    {
+      "id": "biome-dust-debris",
+      "kind": "debris",
+      "source": "Sources/SVG/biome-dust-debris.svg",
+      "texture": "Textures/biome-dust-debris.png",
+      "width": 1024,
+      "height": 1024,
+      "status": "candidate local SVG terrain art, no native visual acceptance"
+    },
+    {
+      "id": "biome-rift-debris",
+      "kind": "debris",
+      "source": "Sources/SVG/biome-rift-debris.svg",
+      "texture": "Textures/biome-rift-debris.png",
+      "width": 1024,
+      "height": 1024,
+      "status": "candidate local SVG terrain art, no native visual acceptance"
+    }
+  ]
+}

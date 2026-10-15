@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2da5714eae8aefc4185f28bb0f4352c4, type: 3}
+  m_Name: DustFlatsMap
+  m_EditorClassIdentifier: AnomalyArena::AnomalyArena.MapLayout
+  width: 100
+  height: 70
+  playerStart: {x: 0, y: 0, z: 0}
+  walls:
+  - serializedVersion: 2
+    x: -42
+    y: -6
+    width: 14
+    height: 2
+  - serializedVersion: 2
+    x: -10
+    y: 9
+    width: 20
+    height: 2
+  - serializedVersion: 2
+    x: 28
+    y: 4
+    width: 14
+    height: 2
+  - serializedVersion: 2
+    x: -8
+    y: -10
+    width: 16
+    height: 2
+  holeAnchors:
+  - {x: -32, y: -20}
+  - {x: -32, y: 20}
+  - {x: 0, y: -22}
+  - {x: 0, y: 22}
+  - {x: 32, y: -20}
+  - {x: 32, y: 20}

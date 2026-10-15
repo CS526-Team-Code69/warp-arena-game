@@ -1,0 +1,1638 @@
+{
+  "schemaVersion": 1,
+  "collection": "ArenaUI",
+  "entries": [
+    {
+      "key": "ui.title",
+      "zh": "WARP ARENA",
+      "en": "WARP ARENA",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.start",
+      "zh": "START RUN",
+      "en": "START RUN",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.loadout.heading",
+      "zh": "CHOOSE YOUR STARTING WEAPON",
+      "en": "CHOOSE YOUR STARTING WEAPON",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.armory.heading",
+      "zh": "EARTH SUPPLY · ARMORY",
+      "en": "EARTH SUPPLY · ARMORY",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.draft.heading",
+      "zh": "BUILD YOUR RUN",
+      "en": "BUILD YOUR RUN",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.replace.weapon",
+      "zh": "REPLACE A WEAPON",
+      "en": "REPLACE A WEAPON",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.replace.skill",
+      "zh": "REPLACE A SKILL",
+      "en": "REPLACE A SKILL",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.ready.heading",
+      "zh": "BUILD READY",
+      "en": "BUILD READY",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.pause",
+      "zh": "PAUSED",
+      "en": "PAUSED",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.resume",
+      "zh": "RESUME",
+      "en": "RESUME",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.restart",
+      "zh": "RESTART RUN",
+      "en": "RESTART RUN",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.quit",
+      "zh": "QUIT TO TITLE",
+      "en": "QUIT TO TITLE",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.newrun",
+      "zh": "NEW RUN [R]",
+      "en": "NEW RUN [R]",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.nextwave",
+      "zh": "START NEXT WAVE [SPACE]",
+      "en": "START NEXT WAVE [SPACE]",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.return.reward",
+      "zh": "RETURN / DECLINE SKILL [SPACE]",
+      "en": "RETURN / DECLINE SKILL [SPACE]",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.skip",
+      "zh": "SKIP OFFER",
+      "en": "SKIP OFFER",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.reroll",
+      "zh": "REROLL [{0}]",
+      "en": "REROLL [{0}]",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.back",
+      "zh": "BACK",
+      "en": "BACK",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.confirm.random",
+      "zh": "PICK RANDOMLY & START",
+      "en": "PICK RANDOMLY & START",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.keepchoosing",
+      "zh": "KEEP CHOOSING",
+      "en": "KEEP CHOOSING",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.art.whitebox",
+      "zh": "ART: WHITEBOX",
+      "en": "ART: WHITEBOX",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.art.illustrated",
+      "zh": "ART: INTERSTELLAR",
+      "en": "ART: INTERSTELLAR",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.hp",
+      "zh": "HP {0} / {1}",
+      "en": "HP {0} / {1}",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.stamina",
+      "zh": "STAMINA",
+      "en": "STAMINA",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.energy",
+      "zh": "ENERGY {0} / {1}",
+      "en": "ENERGY {0} / {1}",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.energy.void",
+      "zh": "VOID ENERGY {0} / {1}",
+      "en": "VOID ENERGY {0} / {1}",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.xp",
+      "zh": "LV {0} · XP {1} / {2} · DRAFTS {3}",
+      "en": "LV {0} · XP {1} / {2} · DRAFTS {3}",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.level.max",
+      "zh": "10 · MAX",
+      "en": "10 · MAX",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.wave",
+      "zh": "WAVE {0} / {1} · {2}s",
+      "en": "WAVE {0} / {1} · {2}s",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.boss.hp",
+      "zh": "{0} · {1} / {2} · SHIELD {3}",
+      "en": "{0} · {1} / {2} · SHIELD {3}",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.build.clock",
+      "zh": "BUILD TIME {0}s",
+      "en": "BUILD TIME {0}s",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.early.question",
+      "zh": "{0} cards remain. Pick the unfinished choices at random and start the next wave?",
+      "en": "{0} cards remain. Pick the unfinished choices at random and start the next wave?",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.slot",
+      "zh": "SLOT {0}",
+      "en": "SLOT {0}",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.replace",
+      "zh": "REPLACE",
+      "en": "REPLACE",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.frozen",
+      "zh": "FROZEN",
+      "en": "FROZEN",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.paralysed",
+      "zh": "PARALYSED",
+      "en": "PARALYSED",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.freeze.short",
+      "zh": "ICE",
+      "en": "ICE",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.paralysis.short",
+      "zh": "STUN",
+      "en": "STUN",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.hole.portal",
+      "zh": "VOID PORTAL",
+      "en": "VOID PORTAL",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.hole.enter",
+      "zh": "E · ENTER\nFAILURE ENDS RUN",
+      "en": "E · ENTER\nFAILURE ENDS RUN",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.hole.remaining",
+      "zh": "{0} WAVES LEFT",
+      "en": "{0} WAVES LEFT",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.hole.offscreen",
+      "zh": "VOID · {0} WAVES",
+      "en": "VOID · {0} WAVES",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.hole.black",
+      "zh": "BLACK HOLE",
+      "en": "BLACK HOLE",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.elite",
+      "zh": "ELITE",
+      "en": "ELITE",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.shade.incoming",
+      "zh": "SHADE",
+      "en": "SHADE",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.reward.heading",
+      "zh": "GREATER VOID REWARD",
+      "en": "GREATER VOID REWARD",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.reward.body",
+      "zh": "Pick one Greater Void skill, or return without changing your skills. 1 / 2 / 3 select.",
+      "en": "Pick one Greater Void skill, or return without changing your skills. 1 / 2 / 3 select.",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.draft.number",
+      "zh": "DRAFT {0} / {1}",
+      "en": "DRAFT {0} / {1}",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.title.body",
+      "zh": "Survive the warp. Master every anomaly.",
+      "en": "Survive the warp. Master every anomaly.",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.loadout.body",
+      "zh": "Pick one familiar form. Its anomaly stays unknown until you use it.\nEvery anomaly has a backfire. Aim manually; use the terrain.",
+      "en": "Pick one familiar form. Its anomaly stays unknown until you use it.\nEvery anomaly has a backfire. Aim manually; use the terrain.",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.armory.body",
+      "zh": "Take one unrevealed weapon, or skip. Replaced weapons lose their upgrades.",
+      "en": "Take one unrevealed weapon, or skip. Replaced weapons lose their upgrades.",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.draft.body",
+      "zh": "Pick a stat, a weapon change, or a skill. 1 / 2 / 3 select; R rerolls.",
+      "en": "Pick a stat, a weapon change, or a skill. 1 / 2 / 3 select; R rerolls.",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.replace.weapon.body",
+      "zh": "Choose the weapon to replace. Its upgrades will be lost.",
+      "en": "Choose the weapon to replace. Its upgrades will be lost.",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.replace.skill.body",
+      "zh": "Choose the skill to replace. The new skill starts at level 1.",
+      "en": "Choose the skill to replace. The new skill starts at level 1.",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.ready.body",
+      "zh": "Build choices complete. Space starts the next wave.",
+      "en": "Build choices complete. Space starts the next wave.",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.pause.body",
+      "zh": "The battlefield and the build clock are paused.",
+      "en": "The battlefield and the build clock are paused.",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.result.heading",
+      "zh": "RUN ENDED",
+      "en": "RUN ENDED",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.result.win",
+      "zh": "EARTH IS WITHIN REACH",
+      "en": "EARTH IS WITHIN REACH",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.result.lose",
+      "zh": "EXPLORER LOST",
+      "en": "EXPLORER LOST",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.result.details",
+      "zh": "Wave {0} · Level {1} · {2} kills\n{3} seconds on the Interstellar Battlefield",
+      "en": "Wave {0} · Level {1} · {2} kills\n{3} seconds on the Interstellar Battlefield",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "notice.level",
+      "zh": "LEVEL {0}",
+      "en": "LEVEL {0}",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "notice.energy.refilled",
+      "zh": "Energy refilled. Pick the card after the wave.",
+      "en": "Energy refilled. Pick the card after the wave.",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "notice.drafts.auto",
+      "zh": "{0} pending drafts resolved automatically",
+      "en": "{0} pending drafts resolved automatically",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "notice.armory",
+      "zh": "Armory: {0}",
+      "en": "Armory: {0}",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "notice.tyrant.immunities",
+      "zh": "Tyrant immunities: {0}",
+      "en": "Tyrant immunities: {0}",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "notice.recall.blocked",
+      "zh": "Recall point is blocked",
+      "en": "Recall point is blocked",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "notice.menu.blocked",
+      "zh": "Not during a menu",
+      "en": "Not during a menu",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "notice.not.ready",
+      "zh": "Not ready",
+      "en": "Not ready",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "notice.world.unavailable",
+      "zh": "World action unavailable",
+      "en": "World action unavailable",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "notice.point.invalid",
+      "zh": "No valid point",
+      "en": "No valid point",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "notice.target.weakened",
+      "zh": "No weakened target",
+      "en": "No weakened target",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "notice.target.none",
+      "zh": "No target",
+      "en": "No target",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "notice.energy.short",
+      "zh": "No Energy",
+      "en": "No Energy",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "weapon.fists",
+      "zh": "Fists",
+      "en": "Fists",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "weapon.empty",
+      "zh": "Empty",
+      "en": "Empty",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "weapon.kind.hand",
+      "zh": "HAND",
+      "en": "HAND",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "weapon.kind.auto",
+      "zh": "AUTO",
+      "en": "AUTO",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "weapon.unknown",
+      "zh": "Unknown anomaly",
+      "en": "Unknown anomaly",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "weapon.unknown.warning",
+      "zh": "Unknown anomaly. First use may backfire.",
+      "en": "Unknown anomaly. First use may backfire.",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "weapon.offer.none",
+      "zh": "No eligible weapon",
+      "en": "No eligible weapon",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "card.kind.Stat",
+      "zh": "Stat",
+      "en": "Stat",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "card.kind.Weapon",
+      "zh": "Weapon",
+      "en": "Weapon",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "card.kind.Skill",
+      "zh": "Skill",
+      "en": "Skill",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "card.rarity.Common",
+      "zh": "Common",
+      "en": "Common",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "card.rarity.Rare",
+      "zh": "Rare",
+      "en": "Rare",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "card.rarity.Epic",
+      "zh": "Epic",
+      "en": "Epic",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "card.infusion",
+      "zh": "Infuse {0}",
+      "en": "Infuse {0}",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "card.infusion.replace",
+      "zh": "Infuse {0}, replaces {1}",
+      "en": "Infuse {0}, replaces {1}",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "card.power",
+      "zh": "Damage +40%",
+      "en": "Damage +40%",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "card.tempo",
+      "zh": "Cooldown, charge and reload -30%",
+      "en": "Cooldown, charge and reload -30%",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "card.reach",
+      "zh": "Range, area or targets +40%",
+      "en": "Range, area or targets +40%",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "card.twist",
+      "zh": "Add the anomaly's extra behaviour",
+      "en": "Add the anomaly's extra behaviour",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "card.tame",
+      "zh": "Soften this weapon's backfire",
+      "en": "Soften this weapon's backfire",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "stat.MaxHp",
+      "zh": "Max HP",
+      "en": "Max HP",
+      "context": "UI term: Max HP"
+    },
+    {
+      "key": "stat.Regeneration",
+      "zh": "Regeneration",
+      "en": "Regeneration",
+      "context": "UI term: Regeneration"
+    },
+    {
+      "key": "stat.MoveSpeed",
+      "zh": "Move Speed",
+      "en": "Move Speed",
+      "context": "UI term: Move Speed"
+    },
+    {
+      "key": "stat.Stamina",
+      "zh": "Stamina",
+      "en": "Stamina",
+      "context": "UI term: Stamina"
+    },
+    {
+      "key": "stat.Damage",
+      "zh": "Damage",
+      "en": "Damage",
+      "context": "UI term: Damage"
+    },
+    {
+      "key": "stat.AttackSpeed",
+      "zh": "Attack Speed",
+      "en": "Attack Speed",
+      "context": "UI term: Attack Speed"
+    },
+    {
+      "key": "stat.Knockback",
+      "zh": "Knockback",
+      "en": "Knockback",
+      "context": "UI term: Knockback"
+    },
+    {
+      "key": "stat.Impact",
+      "zh": "Impact",
+      "en": "Impact",
+      "context": "UI term: Impact"
+    },
+    {
+      "key": "stat.PickupRange",
+      "zh": "Pickup Range",
+      "en": "Pickup Range",
+      "context": "UI term: Pickup Range"
+    },
+    {
+      "key": "stat.Protection",
+      "zh": "Protection",
+      "en": "Protection",
+      "context": "UI term: Protection"
+    },
+    {
+      "key": "stat.Luck",
+      "zh": "Luck",
+      "en": "Luck",
+      "context": "UI term: Luck"
+    },
+    {
+      "key": "stat.MaxEnergy",
+      "zh": "Max Energy",
+      "en": "Max Energy",
+      "context": "UI term: Max Energy"
+    },
+    {
+      "key": "stat.EnergySiphon",
+      "zh": "Energy Siphon",
+      "en": "Energy Siphon",
+      "context": "UI term: Energy Siphon"
+    },
+    {
+      "key": "stat.ElementPenetration",
+      "zh": "Element Penetration",
+      "en": "Element Penetration",
+      "context": "UI term: Element Penetration"
+    },
+    {
+      "key": "axis.Infusion",
+      "zh": "Infusion",
+      "en": "Infusion",
+      "context": "UI term: Infusion"
+    },
+    {
+      "key": "axis.Power",
+      "zh": "Power",
+      "en": "Power",
+      "context": "UI term: Power"
+    },
+    {
+      "key": "axis.Tempo",
+      "zh": "Tempo",
+      "en": "Tempo",
+      "context": "UI term: Tempo"
+    },
+    {
+      "key": "axis.Reach",
+      "zh": "Reach",
+      "en": "Reach",
+      "context": "UI term: Reach"
+    },
+    {
+      "key": "axis.Twist",
+      "zh": "Twist",
+      "en": "Twist",
+      "context": "UI term: Twist"
+    },
+    {
+      "key": "axis.Tame",
+      "zh": "Tame",
+      "en": "Tame",
+      "context": "UI term: Tame"
+    },
+    {
+      "key": "weapon.form.Rifle",
+      "zh": "Rifle",
+      "en": "Rifle",
+      "context": "Weapon form; does not reveal anomaly."
+    },
+    {
+      "key": "weapon.anomaly.Rifle.0",
+      "zh": "Charged Shot",
+      "en": "Charged Shot",
+      "context": "Display only after anomaly reveal."
+    },
+    {
+      "key": "weapon.anomaly.Rifle.1",
+      "zh": "Reverse Shot",
+      "en": "Reverse Shot",
+      "context": "Display only after anomaly reveal."
+    },
+    {
+      "key": "weapon.form.Knife",
+      "zh": "Knife",
+      "en": "Knife",
+      "context": "Weapon form; does not reveal anomaly."
+    },
+    {
+      "key": "weapon.anomaly.Knife.0",
+      "zh": "Throwing Knife",
+      "en": "Throwing Knife",
+      "context": "Display only after anomaly reveal."
+    },
+    {
+      "key": "weapon.anomaly.Knife.1",
+      "zh": "Hook",
+      "en": "Hook",
+      "context": "Display only after anomaly reveal."
+    },
+    {
+      "key": "weapon.form.RocketLauncher",
+      "zh": "Rocket Launcher",
+      "en": "Rocket Launcher",
+      "context": "Weapon form; does not reveal anomaly."
+    },
+    {
+      "key": "weapon.anomaly.RocketLauncher.0",
+      "zh": "Strike",
+      "en": "Strike",
+      "context": "Display only after anomaly reveal."
+    },
+    {
+      "key": "weapon.anomaly.RocketLauncher.1",
+      "zh": "Launch Yourself",
+      "en": "Launch Yourself",
+      "context": "Display only after anomaly reveal."
+    },
+    {
+      "key": "weapon.form.GravGun",
+      "zh": "Grav Gun",
+      "en": "Grav Gun",
+      "context": "Weapon form; does not reveal anomaly."
+    },
+    {
+      "key": "weapon.anomaly.GravGun.0",
+      "zh": "Attract",
+      "en": "Attract",
+      "context": "Display only after anomaly reveal."
+    },
+    {
+      "key": "weapon.anomaly.GravGun.1",
+      "zh": "Repel",
+      "en": "Repel",
+      "context": "Display only after anomaly reveal."
+    },
+    {
+      "key": "weapon.form.ScatterCannon",
+      "zh": "Scatter Cannon",
+      "en": "Scatter Cannon",
+      "context": "Weapon form; does not reveal anomaly."
+    },
+    {
+      "key": "weapon.anomaly.ScatterCannon.0",
+      "zh": "Blast",
+      "en": "Blast",
+      "context": "Display only after anomaly reveal."
+    },
+    {
+      "key": "weapon.anomaly.ScatterCannon.1",
+      "zh": "Suction",
+      "en": "Suction",
+      "context": "Display only after anomaly reveal."
+    },
+    {
+      "key": "weapon.form.PhaseDagger",
+      "zh": "Phase Dagger",
+      "en": "Phase Dagger",
+      "context": "Weapon form; does not reveal anomaly."
+    },
+    {
+      "key": "weapon.anomaly.PhaseDagger.0",
+      "zh": "Swap",
+      "en": "Swap",
+      "context": "Display only after anomaly reveal."
+    },
+    {
+      "key": "weapon.anomaly.PhaseDagger.1",
+      "zh": "Recall",
+      "en": "Recall",
+      "context": "Display only after anomaly reveal."
+    },
+    {
+      "key": "weapon.form.PlasmaLauncher",
+      "zh": "Plasma Launcher",
+      "en": "Plasma Launcher",
+      "context": "Weapon form; does not reveal anomaly."
+    },
+    {
+      "key": "weapon.anomaly.PlasmaLauncher.0",
+      "zh": "Sticky",
+      "en": "Sticky",
+      "context": "Display only after anomaly reveal."
+    },
+    {
+      "key": "weapon.anomaly.PlasmaLauncher.1",
+      "zh": "Bouncy",
+      "en": "Bouncy",
+      "context": "Display only after anomaly reveal."
+    },
+    {
+      "key": "weapon.form.Flamethrower",
+      "zh": "Flamethrower",
+      "en": "Flamethrower",
+      "context": "Weapon form; does not reveal anomaly."
+    },
+    {
+      "key": "weapon.anomaly.Flamethrower.0",
+      "zh": "Stream",
+      "en": "Stream",
+      "context": "Display only after anomaly reveal."
+    },
+    {
+      "key": "weapon.anomaly.Flamethrower.1",
+      "zh": "Wildfire",
+      "en": "Wildfire",
+      "context": "Display only after anomaly reveal."
+    },
+    {
+      "key": "weapon.form.CryoCannon",
+      "zh": "Cryo Cannon",
+      "en": "Cryo Cannon",
+      "context": "Weapon form; does not reveal anomaly."
+    },
+    {
+      "key": "weapon.anomaly.CryoCannon.0",
+      "zh": "Shatter",
+      "en": "Shatter",
+      "context": "Display only after anomaly reveal."
+    },
+    {
+      "key": "weapon.anomaly.CryoCannon.1",
+      "zh": "Blizzard",
+      "en": "Blizzard",
+      "context": "Display only after anomaly reveal."
+    },
+    {
+      "key": "weapon.form.ArcCoil",
+      "zh": "Arc Coil",
+      "en": "Arc Coil",
+      "context": "Weapon form; does not reveal anomaly."
+    },
+    {
+      "key": "weapon.anomaly.ArcCoil.0",
+      "zh": "Chain",
+      "en": "Chain",
+      "context": "Display only after anomaly reveal."
+    },
+    {
+      "key": "weapon.anomaly.ArcCoil.1",
+      "zh": "Capacitor",
+      "en": "Capacitor",
+      "context": "Display only after anomaly reveal."
+    },
+    {
+      "key": "weapon.form.SporeLauncher",
+      "zh": "Spore Launcher",
+      "en": "Spore Launcher",
+      "context": "Weapon form; does not reveal anomaly."
+    },
+    {
+      "key": "weapon.anomaly.SporeLauncher.0",
+      "zh": "Cloud",
+      "en": "Cloud",
+      "context": "Display only after anomaly reveal."
+    },
+    {
+      "key": "weapon.anomaly.SporeLauncher.1",
+      "zh": "Needler",
+      "en": "Needler",
+      "context": "Display only after anomaly reveal."
+    },
+    {
+      "key": "weapon.form.Railgun",
+      "zh": "Railgun",
+      "en": "Railgun",
+      "context": "Weapon form; does not reveal anomaly."
+    },
+    {
+      "key": "weapon.anomaly.Railgun.0",
+      "zh": "Lance",
+      "en": "Lance",
+      "context": "Display only after anomaly reveal."
+    },
+    {
+      "key": "weapon.anomaly.Railgun.1",
+      "zh": "Execute",
+      "en": "Execute",
+      "context": "Display only after anomaly reveal."
+    },
+    {
+      "key": "weapon.form.Minigun",
+      "zh": "Minigun",
+      "en": "Minigun",
+      "context": "Weapon form; does not reveal anomaly."
+    },
+    {
+      "key": "weapon.anomaly.Minigun.0",
+      "zh": "Spin-up",
+      "en": "Spin-up",
+      "context": "Display only after anomaly reveal."
+    },
+    {
+      "key": "weapon.anomaly.Minigun.1",
+      "zh": "Meltdown",
+      "en": "Meltdown",
+      "context": "Display only after anomaly reveal."
+    },
+    {
+      "key": "weapon.form.SwarmLauncher",
+      "zh": "Swarm Launcher",
+      "en": "Swarm Launcher",
+      "context": "Weapon form; does not reveal anomaly."
+    },
+    {
+      "key": "weapon.anomaly.SwarmLauncher.0",
+      "zh": "Barrage",
+      "en": "Barrage",
+      "context": "Display only after anomaly reveal."
+    },
+    {
+      "key": "weapon.anomaly.SwarmLauncher.1",
+      "zh": "Carpet",
+      "en": "Carpet",
+      "context": "Display only after anomaly reveal."
+    },
+    {
+      "key": "weapon.form.OrbitBlades",
+      "zh": "Orbit Blades",
+      "en": "Orbit Blades",
+      "context": "Weapon form; does not reveal anomaly."
+    },
+    {
+      "key": "weapon.anomaly.OrbitBlades.0",
+      "zh": "Saw",
+      "en": "Saw",
+      "context": "Display only after anomaly reveal."
+    },
+    {
+      "key": "weapon.anomaly.OrbitBlades.1",
+      "zh": "Magnet",
+      "en": "Magnet",
+      "context": "Display only after anomaly reveal."
+    },
+    {
+      "key": "weapon.form.SentryDrone",
+      "zh": "Sentry Drone",
+      "en": "Sentry Drone",
+      "context": "Weapon form; does not reveal anomaly."
+    },
+    {
+      "key": "weapon.anomaly.SentryDrone.0",
+      "zh": "Gunner",
+      "en": "Gunner",
+      "context": "Display only after anomaly reveal."
+    },
+    {
+      "key": "weapon.anomaly.SentryDrone.1",
+      "zh": "Whirl",
+      "en": "Whirl",
+      "context": "Display only after anomaly reveal."
+    },
+    {
+      "key": "weapon.form.ShieldRing",
+      "zh": "Shield Ring",
+      "en": "Shield Ring",
+      "context": "Weapon form; does not reveal anomaly."
+    },
+    {
+      "key": "weapon.anomaly.ShieldRing.0",
+      "zh": "Repulsor",
+      "en": "Repulsor",
+      "context": "Display only after anomaly reveal."
+    },
+    {
+      "key": "weapon.anomaly.ShieldRing.1",
+      "zh": "Leech",
+      "en": "Leech",
+      "context": "Display only after anomaly reveal."
+    },
+    {
+      "key": "skill.FlameWake",
+      "zh": "Flame Wake",
+      "en": "Flame Wake",
+      "context": "Current skill name; excludes unapproved new candidate mechanics."
+    },
+    {
+      "key": "skill.Contagion",
+      "zh": "Contagion",
+      "en": "Contagion",
+      "context": "Current skill name; excludes unapproved new candidate mechanics."
+    },
+    {
+      "key": "skill.FrostNova",
+      "zh": "Frost Nova",
+      "en": "Frost Nova",
+      "context": "Current skill name; excludes unapproved new candidate mechanics."
+    },
+    {
+      "key": "skill.StormCall",
+      "zh": "Storm Call",
+      "en": "Storm Call",
+      "context": "Current skill name; excludes unapproved new candidate mechanics."
+    },
+    {
+      "key": "skill.Bulwark",
+      "zh": "Bulwark",
+      "en": "Bulwark",
+      "context": "Current skill name; excludes unapproved new candidate mechanics."
+    },
+    {
+      "key": "skill.Radiance",
+      "zh": "Radiance",
+      "en": "Radiance",
+      "context": "Current skill name; excludes unapproved new candidate mechanics."
+    },
+    {
+      "key": "skill.Devour",
+      "zh": "Devour",
+      "en": "Devour",
+      "context": "Current skill name; excludes unapproved new candidate mechanics."
+    },
+    {
+      "key": "skill.Blink",
+      "zh": "Blink",
+      "en": "Blink",
+      "context": "Current skill name; excludes unapproved new candidate mechanics."
+    },
+    {
+      "key": "skill.Shockwave",
+      "zh": "Shockwave",
+      "en": "Shockwave",
+      "context": "Current skill name; excludes unapproved new candidate mechanics."
+    },
+    {
+      "key": "skill.GravityWell",
+      "zh": "Gravity Well",
+      "en": "Gravity Well",
+      "context": "Current skill name; excludes unapproved new candidate mechanics."
+    },
+    {
+      "key": "skill.TimeSlip",
+      "zh": "Time Slip",
+      "en": "Time Slip",
+      "context": "Current skill name; excludes unapproved new candidate mechanics."
+    },
+    {
+      "key": "skill.Decoy",
+      "zh": "Decoy",
+      "en": "Decoy",
+      "context": "Current skill name; excludes unapproved new candidate mechanics."
+    },
+    {
+      "key": "skill.Overcharge",
+      "zh": "Overcharge",
+      "en": "Overcharge",
+      "context": "Current skill name; excludes unapproved new candidate mechanics."
+    },
+    {
+      "key": "skill.PocketVoid",
+      "zh": "Pocket Void",
+      "en": "Pocket Void",
+      "context": "Current skill name; excludes unapproved new candidate mechanics."
+    },
+    {
+      "key": "skill.VoidWalk",
+      "zh": "Void Walk",
+      "en": "Void Walk",
+      "context": "Current skill name; excludes unapproved new candidate mechanics."
+    },
+    {
+      "key": "skill.Singularity",
+      "zh": "Singularity",
+      "en": "Singularity",
+      "context": "Current skill name; excludes unapproved new candidate mechanics."
+    },
+    {
+      "key": "enemy.Grunt",
+      "zh": "Grunt",
+      "en": "Grunt",
+      "context": "UI term: Grunt"
+    },
+    {
+      "key": "enemy.Brute",
+      "zh": "Brute",
+      "en": "Brute",
+      "context": "UI term: Brute"
+    },
+    {
+      "key": "enemy.Skitter",
+      "zh": "Skitter",
+      "en": "Skitter",
+      "context": "UI term: Skitter"
+    },
+    {
+      "key": "enemy.Spitter",
+      "zh": "Spitter",
+      "en": "Spitter",
+      "context": "UI term: Spitter"
+    },
+    {
+      "key": "enemy.Rammer",
+      "zh": "Rammer",
+      "en": "Rammer",
+      "context": "UI term: Rammer"
+    },
+    {
+      "key": "enemy.Bloater",
+      "zh": "Bloater",
+      "en": "Bloater",
+      "context": "UI term: Bloater"
+    },
+    {
+      "key": "enemy.Warden",
+      "zh": "Warden",
+      "en": "Warden",
+      "context": "UI term: Warden"
+    },
+    {
+      "key": "enemy.Splitter",
+      "zh": "Splitter",
+      "en": "Splitter",
+      "context": "UI term: Splitter"
+    },
+    {
+      "key": "enemy.Spire",
+      "zh": "Spire",
+      "en": "Spire",
+      "context": "UI term: Spire"
+    },
+    {
+      "key": "enemy.Stomper",
+      "zh": "Stomper",
+      "en": "Stomper",
+      "context": "UI term: Stomper"
+    },
+    {
+      "key": "enemy.Shade",
+      "zh": "Shade",
+      "en": "Shade",
+      "context": "UI term: Shade"
+    },
+    {
+      "key": "enemy.Hollow",
+      "zh": "THE HOLLOW",
+      "en": "THE HOLLOW",
+      "context": "UI term: THE HOLLOW"
+    },
+    {
+      "key": "enemy.Tyrant",
+      "zh": "THE TYRANT",
+      "en": "THE TYRANT",
+      "context": "UI term: THE TYRANT"
+    },
+    {
+      "key": "element.None",
+      "zh": "None",
+      "en": "None",
+      "context": "Element name; Frost and Frozen are distinct."
+    },
+    {
+      "key": "element.Fire",
+      "zh": "Fire",
+      "en": "Fire",
+      "context": "Element name; Frost and Frozen are distinct."
+    },
+    {
+      "key": "element.Poison",
+      "zh": "Poison",
+      "en": "Poison",
+      "context": "Element name; Frost and Frozen are distinct."
+    },
+    {
+      "key": "element.Frost",
+      "zh": "Frost",
+      "en": "Frost",
+      "context": "Element name; Frost and Frozen are distinct."
+    },
+    {
+      "key": "element.Lightning",
+      "zh": "Lightning",
+      "en": "Lightning",
+      "context": "Element name; Frost and Frozen are distinct."
+    },
+    {
+      "key": "element.Earth",
+      "zh": "Earth",
+      "en": "Earth",
+      "context": "Element name; Frost and Frozen are distinct."
+    },
+    {
+      "key": "element.Light",
+      "zh": "Light",
+      "en": "Light",
+      "context": "Element name; Frost and Frozen are distinct."
+    },
+    {
+      "key": "element.Void",
+      "zh": "Void",
+      "en": "Void",
+      "context": "Element name; Frost and Frozen are distinct."
+    },
+    {
+      "key": "ui.subtitle",
+      "zh": "EVERY WEAPON HAS A TWIST.",
+      "en": "EVERY WEAPON HAS A TWIST.",
+      "context": "Static header/button or numbered HUD format."
+    },
+    {
+      "key": "ui.controls",
+      "zh": "WASD MOVE · MOUSE AIM · LMB USE · RMB SWITCH · SHIFT SPRINT · 1/2/3 SKILLS · E ENTER",
+      "en": "WASD MOVE · MOUSE AIM · LMB USE · RMB SWITCH · SHIFT SPRINT · 1/2/3 SKILLS · E ENTER",
+      "context": "Static header/button or numbered HUD format."
+    },
+    {
+      "key": "ui.hand1",
+      "zh": "HAND 1 [LMB]",
+      "en": "HAND 1 [LMB]",
+      "context": "Static header/button or numbered HUD format."
+    },
+    {
+      "key": "ui.hand2",
+      "zh": "HAND 2 [RMB SWITCH]",
+      "en": "HAND 2 [RMB SWITCH]",
+      "context": "Static header/button or numbered HUD format."
+    },
+    {
+      "key": "ui.auto1",
+      "zh": "AUTO 1",
+      "en": "AUTO 1",
+      "context": "Static header/button or numbered HUD format."
+    },
+    {
+      "key": "ui.auto2",
+      "zh": "AUTO 2",
+      "en": "AUTO 2",
+      "context": "Static header/button or numbered HUD format."
+    },
+    {
+      "key": "ui.auto3",
+      "zh": "AUTO 3",
+      "en": "AUTO 3",
+      "context": "Static header/button or numbered HUD format."
+    },
+    {
+      "key": "ui.skill1",
+      "zh": "SKILL 1 [1]",
+      "en": "SKILL 1 [1]",
+      "context": "Static header/button or numbered HUD format."
+    },
+    {
+      "key": "ui.skill2",
+      "zh": "SKILL 2 [2]",
+      "en": "SKILL 2 [2]",
+      "context": "Static header/button or numbered HUD format."
+    },
+    {
+      "key": "ui.skill3",
+      "zh": "SKILL 3 [3]",
+      "en": "SKILL 3 [3]",
+      "context": "Static header/button or numbered HUD format."
+    },
+    {
+      "key": "ui.language.zh",
+      "zh": "Chinese (Team)",
+      "en": "Chinese (Team)",
+      "context": "Static header/button or numbered HUD format."
+    },
+    {
+      "key": "ui.language.en",
+      "zh": "English (Showcase)",
+      "en": "English (Showcase)",
+      "context": "Static header/button or numbered HUD format."
+    },
+    {
+      "key": "ui.greater.heading",
+      "zh": "GREATER VOID REWARD",
+      "en": "GREATER VOID REWARD",
+      "context": "Static header/button or numbered HUD format."
+    },
+    {
+      "key": "ui.draft.counter",
+      "zh": "DRAFT {0} / {1}",
+      "en": "DRAFT {0} / {1}",
+      "context": "Static header/button or numbered HUD format."
+    },
+    {
+      "key": "ui.reroll.counter",
+      "zh": "REROLL [{0}]",
+      "en": "REROLL [{0}]",
+      "context": "Static header/button or numbered HUD format."
+    },
+    {
+      "key": "upgrade.core.Rifle.0.twist",
+      "zh": "Fully charged shots can bounce off walls up to 2 times.",
+      "en": "Fully charged shots can bounce off walls up to 2 times.",
+      "context": "Original six anomalies: exact saved card branch; new 44 upgrades are separate."
+    },
+    {
+      "key": "upgrade.core.Rifle.0.tame",
+      "zh": "Charging no longer slows your movement.",
+      "en": "Charging no longer slows your movement.",
+      "context": "Original six anomalies: exact saved card branch; new 44 upgrades are separate."
+    },
+    {
+      "key": "upgrade.core.Rifle.1.twist",
+      "zh": "Reverse shots can bounce off walls 3 times instead of 1.",
+      "en": "Reverse shots can bounce off walls 3 times instead of 1.",
+      "context": "Original six anomalies: exact saved card branch; new 44 upgrades are separate."
+    },
+    {
+      "key": "upgrade.core.Rifle.1.tame",
+      "zh": "Firing no longer pushes you forward.",
+      "en": "Firing no longer pushes you forward.",
+      "context": "Original six anomalies: exact saved card branch; new 44 upgrades are separate."
+    },
+    {
+      "key": "upgrade.core.Knife.0.twist",
+      "zh": "The throwing knife can bounce off walls up to 2 times.",
+      "en": "The throwing knife can bounce off walls up to 2 times.",
+      "context": "Original six anomalies: exact saved card branch; new 44 upgrades are separate."
+    },
+    {
+      "key": "upgrade.core.Knife.0.tame",
+      "zh": "The returning corpse no longer damages or knocks you back; it still hits others.",
+      "en": "The returning corpse no longer damages or knocks you back; it still hits others.",
+      "context": "Original six anomalies: exact saved card branch; new 44 upgrades are separate."
+    },
+    {
+      "key": "upgrade.core.Knife.1.twist",
+      "zh": "A hook that hits a wall moves you to the wall.",
+      "en": "A hook that hits a wall moves you to the wall.",
+      "context": "Original six anomalies: exact saved card branch; new 44 upgrades are separate."
+    },
+    {
+      "key": "upgrade.core.Knife.1.tame",
+      "zh": "The flung enemy is stunned for 1.5 seconds when it lands.",
+      "en": "The flung enemy is stunned for 1.5 seconds when it lands.",
+      "context": "Original six anomalies: exact saved card branch; new 44 upgrades are separate."
+    },
+    {
+      "key": "upgrade.core.RocketLauncher.0.twist",
+      "zh": "The explosion pulls characters toward its centre instead of knocking them outward.",
+      "en": "The explosion pulls characters toward its centre instead of knocking them outward.",
+      "context": "Original six anomalies: exact saved card branch; new 44 upgrades are separate."
+    },
+    {
+      "key": "upgrade.core.RocketLauncher.0.tame",
+      "zh": "Your explosion no longer damages you, but still displaces you.",
+      "en": "Your explosion no longer damages you, but still displaces you.",
+      "context": "Original six anomalies: exact saved card branch; new 44 upgrades are separate."
+    },
+    {
+      "key": "upgrade.core.RocketLauncher.1.twist",
+      "zh": "Ending the flight on open ground pushes enemies within radius 3 outward by 8 units.",
+      "en": "Ending the flight on open ground pushes enemies within radius 3 outward by 8 units.",
+      "context": "Original six anomalies: exact saved card branch; new 44 upgrades are separate."
+    },
+    {
+      "key": "upgrade.core.RocketLauncher.1.tame",
+      "zh": "Hitting a wall no longer damages you; you still bounce back 3 units.",
+      "en": "Hitting a wall no longer damages you; you still bounce back 3 units.",
+      "context": "Original six anomalies: exact saved card branch; new 44 upgrades are separate."
+    },
+    {
+      "key": "upgrade.expanded.GravGun.0.twist",
+      "zh": "Push enemies out by 3 when the pull ends; no extra damage.",
+      "en": "Push enemies out by 3 when the pull ends; no extra damage.",
+      "context": "Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending."
+    },
+    {
+      "key": "upgrade.expanded.GravGun.0.tame",
+      "zh": "Your attraction field no longer pulls you.",
+      "en": "Your attraction field no longer pulls you.",
+      "context": "Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending."
+    },
+    {
+      "key": "upgrade.expanded.GravGun.1.twist",
+      "zh": "Repel only in the aimed 180-degree half circle.",
+      "en": "Repel only in the aimed 180-degree half circle.",
+      "context": "Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending."
+    },
+    {
+      "key": "upgrade.expanded.GravGun.1.tame",
+      "zh": "Remove your 2-unit recoil; orbs are still repelled.",
+      "en": "Remove your 2-unit recoil; orbs are still repelled.",
+      "context": "Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending."
+    },
+    {
+      "key": "upgrade.expanded.ScatterCannon.0.twist",
+      "zh": "Push side targets toward the aim line; push centred targets forward.",
+      "en": "Push side targets toward the aim line; push centred targets forward.",
+      "context": "Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending."
+    },
+    {
+      "key": "upgrade.expanded.ScatterCannon.0.tame",
+      "zh": "Still move back by 3, using a push without wall-impact damage.",
+      "en": "Still move back by 3, using a push without wall-impact damage.",
+      "context": "Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending."
+    },
+    {
+      "key": "upgrade.expanded.ScatterCannon.1.twist",
+      "zh": "On release, push gathered enemies forward by 5 once.",
+      "en": "On release, push gathered enemies forward by 5 once.",
+      "context": "Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending."
+    },
+    {
+      "key": "upgrade.expanded.ScatterCannon.1.tame",
+      "zh": "Stop suction at a 2-unit body gap; enemies can still walk closer.",
+      "en": "Stop suction at a 2-unit body gap; enemies can still walk closer.",
+      "context": "Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending."
+    },
+    {
+      "key": "upgrade.expanded.PhaseDagger.0.twist",
+      "zh": "Pierce the first body and swap with the second valid target; hit each once.",
+      "en": "Pierce the first body and swap with the second valid target; hit each once.",
+      "context": "Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending."
+    },
+    {
+      "key": "upgrade.expanded.PhaseDagger.0.tame",
+      "zh": "Gain 0.5 s hit protection after a swap; no status clear or hole immunity.",
+      "en": "Gain 0.5 s hit protection after a swap; no status clear or hole immunity.",
+      "context": "Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending."
+    },
+    {
+      "key": "upgrade.expanded.PhaseDagger.1.twist",
+      "zh": "Blast at departure too; overlapping blasts hit each enemy once.",
+      "en": "Blast at departure too; overlapping blasts hit each enemy once.",
+      "context": "Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending."
+    },
+    {
+      "key": "upgrade.expanded.PhaseDagger.1.tame",
+      "zh": "Recall the unused planted dagger after 6 s, without teleporting or exploding.",
+      "en": "Recall the unused planted dagger after 6 s, without teleporting or exploding.",
+      "context": "Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending."
+    },
+    {
+      "key": "upgrade.expanded.PlasmaLauncher.0.twist",
+      "zh": "Click again after 0.3 s attached to detonate early.",
+      "en": "Click again after 0.3 s attached to detonate early.",
+      "context": "Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending."
+    },
+    {
+      "key": "upgrade.expanded.PlasmaLauncher.0.tame",
+      "zh": "Attached carriers no longer speed up; the blast can still hurt you.",
+      "en": "Attached carriers no longer speed up; the blast can still hurt you.",
+      "context": "Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending."
+    },
+    {
+      "key": "upgrade.expanded.PlasmaLauncher.1.twist",
+      "zh": "Stick to the wall after the third bounce, keeping the original fuse.",
+      "en": "Stick to the wall after the third bounce, keeping the original fuse.",
+      "context": "Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending."
+    },
+    {
+      "key": "upgrade.expanded.PlasmaLauncher.1.tame",
+      "zh": "The blast spares your HP but still displaces you.",
+      "en": "The blast spares your HP but still displaces you.",
+      "context": "Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending."
+    },
+    {
+      "key": "upgrade.expanded.Flamethrower.0.twist",
+      "zh": "Reflect the flame once at the first wall; hit each body once per shot.",
+      "en": "Reflect the flame once at the first wall; hit each body once per shot.",
+      "context": "Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending."
+    },
+    {
+      "key": "upgrade.expanded.Flamethrower.0.tame",
+      "zh": "Overheat adds no Fire to you; the 1.5 s lockout stays.",
+      "en": "Overheat adds no Fire to you; the 1.5 s lockout stays.",
+      "context": "Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending."
+    },
+    {
+      "key": "upgrade.expanded.Flamethrower.1.twist",
+      "zh": "Push out by 3 when a fire patch ends; no extra damage.",
+      "en": "Push out by 3 when a fire patch ends; no extra damage.",
+      "context": "Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending."
+    },
+    {
+      "key": "upgrade.expanded.Flamethrower.1.tame",
+      "zh": "Your patches do not hurt or burn you; other fire still can.",
+      "en": "Your patches do not hurt or burn you; other fire still can.",
+      "context": "Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending."
+    },
+    {
+      "key": "upgrade.expanded.CryoCannon.0.twist",
+      "zh": "Frozen bodies can chain-shatter: at most 3 bursts, each body once.",
+      "en": "Frozen bodies can chain-shatter: at most 3 bursts, each body once.",
+      "context": "Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending."
+    },
+    {
+      "key": "upgrade.expanded.CryoCannon.0.tame",
+      "zh": "Wall shards no longer apply Frost to you.",
+      "en": "Wall shards no longer apply Frost to you.",
+      "context": "Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending."
+    },
+    {
+      "key": "upgrade.expanded.CryoCannon.1.twist",
+      "zh": "Cloud stays for 2 s after release; only one cloud at a time.",
+      "en": "Cloud stays for 2 s after release; only one cloud at a time.",
+      "context": "Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending."
+    },
+    {
+      "key": "upgrade.expanded.CryoCannon.1.tame",
+      "zh": "Your cloud spares your HP and Frost; holding still slows you to 70%.",
+      "en": "Your cloud spares your HP and Frost; holding still slows you to 70%.",
+      "context": "Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending."
+    },
+    {
+      "key": "upgrade.expanded.ArcCoil.0.twist",
+      "zh": "Later jumps prefer the most Lightning stacks, then the nearest target.",
+      "en": "Later jumps prefer the most Lightning stacks, then the nearest target.",
+      "context": "Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending."
+    },
+    {
+      "key": "upgrade.expanded.ArcCoil.0.tame",
+      "zh": "Empty jumps end without damaging you.",
+      "en": "Empty jumps end without damaging you.",
+      "context": "Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending."
+    },
+    {
+      "key": "upgrade.expanded.ArcCoil.1.twist",
+      "zh": "Knockback and thrown travel also charge: 1 per unit, cap 30.",
+      "en": "Knockback and thrown travel also charge: 1 per unit, cap 30.",
+      "context": "Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending."
+    },
+    {
+      "key": "upgrade.expanded.ArcCoil.1.tame",
+      "zh": "After 4 s full, drain 1 charge/s instead of self-blasting.",
+      "en": "After 4 s full, drain 1 charge/s instead of self-blasting.",
+      "context": "Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending."
+    },
+    {
+      "key": "upgrade.expanded.SporeLauncher.0.twist",
+      "zh": "Cloud drifts 1 unit/s along its launch direction, blocked by walls and bounds.",
+      "en": "Cloud drifts 1 unit/s along its launch direction, blocked by walls and bounds.",
+      "context": "Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending."
+    },
+    {
+      "key": "upgrade.expanded.SporeLauncher.0.tame",
+      "zh": "Your clouds do not hurt or poison you; other poison still can.",
+      "en": "Your clouds do not hurt or poison you; other poison still can.",
+      "context": "Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending."
+    },
+    {
+      "key": "upgrade.expanded.SporeLauncher.1.twist",
+      "zh": "Needles bounce once off a wall; no body piercing.",
+      "en": "Needles bounce once off a wall; no body piercing.",
+      "context": "Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending."
+    },
+    {
+      "key": "upgrade.expanded.SporeLauncher.1.tame",
+      "zh": "Reloading no longer slows movement; clip and reload duration stay.",
+      "en": "Reloading no longer slows movement; clip and reload duration stay.",
+      "context": "Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending."
+    },
+    {
+      "key": "upgrade.expanded.Railgun.0.twist",
+      "zh": "Pierce one interior wall, never bounds; body damage still decays.",
+      "en": "Pierce one interior wall, never bounds; body damage still decays.",
+      "context": "Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending."
+    },
+    {
+      "key": "upgrade.expanded.Railgun.0.tame",
+      "zh": "Still move back by 4, using a push without wall-impact damage.",
+      "en": "Still move back by 4, using a push without wall-impact damage.",
+      "context": "Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending."
+    },
+    {
+      "key": "upgrade.expanded.Railgun.1.twist",
+      "zh": "On a kill, fire one half-damage follow-up within 4; no execute, kill bonus or repeat follow-up.",
+      "en": "On a kill, fire one half-damage follow-up within 4; no execute, kill bonus or repeat follow-up.",
+      "context": "Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending."
+    },
+    {
+      "key": "upgrade.expanded.Railgun.1.tame",
+      "zh": "A failed kill adds no 1.5 s jam; normal cooldown remains.",
+      "en": "A failed kill adds no 1.5 s jam; normal cooldown remains.",
+      "context": "Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending."
+    },
+    {
+      "key": "upgrade.expanded.Minigun.0.twist",
+      "zh": "Keep spin-up for 1 s after release; release still restores movement.",
+      "en": "Keep spin-up for 1 s after release; release still restores movement.",
+      "context": "Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending."
+    },
+    {
+      "key": "upgrade.expanded.Minigun.0.tame",
+      "zh": "Keep 70% movement at full heat; firing speed is unchanged.",
+      "en": "Keep 70% movement at full heat; firing speed is unchanged.",
+      "context": "Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending."
+    },
+    {
+      "key": "upgrade.expanded.Minigun.1.twist",
+      "zh": "Enemy blast becomes a forward 90-degree cone; self-damage and lockout remain.",
+      "en": "Enemy blast becomes a forward 90-degree cone; self-damage and lockout remain.",
+      "context": "Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending."
+    },
+    {
+      "key": "upgrade.expanded.Minigun.1.tame",
+      "zh": "Overheat spares your HP; the 3 s lockout remains.",
+      "en": "Overheat spares your HP; the 3 s lockout remains.",
+      "context": "Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending."
+    },
+    {
+      "key": "upgrade.expanded.SwarmLauncher.0.twist",
+      "zh": "Wall hit leaves a 1 s mine; blast if an enemy enters 1.5, without making new mines.",
+      "en": "Wall hit leaves a 1 s mine; blast if an enemy enters 1.5, without making new mines.",
+      "context": "Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending."
+    },
+    {
+      "key": "upgrade.expanded.SwarmLauncher.0.tame",
+      "zh": "Missed rockets disappear instead of returning.",
+      "en": "Missed rockets disappear instead of returning.",
+      "context": "Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending."
+    },
+    {
+      "key": "upgrade.expanded.SwarmLauncher.1.twist",
+      "zh": "Reverse the six blasts from far to near; other values stay the same.",
+      "en": "Reverse the six blasts from far to near; other values stay the same.",
+      "context": "Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending."
+    },
+    {
+      "key": "upgrade.expanded.SwarmLauncher.1.tame",
+      "zh": "Carpet blasts spare your HP but still displace you.",
+      "en": "Carpet blasts spare your HP but still displace you.",
+      "context": "Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending."
+    }
+  ]
+}

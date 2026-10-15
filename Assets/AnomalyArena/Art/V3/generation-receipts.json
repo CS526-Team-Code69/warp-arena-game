@@ -1,0 +1,404 @@
+{
+  "schema": "anomaly.v3.world-art.delivery/1",
+  "status": "Source assets prepared; Unity authoring delegated to root, runtime unverified.",
+  "image_generation": [
+    {
+      "path": "Assets/AnomalyArena/Art/V3/Ground/bio-desert-basecolor.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 3594571,
+      "sha256": "fdbaca8c275a77a744e418bafeb673de61dbd4d7556d14f11e327e3d6ee02a9c",
+      "tool": "built-in image_gen.imagegen",
+      "actual_model": "not exposed by tool; GPT Image 2.5 unconfirmed",
+      "requested_dimension": "ideally 2048 square",
+      "original": "local-image-cache/exec-8f744405-f50f-4434-9d1c-9baab4e0e490.png",
+      "prompt_summary": "Continuous matte dusty brown-grey sand and sediment crust. Shallow buried branching organic roots, subdued dried spore stains, thin dark chitin traces. 75 percent calm ground, 20 percent biological staining, 5 percent subdued violet. No emission or impassable-looking channels.",
+      "shared_prompt_constraints": "Square seamless tileable straight-down BaseColor only, flat diffuse light, no cast shadows, no perspective/horizon/text/logo/characters/walls/freestanding objects, edge-matched opaque full bleed, game-readable restrained detail.",
+      "pixel_edits": "none; generated original copied unchanged",
+      "seamless_repeat_verified": false
+    },
+    {
+      "path": "Assets/AnomalyArena/Art/V3/Ground/wind-sand-basecolor.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 3253161,
+      "sha256": "dc92eb1e3d8aaeac72c543444c9a63a0ea0c35353fe60e735d02152e232e3ef8",
+      "tool": "built-in image_gen.imagegen",
+      "actual_model": "not exposed by tool; GPT Image 2.5 unconfirmed",
+      "requested_dimension": "ideally 2048 square",
+      "original": "local-image-cache/exec-9ccfa4f2-d2d2-478f-9e59-c6f43134651b.png",
+      "prompt_summary": "85 percent calm desaturated ochre and buff sand. Long shallow curved wind ripples at several scales, fine grains, flattened sediment, a few flush sandstone grains. Subtle warm umber to muted tan. No deep dunes, relief, walls or freestanding props.",
+      "shared_prompt_constraints": "Square seamless tileable straight-down BaseColor only, flat diffuse light, no cast shadows, no perspective/horizon/text/logo/characters/walls/freestanding objects, edge-matched opaque full bleed, game-readable restrained detail.",
+      "pixel_edits": "none; generated original copied unchanged",
+      "seamless_repeat_verified": false
+    },
+    {
+      "path": "Assets/AnomalyArena/Art/V3/Ground/dark-fissure-basecolor.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 3626237,
+      "sha256": "966c8c73d2c8a9b9af431017ecf379c81934cdc5579f82ee2c2046e51288b65f",
+      "tool": "built-in image_gen.imagegen",
+      "actual_model": "not exposed by tool; GPT Image 2.5 unconfirmed",
+      "requested_dimension": "ideally 2048 square",
+      "original": "local-image-cache/exec-985f8e0c-3575-44ab-b4b8-57a097f4bccb.png",
+      "prompt_summary": "Charcoal umber and muted blue-grey basalt dust and sand. Low broad worn flaky crust patches, sparse shallow branching cracks, very subtle desaturated violet stain and scarce buried filaments. 80 percent calm ground, 20 percent variation. No huge pits or glowing channels.",
+      "shared_prompt_constraints": "Square seamless tileable straight-down BaseColor only, flat diffuse light, no cast shadows, no perspective/horizon/text/logo/characters/walls/freestanding objects, edge-matched opaque full bleed, game-readable restrained detail.",
+      "pixel_edits": "none; generated original copied unchanged",
+      "seamless_repeat_verified": false
+    }
+  ],
+  "svg_overlays": [
+    {
+      "id": "bio-root-web",
+      "source": "Assets/AnomalyArena/Art/V3/Sources/SVG/bio-root-web.svg",
+      "png": "Assets/AnomalyArena/Art/V3/Overlays/bio-root-web.png",
+      "width": 1024,
+      "height": 1024,
+      "transparent": true
+    },
+    {
+      "id": "bio-spore-scar",
+      "source": "Assets/AnomalyArena/Art/V3/Sources/SVG/bio-spore-scar.svg",
+      "png": "Assets/AnomalyArena/Art/V3/Overlays/bio-spore-scar.png",
+      "width": 1024,
+      "height": 1024,
+      "transparent": true
+    },
+    {
+      "id": "bio-chitin-shed",
+      "source": "Assets/AnomalyArena/Art/V3/Sources/SVG/bio-chitin-shed.svg",
+      "png": "Assets/AnomalyArena/Art/V3/Overlays/bio-chitin-shed.png",
+      "width": 1024,
+      "height": 1024,
+      "transparent": true
+    },
+    {
+      "id": "sand-wind-ripples",
+      "source": "Assets/AnomalyArena/Art/V3/Sources/SVG/sand-wind-ripples.svg",
+      "png": "Assets/AnomalyArena/Art/V3/Overlays/sand-wind-ripples.png",
+      "width": 1024,
+      "height": 1024,
+      "transparent": true
+    },
+    {
+      "id": "sand-wind-scour",
+      "source": "Assets/AnomalyArena/Art/V3/Sources/SVG/sand-wind-scour.svg",
+      "png": "Assets/AnomalyArena/Art/V3/Overlays/sand-wind-scour.png",
+      "width": 1024,
+      "height": 1024,
+      "transparent": true
+    },
+    {
+      "id": "sand-mineral-dust",
+      "source": "Assets/AnomalyArena/Art/V3/Sources/SVG/sand-mineral-dust.svg",
+      "png": "Assets/AnomalyArena/Art/V3/Overlays/sand-mineral-dust.png",
+      "width": 1024,
+      "height": 1024,
+      "transparent": true
+    },
+    {
+      "id": "rift-dark-branches",
+      "source": "Assets/AnomalyArena/Art/V3/Sources/SVG/rift-dark-branches.svg",
+      "png": "Assets/AnomalyArena/Art/V3/Overlays/rift-dark-branches.png",
+      "width": 1024,
+      "height": 1024,
+      "transparent": true
+    },
+    {
+      "id": "rift-mineral-patina",
+      "source": "Assets/AnomalyArena/Art/V3/Sources/SVG/rift-mineral-patina.svg",
+      "png": "Assets/AnomalyArena/Art/V3/Overlays/rift-mineral-patina.png",
+      "width": 1024,
+      "height": 1024,
+      "transparent": true
+    },
+    {
+      "id": "rift-organic-veins",
+      "source": "Assets/AnomalyArena/Art/V3/Sources/SVG/rift-organic-veins.svg",
+      "png": "Assets/AnomalyArena/Art/V3/Overlays/rift-organic-veins.png",
+      "width": 1024,
+      "height": 1024,
+      "transparent": true
+    }
+  ],
+  "meshy": [
+    {
+      "id": "wind-eroded-rock",
+      "model": "meshy-7.1",
+      "prompt": "One low broad natural wind-eroded sandstone outcrop cluster for a top-down desert game. Three interlocking rounded flattened stones with irregular scalloped edges, shallow horizontal erosion layers and a wide stable buried base. Height much lower than width, no vertical wall, no rectangular slab, no spikes, no buildings, no metal, no scattered detached pieces. Simple readable silhouette, coarse natural forms with restrained detail. Muted warm sandstone and umber. Entire object, standalone game terrain prop.",
+      "texture_prompt": "Matte desaturated buff and ochre sandstone, darker umber in shallow erosion seams, dusty buried base. Natural mineral grains, restrained variation, no shiny metal, no lights, no baked directional shadows.",
+      "requested_target_polycount": 5000,
+      "requested_should_remesh": true,
+      "stages": [
+        {
+          "stage": "preview",
+          "task_id": "01a133bf-55d0-7789-986e-94c35dcc6f8a",
+          "status": "SUCCEEDED",
+          "consumed_credits": 20,
+          "face_count": null
+        },
+        {
+          "stage": "refine",
+          "task_id": "01a133c1-648f-736b-a4c7-797e9404c718",
+          "status": "SUCCEEDED",
+          "consumed_credits": 10,
+          "face_count": null
+        }
+      ],
+      "files": [
+        {
+          "path": "Assets/AnomalyArena/Art/V3/Models/wind-eroded-rock/Source/model.fbx",
+          "bytes": 12492716,
+          "sha256": "f269d2353c22b2e743bac0ed4e29f401c520253300250ba783e0442518348ea5"
+        },
+        {
+          "path": "Assets/AnomalyArena/Art/V3/Models/wind-eroded-rock/Source/model.glb",
+          "bytes": 6755232,
+          "sha256": "10076ae6e57067dcd1a75106f154aed8ba9eebb7db02ba87feb0595f60b74abf"
+        },
+        {
+          "path": "Assets/AnomalyArena/Art/V3/Models/wind-eroded-rock/Source/texture_0_base_color.png",
+          "bytes": 6035563,
+          "sha256": "31e8b469fe59c6a3a61b2c6b894853c1428b18c2195a6400212325d8418faabe"
+        },
+        {
+          "path": "Assets/AnomalyArena/Art/V3/Models/wind-eroded-rock/Source/texture_0_metallic.png",
+          "bytes": 18450,
+          "sha256": "9eb11a0cc0167198e6915b28b26a299e11d0aa749c63a0dea8cd3282684abb6f"
+        },
+        {
+          "path": "Assets/AnomalyArena/Art/V3/Models/wind-eroded-rock/Source/texture_0_normal.png",
+          "bytes": 5029005,
+          "sha256": "a6f430f8f413024ced21254f3339f3e861cbdce0d402d8a51fc2e1919f8ea083"
+        },
+        {
+          "path": "Assets/AnomalyArena/Art/V3/Models/wind-eroded-rock/Source/texture_0_roughness.png",
+          "bytes": 1181469,
+          "sha256": "9803fda7cd5d653bb944709b1722d34f1e8e7cfd4d25e5e68c03acd01bdcdc0f"
+        },
+        {
+          "path": "Assets/AnomalyArena/Art/V3/Models/wind-eroded-rock/Source/thumbnail.png",
+          "bytes": 82365,
+          "sha256": "43f93db0ee5816475cec1f5484c7c6b46f66a51e196e8fe3beb64edd18a28dc8"
+        }
+      ],
+      "supplier_thumbnail_downloaded": true,
+      "native_review_performed": false
+    },
+    {
+      "id": "chitin-cluster",
+      "model": "meshy-7.1",
+      "prompt": "One low wide alien organic ground-growth terrain cluster for a top-down game. Three squat overlapping weathered chitin carapace mounds fused into a broad buried organic root base. Curved asymmetrical shell plates with shallow ribs and small porous scars. Rounded chipped edges, low readable silhouette, height lower than half width. Dried bark-like biological texture, dusty grey-brown and muted plum. No creature, no face, no legs, no upright spikes, no walls, no rectangular block, no logos. Standalone game prop.",
+      "texture_prompt": "Dry matte dusty brown-grey chitin, subdued dark plum in shell seams, old muted olive spore staining at the buried base. Coarse weathered surface, no neon emission, no glossy slime, no directional baked shadows.",
+      "requested_target_polycount": 5000,
+      "requested_should_remesh": true,
+      "stages": [
+        {
+          "stage": "preview",
+          "task_id": "01a133bf-8431-76a8-8684-52b15d108363",
+          "status": "SUCCEEDED",
+          "consumed_credits": 20,
+          "face_count": null
+        },
+        {
+          "stage": "refine",
+          "task_id": "01a133c1-70dc-72eb-9fdd-8b7a8637cfe2",
+          "status": "SUCCEEDED",
+          "consumed_credits": 10,
+          "face_count": null
+        }
+      ],
+      "files": [
+        {
+          "path": "Assets/AnomalyArena/Art/V3/Models/chitin-cluster/Source/model.fbx",
+          "bytes": 13007596,
+          "sha256": "535990aa7b2bc0e097c1dcde13461d85bd09c9f6cdecc3fef4c89733fa788e4a"
+        },
+        {
+          "path": "Assets/AnomalyArena/Art/V3/Models/chitin-cluster/Source/model.glb",
+          "bytes": 8299676,
+          "sha256": "d9930123125f552a9d57fe734e5629724df8dc06b4f415dcb479a142ae2accd0"
+        },
+        {
+          "path": "Assets/AnomalyArena/Art/V3/Models/chitin-cluster/Source/texture_0_base_color.png",
+          "bytes": 5847248,
+          "sha256": "f8d6922aa3b31413d0f7801511a0e465734787ec2c22c833d09f4b790907e3a2"
+        },
+        {
+          "path": "Assets/AnomalyArena/Art/V3/Models/chitin-cluster/Source/texture_0_metallic.png",
+          "bytes": 32126,
+          "sha256": "45445977815e0b2a66a9b174ab7890849eef5f3aa9bc3251035d29fe4267c3af"
+        },
+        {
+          "path": "Assets/AnomalyArena/Art/V3/Models/chitin-cluster/Source/texture_0_normal.png",
+          "bytes": 5329615,
+          "sha256": "73d5223f2d681f69027e59e8c416110ea32a28b61c6634b408278b696412ab7c"
+        },
+        {
+          "path": "Assets/AnomalyArena/Art/V3/Models/chitin-cluster/Source/texture_0_roughness.png",
+          "bytes": 1532685,
+          "sha256": "538d59badda0b793ee60e8416f421ce343b47c3194fadb1e75ea563a51618c1e"
+        },
+        {
+          "path": "Assets/AnomalyArena/Art/V3/Models/chitin-cluster/Source/thumbnail.png",
+          "bytes": 180684,
+          "sha256": "9b677b9473d825f05114ba9d1f270fac0b420b71fd70a497e0bd7a44e037a584"
+        }
+      ],
+      "supplier_thumbnail_downloaded": true,
+      "native_review_performed": false
+    },
+    {
+      "id": "organic-vent",
+      "model": "meshy-7.1",
+      "prompt": "One squat alien organic ground vent for a top-down desert game. A low wide irregular mound with two small shallow dark pores on top, weathered ribbed shell edges and a broad tapered root base spreading onto the ground. Naturally curved eroded biological stone forms. Height far lower than width, stable wide base, clean silhouette. Charcoal umber basalt-like chitin with muted violet patina. No upright tower, no rectangular wall, no character, no teeth or face, no flame, no smoke, no detached particles. Standalone terrain prop.",
+      "texture_prompt": "Dry matte charcoal-brown basalt-like chitin, muted blue-grey dust, shallow dark pores, restrained desaturated violet mineral stains. No bright glow, no cyan or orange, no directional baked lighting.",
+      "requested_target_polycount": 5000,
+      "requested_should_remesh": true,
+      "stages": [
+        {
+          "stage": "preview",
+          "task_id": "01a133bf-bf3b-71be-9ba9-9914f85dc3d4",
+          "status": "SUCCEEDED",
+          "consumed_credits": 20,
+          "face_count": null
+        },
+        {
+          "stage": "refine",
+          "task_id": "01a133c1-1eee-70b7-871a-1f345a5296c1",
+          "status": "SUCCEEDED",
+          "consumed_credits": 10,
+          "face_count": null
+        }
+      ],
+      "files": [
+        {
+          "path": "Assets/AnomalyArena/Art/V3/Models/organic-vent/Source/model.fbx",
+          "bytes": 13153964,
+          "sha256": "a280ca25b8470ac46e99b8e7b89286bf12a868717f7386202f9d090accc83f0d"
+        },
+        {
+          "path": "Assets/AnomalyArena/Art/V3/Models/organic-vent/Source/model.glb",
+          "bytes": 8080680,
+          "sha256": "9c6b74c4ad355479cef8ac494da7e94eb5aee8d97fd993f734b47de4c87fd5f7"
+        },
+        {
+          "path": "Assets/AnomalyArena/Art/V3/Models/organic-vent/Source/texture_0_base_color.png",
+          "bytes": 5850663,
+          "sha256": "9bb607d33c504f58994e077d4f6b489ac7382a39c89be29da44fc32191d8e62e"
+        },
+        {
+          "path": "Assets/AnomalyArena/Art/V3/Models/organic-vent/Source/texture_0_metallic.png",
+          "bytes": 29677,
+          "sha256": "90715df533decfba338c43a31b2467c6cd3f7739a2028e81bd021cda0c92545d"
+        },
+        {
+          "path": "Assets/AnomalyArena/Art/V3/Models/organic-vent/Source/texture_0_normal.png",
+          "bytes": 5315833,
+          "sha256": "8c3015324572fb6d3f7c28fead32f88f81a480a79395761a7b3c17371ac3a2a3"
+        },
+        {
+          "path": "Assets/AnomalyArena/Art/V3/Models/organic-vent/Source/texture_0_roughness.png",
+          "bytes": 1711194,
+          "sha256": "a50c9b1dcf10eee8c5142fae4ffce0e563ef3a470c7dedf7aee9ff36d7e20be4"
+        },
+        {
+          "path": "Assets/AnomalyArena/Art/V3/Models/organic-vent/Source/thumbnail.png",
+          "bytes": 203048,
+          "sha256": "c15aa4da26e14c3728c80885cbb110c587731d5ad95756c8657745d62fa9b3ca"
+        }
+      ],
+      "supplier_thumbnail_downloaded": true,
+      "native_review_performed": false
+    }
+  ],
+  "actual_meshy_credits": 90,
+  "existing_layouts_before_authoring": [
+    {
+      "path": "Assets/AnomalyArena/V2/Data/ExpandedWorld/DustFlats_1Map.asset",
+      "sha256": "5409bbbd3ed802a9a7c55a307e24a12449e02b1e4016325ee13f3179c3aef30c",
+      "wall_records": 26
+    },
+    {
+      "path": "Assets/AnomalyArena/V2/Data/ExpandedWorld/DustFlats_2Map.asset",
+      "sha256": "844ecd36c0597f66a31d7ac80df6a8f12d28357c46bc6fd4b60a47f23dcce753",
+      "wall_records": 26
+    },
+    {
+      "path": "Assets/AnomalyArena/V2/Data/ExpandedWorld/DustFlats_3Map.asset",
+      "sha256": "5767e7172283126ea17f1308d3c7d97744a79dd27ccfa503a27ba91e79e1267b",
+      "wall_records": 24
+    },
+    {
+      "path": "Assets/AnomalyArena/V2/Data/ExpandedWorld/RiftZone_1Map.asset",
+      "sha256": "667253e53bd18b895ee4a6b199f3706da3e566da7631385f3a30a7be7547e68f",
+      "wall_records": 39
+    },
+    {
+      "path": "Assets/AnomalyArena/V2/Data/ExpandedWorld/RiftZone_2Map.asset",
+      "sha256": "0367c5bb114e64c1693a6cfb476a02ce8f9a188cb9b7309a8c4c7e21fe56d853",
+      "wall_records": 37
+    },
+    {
+      "path": "Assets/AnomalyArena/V2/Data/ExpandedWorld/RiftZone_3Map.asset",
+      "sha256": "af7e156848d871f0408c61dc931570c0b5547b9aeb14698a613bab71c689049e",
+      "wall_records": 39
+    },
+    {
+      "path": "Assets/AnomalyArena/V2/Data/ExpandedWorld/WreckField_1Map.asset",
+      "sha256": "42384e0c8277f946803dc8fb53c7ed001c7661c81914288da2e59047f9e3447e",
+      "wall_records": 39
+    },
+    {
+      "path": "Assets/AnomalyArena/V2/Data/ExpandedWorld/WreckField_2Map.asset",
+      "sha256": "279905c0aea87181ca15359257a871a514b175806d3952b65ef9f5c81ff248e2",
+      "wall_records": 36
+    },
+    {
+      "path": "Assets/AnomalyArena/V2/Data/ExpandedWorld/WreckField_3Map.asset",
+      "sha256": "1244dd1fff098cb4a5bcab0f2909435fe9044d6251f2c94376af26ab3cd771ac",
+      "wall_records": 38
+    }
+  ],
+  "cleanup_scope": [
+    "exact AuthoredTerrainArt children under existing collider walls",
+    "DistantWreck_ children under three saved biome detail roots"
+  ],
+  "preserved": [
+    "MapLayout assets",
+    "all nine wall group positions and transforms",
+    "original BoxCollider footprints",
+    "unrelated user objects",
+    "legacy SurfacePatch objects (unchanged generated sprites only disabled with scene rollback)"
+  ],
+  "installer": "AnomalyArena.EditorTools.InstallV3WorldArt.Install",
+  "assembly": "AnomalyArena.Editor",
+  "references": [
+    {
+      "url": "https://www.warhammer-community.com/en-gb/articles/hhPnh6jU/creating-a-catastrophe-behind-the-scenes-of-the-latest-tyranid-filled-warhammer-world-display/",
+      "use": "Official infestation diorama source; natural organic erosion motif is our interpretation, no brand symbols or characters copied."
+    },
+    {
+      "url": "https://wbpinewmedia.warnerbros.com/duneparttwo/index.html",
+      "use": "Official Dune Part Two artwork source; wind erosion and broad quiet sand surfaces inspire the palette, no movie assets imported."
+    },
+    {
+      "url": "https://www.warnerbros.co.jp/home_entertainment/szn1wl92g8s/",
+      "use": "Official Dune Part Two source."
+    },
+    {
+      "url": "https://docs.meshy.ai/en/api/pricing",
+      "use": "Current 20 preview +10 refine per prop."
+    },
+    {
+      "url": "https://docs.meshy.ai/en/api/text-to-3d",
+      "use": "meshy-7.1 standard with included remesh target5000, texture2k PBR."
+    }
+  ],
+  "evidence_limits": [
+    "No Play, tests, build, captures, audition or native visual review.",
+    "Requested seamless tile and topology budgets are not runtime or image-seam verification.",
+    "Actual imagegen model identifier is unavailable."
+  ]
+}

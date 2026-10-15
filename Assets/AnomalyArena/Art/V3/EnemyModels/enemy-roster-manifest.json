@@ -1,0 +1,906 @@
+{
+  "schemaVersion": 1,
+  "provider": "Meshy",
+  "date": "2026-10-12",
+  "characters": [
+    {
+      "id": "Enemy_Grunt",
+      "enemyKind": "Grunt",
+      "sourceGlb": "Assets/AnomalyArena/Art/V3/Enemies/Grunt/Grunt-source.glb",
+      "sourceFbx": "Assets/AnomalyArena/Art/V3/Enemies/Grunt/Grunt-source.fbx",
+      "providerThumbnail": "work/art-plans/meshy-enemies-2026-10-12/20261012_223436_grunt_01a133c1/textured-preview.png",
+      "riggedFbx": "Assets/AnomalyArena/Art/V3/Enemies/Grunt/Grunt-rigged.fbx",
+      "idleFbx": "Assets/AnomalyArena/Art/V3/Enemies/Grunt/Animations/Idle.fbx",
+      "runFbx": "Assets/AnomalyArena/Art/V3/Enemies/Grunt/Animations/Run.fbx",
+      "attackFbx": "Assets/AnomalyArena/Art/V3/Enemies/Grunt/Animations/Action.fbx",
+      "animationRig": "Generic",
+      "genericMotionRoot": "Hips",
+      "textures": [
+        {
+          "baseColor": "Assets/AnomalyArena/Art/V3/Enemies/Grunt/Textures/texture_0_base_color.png",
+          "normal": "Assets/AnomalyArena/Art/V3/Enemies/Grunt/Textures/texture_0_normal.png",
+          "metallic": "Assets/AnomalyArena/Art/V3/Enemies/Grunt/Textures/texture_0_metallic.png",
+          "roughness": "Assets/AnomalyArena/Art/V3/Enemies/Grunt/Textures/texture_0_roughness.png"
+        }
+      ],
+      "textureMetadata": {
+        "baseColor": {
+          "bytes": 5658763,
+          "width": 2048,
+          "height": 2048
+        },
+        "normal": {
+          "bytes": 4110676,
+          "width": 2048,
+          "height": 2048
+        },
+        "metallic": {
+          "bytes": 95550,
+          "width": 2048,
+          "height": 2048
+        },
+        "roughness": {
+          "bytes": 1437640,
+          "width": 2048,
+          "height": 2048
+        }
+      },
+      "fitFootprint": false,
+      "presentationHeight": 1.8,
+      "rotationOffsetEuler": [
+        0,
+        0,
+        0
+      ],
+      "motionRoute": "meshy_humanoid",
+      "sourceDownloadComplete": true,
+      "downloadComplete": true,
+      "animationFilesComplete": true,
+      "localAnimationPending": false,
+      "sourceTriangles": 2580,
+      "rigTriangles": 2580,
+      "targetTriangles": 2500,
+      "sourceFacing": "Source glTF +Y up; +Z front is provider convention, rotationOffset0 awaits native integration verification.",
+      "actionId": 192,
+      "actionName": "Right Jab from Guard",
+      "actionMeaning": "punch",
+      "runtimeVerified": false,
+      "rigSuitabilityNote": "Main two arms and legs visible in one provider resource preview. T-pose request not followed exactly. Actual GLB triangles read; rig and native animation still pending.",
+      "taskIds": {
+        "preview": "01a133c1-68f9-7308-9dfd-af80264d9715",
+        "refine": "01a133ca-e010-71a7-8754-00d396fa2b16",
+        "rigging": "01a133d4-5e82-778e-b3b1-32fec51fd74c",
+        "idle": "01a133d7-087d-771b-ba6c-839425870136",
+        "action": "01a133d7-0eb4-7531-b762-1b06989a220d"
+      }
+    },
+    {
+      "id": "Enemy_Brute",
+      "enemyKind": "Brute",
+      "sourceGlb": "Assets/AnomalyArena/Art/V3/Enemies/Brute/Brute-source.glb",
+      "sourceFbx": "Assets/AnomalyArena/Art/V3/Enemies/Brute/Brute-source.fbx",
+      "providerThumbnail": "work/art-plans/meshy-enemies-2026-10-12/20261012_223809_brute_01a133c4/textured-preview.png",
+      "riggedFbx": "Assets/AnomalyArena/Art/V3/Enemies/Brute/Brute-rigged.fbx",
+      "idleFbx": "Assets/AnomalyArena/Art/V3/Enemies/Brute/Animations/Idle.fbx",
+      "runFbx": "Assets/AnomalyArena/Art/V3/Enemies/Brute/Animations/Run.fbx",
+      "attackFbx": "Assets/AnomalyArena/Art/V3/Enemies/Brute/Animations/Action.fbx",
+      "animationRig": "Generic",
+      "genericMotionRoot": "Hips",
+      "textures": [
+        {
+          "baseColor": "Assets/AnomalyArena/Art/V3/Enemies/Brute/Textures/texture_0_base_color.png",
+          "normal": "Assets/AnomalyArena/Art/V3/Enemies/Brute/Textures/texture_0_normal.png",
+          "metallic": "Assets/AnomalyArena/Art/V3/Enemies/Brute/Textures/texture_0_metallic.png",
+          "roughness": "Assets/AnomalyArena/Art/V3/Enemies/Brute/Textures/texture_0_roughness.png"
+        }
+      ],
+      "textureMetadata": {
+        "baseColor": {
+          "bytes": 6210220,
+          "width": 2048,
+          "height": 2048
+        },
+        "normal": {
+          "bytes": 5186088,
+          "width": 2048,
+          "height": 2048
+        },
+        "metallic": {
+          "bytes": 66767,
+          "width": 2048,
+          "height": 2048
+        },
+        "roughness": {
+          "bytes": 1375416,
+          "width": 2048,
+          "height": 2048
+        }
+      },
+      "fitFootprint": false,
+      "presentationHeight": 2.8,
+      "rotationOffsetEuler": [
+        0,
+        0,
+        0
+      ],
+      "motionRoute": "meshy_humanoid",
+      "sourceDownloadComplete": true,
+      "downloadComplete": true,
+      "animationFilesComplete": true,
+      "localAnimationPending": false,
+      "sourceTriangles": 2608,
+      "rigTriangles": 2608,
+      "targetTriangles": 2500,
+      "sourceFacing": "Source glTF +Y up; +Z front is provider convention, rotationOffset0 awaits native integration verification.",
+      "actionId": 214,
+      "actionName": "Punch Forward with Both Fists",
+      "actionMeaning": "heavy-punch",
+      "runtimeVerified": false,
+      "rigSuitabilityNote": "Main two arms and legs visible in one provider resource preview. T-pose request not followed exactly. Actual GLB triangles read; rig and native animation still pending.",
+      "taskIds": {
+        "preview": "01a133c4-ab98-75c9-9d2f-4fc45e0eec11",
+        "refine": "01a133ca-eb89-729d-b1f6-b221dd61dc14",
+        "rigging": "01a133d4-705d-77cd-b273-0f0ad3bebd0d",
+        "idle": "01a133d7-14b9-717d-81d6-97372ccfb4af",
+        "action": "01a133d7-1acb-769c-bcef-b2f74ed82170"
+      }
+    },
+    {
+      "sourceGlb": "Assets/AnomalyArena/Art/V3/Enemies/Skitter/Skitter-source.glb",
+      "sourceFbx": "Assets/AnomalyArena/Art/V3/Enemies/Skitter/Skitter-source.fbx",
+      "providerThumbnail": "work/art-plans/meshy-enemies-2026-10-12/20261012_223814_skitter_01a133c4/textured-preview.png",
+      "textures": [
+        {
+          "baseColor": "Assets/AnomalyArena/Art/V3/Enemies/Skitter/Textures/texture_0_base_color.png",
+          "normal": "Assets/AnomalyArena/Art/V3/Enemies/Skitter/Textures/texture_0_normal.png",
+          "metallic": "Assets/AnomalyArena/Art/V3/Enemies/Skitter/Textures/texture_0_metallic.png",
+          "roughness": "Assets/AnomalyArena/Art/V3/Enemies/Skitter/Textures/texture_0_roughness.png"
+        }
+      ],
+      "textureMetadata": {
+        "baseColor": {
+          "bytes": 5817315,
+          "width": 2048,
+          "height": 2048
+        },
+        "normal": {
+          "bytes": 4725117,
+          "width": 2048,
+          "height": 2048
+        },
+        "metallic": {
+          "bytes": 88666,
+          "width": 2048,
+          "height": 2048
+        },
+        "roughness": {
+          "bytes": 1391704,
+          "width": 2048,
+          "height": 2048
+        }
+      },
+      "fitFootprint": true,
+      "presentationHeight": 0.55,
+      "sourceDownloadComplete": true,
+      "downloadComplete": true,
+      "sourceTriangles": 2563,
+      "rigTriangles": null,
+      "targetTriangles": 2500,
+      "sourceFacing": "Source glTF +Y up; +Z front is provider convention, rotationOffset0 awaits native integration verification.",
+      "actionId": null,
+      "actionName": "",
+      "actionMeaning": "bite",
+      "runtimeVerified": false,
+      "rigSuitabilityNote": "",
+      "taskIds": {
+        "preview": "01a133c4-ba14-70bc-be0f-3adabd9497c3",
+        "refine": "01a133ca-f7bb-724b-92e5-a74b3491b8ec"
+      },
+      "id": "Enemy_Skitter",
+      "enemyKind": "Skitter",
+      "riggedFbx": "Assets/AnomalyArena/Art/V3/Enemies/Skitter/LocalAnimation/Rigged.fbx",
+      "idleFbx": "Assets/AnomalyArena/Art/V3/Enemies/Skitter/LocalAnimation/Idle.fbx",
+      "runFbx": "Assets/AnomalyArena/Art/V3/Enemies/Skitter/LocalAnimation/Run.fbx",
+      "attackFbx": "Assets/AnomalyArena/Art/V3/Enemies/Skitter/LocalAnimation/Attack.fbx",
+      "animationRig": "Generic",
+      "genericMotionRoot": "Root",
+      "motionRoute": "local_nonhuman",
+      "rotationOffsetEuler": [
+        0,
+        0,
+        0
+      ],
+      "localAnimationPending": false,
+      "animationFilesComplete": true
+    },
+    {
+      "sourceGlb": "Assets/AnomalyArena/Art/V3/Enemies/Spitter/Spitter-source.glb",
+      "sourceFbx": "Assets/AnomalyArena/Art/V3/Enemies/Spitter/Spitter-source.fbx",
+      "providerThumbnail": "work/art-plans/meshy-enemies-2026-10-12/20261012_223819_spitter_01a133c4/textured-preview.png",
+      "textures": [
+        {
+          "baseColor": "Assets/AnomalyArena/Art/V3/Enemies/Spitter/Textures/texture_0_base_color.png",
+          "normal": "Assets/AnomalyArena/Art/V3/Enemies/Spitter/Textures/texture_0_normal.png",
+          "metallic": "Assets/AnomalyArena/Art/V3/Enemies/Spitter/Textures/texture_0_metallic.png",
+          "roughness": "Assets/AnomalyArena/Art/V3/Enemies/Spitter/Textures/texture_0_roughness.png"
+        }
+      ],
+      "textureMetadata": {
+        "baseColor": {
+          "bytes": 6039242,
+          "width": 2048,
+          "height": 2048
+        },
+        "normal": {
+          "bytes": 4853461,
+          "width": 2048,
+          "height": 2048
+        },
+        "metallic": {
+          "bytes": 30531,
+          "width": 2048,
+          "height": 2048
+        },
+        "roughness": {
+          "bytes": 1317096,
+          "width": 2048,
+          "height": 2048
+        }
+      },
+      "fitFootprint": true,
+      "presentationHeight": 1.1,
+      "sourceDownloadComplete": true,
+      "downloadComplete": true,
+      "sourceTriangles": 2590,
+      "rigTriangles": null,
+      "targetTriangles": 2500,
+      "sourceFacing": "Source glTF +Y up; +Z front is provider convention, rotationOffset0 awaits native integration verification.",
+      "actionId": null,
+      "actionName": "",
+      "actionMeaning": "spit",
+      "runtimeVerified": false,
+      "rigSuitabilityNote": "",
+      "taskIds": {
+        "preview": "01a133c4-ce07-74e6-a367-0524c8070f10",
+        "refine": "01a133cb-02b6-7734-830e-0d71c0f3925e"
+      },
+      "id": "Enemy_Spitter",
+      "enemyKind": "Spitter",
+      "riggedFbx": "Assets/AnomalyArena/Art/V3/Enemies/Spitter/LocalAnimation/Rigged.fbx",
+      "idleFbx": "Assets/AnomalyArena/Art/V3/Enemies/Spitter/LocalAnimation/Idle.fbx",
+      "runFbx": "Assets/AnomalyArena/Art/V3/Enemies/Spitter/LocalAnimation/Run.fbx",
+      "attackFbx": "Assets/AnomalyArena/Art/V3/Enemies/Spitter/LocalAnimation/Attack.fbx",
+      "animationRig": "Generic",
+      "genericMotionRoot": "Root",
+      "motionRoute": "local_nonhuman",
+      "rotationOffsetEuler": [
+        0,
+        0,
+        0
+      ],
+      "localAnimationPending": false,
+      "animationFilesComplete": true
+    },
+    {
+      "sourceGlb": "Assets/AnomalyArena/Art/V3/Enemies/Rammer/Rammer-source.glb",
+      "sourceFbx": "Assets/AnomalyArena/Art/V3/Enemies/Rammer/Rammer-source.fbx",
+      "providerThumbnail": "work/art-plans/meshy-enemies-2026-10-12/20261012_223824_rammer_01a133c4/textured-preview.png",
+      "textures": [
+        {
+          "baseColor": "Assets/AnomalyArena/Art/V3/Enemies/Rammer/Textures/texture_0_base_color.png",
+          "normal": "Assets/AnomalyArena/Art/V3/Enemies/Rammer/Textures/texture_0_normal.png",
+          "metallic": "Assets/AnomalyArena/Art/V3/Enemies/Rammer/Textures/texture_0_metallic.png",
+          "roughness": "Assets/AnomalyArena/Art/V3/Enemies/Rammer/Textures/texture_0_roughness.png"
+        }
+      ],
+      "textureMetadata": {
+        "baseColor": {
+          "bytes": 6161575,
+          "width": 2048,
+          "height": 2048
+        },
+        "normal": {
+          "bytes": 5224521,
+          "width": 2048,
+          "height": 2048
+        },
+        "metallic": {
+          "bytes": 236337,
+          "width": 2048,
+          "height": 2048
+        },
+        "roughness": {
+          "bytes": 1433612,
+          "width": 2048,
+          "height": 2048
+        }
+      },
+      "fitFootprint": true,
+      "presentationHeight": 1.3,
+      "sourceDownloadComplete": true,
+      "downloadComplete": true,
+      "sourceTriangles": 2604,
+      "rigTriangles": null,
+      "targetTriangles": 2500,
+      "sourceFacing": "Source glTF +Y up; +Z front is provider convention, rotationOffset0 awaits native integration verification.",
+      "actionId": null,
+      "actionName": "",
+      "actionMeaning": "charge",
+      "runtimeVerified": false,
+      "rigSuitabilityNote": "",
+      "taskIds": {
+        "preview": "01a133c4-e209-7107-bbca-5b1f2ea60ffa",
+        "refine": "01a133cb-0cb1-70a9-a783-1fa9801dc66f"
+      },
+      "id": "Enemy_Rammer",
+      "enemyKind": "Rammer",
+      "riggedFbx": "Assets/AnomalyArena/Art/V3/Enemies/Rammer/LocalAnimation/Rigged.fbx",
+      "idleFbx": "Assets/AnomalyArena/Art/V3/Enemies/Rammer/LocalAnimation/Idle.fbx",
+      "runFbx": "Assets/AnomalyArena/Art/V3/Enemies/Rammer/LocalAnimation/Run.fbx",
+      "attackFbx": "Assets/AnomalyArena/Art/V3/Enemies/Rammer/LocalAnimation/Attack.fbx",
+      "animationRig": "Generic",
+      "genericMotionRoot": "Root",
+      "motionRoute": "local_nonhuman",
+      "rotationOffsetEuler": [
+        0,
+        0,
+        0
+      ],
+      "localAnimationPending": false,
+      "animationFilesComplete": true
+    },
+    {
+      "sourceGlb": "Assets/AnomalyArena/Art/V3/Enemies/Bloater/Bloater-source.glb",
+      "sourceFbx": "Assets/AnomalyArena/Art/V3/Enemies/Bloater/Bloater-source.fbx",
+      "providerThumbnail": "work/art-plans/meshy-enemies-2026-10-12/20261012_223827_bloater_01a133c4/textured-preview.png",
+      "textures": [
+        {
+          "baseColor": "Assets/AnomalyArena/Art/V3/Enemies/Bloater/Textures/texture_0_base_color.png",
+          "normal": "Assets/AnomalyArena/Art/V3/Enemies/Bloater/Textures/texture_0_normal.png",
+          "metallic": "Assets/AnomalyArena/Art/V3/Enemies/Bloater/Textures/texture_0_metallic.png",
+          "roughness": "Assets/AnomalyArena/Art/V3/Enemies/Bloater/Textures/texture_0_roughness.png"
+        }
+      ],
+      "textureMetadata": {
+        "baseColor": {
+          "bytes": 5970522,
+          "width": 2048,
+          "height": 2048
+        },
+        "normal": {
+          "bytes": 4358499,
+          "width": 2048,
+          "height": 2048
+        },
+        "metallic": {
+          "bytes": 30065,
+          "width": 2048,
+          "height": 2048
+        },
+        "roughness": {
+          "bytes": 1278730,
+          "width": 2048,
+          "height": 2048
+        }
+      },
+      "fitFootprint": true,
+      "presentationHeight": 1.0,
+      "sourceDownloadComplete": true,
+      "downloadComplete": true,
+      "sourceTriangles": 2580,
+      "rigTriangles": null,
+      "targetTriangles": 2500,
+      "sourceFacing": "Source glTF +Y up; +Z front is provider convention, rotationOffset0 awaits native integration verification.",
+      "actionId": null,
+      "actionName": "",
+      "actionMeaning": "swell-explode",
+      "runtimeVerified": false,
+      "rigSuitabilityNote": "",
+      "taskIds": {
+        "preview": "01a133c4-f295-7205-9f66-bb3e5eccdea1",
+        "refine": "01a133cb-18ea-712a-ac67-a5dbd0ebfcc7"
+      },
+      "id": "Enemy_Bloater",
+      "enemyKind": "Bloater",
+      "riggedFbx": "Assets/AnomalyArena/Art/V3/Enemies/Bloater/LocalAnimation/Rigged.fbx",
+      "idleFbx": "Assets/AnomalyArena/Art/V3/Enemies/Bloater/LocalAnimation/Idle.fbx",
+      "runFbx": "Assets/AnomalyArena/Art/V3/Enemies/Bloater/LocalAnimation/Run.fbx",
+      "attackFbx": "Assets/AnomalyArena/Art/V3/Enemies/Bloater/LocalAnimation/Attack.fbx",
+      "animationRig": "Generic",
+      "genericMotionRoot": "Root",
+      "motionRoute": "local_nonhuman",
+      "rotationOffsetEuler": [
+        0,
+        0,
+        0
+      ],
+      "localAnimationPending": false,
+      "animationFilesComplete": true
+    },
+    {
+      "id": "Enemy_Warden",
+      "enemyKind": "Warden",
+      "sourceGlb": "Assets/AnomalyArena/Art/V3/Enemies/Warden/Warden-source.glb",
+      "sourceFbx": "Assets/AnomalyArena/Art/V3/Enemies/Warden/Warden-source.fbx",
+      "providerThumbnail": "work/art-plans/meshy-enemies-2026-10-12/20261012_223831_warden_01a133c5/textured-preview.png",
+      "riggedFbx": "Assets/AnomalyArena/Art/V3/Enemies/Warden/Warden-rigged.fbx",
+      "idleFbx": "Assets/AnomalyArena/Art/V3/Enemies/Warden/Animations/Idle.fbx",
+      "runFbx": "Assets/AnomalyArena/Art/V3/Enemies/Warden/Animations/Run.fbx",
+      "attackFbx": "Assets/AnomalyArena/Art/V3/Enemies/Warden/Animations/Action.fbx",
+      "animationRig": "Generic",
+      "genericMotionRoot": "Hips",
+      "textures": [
+        {
+          "baseColor": "Assets/AnomalyArena/Art/V3/Enemies/Warden/Textures/texture_0_base_color.png",
+          "normal": "Assets/AnomalyArena/Art/V3/Enemies/Warden/Textures/texture_0_normal.png",
+          "metallic": "Assets/AnomalyArena/Art/V3/Enemies/Warden/Textures/texture_0_metallic.png",
+          "roughness": "Assets/AnomalyArena/Art/V3/Enemies/Warden/Textures/texture_0_roughness.png"
+        }
+      ],
+      "textureMetadata": {
+        "baseColor": {
+          "bytes": 6478401,
+          "width": 2048,
+          "height": 2048
+        },
+        "normal": {
+          "bytes": 5595265,
+          "width": 2048,
+          "height": 2048
+        },
+        "metallic": {
+          "bytes": 41888,
+          "width": 2048,
+          "height": 2048
+        },
+        "roughness": {
+          "bytes": 1520560,
+          "width": 2048,
+          "height": 2048
+        }
+      },
+      "fitFootprint": false,
+      "presentationHeight": 1.9,
+      "rotationOffsetEuler": [
+        0,
+        0,
+        0
+      ],
+      "motionRoute": "meshy_humanoid",
+      "sourceDownloadComplete": true,
+      "downloadComplete": true,
+      "animationFilesComplete": true,
+      "localAnimationPending": false,
+      "sourceTriangles": 2594,
+      "rigTriangles": 2594,
+      "targetTriangles": 2500,
+      "sourceFacing": "Source glTF +Y up; +Z front is provider convention, rotationOffset0 awaits native integration verification.",
+      "actionId": 125,
+      "actionName": "Charged Spell Cast",
+      "actionMeaning": "Support gesture; no damage",
+      "runtimeVerified": false,
+      "rigSuitabilityNote": "Two clear main arms and legs; two smaller accessory limbs. Root approved one official rig attempt; accessory deformation and native fit not verified. Failed rig must use local fallback, no paid retry.",
+      "taskIds": {
+        "preview": "01a133c5-00ed-71be-b226-8948a1b6c667",
+        "refine": "01a133cb-23d4-7495-bcfc-f77983f08451",
+        "rigging": "01a133d4-818f-7263-9520-77012e4eaaad",
+        "idle": "01a133d7-2098-7762-b200-fc2b9cdcd926",
+        "action": "01a133d7-270e-7636-8731-d98ff89589c8"
+      }
+    },
+    {
+      "sourceGlb": "Assets/AnomalyArena/Art/V3/Enemies/Splitter/Splitter-source.glb",
+      "sourceFbx": "Assets/AnomalyArena/Art/V3/Enemies/Splitter/Splitter-source.fbx",
+      "providerThumbnail": "work/art-plans/meshy-enemies-2026-10-12/20261012_223835_splitter_01a133c5/textured-preview.png",
+      "textures": [
+        {
+          "baseColor": "Assets/AnomalyArena/Art/V3/Enemies/Splitter/Textures/texture_0_base_color.png",
+          "normal": "Assets/AnomalyArena/Art/V3/Enemies/Splitter/Textures/texture_0_normal.png",
+          "metallic": "Assets/AnomalyArena/Art/V3/Enemies/Splitter/Textures/texture_0_metallic.png",
+          "roughness": "Assets/AnomalyArena/Art/V3/Enemies/Splitter/Textures/texture_0_roughness.png"
+        }
+      ],
+      "textureMetadata": {
+        "baseColor": {
+          "bytes": 6134511,
+          "width": 2048,
+          "height": 2048
+        },
+        "normal": {
+          "bytes": 5025613,
+          "width": 2048,
+          "height": 2048
+        },
+        "metallic": {
+          "bytes": 369839,
+          "width": 2048,
+          "height": 2048
+        },
+        "roughness": {
+          "bytes": 1503624,
+          "width": 2048,
+          "height": 2048
+        }
+      },
+      "fitFootprint": true,
+      "presentationHeight": 1.2,
+      "sourceDownloadComplete": true,
+      "downloadComplete": true,
+      "sourceTriangles": 2611,
+      "rigTriangles": null,
+      "targetTriangles": 2500,
+      "sourceFacing": "Source glTF +Y up; +Z front is provider convention, rotationOffset0 awaits native integration verification.",
+      "actionId": null,
+      "actionName": "",
+      "actionMeaning": "split",
+      "runtimeVerified": false,
+      "rigSuitabilityNote": "",
+      "taskIds": {
+        "preview": "01a133c5-101a-71d5-9ad9-b36974f365e0",
+        "refine": "01a133cb-2efb-74f8-85a4-adaae9af0240"
+      },
+      "id": "Enemy_Splitter",
+      "enemyKind": "Splitter",
+      "riggedFbx": "Assets/AnomalyArena/Art/V3/Enemies/Splitter/LocalAnimation/Rigged.fbx",
+      "idleFbx": "Assets/AnomalyArena/Art/V3/Enemies/Splitter/LocalAnimation/Idle.fbx",
+      "runFbx": "Assets/AnomalyArena/Art/V3/Enemies/Splitter/LocalAnimation/Run.fbx",
+      "attackFbx": "Assets/AnomalyArena/Art/V3/Enemies/Splitter/LocalAnimation/Attack.fbx",
+      "animationRig": "Generic",
+      "genericMotionRoot": "Root",
+      "motionRoute": "local_nonhuman",
+      "rotationOffsetEuler": [
+        0,
+        0,
+        0
+      ],
+      "localAnimationPending": false,
+      "animationFilesComplete": true
+    },
+    {
+      "sourceGlb": "Assets/AnomalyArena/Art/V3/Enemies/Spire/Spire-source.glb",
+      "sourceFbx": "Assets/AnomalyArena/Art/V3/Enemies/Spire/Spire-source.fbx",
+      "providerThumbnail": "work/art-plans/meshy-enemies-2026-10-12/20261012_223839_spire_01a133c5/textured-preview.png",
+      "textures": [
+        {
+          "baseColor": "Assets/AnomalyArena/Art/V3/Enemies/Spire/Textures/texture_0_base_color.png",
+          "normal": "Assets/AnomalyArena/Art/V3/Enemies/Spire/Textures/texture_0_normal.png",
+          "metallic": "Assets/AnomalyArena/Art/V3/Enemies/Spire/Textures/texture_0_metallic.png",
+          "roughness": "Assets/AnomalyArena/Art/V3/Enemies/Spire/Textures/texture_0_roughness.png"
+        }
+      ],
+      "textureMetadata": {
+        "baseColor": {
+          "bytes": 5500205,
+          "width": 2048,
+          "height": 2048
+        },
+        "normal": {
+          "bytes": 4423944,
+          "width": 2048,
+          "height": 2048
+        },
+        "metallic": {
+          "bytes": 1256745,
+          "width": 2048,
+          "height": 2048
+        },
+        "roughness": {
+          "bytes": 1324586,
+          "width": 2048,
+          "height": 2048
+        }
+      },
+      "fitFootprint": true,
+      "presentationHeight": 2.7,
+      "sourceDownloadComplete": true,
+      "downloadComplete": true,
+      "sourceTriangles": 2565,
+      "rigTriangles": null,
+      "targetTriangles": 2500,
+      "sourceFacing": "Source glTF +Y up; +Z front is provider convention, rotationOffset0 awaits native integration verification.",
+      "actionId": null,
+      "actionName": "",
+      "actionMeaning": "pulse",
+      "runtimeVerified": false,
+      "rigSuitabilityNote": "",
+      "taskIds": {
+        "preview": "01a133c5-20c4-724b-b969-4cd5b1ba8bbc",
+        "refine": "01a133cb-3c2c-7425-bdab-64d10a021b4f"
+      },
+      "id": "Enemy_Spire",
+      "enemyKind": "Spire",
+      "riggedFbx": "Assets/AnomalyArena/Art/V3/Enemies/Spire/LocalAnimation/Rigged.fbx",
+      "idleFbx": "Assets/AnomalyArena/Art/V3/Enemies/Spire/LocalAnimation/Idle.fbx",
+      "runFbx": "Assets/AnomalyArena/Art/V3/Enemies/Spire/LocalAnimation/Run.fbx",
+      "attackFbx": "Assets/AnomalyArena/Art/V3/Enemies/Spire/LocalAnimation/Attack.fbx",
+      "animationRig": "Generic",
+      "genericMotionRoot": "Root",
+      "motionRoute": "local_nonhuman",
+      "rotationOffsetEuler": [
+        0,
+        0,
+        0
+      ],
+      "localAnimationPending": false,
+      "animationFilesComplete": true
+    },
+    {
+      "id": "Enemy_Stomper",
+      "enemyKind": "Stomper",
+      "sourceGlb": "Assets/AnomalyArena/Art/V3/Enemies/Stomper/Stomper-source.glb",
+      "sourceFbx": "Assets/AnomalyArena/Art/V3/Enemies/Stomper/Stomper-source.fbx",
+      "providerThumbnail": "work/art-plans/meshy-enemies-2026-10-12/20261012_223843_stomper_01a133c5/textured-preview.png",
+      "riggedFbx": "Assets/AnomalyArena/Art/V3/Enemies/Stomper/Stomper-rigged.fbx",
+      "idleFbx": "Assets/AnomalyArena/Art/V3/Enemies/Stomper/Animations/Idle.fbx",
+      "runFbx": "Assets/AnomalyArena/Art/V3/Enemies/Stomper/Animations/Run.fbx",
+      "attackFbx": "Assets/AnomalyArena/Art/V3/Enemies/Stomper/Animations/Action.fbx",
+      "animationRig": "Generic",
+      "genericMotionRoot": "Hips",
+      "textures": [
+        {
+          "baseColor": "Assets/AnomalyArena/Art/V3/Enemies/Stomper/Textures/texture_0_base_color.png",
+          "normal": "Assets/AnomalyArena/Art/V3/Enemies/Stomper/Textures/texture_0_normal.png",
+          "metallic": "Assets/AnomalyArena/Art/V3/Enemies/Stomper/Textures/texture_0_metallic.png",
+          "roughness": "Assets/AnomalyArena/Art/V3/Enemies/Stomper/Textures/texture_0_roughness.png"
+        }
+      ],
+      "textureMetadata": {
+        "baseColor": {
+          "bytes": 5786977,
+          "width": 2048,
+          "height": 2048
+        },
+        "normal": {
+          "bytes": 4395246,
+          "width": 2048,
+          "height": 2048
+        },
+        "metallic": {
+          "bytes": 301983,
+          "width": 2048,
+          "height": 2048
+        },
+        "roughness": {
+          "bytes": 1497368,
+          "width": 2048,
+          "height": 2048
+        }
+      },
+      "fitFootprint": false,
+      "presentationHeight": 2.9,
+      "rotationOffsetEuler": [
+        0,
+        0,
+        0
+      ],
+      "motionRoute": "meshy_humanoid",
+      "sourceDownloadComplete": true,
+      "downloadComplete": true,
+      "animationFilesComplete": true,
+      "localAnimationPending": false,
+      "sourceTriangles": 2592,
+      "rigTriangles": 2592,
+      "targetTriangles": 2500,
+      "sourceFacing": "Source glTF +Y up; +Z front is provider convention, rotationOffset0 awaits native integration verification.",
+      "actionId": 127,
+      "actionName": "Charged Ground Slam",
+      "actionMeaning": "stomp",
+      "runtimeVerified": false,
+      "rigSuitabilityNote": "Two clear main arms and legs; two smaller accessory limbs. Root approved one official rig attempt; accessory deformation and native fit not verified. Failed rig must use local fallback, no paid retry.",
+      "taskIds": {
+        "preview": "01a133c5-2f52-70da-bc47-8ed64e706eff",
+        "refine": "01a133cb-48d2-77ce-a7eb-60c499fc2b3b",
+        "rigging": "01a133d4-94e6-7431-b432-e852c4277882",
+        "idle": "01a133d7-2cda-7274-9bfd-5244a9ab6cd1",
+        "action": "01a133d7-3324-777d-b105-10616d95762b"
+      }
+    },
+    {
+      "id": "Enemy_Shade",
+      "enemyKind": "Shade",
+      "sourceGlb": "Assets/AnomalyArena/Art/V3/Enemies/Shade/Shade-source.glb",
+      "sourceFbx": "Assets/AnomalyArena/Art/V3/Enemies/Shade/Shade-source.fbx",
+      "providerThumbnail": "work/art-plans/meshy-enemies-2026-10-12/20261012_223847_shade_01a133c5/textured-preview.png",
+      "riggedFbx": "Assets/AnomalyArena/Art/V3/Enemies/Shade/Shade-rigged.fbx",
+      "idleFbx": "Assets/AnomalyArena/Art/V3/Enemies/Shade/Animations/Idle.fbx",
+      "runFbx": "Assets/AnomalyArena/Art/V3/Enemies/Shade/Animations/Run.fbx",
+      "attackFbx": "Assets/AnomalyArena/Art/V3/Enemies/Shade/Animations/Action.fbx",
+      "animationRig": "Generic",
+      "genericMotionRoot": "Hips",
+      "textures": [
+        {
+          "baseColor": "Assets/AnomalyArena/Art/V3/Enemies/Shade/Textures/texture_0_base_color.png",
+          "normal": "Assets/AnomalyArena/Art/V3/Enemies/Shade/Textures/texture_0_normal.png",
+          "metallic": "Assets/AnomalyArena/Art/V3/Enemies/Shade/Textures/texture_0_metallic.png",
+          "roughness": "Assets/AnomalyArena/Art/V3/Enemies/Shade/Textures/texture_0_roughness.png"
+        }
+      ],
+      "textureMetadata": {
+        "baseColor": {
+          "bytes": 6445453,
+          "width": 2048,
+          "height": 2048
+        },
+        "normal": {
+          "bytes": 5494569,
+          "width": 2048,
+          "height": 2048
+        },
+        "metallic": {
+          "bytes": 57587,
+          "width": 2048,
+          "height": 2048
+        },
+        "roughness": {
+          "bytes": 1445036,
+          "width": 2048,
+          "height": 2048
+        }
+      },
+      "fitFootprint": false,
+      "presentationHeight": 1.8,
+      "rotationOffsetEuler": [
+        0,
+        0,
+        0
+      ],
+      "motionRoute": "meshy_humanoid",
+      "sourceDownloadComplete": true,
+      "downloadComplete": true,
+      "animationFilesComplete": true,
+      "localAnimationPending": false,
+      "sourceTriangles": 2611,
+      "rigTriangles": 2611,
+      "targetTriangles": 2500,
+      "sourceFacing": "Source glTF +Y up; +Z front is provider convention, rotationOffset0 awaits native integration verification.",
+      "actionId": 240,
+      "actionName": "Thrust Slash",
+      "actionMeaning": "slash",
+      "runtimeVerified": false,
+      "rigSuitabilityNote": "Two clear main arms and legs; two smaller accessory limbs. Root approved one official rig attempt; accessory deformation and native fit not verified. Failed rig must use local fallback, no paid retry.",
+      "taskIds": {
+        "preview": "01a133c5-3f6e-703a-94a9-c1a774cd95c8",
+        "refine": "01a133ce-d8a4-7449-b470-0993826c49ed",
+        "rigging": "01a133d4-ab4f-7086-bc3c-f27d3ff40c59",
+        "idle": "01a133d7-3886-7434-bc78-cca4d9782a83",
+        "action": "01a133d7-3e54-75ab-8f26-377870410e8f"
+      }
+    },
+    {
+      "sourceGlb": "Assets/AnomalyArena/Art/V3/Enemies/Hollow/Hollow-source.glb",
+      "sourceFbx": "Assets/AnomalyArena/Art/V3/Enemies/Hollow/Hollow-source.fbx",
+      "providerThumbnail": "work/art-plans/meshy-enemies-2026-10-12/20261012_223851_hollow_01a133c5/textured-preview.png",
+      "textures": [
+        {
+          "baseColor": "Assets/AnomalyArena/Art/V3/Enemies/Hollow/Textures/texture_0_base_color.png",
+          "normal": "Assets/AnomalyArena/Art/V3/Enemies/Hollow/Textures/texture_0_normal.png",
+          "metallic": "Assets/AnomalyArena/Art/V3/Enemies/Hollow/Textures/texture_0_metallic.png",
+          "roughness": "Assets/AnomalyArena/Art/V3/Enemies/Hollow/Textures/texture_0_roughness.png"
+        }
+      ],
+      "textureMetadata": {
+        "baseColor": {
+          "bytes": 5830271,
+          "width": 2048,
+          "height": 2048
+        },
+        "normal": {
+          "bytes": 5207605,
+          "width": 2048,
+          "height": 2048
+        },
+        "metallic": {
+          "bytes": 1589783,
+          "width": 2048,
+          "height": 2048
+        },
+        "roughness": {
+          "bytes": 1529412,
+          "width": 2048,
+          "height": 2048
+        }
+      },
+      "fitFootprint": true,
+      "presentationHeight": 4.0,
+      "sourceDownloadComplete": true,
+      "downloadComplete": true,
+      "sourceTriangles": 5212,
+      "rigTriangles": null,
+      "targetTriangles": 5000,
+      "sourceFacing": "Source glTF +Y up; +Z front is provider convention, rotationOffset0 awaits native integration verification.",
+      "actionId": null,
+      "actionName": "",
+      "actionMeaning": "void-inhale",
+      "runtimeVerified": false,
+      "rigSuitabilityNote": "",
+      "taskIds": {
+        "preview": "01a133c5-4e4b-756b-b332-5836b9444e1a",
+        "refine": "01a133cf-1288-73d6-8b70-8f654c909b65"
+      },
+      "id": "Enemy_Hollow",
+      "enemyKind": "Hollow",
+      "riggedFbx": "Assets/AnomalyArena/Art/V3/Enemies/Hollow/LocalAnimation/Rigged.fbx",
+      "idleFbx": "Assets/AnomalyArena/Art/V3/Enemies/Hollow/LocalAnimation/Idle.fbx",
+      "runFbx": "Assets/AnomalyArena/Art/V3/Enemies/Hollow/LocalAnimation/Run.fbx",
+      "attackFbx": "Assets/AnomalyArena/Art/V3/Enemies/Hollow/LocalAnimation/Attack.fbx",
+      "animationRig": "Generic",
+      "genericMotionRoot": "Root",
+      "motionRoute": "local_nonhuman",
+      "rotationOffsetEuler": [
+        0,
+        0,
+        0
+      ],
+      "localAnimationPending": false,
+      "animationFilesComplete": true
+    },
+    {
+      "sourceGlb": "Assets/AnomalyArena/Art/V3/Enemies/Tyrant/Tyrant-source.glb",
+      "sourceFbx": "Assets/AnomalyArena/Art/V3/Enemies/Tyrant/Tyrant-source.fbx",
+      "providerThumbnail": "work/art-plans/meshy-enemies-2026-10-12/20261012_223855_tyrant_01a133c5/textured-preview.png",
+      "textures": [
+        {
+          "baseColor": "Assets/AnomalyArena/Art/V3/Enemies/Tyrant/Textures/texture_0_base_color.png",
+          "normal": "Assets/AnomalyArena/Art/V3/Enemies/Tyrant/Textures/texture_0_normal.png",
+          "metallic": "Assets/AnomalyArena/Art/V3/Enemies/Tyrant/Textures/texture_0_metallic.png",
+          "roughness": "Assets/AnomalyArena/Art/V3/Enemies/Tyrant/Textures/texture_0_roughness.png"
+        }
+      ],
+      "textureMetadata": {
+        "baseColor": {
+          "bytes": 6465002,
+          "width": 2048,
+          "height": 2048
+        },
+        "normal": {
+          "bytes": 5336537,
+          "width": 2048,
+          "height": 2048
+        },
+        "metallic": {
+          "bytes": 1306862,
+          "width": 2048,
+          "height": 2048
+        },
+        "roughness": {
+          "bytes": 1720734,
+          "width": 2048,
+          "height": 2048
+        }
+      },
+      "fitFootprint": true,
+      "presentationHeight": 4.6,
+      "sourceDownloadComplete": true,
+      "downloadComplete": true,
+      "sourceTriangles": 5138,
+      "rigTriangles": null,
+      "targetTriangles": 5000,
+      "sourceFacing": "Source glTF +Y up; +Z front is provider convention, rotationOffset0 awaits native integration verification.",
+      "actionId": 219,
+      "actionName": "Right-hand Sword Slash",
+      "actionMeaning": "cleave",
+      "runtimeVerified": false,
+      "rigSuitabilityNote": "Provider output is low crouched crab-like, large scythe claws, no clear upright humanoid hips. Root approved local_nonhuman route; no paid regenerated model or auto-rig.",
+      "taskIds": {
+        "preview": "01a133c5-5d92-7630-a002-516073440ffd",
+        "refine": "01a133cf-1d40-770f-938e-dabc834e872f"
+      },
+      "id": "Enemy_Tyrant",
+      "enemyKind": "Tyrant",
+      "riggedFbx": "Assets/AnomalyArena/Art/V3/Enemies/Tyrant/LocalAnimation/Rigged.fbx",
+      "idleFbx": "Assets/AnomalyArena/Art/V3/Enemies/Tyrant/LocalAnimation/Idle.fbx",
+      "runFbx": "Assets/AnomalyArena/Art/V3/Enemies/Tyrant/LocalAnimation/Run.fbx",
+      "attackFbx": "Assets/AnomalyArena/Art/V3/Enemies/Tyrant/LocalAnimation/Attack.fbx",
+      "animationRig": "Generic",
+      "genericMotionRoot": "Root",
+      "motionRoute": "local_nonhuman",
+      "rotationOffsetEuler": [
+        0,
+        0,
+        0
+      ],
+      "localAnimationPending": false,
+      "animationFilesComplete": true
+    }
+  ]
+}

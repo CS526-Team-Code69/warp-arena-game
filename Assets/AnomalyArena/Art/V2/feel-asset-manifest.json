@@ -1,0 +1,47 @@
+{
+  "count": 6,
+  "assets": [
+    {
+      "id": "hole-core-round",
+      "svg": "Sources/SVG/hole-core-round.svg",
+      "png": "Textures/hole-core-round.png",
+      "pixels": 512,
+      "status": "candidate presentation, no paid generation or Play verification"
+    },
+    {
+      "id": "hole-swirl-round",
+      "svg": "Sources/SVG/hole-swirl-round.svg",
+      "png": "Textures/hole-swirl-round.png",
+      "pixels": 512,
+      "status": "candidate presentation, no paid generation or Play verification"
+    },
+    {
+      "id": "hole-gravity-soft",
+      "svg": "Sources/SVG/hole-gravity-soft.svg",
+      "png": "Textures/hole-gravity-soft.png",
+      "pixels": 512,
+      "status": "candidate presentation, no paid generation or Play verification"
+    },
+    {
+      "id": "portal-round",
+      "svg": "Sources/SVG/portal-round.svg",
+      "png": "Textures/portal-round.png",
+      "pixels": 512,
+      "status": "candidate presentation, no paid generation or Play verification"
+    },
+    {
+      "id": "hit-impact-pixel",
+      "svg": "Sources/SVG/hit-impact-pixel.svg",
+      "png": "Textures/hit-impact-pixel.png",
+      "pixels": 512,
+      "status": "candidate presentation, no paid generation or Play verification"
+    },
+    {
+      "id": "knife-return-marker",
+      "svg": "Sources/SVG/knife-return-marker.svg",
+      "png": "Textures/knife-return-marker.png",
+      "pixels": 512,
+      "status": "candidate presentation, no paid generation or Play verification"
+    }
+  ]
+}

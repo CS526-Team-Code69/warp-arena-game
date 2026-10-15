@@ -1,0 +1,38 @@
+{
+  "sourceSha256": "2c9012e890f3cd5fbc5e822fa2b4c425e76070f7ef33ab9a9d1ca7820666b787",
+  "sourceRetained": true,
+  "blenderVersion": "5.2.2 LTS",
+  "boneCount": 11,
+  "legPairs": 2,
+  "skinnedVertices": 4442,
+  "sourceBoundsBlender": [
+    1.0063269138336182,
+    1.8904139995574951,
+    1.5178029537200928
+  ],
+  "fps": 30,
+  "durations": {
+    "Idle": 2,
+    "Run": 0.8,
+    "Attack": 0.9
+  },
+  "rootMotion": false,
+  "weightsAndMotion": "candidate geometric region skin; no native visual or locomotion review",
+  "runtimeVerified": false,
+  "bindings": {
+    "id": "Enemy_Rammer",
+    "enemyKind": "Rammer",
+    "riggedFbx": "Assets/AnomalyArena/Art/V3/Enemies/Rammer/LocalAnimation/Rigged.fbx",
+    "idleFbx": "Assets/AnomalyArena/Art/V3/Enemies/Rammer/LocalAnimation/Idle.fbx",
+    "runFbx": "Assets/AnomalyArena/Art/V3/Enemies/Rammer/LocalAnimation/Run.fbx",
+    "attackFbx": "Assets/AnomalyArena/Art/V3/Enemies/Rammer/LocalAnimation/Attack.fbx",
+    "animationRig": "Generic",
+    "genericMotionRoot": "Root",
+    "motionRoute": "local_nonhuman",
+    "rotationOffsetEuler": [
+      0,
+      0,
+      0
+    ]
+  }
+}

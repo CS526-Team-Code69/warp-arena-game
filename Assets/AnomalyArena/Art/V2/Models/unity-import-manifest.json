@@ -1,0 +1,193 @@
+{
+  "schemaVersion": 1,
+  "provider": "Meshy",
+  "requestedModel": "meshy-7.1",
+  "characters": [
+    {
+      "id": "explorer",
+      "riggedFbx": "Assets/AnomalyArena/Art/V2/Models/explorer/explorer-rigged.fbx",
+      "idleFbx": "Assets/AnomalyArena/Art/V2/Models/explorer/Animations/Idle.fbx",
+      "runFbx": "Assets/AnomalyArena/Art/V2/Models/explorer/Animations/Run.fbx",
+      "attackFbx": "Assets/AnomalyArena/Art/V2/Models/explorer/Animations/Attack.fbx",
+      "textures": [
+        {
+          "baseColor": "Assets/AnomalyArena/Art/V2/Models/explorer/Textures/texture_0_base_color.png",
+          "normal": "Assets/AnomalyArena/Art/V2/Models/explorer/Textures/texture_0_normal.png",
+          "metallic": "Assets/AnomalyArena/Art/V2/Models/explorer/Textures/texture_0_metallic.png",
+          "roughness": "Assets/AnomalyArena/Art/V2/Models/explorer/Textures/texture_0_roughness.png",
+          "pixels": 2048,
+          "baseColorSRGB": true,
+          "normalIsNormalMap": true,
+          "metallicSRGB": false,
+          "roughnessSRGB": false,
+          "emissionMapAvailable": false
+        }
+      ],
+      "rotationOffsetEuler": [
+        0,
+        0,
+        0
+      ],
+      "animationRig": "Generic",
+      "genericMotionRoot": "Hips",
+      "applyRootMotion": false,
+      "downloadComplete": true,
+      "rigJointCount": 24,
+      "armatureObjectRoot": "Armature",
+      "expectedUpAxis": "+Y",
+      "expectedForwardAxis": "+Z",
+      "orientationNativeVerified": false,
+      "orientationEvidence": "glTF joint headfront minus Head has positive Z; FBX Unity import still unverified.",
+      "declaredRigHeightMeters": 1.8,
+      "sourceTriangles": 5155,
+      "runClipName": "Armature|running|baselayer",
+      "runDurationSeconds": 0.6666666865348816,
+      "runRootTranslation": [
+        {
+          "node": "Hips",
+          "first": [
+            -0.07102127373218536,
+            98.25784301757812,
+            -3.605968952178955
+          ],
+          "last": [
+            -0.0710192397236824,
+            98.25784301757812,
+            -3.6059672832489014
+          ],
+          "delta": [
+            2.034008502960205e-06,
+            0.0,
+            1.6689300537109375e-06
+          ],
+          "min": [
+            -0.9972100257873535,
+            96.46295166015625,
+            -8.273904800415039
+          ],
+          "max": [
+            0.8223181366920471,
+            103.50070190429688,
+            -0.8981078863143921
+          ]
+        }
+      ],
+      "idleCatalogActionId": 0,
+      "attackCatalogActionId": 4,
+      "attackCatalogName": "Attack",
+      "sourceRigTaskId": "01a13388-9f6e-74f5-be59-f0a17c695f0d"
+    },
+    {
+      "id": "alien-biped",
+      "riggedFbx": "Assets/AnomalyArena/Art/V2/Models/alien-biped/alien-biped-rigged.fbx",
+      "idleFbx": "Assets/AnomalyArena/Art/V2/Models/alien-biped/Animations/Idle.fbx",
+      "runFbx": "Assets/AnomalyArena/Art/V2/Models/alien-biped/Animations/Run.fbx",
+      "attackFbx": "Assets/AnomalyArena/Art/V2/Models/alien-biped/Animations/Attack.fbx",
+      "textures": [
+        {
+          "baseColor": "Assets/AnomalyArena/Art/V2/Models/alien-biped/Textures/texture_0_base_color.png",
+          "normal": "Assets/AnomalyArena/Art/V2/Models/alien-biped/Textures/texture_0_normal.png",
+          "metallic": "Assets/AnomalyArena/Art/V2/Models/alien-biped/Textures/texture_0_metallic.png",
+          "roughness": "Assets/AnomalyArena/Art/V2/Models/alien-biped/Textures/texture_0_roughness.png",
+          "pixels": 2048,
+          "baseColorSRGB": true,
+          "normalIsNormalMap": true,
+          "metallicSRGB": false,
+          "roughnessSRGB": false,
+          "emissionMapAvailable": false
+        }
+      ],
+      "rotationOffsetEuler": [
+        0,
+        0,
+        0
+      ],
+      "animationRig": "Generic",
+      "genericMotionRoot": "Hips",
+      "applyRootMotion": false,
+      "downloadComplete": true,
+      "rigJointCount": 24,
+      "armatureObjectRoot": "Armature",
+      "expectedUpAxis": "+Y",
+      "expectedForwardAxis": "+Z",
+      "orientationNativeVerified": false,
+      "orientationEvidence": "glTF joint headfront minus Head has positive Z; FBX Unity import still unverified.",
+      "declaredRigHeightMeters": 1.8,
+      "sourceTriangles": 5238,
+      "runClipName": "Armature|running|baselayer",
+      "runDurationSeconds": 0.6666666865348816,
+      "runRootTranslation": [
+        {
+          "node": "Hips",
+          "first": [
+            -0.075371153652668,
+            97.15328216552734,
+            8.6627836227417
+          ],
+          "last": [
+            -0.07536914944648743,
+            97.1532974243164,
+            8.662785530090332
+          ],
+          "delta": [
+            2.0042061805725098e-06,
+            1.52587890625e-05,
+            1.9073486328125e-06
+          ],
+          "min": [
+            -0.9888617396354675,
+            95.38300323486328,
+            4.058845520019531
+          ],
+          "max": [
+            0.8057203888893127,
+            102.32427215576172,
+            11.333518981933594
+          ]
+        }
+      ],
+      "idleCatalogActionId": 0,
+      "attackCatalogActionId": 192,
+      "attackCatalogName": "Right Jab from Guard",
+      "sourceRigTaskId": "01a13388-b1b2-7501-b1da-59602b465aee"
+    }
+  ],
+  "cover": {
+    "id": "wreck-cover",
+    "fbx": "Assets/AnomalyArena/Art/V2/Models/wreck-cover/wreck-cover-source.fbx",
+    "textures": [
+      {
+        "baseColor": "Assets/AnomalyArena/Art/V2/Models/wreck-cover/Textures/texture_0_base_color.png",
+        "normal": "Assets/AnomalyArena/Art/V2/Models/wreck-cover/Textures/texture_0_normal.png",
+        "metallic": "Assets/AnomalyArena/Art/V2/Models/wreck-cover/Textures/texture_0_metallic.png",
+        "roughness": "Assets/AnomalyArena/Art/V2/Models/wreck-cover/Textures/texture_0_roughness.png",
+        "pixels": 2048,
+        "baseColorSRGB": true,
+        "normalIsNormalMap": true,
+        "metallicSRGB": false,
+        "roughnessSRGB": false,
+        "emissionMapAvailable": false
+      }
+    ],
+    "rotationOffsetEuler": [
+      0,
+      0,
+      0
+    ],
+    "sourceTriangles": 3075,
+    "downloadComplete": true,
+    "appearanceLimitation": "Primarily rock; spacecraft metal ribs are weak in the generated preview. Root will add saved local metal-rib decoration."
+  },
+  "credits": {
+    "estimatedBefore": 118,
+    "actualConsumed": 112,
+    "balanceBefore": 1127,
+    "balanceAfter": 1015,
+    "runningClipsReused": 2,
+    "paidGenerationTasks": 12
+  },
+  "unityImported": false,
+  "playVerified": false,
+  "materialNotes": "PBR maps provided separately. Roughness is not Smoothness; map the inverse where the selected Unity shader expects Smoothness. No emission map was generated.",
+  "collisionNotes": "Attach presentation as saved visual children; preserve current roots, rigidbodies, colliders, attack timing and weapon behavior."
+}

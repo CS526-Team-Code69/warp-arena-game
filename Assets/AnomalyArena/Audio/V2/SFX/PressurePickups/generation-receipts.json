@@ -1,0 +1,60 @@
+{
+  "one_take_each": true,
+  "automatic_retries": 0,
+  "records": [
+    {
+      "id": "bloater-warning",
+      "duration_seconds": 0.5,
+      "prompt": "Short urgent alien self-destruct warning: a rising organic pressure hiss with three crisp red-alert electronic ticks, escalating danger, dry foreground game cue, no explosion yet, no voice, no music, immediate onset, clean short ending.",
+      "status": "generated",
+      "service": "ElevenLabs",
+      "model_id": "eleven_text_to_sound_v2",
+      "output_format": "mp3_44100_128",
+      "file": "D:\\Code\\Game\\Unity\\anomaly-weapon-arena\\Assets\\AnomalyArena\\Audio\\V2\\SFX\\PressurePickups\\bloater-warning.mp3",
+      "listened": false,
+      "runtime_verified": false,
+      "submitted_at_utc": "2026-10-13T05:24:29.038574+00:00",
+      "http_status": 200,
+      "bytes": 8821,
+      "request_id": null,
+      "character_cost": "6",
+      "finished_at_utc": "2026-10-13T05:24:30.381874+00:00"
+    },
+    {
+      "id": "pickup-xp",
+      "duration_seconds": 0.5,
+      "prompt": "Tiny satisfying sci-fi experience pickup: a bright glassy digital ping rising into a soft energy sparkle, very short dry game UI cue, clean quick decay, no voice, no music, no ambient background.",
+      "status": "generated",
+      "service": "ElevenLabs",
+      "model_id": "eleven_text_to_sound_v2",
+      "output_format": "mp3_44100_128",
+      "file": "D:\\Code\\Game\\Unity\\anomaly-weapon-arena\\Assets\\AnomalyArena\\Audio\\V2\\SFX\\PressurePickups\\pickup-xp.mp3",
+      "listened": false,
+      "runtime_verified": false,
+      "submitted_at_utc": "2026-10-13T05:24:29.039538+00:00",
+      "http_status": 200,
+      "bytes": 8821,
+      "request_id": null,
+      "character_cost": "6",
+      "finished_at_utc": "2026-10-13T05:24:30.353834+00:00"
+    },
+    {
+      "id": "pickup-health",
+      "duration_seconds": 0.5,
+      "prompt": "Short gentle sci-fi healing pickup: warm rounded two-note electronic chime and a soft restorative energy pulse, compact dry game feedback, smooth quick decay, no voice, no music, no background.",
+      "status": "generated",
+      "service": "ElevenLabs",
+      "model_id": "eleven_text_to_sound_v2",
+      "output_format": "mp3_44100_128",
+      "file": "D:\\Code\\Game\\Unity\\anomaly-weapon-arena\\Assets\\AnomalyArena\\Audio\\V2\\SFX\\PressurePickups\\pickup-health.mp3",
+      "listened": false,
+      "runtime_verified": false,
+      "submitted_at_utc": "2026-10-13T05:24:30.354287+00:00",
+      "http_status": 200,
+      "bytes": 8821,
+      "request_id": null,
+      "character_cost": "6",
+      "finished_at_utc": "2026-10-13T05:24:31.526280+00:00"
+    }
+  ]
+}

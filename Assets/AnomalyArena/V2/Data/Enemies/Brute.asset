@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5a6c7c0447e6e8b40b349bc4c9e985ee, type: 3}
+  m_Name: Brute
+  m_EditorClassIdentifier: AnomalyArena::AnomalyArena.EnemyDefinition
+  kind: 1
+  displayName: Brute
+  hp: 30
+  speed: 3.6
+  radius: 1
+  damage: 15
+  windup: 0.8
+  interval: 2
+  reach: 0.8
+  knockback: 5
+  knockbackScale: 0.5
+  xp: 4
+  canAffix: 1
+  canElite: 1
+  startShieldShare: 0
+  colour: {r: 0.9, g: 0.69308996, b: 0.40499997, a: 1}

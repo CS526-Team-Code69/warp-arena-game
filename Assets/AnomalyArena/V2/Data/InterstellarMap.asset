@@ -1,0 +1,75 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2da5714eae8aefc4185f28bb0f4352c4, type: 3}
+  m_Name: InterstellarMap
+  m_EditorClassIdentifier: AnomalyArena::AnomalyArena.MapLayout
+  width: 100
+  height: 70
+  playerStart: {x: 0, y: 0, z: 0}
+  walls:
+  - serializedVersion: 2
+    x: -43
+    y: -5
+    width: 8
+    height: 2
+  - serializedVersion: 2
+    x: -20
+    y: -15
+    width: 2
+    height: 8
+  - serializedVersion: 2
+    x: -20
+    y: 7
+    width: 2
+    height: 8
+  - serializedVersion: 2
+    x: -8
+    y: -8
+    width: 6
+    height: 2
+  - serializedVersion: 2
+    x: 4
+    y: 6
+    width: 6
+    height: 2
+  - serializedVersion: 2
+    x: 17
+    y: -15
+    width: 2
+    height: 8
+  - serializedVersion: 2
+    x: 17
+    y: 7
+    width: 2
+    height: 8
+  - serializedVersion: 2
+    x: 35
+    y: 3
+    width: 8
+    height: 2
+  - serializedVersion: 2
+    x: -8
+    y: 30
+    width: 8
+    height: 2
+  - serializedVersion: 2
+    x: 3
+    y: -32
+    width: 8
+    height: 2
+  holeAnchors:
+  - {x: -32, y: -20}
+  - {x: -32, y: 20}
+  - {x: 0, y: -22}
+  - {x: 0, y: 22}
+  - {x: 32, y: -20}
+  - {x: 32, y: 20}

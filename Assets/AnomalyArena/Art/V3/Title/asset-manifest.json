@@ -1,0 +1,46 @@
+{
+  "paid_generation": false,
+  "existing_background_edited": false,
+  "assets": [
+    {
+      "id": "warp-arena-logo",
+      "source": "Assets/AnomalyArena/Art/V3/Title/Sources/warp-arena-logo.svg",
+      "png": "Assets/AnomalyArena/Art/V3/Title/Textures/warp-arena-logo.png",
+      "width": 1600,
+      "height": 240,
+      "transparent": true
+    },
+    {
+      "id": "title-soft-glow",
+      "source": "Assets/AnomalyArena/Art/V3/Title/Sources/title-soft-glow.svg",
+      "png": "Assets/AnomalyArena/Art/V3/Title/Textures/title-soft-glow.png",
+      "width": 512,
+      "height": 512,
+      "transparent": true
+    },
+    {
+      "id": "title-dust-mote",
+      "source": "Assets/AnomalyArena/Art/V3/Title/Sources/title-dust-mote.svg",
+      "png": "Assets/AnomalyArena/Art/V3/Title/Textures/title-dust-mote.png",
+      "width": 64,
+      "height": 64,
+      "transparent": true
+    },
+    {
+      "id": "title-warp-arcs",
+      "source": "Assets/AnomalyArena/Art/V3/Title/Sources/title-warp-arcs.svg",
+      "png": "Assets/AnomalyArena/Art/V3/Title/Textures/title-warp-arcs.png",
+      "width": 1024,
+      "height": 1024,
+      "transparent": true
+    },
+    {
+      "id": "title-menu-rule",
+      "source": "Assets/AnomalyArena/Art/V3/Title/Sources/title-menu-rule.svg",
+      "png": "Assets/AnomalyArena/Art/V3/Title/Textures/title-menu-rule.png",
+      "width": 512,
+      "height": 64,
+      "transparent": true
+    }
+  ]
+}

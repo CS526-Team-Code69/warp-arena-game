@@ -1,0 +1,38 @@
+{
+  "sourceSha256": "05575ed546d6877d62827be48b4fe5796dd119e967dbd3a7d304a6128fec027f",
+  "sourceRetained": true,
+  "blenderVersion": "5.2.2 LTS",
+  "boneCount": 15,
+  "legPairs": 3,
+  "skinnedVertices": 4304,
+  "sourceBoundsBlender": [
+    1.1215358972549438,
+    1.0990688800811768,
+    1.902419090270996
+  ],
+  "fps": 30,
+  "durations": {
+    "Idle": 2,
+    "Run": 0.8,
+    "Attack": 0.9
+  },
+  "rootMotion": false,
+  "weightsAndMotion": "candidate geometric region skin; no native visual or locomotion review",
+  "runtimeVerified": false,
+  "bindings": {
+    "id": "Enemy_Bloater",
+    "enemyKind": "Bloater",
+    "riggedFbx": "Assets/AnomalyArena/Art/V3/Enemies/Bloater/LocalAnimation/Rigged.fbx",
+    "idleFbx": "Assets/AnomalyArena/Art/V3/Enemies/Bloater/LocalAnimation/Idle.fbx",
+    "runFbx": "Assets/AnomalyArena/Art/V3/Enemies/Bloater/LocalAnimation/Run.fbx",
+    "attackFbx": "Assets/AnomalyArena/Art/V3/Enemies/Bloater/LocalAnimation/Attack.fbx",
+    "animationRig": "Generic",
+    "genericMotionRoot": "Root",
+    "motionRoute": "local_nonhuman",
+    "rotationOffsetEuler": [
+      0,
+      0,
+      0
+    ]
+  }
+}

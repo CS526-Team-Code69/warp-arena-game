@@ -1,0 +1,38 @@
+{
+  "sourceSha256": "01c77635adab82afd4eb873112d091e5647fcd58991dd0671319ad2b848418ee",
+  "sourceRetained": true,
+  "blenderVersion": "5.2.2 LTS",
+  "boneCount": 11,
+  "legPairs": 2,
+  "skinnedVertices": 4137,
+  "sourceBoundsBlender": [
+    1.1338160037994385,
+    0.884026050567627,
+    1.8979660272598267
+  ],
+  "fps": 30,
+  "durations": {
+    "Idle": 2,
+    "Run": 0.8,
+    "Attack": 0.9
+  },
+  "rootMotion": false,
+  "weightsAndMotion": "candidate geometric region skin; no native visual or locomotion review",
+  "runtimeVerified": false,
+  "bindings": {
+    "id": "Enemy_Spitter",
+    "enemyKind": "Spitter",
+    "riggedFbx": "Assets/AnomalyArena/Art/V3/Enemies/Spitter/LocalAnimation/Rigged.fbx",
+    "idleFbx": "Assets/AnomalyArena/Art/V3/Enemies/Spitter/LocalAnimation/Idle.fbx",
+    "runFbx": "Assets/AnomalyArena/Art/V3/Enemies/Spitter/LocalAnimation/Run.fbx",
+    "attackFbx": "Assets/AnomalyArena/Art/V3/Enemies/Spitter/LocalAnimation/Attack.fbx",
+    "animationRig": "Generic",
+    "genericMotionRoot": "Root",
+    "motionRoute": "local_nonhuman",
+    "rotationOffsetEuler": [
+      0,
+      0,
+      0
+    ]
+  }
+}

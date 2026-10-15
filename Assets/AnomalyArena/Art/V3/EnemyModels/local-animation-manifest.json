@@ -1,0 +1,132 @@
+{
+  "characters": [
+    {
+      "id": "Enemy_Skitter",
+      "enemyKind": "Skitter",
+      "riggedFbx": "Assets/AnomalyArena/Art/V3/Enemies/Skitter/LocalAnimation/Rigged.fbx",
+      "idleFbx": "Assets/AnomalyArena/Art/V3/Enemies/Skitter/LocalAnimation/Idle.fbx",
+      "runFbx": "Assets/AnomalyArena/Art/V3/Enemies/Skitter/LocalAnimation/Run.fbx",
+      "attackFbx": "Assets/AnomalyArena/Art/V3/Enemies/Skitter/LocalAnimation/Attack.fbx",
+      "animationRig": "Generic",
+      "genericMotionRoot": "Root",
+      "motionRoute": "local_nonhuman",
+      "rotationOffsetEuler": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "Enemy_Spitter",
+      "enemyKind": "Spitter",
+      "riggedFbx": "Assets/AnomalyArena/Art/V3/Enemies/Spitter/LocalAnimation/Rigged.fbx",
+      "idleFbx": "Assets/AnomalyArena/Art/V3/Enemies/Spitter/LocalAnimation/Idle.fbx",
+      "runFbx": "Assets/AnomalyArena/Art/V3/Enemies/Spitter/LocalAnimation/Run.fbx",
+      "attackFbx": "Assets/AnomalyArena/Art/V3/Enemies/Spitter/LocalAnimation/Attack.fbx",
+      "animationRig": "Generic",
+      "genericMotionRoot": "Root",
+      "motionRoute": "local_nonhuman",
+      "rotationOffsetEuler": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "Enemy_Rammer",
+      "enemyKind": "Rammer",
+      "riggedFbx": "Assets/AnomalyArena/Art/V3/Enemies/Rammer/LocalAnimation/Rigged.fbx",
+      "idleFbx": "Assets/AnomalyArena/Art/V3/Enemies/Rammer/LocalAnimation/Idle.fbx",
+      "runFbx": "Assets/AnomalyArena/Art/V3/Enemies/Rammer/LocalAnimation/Run.fbx",
+      "attackFbx": "Assets/AnomalyArena/Art/V3/Enemies/Rammer/LocalAnimation/Attack.fbx",
+      "animationRig": "Generic",
+      "genericMotionRoot": "Root",
+      "motionRoute": "local_nonhuman",
+      "rotationOffsetEuler": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "Enemy_Bloater",
+      "enemyKind": "Bloater",
+      "riggedFbx": "Assets/AnomalyArena/Art/V3/Enemies/Bloater/LocalAnimation/Rigged.fbx",
+      "idleFbx": "Assets/AnomalyArena/Art/V3/Enemies/Bloater/LocalAnimation/Idle.fbx",
+      "runFbx": "Assets/AnomalyArena/Art/V3/Enemies/Bloater/LocalAnimation/Run.fbx",
+      "attackFbx": "Assets/AnomalyArena/Art/V3/Enemies/Bloater/LocalAnimation/Attack.fbx",
+      "animationRig": "Generic",
+      "genericMotionRoot": "Root",
+      "motionRoute": "local_nonhuman",
+      "rotationOffsetEuler": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "Enemy_Splitter",
+      "enemyKind": "Splitter",
+      "riggedFbx": "Assets/AnomalyArena/Art/V3/Enemies/Splitter/LocalAnimation/Rigged.fbx",
+      "idleFbx": "Assets/AnomalyArena/Art/V3/Enemies/Splitter/LocalAnimation/Idle.fbx",
+      "runFbx": "Assets/AnomalyArena/Art/V3/Enemies/Splitter/LocalAnimation/Run.fbx",
+      "attackFbx": "Assets/AnomalyArena/Art/V3/Enemies/Splitter/LocalAnimation/Attack.fbx",
+      "animationRig": "Generic",
+      "genericMotionRoot": "Root",
+      "motionRoute": "local_nonhuman",
+      "rotationOffsetEuler": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "Enemy_Spire",
+      "enemyKind": "Spire",
+      "riggedFbx": "Assets/AnomalyArena/Art/V3/Enemies/Spire/LocalAnimation/Rigged.fbx",
+      "idleFbx": "Assets/AnomalyArena/Art/V3/Enemies/Spire/LocalAnimation/Idle.fbx",
+      "runFbx": "Assets/AnomalyArena/Art/V3/Enemies/Spire/LocalAnimation/Run.fbx",
+      "attackFbx": "Assets/AnomalyArena/Art/V3/Enemies/Spire/LocalAnimation/Attack.fbx",
+      "animationRig": "Generic",
+      "genericMotionRoot": "Root",
+      "motionRoute": "local_nonhuman",
+      "rotationOffsetEuler": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "Enemy_Hollow",
+      "enemyKind": "Hollow",
+      "riggedFbx": "Assets/AnomalyArena/Art/V3/Enemies/Hollow/LocalAnimation/Rigged.fbx",
+      "idleFbx": "Assets/AnomalyArena/Art/V3/Enemies/Hollow/LocalAnimation/Idle.fbx",
+      "runFbx": "Assets/AnomalyArena/Art/V3/Enemies/Hollow/LocalAnimation/Run.fbx",
+      "attackFbx": "Assets/AnomalyArena/Art/V3/Enemies/Hollow/LocalAnimation/Attack.fbx",
+      "animationRig": "Generic",
+      "genericMotionRoot": "Root",
+      "motionRoute": "local_nonhuman",
+      "rotationOffsetEuler": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "Enemy_Tyrant",
+      "enemyKind": "Tyrant",
+      "riggedFbx": "Assets/AnomalyArena/Art/V3/Enemies/Tyrant/LocalAnimation/Rigged.fbx",
+      "idleFbx": "Assets/AnomalyArena/Art/V3/Enemies/Tyrant/LocalAnimation/Idle.fbx",
+      "runFbx": "Assets/AnomalyArena/Art/V3/Enemies/Tyrant/LocalAnimation/Run.fbx",
+      "attackFbx": "Assets/AnomalyArena/Art/V3/Enemies/Tyrant/LocalAnimation/Attack.fbx",
+      "animationRig": "Generic",
+      "genericMotionRoot": "Root",
+      "motionRoute": "local_nonhuman",
+      "rotationOffsetEuler": [
+        0,
+        0,
+        0
+      ]
+    }
+  ]
+}

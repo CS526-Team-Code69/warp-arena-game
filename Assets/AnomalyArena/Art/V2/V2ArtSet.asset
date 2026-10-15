@@ -1,0 +1,165 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a9cfbeac4e2da5c4790c098722ec47fa, type: 3}
+  m_Name: V2ArtSet
+  m_EditorClassIdentifier: AnomalyArena::AnomalyArena.V2ArtSet
+  themeBackground: {fileID: 2800000, guid: 2dd0a88a383cee54e8236d4c4d970ce3, type: 3}
+  player: {fileID: 2800000, guid: 9f745305090031f40b7706652045b2f0, type: 3}
+  floor: {fileID: 2800000, guid: 02eb0586e5ea3974ea6d197eb3ea8326, type: 3}
+  wall: {fileID: 2800000, guid: c735673563aca004b89caaa75563cc84, type: 3}
+  monsterConceptSheet: {fileID: 2800000, guid: a699c3ceac1c38142b418b846c520ebe, type: 3}
+  elementIcons:
+  - {fileID: 21300000, guid: 66a3bfd6330585a498dff61455d86fcf, type: 3}
+  - {fileID: 21300000, guid: e56227ade2ac1104ca01fa4cc19e2e28, type: 3}
+  - {fileID: 21300000, guid: 8acb78587a5ac814fa6bbd5b9acc40c2, type: 3}
+  - {fileID: 21300000, guid: 86403f44cfd98b04481aedc5f927c774, type: 3}
+  - {fileID: 21300000, guid: 99df7c6b390c7ba4faf92b83a38156d7, type: 3}
+  - {fileID: 21300000, guid: 5adc829352e9e514b82e361e4a8035b2, type: 3}
+  - {fileID: 21300000, guid: 2baa32cf93f1d2a44b41bd2f38210724, type: 3}
+  weaponSlotFrame: {fileID: 21300000, guid: c694e047658aaf0479ccba8ac652fa9c, type: 3}
+  cardFrame: {fileID: 21300000, guid: d872f7f1d97a81c4eaee47b9b17c7de8, type: 3}
+  weaponSprites:
+  - {fileID: 21300000, guid: 201fbc592f70af24089f1bb351432a83, type: 3}
+  - {fileID: 21300000, guid: 3bc207f7ae5775b4aae7ab8e889ce831, type: 3}
+  - {fileID: 21300000, guid: 4a35c4084effdbc43bd25707a3ff8516, type: 3}
+  - {fileID: 21300000, guid: 80ad7e4621850bb4295475706a585004, type: 3}
+  - {fileID: 21300000, guid: e8bd67241ce52c74e8181419eaa96390, type: 3}
+  - {fileID: 21300000, guid: f804b6dc1edeb604a96e738f69e51c19, type: 3}
+  - {fileID: 21300000, guid: 7893f4896bba93c4ab1ff7fefe67cabd, type: 3}
+  - {fileID: 21300000, guid: d6662c2a2bf22814095ba53e966ac378, type: 3}
+  - {fileID: 21300000, guid: 1c0d5f0fd314873448fd8811e27411ad, type: 3}
+  - {fileID: 21300000, guid: 31fed24cfd2ea3b499179a96886fe9eb, type: 3}
+  - {fileID: 21300000, guid: ffc1a36a18824884fa25a2906f29279b, type: 3}
+  - {fileID: 21300000, guid: 522bb9098596c174abc8cb9f6cae3bae, type: 3}
+  - {fileID: 21300000, guid: 024669a956f55f74196bf81edc964ef0, type: 3}
+  - {fileID: 21300000, guid: dba4f3205d8e5d34d81afd1852bd28f8, type: 3}
+  - {fileID: 21300000, guid: 6b8f56a9bf5d20a448eff93347fab6bc, type: 3}
+  - {fileID: 21300000, guid: e80b6ff744c394f448becdb97aa391bf, type: 3}
+  - {fileID: 21300000, guid: 55a30b99f9ad72048bfe9062eadfc18f, type: 3}
+  skillIcons:
+  - {fileID: 21300000, guid: 8361ef7970cdde74a8b449300bf568f0, type: 3}
+  - {fileID: 21300000, guid: 1350c38baefec7a4093c6af10ac79691, type: 3}
+  - {fileID: 21300000, guid: 09d1600bcd010984a97356939f33adff, type: 3}
+  - {fileID: 21300000, guid: 457cdb5a5e1a3d94ab2d2bf533a4d180, type: 3}
+  - {fileID: 21300000, guid: 5a19ebd90197c1e46b69366e53f19fa6, type: 3}
+  - {fileID: 21300000, guid: b3ef393e7d51d6e499347524ea96316c, type: 3}
+  - {fileID: 21300000, guid: 9fa87d64f5c85e14aa56ed5b629b7a6b, type: 3}
+  - {fileID: 21300000, guid: 16a09719121c0bc4f8ad297fa1b247af, type: 3}
+  - {fileID: 21300000, guid: 88cb900bd10692f46a58cb6a0c63cbbf, type: 3}
+  - {fileID: 21300000, guid: 7541f0c0c42ea0545b44cd6268c63c2a, type: 3}
+  - {fileID: 21300000, guid: c29f46746928d2c4cbe776417336f0ae, type: 3}
+  - {fileID: 21300000, guid: 0771dde37dbc40f408e80e3f8dd86f4a, type: 3}
+  - {fileID: 21300000, guid: 17353cb103679644095468a1caa4966b, type: 3}
+  - {fileID: 21300000, guid: ca73430f038cea345a021f1afb2bcd0e, type: 3}
+  - {fileID: 21300000, guid: 81981fdb677e3f34bbd8a73485fb066a, type: 3}
+  - {fileID: 21300000, guid: 3755d56a556dc914f8327c30c804955c, type: 3}
+  statIcons:
+  - {fileID: 21300000, guid: 595b784457f34584393420f875b257c1, type: 3}
+  - {fileID: 21300000, guid: 0b25294ae2eaf6f42b5e226499c06ce1, type: 3}
+  - {fileID: 21300000, guid: bd8f2d40210984044b2da7cb02374466, type: 3}
+  - {fileID: 21300000, guid: 4293978520327d24ca3a1295d6ffbba0, type: 3}
+  - {fileID: 21300000, guid: 1d92a19e3a2a25741a1dcc32d8b9b586, type: 3}
+  - {fileID: 21300000, guid: e44912ee4c3d1de4a9a32dbbe2f2da13, type: 3}
+  - {fileID: 21300000, guid: feb892306cafb304e9b1e6ee13afc39d, type: 3}
+  - {fileID: 21300000, guid: bcfbdeaea4b641743a94cb51b10da80d, type: 3}
+  - {fileID: 21300000, guid: 2bc8f6530606ffc40abe411f591aec07, type: 3}
+  - {fileID: 21300000, guid: 1f1e506df1b67a94f9609206625c6923, type: 3}
+  - {fileID: 21300000, guid: 40123a67178cb224a8499ed257daa44b, type: 3}
+  - {fileID: 21300000, guid: f003aaede5d099d43a417cec7a11aec8, type: 3}
+  - {fileID: 21300000, guid: e524ca04a1c808e46b4456dab3c8b8a1, type: 3}
+  - {fileID: 21300000, guid: bb29e30fb47f7694e974ae40e23fffae, type: 3}
+  axisIcons:
+  - {fileID: 21300000, guid: 64db58994250b224cb0c5e6dfc497ca3, type: 3}
+  - {fileID: 21300000, guid: 3ed4e317c99695d4e9f9dfb906f4c703, type: 3}
+  - {fileID: 21300000, guid: 227db200376c7e74ca0c90dbb89b18bc, type: 3}
+  - {fileID: 21300000, guid: 336f6e0465e73c0488d3f02ef03fca0c, type: 3}
+  - {fileID: 21300000, guid: 61792585d42b08b469b674a538ecfb45, type: 3}
+  - {fileID: 21300000, guid: d510388f910bfa44992f8e0853c910a8, type: 3}
+  bossPhaseMarks:
+  - {fileID: 21300000, guid: 33db609c982945c4fabafe401a15b73f, type: 3}
+  - {fileID: 21300000, guid: b2eab00b21087ac4f9a3deeac1b12b2d, type: 3}
+  - {fileID: 21300000, guid: 8e64fa25b5c55434ebcd15df51eccde5, type: 3}
+  telegraphRing: {fileID: 21300000, guid: aca7e19e73fb4b442902ddb4eb134108, type: 3}
+  telegraphCleave: {fileID: 21300000, guid: 06d3b5d0b53365541995c0681baff104, type: 3}
+  telegraphCharge: {fileID: 21300000, guid: dce355804f9fb304eab500ecc1a1e125, type: 3}
+  phaseDagger: {fileID: 21300000, guid: c398ca73b903aca47a88af1fe53367fe, type: 3}
+  plasmaBlob: {fileID: 21300000, guid: 25a1ae595a05b8e45935b011f63bd7cf, type: 3}
+  frostShard: {fileID: 21300000, guid: 6cee08d8e06abfa47911ede8f584b856, type: 3}
+  fireball: {fileID: 21300000, guid: e4b6b588be18bee45809dd552469e329, type: 3}
+  sporePod: {fileID: 21300000, guid: 5917a25bb6afb904a9e01fedcf7199be, type: 3}
+  flameField: {fileID: 21300000, guid: 0895fadf419fc2d4f9e6cb9102786201, type: 3}
+  blizzardField: {fileID: 21300000, guid: ee1c0ca867a4c174697a5d5b7c25bde0, type: 3}
+  poisonField: {fileID: 21300000, guid: b78b268113e43d447a2a2b6424eb1301, type: 3}
+  holeCore: {fileID: 21300000, guid: 49d8997f7cc107149884bb7a2489b240, type: 3}
+  holeSwirl: {fileID: 21300000, guid: 53668ba8b9f0ba14ba070e389c1c529c, type: 3}
+  holeGravity: {fileID: 21300000, guid: 8742d15ae99cd484882fbca2cae40beb, type: 3}
+  holePortal: {fileID: 21300000, guid: 2b16c86d195acd44caa5817ec662f07f, type: 3}
+  hitImpact: {fileID: 21300000, guid: dd043a9130531cb42923f0b369e151f6, type: 3}
+  knifeReturnMarker: {fileID: 21300000, guid: b38fcaf4671cefa43a27ccaea81989c7, type: 3}
+  blackHoleSquare: {fileID: 2800000, guid: 53baaf66fa1e2fc4fa141e2c6c57d814, type: 3}
+  gravitySmall: {fileID: 2800000, guid: 83dea6f42cb6ed04dbc768e967c3802c, type: 3}
+  gravityLarge: {fileID: 2800000, guid: 0d88ac2bfad890342b2180c22c4a68f5, type: 3}
+  portal: {fileID: 2800000, guid: d546e90e974fac14c8f9c2c2d0cd997b, type: 3}
+  strikeMark: {fileID: 2800000, guid: 2f52d2405f145cf4aa7b886ff25ae0b1, type: 3}
+  enemyImages:
+  - id: Grunt
+    sprite: {fileID: -617746853, guid: a699c3ceac1c38142b418b846c520ebe, type: 3}
+    windup: {fileID: 0}
+    height: 1.8
+  - id: Brute
+    sprite: {fileID: 2068185538, guid: a699c3ceac1c38142b418b846c520ebe, type: 3}
+    windup: {fileID: 0}
+    height: 3
+  - id: Skitter
+    sprite: {fileID: -1531419355, guid: a699c3ceac1c38142b418b846c520ebe, type: 3}
+    windup: {fileID: 0}
+    height: 1.3
+  - id: Spitter
+    sprite: {fileID: -1262703141, guid: a699c3ceac1c38142b418b846c520ebe, type: 3}
+    windup: {fileID: 0}
+    height: 1.8
+  - id: Rammer
+    sprite: {fileID: -485332847, guid: a699c3ceac1c38142b418b846c520ebe, type: 3}
+    windup: {fileID: 0}
+    height: 2.4
+  - id: Bloater
+    sprite: {fileID: 944635964, guid: a699c3ceac1c38142b418b846c520ebe, type: 3}
+    windup: {fileID: 0}
+    height: 2.3
+  - id: Warden
+    sprite: {fileID: 2092887597, guid: a699c3ceac1c38142b418b846c520ebe, type: 3}
+    windup: {fileID: 0}
+    height: 2
+  - id: Splitter
+    sprite: {fileID: -1409535179, guid: a699c3ceac1c38142b418b846c520ebe, type: 3}
+    windup: {fileID: 0}
+    height: 2
+  - id: Spire
+    sprite: {fileID: 1396037730, guid: a699c3ceac1c38142b418b846c520ebe, type: 3}
+    windup: {fileID: 0}
+    height: 3
+  - id: Stomper
+    sprite: {fileID: -552717710, guid: a699c3ceac1c38142b418b846c520ebe, type: 3}
+    windup: {fileID: 0}
+    height: 3
+  - id: Shade
+    sprite: {fileID: -1143452750, guid: a699c3ceac1c38142b418b846c520ebe, type: 3}
+    windup: {fileID: 0}
+    height: 1.8
+  - id: Tyrant
+    sprite: {fileID: 494300359, guid: a699c3ceac1c38142b418b846c520ebe, type: 3}
+    windup: {fileID: 0}
+    height: 5
+  - id: Hollow
+    sprite: {fileID: 21300000, guid: 13e53b7b0716635478634296243a5f46, type: 3}
+    windup: {fileID: 0}
+    height: 4.2

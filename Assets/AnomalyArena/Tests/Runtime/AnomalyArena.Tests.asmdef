@@ -1,0 +1,25 @@
+{
+    "name": "AnomalyArena.Tests",
+    "rootNamespace": "",
+    "references": [
+        "AnomalyArena",
+        "Unity.ugui",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner",
+        "TestHelper",
+        "TestHelper.RuntimeInternals"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

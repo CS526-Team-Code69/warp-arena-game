@@ -1,0 +1,38 @@
+{
+  "sourceSha256": "04760805bbdb861d02191957e1d6ac888c61b9b89a7e8115bb552296bbe66ffb",
+  "sourceRetained": true,
+  "blenderVersion": "5.2.2 LTS",
+  "boneCount": 3,
+  "legPairs": 0,
+  "skinnedVertices": 8232,
+  "sourceBoundsBlender": [
+    1.3533650636672974,
+    1.2617028951644897,
+    1.8972930908203125
+  ],
+  "fps": 30,
+  "durations": {
+    "Idle": 2,
+    "Run": 0.8,
+    "Attack": 0.9
+  },
+  "rootMotion": false,
+  "weightsAndMotion": "candidate geometric region skin; no native visual or locomotion review",
+  "runtimeVerified": false,
+  "bindings": {
+    "id": "Enemy_Hollow",
+    "enemyKind": "Hollow",
+    "riggedFbx": "Assets/AnomalyArena/Art/V3/Enemies/Hollow/LocalAnimation/Rigged.fbx",
+    "idleFbx": "Assets/AnomalyArena/Art/V3/Enemies/Hollow/LocalAnimation/Idle.fbx",
+    "runFbx": "Assets/AnomalyArena/Art/V3/Enemies/Hollow/LocalAnimation/Run.fbx",
+    "attackFbx": "Assets/AnomalyArena/Art/V3/Enemies/Hollow/LocalAnimation/Attack.fbx",
+    "animationRig": "Generic",
+    "genericMotionRoot": "Root",
+    "motionRoute": "local_nonhuman",
+    "rotationOffsetEuler": [
+      0,
+      0,
+      0
+    ]
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "sourceSha256": "332f601ed472dcaf2789c8f9dffda633529c87847d041367675012d9fbd97ab7",
+  "sourceRetained": true,
+  "blenderVersion": "5.2.2 LTS",
+  "boneCount": 13,
+  "legPairs": 2,
+  "skinnedVertices": 9416,
+  "sourceBoundsBlender": [
+    1.9045829772949219,
+    1.5997250080108643,
+    1.8748611211776733
+  ],
+  "fps": 30,
+  "durations": {
+    "Idle": 2,
+    "Run": 0.8,
+    "Attack": 0.9
+  },
+  "rootMotion": false,
+  "weightsAndMotion": "candidate geometric region skin; no native visual or locomotion review",
+  "runtimeVerified": false,
+  "bindings": {
+    "id": "Enemy_Tyrant",
+    "enemyKind": "Tyrant",
+    "riggedFbx": "Assets/AnomalyArena/Art/V3/Enemies/Tyrant/LocalAnimation/Rigged.fbx",
+    "idleFbx": "Assets/AnomalyArena/Art/V3/Enemies/Tyrant/LocalAnimation/Idle.fbx",
+    "runFbx": "Assets/AnomalyArena/Art/V3/Enemies/Tyrant/LocalAnimation/Run.fbx",
+    "attackFbx": "Assets/AnomalyArena/Art/V3/Enemies/Tyrant/LocalAnimation/Attack.fbx",
+    "animationRig": "Generic",
+    "genericMotionRoot": "Root",
+    "motionRoute": "local_nonhuman",
+    "rotationOffsetEuler": [
+      0,
+      0,
+      0
+    ]
+  }
+}

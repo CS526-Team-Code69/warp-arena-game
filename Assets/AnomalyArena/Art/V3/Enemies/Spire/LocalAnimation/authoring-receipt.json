@@ -1,0 +1,38 @@
+{
+  "sourceSha256": "8491bf6ab7f3cf2caabfcc934df9fdbaf91e591c4587bc95d7c535eb57a54422",
+  "sourceRetained": true,
+  "blenderVersion": "5.2.2 LTS",
+  "boneCount": 3,
+  "legPairs": 0,
+  "skinnedVertices": 4409,
+  "sourceBoundsBlender": [
+    0.6869979500770569,
+    0.6134669780731201,
+    1.9026908874511719
+  ],
+  "fps": 30,
+  "durations": {
+    "Idle": 2,
+    "Run": 0.8,
+    "Attack": 0.9
+  },
+  "rootMotion": false,
+  "weightsAndMotion": "candidate geometric region skin; no native visual or locomotion review",
+  "runtimeVerified": false,
+  "bindings": {
+    "id": "Enemy_Spire",
+    "enemyKind": "Spire",
+    "riggedFbx": "Assets/AnomalyArena/Art/V3/Enemies/Spire/LocalAnimation/Rigged.fbx",
+    "idleFbx": "Assets/AnomalyArena/Art/V3/Enemies/Spire/LocalAnimation/Idle.fbx",
+    "runFbx": "Assets/AnomalyArena/Art/V3/Enemies/Spire/LocalAnimation/Run.fbx",
+    "attackFbx": "Assets/AnomalyArena/Art/V3/Enemies/Spire/LocalAnimation/Attack.fbx",
+    "animationRig": "Generic",
+    "genericMotionRoot": "Root",
+    "motionRoute": "local_nonhuman",
+    "rotationOffsetEuler": [
+      0,
+      0,
+      0
+    ]
+  }
+}

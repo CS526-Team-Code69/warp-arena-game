@@ -1,0 +1,72 @@
+{
+  "models": [
+    {
+      "id": "wind-eroded-rock",
+      "fbx": "Assets/AnomalyArena/Art/V3/Models/wind-eroded-rock/Source/model.fbx",
+      "textures": [
+        {
+          "baseColor": "Assets/AnomalyArena/Art/V3/Models/wind-eroded-rock/Source/texture_0_base_color.png",
+          "normal": "Assets/AnomalyArena/Art/V3/Models/wind-eroded-rock/Source/texture_0_normal.png",
+          "metallic": "Assets/AnomalyArena/Art/V3/Models/wind-eroded-rock/Source/texture_0_metallic.png",
+          "roughness": "Assets/AnomalyArena/Art/V3/Models/wind-eroded-rock/Source/texture_0_roughness.png"
+        }
+      ]
+    },
+    {
+      "id": "chitin-cluster",
+      "fbx": "Assets/AnomalyArena/Art/V3/Models/chitin-cluster/Source/model.fbx",
+      "textures": [
+        {
+          "baseColor": "Assets/AnomalyArena/Art/V3/Models/chitin-cluster/Source/texture_0_base_color.png",
+          "normal": "Assets/AnomalyArena/Art/V3/Models/chitin-cluster/Source/texture_0_normal.png",
+          "metallic": "Assets/AnomalyArena/Art/V3/Models/chitin-cluster/Source/texture_0_metallic.png",
+          "roughness": "Assets/AnomalyArena/Art/V3/Models/chitin-cluster/Source/texture_0_roughness.png"
+        }
+      ]
+    },
+    {
+      "id": "organic-vent",
+      "fbx": "Assets/AnomalyArena/Art/V3/Models/organic-vent/Source/model.fbx",
+      "textures": [
+        {
+          "baseColor": "Assets/AnomalyArena/Art/V3/Models/organic-vent/Source/texture_0_base_color.png",
+          "normal": "Assets/AnomalyArena/Art/V3/Models/organic-vent/Source/texture_0_normal.png",
+          "metallic": "Assets/AnomalyArena/Art/V3/Models/organic-vent/Source/texture_0_metallic.png",
+          "roughness": "Assets/AnomalyArena/Art/V3/Models/organic-vent/Source/texture_0_roughness.png"
+        }
+      ]
+    }
+  ],
+  "surfaces": [
+    {
+      "family": "Wreck",
+      "ground": "Assets/AnomalyArena/Art/V3/Ground/bio-desert-basecolor.png",
+      "modelId": "chitin-cluster",
+      "overlays": [
+        "Assets/AnomalyArena/Art/V3/Overlays/bio-root-web.png",
+        "Assets/AnomalyArena/Art/V3/Overlays/bio-spore-scar.png",
+        "Assets/AnomalyArena/Art/V3/Overlays/bio-chitin-shed.png"
+      ]
+    },
+    {
+      "family": "Dust",
+      "ground": "Assets/AnomalyArena/Art/V3/Ground/wind-sand-basecolor.png",
+      "modelId": "wind-eroded-rock",
+      "overlays": [
+        "Assets/AnomalyArena/Art/V3/Overlays/sand-wind-ripples.png",
+        "Assets/AnomalyArena/Art/V3/Overlays/sand-wind-scour.png",
+        "Assets/AnomalyArena/Art/V3/Overlays/sand-mineral-dust.png"
+      ]
+    },
+    {
+      "family": "Rift",
+      "ground": "Assets/AnomalyArena/Art/V3/Ground/dark-fissure-basecolor.png",
+      "modelId": "organic-vent",
+      "overlays": [
+        "Assets/AnomalyArena/Art/V3/Overlays/rift-dark-branches.png",
+        "Assets/AnomalyArena/Art/V3/Overlays/rift-mineral-patina.png",
+        "Assets/AnomalyArena/Art/V3/Overlays/rift-organic-veins.png"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6b8ffaeb0bc0faa4ca25744bec02268e, type: 3}
+  m_Name: InterstellarBattlefield
+  m_EditorClassIdentifier: AnomalyArena::AnomalyArena.Biome
+  displayName: Wreck Field
+  layout: {fileID: 11400000, guid: 4c9923c9263ed9e428c7fdcc9cb6b32c, type: 2}
+  ambient: {r: 0.19, g: 0.24, b: 0.35, a: 1}
+  floor: {fileID: 2100000, guid: 74f2515ed671239498bfb2c7c20ff000, type: 2}
+  wall: {fileID: 2100000, guid: 9bbe61e294141684ebc8d7402b63378a, type: 2}
+  mixTilt: f6ffffff0000000000000000000000000a000000000000000000000000000000000000000000000000000000i

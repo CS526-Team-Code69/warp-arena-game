@@ -1,0 +1,1221 @@
+{
+ "waves": [
+  {
+   "wave": 1,
+   "dps": 7.5,
+   "fodder_hp": 5,
+   "R": 1.0,
+   "hand_share": 1.0,
+   "stat_mult": 1.0,
+   "mk_par": 1
+  },
+  {
+   "wave": 2,
+   "dps": 8.5,
+   "fodder_hp": 6,
+   "R": 1.133,
+   "hand_share": 0.979,
+   "stat_mult": 1.039,
+   "mk_par": 1
+  },
+  {
+   "wave": 3,
+   "dps": 10,
+   "fodder_hp": 6,
+   "R": 1.333,
+   "hand_share": 0.957,
+   "stat_mult": 1.079,
+   "mk_par": 1
+  },
+  {
+   "wave": 4,
+   "dps": 12,
+   "fodder_hp": 8,
+   "R": 1.6,
+   "hand_share": 0.936,
+   "stat_mult": 1.121,
+   "mk_par": 2
+  },
+  {
+   "wave": 5,
+   "dps": 14,
+   "fodder_hp": 9,
+   "R": 1.867,
+   "hand_share": 0.914,
+   "stat_mult": 1.163,
+   "mk_par": 2
+  },
+  {
+   "wave": 6,
+   "dps": 16,
+   "fodder_hp": 10,
+   "R": 2.133,
+   "hand_share": 0.893,
+   "stat_mult": 1.208,
+   "mk_par": 2
+  },
+  {
+   "wave": 7,
+   "dps": 18,
+   "fodder_hp": 12,
+   "R": 2.4,
+   "hand_share": 0.871,
+   "stat_mult": 1.253,
+   "mk_par": 3
+  },
+  {
+   "wave": 8,
+   "dps": 20,
+   "fodder_hp": 13,
+   "R": 2.667,
+   "hand_share": 0.85,
+   "stat_mult": 1.3,
+   "mk_par": 3
+  },
+  {
+   "wave": 9,
+   "dps": 23,
+   "fodder_hp": 15,
+   "R": 3.067,
+   "hand_share": 0.829,
+   "stat_mult": 1.349,
+   "mk_par": 3
+  },
+  {
+   "wave": 10,
+   "dps": 26,
+   "fodder_hp": 17,
+   "R": 3.467,
+   "hand_share": 0.807,
+   "stat_mult": 1.399,
+   "mk_par": 4
+  },
+  {
+   "wave": 11,
+   "dps": 28,
+   "fodder_hp": 18,
+   "R": 3.733,
+   "hand_share": 0.786,
+   "stat_mult": 1.45,
+   "mk_par": 4
+  },
+  {
+   "wave": 12,
+   "dps": 31,
+   "fodder_hp": 20,
+   "R": 4.133,
+   "hand_share": 0.764,
+   "stat_mult": 1.504,
+   "mk_par": 4
+  },
+  {
+   "wave": 13,
+   "dps": 34,
+   "fodder_hp": 22,
+   "R": 4.533,
+   "hand_share": 0.743,
+   "stat_mult": 1.559,
+   "mk_par": 5
+  },
+  {
+   "wave": 14,
+   "dps": 37,
+   "fodder_hp": 24,
+   "R": 4.933,
+   "hand_share": 0.721,
+   "stat_mult": 1.615,
+   "mk_par": 5
+  },
+  {
+   "wave": 15,
+   "dps": 40,
+   "fodder_hp": 26,
+   "R": 5.333,
+   "hand_share": 0.7,
+   "stat_mult": 1.673,
+   "mk_par": 5
+  }
+ ],
+ "mk": [
+  {
+   "mk": 1,
+   "window_start": 1,
+   "multiplier": 1.0,
+   "step": 1
+  },
+  {
+   "mk": 2,
+   "window_start": 4,
+   "multiplier": 1.35,
+   "step": 1.35
+  },
+  {
+   "mk": 3,
+   "window_start": 7,
+   "multiplier": 1.65,
+   "step": 1.222
+  },
+  {
+   "mk": 4,
+   "window_start": 10,
+   "multiplier": 1.9,
+   "step": 1.152
+  },
+  {
+   "mk": 5,
+   "window_start": 13,
+   "multiplier": 2.05,
+   "step": 1.079
+  },
+  {
+   "mk": 6,
+   "window_start": 16,
+   "multiplier": 2.25,
+   "step": 1.098
+  }
+ ],
+ "edps_check": [
+  {
+   "wave": 1,
+   "mk": 1,
+   "hand_edps": 7.5,
+   "required": 7.5,
+   "ratio": 1.0,
+   "fodder_ttk": 0.667
+  },
+  {
+   "wave": 2,
+   "mk": 1,
+   "hand_edps": 7.79,
+   "required": 8.32,
+   "ratio": 0.937,
+   "fodder_ttk": 0.754
+  },
+  {
+   "wave": 3,
+   "mk": 1,
+   "hand_edps": 8.09,
+   "required": 9.57,
+   "ratio": 0.846,
+   "fodder_ttk": 0.71
+  },
+  {
+   "wave": 4,
+   "mk": 2,
+   "hand_edps": 11.35,
+   "required": 11.23,
+   "ratio": 1.011,
+   "fodder_ttk": 0.66
+  },
+  {
+   "wave": 5,
+   "mk": 2,
+   "hand_edps": 11.78,
+   "required": 12.8,
+   "ratio": 0.92,
+   "fodder_ttk": 0.699
+  },
+  {
+   "wave": 6,
+   "mk": 2,
+   "hand_edps": 12.23,
+   "required": 14.29,
+   "ratio": 0.856,
+   "fodder_ttk": 0.73
+  },
+  {
+   "wave": 7,
+   "mk": 3,
+   "hand_edps": 15.51,
+   "required": 15.69,
+   "ratio": 0.989,
+   "fodder_ttk": 0.674
+  },
+  {
+   "wave": 8,
+   "mk": 3,
+   "hand_edps": 16.09,
+   "required": 17.0,
+   "ratio": 0.947,
+   "fodder_ttk": 0.687
+  },
+  {
+   "wave": 9,
+   "mk": 3,
+   "hand_edps": 16.69,
+   "required": 19.06,
+   "ratio": 0.876,
+   "fodder_ttk": 0.745
+  },
+  {
+   "wave": 10,
+   "mk": 4,
+   "hand_edps": 19.93,
+   "required": 20.99,
+   "ratio": 0.95,
+   "fodder_ttk": 0.688
+  },
+  {
+   "wave": 11,
+   "mk": 4,
+   "hand_edps": 20.67,
+   "required": 22.0,
+   "ratio": 0.94,
+   "fodder_ttk": 0.684
+  },
+  {
+   "wave": 12,
+   "mk": 4,
+   "hand_edps": 21.43,
+   "required": 23.69,
+   "ratio": 0.904,
+   "fodder_ttk": 0.713
+  },
+  {
+   "wave": 13,
+   "mk": 5,
+   "hand_edps": 23.96,
+   "required": 25.26,
+   "ratio": 0.949,
+   "fodder_ttk": 0.682
+  },
+  {
+   "wave": 14,
+   "mk": 5,
+   "hand_edps": 24.83,
+   "required": 26.69,
+   "ratio": 0.93,
+   "fodder_ttk": 0.697
+  },
+  {
+   "wave": 15,
+   "mk": 5,
+   "hand_edps": 25.73,
+   "required": 28.0,
+   "ratio": 0.919,
+   "fodder_ttk": 0.707
+  }
+ ],
+ "breakpoints": [
+  {
+   "wave": 1,
+   "form": "Rifle A (full charge)",
+   "hp": 5,
+   "hit": 4.5,
+   "htk": 2,
+   "htk_card": 1,
+   "htk_upgrade": 1,
+   "one_hit_crit": 0.04
+  },
+  {
+   "wave": 1,
+   "form": "Rifle B (reverse)",
+   "hp": 5,
+   "hit": 1.0,
+   "htk": 5,
+   "htk_card": 5,
+   "htk_upgrade": 4,
+   "one_hit_crit": 0.0
+  },
+  {
+   "wave": 1,
+   "form": "Knife A",
+   "hp": 5,
+   "hit": 3.05,
+   "htk": 2,
+   "htk_card": 2,
+   "htk_upgrade": 2,
+   "one_hit_crit": 0.04
+  },
+  {
+   "wave": 1,
+   "form": "Knife B hook",
+   "hp": 5,
+   "hit": 6.0,
+   "htk": 1,
+   "htk_card": 1,
+   "htk_upgrade": 1,
+   "one_hit_crit": 1.0
+  },
+  {
+   "wave": 1,
+   "form": "Rocket A",
+   "hp": 5,
+   "hit": 5.0,
+   "htk": 1,
+   "htk_card": 1,
+   "htk_upgrade": 1,
+   "one_hit_crit": 1.0
+  },
+  {
+   "wave": 1,
+   "form": "Phase Dagger A",
+   "hp": 5,
+   "hit": 5.0,
+   "htk": 1,
+   "htk_card": 1,
+   "htk_upgrade": 1,
+   "one_hit_crit": 1.0
+  },
+  {
+   "wave": 1,
+   "form": "Plasma A",
+   "hp": 5,
+   "hit": 12.0,
+   "htk": 1,
+   "htk_card": 1,
+   "htk_upgrade": 1,
+   "one_hit_crit": 1.0
+  },
+  {
+   "wave": 1,
+   "form": "Cryo A",
+   "hp": 5,
+   "hit": 18.0,
+   "htk": 1,
+   "htk_card": 1,
+   "htk_upgrade": 1,
+   "one_hit_crit": 1.0
+  },
+  {
+   "wave": 1,
+   "form": "Arc Coil A",
+   "hp": 5,
+   "hit": 6.0,
+   "htk": 1,
+   "htk_card": 1,
+   "htk_upgrade": 1,
+   "one_hit_crit": 1.0
+  },
+  {
+   "wave": 1,
+   "form": "Railgun A",
+   "hp": 5,
+   "hit": 36.0,
+   "htk": 1,
+   "htk_card": 1,
+   "htk_upgrade": 1,
+   "one_hit_crit": 1.0
+  },
+  {
+   "wave": 1,
+   "form": "Minigun",
+   "hp": 5,
+   "hit": 3.0,
+   "htk": 2,
+   "htk_card": 2,
+   "htk_upgrade": 2,
+   "one_hit_crit": 0.04
+  },
+  {
+   "wave": 1,
+   "form": "Flamethrower A",
+   "hp": 5,
+   "hit": 2.0,
+   "htk": 3,
+   "htk_card": 3,
+   "htk_upgrade": 2,
+   "one_hit_crit": 0.0
+  },
+  {
+   "wave": 1,
+   "form": "Swarm A (per missile)",
+   "hp": 5,
+   "hit": 4.0,
+   "htk": 2,
+   "htk_card": 2,
+   "htk_upgrade": 1,
+   "one_hit_crit": 0.04
+  },
+  {
+   "wave": 4,
+   "form": "Rifle A (full charge)",
+   "hp": 8,
+   "hit": 6.81,
+   "htk": 2,
+   "htk_card": 2,
+   "htk_upgrade": 1,
+   "one_hit_crit": 0.07
+  },
+  {
+   "wave": 4,
+   "form": "Rifle B (reverse)",
+   "hp": 8,
+   "hit": 1.51,
+   "htk": 6,
+   "htk_card": 5,
+   "htk_upgrade": 5,
+   "one_hit_crit": 0.0
+  },
+  {
+   "wave": 4,
+   "form": "Knife A",
+   "hp": 8,
+   "hit": 4.61,
+   "htk": 2,
+   "htk_card": 2,
+   "htk_upgrade": 2,
+   "one_hit_crit": 0.07
+  },
+  {
+   "wave": 4,
+   "form": "Knife B hook",
+   "hp": 8,
+   "hit": 9.08,
+   "htk": 1,
+   "htk_card": 1,
+   "htk_upgrade": 1,
+   "one_hit_crit": 1.0
+  },
+  {
+   "wave": 4,
+   "form": "Rocket A",
+   "hp": 8,
+   "hit": 7.56,
+   "htk": 2,
+   "htk_card": 1,
+   "htk_upgrade": 1,
+   "one_hit_crit": 0.07
+  },
+  {
+   "wave": 4,
+   "form": "Phase Dagger A",
+   "hp": 8,
+   "hit": 7.56,
+   "htk": 2,
+   "htk_card": 1,
+   "htk_upgrade": 1,
+   "one_hit_crit": 0.07
+  },
+  {
+   "wave": 4,
+   "form": "Plasma A",
+   "hp": 8,
+   "hit": 18.15,
+   "htk": 1,
+   "htk_card": 1,
+   "htk_upgrade": 1,
+   "one_hit_crit": 1.0
+  },
+  {
+   "wave": 4,
+   "form": "Cryo A",
+   "hp": 8,
+   "hit": 27.23,
+   "htk": 1,
+   "htk_card": 1,
+   "htk_upgrade": 1,
+   "one_hit_crit": 1.0
+  },
+  {
+   "wave": 4,
+   "form": "Arc Coil A",
+   "hp": 8,
+   "hit": 9.08,
+   "htk": 1,
+   "htk_card": 1,
+   "htk_upgrade": 1,
+   "one_hit_crit": 1.0
+  },
+  {
+   "wave": 4,
+   "form": "Railgun A",
+   "hp": 8,
+   "hit": 54.46,
+   "htk": 1,
+   "htk_card": 1,
+   "htk_upgrade": 1,
+   "one_hit_crit": 1.0
+  },
+  {
+   "wave": 4,
+   "form": "Minigun",
+   "hp": 8,
+   "hit": 4.54,
+   "htk": 2,
+   "htk_card": 2,
+   "htk_upgrade": 2,
+   "one_hit_crit": 0.07
+  },
+  {
+   "wave": 4,
+   "form": "Flamethrower A",
+   "hp": 8,
+   "hit": 3.03,
+   "htk": 3,
+   "htk_card": 3,
+   "htk_upgrade": 3,
+   "one_hit_crit": 0.0
+  },
+  {
+   "wave": 4,
+   "form": "Swarm A (per missile)",
+   "hp": 8,
+   "hit": 6.05,
+   "htk": 2,
+   "htk_card": 2,
+   "htk_upgrade": 2,
+   "one_hit_crit": 0.07
+  },
+  {
+   "wave": 7,
+   "form": "Rifle A (full charge)",
+   "hp": 12,
+   "hit": 9.31,
+   "htk": 2,
+   "htk_card": 2,
+   "htk_upgrade": 2,
+   "one_hit_crit": 0.11
+  },
+  {
+   "wave": 7,
+   "form": "Rifle B (reverse)",
+   "hp": 12,
+   "hit": 2.07,
+   "htk": 6,
+   "htk_card": 6,
+   "htk_upgrade": 6,
+   "one_hit_crit": 0.0
+  },
+  {
+   "wave": 7,
+   "form": "Knife A",
+   "hp": 12,
+   "hit": 6.31,
+   "htk": 2,
+   "htk_card": 2,
+   "htk_upgrade": 2,
+   "one_hit_crit": 0.11
+  },
+  {
+   "wave": 7,
+   "form": "Knife B hook",
+   "hp": 12,
+   "hit": 12.41,
+   "htk": 1,
+   "htk_card": 1,
+   "htk_upgrade": 1,
+   "one_hit_crit": 1.0
+  },
+  {
+   "wave": 7,
+   "form": "Rocket A",
+   "hp": 12,
+   "hit": 10.34,
+   "htk": 2,
+   "htk_card": 2,
+   "htk_upgrade": 2,
+   "one_hit_crit": 0.11
+  },
+  {
+   "wave": 7,
+   "form": "Phase Dagger A",
+   "hp": 12,
+   "hit": 10.34,
+   "htk": 2,
+   "htk_card": 2,
+   "htk_upgrade": 2,
+   "one_hit_crit": 0.11
+  },
+  {
+   "wave": 7,
+   "form": "Plasma A",
+   "hp": 12,
+   "hit": 24.81,
+   "htk": 1,
+   "htk_card": 1,
+   "htk_upgrade": 1,
+   "one_hit_crit": 1.0
+  },
+  {
+   "wave": 7,
+   "form": "Cryo A",
+   "hp": 12,
+   "hit": 37.22,
+   "htk": 1,
+   "htk_card": 1,
+   "htk_upgrade": 1,
+   "one_hit_crit": 1.0
+  },
+  {
+   "wave": 7,
+   "form": "Arc Coil A",
+   "hp": 12,
+   "hit": 12.41,
+   "htk": 1,
+   "htk_card": 1,
+   "htk_upgrade": 1,
+   "one_hit_crit": 1.0
+  },
+  {
+   "wave": 7,
+   "form": "Railgun A",
+   "hp": 12,
+   "hit": 74.44,
+   "htk": 1,
+   "htk_card": 1,
+   "htk_upgrade": 1,
+   "one_hit_crit": 1.0
+  },
+  {
+   "wave": 7,
+   "form": "Minigun",
+   "hp": 12,
+   "hit": 6.2,
+   "htk": 2,
+   "htk_card": 2,
+   "htk_upgrade": 2,
+   "one_hit_crit": 0.11
+  },
+  {
+   "wave": 7,
+   "form": "Flamethrower A",
+   "hp": 12,
+   "hit": 4.14,
+   "htk": 3,
+   "htk_card": 3,
+   "htk_upgrade": 3,
+   "one_hit_crit": 0.0
+  },
+  {
+   "wave": 7,
+   "form": "Swarm A (per missile)",
+   "hp": 12,
+   "hit": 8.27,
+   "htk": 2,
+   "htk_card": 2,
+   "htk_upgrade": 2,
+   "one_hit_crit": 0.11
+  },
+  {
+   "wave": 10,
+   "form": "Rifle A (full charge)",
+   "hp": 17,
+   "hit": 11.96,
+   "htk": 2,
+   "htk_card": 2,
+   "htk_upgrade": 2,
+   "one_hit_crit": 0.14
+  },
+  {
+   "wave": 10,
+   "form": "Rifle B (reverse)",
+   "hp": 17,
+   "hit": 2.66,
+   "htk": 7,
+   "htk_card": 6,
+   "htk_upgrade": 6,
+   "one_hit_crit": 0.0
+  },
+  {
+   "wave": 10,
+   "form": "Knife A",
+   "hp": 17,
+   "hit": 8.11,
+   "htk": 3,
+   "htk_card": 2,
+   "htk_upgrade": 2,
+   "one_hit_crit": 0.0
+  },
+  {
+   "wave": 10,
+   "form": "Knife B hook",
+   "hp": 17,
+   "hit": 15.95,
+   "htk": 2,
+   "htk_card": 1,
+   "htk_upgrade": 1,
+   "one_hit_crit": 0.14
+  },
+  {
+   "wave": 10,
+   "form": "Rocket A",
+   "hp": 17,
+   "hit": 13.29,
+   "htk": 2,
+   "htk_card": 2,
+   "htk_upgrade": 2,
+   "one_hit_crit": 0.14
+  },
+  {
+   "wave": 10,
+   "form": "Phase Dagger A",
+   "hp": 17,
+   "hit": 13.29,
+   "htk": 2,
+   "htk_card": 2,
+   "htk_upgrade": 2,
+   "one_hit_crit": 0.14
+  },
+  {
+   "wave": 10,
+   "form": "Plasma A",
+   "hp": 17,
+   "hit": 31.89,
+   "htk": 1,
+   "htk_card": 1,
+   "htk_upgrade": 1,
+   "one_hit_crit": 1.0
+  },
+  {
+   "wave": 10,
+   "form": "Cryo A",
+   "hp": 17,
+   "hit": 47.84,
+   "htk": 1,
+   "htk_card": 1,
+   "htk_upgrade": 1,
+   "one_hit_crit": 1.0
+  },
+  {
+   "wave": 10,
+   "form": "Arc Coil A",
+   "hp": 17,
+   "hit": 15.95,
+   "htk": 2,
+   "htk_card": 1,
+   "htk_upgrade": 1,
+   "one_hit_crit": 0.14
+  },
+  {
+   "wave": 10,
+   "form": "Railgun A",
+   "hp": 17,
+   "hit": 95.68,
+   "htk": 1,
+   "htk_card": 1,
+   "htk_upgrade": 1,
+   "one_hit_crit": 1.0
+  },
+  {
+   "wave": 10,
+   "form": "Minigun",
+   "hp": 17,
+   "hit": 7.97,
+   "htk": 3,
+   "htk_card": 2,
+   "htk_upgrade": 2,
+   "one_hit_crit": 0.0
+  },
+  {
+   "wave": 10,
+   "form": "Flamethrower A",
+   "hp": 17,
+   "hit": 5.32,
+   "htk": 4,
+   "htk_card": 3,
+   "htk_upgrade": 3,
+   "one_hit_crit": 0.0
+  },
+  {
+   "wave": 10,
+   "form": "Swarm A (per missile)",
+   "hp": 17,
+   "hit": 10.63,
+   "htk": 2,
+   "htk_card": 2,
+   "htk_upgrade": 2,
+   "one_hit_crit": 0.14
+  },
+  {
+   "wave": 13,
+   "form": "Rifle A (full charge)",
+   "hp": 22,
+   "hit": 14.38,
+   "htk": 2,
+   "htk_card": 2,
+   "htk_upgrade": 2,
+   "one_hit_crit": 0.18
+  },
+  {
+   "wave": 13,
+   "form": "Rifle B (reverse)",
+   "hp": 22,
+   "hit": 3.2,
+   "htk": 7,
+   "htk_card": 7,
+   "htk_upgrade": 7,
+   "one_hit_crit": 0.0
+  },
+  {
+   "wave": 13,
+   "form": "Knife A",
+   "hp": 22,
+   "hit": 9.74,
+   "htk": 3,
+   "htk_card": 3,
+   "htk_upgrade": 3,
+   "one_hit_crit": 0.0
+  },
+  {
+   "wave": 13,
+   "form": "Knife B hook",
+   "hp": 22,
+   "hit": 19.17,
+   "htk": 2,
+   "htk_card": 2,
+   "htk_upgrade": 2,
+   "one_hit_crit": 0.18
+  },
+  {
+   "wave": 13,
+   "form": "Rocket A",
+   "hp": 22,
+   "hit": 15.98,
+   "htk": 2,
+   "htk_card": 2,
+   "htk_upgrade": 2,
+   "one_hit_crit": 0.18
+  },
+  {
+   "wave": 13,
+   "form": "Phase Dagger A",
+   "hp": 22,
+   "hit": 15.98,
+   "htk": 2,
+   "htk_card": 2,
+   "htk_upgrade": 2,
+   "one_hit_crit": 0.18
+  },
+  {
+   "wave": 13,
+   "form": "Plasma A",
+   "hp": 22,
+   "hit": 38.34,
+   "htk": 1,
+   "htk_card": 1,
+   "htk_upgrade": 1,
+   "one_hit_crit": 1.0
+  },
+  {
+   "wave": 13,
+   "form": "Cryo A",
+   "hp": 22,
+   "hit": 57.51,
+   "htk": 1,
+   "htk_card": 1,
+   "htk_upgrade": 1,
+   "one_hit_crit": 1.0
+  },
+  {
+   "wave": 13,
+   "form": "Arc Coil A",
+   "hp": 22,
+   "hit": 19.17,
+   "htk": 2,
+   "htk_card": 2,
+   "htk_upgrade": 2,
+   "one_hit_crit": 0.18
+  },
+  {
+   "wave": 13,
+   "form": "Railgun A",
+   "hp": 22,
+   "hit": 115.02,
+   "htk": 1,
+   "htk_card": 1,
+   "htk_upgrade": 1,
+   "one_hit_crit": 1.0
+  },
+  {
+   "wave": 13,
+   "form": "Minigun",
+   "hp": 22,
+   "hit": 9.59,
+   "htk": 3,
+   "htk_card": 3,
+   "htk_upgrade": 3,
+   "one_hit_crit": 0.0
+  },
+  {
+   "wave": 13,
+   "form": "Flamethrower A",
+   "hp": 22,
+   "hit": 6.39,
+   "htk": 4,
+   "htk_card": 4,
+   "htk_upgrade": 4,
+   "one_hit_crit": 0.0
+  },
+  {
+   "wave": 13,
+   "form": "Swarm A (per missile)",
+   "hp": 22,
+   "hit": 12.78,
+   "htk": 2,
+   "htk_card": 2,
+   "htk_upgrade": 2,
+   "one_hit_crit": 0.18
+  },
+  {
+   "wave": 15,
+   "form": "Rifle A (full charge)",
+   "hp": 26,
+   "hit": 15.44,
+   "htk": 2,
+   "htk_card": 2,
+   "htk_upgrade": 2,
+   "one_hit_crit": 0.2
+  },
+  {
+   "wave": 15,
+   "form": "Rifle B (reverse)",
+   "hp": 26,
+   "hit": 3.43,
+   "htk": 8,
+   "htk_card": 7,
+   "htk_upgrade": 7,
+   "one_hit_crit": 0.0
+  },
+  {
+   "wave": 15,
+   "form": "Knife A",
+   "hp": 26,
+   "hit": 10.46,
+   "htk": 3,
+   "htk_card": 3,
+   "htk_upgrade": 3,
+   "one_hit_crit": 0.0
+  },
+  {
+   "wave": 15,
+   "form": "Knife B hook",
+   "hp": 26,
+   "hit": 20.58,
+   "htk": 2,
+   "htk_card": 2,
+   "htk_upgrade": 2,
+   "one_hit_crit": 0.2
+  },
+  {
+   "wave": 15,
+   "form": "Rocket A",
+   "hp": 26,
+   "hit": 17.15,
+   "htk": 2,
+   "htk_card": 2,
+   "htk_upgrade": 2,
+   "one_hit_crit": 0.2
+  },
+  {
+   "wave": 15,
+   "form": "Phase Dagger A",
+   "hp": 26,
+   "hit": 17.15,
+   "htk": 2,
+   "htk_card": 2,
+   "htk_upgrade": 2,
+   "one_hit_crit": 0.2
+  },
+  {
+   "wave": 15,
+   "form": "Plasma A",
+   "hp": 26,
+   "hit": 41.16,
+   "htk": 1,
+   "htk_card": 1,
+   "htk_upgrade": 1,
+   "one_hit_crit": 1.0
+  },
+  {
+   "wave": 15,
+   "form": "Cryo A",
+   "hp": 26,
+   "hit": 61.75,
+   "htk": 1,
+   "htk_card": 1,
+   "htk_upgrade": 1,
+   "one_hit_crit": 1.0
+  },
+  {
+   "wave": 15,
+   "form": "Arc Coil A",
+   "hp": 26,
+   "hit": 20.58,
+   "htk": 2,
+   "htk_card": 2,
+   "htk_upgrade": 2,
+   "one_hit_crit": 0.2
+  },
+  {
+   "wave": 15,
+   "form": "Railgun A",
+   "hp": 26,
+   "hit": 123.49,
+   "htk": 1,
+   "htk_card": 1,
+   "htk_upgrade": 1,
+   "one_hit_crit": 1.0
+  },
+  {
+   "wave": 15,
+   "form": "Minigun",
+   "hp": 26,
+   "hit": 10.29,
+   "htk": 3,
+   "htk_card": 3,
+   "htk_upgrade": 3,
+   "one_hit_crit": 0.0
+  },
+  {
+   "wave": 15,
+   "form": "Flamethrower A",
+   "hp": 26,
+   "hit": 6.86,
+   "htk": 4,
+   "htk_card": 4,
+   "htk_upgrade": 4,
+   "one_hit_crit": 0.0
+  },
+  {
+   "wave": 15,
+   "form": "Swarm A (per missile)",
+   "hp": 26,
+   "hit": 13.72,
+   "htk": 2,
+   "htk_card": 2,
+   "htk_upgrade": 2,
+   "one_hit_crit": 0.2
+  }
+ ],
+ "cards": {
+  "Damage": {
+   "main": [
+    0.12,
+    0.18,
+    0.25
+   ],
+   "crit": [
+    0.08,
+    0.12,
+    0.16
+   ]
+  },
+  "AttackSpeed": {
+   "main": [
+    0.15,
+    0.22,
+    0.32
+   ]
+  },
+  "Protection": {
+   "main": [
+    25,
+    40,
+    60
+   ],
+   "K": 100
+  },
+  "MaxHp": {
+   "main": [
+    15,
+    25,
+    40
+   ],
+   "regen": [
+    1,
+    1.5,
+    2.5
+   ]
+  },
+  "MoveSpeed": {
+   "main": [
+    0.08,
+    0.12,
+    0.16
+   ],
+   "stamina": [
+    0.2,
+    0.3,
+    0.45
+   ]
+  },
+  "Knockback": {
+   "main": [
+    0.2,
+    0.35,
+    0.5
+   ],
+   "impact": [
+    3,
+    5,
+    8
+   ]
+  },
+  "MaxEnergy": {
+   "main": [
+    25,
+    40,
+    60
+   ],
+   "siphon": [
+    0.4,
+    0.7,
+    1.0
+   ]
+  },
+  "ElementPenetration": {
+   "main": [
+    0.2,
+    0.35,
+    0.5
+   ]
+  }
+ },
+ "removed_cards": [
+  "Regeneration",
+  "Stamina",
+  "Impact",
+  "PickupRange",
+  "Luck",
+  "EnergySiphon"
+ ],
+ "elements": {
+  "fire": {
+   "interval": 0.5,
+   "half_life": 1.5,
+   "damage_per_stack": 1.5,
+   "cap": 20
+  },
+  "poison": {
+   "interval": 1.0,
+   "damage_per_stack": 0.12,
+   "cap": 20
+  },
+  "frost": {
+   "threshold": 6,
+   "decay": 1.0,
+   "chill": 1.5,
+   "freeze": 1.5,
+   "immunity": 3
+  },
+  "lightning": {
+   "threshold": 6,
+   "duration": 4,
+   "slow": 0.55,
+   "twitch_interval": 1.0,
+   "twitch": 0.3,
+   "frost_bonus": 1.5,
+   "chain_falloff": 0.7
+  },
+  "earth": 0.1,
+  "light": 0.05,
+  "void": 0.1,
+  "light_missing_bonus": 2.0,
+  "fire_tick_fraction": 0.2063
+ },
+ "skills": {
+  "level_growth": 1.35,
+  "bases": {
+   "StormCall bolt": 6,
+   "GravityWell end": 10,
+   "Singularity base": 10,
+   "Singularity per enemy": 4
+  },
+  "bulwark_share": [
+   0.2,
+   0.3,
+   0.3
+  ]
+ }
+}

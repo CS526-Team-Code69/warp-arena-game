@@ -1,0 +1,17 @@
+{
+  "paidGeneration": false,
+  "assets": [
+    {
+      "id": "supply-crate",
+      "source": "Assets/AnomalyArena/Art/V3/Supply/Sources/supply-crate.svg",
+      "png": "Assets/AnomalyArena/Art/V3/Supply/Textures/supply-crate.png"
+    },
+    {
+      "id": "supply-dust-ring",
+      "source": "Assets/AnomalyArena/Art/V3/Supply/Sources/supply-dust-ring.svg",
+      "png": "Assets/AnomalyArena/Art/V3/Supply/Textures/supply-dust-ring.png"
+    }
+  ],
+  "model": "Editor-authored primitive mesh prefab",
+  "audio": "Existing V2 Impact at landing edge once"
+}

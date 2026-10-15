@@ -1,0 +1,38 @@
+{
+  "sourceSha256": "661b3a377cf1775db33d254f30256ad59d000a4dac998d9061788507a029a91b",
+  "sourceRetained": true,
+  "blenderVersion": "5.2.2 LTS",
+  "boneCount": 15,
+  "legPairs": 3,
+  "skinnedVertices": 4693,
+  "sourceBoundsBlender": [
+    1.0034661293029785,
+    1.9005781412124634,
+    1.82076096534729
+  ],
+  "fps": 30,
+  "durations": {
+    "Idle": 2,
+    "Run": 0.8,
+    "Attack": 0.9
+  },
+  "rootMotion": false,
+  "weightsAndMotion": "candidate geometric region skin; no native visual or locomotion review",
+  "runtimeVerified": false,
+  "bindings": {
+    "id": "Enemy_Skitter",
+    "enemyKind": "Skitter",
+    "riggedFbx": "Assets/AnomalyArena/Art/V3/Enemies/Skitter/LocalAnimation/Rigged.fbx",
+    "idleFbx": "Assets/AnomalyArena/Art/V3/Enemies/Skitter/LocalAnimation/Idle.fbx",
+    "runFbx": "Assets/AnomalyArena/Art/V3/Enemies/Skitter/LocalAnimation/Run.fbx",
+    "attackFbx": "Assets/AnomalyArena/Art/V3/Enemies/Skitter/LocalAnimation/Attack.fbx",
+    "animationRig": "Generic",
+    "genericMotionRoot": "Root",
+    "motionRoute": "local_nonhuman",
+    "rotationOffsetEuler": [
+      0,
+      0,
+      0
+    ]
+  }
+}

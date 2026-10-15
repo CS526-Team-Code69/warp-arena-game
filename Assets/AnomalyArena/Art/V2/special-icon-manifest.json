@@ -1,0 +1,354 @@
+{
+  "source": "Local editable SVG",
+  "paid_generation": false,
+  "skills_used": [
+    "game-art-skills",
+    "game-ui-workflow",
+    "unity:ui-ugui"
+  ],
+  "runtime_verified": false,
+  "entries": [
+    {
+      "name": "skill-flame-wake",
+      "group": "skill",
+      "id": "flame-wake",
+      "color": "#FF9250",
+      "size": 256
+    },
+    {
+      "name": "skill-contagion",
+      "group": "skill",
+      "id": "contagion",
+      "color": "#A5DE5B",
+      "size": 256
+    },
+    {
+      "name": "skill-frost-nova",
+      "group": "skill",
+      "id": "frost-nova",
+      "color": "#77D6F2",
+      "size": 256
+    },
+    {
+      "name": "skill-storm-call",
+      "group": "skill",
+      "id": "storm-call",
+      "color": "#FFD65C",
+      "size": 256
+    },
+    {
+      "name": "skill-bulwark",
+      "group": "skill",
+      "id": "bulwark",
+      "color": "#CCA782",
+      "size": 256
+    },
+    {
+      "name": "skill-radiance",
+      "group": "skill",
+      "id": "radiance",
+      "color": "#FFF0AC",
+      "size": 256
+    },
+    {
+      "name": "skill-devour",
+      "group": "skill",
+      "id": "devour",
+      "color": "#C19AFF",
+      "size": 256
+    },
+    {
+      "name": "skill-blink",
+      "group": "skill",
+      "id": "blink",
+      "color": "#77D6F2",
+      "size": 256
+    },
+    {
+      "name": "skill-shockwave",
+      "group": "skill",
+      "id": "shockwave",
+      "color": "#77D6F2",
+      "size": 256
+    },
+    {
+      "name": "skill-gravity-well",
+      "group": "skill",
+      "id": "gravity-well",
+      "color": "#C19AFF",
+      "size": 256
+    },
+    {
+      "name": "skill-time-slip",
+      "group": "skill",
+      "id": "time-slip",
+      "color": "#77D6F2",
+      "size": 256
+    },
+    {
+      "name": "skill-decoy",
+      "group": "skill",
+      "id": "decoy",
+      "color": "#77D6F2",
+      "size": 256
+    },
+    {
+      "name": "skill-overcharge",
+      "group": "skill",
+      "id": "overcharge",
+      "color": "#FFD65C",
+      "size": 256
+    },
+    {
+      "name": "skill-pocket-void",
+      "group": "skill",
+      "id": "pocket-void",
+      "color": "#C19AFF",
+      "size": 256
+    },
+    {
+      "name": "skill-void-walk",
+      "group": "skill",
+      "id": "void-walk",
+      "color": "#C19AFF",
+      "size": 256
+    },
+    {
+      "name": "skill-singularity",
+      "group": "skill",
+      "id": "singularity",
+      "color": "#C19AFF",
+      "size": 256
+    },
+    {
+      "name": "stat-max-hp",
+      "group": "stat",
+      "id": "max-hp",
+      "color": "#FFF0AC",
+      "size": 256
+    },
+    {
+      "name": "stat-regeneration",
+      "group": "stat",
+      "id": "regeneration",
+      "color": "#A5DE5B",
+      "size": 256
+    },
+    {
+      "name": "stat-move-speed",
+      "group": "stat",
+      "id": "move-speed",
+      "color": "#77D6F2",
+      "size": 256
+    },
+    {
+      "name": "stat-stamina",
+      "group": "stat",
+      "id": "stamina",
+      "color": "#FFD65C",
+      "size": 256
+    },
+    {
+      "name": "stat-damage",
+      "group": "stat",
+      "id": "damage",
+      "color": "#FF9250",
+      "size": 256
+    },
+    {
+      "name": "stat-attack-speed",
+      "group": "stat",
+      "id": "attack-speed",
+      "color": "#77D6F2",
+      "size": 256
+    },
+    {
+      "name": "stat-knockback",
+      "group": "stat",
+      "id": "knockback",
+      "color": "#77D6F2",
+      "size": 256
+    },
+    {
+      "name": "stat-impact",
+      "group": "stat",
+      "id": "impact",
+      "color": "#FF9250",
+      "size": 256
+    },
+    {
+      "name": "stat-pickup-range",
+      "group": "stat",
+      "id": "pickup-range",
+      "color": "#77D6F2",
+      "size": 256
+    },
+    {
+      "name": "stat-protection",
+      "group": "stat",
+      "id": "protection",
+      "color": "#CCA782",
+      "size": 256
+    },
+    {
+      "name": "stat-luck",
+      "group": "stat",
+      "id": "luck",
+      "color": "#A5DE5B",
+      "size": 256
+    },
+    {
+      "name": "stat-max-energy",
+      "group": "stat",
+      "id": "max-energy",
+      "color": "#77D6F2",
+      "size": 256
+    },
+    {
+      "name": "stat-energy-siphon",
+      "group": "stat",
+      "id": "energy-siphon",
+      "color": "#C19AFF",
+      "size": 256
+    },
+    {
+      "name": "stat-element-penetration",
+      "group": "stat",
+      "id": "element-penetration",
+      "color": "#C19AFF",
+      "size": 256
+    },
+    {
+      "name": "axis-infusion",
+      "group": "axis",
+      "id": "infusion",
+      "color": "#C19AFF",
+      "size": 256
+    },
+    {
+      "name": "axis-power",
+      "group": "axis",
+      "id": "power",
+      "color": "#FF9250",
+      "size": 256
+    },
+    {
+      "name": "axis-tempo",
+      "group": "axis",
+      "id": "tempo",
+      "color": "#FFD65C",
+      "size": 256
+    },
+    {
+      "name": "axis-reach",
+      "group": "axis",
+      "id": "reach",
+      "color": "#77D6F2",
+      "size": 256
+    },
+    {
+      "name": "axis-twist",
+      "group": "axis",
+      "id": "twist",
+      "color": "#C19AFF",
+      "size": 256
+    },
+    {
+      "name": "axis-tame",
+      "group": "axis",
+      "id": "tame",
+      "color": "#CCA782",
+      "size": 256
+    },
+    {
+      "name": "hollow-candidate",
+      "group": "presentation",
+      "id": "hollow-candidate",
+      "size": 640
+    },
+    {
+      "name": "boss-phase-one",
+      "group": "presentation",
+      "id": "boss-phase-one",
+      "size": 512
+    },
+    {
+      "name": "boss-phase-two",
+      "group": "presentation",
+      "id": "boss-phase-two",
+      "size": 512
+    },
+    {
+      "name": "boss-phase-three",
+      "group": "presentation",
+      "id": "boss-phase-three",
+      "size": 512
+    },
+    {
+      "name": "telegraph-ring",
+      "group": "presentation",
+      "id": "telegraph-ring",
+      "size": 512
+    },
+    {
+      "name": "telegraph-cleave",
+      "group": "presentation",
+      "id": "telegraph-cleave",
+      "size": 512
+    },
+    {
+      "name": "telegraph-charge",
+      "group": "presentation",
+      "id": "telegraph-charge",
+      "size": 512
+    },
+    {
+      "name": "attack-phase-dagger",
+      "group": "presentation",
+      "id": "attack-phase-dagger",
+      "size": 512
+    },
+    {
+      "name": "attack-plasma-blob",
+      "group": "presentation",
+      "id": "attack-plasma-blob",
+      "size": 512
+    },
+    {
+      "name": "attack-frost-shard",
+      "group": "presentation",
+      "id": "attack-frost-shard",
+      "size": 512
+    },
+    {
+      "name": "attack-fireball",
+      "group": "presentation",
+      "id": "attack-fireball",
+      "size": 512
+    },
+    {
+      "name": "attack-spore-pod",
+      "group": "presentation",
+      "id": "attack-spore-pod",
+      "size": 512
+    },
+    {
+      "name": "field-flame",
+      "group": "presentation",
+      "id": "field-flame",
+      "size": 512
+    },
+    {
+      "name": "field-blizzard",
+      "group": "presentation",
+      "id": "field-blizzard",
+      "size": 512
+    },
+    {
+      "name": "field-poison",
+      "group": "presentation",
+      "id": "field-poison",
+      "size": 512
+    }
+  ]
+}

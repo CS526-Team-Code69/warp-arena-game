@@ -1,0 +1,53 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2da5714eae8aefc4185f28bb0f4352c4, type: 3}
+  m_Name: RiftZoneMap
+  m_EditorClassIdentifier: AnomalyArena::AnomalyArena.MapLayout
+  width: 100
+  height: 70
+  playerStart: {x: 0, y: 0, z: 0}
+  walls:
+  - serializedVersion: 2
+    x: -42
+    y: -5
+    width: 8
+    height: 2
+  - serializedVersion: 2
+    x: -8
+    y: -4
+    width: 6
+    height: 2
+  - serializedVersion: 2
+    x: 2
+    y: 4
+    width: 6
+    height: 2
+  - serializedVersion: 2
+    x: 34
+    y: 3
+    width: 8
+    height: 2
+  - serializedVersion: 2
+    x: -14
+    y: 26
+    width: 6
+    height: 2
+  - serializedVersion: 2
+    x: 8
+    y: -28
+    width: 6
+    height: 2
+  holeAnchors:
+  - {x: -26, y: -15}
+  - {x: -26, y: 15}
+  - {x: 26, y: -15}
+  - {x: 26, y: 15}

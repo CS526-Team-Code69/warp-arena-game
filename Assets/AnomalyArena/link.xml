@@ -1,0 +1,11 @@
+<linker>
+  <!--
+    At runtime, GameObject.CreatePrimitive is used for quad / sphere effects, and Unity automatically adds a MeshCollider / SphereCollider to them (removed right away).
+    No object in the scene uses these two colliders, so 'Strip Engine Code' in the WebGL build removes them and the web page spams
+    "Can't add component because class 'MeshCollider' doesn't exist!". They are preserved explicitly here.
+  -->
+  <assembly fullname="UnityEngine.PhysicsModule">
+    <type fullname="UnityEngine.MeshCollider" preserve="all" />
+    <type fullname="UnityEngine.SphereCollider" preserve="all" />
+  </assembly>
+</linker>
