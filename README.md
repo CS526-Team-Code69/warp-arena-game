@@ -2,6 +2,8 @@
 
 A top-down arena survival game about unpredictable weapons, elemental builds and dangerous void phenomena, built in Unity by a four-person team.
 
+**Play in the browser:** https://cs526-team-code69.github.io/warp-arena-game/ (desktop Chrome, Edge or Firefox; the first load downloads about 95 MB).
+
 ## The game
 
 Fight through fifteen waves, open the supply crates that drop between them, and combine anomalous weapons with skills and stat cards. Fodder is there to be cleared quickly; specialists, elites and bosses give damage over time and elemental effects room to matter.
@@ -79,7 +81,7 @@ Time-to-kill targets for an ordinary build are **0.5–0.8 s for fodder, 5–10 
 
 3D characters and props were generated with Meshy, then rigged and animated for the game. Effect sprites are authored as SVG (sources in `Art/V4/VFX/Sources/SVG/`), and sound effects were produced with ElevenLabs. Earlier art that the current game no longer uses is kept in `ArtSource/Archive/`, outside `Assets/`, so Unity does not import it. Large art and audio files use Git LFS; keep each `.meta` file with its asset.
 
-The `gh-pages` branch of the previous repository holds an older browser prototype; there is no current WebGL build.
+The browser build is published from the `gh-pages` branch. To rebuild it, run **Anomaly Arena → Build WebGL (V2)**: it builds `ArenaV2_EN.unity` into `Builds/WebGL-V2`, with textures capped at 1024 for the web so every file stays under GitHub's 100 MB limit. Then replace the contents of `gh-pages` with that folder (keep the `.nojekyll` file).
 
 ## Team
 
