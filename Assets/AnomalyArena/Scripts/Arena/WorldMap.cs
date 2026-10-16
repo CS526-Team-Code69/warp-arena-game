@@ -5,6 +5,7 @@ using UnityEngine.InputSystem;
 
 namespace AnomalyArena
 {
+
     [DefaultExecutionOrder(200)]
     public sealed class WorldMap : MonoBehaviour
     {
@@ -324,7 +325,6 @@ namespace AnomalyArena
                 foreach (var enemy in GM.waves.Alive) if (enemy && enemy.gameObject.activeSelf) Freeze(enemy.gameObject);
 
             foreach(var enemy in GM.waves.preparedEnemies)if(enemy&&enemy.gameObject.activeSelf)Freeze(enemy.gameObject);
-                foreach (var projectile in UnityEngine.Object.FindObjectsByType<Projectile>()) Freeze(projectile.gameObject);
                 if (AttackPool.Instance) foreach (var projectile in AttackPool.Instance.actors) if (projectile && projectile.gameObject.activeSelf) Freeze(projectile.gameObject);
                 foreach (var bolt in GM.waves.preparedBolts) if (bolt.gameObject.activeSelf) Freeze(bolt.gameObject);
                 GM.waves.SuspendForTrial();

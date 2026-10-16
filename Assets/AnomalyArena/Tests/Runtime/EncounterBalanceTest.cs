@@ -60,7 +60,7 @@ namespace AnomalyArena
                 waveField.SetValue(game.waves,wave-1);
                 foreach(var data in game.waves.roster)
                 {
-                    bool elite=data.canElite&&data.kind is not (EnemyKind.Grunt or EnemyKind.Skitter);
+                    bool elite=EnemyRoles.IsEliteOnly(data.kind);                                             
                     if(elite&&wave<6)continue;
                     target.Configure(data,game.waves.HpMultiplier,elite);target.enabled=false;
                     float actualShield=ElementStatus.For(target).Shield;
@@ -68,7 +68,7 @@ namespace AnomalyArena
                     float modeled=(target.maxHp+(actualShield+phases)/balance.ShieldDirectFactor)/balance.DpsAt(wave);
                     if(target.IsBoss)Assert.That(modeled,Is.InRange(45f,75f),data.kind+" boss budget");
                     else if(elite)Assert.That(modeled,Is.InRange(5f,10f),data.kind+" elite budget");
-                    else if(data.kind is EnemyKind.Grunt or EnemyKind.Skitter)Assert.That(modeled,Is.InRange(.5f,.8f));
+                    else if(EnemyRoles.IsMelee(data.kind))Assert.That(modeled,Is.InRange(.5f,.8f),data.kind+" melee variants share the fodder budget");
                     float hp=target.maxHp;game.progression.Stats.damageBonus+=1f;
                     target.Configure(data,game.waves.HpMultiplier,elite);target.enabled=false;
                     Assert.That(target.maxHp,Is.EqualTo(hp),"a player's upgrade must not inflate enemies");

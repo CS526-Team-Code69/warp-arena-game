@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.InputSystem;
-using UnityEngine.SceneManagement;
 
 namespace AnomalyArena
 {
@@ -22,28 +20,38 @@ namespace AnomalyArena
         [Serializable]
         public class Feedback
         {
-            [Tooltip("Short feedback for rapid bullets; capped by a real-time interval to avoid continuous freezing.")] public float bulletHitStop=.025f;
-            public float bulletHitStopInterval=.12f;
-            [Min(0f), Tooltip("V2: maximum real-time pause for a direct hit on the player. Enemy hits never pause the world.")]
-            public float playerHitStopLimit = .04f;
-            [Min(.1f), Tooltip("V2: minimum real time between global pauses; repeated hits never extend a pause.")]
-            public float globalHitStopInterval = .35f;
             [Tooltip("Seconds the white flash lasts")] public float flashTime = 0.1f;
             [Tooltip("How much the body is squashed on hit (0 = no deformation)")] public float squash = 0.35f;
-            [Tooltip("Hit stop for a normal hit, in seconds (real time)")] public float hitStop = 0.035f;
-            [Tooltip("Hit stop for a heavy hit (damage reaches heavyDamage, wall impact, explosion, player hit), in seconds")] public float heavyHitStop = 0.08f;
             [Tooltip("Damage at which a hit counts as heavy")] public float heavyDamage = 10f;
-            [Tooltip("Time scale during hit stop")] public float hitStopTimeScale = 0.05f;
-            [Tooltip("Screen shake amplitude when the player is hit (units)")] public float playerHitShake = 0.5f;
-            [Tooltip("Screen shake amplitude when an enemy takes a heavy hit (units)")] public float heavyShake = 0.25f;
-            [Tooltip("How many units of shake decay per second")] public float shakeDecay = 4f;
-            [Header("V4 local impact (no global pause)")]
-            [Min(0f), Tooltip("Seconds the struck enemy alone holds its pose and animation on a normal hit.")] public float enemyHitPause = .045f;
-            [Min(0f), Tooltip("Local pose hold on a heavy hit (damage ≥ heavyDamage × wave scale, slam or blast).")] public float enemyHeavyHitPause = .085f;
-            [Min(0f), Tooltip("Local pose hold on a critical hit.")] public float critHitPause = .11f;
-            [Min(0f), Tooltip("Small camera kick when the player lands a heavy hit.")] public float enemyHeavyShake = .1f;
-            [Min(0f), Tooltip("Camera kick when the player lands a critical hit.")] public float critShake = .16f;
-            [Min(0f), Tooltip("Minimum real seconds between hit kicks so crowds do not blur the screen.")] public float hitKickInterval = .12f;
+
+            [Header("Player hit: hit stun instead of knockback (bosses still knock back)")]
+            [Min(0f), Tooltip("Seconds the player cannot move or act after a basic enemy's hit.")] public float basicHitStun = .12f;
+            [Min(0f), Tooltip("Seconds of hit stun from an elite (special) enemy's hit.")] public float eliteHitStun = .22f;
+            [Min(0f), Tooltip("Once a hit stun starts, no new one for this many seconds; damage still applies.")] public float hitStunWindow = .8f;
+            [Min(0f), Tooltip("Camera push away from a basic enemy's hit.")] public float basicHitKick = .18f;
+            [Min(0f), Tooltip("Camera push away from an elite's hit.")] public float eliteHitKick = .3f;
+            [Min(0f), Tooltip("Camera push from a boss hit.")] public float bossHitKick = .4f;
+            [Min(0f), Tooltip("How far the player model flinches along the hit (units).")] public float playerFlinch = .18f;
+
+            [Header("Hits the player lands")]
+            [Min(0f), Tooltip("Real seconds before the same enemy can hold its pose again, so rapid fire never freezes it.")] public float victimHoldCooldown = .25f;
+            [Min(0f), Tooltip("Real seconds between camera pushes from landed hits, so crowds never blur the screen.")] public float hitKickInterval = .12f;
+            [Tooltip("Knife, hook, body slam, orbit blades, shield ring: the target bites back.")]
+            public HitFeelProfile melee = new() { victimHold = .07f, victimHeavyHold = .1f, victimJolt = .18f, attackerHold = .04f, hitKick = .06f, heavyHitKick = .12f, splash = 1.4f, fireRecoil = -.12f };
+            [Tooltip("Rifle, railgun, shatter shards: a heavy round with a short hold on heavy hits.")]
+            public HitFeelProfile heavyShot = new() { victimHold = .03f, victimHeavyHold = .07f, victimJolt = .16f, heavyHitKick = .1f, splash = 1f, fireRecoil = .14f, fireKick = .12f, muzzleFlash = 1.3f };
+            [Tooltip("Minigun, needler, scatter, sentry: many small rounds, no hold, only a jolt.")]
+            public HitFeelProfile lightShot = new() { victimJolt = .07f, heavyHitKick = .05f, splash = .7f, fireRecoil = .05f, fireKick = .03f, muzzleFlash = .75f };
+            [Tooltip("Flames, frost, lightning, spores, explosions: flash only, never a hold.")]
+            public HitFeelProfile area = new() { victimJolt = .04f, heavyHitKick = .1f, splash = .6f, fireRecoil = .03f };
+
+            public HitFeelProfile For(HitFeel feel) => feel switch
+            {
+                HitFeel.Melee => melee,
+                HitFeel.HeavyShot => heavyShot,
+                HitFeel.LightShot => lightShot,
+                _ => area,
+            };
         }
 
         public static GameManager Instance { get; private set; }
@@ -58,41 +66,19 @@ namespace AnomalyArena
         [Header("Refs")]
         public PlayerController player;
         public WaveManager waves;
-        public WeaponSpawner weapons;
         public Hud hud;
         public Camera cam;
-        [Header("V2.0 run")] public bool useV2;
 
         [Header("Materials")]
         [Tooltip("Base material for whitebox objects created at runtime (URP Lit)")] public Material litMaterial;
-        [Tooltip("Material for translucent hints (URP Unlit transparent)")] public Material fxMaterial;
-        public Material spawnMarkerMaterial;
-
-        [Header("Art")]
-        [Tooltip("Illustrated-mode textures; whitebox / illustrated is switched on the title screen")] public ArtSet art;
 
         public GameState State { get; private set; } = GameState.Title;
         public DeathCause LoseCause { get; private set; }
         public float Elapsed { get; private set; }
 
-        readonly List<MonoBehaviour> transients = new List<MonoBehaviour>();
         readonly Dictionary<Color, Material> matCache = new Dictionary<Color, Material>();
         bool finalWaveCleared;
-
-        static bool skipTitle;
-        float hitStopLeft;
-        float nextGlobalHitStopAt;
-        float nextBulletHitStopAt;
-        public void TryBulletHitStop()
-        {
-            if(Time.unscaledTime<nextBulletHitStopAt)return;
-            nextBulletHitStopAt=Time.unscaledTime+feedback.bulletHitStopInterval;
-            HitStop(feedback.bulletHitStop);
-            Shake(feedback.heavyShake*.25f);
-        }
-        bool hitStopStartedThisFrame;
-        float shake;
-        Vector3 camBase;
+        float nextHitKickAt;
 
         void Awake()
         {
@@ -102,146 +88,35 @@ namespace AnomalyArena
             WallMask = 1 << WallLayer;
             CharacterMask = 1 << CharacterLayer;
             if (!cam) cam = Camera.main;
-            if (cam) camBase = cam.transform.position;
 
             Time.timeScale = 1f;
         }
 
-        public void HitStop(float seconds)
-        {
-            if (seconds <= 0f) return;
-            if (useV2)
-            {
-                if (!IsCombatActive || hitStopLeft > 0f || Time.unscaledTime < nextGlobalHitStopAt) return;
-                seconds = Mathf.Min(seconds, feedback.playerHitStopLimit);
-                if (seconds <= 0f) return;
-                nextGlobalHitStopAt = Time.unscaledTime + Mathf.Max(seconds, feedback.globalHitStopInterval);
-            }
-            hitStopLeft = Mathf.Max(hitStopLeft, seconds);
+        public void Shake(float amount) { if (cam && cam.TryGetComponent<CameraRig>(out var rig)) rig.Shake(amount); }
 
-            Time.timeScale = useV2 ? Mathf.Max(.25f, feedback.hitStopTimeScale) : feedback.hitStopTimeScale;
-            hitStopStartedThisFrame = true;
+        public void Kick(Vector3 dir, float amount) { if (amount > 0f && cam && cam.TryGetComponent<CameraRig>(out var rig)) rig.Kick(dir, amount); }
+
+        public void HitKick(Vector3 dir, float amount)
+        {
+            if (amount <= 0f || Time.unscaledTime < nextHitKickAt) return;
+            nextHitKickAt = Time.unscaledTime + feedback.hitKickInterval;
+            Kick(dir, amount);
         }
 
-        public void Shake(float amount){if(useV2&&cam&&cam.TryGetComponent<CameraRig>(out var rig))rig.Shake(amount);else shake=Mathf.Max(shake,amount);}
+        void Start() => V2Start();
 
-        void TickHitStop()
-        {
-            if (hitStopLeft <= 0f) return;
-            if (useV2)
-            {
-                hitStopLeft = Mathf.Max(0f, hitStopLeft - Time.unscaledDeltaTime);
-                Time.timeScale = !CanPlayerMove ? 0f : hitStopLeft > 0f ? Mathf.Max(.25f, feedback.hitStopTimeScale) : 1f;
-                return;
-            }
+        public void BeginPlaying() => ExecuteUiCommand(ArenaUiCommand.Start);
 
-            if (hitStopStartedThisFrame) hitStopStartedThisFrame = false;
-            else hitStopLeft -= Time.unscaledDeltaTime;
-            Time.timeScale = hitStopLeft > 0f ? feedback.hitStopTimeScale : 1f;
-        }
+        public void ToggleArt() => Art.Enabled = !Art.Enabled;
 
-        void TickShake()
-        {
-            if(useV2)return;
-            if (!cam) return;
+        void Update() => V2Update();
 
-            shake = Mathf.MoveTowards(shake, 0f, feedback.shakeDecay * Time.unscaledDeltaTime);
-            Vector2 o = shake > 0f ? UnityEngine.Random.insideUnitCircle * shake : Vector2.zero;
-            cam.transform.position = camBase + new Vector3(o.x, 0f, o.y);
-        }
-
-        void Start()
-        {
-            if(useV2){V2Start();return;}
-            if (Art.On) Art.DecorateArena();
-            weapons.SpawnInitial();
-            if (!skipTitle) return;
-            skipTitle = false;
-            BeginPlaying();
-        }
-
-        public void BeginPlaying()
-        {
-            if(useV2){ExecuteUiCommand(ArenaUiCommand.Start);return;}
-            if (State != GameState.Title) return;
-            State = GameState.Playing;
-            waves.StartWaves();
-        }
-
-        public void ToggleArt()
-        {
-            if(useV2){Art.Enabled=!Art.Enabled;return;}
-            if (State != GameState.Title) return;
-            Art.Enabled = !Art.Enabled;
-            SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
-        }
-
-        void Update()
-        {
-            if(useV2){V2Update();return;}
-            TickHitStop();
-            var kb = Keyboard.current;
-            Cursor.visible = State != GameState.Playing;
-
-            switch (State)
-            {
-                case GameState.Title:
-
-                    if (kb != null && kb.spaceKey.wasPressedThisFrame) BeginPlaying();
-                    else if (kb != null && kb.tKey.wasPressedThisFrame) ToggleArt();
-                    break;
-                case GameState.Playing:
-                    Elapsed += Time.deltaTime;
-                    break;
-                default:
-                    if (kb != null && kb.rKey.wasPressedThisFrame)
-                    {
-                        skipTitle = true;
-                        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
-                    }
-                    break;
-            }
-        }
-
-        public void NotifyFinalWaveCleared() => finalWaveCleared = true;
-
-        void LateUpdate()
-        {
-            if(useV2){V2LateUpdate();return;}
-            TickShake();
-            if (State != GameState.Playing) return;
-            if (finalWaveCleared)
-            {
-                State = GameState.Won;
-                ClearTransients();
-            }
-            else if (!player.IsAlive)
-            {
-                State = GameState.Lost;
-                LoseCause = player.DeathCause;
-                ClearTransients();
-            }
-        }
-
-        public void Register(MonoBehaviour t)
-        {
-            if (t && !transients.Contains(t)) transients.Add(t);
-        }
-
-        public void Unregister(MonoBehaviour t) => transients.Remove(t);
+        void LateUpdate() => V2LateUpdate();
 
         public void ClearTransients()
         {
-            if(useV2&&runWeapons)runWeapons.ClearWaveEffects();
-            if(useV2)WorldMap.Active?.ClearTemporaryObjects();
-            var copy = transients.ToArray();
-            transients.Clear();
-            foreach (var t in copy)
-            {
-                if (!t) continue;
-                if (t is WeaponRuntime r) r.Cancel();
-                else Destroy(t.gameObject);
-            }
+            if (runWeapons) runWeapons.ClearWaveEffects();
+            WorldMap.Active?.ClearTemporaryObjects();
         }
 
         public Material Mat(Color c)
@@ -251,13 +126,6 @@ namespace AnomalyArena
             m = new Material(litMaterial);
             m.color = c;
             matCache[c] = m;
-            return m;
-        }
-
-        public Material FxMat(Color c)
-        {
-            var m = new Material(fxMaterial);
-            m.color = c;
             return m;
         }
     }

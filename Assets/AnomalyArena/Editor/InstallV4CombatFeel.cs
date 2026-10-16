@@ -27,7 +27,7 @@ namespace AnomalyArena.EditorTools
         sealed class Entry
         {
             public string scene;
-            public int blackHoles, blackHolesWithV4Layers, poolQuads, hitSparks, armoryChoices;
+            public int blackHoles, blackHolesWithV4Layers, poolQuads, hitSparks, armoryChoices, edgeOutlines;
             public bool poolBound;
         }
 
@@ -147,12 +147,16 @@ namespace AnomalyArena.EditorTools
                 .Select(card => card.stat + (card.bonus != StatBonus.None ? "+" + card.bonus : "")).ToArray();
 
             var status = Load<StatusRules>(statusPath);
+            Undo.RecordObject(status, "V4 element rules");
+            status.enemyFireStacks = 2f;
             EditorUtility.SetDirty(status);
 
             var roster = Load<WeaponRoster>(rosterPath);
             Undo.RecordObject(roster, "V4 Mk table");
             roster.mkDamage = new[] { 1f, 1.4f, 1.65f, 1.9f, 2.1f, 2.3f };
             roster.mkWaveSpacing = 3;
+            foreach (var definition in roster.definitions)
+                definition.retired = definition.form is WeaponForm.PlasmaLauncher or WeaponForm.PhaseDagger;
             EditorUtility.SetDirty(roster);
             receipt.mkDamage = roster.mkDamage;
 
@@ -181,6 +185,7 @@ namespace AnomalyArena.EditorTools
             pool.hitSparks = Frames("hit-spark-", 3);
             pool.hitCrit = Tex("hit-crit");
             pool.hitRing = Tex("hit-ring");
+            pool.muzzleFlash = Tex("muzzle-flash");
             EditorUtility.SetDirty(pool);
             entry.hitSparks = pool.hitSparks.Length;
 
@@ -213,7 +218,7 @@ namespace AnomalyArena.EditorTools
             entry.armoryChoices = EnsureThreeArmoryChoices(roots);
 
             var gm = roots.SelectMany(root => root.GetComponentsInChildren<GameManager>(true))
-                .First(game => game.useV2);
+                .First();
             var vfx = roots.SelectMany(root => root.GetComponentsInChildren<V4CombatVfx>(true)).FirstOrDefault();
             if (!vfx)
             {
@@ -263,10 +268,37 @@ namespace AnomalyArena.EditorTools
             vfx.auraTimeSlip = Tex("aura-timeslip");
             vfx.auraShield = Tex("aura-shield-hex");
             vfx.auraVoid = Tex("aura-void");
+            vfx.strikeRocket = Tex("strike-rocket");
+            vfx.strikeTarget = Tex("strike-target");
+            vfx.strikeFlash = Tex("strike-flash");
+            vfx.poisonSpike = Tex("enemy-poison-spike");
+            vfx.prismBeam = Tex("elite-prism-beam");
+            entry.edgeOutlines = EnsureEdgeOutlines(roots);
             EditorUtility.SetDirty(vfx);
             entry.poolQuads = vfx.items.Length;
             entry.poolBound = vfx.fireFrames.All(t => t) && vfx.lightningFrames.All(t => t) && vfx.auraShield;
             return entry;
+        }
+
+        static int EnsureEdgeOutlines(GameObject[] roots)
+        {
+            int count = 0;
+            foreach (var labels in roots.SelectMany(root => root.GetComponentsInChildren<V2WorldLabels>(true)))
+            {
+                if (labels.edgeLabels == null) continue;
+                foreach (var text in labels.edgeLabels)
+                {
+                    if (!text) continue;
+                    var outline = text.GetComponent<UnityEngine.UI.Outline>();
+                    if (!outline) outline = Undo.AddComponent<UnityEngine.UI.Outline>(text.gameObject);
+                    outline.effectColor = new Color(.12f, .02f, .2f, .95f);
+                    outline.effectDistance = new Vector2(2f, -2f);
+                    EditorUtility.SetDirty(outline);
+                    count++;
+                }
+            }
+
+            return count;
         }
 
         static int EnsureThreeArmoryChoices(GameObject[] roots)

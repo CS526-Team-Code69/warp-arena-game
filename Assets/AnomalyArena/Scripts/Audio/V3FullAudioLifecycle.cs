@@ -3,6 +3,7 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
+
     [DefaultExecutionOrder(1300)]
     public sealed class V3FullAudioLifecycle : MonoBehaviour
     {
@@ -19,7 +20,7 @@ namespace AnomalyArena
         void Start()
         {
             if(!game)game=GetComponent<GameManager>();if(!audioBank)audioBank=GetComponent<V3WorldAudio>();
-            if(!game||!audioBank||!game.useV2)return;
+            if(!game||!audioBank)return;
             game.waves.EnemySpawned+=OnEnemySpawned;game.waves.EnemyEliminated+=OnEnemyDied;game.waves.WaveCompleted+=OnWaveEnded;
             game.progression.LevelGained+=OnLevelGained;game.player.Eliminated+=OnPlayerEliminated;
             if(game.skills){game.skills.CastSucceeded+=OnSkillCast;game.skills.VisualRequested+=OnSkillImpact;}
@@ -53,6 +54,7 @@ namespace AnomalyArena
         void OnPlayerEliminated(Combatant player)=>audioBank.OnPlayerDeath(player);
         void OnSkillCast(SkillId id,Vector3 point,float radius,float duration)
         {
+
             var cue=id switch
             {
                 SkillId.FlameWake=>ArenaSoundCue.Spray,SkillId.Contagion=>ArenaSoundCue.Poison,

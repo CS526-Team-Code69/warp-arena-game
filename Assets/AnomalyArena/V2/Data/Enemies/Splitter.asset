@@ -14,17 +14,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: AnomalyArena::AnomalyArena.EnemyDefinition
   kind: 7
   displayName: Splitter
-  hp: 18
-  speed: 4.5
+  hp: 3
+  speed: 5
   radius: 0.5
   damage: 5
   windup: 0.5
   interval: 1
   reach: 0.8
-  knockback: 5
+  knockback: 0
   knockbackScale: 1
   xp: 1
   canAffix: 1
-  canElite: 1
+  canElite: 0
   startShieldShare: 0
+  spikePoisonStacks: 1
   colour: {r: 0.40499997, g: 0.72476995, b: 0.9, a: 1}

@@ -10,6 +10,8 @@ namespace AnomalyArena
         {
             public WeaponForm form;
             public int unlockWave=1;
+            [Tooltip("Retired forms stay for saved data but are never offered by the armory.")]
+            public bool retired;
             public float damageA=5, damageB=5, cooldownA=1, cooldownB=1, rangeA=10, rangeB=10;
             [TextArea] public string backfireA, backfireB;
         }

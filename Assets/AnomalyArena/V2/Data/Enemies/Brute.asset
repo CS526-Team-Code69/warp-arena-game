@@ -14,17 +14,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: AnomalyArena::AnomalyArena.EnemyDefinition
   kind: 1
   displayName: Brute
-  hp: 30
-  speed: 3.6
+  hp: 3
+  speed: 4.4
   radius: 1
-  damage: 15
-  windup: 0.8
-  interval: 2
+  damage: 5
+  windup: 0.5
+  interval: 1
   reach: 0.8
-  knockback: 5
-  knockbackScale: 0.5
-  xp: 4
+  knockback: 0
+  knockbackScale: 1
+  xp: 1
   canAffix: 1
-  canElite: 1
+  canElite: 0
   startShieldShare: 0
+  spikePoisonStacks: 1
   colour: {r: 0.9, g: 0.69308996, b: 0.40499997, a: 1}

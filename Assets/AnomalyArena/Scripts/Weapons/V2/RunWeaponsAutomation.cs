@@ -17,7 +17,7 @@ namespace AnomalyArena
         readonly Dictionary<Combatant,float>[] autoHitTimes = { new(), new(), new() };
         public float StaminaRecoveryMultiplier
         {
-            get { foreach(var w in Auto) if(w != null && w.form == WeaponForm.ShieldRing && w.variant == 1) return .75f; return 1; }
+            get { return 1; }
         }
         public bool HasOrbitBlades(int slot) => slot >= 0 && slot < Auto.Length && Auto[slot] is { form: WeaponForm.OrbitBlades, revealed: true };
         public Vector3 GetOrbitPosition(int slot,int blade)
@@ -83,13 +83,19 @@ namespace AnomalyArena
                 if(w.form==WeaponForm.SentryDrone)
                 {
                     if(!target)continue;
+
+                    if(w.variant==0&&progression)
+                    {
+                        if(!progression.EnergyUnlocked)progression.UnlockEnergy();
+                        if(!progression.TrySpendEnergy(upgrades.gunnerEnergyPerShot))continue;
+                    }
                     if(w.variant==1 && target is Enemy { Immovable:true })continue;
                     Reveal(w);
                     w.cooldown=(w.variant==0?definition.cooldownA:definition.cooldownB)*CooldownScale(w);
                     if(w.variant==0)
                     {
                         Vector3 dir=Query.Flat(target.Position-player.Position).normalized;
-                        Bolt(w,dir,hit,0,range,30);player.Push(-dir,.5f);
+                        Bolt(w,dir,hit,0,range,30);
                     }
                     else
                     {
@@ -112,15 +118,20 @@ namespace AnomalyArena
                     }
                     else
                     {
+                        float drained=0;Combatant weakest=null;
                         foreach(var body in Combatant.All)
                         {
                             if(body==player||!body.IsAlive||Query.Flat(body.Position-player.Position).magnitude>range+body.radius)continue;
                             float before=body.Hp;
                             Damage(w,body,hit,0,Vector3.zero);
                             if(lastDamageAccepted)WeaponSound(w);
-                            w.leechDamage+=Mathf.Max(0,before-body.Hp);
+                            float taken=Mathf.Max(0,before-body.Hp);
+                            w.leechDamage+=taken;drained+=taken;
+                            if(body.IsAlive&&body.Hp<body.maxHp&&(!weakest||body.Hp<weakest.Hp))weakest=body;
                         }
                         while(w.leechDamage>=5){w.leechDamage-=5;progression.GainEnergy(1);}
+
+                        if(weakest&&drained>0){weakest.Heal(drained*upgrades.leechHealShare);Fx.Ring(weakest.Position,.6f,new Color(.55f,1f,.5f,.8f));}
                     }
                 }
             }

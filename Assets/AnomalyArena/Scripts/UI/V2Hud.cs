@@ -199,7 +199,13 @@ namespace AnomalyArena
         void RenderSlots(V2UiSlot[] views, ArenaUiSlot[] values)
         {
             if (views == null || values == null) return;
-            for (int i = 0; i < Mathf.Min(views.Length, values.Length); i++) views[i].Render(values[i], art);
+            for (int i = 0; i < views.Length; i++)
+            {
+
+                bool used = i < values.Length;
+                if (views[i] && views[i].gameObject.activeSelf != used) views[i].gameObject.SetActive(used);
+                if (used && views[i]) views[i].Render(values[i], art);
+            }
         }
 
         void RenderScreen(V2UiScreen screen, ArenaUiSnapshot s)

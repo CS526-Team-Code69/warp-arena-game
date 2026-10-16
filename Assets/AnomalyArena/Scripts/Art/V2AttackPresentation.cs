@@ -2,6 +2,7 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
+
     public sealed class V2AttackPresentation : MonoBehaviour
     {
         public AttackActor actor;
@@ -38,7 +39,7 @@ namespace AnomalyArena
             Sprite sprite = SelectSprite(field);
             bool illustrated = Art.Enabled && sprite;
             illustration.enabled = illustrated;
-            if (whitebox) whitebox.enabled = !illustrated;
+            if (whitebox) whitebox.enabled = !illustrated && !V4CombatVfx.DrawsRocketStrike(actor);
             if (shortTrail)
             {
                 shortTrail.transform.position = actor.transform.position;

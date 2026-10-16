@@ -21,10 +21,11 @@ MonoBehaviour:
   windup: 0.5
   interval: 4
   reach: 0.8
-  knockback: 5
+  knockback: 0
   knockbackScale: 1
   xp: 3
   canAffix: 0
-  canElite: 1
+  canElite: 0
   startShieldShare: 0
+  spikePoisonStacks: 1
   colour: {r: 0.40499997, g: 0.9, b: 0.84654, a: 1}

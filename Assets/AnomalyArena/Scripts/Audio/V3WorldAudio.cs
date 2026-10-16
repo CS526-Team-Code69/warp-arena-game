@@ -3,6 +3,7 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
+
     public sealed class V3WorldAudio : MonoBehaviour
     {
         [Serializable] public sealed class Sound
@@ -97,7 +98,7 @@ namespace AnomalyArena
             }
             TickVoices(lifecycleVoices,lifeLeft);
             if(!paused)TickVoices(worldVoices,worldLeft);
-            bool combat=gm&&gm.useV2&&gm.State==GameState.Playing&&gm.CanPlayerMove;
+            bool combat=gm&&gm.State==GameState.Playing&&gm.CanPlayerMove;
             if(!paused)backgroundBlend=Mathf.MoveTowards(backgroundBlend,combat?1f:0f,Time.unscaledDeltaTime/Mathf.Max(.01f,backgroundFadeSeconds));
             var world=WorldMap.Active;
             if(world&&(selectedBiome!=world.biome || selectedTrial!=world.TrialActive))

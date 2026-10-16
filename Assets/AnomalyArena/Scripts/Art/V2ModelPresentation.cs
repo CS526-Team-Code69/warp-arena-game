@@ -29,6 +29,8 @@ namespace AnomalyArena
         [Min(0f), Tooltip("V4 visual-only enlargement; colliders and hit radii stay unchanged. 0 uses the default: player 1.3, enemies 1.35, bosses 1.1.")]
         public float presentationScale;
         public Color critFlashEmission = new Color(1.3f, .85f, .3f);
+        [Tooltip("Always-on emission, e.g. the Warlord's purple glow; black = none.")]
+        public Color idleEmission = Color.black;
         public Vector3 authoredPosition;
         public Color flashEmission = new Color(.7f, .65f, .4f);
         public Color windupEmission = new Color(.18f, .12f, .025f);
@@ -50,7 +52,7 @@ namespace AnomalyArena
         static readonly int EmissionId = Shader.PropertyToID("_EmissionColor");
 
         public bool HasAssignedModel => modelRoot && animator && animator.runtimeAnimatorController && idleClip && runClip && attackClip && modelRenderers != null && modelRenderers.Length > 0;
-        public bool UsingModel => HasAssignedModel && Art.Enabled && (!GameManager.Instance || GameManager.Instance.useV2);
+        public bool UsingModel => HasAssignedModel && Art.Enabled;
 
         void Awake()
         {
@@ -111,7 +113,7 @@ namespace AnomalyArena
                 return;
             }
 
-            frozen |= body.HitPaused;
+            frozen |= body.PoseHeld;
             animator.speed = frozen ? 0f : clockScale;
             if (dt <= 0f || frozen)
             {
@@ -186,7 +188,9 @@ namespace AnomalyArena
         float PresentationScale => presentationScale > 0f ? presentationScale : enemy ? (enemy.IsBoss ? 1.1f : 1.35f) : 1.3f;
         void ApplyHitFeedback()
         {
-            Color glow = body.IsAlive ? (body.LastHitCritical ? critFlashEmission : flashEmission) * body.HitFlash01 + (enemy && enemy.WindingUp ? windupEmission : Color.black) + StatusGlow() : Color.black;
+
+            if (body.IsAlive) modelRoot.localPosition = authoredPosition + (modelRoot.parent ? modelRoot.parent.InverseTransformVector(body.VisualOffset) : body.VisualOffset);
+            Color glow = body.IsAlive ? idleEmission + (body.LastHitCritical ? critFlashEmission : flashEmission) * body.HitFlash01 + (enemy && enemy.WindingUp ? windupEmission : Color.black) + StatusGlow() : Color.black;
             foreach (var renderer in modelRenderers)
             {
                 if (!renderer) continue;

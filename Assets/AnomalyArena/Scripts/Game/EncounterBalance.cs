@@ -2,6 +2,7 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
+
     [CreateAssetMenu(menuName = "Anomaly Arena/Waves/TTK Balance")]
     public sealed class EncounterBalance : ScriptableObject
     {
@@ -23,7 +24,7 @@ namespace AnomalyArena
         public float TargetSeconds(EnemyDefinition enemy, bool elite)
         {
             if (enemy.kind is EnemyKind.Hollow or EnemyKind.Tyrant) return Mathf.Max(1f,bossSeconds);
-            if (!elite && enemy.kind is EnemyKind.Grunt or EnemyKind.Skitter) return Mathf.Max(.1f,fodderSeconds);
+            if (!elite && EnemyRoles.IsMelee(enemy.kind)) return Mathf.Max(.1f,fodderSeconds);                                                     
             var values = elite ? eliteSeconds : functionSeconds;
             return values != null && (int)enemy.kind < values.Length ? Mathf.Max(.1f,values[(int)enemy.kind]) : elite ? 7.5f : 2f;
         }

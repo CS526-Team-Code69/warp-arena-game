@@ -3,6 +3,7 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
+
     public class V2WorldLabels : MonoBehaviour
     {
         [Serializable]
@@ -19,6 +20,11 @@ namespace AnomalyArena
         public EnemyLabel[] enemyLabels;
         public UnityEngine.UI.Text[] holeLabels;
         public UnityEngine.UI.Text[] edgeLabels;
+        [Header("Offscreen black hole marker")]
+        public Color holeEdgeColor = new(.78f, .36f, 1f);
+        public Color holeEdgeGlow = new(1f, .84f, 1f);
+        [Min(0f)] public float holeEdgePulsePerSecond = 1.8f;
+        [Min(1f)] public float holeEdgeScale = 1.35f;
         Enemy[] bindings;
         float refresh;
         RectTransform canvasRect;
@@ -61,7 +67,13 @@ namespace AnomalyArena
                     bool visible = PlaceWorld(label.rectTransform, hole.Centre + gm.cam.transform.up * (hole.size * .5f + 1f), gm.cam);
                     label.gameObject.SetActive(visible && text.Length > 0);
                     if (Offscreen(hole.Centre, gm.cam) && edges < edgeLabels.Length)
-                        PlaceEdge(edgeLabels[edges++], hole.Centre, gm.cam, hole.Phase == HolePhase.Portal ? ArenaText.Text("ui.hole.offscreen", hole.WavesLeft) : ArenaText.Pair("BLACK HOLE","BLACK HOLE"), hole.Phase == HolePhase.Portal);
+                    {
+                        float distance = gm.player ? Query.Flat(hole.Centre - gm.player.Position).magnitude : 0f;
+                        if (hole.Phase == HolePhase.Portal)
+                            PlaceEdge(edgeLabels[edges++], hole.Centre, gm.cam, ArenaText.Text("ui.hole.offscreen", hole.WavesLeft), true);
+                        else
+                            PlaceHoleEdge(edgeLabels[edges++], hole.Centre, gm.cam, ArenaText.Pair("BLACK HOLE","BLACK HOLE") + $"  {distance:0}m");
+                    }
                 }
             }
 
@@ -117,8 +129,19 @@ namespace AnomalyArena
             return true;
         }
 
+        void PlaceHoleEdge(UnityEngine.UI.Text label, Vector3 world, Camera cam, string value)
+        {
+            PlaceEdge(label, world, cam, value, false);
+            float pulse = .5f + .5f * Mathf.Sin(Time.unscaledTime * holeEdgePulsePerSecond * Mathf.PI * 2f);
+            label.color = Color.Lerp(holeEdgeColor, holeEdgeGlow, pulse);
+            label.fontStyle = FontStyle.Bold;
+            label.rectTransform.localScale = Vector3.one * holeEdgeScale * (1f + .08f * pulse);
+        }
+
         void PlaceEdge(UnityEngine.UI.Text label, Vector3 world, Camera cam, string value, bool bright)
         {
+            label.fontStyle = FontStyle.Normal;
+            label.rectTransform.localScale = Vector3.one;
             Vector3 screen = cam.WorldToScreenPoint(world);
             if (screen.z < 0f) { screen.x = Screen.width - screen.x; screen.y = Screen.height - screen.y; }
             screen.x = Mathf.Clamp(screen.x, 110f, Screen.width - 110f);

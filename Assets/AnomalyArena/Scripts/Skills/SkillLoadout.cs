@@ -178,10 +178,10 @@ namespace AnomalyArena
         {
             if (index < 0 || index >= Slots.Length || Slots[index].Empty || !body || !body.IsAlive) return false;
             var game = GameManager.Instance;
-            if (game && game.useV2 && !game.IsCombatActive) return Refuse(index, ArenaText.Pair("Not during a menu","Not during a menu"));
+            if (game && !game.IsCombatActive) return Refuse(index, ArenaText.Pair("Not during a menu","Not during a menu"));
             var slot = Slots[index]; var def = slot.Definition; int level = slot.Level;
             var board = ElementStatus.For(body);
-            if (ActionLocked || body.State == CharacterState.Dashing || (board && board.BlocksActions) || slot.CooldownLeft > 0f)
+            if (ActionLocked || body.Stunned || body.State == CharacterState.Dashing || (board && board.BlocksActions) || slot.CooldownLeft > 0f)
                 return Refuse(index, ArenaText.Pair("Not ready","Not ready"));
             if (!HasWorldHook(def.id)) return Refuse(index, ArenaText.Pair("World action unavailable","World action unavailable"));
             Vector3 desired = body.AimPoint;
@@ -326,7 +326,7 @@ namespace AnomalyArena
         {
             if (dt <= 0f) return;
             var game = GameManager.Instance;
-            float worldDt = game && game.useV2 ? game.WorldDeltaTime : dt;
+            float worldDt = game ? game.WorldDeltaTime : dt;
             foreach (var slot in Slots) slot.CooldownLeft = Mathf.Max(0f, slot.CooldownLeft - dt);
             radianceTimer = Mathf.Max(0f, radianceTimer - dt);
             voidWalkTimer = Mathf.Max(0f, voidWalkTimer - worldDt);

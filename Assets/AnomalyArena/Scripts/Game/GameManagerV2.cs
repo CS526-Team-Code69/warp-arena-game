@@ -20,9 +20,9 @@ namespace AnomalyArena
         ArenaUiState pendingSupplyChoice;
         bool supplyChoiceOpened;
         public void MarkSupplyLanded(){if(RunPhase==ArenaUiState.SupplyDrop)SupplyDropReady=true;}
-        public bool IsCombatActive => State==GameState.Playing&&(!useV2||RunPhase is ArenaUiState.WaveActive or ArenaUiState.VoidTrial or ArenaUiState.FinalBoss);
-        public bool CanPlayerMove => State==GameState.Playing&&(!useV2||RunPhase is ArenaUiState.WaveIntro or ArenaUiState.WaveActive or ArenaUiState.VoidTrial or ArenaUiState.FinalBoss);
-        public float WorldTimeScale => useV2 && IsCombatActive && slipLeft > 0 ? slipScale : 1f;
+        public bool IsCombatActive => State==GameState.Playing&&RunPhase is ArenaUiState.WaveActive or ArenaUiState.VoidTrial or ArenaUiState.FinalBoss;
+        public bool CanPlayerMove => State==GameState.Playing&&RunPhase is ArenaUiState.WaveIntro or ArenaUiState.WaveActive or ArenaUiState.VoidTrial or ArenaUiState.FinalBoss;
+        public float WorldTimeScale => IsCombatActive && slipLeft > 0 ? slipScale : 1f;
         public float WorldDeltaTime => Time.deltaTime * WorldTimeScale;
         public float WorldFixedDeltaTime => Time.fixedDeltaTime * WorldTimeScale;
         public float PlayerDeltaTime => Time.deltaTime;
@@ -69,7 +69,6 @@ namespace AnomalyArena
         {
             bool needsSupply=!supplyChoiceOpened&&(phase is ArenaUiState.Loadout or ArenaUiState.Armory || phase==ArenaUiState.Draft&&!greaterDraft&&HasWeaponChoice());
             if(needsSupply){pendingSupplyChoice=phase;SupplyDropReady=false;phase=ArenaUiState.SupplyDrop;}
-            hitStopLeft=0f;                                                                             
             RunPhase=phase;LockMenuInput();Time.timeScale=CanPlayerMove?1:0;
             if(phase==ArenaUiState.Paused)V2Audio.Instance?.PauseAll();else if(phase==ArenaUiState.Result)V2Audio.Instance?.StopAll();else if(CanPlayerMove)V2Audio.Instance?.ResumeAll();
             hud?.v2Hud?.RefreshView();
@@ -106,7 +105,7 @@ namespace AnomalyArena
             if(IsCombatActive)
             {
                 Elapsed+=Time.deltaTime;progression.Tick(PlayerDeltaTime);ElementStatus.TickAll(WorldDeltaTime,PlayerDeltaTime);SkillLoadout.TickAll(PlayerDeltaTime);runWeapons.Tick(PlayerDeltaTime);orbs?.Tick(WorldDeltaTime);
-                slipLeft=Mathf.Max(0,slipLeft-PlayerDeltaTime);TickHitStop();if(eligibilityWave!=waves.WaveIndex)UpdatePenetrationEligibility();
+                slipLeft=Mathf.Max(0,slipLeft-PlayerDeltaTime);if(eligibilityWave!=waves.WaveIndex)UpdatePenetrationEligibility();
             }
             else if(RunPhase==ArenaUiState.WaveEnd&&Time.unscaledTime>=waveEndAt)OpenBuild();
             else if(RunPhase is ArenaUiState.Armory or ArenaUiState.Draft or ArenaUiState.Ready or ArenaUiState.ReplaceWeapon or ArenaUiState.ReplaceSkill)
@@ -171,7 +170,6 @@ namespace AnomalyArena
         }
         public void ExecuteUiCommand(ArenaUiCommand command,int index=-1)
         {
-            if(!useV2)return;
             if(!MenuInputReady||Time.unscaledTime-menuCommandAt<.15f)return;menuCommandAt=Time.unscaledTime;
             var previousPhase=RunPhase;var previousState=State;bool previousArt=Art.Enabled,previousConfirmation=snapshot.earlyStartConfirmation;
             int previousDrafts=progression.BankedDrafts,previousRerolls=progression.RerollsRemaining,previousOffer=pendingOffer,previousDraft=pendingDraft;
@@ -241,7 +239,7 @@ namespace AnomalyArena
                 snapshot.bossImmunities="";for(int i=0;i<3;i++){var immune=waves.TyrantImmunities[i];snapshot.bossImmunityIndices[i]=snapshot.wave>=11?ElementIndex(immune):-1;if(snapshot.wave>=11)snapshot.bossImmunities+=(i==0?ArenaText.Pair("Tyrant immunities: ","Tyrant immunities: "):" · ")+ArenaTerms.Element(immune);}
                 snapshot.banner=RunPhase==ArenaUiState.WaveIntro?ArenaText.Pair("WAVE "+snapshot.wave,"WAVE "+snapshot.wave)+(snapshot.wave==11?"\n"+snapshot.bossImmunities:""):"";
                 snapshot.resultTitle=State==GameState.Won?ArenaText.Pair("EARTH IS WITHIN REACH","EARTH IS WITHIN REACH"):ArenaText.Pair("EXPLORER LOST","EXPLORER LOST");snapshot.resultDetails=ArenaText.Pair($"Wave {snapshot.wave} · Level {snapshot.level} · {snapshot.kills} kills\n{Elapsed:0} seconds on the Interstellar Battlefield",$"Wave {snapshot.wave} · Level {snapshot.level} · {snapshot.kills} kills\n{Elapsed:0} seconds on the Interstellar Battlefield");
-                if(runWeapons){for(int i=0;i<2;i++)WriteSlot(snapshot.handSlots[i],runWeapons.Hand[i],i==runWeapons.ActiveIndex);for(int i=0;i<3;i++)WriteSlot(snapshot.autoSlots[i],runWeapons.Auto[i],false);for(int i=0;i<snapshot.armoryOffers.Length;i++){var w=i<runWeapons.Offers.Length?runWeapons.Offers[i]:null;WriteArmoryOffer(snapshot.armoryOffers[i],w);}}
+                if(runWeapons){for(int i=0;i<2;i++)WriteSlot(snapshot.handSlots[i],runWeapons.Hand[i],i==runWeapons.ActiveIndex);for(int i=0;i<snapshot.autoSlots.Length;i++)WriteSlot(snapshot.autoSlots[i],i<runWeapons.Auto.Length?runWeapons.Auto[i]:null,false);for(int i=0;i<snapshot.armoryOffers.Length;i++){var w=i<runWeapons.Offers.Length?runWeapons.Offers[i]:null;WriteArmoryOffer(snapshot.armoryOffers[i],w);}}
                 for(int i=0;i<snapshot.armoryOffers.Length;i++)
                 {
                     var weapon=runWeapons?runWeapons.Offers[i]:null;var offer=snapshot.armoryOffers[i];
@@ -285,7 +283,7 @@ namespace AnomalyArena
         }
         void WriteSlot(ArenaUiSlot slot,RunWeapon w,bool active)
         {
-            slot.title=w?.Label??ArenaText.Pair("Fists","Fists");slot.detail=w==null?ArenaText.Pair("3 damage","3 damage"):ArenaText.Pair($"Lv {w.Level} · ",$"Lv {w.Level} · ")+ArenaTerms.Element(w.element)+(w.reload>0?ArenaText.Pair($" · Reload {w.reload:0.0}s",$" · Reload {w.reload:0.0}s"):"");slot.formIndex=w==null?-1:(int)w.form;slot.active=active;slot.elementIndex=w==null?-1:ElementIndex(w.element);slot.skillIndex=-1;slot.available=true;
+            slot.title=w?.Label??ArenaText.Pair("Empty slot","Empty slot");slot.detail=w==null?ArenaText.Pair("No weapon","No weapon"):ArenaText.Pair($"Lv {w.Level} · ",$"Lv {w.Level} · ")+ArenaTerms.Element(w.element)+(w.reload>0?ArenaText.Pair($" · Reload {w.reload:0.0}s",$" · Reload {w.reload:0.0}s"):"");slot.formIndex=w==null?-1:(int)w.form;slot.active=active;slot.elementIndex=w==null?-1:ElementIndex(w.element);slot.skillIndex=-1;slot.available=true;
             slot.rarity=ArenaRarity.ForWeapon(w);if(w!=null)slot.detail=ArenaTerms.Rarity(slot.rarity)+" · "+slot.detail;
             float cooldown=runWeapons.GetCooldownDuration(w);
             slot.cooldown01=w==null?0:Mathf.Clamp01(w.cooldown/Mathf.Max(.01f,cooldown));

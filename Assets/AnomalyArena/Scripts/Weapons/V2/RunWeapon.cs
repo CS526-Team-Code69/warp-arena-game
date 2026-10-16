@@ -33,6 +33,7 @@ namespace AnomalyArena
         [NonSerialized] public bool capacitorLeaking;
         [NonSerialized] public System.Collections.Generic.HashSet<Combatant> suctionTargets = new();
         [NonSerialized] public float whirlLeft, orbitAngle, leechDamage;
+        [NonSerialized] public float streamFiredAt = -99f, tankReadyAt, coldClock;
         public bool IsAuto => (int)form >= (int)WeaponForm.OrbitBlades;
         public bool Has(UpgradeAxis axis) => (axes & axis) != 0;
         public int Level { get { int n=1; for(int i=0;i<6;i++) if(Has((UpgradeAxis)(1<<i))) n++; return n; } }
