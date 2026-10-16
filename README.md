@@ -30,7 +30,6 @@ git clone https://github.com/CS526-Team-Code69/warp-arena-game.git
 ## Documentation
 
 - [Game design document](Docs/GDD.md)
-- [Technical backlog](Docs/TECH-BACKLOG.md)
 
 ## Team
 
