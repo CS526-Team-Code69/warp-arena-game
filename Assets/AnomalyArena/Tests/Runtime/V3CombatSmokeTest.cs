@@ -190,7 +190,8 @@ namespace AnomalyArena
             await CommandUntil(game, ArenaUiCommand.Start, () => game.RunPhase == ArenaUiState.SupplyDrop);
             await Until(() => game.SupplyDropReady, 4f, "supply crate lands");
             await CommandUntil(game, ArenaUiCommand.OpenSupply, () => game.RunPhase == ArenaUiState.Loadout);
-            await CommandUntil(game, ArenaUiCommand.ChooseLoadout, () => game.RunPhase == ArenaUiState.WaveIntro, 1);
+            await CommandUntil(game, ArenaUiCommand.ChooseLoadout, () => game.RunPhase == ArenaUiState.WeaponIntro, 1);
+            await CommandUntil(game, ArenaUiCommand.DismissWeaponIntro, () => game.RunPhase == ArenaUiState.WaveIntro);
             game.player.ProtectFor(20f);
             await Until(() => game.IsCombatActive && game.waves.LivingCount >= 3, 12f, "first three authored enemies spawn");
             game.waves.enabled = false;

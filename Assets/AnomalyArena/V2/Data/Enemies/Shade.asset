@@ -24,7 +24,7 @@ MonoBehaviour:
   knockback: 3
   knockbackScale: 1.5
   xp: 3
-  canAffix: 0
+  canAffix: 1
   canElite: 1
   startShieldShare: 0
   spikePoisonStacks: 1

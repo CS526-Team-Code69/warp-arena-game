@@ -6,6 +6,8 @@ namespace AnomalyArena
     public class Enemy : Combatant
     {
         [Header("Attack")] public float attackDamage = 5f;
+        [Tooltip("Authored walk speed at or above which this enemy follows the player into a gravity zone. Compared before the global movement multiplier, so slowing everyone down does not switch the rule off.")]
+        public float gravityFollowSpeed = 4.5f;
 
         [Tooltip("How close to the player's body edge before winding up (almost touching)")]
         public float triggerRange = 0.3f;
@@ -332,7 +334,7 @@ namespace AnomalyArena
                 }
                 rb.linearVelocity = facing * speed + Vector3.up * rb.linearVelocity.y;
                 chargeLeft -= step;
-                if (InFist(player)) { DealHit(player, IsBoss ? 20 : 12, facing, 8); charging = false; if (IsBoss) bossRecovery = 1.5f; }
+                if (InFist(player)) { DealHit(player, IsBoss ? 20 : attackDamage, facing, 8); charging = false; if (IsBoss) bossRecovery = 1.5f; }
                 if (chargeLeft <= 0f) { charging = false; cooldown = 1.5f; if (IsBoss) bossRecovery = 1.5f; }
                 return true;
             }
@@ -431,8 +433,8 @@ namespace AnomalyArena
                 case EnemyKind.Spitter: GM.waves.LaunchSpit(this, Position, facing); return true;
                 case EnemyKind.Rammer: charging = true; chargeLeft = 12f; V3WorldAudio.Instance?.Play(ArenaWorldCue.NpcChargeRush, Position); return true;
                 case EnemyKind.Bloater: dyingExplosion = true; Explode(); Kill(); dyingExplosion = false; return true;
-                case EnemyKind.Spire: V3WorldAudio.Instance?.Play(ArenaWorldCue.NpcPulse, Position); AreaAttack(6f, 8f, 5f); return true;
-                case EnemyKind.Stomper: V3WorldAudio.Instance?.Play(ArenaWorldCue.NpcPulse, Position); AreaAttack(5f, 6f, 8f); return true;
+                case EnemyKind.Spire: V3WorldAudio.Instance?.Play(ArenaWorldCue.NpcPulse, Position); AreaAttack(6f, attackDamage, 5f); return true;
+                case EnemyKind.Stomper: V3WorldAudio.Instance?.Play(ArenaWorldCue.NpcPulse, Position); AreaAttack(5f, attackDamage, 8f); return true;
                 case EnemyKind.Hollow:
                     if (bossAttack == 0) { V3WorldAudio.Instance?.Play(ArenaWorldCue.BossSlam, Position); AreaAttack(6f, 5f, 8f); bossRecovery = 1.5f; }
                     else { inhaleLeft = 2f; V3WorldAudio.Instance?.Play(ArenaWorldCue.BossInhale, Position); }
@@ -466,7 +468,7 @@ namespace AnomalyArena
         Vector3 KeepOffEdges(Vector3 v, float dt)
         {
             if (!WorldMap.Active || WorldMap.Active.TrialActive) return v;
-            bool allowGravity = moveSpeed >= 4.5f && WorldMap.Active.GetPull(GM.player.Position).sqrMagnitude > 0.01f;
+            bool allowGravity = definition && definition.speed >= gravityFollowSpeed && WorldMap.Active.GetPull(GM.player.Position).sqrMagnitude > 0.01f;
             return WorldMap.Active.IsWalkable(Position + v * dt, radius, allowGravity) ? v : Vector3.zero;
         }
 

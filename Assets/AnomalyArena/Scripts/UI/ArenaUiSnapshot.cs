@@ -33,6 +33,13 @@ namespace AnomalyArena
         public string resultTitle = "RUN ENDED";
         public string resultDetails = "";
         public string buildSummary = "";
+
+        public string weaponIntroTitle = "", weaponIntroBody = "", weaponIntroHint = "", weaponIntroContinue = "";
+        public int weaponIntroForm = -1;
+
+        public int cardPickSequence, cardPickIndex = -1;
+        public ArenaUiState cardPickState;
+        public CardRarity cardPickRarity;
         public ArenaUiSlot[] handSlots = { new(), new() };
         public ArenaUiSlot[] autoSlots = { new(), new() };
         public ArenaUiSlot[] skillSlots = { new(), new(), new() };

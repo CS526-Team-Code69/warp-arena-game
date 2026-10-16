@@ -235,6 +235,12 @@ namespace AnomalyArena
             bool repeat=w.form==WeaponForm.Rifle&&w.variant==1||w.form==WeaponForm.Flamethrower&&w.variant==0||w.form==WeaponForm.CryoCannon&&w.variant==1||w.form==WeaponForm.ScatterCannon&&w.variant==1||w.form==WeaponForm.SporeLauncher&&w.variant==1||w.form==WeaponForm.Minigun;
             if(pressed||repeat&&held)Fire(w,false);
         }
+
+        public void RevealNow(RunWeapon w)=>Reveal(w);
+
+        public float HitDamage(RunWeapon w){var d=roster.Get(w.form);return d==null?0f:(w.variant==0?d.damageA:d.damageB)*DamageScale(w);}
+
+        public float CycleSeconds(RunWeapon w){var d=roster.Get(w.form);return d==null?0f:(w.variant==0?d.cooldownA:d.cooldownB)*CooldownScale(w);}
         void Reveal(RunWeapon w){if(w.revealed)return;w.revealed=true;PlayerPrefs.SetInt("anomaly."+(int)w.form+"."+w.variant,1);Revealed?.Invoke(w);}
         public void Tick(float dt)
         {

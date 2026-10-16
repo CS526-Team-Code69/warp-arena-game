@@ -32,6 +32,7 @@ namespace AnomalyArena
         public UnityEngine.UI.Image damageFlash;
         public V2UiSlot[] handSlots, autoSlots, skillSlots;
         public V2UiScreen[] screens;
+        [Tooltip("Plays on the picked card when a card is taken; optional.")] public V2CardPickFx cardPickFx;
         public GameObject earlyStartPrompt;
         public UnityEngine.UI.Text earlyStartLabel;
         [Tooltip("Fixed, saved labels reused for floating damage; no runtime UI object creation.")]
@@ -48,6 +49,8 @@ namespace AnomalyArena
         float[] damageAge;
         Color[] damageColor;
         int damageCursor;
+        ArenaUiSnapshot lastSnapshot;
+        int seenPick = -1;
 
         void Awake()
         {
@@ -76,6 +79,8 @@ namespace AnomalyArena
             flash = Mathf.Max(0f, flash - dt * 3f);
             if (damageFlash) damageFlash.color = new Color(1f, .1f, .04f, flash * .15f);
             TickDamage(dt);
+
+            if (lastSnapshot != null && lastSnapshot.cardPickSequence != seenPick) nextRefresh = 0f;
             if (source == null || Time.unscaledTime < nextRefresh) return;
             nextRefresh = Time.unscaledTime + Mathf.Max(.02f, refreshInterval);
             Render(source.UiSnapshot);
@@ -128,6 +133,10 @@ namespace AnomalyArena
         void Render(ArenaUiSnapshot s)
         {
             if (s == null) return;
+            lastSnapshot = s;
+
+            if (seenPick < 0) seenPick = s.cardPickSequence;
+            else if (s.cardPickSequence != seenPick) { seenPick = s.cardPickSequence; PlayCardPick(s); }
             bool gameplay = s.state is ArenaUiState.SupplyDrop or ArenaUiState.WaveIntro or ArenaUiState.WaveActive or ArenaUiState.WaveEnd
                 or ArenaUiState.VoidTrial or ArenaUiState.FinalBoss;
             gameplayRoot.SetActive(gameplay);
@@ -196,6 +205,19 @@ namespace AnomalyArena
             SetText(earlyStartLabel, ArenaText.Text("ui.early.question", s.bankedDrafts));
         }
 
+        void PlayCardPick(ArenaUiSnapshot s)
+        {
+            V2Audio.Instance?.PlayCardPick(s.cardPickRarity);
+            if (!cardPickFx || screens == null || s.cardPickIndex < 0) return;
+            foreach (var screen in screens)
+            {
+                if (!screen || screen.state != s.cardPickState || screen.choices == null || s.cardPickIndex >= screen.choices.Length) continue;
+                var choice = screen.choices[s.cardPickIndex];
+                if (choice && choice.gameObject.activeInHierarchy) cardPickFx.Play((RectTransform)choice.transform, s.cardPickRarity);
+                return;
+            }
+        }
+
         void RenderSlots(V2UiSlot[] views, ArenaUiSlot[] values)
         {
             if (views == null || values == null) return;
@@ -233,7 +255,7 @@ namespace AnomalyArena
                     break;
                 case ArenaUiState.Loadout:
                     cards = s.loadoutChoices;
-                    SetText(screen.body, ArenaText.Pair("Pick one familiar form. Its anomaly stays unknown until you use it.\nEvery anomaly has a backfire. Aim manually; use the terrain.","Pick one familiar form. Its anomaly stays unknown until you use it.\nEvery anomaly has a backfire. Aim manually; use the terrain."));
+                    SetText(screen.body, ArenaText.Pair("Pick one familiar form. Its anomaly and backfire are revealed the moment you take it.\nAim manually; use the terrain.","Pick one familiar form. Its anomaly and backfire are revealed the moment you take it.\nAim manually; use the terrain."));
                     break;
                 case ArenaUiState.Armory:
                     cards = s.armoryOffers;
@@ -257,6 +279,13 @@ namespace AnomalyArena
                     break;
                 case ArenaUiState.Ready:
                     SetText(screen.body, ArenaText.Pair("Build choices complete. Space starts the next wave.","Build choices complete. Space starts the next wave."));
+                    break;
+                case ArenaUiState.WeaponIntro:
+                    SetText(screen.heading, s.weaponIntroTitle);
+                    SetText(screen.body, s.weaponIntroBody);
+                    SetText(screen.summary, s.weaponIntroHint);
+                    if (screen.continueLabel) SetText(screen.continueLabel, s.weaponIntroContinue);
+                    if (screen.icon) SetWeaponIcon(screen.icon, art, s.weaponIntroForm);
                     break;
                 case ArenaUiState.Paused:
                     SetText(screen.body, ArenaText.Pair("The battlefield and the build clock are paused.","The battlefield and the build clock are paused."));
