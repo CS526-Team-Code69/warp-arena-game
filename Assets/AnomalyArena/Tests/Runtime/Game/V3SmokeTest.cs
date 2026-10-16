@@ -53,7 +53,11 @@ namespace AnomalyArena
             await OpenLoadout(game);
             Assert.That(game.player.Hp, Is.EqualTo(25f), "initial HP");
             Assert.That(game.UiSnapshot.selectionUnlimited, Is.True, "choice has no countdown");
-            await ClickUntil(game, ArenaUiCommand.ChooseLoadout, () => game.RunPhase == ArenaUiState.WaveIntro, 1);
+            await ClickUntil(game, ArenaUiCommand.ChooseLoadout, () => game.RunPhase == ArenaUiState.WeaponIntro, 1);
+            Assert.That(Time.timeScale, Is.Zero, "the weapon card pauses the game");
+            Assert.That(game.runWeapons.Hand[0].revealed, Is.True, "the weapon is revealed the moment it is taken");
+            Assert.That(game.UiSnapshot.weaponIntroBody, Does.Contain(WeaponGuide.Backfire(game.runWeapons.Hand[0].form, game.runWeapons.Hand[0].variant)), "the card states the backfire");
+            await ClickUntil(game, ArenaUiCommand.DismissWeaponIntro, () => game.RunPhase == ArenaUiState.WaveIntro);
             game.player.ProtectFor(120f);
             await Until(() => game.waves.LivingCount >= 8, 10f, "first eight saved enemies spawn");
             var balance = game.waves.waveSet.encounterBalance;
@@ -77,7 +81,13 @@ namespace AnomalyArena
             Assert.That(game.runWeapons.Offers, Has.Length.EqualTo(RunWeapons.ArmoryOfferCount), "three armory offers");
             Assert.That(game.runWeapons.Offers, Has.None.Matches<RunWeapon>(w => w != null && game.runWeapons.OwnsForm(w.form) && w.upgradeOf == null), "held forms only appear as upgrades");
             Assert.That(game.runWeapons.Offers[0], Is.Not.Null.And.Matches<RunWeapon>(w => w.upgradeOf == null), "first offer is a new form");
-            await ClickUntil(game, ArenaUiCommand.TakeArmory, () => game.RunPhase == ArenaUiState.Ready, 0);
+            var flourish = Object.FindAnyObjectByType<V2CardPickFx>(FindObjectsInactive.Include);
+            Assert.That(flourish, Is.Not.Null, "the card-pick flourish is saved in the scene");
+            int picks = game.UiSnapshot.cardPickSequence, plays = flourish.Plays;
+            await ClickUntil(game, ArenaUiCommand.TakeArmory, () => game.RunPhase == ArenaUiState.WeaponIntro, 0);
+            Assert.That(game.UiSnapshot.cardPickSequence, Is.EqualTo(picks + 1), "taking an offer is one card pick");
+            Assert.That(flourish.Plays, Is.EqualTo(plays + 1), "the picked card plays its flourish");
+            await ClickUntil(game, ArenaUiCommand.DismissWeaponIntro, () => game.RunPhase == ArenaUiState.Ready);
             Assert.That(game.runWeapons.Hand.Count(w => w != null), Is.EqualTo(2), "second hand weapon equipped");
             Assert.That(game.RunPhase, Is.EqualTo(ArenaUiState.Ready), "manual next wave confirmation remains");
         }
@@ -92,6 +102,44 @@ namespace AnomalyArena
             Assert.That(game.UiSnapshot.loadoutChoices, Has.Length.EqualTo(3), "three initial choices");
             Assert.That(game.runWeapons.Hand, Has.All.Null, "opening the crate has not auto-equipped a weapon");
             Assert.That(game.UiSnapshot.selectionUnlimited, Is.True, "English choice has no countdown");
+        }
+
+        [Test, LoadScene(SceneEn), Category("Integration"), Timeout(25000)]
+        public async Task BottomRow_SlotTexts_StayInsideTheirOwnBoxes()
+        {
+            await ReadyScene();
+            var hud = Object.FindAnyObjectByType<V2Hud>(FindObjectsInactive.Include);
+            var slots = hud.handSlots.Concat(hud.autoSlots).Concat(hud.skillSlots).Where(slot => slot).ToArray();
+            Assert.That(slots, Has.Length.EqualTo(8), "two hand, three auto and three skill slots");
+            for (int i = 0; i < slots.Length; i++)
+            {
+                var slot = slots[i];
+                Rect box = Bounds(slot.transform, hud.transform);
+                for (int j = i + 1; j < slots.Length; j++)
+                    Assert.That(box.Overlaps(Bounds(slots[j].transform, hud.transform)), Is.False, $"{slot.name} overlaps {slots[j].name}");
+                var texts = new[] { slot.transform.Find("SlotKey").GetComponent<Text>(), slot.title, slot.detail };
+                var glyphs = new Graphic[] { slot.icon, slot.weaponIcon, slot.contentIcon, slot.cooldown };
+                foreach (var text in texts)
+                {
+                    Rect area = Bounds(text.transform, hud.transform);
+                    Assert.That(area.xMin >= box.xMin - .5f && area.xMax <= box.xMax + .5f && area.yMin >= box.yMin - .5f && area.yMax <= box.yMax + .5f,
+                        Is.True, $"{slot.name}/{text.name} stays inside the slot");
+                    Assert.That(text.resizeTextForBestFit && text.verticalOverflow == VerticalWrapMode.Truncate, Is.True,
+                        $"{slot.name}/{text.name} shrinks to fit instead of spilling");
+                    foreach (var glyph in glyphs)
+                        if (glyph) Assert.That(area.Overlaps(Bounds(glyph.transform, hud.transform)), Is.False, $"{slot.name}/{text.name} is clear of {glyph.name}");
+                    foreach (var other in texts)
+                        if (other != text) Assert.That(area.Overlaps(Bounds(other.transform, hud.transform)), Is.False, $"{slot.name}/{text.name} is clear of {other.name}");
+                }
+            }
+        }
+
+        static Rect Bounds(Transform part, Transform space)
+        {
+            var corners = new Vector3[4];
+            ((RectTransform)part).GetWorldCorners(corners);
+            Vector2 a = space.InverseTransformPoint(corners[0]), b = space.InverseTransformPoint(corners[2]);
+            return Rect.MinMaxRect(Mathf.Min(a.x, b.x), Mathf.Min(a.y, b.y), Mathf.Max(a.x, b.x), Mathf.Max(a.y, b.y));
         }
 
         [Test, LoadScene(SceneCn), Category("Integration"), Timeout(25000)]
@@ -452,7 +500,8 @@ namespace AnomalyArena
             await CommandUntil(game, ArenaUiCommand.Start, () => game.RunPhase == ArenaUiState.SupplyDrop);
             await Until(() => game.SupplyDropReady, 4f, "supply crate landing");
             await CommandUntil(game, ArenaUiCommand.OpenSupply, () => game.RunPhase == ArenaUiState.Loadout);
-            await CommandUntil(game, ArenaUiCommand.ChooseLoadout, () => game.RunPhase == ArenaUiState.WaveIntro, 1);
+            await CommandUntil(game, ArenaUiCommand.ChooseLoadout, () => game.RunPhase == ArenaUiState.WeaponIntro, 1);
+            await CommandUntil(game, ArenaUiCommand.DismissWeaponIntro, () => game.RunPhase == ArenaUiState.WaveIntro);
             while (game.waves.WaveIndex < wave - 1) game.waves.BeginNextWave();
             game.player.ProtectFor(120f);
             await Until(() => game.RunPhase == ArenaUiState.WaveActive, 7f, "wave introduction completes");

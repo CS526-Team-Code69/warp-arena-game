@@ -2,6 +2,7 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
+
     public class V2Audio : MonoBehaviour
     {
         public static V2Audio Instance { get; private set; }
@@ -68,6 +69,16 @@ namespace AnomalyArena
                 nextFocus = Time.unscaledTime + Mathf.Max(0f, uiFocusMinInterval);
             }
             TryPlay((ArenaSoundCue)(int)cue, true, 1f, cue is ArenaUiSound.Confirm or ArenaUiSound.Cancel);
+        }
+
+        public void PlayCardPick(CardRarity rarity)
+        {
+            float pitch = rarity switch
+            {
+                CardRarity.Rare => 1.08f, CardRarity.Epic => 1.16f, CardRarity.Legendary => 1.26f, CardRarity.Void => .86f, _ => 1f
+            };
+            TryPlay(ArenaSoundCue.UiConfirm, true, pitch, true);
+            if (rarity >= CardRarity.Epic) TryPlay(ArenaSoundCue.PickupXp, true, pitch * 1.25f, true);
         }
 
         public void PlayWorld(ArenaSoundCue cue, Vector3 at)
@@ -170,6 +181,7 @@ namespace AnomalyArena
             if (shotSource) shotSource.Pause(); if (voidSource) voidSource.Pause(); if (waveSource) waveSource.Pause();
             if (weaponVoices != null) foreach (var voice in weaponVoices) if (voice) voice.Pause();
             if (warningVoices != null) foreach (var voice in warningVoices) if (voice) voice.Pause();
+
         }
         public void ResumeAll()
         {

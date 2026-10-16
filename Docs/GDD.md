@@ -27,7 +27,7 @@ Moment to moment you move, aim with the mouse, sprint out of trouble, swap betwe
 
 | The player should feel | Because |
 |---|---|
-| **Surprise, then mastery:** "It does *what*? … Oh, I can use that." | Weapon effects are hidden until first use, every effect has a backfire, and there is no use limit, so a trick can be practised. |
+| **Surprise, then mastery:** "It does *what*? … Oh, I can use that." | You pick a weapon without knowing what it really does; the moment you take it, a weapon card reveals the effect and its backfire. There is no use limit, so a trick can be practised. |
 | **"The map did the killing."** | Attacks push enemies different distances; walls make them slam and rebound; black holes swallow anything, and enemies avoid holes on their own. |
 | **"My build came together."** | Weapons, elements, skills and stat cards are chosen one at a time between waves, and they combine. |
 | **"Do I risk it?"** | Feeding a black hole costs XP and terrain, opens a door for only three waves, and losing what waits behind it ends the run. |
@@ -69,7 +69,7 @@ The inner loop is fight → grow → fight harder. The dotted branch is the opti
 
 ## 6. Main systems
 
-**Anomalous weapons.** Each weapon form has two anomalies; a new weapon rolls one of them, hidden until first use. Every anomaly has a backfire, from recoil that can walk you into a black hole to a corpse that flies back at you. You carry two hand weapons (right mouse button swaps) and up to two auto weapons that act on their own. There is no unarmed attack.
+**Anomalous weapons.** Each weapon form has two anomalies; a new weapon rolls one of them, hidden until you take it. The moment you do, the game pauses on a weapon card that explains how it fires, its damage and its backfire. Every anomaly has a backfire, from recoil that can walk you into a black hole to a corpse that flies back at you. You carry two hand weapons (right mouse button swaps) and up to two auto weapons that act on their own. There is no unarmed attack.
 
 **Weapon growth.** Damage growth comes from the Armory, which offers higher Mk tiers of weapons you already hold. Draft cards change a weapon instead of inflating it: *Twist* adds a behaviour, *Tame* softens the backfire, *Infusion* adds an element.
 

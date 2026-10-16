@@ -63,7 +63,8 @@ namespace AnomalyArena.EditorTools
             foreach (var kind in EliteOnly)
             {
                 var data = Load(kind);
-                data.canElite = true;                                                                         
+                data.canElite = true;                                           
+                data.canAffix = true;                                                                    
                 Save(data, log);
             }
 

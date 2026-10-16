@@ -16,7 +16,7 @@ MonoBehaviour:
     maxHp: 25
     regeneration: 0
     moveSpeed: 6
-    sprintDuration: 0.5
+    sprintDuration: 1
     sprintRecovery: 1.5
     damageBonus: 0
     attackSpeedBonus: 0
@@ -38,7 +38,7 @@ MonoBehaviour:
     - -1
     - 5
     - 8.4
-    - 1.25
+    - 1.75
     - -1
     - 2
     - 1

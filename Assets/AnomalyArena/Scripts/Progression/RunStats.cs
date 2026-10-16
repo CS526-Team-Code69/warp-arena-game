@@ -10,7 +10,7 @@ namespace AnomalyArena
         public float maxHp = 50f;
         public float regeneration;
         public float moveSpeed = 6f;
-        public float sprintDuration = 0.5f;
+        public float sprintDuration = 1f;
         public float sprintRecovery = 1.5f;
         public float damageBonus;
         public float attackSpeedBonus;
@@ -31,7 +31,7 @@ namespace AnomalyArena
         [Min(1f)] public float armorConstant = 100f;
         public float armorCap = 300f;
         [Tooltip("Caps follow StatId order; negative means uncapped. MoveSpeed is in world units/s, bonuses are fractions.")]
-        public float[] caps = { -1f, 5f, 8.4f, 1.25f, -1f, 0.5f, 1f, -1f, 10f, 1f, 30f, 250f, 2f, 1f };
+        public float[] caps = { -1f, 5f, 8.4f, 1.75f, -1f, 0.5f, 1f, -1f, 10f, 1f, 30f, 250f, 2f, 1f };
 
         public float DamageMultiplier => 1f + damageBonus;
         public float CooldownMultiplier => 1f / (1f + Mathf.Max(0f, attackSpeedBonus));

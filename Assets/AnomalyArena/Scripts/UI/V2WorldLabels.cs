@@ -144,8 +144,9 @@ namespace AnomalyArena
             label.rectTransform.localScale = Vector3.one;
             Vector3 screen = cam.WorldToScreenPoint(world);
             if (screen.z < 0f) { screen.x = Screen.width - screen.x; screen.y = Screen.height - screen.y; }
-            screen.x = Mathf.Clamp(screen.x, 110f, Screen.width - 110f);
-            screen.y = Mathf.Clamp(screen.y, 170f, Screen.height - 140f);
+            float unit = canvasRect.lossyScale.x > 0f ? canvasRect.lossyScale.x : 1f;
+            screen.x = Mathf.Clamp(screen.x, 110f * unit, Screen.width - 110f * unit);
+            screen.y = Mathf.Clamp(screen.y, 170f * unit, Screen.height - 140f * unit);
             RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, screen, null, out var local);
             label.rectTransform.position = canvasRect.TransformPoint(local);
             string arrow = Mathf.Abs(screen.x - Screen.width * .5f) > Mathf.Abs(screen.y - Screen.height * .5f)

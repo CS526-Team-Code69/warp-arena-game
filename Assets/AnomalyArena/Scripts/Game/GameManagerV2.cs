@@ -86,8 +86,8 @@ namespace AnomalyArena
             if(kb!=null)
             {
                 if(kb.escapeKey.wasPressedThisFrame){if(RunPhase==ArenaUiState.Paused)ExecuteUiCommand(ArenaUiCommand.Resume);else if(CanPlayerMove)ExecuteUiCommand(ArenaUiCommand.Pause);}
-                if(kb.spaceKey.wasPressedThisFrame){if(RunPhase==ArenaUiState.Title)ExecuteUiCommand(ArenaUiCommand.Start);else if(RunPhase==ArenaUiState.SupplyDrop)ExecuteUiCommand(ArenaUiCommand.OpenSupply);else if(RunPhase is ArenaUiState.Armory or ArenaUiState.Draft or ArenaUiState.Ready)ExecuteUiCommand(ArenaUiCommand.StartNextWave);}
-                if((kb.enterKey.wasPressedThisFrame||kb.numpadEnterKey.wasPressedThisFrame)&&RunPhase==ArenaUiState.SupplyDrop)ExecuteUiCommand(ArenaUiCommand.OpenSupply);
+                if(kb.spaceKey.wasPressedThisFrame){if(RunPhase==ArenaUiState.Title)ExecuteUiCommand(ArenaUiCommand.Start);else if(RunPhase==ArenaUiState.SupplyDrop)ExecuteUiCommand(ArenaUiCommand.OpenSupply);else if(RunPhase is ArenaUiState.Armory or ArenaUiState.Draft or ArenaUiState.Ready)ExecuteUiCommand(ArenaUiCommand.StartNextWave);else if(RunPhase==ArenaUiState.WeaponIntro)ExecuteUiCommand(ArenaUiCommand.DismissWeaponIntro);}
+                if(kb.enterKey.wasPressedThisFrame||kb.numpadEnterKey.wasPressedThisFrame){if(RunPhase==ArenaUiState.SupplyDrop)ExecuteUiCommand(ArenaUiCommand.OpenSupply);else if(RunPhase==ArenaUiState.WeaponIntro)ExecuteUiCommand(ArenaUiCommand.DismissWeaponIntro);}
                 if(kb.tKey.wasPressedThisFrame&&RunPhase==ArenaUiState.Title)ToggleArt();
                 if(kb.rKey.wasPressedThisFrame){if(RunPhase==ArenaUiState.Result)ExecuteUiCommand(ArenaUiCommand.Restart);else if(RunPhase==ArenaUiState.Draft)ExecuteUiCommand(ArenaUiCommand.Reroll);}
                 int choice=kb.digit1Key.wasPressedThisFrame?0:kb.digit2Key.wasPressedThisFrame?1:kb.digit3Key.wasPressedThisFrame?2:-1;
@@ -144,6 +144,35 @@ namespace AnomalyArena
             player.ProtectFor(2);SetPhase(ArenaUiState.WaveActive);
         }
         public void NotifyFinalBossDefeated()=>finalWaveCleared=true;
+
+        RunWeapon introWeapon;
+        System.Action afterIntro;
+
+        void ShowWeaponIntro(RunWeapon weapon,System.Action then)
+        {
+            if(weapon==null){then?.Invoke();return;}
+            runWeapons.RevealNow(weapon);introWeapon=weapon;afterIntro=then;SetPhase(ArenaUiState.WeaponIntro);
+        }
+
+        void NotifyCardPicked(ArenaUiState from,int index,CardRarity rarity){snapshot.cardPickSequence++;snapshot.cardPickState=from;snapshot.cardPickIndex=index;snapshot.cardPickRarity=rarity;}
+        void DismissWeaponIntro()
+        {
+            if(RunPhase!=ArenaUiState.WeaponIntro)return;
+            var next=afterIntro;afterIntro=null;introWeapon=null;next?.Invoke();
+        }
+        void FillWeaponIntro()
+        {
+            var w=introWeapon;if(w==null)return;
+            string kind=w.IsAuto?ArenaText.Pair("Auto weapon","Auto weapon"):ArenaText.Pair("Hand weapon","Hand weapon");
+            float damage=runWeapons.HitDamage(w),cycle=runWeapons.CycleSeconds(w);
+            string damageLine=damage>0f?ArenaText.Pair($"{damage:0.#} per hit · {cycle:0.##} s between uses",$"{damage:0.#} per hit · {cycle:0.##} s between uses"):ArenaText.Pair("Deals no direct damage","Deals no direct damage");
+            string element=w.element!=ElementKind.None?ArenaText.Pair("   Element: ","   Element: ")+ArenaTerms.Element(w.element):"";
+            snapshot.weaponIntroTitle=w.Label;
+            snapshot.weaponIntroBody=$"<color=#9ad8ff>{kind}</color>\n\n<b><color=#ffd36e>{ArenaText.Pair("How it fires","How it fires")}</color></b>\n{WeaponGuide.How(w.form,w.variant)}\n\n<b><color=#ffd36e>{ArenaText.Pair("Damage","Damage")}</color></b>\n{damageLine}{element}\n\n<b><color=#ff8a73>{ArenaText.Pair("Backfire","Backfire")}</color></b>\n{WeaponGuide.Backfire(w.form,w.variant)}";
+            snapshot.weaponIntroHint=ArenaText.Pair("Click anywhere, or press Space / Enter to continue","Click anywhere, or press Space / Enter to continue");
+            snapshot.weaponIntroContinue=ArenaText.Pair("CONTINUE [SPACE]","CONTINUE [SPACE]");
+            snapshot.weaponIntroForm=(int)w.form;
+        }
         void UpdatePenetrationEligibility()
         {
             bool anyImmune=false, anyElement=false, allImmune=true;
@@ -181,19 +210,20 @@ namespace AnomalyArena
                     supplyChoiceOpened=true;SupplyDropReady=false;SetPhase(pendingSupplyChoice);pendingSupplyChoice=ArenaUiState.Title;break;
                 case ArenaUiCommand.ToggleArt:if(RunPhase==ArenaUiState.Title)ToggleArt();break;
                 case ArenaUiCommand.ChooseLoadout:
-                    if(RunPhase!=ArenaUiState.Loadout||index<0||index>2)return;runWeapons.GiveStarting(index==0?WeaponForm.RocketLauncher:index==1?WeaponForm.Rifle:WeaponForm.Knife);State=GameState.Playing;SetPhase(ArenaUiState.WaveIntro);waves.StartWaves();V2Audio.Instance?.PlayWave();break;
+                    if(RunPhase!=ArenaUiState.Loadout||index<0||index>2)return;runWeapons.GiveStarting(index==0?WeaponForm.RocketLauncher:index==1?WeaponForm.Rifle:WeaponForm.Knife);NotifyCardPicked(ArenaUiState.Loadout,index,CardRarity.Common);ShowWeaponIntro(runWeapons.Hand[0],()=>{State=GameState.Playing;SetPhase(ArenaUiState.WaveIntro);waves.StartWaves();V2Audio.Instance?.PlayWave();});break;
                 case ArenaUiCommand.TakeArmory:
-                    if(RunPhase!=ArenaUiState.Armory||index<0||index>=runWeapons.Offers.Length||runWeapons.Offers[index]==null)return;var offered=runWeapons.Offers[index];string taken=offered.FormName+(offered.upgradeOf!=null?" "+offered.MkLabel:"");if(runWeapons.TakeOffer(index)){buildSummary+=ArenaText.Pair("\nArmory: ","\nArmory: ")+taken;OpenDraft();}else{pendingOffer=index;SetPhase(ArenaUiState.ReplaceWeapon);}break;
+                    if(RunPhase!=ArenaUiState.Armory||index<0||index>=runWeapons.Offers.Length||runWeapons.Offers[index]==null)return;var offered=runWeapons.Offers[index];var offeredRarity=ArenaRarity.ForWeapon(offered);string taken=offered.FormName+(offered.upgradeOf!=null?" "+offered.MkLabel:"");if(runWeapons.TakeOffer(index)){buildSummary+=ArenaText.Pair("\nArmory: ","\nArmory: ")+taken;NotifyCardPicked(ArenaUiState.Armory,index,offeredRarity);ShowWeaponIntro(offered.upgradeOf??offered,OpenDraft);}else{pendingOffer=index;SetPhase(ArenaUiState.ReplaceWeapon);}break;
                 case ArenaUiCommand.SkipArmory:if(RunPhase==ArenaUiState.Armory)OpenDraft();break;
-                case ArenaUiCommand.ReplaceWeapon:if(RunPhase==ArenaUiState.ReplaceWeapon&&pendingOffer>=0){string replacement=runWeapons.Offers[pendingOffer]?.FormName;if(runWeapons.TakeOffer(pendingOffer,index)){buildSummary+=ArenaText.Pair("\nArmory: ","\nArmory: ")+replacement;OpenDraft();}}break;
+                case ArenaUiCommand.ReplaceWeapon:if(RunPhase==ArenaUiState.ReplaceWeapon&&pendingOffer>=0){var replacing=runWeapons.Offers[pendingOffer];var replacingRarity=ArenaRarity.ForWeapon(replacing);string replacement=replacing?.FormName;if(runWeapons.TakeOffer(pendingOffer,index)){buildSummary+=ArenaText.Pair("\nArmory: ","\nArmory: ")+replacement;NotifyCardPicked(ArenaUiState.ReplaceWeapon,index,replacingRarity);ShowWeaponIntro(replacing?.upgradeOf??replacing,OpenDraft);}}break;
                 case ArenaUiCommand.ChooseCard:
                     if(RunPhase!=ArenaUiState.Draft||index<0||index>2)return;
                     var cards=greaterDraft?greaterCards:progression.CurrentCards;if(index>=cards.Length)return;
                     if(cards[index].NeedsReplacement){pendingDraft=index;SetPhase(ArenaUiState.ReplaceSkill);break;}
-                    if(greaterDraft){if(cards[index].Apply())FinishGreaterReward();}
-                    else if(progression.ApplyCard(index)){buildSummary+="\n"+cards[index].Title;UpdatePenetrationEligibility();OpenDraft();}break;
+                    var pickedRarity=cards[index].Rarity;
+                    if(greaterDraft){if(cards[index].Apply()){NotifyCardPicked(ArenaUiState.Draft,index,pickedRarity);FinishGreaterReward();}}
+                    else if(progression.ApplyCard(index)){buildSummary+="\n"+cards[index].Title;NotifyCardPicked(ArenaUiState.Draft,index,pickedRarity);UpdatePenetrationEligibility();OpenDraft();}break;
                 case ArenaUiCommand.ReplaceSkill:
-                    if(RunPhase!=ArenaUiState.ReplaceSkill)return;if(greaterDraft){if(greaterCards[pendingDraft].Apply(index))FinishGreaterReward();}else{string chosen=progression.CurrentCards[pendingDraft].Title;if(progression.ApplyCard(pendingDraft,index)){buildSummary+="\n"+chosen;UpdatePenetrationEligibility();OpenDraft();}}break;
+                    if(RunPhase!=ArenaUiState.ReplaceSkill)return;var skillRarity=(greaterDraft?greaterCards:progression.CurrentCards)[pendingDraft].Rarity;if(greaterDraft){if(greaterCards[pendingDraft].Apply(index)){NotifyCardPicked(ArenaUiState.ReplaceSkill,index,skillRarity);FinishGreaterReward();}}else{string chosen=progression.CurrentCards[pendingDraft].Title;if(progression.ApplyCard(pendingDraft,index)){buildSummary+="\n"+chosen;NotifyCardPicked(ArenaUiState.ReplaceSkill,index,skillRarity);UpdatePenetrationEligibility();OpenDraft();}}break;
                 case ArenaUiCommand.Reroll:if(RunPhase==ArenaUiState.Draft&&!greaterDraft)progression.Reroll();break;
                 case ArenaUiCommand.StartNextWave:
                     if(greaterDraft&&RunPhase==ArenaUiState.Draft){FinishGreaterReward();break;}
@@ -204,6 +234,7 @@ namespace AnomalyArena
                 case ArenaUiCommand.Resume:if(RunPhase==ArenaUiState.Paused)SetPhase(resumePhase);break;
                 case ArenaUiCommand.Restart:V2Audio.Instance?.PlayUI(ArenaUiSound.Confirm);_=ReloadAfterUiFeedback();return;
                 case ArenaUiCommand.QuitToTitle:V2Audio.Instance?.PlayUI(ArenaUiSound.Cancel);_=ReloadAfterUiFeedback();return;
+                case ArenaUiCommand.DismissWeaponIntro:DismissWeaponIntro();break;
                 case ArenaUiCommand.EnterPortal:WorldMap.Active?.TryEnterPortal(player);break;
             }
             bool accepted=previousPhase!=RunPhase||previousState!=State||previousArt!=Art.Enabled||previousConfirmation!=snapshot.earlyStartConfirmation
@@ -230,6 +261,7 @@ namespace AnomalyArena
         {
             get
             {
+                if(RunPhase==ArenaUiState.WeaponIntro)FillWeaponIntro();
                 snapshot.state=RunPhase;snapshot.supplyLanded=SupplyDropReady;snapshot.isGreaterReward=greaterDraft;snapshot.illustrated=Art.Enabled;snapshot.hp=player?player.Hp:50;snapshot.maxHp=player?player.maxHp:50;snapshot.stamina=player?player.stamina.Value:1;snapshot.staminaExhausted=player&&player.stamina.Exhausted;
                 if(progression){snapshot.level=progression.Level;snapshot.xp=progression.Xp;snapshot.xpNeeded=progression.XpRequired;snapshot.energy=progression.Energy;snapshot.maxEnergy=progression.Stats.maxEnergy;snapshot.energyUnlocked=progression.EnergyUnlocked;snapshot.voidEnergy=progression.VoidEnergy;snapshot.rainbowLevel=progression.RainbowBadge;snapshot.bankedDrafts=progression.BankedDrafts;snapshot.rerolls=progression.RerollsRemaining;}
                 var status=player?ElementStatus.For(player):null;snapshot.shield=status?status.Shield:0;snapshot.playerStatuses=status?ArenaText.Pair($"Fire {status.Fire:0.#} · Poison {status.Poison:0.#} · Frost {status.Frost:0.#} · Lightning {status.Lightning:0.#}",$"Fire {status.Fire:0.#} · Poison {status.Poison:0.#} · Frost {status.Frost:0.#} · Lightning {status.Lightning:0.#}"):"";
@@ -248,7 +280,7 @@ namespace AnomalyArena
                 }
                 for(int i=0;i<3;i++)
                 {
-                    var loadout=snapshot.loadoutChoices[i];loadout.title=ArenaTerms.WeaponForm(i==0?WeaponForm.RocketLauncher:i==1?WeaponForm.Rifle:WeaponForm.Knife);loadout.body=ArenaText.Pair("Unknown anomaly. First use may backfire.","Unknown anomaly. First use may backfire.");loadout.formIndex=i==0?2:i==1?0:1;loadout.elementIndex=-1;
+                    var loadout=snapshot.loadoutChoices[i];loadout.title=ArenaTerms.WeaponForm(i==0?WeaponForm.RocketLauncher:i==1?WeaponForm.Rifle:WeaponForm.Knife);loadout.body=ArenaText.Pair("Unknown anomaly, revealed the moment you take it.","Unknown anomaly, revealed the moment you take it.");loadout.formIndex=i==0?2:i==1?0:1;loadout.elementIndex=-1;
                     loadout.rarity=CardRarity.Common;loadout.badge=ArenaTerms.Rarity(loadout.rarity);loadout.kind=ArenaTerms.CardKind(DraftCardKind.Weapon);
                     if(skills)WriteSkillSlot(snapshot.skillSlots[i],skills.Slots[i]);
                 }
