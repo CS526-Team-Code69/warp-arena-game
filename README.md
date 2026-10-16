@@ -6,11 +6,11 @@ A top-down arena survival game about unpredictable weapons, elemental builds and
 
 ## The game
 
-Fight through fifteen waves, open the supply crates that drop between them, and combine anomalous weapons with skills and stat cards. Fodder is there to be cleared quickly; specialists, elites and bosses give damage over time and elemental effects room to matter.
+Fight through fifteen waves, open the supply crates that drop between them, and combine anomalous weapons with skills and stat cards. Fodder is there to be cleared quickly; elites and bosses give damage over time and elemental effects room to matter.
 
-- Seventeen weapon forms, each with two anomaly variants, upgraded through armory Mk tiers.
+- Fifteen weapon forms (twelve held, three automatic), each with two anomaly variants, upgraded through armory Mk tiers.
 - Sixteen active skills, including Flame Wake, Gravity Well and the greater void skills.
-- Fire, Poison, Frost, Lightning, Earth, Light and Void, each with its own formula (see [V4 numbers](Docs/V4-NUMBERS.md)).
+- Fire, Poison, Frost, Lightning, Earth, Light and Void, each with its own formula.
 - Seven stat cards plus Element Penetration, in Common, Rare, Exceptional, Legendary and Void rarity.
 - Player-relative spawning, offscreen enemy indicators, XP attraction and supply crates opened by the player.
 - Saved scenes, editable prefabs, Inspector parameters, animation, audio and pooled effects.
@@ -28,7 +28,7 @@ git lfs pull
 
 Add the folder in Unity Hub and let the import finish. Open **`Assets/AnomalyArena/Scenes/ArenaV2_EN.unity`** and press Play. Scene objects and component references are saved in the scene; no generation step is needed.
 
-`ArenaV2.unity` is a second English entry scene for editing. `Arena.unity` keeps the original prototype, which the low-level weapon tests still use.
+`ArenaV2.unity` is a second English entry scene for editing.
 
 ## Controls
 
@@ -56,7 +56,7 @@ Paths are relative to `Assets/AnomalyArena/`.
 | Enemy HP and TTK | `Scripts/Game/EncounterBalance.cs`, `Data/EncounterBalance.asset` |
 | Growth and drafts | `Scripts/Progression/`, `Data/ProgressionRules.asset` |
 | Presentation | `Scripts/Art/`, `Scripts/Audio/`, `Scripts/UI/` |
-| Automated tests | `Tests/Runtime/` (Play Mode), `Tests/Editor/` (Edit Mode) |
+| Automated tests | `Tests/Runtime/` (Play Mode); `Tests/Editor/` writes editor test results to `Logs/` |
 
 Folder and namespace names (`AnomalyArena`) keep the working title so asset references stay intact. The product name is **WARP ARENA**.
 
@@ -66,14 +66,8 @@ The combat-feel layer (black-hole layers, status and buff effects, hit sparks, t
 
 | Document | Contents |
 | --- | --- |
-| [Game design](Docs/GDD.md) | Full design: rules, systems, content and decision log |
-| [V4 numbers](Docs/V4-NUMBERS.md) | Current element, stat-card, weapon Mk and skill formulas, with the model in `Docs/tools/` |
-| [Combat balance](Docs/COMBAT-BALANCE.md) | Wave HP budgets and time-to-kill targets |
-| [Progression](Docs/PROGRESSION.md) | XP, levels, drafts and rarity |
-| [Design decisions](Docs/DESIGN-DECISIONS.md) | Decisions and the reasons behind them |
-| [Implementation notes](Docs/IMPLEMENTATION-NOTES.md) | How the V2 scenes, data and presentation are built |
+| [Game design](Docs/GDD.md) | What the game is: pillars, core loop, a run from start to finish, main systems, content and external references |
 | [Technical backlog](Docs/TECH-BACKLOG.md) | Open engineering tasks and acceptance criteria |
-| [Project status](Docs/PROJECT-STATUS.md) | What works, what is verified, what is next |
 
 Time-to-kill targets for an ordinary build are **0.5–0.8 s for fodder, 5–10 s for elites and 45–75 s for bosses**. The reference DPS behind them is a tuning assumption, not recorded player data.
 
@@ -85,4 +79,4 @@ The browser build is published from the `gh-pages` branch. To rebuild it, run **
 
 ## Team
 
-Felix Lin, Joe Zhang, Hongyi Wang and Yuyang Bo— CS526-Team-Code69.
+Felix Lin, Joe Zhang, Hongyi Wang, Yuyang Bo and Hector Medina— CS526-Team-Code69.

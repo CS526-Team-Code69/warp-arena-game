@@ -1,5 +1,6 @@
 namespace AnomalyArena
 {
+
     public static class ArenaTerms
     {
         static readonly string[] FormZh = { "Rifle", "Knife", "Rocket Launcher", "Grav Gun", "Scatter Cannon", "Phase Dagger", "Plasma Launcher", "Flamethrower", "Cryo Cannon", "Arc Coil", "Spore Launcher", "Railgun", "Minigun", "Swarm Launcher", "Orbit Blades", "Sentry Drone", "Shield Ring" };
@@ -17,7 +18,7 @@ namespace AnomalyArena
         static readonly string[] ExpandedTwistZh = {
             "Push enemies out by 3 when the pull ends; no extra damage.", "Repel only in the aimed 180-degree half circle.", "Push side targets toward the aim line; push centred targets forward.", "On release, push gathered enemies forward by 5 once.",
             "Pierce the first body and swap with the second valid target; hit each once.", "Blast at departure too; overlapping blasts hit each enemy once.", "Click again after 0.3 s attached to detonate early.", "Stick to the wall after the third bounce, keeping the original fuse.",
-            "Reflect the flame once at the first wall; hit each body once per shot.", "Push out by 3 when a fire patch ends; no extra damage.", "Frozen bodies can chain-shatter: at most 3 bursts, each body once.", "Cloud stays for 2 s after release; only one cloud at a time.",
+            "Reflect the flame once at the first wall; hit each body once per shot.", "Push out by 3 when a fire patch ends; no extra damage.", "Frozen bodies can chain-shatter: at most 3 bursts, each body once.", "On release, the frost mist lingers ahead for 2 s and keeps freezing.",
             "Later jumps prefer the most Lightning stacks, then the nearest target.", "Knockback and thrown travel also charge: 1 per unit, cap 30.", "Cloud drifts 1 unit/s along its launch direction, blocked by walls and bounds.", "Needles bounce once off a wall; no body piercing.",
             "Pierce one interior wall, never bounds; body damage still decays.", "On a kill, fire one half-damage follow-up within 4; no execute, kill bonus or repeat follow-up.", "Keep spin-up for 1 s after release; release still restores movement.", "Enemy blast becomes a forward 90-degree cone; self-damage and lockout remain.",
             "Wall hit leaves a 1 s mine; blast if an enemy enters 1.5, without making new mines.", "Reverse the six blasts from far to near; other values stay the same."
@@ -25,7 +26,7 @@ namespace AnomalyArena
         static readonly string[] ExpandedTwistEn = {
             "Push enemies out by 3 when the pull ends; no extra damage.", "Repel only in the aimed 180-degree half circle.", "Push side targets toward the aim line; push centred targets forward.", "On release, push gathered enemies forward by 5 once.",
             "Pierce the first body and swap with the second valid target; hit each once.", "Blast at departure too; overlapping blasts hit each enemy once.", "Click again after 0.3 s attached to detonate early.", "Stick to the wall after the third bounce, keeping the original fuse.",
-            "Reflect the flame once at the first wall; hit each body once per shot.", "Push out by 3 when a fire patch ends; no extra damage.", "Frozen bodies can chain-shatter: at most 3 bursts, each body once.", "Cloud stays for 2 s after release; only one cloud at a time.",
+            "Reflect the flame once at the first wall; hit each body once per shot.", "Push out by 3 when a fire patch ends; no extra damage.", "Frozen bodies can chain-shatter: at most 3 bursts, each body once.", "On release, the frost mist lingers ahead for 2 s and keeps freezing.",
             "Later jumps prefer the most Lightning stacks, then the nearest target.", "Knockback and thrown travel also charge: 1 per unit, cap 30.", "Cloud drifts 1 unit/s along its launch direction, blocked by walls and bounds.", "Needles bounce once off a wall; no body piercing.",
             "Pierce one interior wall, never bounds; body damage still decays.", "On a kill, fire one half-damage follow-up within 4; no execute, kill bonus or repeat follow-up.", "Keep spin-up for 1 s after release; release still restores movement.", "Enemy blast becomes a forward 90-degree cone; self-damage and lockout remain.",
             "Wall hit leaves a 1 s mine; blast if an enemy enters 1.5, without making new mines.", "Reverse the six blasts from far to near; other values stay the same."
@@ -33,17 +34,17 @@ namespace AnomalyArena
         static readonly string[] ExpandedTameZh = {
             "Your attraction field no longer pulls you.", "Remove your 2-unit recoil; orbs are still repelled.", "Still move back by 3, using a push without wall-impact damage.", "Stop suction at a 2-unit body gap; enemies can still walk closer.",
             "Gain 0.5 s hit protection after a swap; no status clear or hole immunity.", "Recall the unused planted dagger after 6 s, without teleporting or exploding.", "Attached carriers no longer speed up; the blast can still hurt you.", "The blast spares your HP but still displaces you.",
-            "Overheat adds no Fire to you; the 1.5 s lockout stays.", "Your patches do not hurt or burn you; other fire still can.", "Wall shards no longer apply Frost to you.", "Your cloud spares your HP and Frost; holding still slows you to 70%.",
-            "Empty jumps end without damaging you.", "After 4 s full, drain 1 charge/s instead of self-blasting.", "Your clouds do not hurt or poison you; other poison still can.", "Reloading no longer slows movement; clip and reload duration stay.",
-            "Still move back by 4, using a push without wall-impact damage.", "A failed kill adds no 1.5 s jam; normal cooldown remains.", "Keep 70% movement at full heat; firing speed is unchanged.", "Overheat spares your HP; the 3 s lockout remains.",
+            "The fuel-tank burst no longer sets you alight; the ring still burns enemies.", "Launching no longer lights you and your patches spare you; other fire still can.", "Broken shards leave no ice patches.", "Spraying no longer hurts you with cold.",
+            "Returning current no longer adds Lightning to you; it still shocks enemies around you.", "After 4 s full, drain 1 charge/s instead of self-blasting.", "Spore pods never burst under you, and their bursts spare you.", "Reloading no longer slows movement; clip and reload duration stay.",
+            "Still move back by 4, using a push without wall-impact damage.", "The rebounding slug no longer hurts you.", "Full spin no longer limits turning or slows you.", "Overheat spares your HP; the 3 s lockout remains.",
             "Missed rockets disappear instead of returning.", "Carpet blasts spare your HP but still displace you."
         };
         static readonly string[] ExpandedTameEn = {
             "Your attraction field no longer pulls you.", "Remove your 2-unit recoil; orbs are still repelled.", "Still move back by 3, using a push without wall-impact damage.", "Stop suction at a 2-unit body gap; enemies can still walk closer.",
             "Gain 0.5 s hit protection after a swap; no status clear or hole immunity.", "Recall the unused planted dagger after 6 s, without teleporting or exploding.", "Attached carriers no longer speed up; the blast can still hurt you.", "The blast spares your HP but still displaces you.",
-            "Overheat adds no Fire to you; the 1.5 s lockout stays.", "Your patches do not hurt or burn you; other fire still can.", "Wall shards no longer apply Frost to you.", "Your cloud spares your HP and Frost; holding still slows you to 70%.",
-            "Empty jumps end without damaging you.", "After 4 s full, drain 1 charge/s instead of self-blasting.", "Your clouds do not hurt or poison you; other poison still can.", "Reloading no longer slows movement; clip and reload duration stay.",
-            "Still move back by 4, using a push without wall-impact damage.", "A failed kill adds no 1.5 s jam; normal cooldown remains.", "Keep 70% movement at full heat; firing speed is unchanged.", "Overheat spares your HP; the 3 s lockout remains.",
+            "The fuel-tank burst no longer sets you alight; the ring still burns enemies.", "Launching no longer lights you and your patches spare you; other fire still can.", "Broken shards leave no ice patches.", "Spraying no longer hurts you with cold.",
+            "Returning current no longer adds Lightning to you; it still shocks enemies around you.", "After 4 s full, drain 1 charge/s instead of self-blasting.", "Spore pods never burst under you, and their bursts spare you.", "Reloading no longer slows movement; clip and reload duration stay.",
+            "Still move back by 4, using a push without wall-impact damage.", "The rebounding slug no longer hurts you.", "Full spin no longer limits turning or slows you.", "Overheat spares your HP; the 3 s lockout remains.",
             "Missed rockets disappear instead of returning.", "Carpet blasts spare your HP but still displace you."
         };
         public static string ExpandedUpgradeDescription(AnomalyArena.WeaponForm form,int variant,UpgradeAxis axis)

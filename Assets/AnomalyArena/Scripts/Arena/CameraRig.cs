@@ -2,17 +2,29 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
+
     public sealed class CameraRig : MonoBehaviour
     {
         public Transform target;
         public Camera camera;
         public Vector3 offset = new Vector3(0f, 46f, -15f);
         public float smoothTime = 0.12f;
-        Vector3 follow, velocity;
+        [Min(0f), Tooltip("How fast a camera push springs back (per second).")] public float kickReturn = 14f;
+        [Min(0f), Tooltip("Largest push, so stacked kicks never throw the view.")] public float kickLimit = .6f;
+        Vector3 follow, velocity, kick;
         float amplitude;
         bool started;
 
         public void Shake(float amount) => amplitude = Mathf.Max(amplitude, amount);
+
+        public void Kick(Vector3 worldDirection, float amount)
+        {
+            Vector3 d = new Vector3(worldDirection.x, 0f, worldDirection.z);
+            if (d.sqrMagnitude < 1e-4f || amount <= 0f) return;
+            Vector3 k = d.normalized * amount;
+            kick = k.magnitude > kick.magnitude ? k : kick + k * .3f;
+            kick = Vector3.ClampMagnitude(kick, kickLimit);
+        }
         public Vector2 ScreenEdge(Vector3 world, float margin = 32f)
         {
             Vector3 screen = camera.WorldToScreenPoint(world);
@@ -47,7 +59,8 @@ namespace AnomalyArena
             follow = Vector3.SmoothDamp(follow, want, ref velocity, smoothTime, Mathf.Infinity, Time.unscaledDeltaTime);
             amplitude = Mathf.MoveTowards(amplitude, 0f, 4f * Time.unscaledDeltaTime);
             Vector2 shake = amplitude > 0f ? Random.insideUnitCircle * amplitude : Vector2.zero;
-            transform.position = follow + offset + new Vector3(shake.x, 0f, shake.y);
+            kick = Vector3.Lerp(kick, Vector3.zero, 1f - Mathf.Exp(-kickReturn * Time.unscaledDeltaTime));
+            transform.position = follow + offset + new Vector3(shake.x, 0f, shake.y) + kick;
         }
     }
 }

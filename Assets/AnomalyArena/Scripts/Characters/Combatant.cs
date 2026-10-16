@@ -5,14 +5,14 @@ namespace AnomalyArena
 {
 
     [RequireComponent(typeof(Rigidbody), typeof(CapsuleCollider))]
-    public abstract class Combatant : MonoBehaviour, IWeaponHolder, IDamageDealer
+    public abstract class Combatant : MonoBehaviour, IDamageReceiver, IDamageDealer
     {
         public static readonly System.Collections.Generic.List<Combatant> All = new();
         ElementStatus elementStatus;
         readonly System.Collections.Generic.Dictionary<object, float> movementModifiers = new();
         float stunTimer;
         int wallSlams;
-        public bool ActionsBlocked => stunTimer > 0 || elementStatus && elementStatus.BlocksActions || GM&&GM.useV2&&Team==Team.Player&&GM.skills&&GM.skills.ActionLocked;
+        public bool ActionsBlocked => stunTimer > 0 || elementStatus && elementStatus.BlocksActions || GM&&Team==Team.Player&&GM.skills&&GM.skills.ActionLocked;
         public float ExternalMoveMultiplier
         {
             get { float multiplier = Team==Team.Enemy?SkillLoadout.EnemySlowMultiplier(this):1f; foreach (var value in movementModifiers.Values) multiplier *= value; return multiplier; }
@@ -20,6 +20,9 @@ namespace AnomalyArena
         public void AddMovementModifier(object source, float multiplier) => movementModifiers[source] = multiplier;
         public void RemoveMovementModifier(object source) => movementModifiers.Remove(source);
         public void Stun(float seconds) => stunTimer = Mathf.Max(stunTimer, seconds);
+
+        public bool Stunned => stunTimer > 0f;
+        float hitStunWindowLeft;
         [Header("Stats")] public float maxHp = 10f;
         public float moveSpeed = 6f;
         public float radius = 0.5f;
@@ -36,10 +39,11 @@ namespace AnomalyArena
         public float Hp { get; protected set; }
         public CharacterState State { get; private set; } = CharacterState.Normal;
         public DeathCause DeathCause { get; private set; }
-        public Weapon Weapon { get; private set; }
         public bool Protected => protectTimer > 0f;
 
         public event Action<Combatant> Eliminated;
+
+        public event Action<DamageInfo> AttackReceived;
         public int SpawnVersion { get; private set; }
         protected Vector3 DeathVelocity { get; private set; }
 
@@ -48,7 +52,6 @@ namespace AnomalyArena
 
         Vector3 pushVel;
 
-        protected float weaponCooldown;
         KnockKind knockKind;
 
         ThrowImpact? throwImpact;
@@ -59,11 +62,10 @@ namespace AnomalyArena
 
         protected static GameManager GM => GameManager.Instance;
 
-        public Transform Root => transform;
         public Vector3 Position => rb ? rb.position : transform.position;
         public float Radius => radius;
         public bool IsAlive => gameObject.activeInHierarchy && State != CharacterState.Dead && State != CharacterState.Falling;
-        public IWeaponHolder Owner => this;
+        public Combatant Owner => this;
         public abstract Team Team { get; }
         public abstract Vector3 AimDirection { get; }
 
@@ -73,10 +75,9 @@ namespace AnomalyArena
 
         public virtual float CorpseDamage => 0f;
 
-        public Combatant HeldShield => GM && GM.useV2 && this is PlayerController ? GM.runWeapons.HeldEnemy : Weapon != null && Weapon.Active is Hook h ? h.HeldTarget : null;
+        public Combatant HeldShield => GM && GM.runWeapons && this is PlayerController ? GM.runWeapons.HeldEnemy : null;
 
-        public bool MovementLocked => GM && GM.useV2 && this is PlayerController && ((GM.runWeapons && GM.runWeapons.HandHookBusy)||(GM.skills&&GM.skills.MovementLocked)) || Weapon != null && Weapon.Active != null && Weapon.Active.LocksMovement;
-        public float SpeedMultiplier => Weapon != null && Weapon.Active != null ? Weapon.Active.SpeedMultiplier : 1f;
+        public bool MovementLocked => GM && this is PlayerController && ((GM.runWeapons && GM.runWeapons.HandHookBusy)||(GM.skills&&GM.skills.MovementLocked));
 
         public static Combatant From(Collider col)
         {
@@ -101,97 +102,29 @@ namespace AnomalyArena
             SpawnVersion++;DeathVelocity=Vector3.zero;
             if(!rb)rb=GetComponent<Rigidbody>();
             Hp=maxHp;State=CharacterState.Normal;DeathCause=DeathCause.None;eliminated=false;
-            stunTimer=0;wallSlams=0;movementModifiers.Clear();
-            protectTimer=fallTimer=weaponCooldown=0;knockVel=pushVel=Vector3.zero;throwImpact=null;
+            stunTimer=0;hitStunWindowLeft=0;wallSlams=0;movementModifiers.Clear();
+            protectTimer=fallTimer=0;knockVel=pushVel=Vector3.zero;throwImpact=null;
             SetFlash(false);flashTimer=squashTimer=0;LastHitDirection=Vector3.forward;
             if(squashTarget)squashTarget.localScale=squashBase;
             rb.isKinematic=false;rb.linearVelocity=Vector3.zero;rb.angularVelocity=Vector3.zero;
             if(elementStatus)elementStatus.ResetForSpawn();gameObject.SetActive(true);
         }
         public void DiscardWithoutReward(){eliminated=true;State=CharacterState.Dead;if(rb){rb.linearVelocity=Vector3.zero;rb.isKinematic=true;}gameObject.SetActive(false);}
-        public void ClearWaveState(){stunTimer=0;movementModifiers.Clear();knockVel=pushVel=Vector3.zero;protectTimer=0;throwImpact=null;if(IsAlive)SetState(CharacterState.Normal);if(rb&&!rb.isKinematic)rb.linearVelocity=Vector3.zero;if(elementStatus)elementStatus.ClearStatuses();}
+        public void ClearWaveState(){stunTimer=0;hitStunWindowLeft=0;movementModifiers.Clear();knockVel=pushVel=Vector3.zero;protectTimer=0;throwImpact=null;if(IsAlive)SetState(CharacterState.Normal);if(rb&&!rb.isKinematic)rb.linearVelocity=Vector3.zero;if(elementStatus)elementStatus.ClearStatuses();}
         public void ProtectFor(float seconds)=>protectTimer=Mathf.Max(protectTimer,seconds);
         public void CancelDisplacement(){knockVel=pushVel=Vector3.zero;throwImpact=null;if(IsAlive)SetState(CharacterState.Normal);if(rb&&!rb.isKinematic)rb.linearVelocity=Vector3.zero;}
         public void BounceFromWall(Vector3 at,Vector3 away,float bounceDistance,bool takeDamage)
         {rb.position=at;transform.position=at;if(State is CharacterState.Dashing or CharacterState.Hooked)SetState(CharacterState.Normal);if(takeDamage)TakeWallDamage(away);if(IsAlive)Knockback(away,bounceDistance,KnockKind.Push);}
 
-        protected Transform artPivot;
-
-        protected Renderer artSprite;
-        protected virtual Texture2D ArtTexture => null;
-
-        protected virtual Texture2D ArtWindupTexture => null;
-
-        protected virtual float ArtHeight => 2f;
-
-        protected Renderer artWindupSprite;
-
-        GameObject shieldVisual;
-
-        public Vector3 HeadPoint(Camera cam)
-        {
-            if (artPivot && cam) return artPivot.position + cam.transform.up * (ArtHeight + 0.15f);
-            return Position + Vector3.up * (radius * 2f + 0.6f);
-        }
+        public Vector3 HeadPoint(Camera cam) => Position + Vector3.up * (radius * 2f + 0.6f);
 
         protected virtual void Start()
         {
-            if(GM&&GM.useV2){squashTarget=bodyRenderer?bodyRenderer.transform:null;if(squashTarget)squashBase=squashTarget.localScale;return;}
-            if (Art.On && ArtTexture != null)
-            {
-                Art.HideWhitebox(gameObject);
-                artPivot = Art.Billboard(transform, ArtTexture, ArtHeight, Art.OrderCharacter, out artSprite);
-                if (ArtWindupTexture)
-                {
-                    artWindupSprite = Art.BillboardLayer(artPivot, ArtTexture, ArtHeight, ArtWindupTexture,
-                        Art.OrderCharacter);
-                    artWindupSprite.enabled = false;
-                }
-            }
-
-            squashTarget = artPivot ? artPivot : bodyRenderer ? bodyRenderer.transform : null;
-            if (squashTarget) squashBase = squashTarget.localScale;
-            if (protectionTime > 0f) BuildShieldVisual();
-        }
-
-        protected bool ShowArtWindup(bool on)
-        {
-            if (!artWindupSprite) return false;
-            artWindupSprite.enabled = on;
-            artSprite.enabled = !on;
-            return true;
-        }
-
-        void BuildShieldVisual()
-        {
-            if (artPivot && Art.Set.shieldBubble)
-            {
-
-                var bubble = Art.Set.shieldBubble;
-                var r = Art.BillboardLayer(artPivot, bubble, ArtHeight * 1.15f, bubble, Art.OrderHeld);
-                r.transform.localPosition = new Vector3(0f, ArtHeight * 0.5f, -0.02f);
-                shieldVisual = r.gameObject;
-            }
-            else
-            {
-                shieldVisual = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                UnityEngine.Object.DestroyImmediate(shieldVisual
-                    .GetComponent<Collider>());                                                            
-                shieldVisual.name = "Shield";
-                shieldVisual.transform.SetParent(transform, false);
-                shieldVisual.transform.localPosition = new Vector3(0f, radius * 1.6f, 0f);
-                shieldVisual.transform.localScale = Vector3.one * (radius * 2.8f);
-                var mr = shieldVisual.GetComponent<Renderer>();
-                mr.sharedMaterial = GM.FxMat(new Color(0.6f, 0.85f, 1f, 0.28f));
-                mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            }
-
-            shieldVisual.SetActive(false);
+            squashTarget=bodyRenderer?bodyRenderer.transform:null;if(squashTarget)squashBase=squashTarget.localScale;
         }
 
         const float SquashTime = 0.15f;
 
-        static readonly Color ArtFlashColor = new Color(6f, 6f, 6f, 1f);
         static MaterialPropertyBlock flashBlock;
 
         float flashTimer;
@@ -200,9 +133,34 @@ namespace AnomalyArena
         public float HitSquash01 => Mathf.Clamp01(squashTimer/SquashTime);
 
         public bool HitPaused => hitPauseTimer > 0f;
+
+        public bool PoseHeld => hitPauseTimer > 0f || poseHoldTimer > 0f;
+        float poseHoldTimer;
+        float hitPauseReadyAt;
+        Vector3 kickDirection;
+        float kickAmount, kickLength, kickAge = 1f;
+
+        public Vector3 VisualOffset
+        {
+            get
+            {
+                if (kickAge >= kickLength || kickLength <= 0f) return Vector3.zero;
+                float k = 1f - kickAge / kickLength;
+                return kickDirection * (kickAmount * k * k);
+            }
+        }
+
+        public void VisualKick(Vector3 dir, float amount, float seconds)
+        {
+            dir = Query.Flat(dir);
+            if (dir.sqrMagnitude < 1e-4f || Mathf.Approximately(amount, 0f) || seconds <= 0f) return;
+            if (Mathf.Abs(amount) < Mathf.Abs(VisualOffset.magnitude)) return;                                                 
+            kickDirection = dir.normalized; kickAmount = amount; kickLength = seconds; kickAge = 0f;
+        }
+
+        public void HoldPose(float seconds) => poseHoldTimer = Mathf.Max(poseHoldTimer, seconds);
         public bool LastHitCritical { get; private set; }
         float hitPauseTimer;
-        static float nextHitKickAt;
         public Vector3 LastHitDirection { get; private set; } = Vector3.forward;
         bool flashing;
         Transform squashTarget;
@@ -217,7 +175,7 @@ namespace AnomalyArena
             _ => new Color(1f, 0.8f, 0.35f),
         };
 
-        void PlayHitFeedback(float amount, Vector3 dir, HitKind kind, bool crit = false)
+        void PlayHitFeedback(float amount, Vector3 dir, HitKind kind, bool crit = false, HitFeel feel = HitFeel.Auto, Combatant attacker = null)
         {
             var fb = GM.feedback;
             float heavyAt = fb.heavyDamage * (Team == Team.Enemy ? ElementCombat.WaveScale : 1f);
@@ -239,45 +197,42 @@ namespace AnomalyArena
                 HitKind.Blast => (16, 10f, 360f),
                 _ => (heavy ? 14 : 9, heavy ? 11f : 8f, 120f),
             };
+            if (feel == HitFeel.Auto) feel = WeaponFeel.FromKind(kind);
+            var profile = fb.For(feel);
+            if (!isPlayer) count = Mathf.Max(1, Mathf.RoundToInt(count * profile.splash));
             Fx.Burst(at, spread >= 360f ? Vector3.zero : dir, c, count, speed, spread, size);
-            var art = Art.On ? Art.Set : null;
-            bool v4Sparks = GM.useV2 && FxPool.Active && FxPool.Active.hitSparks is { Length: > 0 };
-            if (v4Sparks) { }
-            else if (art && art.hitSpark)
-                Fx.SpriteBillboard(art.hitSpark, at + Vector3.up * 0.3f, radius * 1.2f, radius * (heavy ? 3.2f : 2.4f),
-                    0.2f);
-            else
-                Fx.Pop(at, c, radius * (heavy ? 3.5f : 2.5f));
+            bool v4Sparks = FxPool.Active && FxPool.Active.hitSparks is { Length: > 0 };
+            if (!v4Sparks) Fx.Pop(at, c, radius * (heavy ? 3.5f : 2.5f));
             if (heavy) Fx.Ring(Position, radius + 2.5f, c);
 
-            if (kind == HitKind.Slam && art && art.dust)
-                Fx.SpriteBillboard(art.dust, new Vector3(Position.x, 0.1f, Position.z), radius * 1.5f, radius * 3.5f,
-                    0.45f);
-
-            if (!isPlayer && GM.useV2) PlayLocalImpact(at, dir, heavy, crit, c);
+            if (!isPlayer) PlayLocalImpact(at, dir, heavy, crit, c, profile, attacker);
             if(amount>0f)GM.hud.DamageNumber(Position, amount, isPlayer ? new Color(1f, 0.3f, 0.25f) : crit ? new Color(1f, 0.55f, 0.12f) : new Color(1f, 0.95f, 0.6f),
                 heavy || isPlayer);
             if (isPlayer)
             {
-                GM.HitStop(fb.heavyHitStop);
-                GM.Shake(fb.playerHitShake);
-            }
-            else
-            {
 
-                if (!GM.useV2 && kind != HitKind.Bullet)
-                {
-                    GM.HitStop(heavy ? fb.heavyHitStop : fb.hitStop);
-                    if (heavy) GM.Shake(fb.heavyShake);
-                }
+                var enemy = attacker as Enemy;
+                float push = enemy && enemy.IsBoss ? fb.bossHitKick : enemy && enemy.IsSpecial ? fb.eliteHitKick : fb.basicHitKick;
+                GM.Kick(LastHitDirection, push);
+                VisualKick(LastHitDirection, fb.playerFlinch, .15f);
             }
         }
 
-        void PlayLocalImpact(Vector3 at, Vector3 dir, bool heavy, bool crit, Color color)
+        void PlayLocalImpact(Vector3 at, Vector3 dir, bool heavy, bool crit, Color color, HitFeelProfile profile, Combatant attacker)
         {
             var fb = GM.feedback;
-            hitPauseTimer = Mathf.Max(hitPauseTimer, crit ? fb.critHitPause : heavy ? fb.enemyHeavyHitPause : fb.enemyHitPause);
+            bool big = heavy || crit;
+
+            float hold = big ? profile.victimHeavyHold : profile.victimHold;
+            if (hold > 0f && Time.unscaledTime >= hitPauseReadyAt)
+            {
+                hitPauseTimer = Mathf.Max(hitPauseTimer, hold);
+                hitPauseReadyAt = Time.unscaledTime + hold + fb.victimHoldCooldown;
+            }
             if (crit) squashTimer = SquashTime * 1.35f;
+            var hitDirection = Query.Flat(dir).sqrMagnitude > .0001f ? Query.Flat(dir).normalized : LastHitDirection;
+            VisualKick(hitDirection, profile.victimJolt * (big ? 1.4f : 1f), .12f);
+            if (attacker is PlayerController && profile.attackerHold > 0f) attacker.HoldPose(profile.attackerHold);
             var pool = FxPool.Active;
             if (pool)
             {
@@ -288,24 +243,15 @@ namespace AnomalyArena
                 if (crit && pool.hitCrit) pool.Emit(at + Vector3.up * .6f, new Color(1f, .82f, .35f), radius * 4.5f, .26f, texture: pool.hitCrit, pulse: true);
                 if (heavy && pool.hitRing) pool.Emit(new Vector3(Position.x, .08f, Position.z), new Color(color.r, color.g, color.b, .8f), radius * 3.2f, .22f, texture: pool.hitRing, flat: true, pulse: true);
             }
-            if ((heavy || crit) && Time.unscaledTime >= nextHitKickAt)
-            {
-                nextHitKickAt = Time.unscaledTime + fb.hitKickInterval;
-                GM.Shake(crit ? fb.critShake : fb.enemyHeavyShake);
-            }
+            GM.HitKick(hitDirection, big ? profile.heavyHitKick : profile.hitKick);
         }
 
         void LateUpdate()
         {
 
             float dt = Time.unscaledDeltaTime;
-            if (shieldVisual)
-            {
-
-                bool show = Protected && IsAlive && (protectTimer > 0.15f || Mathf.Repeat(Time.time * 20f, 1f) < 0.5f);
-                if (shieldVisual.activeSelf != show) shieldVisual.SetActive(show);
-            }
-
+            if (poseHoldTimer > 0f) poseHoldTimer -= dt;
+            if (kickAge < kickLength) kickAge += dt;
             if (flashTimer > 0f || flashing)
             {
                 flashTimer -= dt;
@@ -317,9 +263,7 @@ namespace AnomalyArena
                 squashTimer = Mathf.Max(0f, squashTimer - dt);
                 float s = GM.feedback.squash * (squashTimer / SquashTime);
 
-                squashTarget.localScale = artPivot
-                    ? Vector3.Scale(squashBase, new Vector3(1f + s, 1f - s, 1f))
-                    : Vector3.Scale(squashBase, new Vector3(1f + s, 1f - s, 1f + s));
+                squashTarget.localScale = Vector3.Scale(squashBase, new Vector3(1f + s, 1f - s, 1f + s));
             }
         }
 
@@ -327,12 +271,7 @@ namespace AnomalyArena
         {
             if (on == flashing) return;
             flashing = on;
-            if (artSprite)
-            {
-                Art.Tint(artSprite, on ? ArtFlashColor : Color.white);
-                Art.Tint(artWindupSprite, on ? ArtFlashColor : Color.white);
-            }
-            else if (bodyRenderer)
+            if (bodyRenderer)
             {
 
                 if (on)
@@ -394,12 +333,12 @@ namespace AnomalyArena
 
         protected virtual void FixedUpdate()
         {
-            float dt = GM && GM.useV2 && Team == Team.Enemy ? GM.WorldFixedDeltaTime : Time.fixedDeltaTime;
-            if(GM&&GM.useV2&&!GM.CanPlayerMove){if(!rb.isKinematic)rb.linearVelocity=Vector3.zero;return;}
-            if(GM&&GM.useV2&&Team==Team.Player&&GM.skills&&GM.skills.MovementLocked&&IsAlive){if(!rb.isKinematic)rb.linearVelocity=Vector3.zero;return;}
+            float dt = GM && Team == Team.Enemy ? GM.WorldFixedDeltaTime : Time.fixedDeltaTime;
+            if(GM&&!GM.CanPlayerMove){if(!rb.isKinematic)rb.linearVelocity=Vector3.zero;return;}
+            if(GM&&Team==Team.Player&&GM.skills&&GM.skills.MovementLocked&&IsAlive){if(!rb.isKinematic)rb.linearVelocity=Vector3.zero;return;}
             stunTimer=Mathf.Max(0,stunTimer-dt);
+            if(hitStunWindowLeft>0f)hitStunWindowLeft-=dt;
             if (protectTimer > 0f) protectTimer -= dt;
-            if (weaponCooldown > 0f) weaponCooldown -= dt;
 
             if (IsAlive && State != CharacterState.Hooked && State != CharacterState.Dashing && rb.position.y < -2f)
                 OnEnterFallZone(Vector3.zero);
@@ -436,7 +375,7 @@ namespace AnomalyArena
                     break;
             }
 
-            if(GM&&GM.useV2&&Team==Team.Enemy&&!rb.isKinematic&&State is CharacterState.Normal or CharacterState.Knocked or CharacterState.Thrown)
+            if(GM&&Team==Team.Enemy&&!rb.isKinematic&&State is CharacterState.Normal or CharacterState.Knocked or CharacterState.Thrown)
                 rb.linearVelocity=new Vector3(rb.linearVelocity.x*GM.WorldTimeScale,rb.linearVelocity.y,rb.linearVelocity.z*GM.WorldTimeScale);
 
             if (IsAlive && State != CharacterState.Dashing && State != CharacterState.Hooked)
@@ -455,17 +394,6 @@ namespace AnomalyArena
             if (dir.sqrMagnitude < 1e-6f || distance <= 0f) return;
 
             pushVel += dir.normalized * (distance * GM.rules.knockDamping);
-        }
-
-        public void SlamIntoWall(Vector3 at, Vector3 away, float bounceDistance)
-        {
-            if (!IsAlive) return;
-
-            rb.position = at;
-            transform.position = at;
-            if (State == CharacterState.Dashing || State == CharacterState.Hooked) SetState(CharacterState.Normal);
-            TakeWallDamage(away);
-            if (IsAlive) Knockback(away, bounceDistance, KnockKind.Push);
         }
 
         public void Knockback(Vector3 dir, float distance, KnockKind kind)
@@ -545,7 +473,7 @@ namespace AnomalyArena
                 SetState(CharacterState.Normal);
                 rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
                 if (damage) TakeWallDamage(-to.normalized);
-                if(GM.useV2&&IsAlive&&damage&&++wallSlams<3&&rebound.magnitude>.3f)
+                if(IsAlive&&damage&&++wallSlams<3&&rebound.magnitude>.3f)
                 {knockVel=rebound;knockKind=KnockKind.Hit;SetState(CharacterState.Knocked);rb.linearVelocity=rebound*(Team==Team.Enemy?GM.WorldTimeScale:1);}
                 return;
             }
@@ -556,7 +484,7 @@ namespace AnomalyArena
             if (!IsAlive) return;
             float damage=GM.rules.wallDamage;
 
-            if(GM.useV2&&Team==Team.Enemy)damage=(damage+(GM.progression?GM.progression.Stats.impact:0))*GM.waves.HpMultiplier;
+            if(Team==Team.Enemy)damage=(damage+(GM.progression?GM.progression.Stats.impact:0))*GM.waves.HpMultiplier;
             ReceiveDamage(new DamageInfo{amount=damage,knockDir=away,kind=HitKind.Slam,source=DamageSource.Wall});
         }
 
@@ -566,7 +494,7 @@ namespace AnomalyArena
             if (info.isAttack && (Protected || State == CharacterState.Dashing)) return false;
             float beforeHp=Hp,beforeShield=elementStatus?elementStatus.Shield:0;
             bool crit=false;
-            var runStats=GM&&GM.useV2&&GM.progression?GM.progression.Stats:null;
+            var runStats=GM&&GM.progression?GM.progression.Stats:null;
             if(runStats!=null&&info.isAttack&&Team==Team.Enemy&&info.source==DamageSource.Hit&&info.dealer?.Owner is Combatant{Team:Team.Player}
                &&runStats.critChance>0f&&UnityEngine.Random.value<runStats.critChance)
             {crit=true;info.amount*=runStats.CritMultiplier;}
@@ -585,22 +513,35 @@ namespace AnomalyArena
             float actualDamage=hpDamage+shieldDamage;
             if(!tick&&actualDamage>0f)
             {
-                PlayHitFeedback(hpDamage,info.knockDir,info.kind,crit);
+                PlayHitFeedback(hpDamage,info.knockDir,info.kind,crit,info.feel,info.dealer?.Owner);
             }
             else if(tick&&hpDamage>0f)
                 GM.hud?.DamageNumber(Position,hpDamage,info.source==DamageSource.Burn?new Color(1f,.48f,.2f):new Color(.6f,.9f,.35f),false);
             if(shieldDamage>0f)GM.hud?.DamageNumber(Position+Vector3.up*.45f,shieldDamage,Color.yellow,false);
             OnDamaged(dealt);
-            if(!tick&&actualDamage>0&&GM&&GM.useV2)V3WorldAudio.Instance?.OnConfirmedHit(this,info.kind);
+            if(!tick&&actualDamage>0&&GM)V3WorldAudio.Instance?.OnConfirmedHit(this,info.kind);
+            if(info.isAttack&&actualDamage>0f)AttackReceived?.Invoke(info);
             if (Hp <= 0f)
             {
                 Hp = 0f;
                 Die(DeathCause.HpDepleted);
             }
+            else if (Team == Team.Player && info.isAttack && actualDamage > 0f && info.dealer?.Owner is Enemy attacker && !attacker.IsBoss)
+                HitStunFrom(attacker);                                                                         
             else if (info.knockDistance > 0f) Knockback(info.knockDir, info.knockDistance, KnockKind.Hit);
             if(!tick&&info.source==DamageSource.Hit&&info.dealer?.Owner is Combatant { Team: Team.Player } source)
                 ElementCombat.ApplyHit(this,info.element,info.baseDamage>0?info.baseDamage:info.amount,actualDamage,source,info.builtInElement);
             return true;
+        }
+
+        void HitStunFrom(Enemy attacker)
+        {
+            if (hitStunWindowLeft > 0f) return;
+            var fb = GM.feedback;
+            float seconds = attacker.IsSpecial ? fb.eliteHitStun : fb.basicHitStun;
+            if (seconds <= 0f) return;
+            Stun(seconds);
+            hitStunWindowLeft = Mathf.Max(seconds, fb.hitStunWindow);
         }
 
         public void Heal(float amount){float gained=Mathf.Min(maxHp-Hp,amount);Hp+=gained;if(elementStatus&&gained>0)elementStatus.OnHeal();}
@@ -621,8 +562,8 @@ namespace AnomalyArena
             Hp = Mathf.Max(0f, Hp);
             DeathCause = cause;
             SetState(CharacterState.Dead);
-            if(GM&&GM.useV2&&Team==Team.Player)V3WorldAudio.Instance?.OnPlayerDeath(this);
-            if(GM&&GM.useV2&&Team==Team.Enemy)SkillLoadout.NotifyEnemyDied(this);
+            if(GM&&Team==Team.Player)V3WorldAudio.Instance?.OnPlayerDeath(this);
+            if(GM&&Team==Team.Enemy)SkillLoadout.NotifyEnemyDied(this);
             OnDied();
             ReportEliminated();
         }
@@ -635,7 +576,7 @@ namespace AnomalyArena
                 ? Vector3.zero
                 : Query.Flat(rb.linearVelocity);
             SetState(CharacterState.Falling);
-            if(GM&&GM.useV2&&Team==Team.Player)V3WorldAudio.Instance?.OnPlayerDeath(this);
+            if(GM&&Team==Team.Player)V3WorldAudio.Instance?.OnPlayerDeath(this);
             rb.linearVelocity = v + outward * 3f;
             OnFell();
             ReportEliminated();
@@ -667,66 +608,5 @@ namespace AnomalyArena
 
         public void SetMovePosition(Vector3 p) => rb.MovePosition(p);
 
-        public void Equip(Weapon w)
-        {
-            Weapon = w;
-            w.AttachTo(this, hand ? hand : transform);
-        }
-
-        public void ReleaseWeapon()
-        {
-            if (Weapon != null && Weapon.Active != null) Weapon.Active.OnUseReleased();
-        }
-
-        public Weapon Unequip()
-        {
-            var w = Weapon;
-            Weapon = null;
-            return w;
-        }
-
-        public bool TryUseWeapon()
-        {
-            var w = Weapon;
-            if (w == null || !IsAlive) return false;
-            if (w.Active != null)
-            {
-                w.Active.OnUsePressed();
-                return true;
-            }
-
-            if (w.InFlight) return false;
-            if (State != CharacterState.Normal || weaponCooldown > 0f) return false;
-            w.ApplyDebugForce();
-            bool first = !w.Revealed;
-            bool fromClip = w.RoundsLeft > 0;
-            w.Effect.Use(w, this);
-            if (fromClip) w.RoundsLeft--;
-            else
-            {
-                w.UsesLeft--;
-                w.RoundsLeft = Mathf.Max(1, w.Effect.roundsPerUse) - 1;
-            }
-
-            w.Revealed = true;
-            weaponCooldown = w.Effect.cooldown;
-            if (first) OnWeaponRevealed(w);
-            CheckWeaponDepleted();
-            return true;
-        }
-
-        protected virtual void OnWeaponRevealed(Weapon w)
-        {
-        }
-
-        public void OnWeaponRuntimeFinished() => CheckWeaponDepleted();
-
-        public void CheckWeaponDepleted()
-        {
-            if (Weapon == null || Weapon.UsesLeft > 0 || Weapon.RoundsLeft > 0 || Weapon.Active != null ||
-                Weapon.InFlight) return;
-            var w = Unequip();
-            w.Consume();
-        }
     }
 }

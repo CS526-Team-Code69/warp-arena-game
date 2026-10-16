@@ -2,6 +2,7 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
+
     public class Enemy : Combatant
     {
         [Header("Attack")] public float attackDamage = 5f;
@@ -38,6 +39,8 @@ namespace AnomalyArena
         public int XpValue => definition ? definition.xp * (Elite ? 5 : 1) + (Affix == ElementKind.None ? 0 : 1) : IsLarge ? 4 : 1;
         public bool IsBoss => definition && (definition.kind == EnemyKind.Hollow || definition.kind == EnemyKind.Tyrant);
         public bool IsBossOrElite => IsBoss || Elite;
+
+        public bool IsSpecial => Elite || definition && EnemyRoles.IsEliteOnly(definition.kind);
         public bool Immovable => IsBoss || definition && definition.kind == EnemyKind.Spire;
         public bool IsTrialSummon { get; set; }
         public bool SuppressRewards { get; set; }
@@ -76,19 +79,19 @@ namespace AnomalyArena
             definition = data;
             Elite = elite;
             Affix = data.canAffix ? affix : ElementKind.None;
-            bool fodder = !elite && (data.kind is EnemyKind.Grunt or EnemyKind.Skitter);
+            bool fodder = !elite && EnemyRoles.IsMelee(data.kind);
             maxHp = fodder ? data.hp : Mathf.Round(data.hp * hpMultiplier * (elite ? 3f : 1f));
-            var balance = GM && GM.useV2 && GM.waves && GM.waves.waveSet ? GM.waves.waveSet.encounterBalance : null;
+            var balance = GM && GM.waves && GM.waves.waveSet ? GM.waves.waveSet.encounterBalance : null;
             if (balance) maxHp = balance.MaxHp(data, GM.waves.WaveIndex + 1, elite, Affix);
-            moveSpeed = data.speed * (GM&&GM.useV2&&GM.waves?GM.waves.EnemySpeedFactor:1f);
+            moveSpeed = data.speed * (GM&&GM.waves?GM.waves.EnemySpeedFactor:1f);
             radius = data.radius;
-            attackDamage = data.damage * (elite ? 1.5f : 1f) * (GM&&GM.useV2&&GM.waves?GM.waves.EnemyDamageFactor:1f);
+            attackDamage = data.damage * (elite ? 1.5f : 1f) * (GM&&GM.waves?GM.waves.EnemyDamageFactor:1f);
             windupTime = data.windup;
             attackInterval = data.interval;
             attackRange = data.reach;
-            attackKnockback = data.knockback;
+            attackKnockback = EnemyRoles.KnocksBackPlayer(data.kind) ? data.knockback : 0f;                                        
             knockbackScale = data.knockbackScale * (elite ? 0.5f : 1f);
-            large = data.kind == EnemyKind.Brute || data.kind == EnemyKind.Stomper || IsBoss;
+            large = data.kind == EnemyKind.Stomper || IsBoss;                                                         
             ResetForSpawn();
             AttackSequence = 0;
             windup = false;
@@ -181,11 +184,6 @@ namespace AnomalyArena
         public override Team Team => Team.Enemy;
         public override Vector3 AimDirection => facing;
         public override float CorpseDamage => attackDamage;
-        protected override Texture2D ArtTexture => Art.Set ? (IsLarge ? Art.Set.enemyLarge : Art.Set.enemySmall) : null;
-        protected override float ArtHeight => IsLarge ? Art.Set.enemyLargeHeight : Art.Set.enemySmallHeight;
-
-        protected override Texture2D ArtWindupTexture =>
-            Art.Set ? (IsLarge ? Art.Set.enemyLargeWindup : Art.Set.enemySmallWindup) : null;
 
         Vector3 facing = Vector3.back;
         bool windup;
@@ -207,13 +205,9 @@ namespace AnomalyArena
 
             if (windup)
             {
+
                 Stop();
                 windupTimer -= dt;
-
-                float pulse = 0.5f + 0.5f * Mathf.Sin(Time.time * 30f);
-                if (artWindupSprite)
-                    Art.Tint(artWindupSprite, Color.Lerp(Color.white, new Color(1.35f, 1.3f, 1.1f), pulse));
-                else if (artSprite) Art.Tint(artSprite, Color.Lerp(Color.white, new Color(1f, 0.85f, 0.2f), pulse));
                 if (windupTimer <= 0f)
                 {
                     PerformAttack();
@@ -253,21 +247,13 @@ namespace AnomalyArena
             if (!definition || definition.kind is EnemyKind.Grunt or EnemyKind.Brute or EnemyKind.Skitter or EnemyKind.Splitter or EnemyKind.Shade)
                 V3WorldAudio.Instance?.Play(ArenaWorldCue.NpcSwing, Position);
             if (definition && PerformSpecialAttack()) return;
-            var arc = Art.On ? Art.Set.enemyPunchArc : null;
-            if (arc)
-            {
-                float reach = radius + attackRange;
-                Fx.SpriteFlat(arc, Query.AtCastHeight(Position) + facing * (reach * 0.7f), facing, reach * 1.4f, 0.2f);
-            }
-            else
-            {
-                Fx.Sector(Position, facing, radius + attackRange, attackArc, new Color(1f, 0.3f, 0.2f, 0.55f));
-            }
+            Fx.Sector(Position, facing, radius + attackRange, attackArc, new Color(1f, 0.3f, 0.2f, 0.55f));
 
             var p = GM.player;
             var shield = p.HeldShield;
             if (shield != null && shield != this && InFist(shield))
             {
+
                 DealHit(shield, attackDamage, shield.Position - Position, 0f);
                 return;
             }
@@ -332,7 +318,7 @@ namespace AnomalyArena
             if (charging)
             {
                 float speed = IsBoss ? 18f * (bossPhase == 3 ? 1.25f : 1f) : 16f;
-                speed *= GM && GM.useV2 && GM.waves ? GM.waves.MovementSpeedScale : 1f;
+                speed *= GM && GM.waves ? GM.waves.MovementSpeedScale : 1f;
                 float step = speed * dt;
                 bool wall = Query.WallBetween(Query.AtCastHeight(Position), Query.AtCastHeight(Position + facing * (step + radius)), out _);
                 bool hole = IsBoss && WorldMap.Active && WorldMap.Active.IsHole(Position + facing * (step + radius));
@@ -479,19 +465,9 @@ namespace AnomalyArena
 
         Vector3 KeepOffEdges(Vector3 v, float dt)
         {
-            if (WorldMap.Active)
-            {
-                if (WorldMap.Active.TrialActive) return v;
-                bool allowGravity = moveSpeed >= 4.5f && WorldMap.Active.GetPull(GM.player.Position).sqrMagnitude > 0.01f;
-                if (WorldMap.Active.IsWalkable(Position + v * dt, radius, allowGravity)) return v;
-                return Vector3.zero;
-            }
-            if (ArenaShape.ContainsWithMargin(Position + v * dt, radius)) return v;
-            var alongX = new Vector3(v.x, 0f, 0f);
-            if (ArenaShape.ContainsWithMargin(Position + alongX * dt, radius)) return alongX;
-            var alongZ = new Vector3(0f, 0f, v.z);
-            if (ArenaShape.ContainsWithMargin(Position + alongZ * dt, radius)) return alongZ;
-            return Vector3.zero;
+            if (!WorldMap.Active || WorldMap.Active.TrialActive) return v;
+            bool allowGravity = moveSpeed >= 4.5f && WorldMap.Active.GetPull(GM.player.Position).sqrMagnitude > 0.01f;
+            return WorldMap.Active.IsWalkable(Position + v * dt, radius, allowGravity) ? v : Vector3.zero;
         }
 
         void Stop() { if (!rb.isKinematic) rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f); }
@@ -507,8 +483,6 @@ namespace AnomalyArena
         void SetLook(bool yellow)
         {
             if (bodyRenderer) bodyRenderer.sharedMaterial = yellow && windupMaterial ? windupMaterial : normalMaterial;
-            if (ShowArtWindup(yellow)) return;
-            if (!yellow && artSprite) Art.Tint(artSprite, Color.white);
         }
 
         protected override void OnStateChanged(CharacterState from, CharacterState to)
@@ -527,7 +501,7 @@ namespace AnomalyArena
 
         void BeginCorpse()
         {
-            if(!GM||!GM.useV2||!pooled||IsBoss||DeathCause!=DeathCause.HpDepleted)
+            if(!GM||!pooled||IsBoss||DeathCause!=DeathCause.HpDepleted)
             {if(pooled)gameObject.SetActive(false);else Destroy(gameObject);return;}
             CorpseActive=true;CorpseCarried=false;corpseSeconds=corpseLifetime;
             corpseVelocity=Vector3.ClampMagnitude(DeathVelocity,12f);
@@ -577,7 +551,6 @@ namespace AnomalyArena
                     V2Audio.Instance?.PlayWorld(ArenaSoundCue.BloaterWarning, Position);
                     return;
                 }
-                if (definition.kind == EnemyKind.Splitter) { GM.waves.SpawnExtras(EnemyKind.Skitter, 3, Position, false); V3WorldAudio.Instance?.Play(ArenaWorldCue.NpcSplit,Position); }
                 if (definition.kind == EnemyKind.Hollow) WorldMap.Active.CompleteTrial();
                 if (definition.kind == EnemyKind.Tyrant) GM.NotifyFinalBossDefeated();
             }
@@ -594,3 +567,4 @@ namespace AnomalyArena
         }
     }
 }
+

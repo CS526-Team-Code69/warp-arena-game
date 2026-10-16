@@ -10,32 +10,7 @@ namespace AnomalyArena
     [DefaultExecutionOrder(100)]
     public class WaveManager : MonoBehaviour
     {
-        [Serializable]
-        public class Wave
-        {
-            public int small;
-            public int large;
-        }
-
-        public Wave[] waves =
-        {
-            new Wave { small = 4, large = 1 },
-            new Wave { small = 8, large = 2 },
-            new Wave { small = 15, large = 5 },
-        };
-        [Tooltip("Maximum number of enemies alive at once (to be decided)")] public int maxAlive = 12;
-        public float spawnTelegraph = 1f;
-        public float minSpawnDistance = 6f;
-        [Tooltip("Interval between consecutive X markers")] public float spawnInterval = 0.25f;
-        public float betweenWaveDelay = 2.5f;
-        [Tooltip("Refill the player's HP before each wave")] public bool refillHpEachWave = true;
-        [Tooltip("When not refilling, HP restored between waves (capped at max)")] public float waveHeal = 20f;
-
-        public Enemy smallPrefab;
-        public Enemy largePrefab;
-
-        [Header("v2 saved pools and data")]
-        public bool v2;
+        [Header("Saved pools and data")]
         public WaveSet waveSet;
         public EnemyDefinition[] roster;
         public Enemy[] preparedEnemies;
@@ -48,8 +23,8 @@ namespace AnomalyArena
         [SerializeField] int pressurePickupRevision;
         public int PressurePickupRevision => pressurePickupRevision;
         public void MarkPressurePickupApplied() => pressurePickupRevision = 1;
-        public float MovementSpeedScale => v2 ? Mathf.Max(0f, movementSpeedMultiplier) : 1f;
-        int ScaledOrdinaryCount(int count) => v2 ? Mathf.CeilToInt(Mathf.Max(0, count) * Mathf.Max(0f, spawnCountMultiplier)) : count;
+        public float MovementSpeedScale => Mathf.Max(0f, movementSpeedMultiplier);
+        int ScaledOrdinaryCount(int count) => Mathf.CeilToInt(Mathf.Max(0, count) * Mathf.Max(0f, spawnCountMultiplier));
         [Header("Swarm and status roles: batch composition.")]
         [Range(0f,1f)] public float swarmShare = .6f;
         [Range(0f,1f)] public float functionShare = .2f;
@@ -63,6 +38,20 @@ namespace AnomalyArena
         [HideInInspector] public float swarmExperienceMultiplier = .03f;                                                              
         [Min(0f), Tooltip("Fixed XP per fodder enemy; unaffected by wave XP correction or affix bonuses.")] public float swarmExperienceReward = .1f;
         [Min(1)] public int firstEliteWave = 6;
+        [Min(0), Tooltip("Alive elites plus pending elite markers never exceed this; capped elite slots become melee fodder.")] public int maxConcurrentElites = 3;
+        [Min(1), Tooltip("First wave with the ranged basic (Spitter).")] public int rangedFirstWave = 3;
+        [Min(1), Tooltip("First wave with the support basic (Warden).")] public int supportFirstWave = 5;
+        static readonly ElementKind[] EliteElements = { ElementKind.Fire, ElementKind.Poison, ElementKind.Frost, ElementKind.Lightning, ElementKind.Earth, ElementKind.Light, ElementKind.Void };
+
+        public int ActiveEliteCount { get { int count = 0; foreach (var enemy in alive) if (enemy && enemy.IsAlive && enemy.Elite) count++; if (preparedMarkers != null) foreach (var marker in preparedMarkers) if (marker && marker.gameObject.activeSelf && marker.elite) count++; return count; } }
+
+        public ElementKind PickEliteAffix()
+        {
+            var free = new List<ElementKind>(EliteElements);
+            foreach (var enemy in alive) if (enemy && enemy.IsAlive && enemy.Elite) free.Remove(enemy.Affix);
+            if (preparedMarkers != null) foreach (var marker in preparedMarkers) if (marker && marker.gameObject.activeSelf && marker.elite) free.Remove(marker.affix);
+            return free.Count > 0 ? free[Random.Range(0, free.Count)] : ElementKind.None;
+        }
         [Range(.05f,.5f)] public float refillMissingShare = .2f;
         [SerializeField] int continuousCrowdRevision;
         [Tooltip("First five waves as a fraction of full density; later waves use full density.")] public float[] earlyPopulationScale = { .3f,.4f,.5f,.65f,.8f };
@@ -99,33 +88,29 @@ namespace AnomalyArena
         public ElementKind[] TyrantImmunities { get; private set; } = new ElementKind[3];
         public WavePhase Phase { get; private set; }
         public float TimeLeft { get; private set; }
-        public float HpMultiplier => v2 && waveSet && WaveIndex >= 0 ? waveSet.waves[Mathf.Min(WaveIndex, waveSet.waves.Length - 1)].hpMultiplier * waveSet.ExtraHp(WaveIndex+1) : 1f;
-        public float EnemyDamageFactor => v2 && waveSet ? waveSet.DamageFactor(WaveIndex+1) : 1f;
+        public float HpMultiplier => waveSet && WaveIndex >= 0 ? waveSet.waves[Mathf.Min(WaveIndex, waveSet.waves.Length - 1)].hpMultiplier * waveSet.ExtraHp(WaveIndex+1) : 1f;
+        public float EnemyDamageFactor => waveSet ? waveSet.DamageFactor(WaveIndex+1) : 1f;
 
-        public float CombatScale => v2 && waveSet && waveSet.encounterBalance && WaveIndex >= 0 ? waveSet.encounterBalance.DpsAt(WaveIndex + 1) / waveSet.encounterBalance.DpsAt(1) : 1f;
-        public float EnemySpeedFactor => (v2 && waveSet ? waveSet.SpeedFactor(WaveIndex+1) : 1f) * MovementSpeedScale;
-        public float BuildTime => v2 && waveSet && WaveIndex >= 0 ? waveSet.waves[WaveIndex].buildTime : 20f;
+        public float CombatScale => waveSet && waveSet.encounterBalance && WaveIndex >= 0 ? waveSet.encounterBalance.DpsAt(WaveIndex + 1) / waveSet.encounterBalance.DpsAt(1) : 1f;
+        public float EnemySpeedFactor => (waveSet ? waveSet.SpeedFactor(WaveIndex+1) : 1f) * MovementSpeedScale;
+        public float BuildTime => waveSet && WaveIndex >= 0 ? waveSet.waves[WaveIndex].buildTime : 20f;
         public event Action<int> WaveCompleted;
         public event Action<Enemy> EnemySpawned;
         public event Action<Enemy> EnemyEliminated;
         bool trialSuspended;
         bool finalBossPending;
         bool[] eliteIssued;
-        int spiresIssued;
         ElementKind waveAffixA, waveAffixB;
         int batchSpawnsRemaining, deathSequence;
         readonly Dictionary<Enemy, int> corpseOrder = new();
 
         public int WaveIndex { get; private set; } = -1;
-        public int WaveCount => v2 && waveSet ? waveSet.waves.Length : waves.Length;
+        public int WaveCount => waveSet ? waveSet.waves.Length : 0;
         public bool BetweenWaves { get; private set; }
-        public float BetweenTimer { get; private set; }
-        public int Remaining => v2 ? LivingCount + PendingCount : queue.Count + markers.Count + alive.Count;
+        public int Remaining => LivingCount + PendingCount;
         public IReadOnlyList<Enemy> Alive => alive;
         public int Kills { get; private set; }
 
-        readonly List<bool> queue = new List<bool>();                
-        readonly List<SpawnMarker> markers = new List<SpawnMarker>();
         readonly List<Enemy> alive = new List<Enemy>();
         float spawnTimer;
         bool running;
@@ -135,19 +120,14 @@ namespace AnomalyArena
         public void StartWaves()
         {
             running = true;
-            if (v2)
+            var elements = new[] { ElementKind.Fire, ElementKind.Poison, ElementKind.Frost, ElementKind.Lightning, ElementKind.Earth, ElementKind.Light, ElementKind.Void };
+            for (int i = 0; i < TyrantImmunities.Length; i++)
             {
-                var elements = new[] { ElementKind.Fire, ElementKind.Poison, ElementKind.Frost, ElementKind.Lightning, ElementKind.Earth, ElementKind.Light, ElementKind.Void };
-                for (int i = 0; i < TyrantImmunities.Length; i++)
-                {
-                    int choice = Random.Range(i, elements.Length);
-                    (elements[i], elements[choice]) = (elements[choice], elements[i]);
-                    TyrantImmunities[i] = elements[i];
-                }
-                BeginV2Wave(0);
-                return;
+                int choice = Random.Range(i, elements.Length);
+                (elements[i], elements[choice]) = (elements[choice], elements[i]);
+                TyrantImmunities[i] = elements[i];
             }
-            BeginWave(0);
+            BeginV2Wave(0);
         }
 
         public void BeginNextWave()
@@ -165,7 +145,6 @@ namespace AnomalyArena
             spawnTimer = 0f;
             BatchIndex = 0; TimeExpired = false; batchSpawnsRemaining = 0;
             spawnSectorCursor = Random.Range(0,8);
-            spiresIssued = 0;
 
             eliteIssued = new bool[waveSet.waves[index].eliteCount];
             ExperienceRewardScale = CalculateExperienceRewardScale();
@@ -243,8 +222,10 @@ namespace AnomalyArena
             batchSpawnsRemaining = PopulationTarget;
             var shares = ActiveRoleShares;
             swarmRemaining = Mathf.Clamp(Mathf.RoundToInt(batchSpawnsRemaining * shares.x), 0, batchSpawnsRemaining);
-            eliteRemaining = Mathf.Clamp(Mathf.RoundToInt(batchSpawnsRemaining * shares.z), 0, batchSpawnsRemaining - swarmRemaining);
-            functionRemaining = batchSpawnsRemaining - swarmRemaining - eliteRemaining;
+            int eliteWanted = Mathf.Clamp(Mathf.RoundToInt(batchSpawnsRemaining * shares.z), 0, batchSpawnsRemaining - swarmRemaining);
+            functionRemaining = batchSpawnsRemaining - swarmRemaining - eliteWanted;
+            eliteRemaining = Mathf.Min(eliteWanted, Mathf.Max(0, maxConcurrentElites - ActiveEliteCount));
+            swarmRemaining += eliteWanted - eliteRemaining;
             spawnTimer = 0f;
         }
 
@@ -264,7 +245,8 @@ namespace AnomalyArena
             }
             int target = PopulationTarget;
             var shares = ActiveRoleShares;
-            int smallTarget = Mathf.RoundToInt(target * shares.x), eliteTarget = Mathf.RoundToInt(target * shares.z);
+            int eliteShareCount = Mathf.RoundToInt(target * shares.z), eliteTarget = Mathf.Min(eliteShareCount, Mathf.Max(0, maxConcurrentElites));
+            int smallTarget = Mathf.RoundToInt(target * shares.x) + eliteShareCount - eliteTarget;
             int missingSmall = Mathf.Max(0,smallTarget-small), missingElite = Mathf.Max(0,eliteTarget-elite);
             int missingFunctional = Mathf.Max(0,target-smallTarget-eliteTarget-functional);
             int missing = missingSmall+missingFunctional+missingElite;
@@ -280,12 +262,16 @@ namespace AnomalyArena
             while (batchSpawnsRemaining > 0 && !TimeExpired && TimeLeft > 0f)
             {
                 int roll = Random.Range(0, batchSpawnsRemaining);
-                int group = roll < swarmRemaining ? 0 : roll < swarmRemaining + functionRemaining ? 1 : 2;
+                int quota = roll < swarmRemaining ? 0 : roll < swarmRemaining + functionRemaining ? 1 : 2;
+                int group = quota == 2 && ActiveEliteCount >= maxConcurrentElites ? 0 : quota;                                                
                 var data = RollBatchEnemy(group);
-                var affix = data.canAffix && (group == 2 || Random.value < affixShare) ? Random.value < .5f ? waveAffixA : waveAffixB : ElementKind.None;
-                if (!PlaceMarker(data, group == 2, affix)) break;
-                if (group == 0) swarmRemaining--; else if (group == 1) functionRemaining--; else eliteRemaining--;
-                if (data.kind == EnemyKind.Spire) spiresIssued++;
+                if (!data && group > 0) data = RollBatchEnemy(group = 0);                                                                  
+                if (!data) data = roster[(int)EnemyKind.Grunt];
+                bool elite = group == 2;
+
+                var affix = !data.canAffix ? ElementKind.None : elite ? PickEliteAffix() : Random.value < affixShare ? Random.value < .5f ? waveAffixA : waveAffixB : ElementKind.None;
+                if (!PlaceMarker(data, elite, affix)) break;
+                if (quota == 0) swarmRemaining--; else if (quota == 1) functionRemaining--; else eliteRemaining--;
                 batchSpawnsRemaining--;
             }
             spawnTimer = Mathf.Max(.02f, batchSpawnRetry);
@@ -300,26 +286,24 @@ namespace AnomalyArena
             }
         }
 
-        bool IsSwarm(EnemyDefinition data) => data.kind is EnemyKind.Grunt or EnemyKind.Skitter;
+        bool IsSwarm(EnemyDefinition data) => EnemyRoles.IsMelee(data.kind);
         int BatchWeight(WaveSet.Definition wave, int index, int group, bool constrainActive = true)
         {
             if (index >= roster.Length || !roster[index] || roster[index].kind is EnemyKind.Hollow or EnemyKind.Tyrant) return 0;
             var data = roster[index];
-            bool allowed = group == 0 ? IsSwarm(data) : group == 1 ? !IsSwarm(data) : !IsSwarm(data) && data.canElite;
+
+            bool eliteOnly = EnemyRoles.IsEliteOnly(data.kind);
+            bool allowed = group == 0 ? IsSwarm(data) : group == 1 ? !IsSwarm(data) && !eliteOnly : eliteOnly && data.canElite;
             if (!allowed) return 0;
             int unlockWave = data.kind switch {
-                EnemyKind.Brute => 2,
-                EnemyKind.Spitter or EnemyKind.Bloater => 3,
-                EnemyKind.Rammer or EnemyKind.Warden or EnemyKind.Splitter => 4,
-                EnemyKind.Stomper or EnemyKind.Shade => 5,
+                EnemyKind.Spitter => rangedFirstWave,
+                EnemyKind.Warden => supportFirstWave,
                 EnemyKind.Spire => 10,
                 _ => 1
             };
             if (WaveIndex + 1 < unlockWave || group == 2 && WaveIndex + 1 < firstEliteWave) return 0;
             int weight = index < wave.weights.Length ? TiltedWeight(wave, index) : 0;
             if (group > 0) weight = Mathf.Max(3,weight);
-            if (group == 1 && data.kind == EnemyKind.Spire && WaveIndex + 1 >= 10)
-                weight = !constrainActive || spiresIssued < ScaledOrdinaryCount(2) ? Mathf.Max(3, weight) : 0;
             if (constrainActive && data.kind == EnemyKind.Shade)
             {
                 int shades = 0;
@@ -346,10 +330,10 @@ namespace AnomalyArena
             var wave = waveSet.waves[WaveIndex];
             int total = 0;
             for (int i = 0; i < roster.Length; i++) total += BatchWeight(wave, i, group);
-            if (total <= 0) return roster[(int)(group > 0 ? EnemyKind.Brute : EnemyKind.Grunt)];
+            if (total <= 0) return null;
             int roll = Random.Range(0, total);
             for (int i = 0; i < roster.Length; i++) { roll -= BatchWeight(wave, i, group); if (roll < 0) return roster[i]; }
-            return roster[0];
+            return null;
         }
         Vector2 AverageHpXp(WaveSet.Definition wave, int group, bool elite, float affixChance, bool currentRewards = false)
         {
@@ -367,14 +351,14 @@ namespace AnomalyArena
             }
             if (total <= 0)
             {
-                var fallback = roster[(int)(group > 0 ? EnemyKind.Brute : EnemyKind.Grunt)];
+                var fallback = roster[(int)(group == 1 ? EnemyKind.Spitter : group == 2 ? EnemyKind.Rammer : EnemyKind.Grunt)];
                 return new Vector2(fallback.hp * (elite ? 3f : 1f), fallback.xp * (elite ? 5f : 1f));
             }
             return new Vector2(hp / total, xp / total);
         }
         public float CalculateExperienceRewardScale()
         {
-            if (!v2 || !waveSet || WaveIndex < 0) return 1f;
+            if (!waveSet || WaveIndex < 0) return 1f;
             var wave = waveSet.waves[WaveIndex];
             float affix = WaveIndex < 4 ? 0f : WaveIndex < 7 ? .1f : WaveIndex < 10 ? .15f : .25f;
             var oldRegular = AverageHpXp(wave, -1, false, affix);
@@ -419,11 +403,12 @@ namespace AnomalyArena
         EnemyDefinition RollEnemy(WaveSet.Definition wave)
         {
             int total = 0;
-            for (int i = 0; i < wave.weights.Length; i++) total += TiltedWeight(wave, i);
+            for (int i = 0; i < wave.weights.Length; i++) total += SummonWeight(wave, i);
             int roll = Random.Range(0, Mathf.Max(1, total));
-            for (int i = 0; i < wave.weights.Length; i++) { roll -= TiltedWeight(wave, i); if (roll < 0) return roster[i]; }
+            for (int i = 0; i < wave.weights.Length; i++) { roll -= SummonWeight(wave, i); if (roll < 0) return roster[i]; }
             return roster[0];
         }
+        int SummonWeight(WaveSet.Definition wave, int index) => index < roster.Length && roster[index] && !EnemyRoles.IsEliteOnly(roster[index].kind) ? TiltedWeight(wave, index) : 0;
 
         int TiltedWeight(WaveSet.Definition wave, int index)
         {
@@ -440,7 +425,7 @@ namespace AnomalyArena
                 int count = 0;
                 foreach (var enemy in alive) if (enemy && enemy.definition.kind == EnemyKind.Shade) count++;
                 foreach (var marker in preparedMarkers) if (marker.gameObject.activeSelf && marker.definition.kind == EnemyKind.Shade) count++;
-                if (count >= (WaveIndex < 8 ? 1 : 2)) data = roster[0];
+                if (count >= (WaveIndex < 8 ? 1 : 2)) { data = roster[(int)EnemyKind.Grunt]; elite = false; affix = ElementKind.None; }
             }
             foreach (var marker in preparedMarkers)
                 if (!marker.gameObject.activeSelf)
@@ -608,71 +593,10 @@ namespace AnomalyArena
                 if (alive[i] && alive[i].IsTrialSummon) { alive[i].DiscardWithoutReward(); alive.RemoveAt(i); }
         }
 
-        void BeginWave(int i)
-        {
-            WaveIndex = i;
-            BetweenWaves = false;
-            queue.Clear();
-            for (int k = 0; k < waves[i].small; k++) queue.Add(false);
-            for (int k = 0; k < waves[i].large; k++) queue.Add(true);
-            for (int k = queue.Count - 1; k > 0; k--)
-            {
-                int j = Random.Range(0, k + 1);
-                (queue[k], queue[j]) = (queue[j], queue[k]);
-            }
-            spawnTimer = 0.5f;
-            GM.hud.Banner($"Wave {i + 1}", i == waves.Length - 1 ? "Final wave!" : $"{queue.Count} enemies incoming");
-        }
-
         void Update()
         {
             if (!running || GM.State != GameState.Playing) return;
-            if (v2) { TickV2(GM.WorldDeltaTime); return; }
-            float dt = Time.deltaTime;
-
-            if (BetweenWaves)
-            {
-                BetweenTimer -= dt;
-                if (BetweenTimer <= 0f) BeginWave(WaveIndex + 1);
-                return;
-            }
-
-            spawnTimer -= dt;
-            if (queue.Count > 0 && alive.Count + markers.Count < maxAlive && spawnTimer <= 0f)
-            {
-                bool large = queue[queue.Count - 1];
-                queue.RemoveAt(queue.Count - 1);
-                markers.Add(SpawnMarker.Create(FindSpawnPoint(large), large, spawnTelegraph, GM.spawnMarkerMaterial));
-                spawnTimer = spawnInterval;
-            }
-
-            TickMarkers(dt);
-
-            if (queue.Count == 0 && markers.Count == 0 && alive.Count == 0) OnWaveCleared();
-        }
-
-        void TickMarkers(float dt)
-        {
-            var p = GM.player;
-            for (int i = markers.Count - 1; i >= 0; i--)
-            {
-                var m = markers[i];
-                float r = m.large ? largePrefab.radius : smallPrefab.radius;
-
-                if (p.IsAlive && Query.Flat(p.Position - m.Position).magnitude < r + p.Radius)
-                {
-                    m.MoveTo(FindSpawnPoint(m.large));
-                    m.timer = spawnTelegraph;
-                    continue;
-                }
-                m.timer -= dt;
-                if (m.timer > 0f) continue;
-                markers.RemoveAt(i);
-                var e = Instantiate(m.large ? largePrefab : smallPrefab, new Vector3(m.Position.x, 0f, m.Position.z), Quaternion.identity);
-                Destroy(m.gameObject);
-                e.Eliminated += OnEnemyEliminated;
-                alive.Add(e);
-            }
+            TickV2(GM.WorldDeltaTime);
         }
 
         void OnEnemyEliminated(Combatant c)
@@ -680,49 +604,8 @@ namespace AnomalyArena
             var e = c as Enemy;
             alive.Remove(e);
             Kills++;
-            if (v2) { if (e) corpseOrder[e] = ++deathSequence; EnemyEliminated?.Invoke(e); return; }
-            if (e != null && e.IsLarge) GM.weapons.TryLargeDrop(e.Position);
-        }
-
-        void OnWaveCleared()
-        {
-            if (WaveIndex >= waves.Length - 1)
-            {
-                running = false;
-                GM.NotifyFinalWaveCleared();
-                return;
-            }
-
-            float before = GM.player.Hp;
-            GM.player.Heal(refillHpEachWave ? GM.player.maxHp : waveHeal);
-            GM.weapons.SpawnForWave(WaveIndex + 1);                                                              
-            BetweenWaves = true;
-            BetweenTimer = betweenWaveDelay;
-            GM.hud.Banner($"Wave {WaveIndex + 1} cleared!", refillHpEachWave ? "HP fully restored" : $"HP +{Mathf.RoundToInt(GM.player.Hp - before)}");
-        }
-
-        Vector3 FindSpawnPoint(bool large)
-        {
-            float r = large ? largePrefab.radius : smallPrefab.radius;
-            var p = GM.player;
-            Vector3 best = Vector3.zero;
-            float bestScore = -1f;
-            for (int i = 0; i < 50; i++)
-            {
-                var pt = ArenaShape.RandomInside(r + 0.5f);
-                float dp = Query.Flat(pt - p.Position).magnitude;
-                float dOther = 99f;
-                foreach (var m in markers) dOther = Mathf.Min(dOther, Query.Flat(m.Position - pt).magnitude - r);
-                foreach (var e in alive) if (e) dOther = Mathf.Min(dOther, Query.Flat(e.Position - pt).magnitude - r - e.radius);
-                if (dp >= minSpawnDistance && dOther > 0.5f) return pt;
-                float score = Mathf.Min(dp, minSpawnDistance) + Mathf.Min(dOther, 0.5f);
-                if (score > bestScore)
-                {
-                    bestScore = score;
-                    best = pt;
-                }
-            }
-            return best;
+            if (e) corpseOrder[e] = ++deathSequence;
+            EnemyEliminated?.Invoke(e);
         }
     }
 }

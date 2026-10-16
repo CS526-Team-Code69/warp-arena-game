@@ -232,42 +232,6 @@ namespace AnomalyArena
             Assert.That(violations, Is.Empty, "every birth remains within player-near distance bounds");
         }
 
-        [Test, LoadScene(SceneCn), Category("Integration"), Timeout(25000)]
-        public async Task PlayerDirectHit_BoundedPauseAndMenuTransition_RestoresNormalCombatTime()
-        {
-            var game = await ReadyScene();
-            await BeginCombat(game);
-            game.waves.enabled = false;
-            game.player.ClearWaveState();
-            game.feedback.heavyHitStop = .8f;
-            game.feedback.globalHitStopInterval = 1f;
-            float largestFrame = 0f, hitAt = Time.realtimeSinceStartup;
-
-            game.player.ReceiveDamage(DamageInfo.Attack(1f, null, kind: HitKind.Blast));
-
-            Assert.That(Time.timeScale, Is.InRange(.25f, .999f), "player hit keeps a short bounded slowdown");
-            while (Time.timeScale < .999f && Time.realtimeSinceStartup - hitAt < 2f)
-            {
-                await Awaitable.NextFrameAsync();
-                largestFrame = Mathf.Max(largestFrame, Time.unscaledDeltaTime);
-            }
-            Assert.That(Time.timeScale, Is.EqualTo(1f), "player hit slowdown ends");
-            Assert.That(Time.realtimeSinceStartup - hitAt, Is.LessThanOrEqualTo(.04f + largestFrame + .025f), "forty millisecond cap with one-frame observation tolerance");
-            game.player.ClearWaveState();
-            game.player.ReceiveDamage(DamageInfo.Attack(1f, null, kind: HitKind.Blast));
-            Assert.That(Time.timeScale, Is.EqualTo(1f), "another immediate hit cannot chain a world pause");
-
-            await Until(() => Time.realtimeSinceStartup - hitAt >= 1.05f, 2f, "global hit-stop cooldown");
-            game.player.ClearWaveState();
-            game.player.ReceiveDamage(DamageInfo.Attack(1f, null, kind: HitKind.Blast));
-            game.ExecuteUiCommand(ArenaUiCommand.Pause);
-            Assert.That(game.RunPhase, Is.EqualTo(ArenaUiState.Paused), "pause menu is accepted during hit feedback");
-            Assert.That(Time.timeScale, Is.Zero, "menu has fully paused time");
-            await CommandUntil(game, ArenaUiCommand.Resume, () => game.RunPhase == ArenaUiState.WaveActive);
-            await Awaitable.NextFrameAsync();
-            Assert.That(Time.timeScale, Is.EqualTo(1f), "resume has no stale hit-stop timer");
-        }
-
         [Test, LoadScene(SceneCn), Category("Integration"), Category("Acceptance"), Timeout(25000)]
         public async Task FinalBossAndPlayerDieInSameFrame_VictoryTakesPriority()
         {
@@ -356,12 +320,111 @@ namespace AnomalyArena
             Assert.That(game.progression.Energy, Is.EqualTo(before - cost), "refused recast does not charge mana twice");
         }
 
+        [Test, LoadScene(SceneCn), Category("Integration"), Timeout(30000)]
+        public async Task PlayerHit_NonBossEnemiesStunWithoutKnockback_BossesStillPush_GameNeverSlows()
+        {
+            var game = await ReadyScene();
+            await BeginCombat(game);
+            game.waves.enabled = false;
+            var player = game.player;
+            var feedback = game.feedback;
+            player.protectionTime = 0f;
+            player.ClearWaveState();
+            Enemy Attacker(EnemyKind kind, bool elite)
+            {
+                var enemy = game.waves.preparedEnemies.First(e => e && !e.gameObject.activeSelf && e.definition && e.definition.kind == kind);
+                enemy.Configure(enemy.definition, 1f, elite);
+                enemy.enabled = false;
+                enemy.gameObject.SetActive(false);
+                return enemy;
+            }
+
+            var grunt = Attacker(EnemyKind.Grunt, false);
+            Assert.That(player.ReceiveDamage(DamageInfo.Attack(1f, grunt, Vector3.right, 6f)), Is.True, "the basic hit lands");
+            Assert.That(Time.timeScale, Is.EqualTo(1f), "a hit on the player never slows the game");
+            Assert.That(player.State, Is.EqualTo(CharacterState.Normal), "basic enemies do not knock the player back");
+            Assert.That(player.Stunned, Is.True, "a basic hit stuns the player");
+            float basicStart = Time.time;
+            await Until(() => !player.Stunned, 2f, "basic hit stun ends");
+            float basicStun = Time.time - basicStart;
+            Assert.That(basicStun, Is.LessThan(feedback.basicHitStun + .15f), "the basic hit stun is short");
+            Assert.That(player.ReceiveDamage(DamageInfo.Attack(1f, grunt, Vector3.right, 6f)), Is.True, "a second hit still deals damage");
+            Assert.That(player.Stunned, Is.False, "no second hit stun inside the window");
+
+            await Until(() => Time.time - basicStart >= feedback.hitStunWindow + .05f, 3f, "hit stun window passes");
+            var rammer = Attacker(EnemyKind.Rammer, true);
+            Assert.That(player.ReceiveDamage(DamageInfo.Attack(1f, rammer, Vector3.right, 8f)), Is.True, "the elite hit lands");
+            Assert.That(player.State, Is.EqualTo(CharacterState.Normal), "elites do not knock the player back either");
+            float eliteStart = Time.time;
+            await Until(() => !player.Stunned, 2f, "elite hit stun ends");
+            Assert.That(Time.time - eliteStart, Is.GreaterThan(basicStun), "an elite stuns longer than a basic enemy");
+
+            player.ClearWaveState();
+            var boss = game.waves.tyrant;
+            Assume.That(boss && boss.definition && boss.IsBoss, Is.True, "the scene keeps the Tyrant");
+            Assert.That(player.ReceiveDamage(DamageInfo.Attack(1f, boss, Vector3.right, 6f)), Is.True, "the boss hit lands");
+            Assert.That(player.State, Is.EqualTo(CharacterState.Knocked), "bosses still knock the player back");
+            Assert.That(Time.timeScale, Is.EqualTo(1f), "a boss hit does not slow the game either");
+
+            player.ClearWaveState();
+            game.ExecuteUiCommand(ArenaUiCommand.Pause);
+            Assert.That(game.RunPhase, Is.EqualTo(ArenaUiState.Paused), "pause menu is accepted after a hit");
+            Assert.That(Time.timeScale, Is.Zero, "menu has fully paused time");
+            await CommandUntil(game, ArenaUiCommand.Resume, () => game.RunPhase == ArenaUiState.WaveActive);
+            await Awaitable.NextFrameAsync();
+            Assert.That(Time.timeScale, Is.EqualTo(1f), "resume restores normal time");
+        }
+
+        [Test, LoadScene(SceneCn), Category("Integration"), Timeout(30000)]
+        public async Task LandedHits_ShotsJoltWithoutHold_MeleeHoldsOncePerCooldown()
+        {
+            var game = await ReadyScene();
+            await BeginCombat(game);
+            game.waves.enabled = false;
+            var target = game.waves.preparedEnemies.First(e => e && !e.gameObject.activeSelf && e.definition && e.definition.kind == EnemyKind.Grunt);
+            target.Configure(target.definition, 1f, false);
+            target.maxHp = 100000f;
+            target.Heal(100000f);
+
+            var spot = new[] { Vector3.right, Vector3.left, Vector3.forward, Vector3.back }
+                .Select(d => game.player.Position + d * 3f)
+                .FirstOrDefault(p => !WorldMap.Active || WorldMap.Active.IsWalkable(p, target.radius));
+            V3CombatSmokeTest.Teleport(target, spot);
+            Physics.SyncTransforms();
+            await Awaitable.FixedUpdateAsync();
+            Assume.That(target.IsAlive && target.State == CharacterState.Normal, Is.True, "the target stands on the ground");
+            DamageInfo Hit(HitKind kind, HitFeel feel)
+            {
+                var info = DamageInfo.Attack(1f, game.player, Vector3.right, 0f, kind);
+                info.feel = feel;
+                return info;
+            }
+
+            target.ReceiveDamage(Hit(HitKind.Bullet, HitFeel.LightShot));
+            Assert.That(target.HitPaused, Is.False, "a light round never holds the target");
+            Assert.That(target.VisualOffset.sqrMagnitude, Is.GreaterThan(0f), "a light round jolts the model");
+
+            target.ReceiveDamage(Hit(HitKind.Slam, HitFeel.Melee));
+            float meleeAt = Time.realtimeSinceStartup;
+            Assert.That(target.HitPaused, Is.True, "a melee hit holds the target");
+            Assert.That(game.player.PoseHeld, Is.True, "a melee hit also bites on the attacker's animation");
+            Assert.That(game.player.Stunned, Is.False, "the attacker's bite never stops its movement or actions");
+            await Until(() => !target.HitPaused, 1f, "melee hold ends");
+            target.ReceiveDamage(Hit(HitKind.Slam, HitFeel.Melee));
+            Assert.That(target.HitPaused, Is.False, "a melee hit inside the cooldown does not hold again");
+            float readyAfter = game.feedback.melee.victimHold + game.feedback.victimHoldCooldown + .05f;
+            await Until(() => Time.realtimeSinceStartup - meleeAt >= readyAfter, 2f, "hold cooldown passes");
+            target.ReceiveDamage(Hit(HitKind.Slam, HitFeel.Melee));
+            Assert.That(target.HitPaused, Is.True, "after the cooldown a melee hit holds again");
+            Assert.That(Time.timeScale, Is.EqualTo(1f), "landed hits never slow the game");
+        }
+
         static async Task<GameManager> ReadyScene()
         {
             await Awaitable.NextFrameAsync();
             await Until(() => GameManager.Instance && ArenaText.Ready, 12f, "saved scene and localization initialize");
             var game = GameManager.Instance;
-            Assume.That(game.useV2 && game.player && game.waves && game.runWeapons && game.progression && game.skills && game.orbs && game.hud && game.hud.v2Hud,
+            Assume.That(game.player && game.waves && game.runWeapons && game.progression && game.skills && game.orbs && game.hud && game.hud.v2Hud,
                 Is.True, "V2 scene references exist");
             return game;
         }

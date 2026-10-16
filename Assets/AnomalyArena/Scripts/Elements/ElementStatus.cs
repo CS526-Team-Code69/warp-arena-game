@@ -30,6 +30,10 @@ namespace AnomalyArena
         public float FrostThreshold => Rules ? Mathf.Max(.01f, Rules.frostThreshold * ControlThresholdFactor) : 6f;
         public float Chill01 => Frozen ? 1f : Mathf.Clamp01(Frost / FrostThreshold);
 
+        public float PlayerChillMultiplier => !IsPlayer || !Rules || Frozen ? 1f : 1f / (1f + Rules.frostChill * Frost / FrostThreshold);
+
+        public void ExtendFreeze(float seconds) { if (Frozen && !ImmuneToControl) freezeTimer = Mathf.Max(freezeTimer, seconds); }
+
         public float SpeedMultiplier
         {
             get
@@ -113,7 +117,8 @@ namespace AnomalyArena
                     {
                         Frost = 0f;
                         if (ImmuneToControl) { frostImmune = Rules.frostImmunity; OnControlThreshold?.Invoke(Rules.bossControlStagger); }
-                        else freezeTimer = IsPlayer ? Mathf.Min(Rules.playerControlMax, Rules.frostDuration) : Rules.frostDuration;
+
+                        else freezeTimer = Rules.frostDuration;
                     }
                     break;
                 case ElementKind.Lightning:
@@ -125,7 +130,7 @@ namespace AnomalyArena
                         if (ImmuneToControl) { lightningImmune = Rules.lightningImmunity; OnControlThreshold?.Invoke(Rules.bossControlStagger); }
                         else
                         {
-                            paralysisTimer = IsPlayer ? Mathf.Min(Rules.playerControlMax, Rules.lightningDuration) : Rules.lightningDuration;
+                            paralysisTimer = Rules.lightningDuration;
                             twitchClock = Rules.twitchInterval;
                         }
                     }
@@ -143,7 +148,7 @@ namespace AnomalyArena
             if (Frozen)
             {
                 freezeTimer -= dt;
-                if (!Frozen) { frostImmune = IsPlayer ? Rules.playerControlImmunity : Rules.frostImmunity; FrozenKnockbackMultiplier = 1f; }
+                if (!Frozen) { frostImmune = Rules.frostImmunity; FrozenKnockbackMultiplier = 1f; }
             }
             else Frost = Mathf.Max(0f, Frost - Rules.frostDecay * dt);
             if (Paralysed)
@@ -155,7 +160,7 @@ namespace AnomalyArena
                 if (!Paralysed)
                 {
                     twitchTimer = 0f;
-                    lightningImmune = IsPlayer ? Rules.playerControlImmunity : Rules.lightningImmunity;
+                    lightningImmune = Rules.lightningImmunity;
                 }
             }
             else Lightning = Mathf.Max(0f, Lightning - Rules.lightningDecay * dt);

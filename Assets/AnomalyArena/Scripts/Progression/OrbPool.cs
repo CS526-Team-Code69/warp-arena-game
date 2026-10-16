@@ -2,6 +2,7 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
+
     public sealed class OrbPool : MonoBehaviour
     {
         [field: SerializeField, Tooltip("Preplaced pickups, normally 256. No runtime object creation.")]
@@ -63,7 +64,7 @@ namespace AnomalyArena
         {
             if (frozenForTrial || pool == null || !player || !progression) return;
             var game = GameManager.Instance;
-            if (game && game.useV2) dt = game.WorldDeltaTime;
+            if (game) dt = game.WorldDeltaTime;
             float baseRange = progression.Rules ? progression.Rules.startingStats.pickupRange : 2f;
             float xpRange = Mathf.Max(0f, xpMagnetBaseRadius + progression.Stats.pickupRange - baseRange);
             foreach (var orb in pool) if (orb && orb.InUse) orb.Tick(dt, player, progression, orb.Kind == OrbKind.Xp ? xpRange : progression.Stats.pickupRange, magnetSpeed);

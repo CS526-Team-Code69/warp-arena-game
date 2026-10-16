@@ -27,4 +27,5 @@ MonoBehaviour:
   canAffix: 1
   canElite: 1
   startShieldShare: 0
+  spikePoisonStacks: 1
   colour: {r: 0.40499997, g: 0.9, b: 0.61785, a: 1}

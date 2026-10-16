@@ -3,6 +3,7 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
+                                                                                                           
     public static class Query
     {
         public const float CastHeight = 0.8f;
@@ -16,7 +17,7 @@ namespace AnomalyArena
             return v;
         }
 
-
+                                                                             
         public static List<Combatant> Characters(Vector3 center, float radius)
         {
             var list = new List<Combatant>();
@@ -31,7 +32,10 @@ namespace AnomalyArena
             return list;
         }
 
-
+                     
+                                                                                                                          
+                                                                                                                              
+                      
         public static List<Combatant> CharactersAlong(Vector3 from, Vector3 to, float radius)
         {
             var list = new List<Combatant>();
@@ -41,7 +45,7 @@ namespace AnomalyArena
             {
                 var c = Combatant.From(buffer[i]);
                 if (c == null || list.Contains(c)) continue;
-
+                                                                                                                                   
                 float d = Flat(c.Position - from).sqrMagnitude;
                 int at = list.Count;
                 while (at > 0 && Flat(list[at - 1].Position - from).sqrMagnitude > d) at--;
@@ -51,15 +55,17 @@ namespace AnomalyArena
             return list;
         }
 
-
-        public static List<Combatant> InSector(IWeaponHolder self, Vector3 origin, Vector3 aim, float reach,
+                     
+                                                                                                                                                   
+                      
+        public static List<Combatant> InSector(Combatant self, Vector3 origin, Vector3 aim, float reach,
             float arcDeg)
         {
             var list = new List<Combatant>();
-
+                                                                                                                          
             foreach (var c in Characters(AtCastHeight(origin), reach + 2f))
             {
-                if ((IWeaponHolder)c == self || !c.IsAlive) continue;
+                if (c == self || !c.IsAlive) continue;
                 Vector3 to = Flat(c.Position - origin);
                 float d = to.magnitude;
                 if (d - c.Radius > reach) continue;
@@ -70,23 +76,7 @@ namespace AnomalyArena
             return list;
         }
 
-
-        public static Combatant MeleeTarget(IWeaponHolder self, Vector3 origin, Vector3 aim, float reach, float arcDeg)
-        {
-            Combatant best = null;
-            float bestEdge = float.MaxValue;
-            foreach (var c in InSector(self, origin, aim, reach, arcDeg))
-            {
-                float edge = Flat(c.Position - origin).magnitude - c.Radius;
-                if (edge >= bestEdge) continue;
-                bestEdge = edge;
-                best = c;
-            }
-
-            return best;
-        }
-
-
+                                                                               
         public static bool WallBetween(Vector3 from, Vector3 to, out RaycastHit hit)
         {
             Vector3 d = to - from;
@@ -100,7 +90,7 @@ namespace AnomalyArena
             return Physics.Raycast(from, d / len, out hit, len, GameManager.WallMask, QueryTriggerInteraction.Ignore);
         }
 
-
+                                                                                                
         public static Vector3 Steer(Vector3 dir, Vector3 want, float maxDegrees)
         {
             want = Flat(want);

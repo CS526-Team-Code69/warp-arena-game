@@ -4014,6 +4014,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &13453582
 MeshRenderer:
@@ -8166,6 +8167,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &30841148
 MeshRenderer:
@@ -9808,6 +9810,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &36027908
 MeshRenderer:
@@ -14513,6 +14516,7 @@ GameObject:
   - component: {fileID: 51934622}
   - component: {fileID: 51934624}
   - component: {fileID: 51934623}
+  - component: {fileID: 51934625}
   m_Layer: 5
   m_Name: OffscreenDirection2
   m_TagString: Untagged
@@ -14581,6 +14585,21 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 51934621}
   m_CullTransparentMesh: 1
+--- !u!114 &51934625
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 51934621}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Outline
+  m_EffectColor: {r: 0.12, g: 0.02, b: 0.2, a: 0.95}
+  m_EffectDistance: {x: 2, y: -2}
+  m_UseGraphicAlpha: 1
 --- !u!1 &53120857
 GameObject:
   m_ObjectHideFlags: 0
@@ -15876,6 +15895,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &59997992
 MeshRenderer:
@@ -17493,6 +17513,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &66309818
 MeshRenderer:
@@ -18885,6 +18906,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &70676314
 MeshRenderer:
@@ -19304,6 +19326,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &71915601
 MeshRenderer:
@@ -21705,6 +21728,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &78086496
 MeshRenderer:
@@ -24030,6 +24054,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &84822933
 MeshRenderer:
@@ -26239,6 +26264,7 @@ GameObject:
   - component: {fileID: 94203174}
   - component: {fileID: 94203176}
   - component: {fileID: 94203175}
+  - component: {fileID: 94203177}
   m_Layer: 5
   m_Name: OffscreenDirection7
   m_TagString: Untagged
@@ -26307,6 +26333,21 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 94203173}
   m_CullTransparentMesh: 1
+--- !u!114 &94203177
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 94203173}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Outline
+  m_EffectColor: {r: 0.12, g: 0.02, b: 0.2, a: 0.95}
+  m_EffectDistance: {x: 2, y: -2}
+  m_UseGraphicAlpha: 1
 --- !u!1 &94454266
 GameObject:
   m_ObjectHideFlags: 0
@@ -30793,6 +30834,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &112883298
 MeshRenderer:
@@ -32099,6 +32141,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &118068453
 MeshRenderer:
@@ -33161,6 +33204,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &120943028
 MeshRenderer:
@@ -34374,6 +34418,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &123427545
 MeshRenderer:
@@ -35214,6 +35259,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &126811250
 MeshRenderer:
@@ -35386,6 +35432,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &128002313
 MeshRenderer:
@@ -36052,6 +36099,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &129827904
 MeshRenderer:
@@ -36306,6 +36354,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &130966923
 MeshRenderer:
@@ -38166,6 +38215,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &136193396
 MeshRenderer:
@@ -40545,6 +40595,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &143952283
 MeshRenderer:
@@ -43297,6 +43348,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &153328641
 MeshRenderer:
@@ -45156,6 +45208,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &158728994
 MeshRenderer:
@@ -56032,6 +56085,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &200781622
 MeshRenderer:
@@ -61394,6 +61448,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &220548918
 MeshRenderer:
@@ -62186,6 +62241,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &223425321
 MeshRenderer:
@@ -64034,6 +64090,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &230382700
 MeshRenderer:
@@ -69373,6 +69430,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &252282029
 MeshRenderer:
@@ -78390,6 +78448,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &286112996
 MeshRenderer:
@@ -80500,6 +80559,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &293995640
 MeshRenderer:
@@ -86078,6 +86138,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &313888154
 MeshRenderer:
@@ -93886,6 +93947,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &335576927
 MeshRenderer:
@@ -98485,6 +98547,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &350798544
 MeshRenderer:
@@ -102136,6 +102199,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &362491143
 MeshRenderer:
@@ -102971,6 +103035,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &364387317
 MeshRenderer:
@@ -103856,6 +103921,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &366671261
 MeshRenderer:
@@ -108211,6 +108277,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &388199090
 MeshRenderer:
@@ -110225,6 +110292,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &396874321
 MeshRenderer:
@@ -120421,6 +120489,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &431050131
 MeshRenderer:
@@ -120736,6 +120805,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &431576342
 MeshRenderer:
@@ -122762,6 +122832,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &438258481
 MeshRenderer:
@@ -123499,6 +123570,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &441916593
 MeshRenderer:
@@ -125258,6 +125330,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &447685251
 MeshRenderer:
@@ -127317,6 +127390,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &454594542
 MeshRenderer:
@@ -129142,6 +129216,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &458197605
 MeshRenderer:
@@ -129882,6 +129957,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &460191736
 MeshRenderer:
@@ -130717,6 +130793,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &463447102
 MeshRenderer:
@@ -133602,6 +133679,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &470712930
 MeshRenderer:
@@ -136391,6 +136469,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &481634075
 MeshRenderer:
@@ -137334,6 +137413,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &484471651
 MeshRenderer:
@@ -137943,6 +138023,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &485958748
 MeshRenderer:
@@ -138105,6 +138186,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &486052101
 MeshRenderer:
@@ -141363,6 +141445,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &495692164
 MeshRenderer:
@@ -144109,6 +144192,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &503296292
 MeshRenderer:
@@ -145686,6 +145770,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &507383554
 MeshRenderer:
@@ -150036,6 +150121,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &524627351
 MeshRenderer:
@@ -153682,6 +153768,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &533662686
 MeshRenderer:
@@ -157086,6 +157173,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &553544350
 MeshRenderer:
@@ -157847,6 +157935,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &556918021
 MeshRenderer:
@@ -159413,6 +159502,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &562137886
 MeshRenderer:
@@ -159665,6 +159755,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &562879735
 MeshRenderer:
@@ -160750,6 +160841,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &565172871
 MeshRenderer:
@@ -161677,6 +161769,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &567340886
 MeshRenderer:
@@ -162641,6 +162734,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &569580969
 MeshRenderer:
@@ -163960,6 +164054,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &572557601
 MeshRenderer:
@@ -165578,6 +165673,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &582792115
 MeshRenderer:
@@ -166546,6 +166642,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &587901699
 MeshRenderer:
@@ -169967,6 +170064,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &600344802
 MeshRenderer:
@@ -170641,77 +170739,6 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 587901701}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &603648758
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 603648760}
-  - component: {fileID: 603648759}
-  m_Layer: 0
-  m_Name: WeaponSpawner
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &603648759
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 603648758}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7c74996d814794f919fe91552c1b5f33, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: AnomalyArena::AnomalyArena.WeaponSpawner
-  defs:
-  - type: 0
-    prefab: {fileID: 5760506766707245888, guid: ec86f891b96fa467e82f3498ca88e4ce, type: 3}
-    uses: 6
-    effectA: {fileID: 11400000, guid: 9eecc98f6f5d94ea8aa95b4f4aa0d4e7, type: 2}
-    effectB: {fileID: 11400000, guid: 2f0e124017c8d4028b146c7804f7ff43, type: 2}
-    chanceA: 0.5
-    forceOnSpawn: 0
-  - type: 1
-    prefab: {fileID: 3558745476027277093, guid: 17258b6c686824f9e81d3c11bfee7d19, type: 3}
-    uses: 4
-    effectA: {fileID: 11400000, guid: bda9b3ef5890742d59b5ac5a76015d79, type: 2}
-    effectB: {fileID: 11400000, guid: 256c31b68e3a14eff9f4e2533fd7bf7d, type: 2}
-    chanceA: 0.5
-    forceOnSpawn: 0
-  - type: 2
-    prefab: {fileID: 330511716393445189, guid: 028e0ea1ca2d845f3963119e3d784078, type: 3}
-    uses: 2
-    effectA: {fileID: 11400000, guid: 9ce1c65e71c114605a7a1ed311946b79, type: 2}
-    effectB: {fileID: 11400000, guid: a71ac97445eef4012804eb1dd1e00ffb, type: 2}
-    chanceA: 0.5
-    forceOnSpawn: 0
-  perWaveCounts: 030000000400000005000000i
-  groundCap: 6
-  pickupRadius: 1
-  largeDropChance: 0.5
-  dropIgnoresCap: 1
---- !u!4 &603648760
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 603648758}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &603955762
 GameObject:
@@ -173370,6 +173397,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &612367237
 MeshRenderer:
@@ -174011,6 +174039,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &615185322
 MeshRenderer:
@@ -190187,6 +190216,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &674055889
 MeshRenderer:
@@ -194940,6 +194970,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &689961394
 MeshRenderer:
@@ -196719,6 +196750,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &695853192
 MeshRenderer:
@@ -198838,35 +198870,67 @@ MonoBehaviour:
     wallHitSpeed: 3
     knockDamping: 6
   feedback:
-    bulletHitStop: 0.025
-    bulletHitStopInterval: 0.12
-    playerHitStopLimit: 0.04
-    globalHitStopInterval: 0.35
     flashTime: 0.12
     squash: 0.32
-    hitStop: 0.045
-    heavyHitStop: 0.08
     heavyDamage: 4.5
-    hitStopTimeScale: 0.05
-    playerHitShake: 0.5
-    heavyShake: 0.3
-    shakeDecay: 4
-    enemyHitPause: 0.045
-    enemyHeavyHitPause: 0.085
-    critHitPause: 0.11
-    enemyHeavyShake: 0.1
-    critShake: 0.16
+    basicHitStun: 0.12
+    eliteHitStun: 0.22
+    hitStunWindow: 0.8
+    basicHitKick: 0.18
+    eliteHitKick: 0.3
+    bossHitKick: 0.4
+    playerFlinch: 0.18
+    victimHoldCooldown: 0.25
     hitKickInterval: 0.12
+    melee:
+      victimHold: 0.07
+      victimHeavyHold: 0.1
+      victimJolt: 0.18
+      attackerHold: 0.04
+      hitKick: 0.06
+      heavyHitKick: 0.12
+      splash: 1.4
+      fireRecoil: -0.12
+      fireKick: 0
+      muzzleFlash: 0
+    heavyShot:
+      victimHold: 0.03
+      victimHeavyHold: 0.07
+      victimJolt: 0.16
+      attackerHold: 0
+      hitKick: 0
+      heavyHitKick: 0.1
+      splash: 1
+      fireRecoil: 0.14
+      fireKick: 0.12
+      muzzleFlash: 1.3
+    lightShot:
+      victimHold: 0
+      victimHeavyHold: 0
+      victimJolt: 0.07
+      attackerHold: 0
+      hitKick: 0
+      heavyHitKick: 0.05
+      splash: 0.7
+      fireRecoil: 0.05
+      fireKick: 0.03
+      muzzleFlash: 0.75
+    area:
+      victimHold: 0
+      victimHeavyHold: 0
+      victimJolt: 0.04
+      attackerHold: 0
+      hitKick: 0
+      heavyHitKick: 0.1
+      splash: 0.6
+      fireRecoil: 0.03
+      fireKick: 0
+      muzzleFlash: 0
   player: {fileID: 1258361597}
   waves: {fileID: 809177187}
-  weapons: {fileID: 603648759}
   hud: {fileID: 134031410}
   cam: {fileID: 1207676703}
-  useV2: 1
   litMaterial: {fileID: 2100000, guid: cb547c2dd6c88409e8bb305f1fdcd8e7, type: 2}
-  fxMaterial: {fileID: 2100000, guid: 9e253224fae1e424aa83967d8127f9c1, type: 2}
-  spawnMarkerMaterial: {fileID: 2100000, guid: 91cc182fdedb4554ebd09e6ca9b60a45, type: 2}
-  art: {fileID: 0}
   runWeapons: {fileID: 1258361601}
   progression: {fileID: 1258361600}
   skills: {fileID: 1258361602}
@@ -200784,6 +200848,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &710935761
 MeshRenderer:
@@ -201097,6 +201162,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &711136659
 MeshRenderer:
@@ -203366,6 +203432,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &716951366
 MeshRenderer:
@@ -204563,6 +204630,10 @@ MonoBehaviour:
   - {fileID: 1576968588}
   - {fileID: 94203175}
   - {fileID: 1425537226}
+  holeEdgeColor: {r: 0.78, g: 0.36, b: 1, a: 1}
+  holeEdgeGlow: {r: 1, g: 0.84, b: 1, a: 1}
+  holeEdgePulsePerSecond: 1.8
+  holeEdgeScale: 1.35
 --- !u!1 &717858543
 GameObject:
   m_ObjectHideFlags: 0
@@ -205348,6 +205419,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &720423106
 MeshRenderer:
@@ -205729,6 +205801,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &722646094
 MeshRenderer:
@@ -206562,6 +206635,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &725693494
 MeshRenderer:
@@ -209115,6 +209189,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &734048546
 MeshRenderer:
@@ -209430,6 +209505,7 @@ GameObject:
   - component: {fileID: 734159775}
   - component: {fileID: 734159777}
   - component: {fileID: 734159776}
+  - component: {fileID: 734159778}
   m_Layer: 5
   m_Name: OffscreenDirection3
   m_TagString: Untagged
@@ -209498,6 +209574,21 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 734159774}
   m_CullTransparentMesh: 1
+--- !u!114 &734159778
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 734159774}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Outline
+  m_EffectColor: {r: 0.12, g: 0.02, b: 0.2, a: 0.95}
+  m_EffectDistance: {x: 2, y: -2}
+  m_UseGraphicAlpha: 1
 --- !u!1 &734186570
 GameObject:
   m_ObjectHideFlags: 0
@@ -215336,6 +215427,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &755015623
 MeshRenderer:
@@ -216716,6 +216808,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &759394665
 MeshRenderer:
@@ -216952,6 +217045,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &760163359
 MeshRenderer:
@@ -220315,6 +220409,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &768815041
 MeshRenderer:
@@ -221271,6 +221366,7 @@ GameObject:
   - component: {fileID: 771905254}
   - component: {fileID: 771905256}
   - component: {fileID: 771905255}
+  - component: {fileID: 771905257}
   m_Layer: 5
   m_Name: OffscreenDirection5
   m_TagString: Untagged
@@ -221339,6 +221435,21 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 771905253}
   m_CullTransparentMesh: 1
+--- !u!114 &771905257
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 771905253}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Outline
+  m_EffectColor: {r: 0.12, g: 0.02, b: 0.2, a: 0.95}
+  m_EffectDistance: {x: 2, y: -2}
+  m_UseGraphicAlpha: 1
 --- !u!1 &772089706
 GameObject:
   m_ObjectHideFlags: 0
@@ -222140,6 +222251,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &775752492
 MeshRenderer:
@@ -223127,6 +223239,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &779591069
 MeshRenderer:
@@ -223527,6 +223640,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &782458962
 MeshRenderer:
@@ -224043,6 +224157,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &786042079
 MeshRenderer:
@@ -225683,6 +225798,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &791204938
 MeshRenderer:
@@ -227319,6 +227435,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &795439366
 MeshRenderer:
@@ -233010,23 +233127,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bdef643eb5798464aafec1676b3dee77, type: 3}
   m_Name: 
   m_EditorClassIdentifier: AnomalyArena::AnomalyArena.WaveManager
-  waves:
-  - small: 4
-    large: 1
-  - small: 8
-    large: 2
-  - small: 15
-    large: 5
-  maxAlive: 12
-  spawnTelegraph: 1
-  minSpawnDistance: 6
-  spawnInterval: 0.25
-  betweenWaveDelay: 2.5
-  refillHpEachWave: 1
-  waveHeal: 20
-  smallPrefab: {fileID: 3686269604017920817, guid: 3e23d4e43fb3a90449ec9463935d348a, type: 3}
-  largePrefab: {fileID: 7379843092777722238, guid: 1f2119d70f652db4b90e8218d9e6abbf, type: 3}
-  v2: 1
   waveSet: {fileID: 11400000, guid: b657a7174ddc6db459f55f99801bc829, type: 2}
   roster:
   - {fileID: 11400000, guid: 1e90cc605030ded4390d77dd1c6c5fec, type: 2}
@@ -233650,6 +233750,9 @@ MonoBehaviour:
   swarmExperienceMultiplier: 0.03
   swarmExperienceReward: 0.1
   firstEliteWave: 6
+  maxConcurrentElites: 3
+  rangedFirstWave: 3
+  supportFirstWave: 5
   refillMissingShare: 0.2
   continuousCrowdRevision: 1
   earlyPopulationScale:
@@ -237195,6 +237298,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &819946119
 MeshRenderer:
@@ -240075,6 +240179,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &831566356
 MeshRenderer:
@@ -241162,6 +241267,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &838242824
 MeshRenderer:
@@ -244453,6 +244559,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &848621494
 MeshRenderer:
@@ -244615,6 +244722,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &848825632
 MeshRenderer:
@@ -245423,6 +245531,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &850823378
 MeshRenderer:
@@ -246063,6 +246172,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &852655620
 MeshRenderer:
@@ -250895,6 +251005,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &863984844
 MeshRenderer:
@@ -253440,6 +253551,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &869533234
 MeshRenderer:
@@ -253602,6 +253714,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &870134185
 MeshRenderer:
@@ -254207,6 +254320,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &871673129
 MeshRenderer:
@@ -255733,6 +255847,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &878328773
 MeshRenderer:
@@ -256156,6 +256271,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &880376615
 MeshRenderer:
@@ -257641,6 +257757,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &885269382
 MeshRenderer:
@@ -265971,6 +266088,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &913834700
 MeshRenderer:
@@ -267553,6 +267671,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &918698281
 MeshRenderer:
@@ -268175,6 +268294,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &920564963
 MeshRenderer:
@@ -270575,6 +270695,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &931483520
 MeshRenderer:
@@ -271831,6 +271952,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &933999451
 MeshRenderer:
@@ -274565,6 +274687,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &946315678
 MeshRenderer:
@@ -276765,6 +276888,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &955072285
 MeshRenderer:
@@ -276927,6 +277051,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &955414207
 MeshRenderer:
@@ -277363,6 +277488,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &959604577
 MeshRenderer:
@@ -278026,6 +278152,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &962619554
 MeshRenderer:
@@ -279022,6 +279149,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &966460725
 MeshRenderer:
@@ -282023,6 +282151,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &975824212
 MeshRenderer:
@@ -285109,6 +285238,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &985662165
 MeshRenderer:
@@ -291253,6 +291383,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1009030819
 MeshRenderer:
@@ -294350,6 +294481,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1018445360
 MeshRenderer:
@@ -299199,6 +299331,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1037968120
 MeshRenderer:
@@ -301025,6 +301158,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1043678054
 MeshRenderer:
@@ -302764,6 +302898,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1047980501
 MeshRenderer:
@@ -303314,6 +303449,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1049111167
 MeshRenderer:
@@ -306658,6 +306794,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1053493737
 MeshRenderer:
@@ -307975,6 +308112,7 @@ GameObject:
   - component: {fileID: 1058123366}
   - component: {fileID: 1058123368}
   - component: {fileID: 1058123367}
+  - component: {fileID: 1058123369}
   m_Layer: 5
   m_Name: OffscreenDirection1
   m_TagString: Untagged
@@ -308043,6 +308181,21 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1058123365}
   m_CullTransparentMesh: 1
+--- !u!114 &1058123369
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1058123365}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Outline
+  m_EffectColor: {r: 0.12, g: 0.02, b: 0.2, a: 0.95}
+  m_EffectDistance: {x: 2, y: -2}
+  m_UseGraphicAlpha: 1
 --- !u!1 &1058447271
 GameObject:
   m_ObjectHideFlags: 0
@@ -308775,6 +308928,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1060711431
 MeshRenderer:
@@ -310996,6 +311150,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1067230665
 MeshRenderer:
@@ -311835,6 +311990,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1070285021
 MeshRenderer:
@@ -312837,6 +312993,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1073340681
 MeshRenderer:
@@ -314387,6 +314544,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1079558440
 MeshRenderer:
@@ -314628,6 +314786,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1079925826
 MeshRenderer:
@@ -318114,6 +318273,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1093096269
 MeshRenderer:
@@ -321231,6 +321391,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1102138850
 MeshRenderer:
@@ -328818,6 +328979,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1136049514
 MeshRenderer:
@@ -329683,6 +329845,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1138292992
 MeshRenderer:
@@ -332862,6 +333025,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1149377519
 MeshRenderer:
@@ -334255,6 +334419,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1154360326
 MeshRenderer:
@@ -335485,6 +335650,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1160665908
 MeshRenderer:
@@ -336194,6 +336360,7 @@ GameObject:
   - component: {fileID: 1163446870}
   - component: {fileID: 1163446872}
   - component: {fileID: 1163446871}
+  - component: {fileID: 1163446873}
   m_Layer: 5
   m_Name: OffscreenDirection4
   m_TagString: Untagged
@@ -336262,6 +336429,21 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1163446869}
   m_CullTransparentMesh: 1
+--- !u!114 &1163446873
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1163446869}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Outline
+  m_EffectColor: {r: 0.12, g: 0.02, b: 0.2, a: 0.95}
+  m_EffectDistance: {x: 2, y: -2}
+  m_UseGraphicAlpha: 1
 --- !u!1 &1163691953
 GameObject:
   m_ObjectHideFlags: 0
@@ -338735,6 +338917,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1170566164
 MeshRenderer:
@@ -339025,6 +339208,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1171084081
 MeshRenderer:
@@ -342742,6 +342926,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1182187013
 MeshRenderer:
@@ -345498,6 +345683,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1194829915
 MeshRenderer:
@@ -346283,6 +346469,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1199079794
 MeshRenderer:
@@ -347813,6 +348000,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1205280161
 MeshRenderer:
@@ -348231,6 +348419,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1206393209
 MeshRenderer:
@@ -348393,6 +348582,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1206773334
 MeshRenderer:
@@ -348621,6 +348811,8 @@ MonoBehaviour:
   camera: {fileID: 1207676703}
   offset: {x: 0, y: 46, z: -15}
   smoothTime: 0.12
+  kickReturn: 14
+  kickLimit: 0.6
 --- !u!81 &1207676702
 AudioListener:
   m_ObjectHideFlags: 0
@@ -349817,6 +350009,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1211307026
 MeshRenderer:
@@ -351024,6 +351217,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1216204258
 MeshRenderer:
@@ -351312,6 +351506,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1216446334
 MeshRenderer:
@@ -356350,6 +356545,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1233633537
 MeshRenderer:
@@ -360859,6 +361055,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1250525804
 MeshRenderer:
@@ -362771,6 +362968,36 @@ MonoBehaviour:
     spinRetainTime: 1
     meltdownAngle: 90
     swarmMineDuration: 1
+    fuelTankWindow: 0.3
+    fuelTankRadius: 2.5
+    fuelTankDamage: 4
+    fuelTankSelfFire: 3
+    fuelTankCooldown: 1.5
+    wildfireSelfStacks: 2
+    shatterSpread: 12
+    iceRadius: 0.9
+    iceLife: 5
+    iceFrostPerSecond: 4
+    blizzardConeAngle: 50
+    blizzardMaxRange: 7
+    blizzardFrostPerTick: 0.8
+    blizzardFrozenHold: 0.6
+    blizzardSelfDamagePerSecond: 1
+    chainReturnRadius: 3
+    chainReturnDamage: 3
+    sporePods: 3
+    sporePodRadius: 0.7
+    sporePodLife: 12
+    sporeBurstRadius: 1.8
+    sporeBurstLife: 3
+    executeReboundShare: 0.5
+    executeReboundSpeed: 70
+    spinUpMoveFloor: 0.8
+    spinUpFreeTurn: 1080
+    spinUpFullTurn: 90
+    needlerReloadMove: 0.5
+    gunnerEnergyPerShot: 1
+    leechHealShare: 0.5
 --- !u!114 &1258361602
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -365876,6 +366103,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1269656938
 MeshRenderer:
@@ -366038,6 +366266,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1269721602
 MeshRenderer:
@@ -366368,6 +366597,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1271510530
 MeshRenderer:
@@ -373391,6 +373621,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1292747576
 MeshRenderer:
@@ -375561,6 +375792,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1301922343
 MeshRenderer:
@@ -381404,6 +381636,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1324463393
 MeshRenderer:
@@ -386442,6 +386675,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1344645627
 MeshRenderer:
@@ -387760,6 +387994,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1348322693
 MeshRenderer:
@@ -388244,6 +388479,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1349257895
 MeshRenderer:
@@ -390163,6 +390399,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1359922930
 MeshRenderer:
@@ -392515,6 +392752,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1368508365
 MeshRenderer:
@@ -393239,6 +393477,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1368987476
 MeshRenderer:
@@ -394506,6 +394745,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1372161861
 MeshRenderer:
@@ -398847,6 +399087,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1385675411
 MeshRenderer:
@@ -399895,6 +400136,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1390068065
 MeshRenderer:
@@ -402223,6 +402465,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1398560286
 MeshRenderer:
@@ -402417,6 +402660,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1399908276
 MeshRenderer:
@@ -402579,6 +402823,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1399919740
 MeshRenderer:
@@ -404651,6 +404896,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1409317455
 MeshRenderer:
@@ -409157,6 +409403,7 @@ GameObject:
   - component: {fileID: 1425537225}
   - component: {fileID: 1425537227}
   - component: {fileID: 1425537226}
+  - component: {fileID: 1425537228}
   m_Layer: 5
   m_Name: OffscreenDirection8
   m_TagString: Untagged
@@ -409225,6 +409472,21 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1425537224}
   m_CullTransparentMesh: 1
+--- !u!114 &1425537228
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1425537224}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Outline
+  m_EffectColor: {r: 0.12, g: 0.02, b: 0.2, a: 0.95}
+  m_EffectDistance: {x: 2, y: -2}
+  m_UseGraphicAlpha: 1
 --- !u!1 &1426080187
 GameObject:
   m_ObjectHideFlags: 0
@@ -413943,6 +414205,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1443217263
 MeshRenderer:
@@ -418661,6 +418924,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1459658086
 MeshRenderer:
@@ -420436,6 +420700,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1466381825
 MeshRenderer:
@@ -423999,6 +424264,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1478702329
 MeshRenderer:
@@ -424403,6 +424669,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1479757860
 MeshRenderer:
@@ -426318,6 +426585,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1484539490
 MeshRenderer:
@@ -427138,6 +427406,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1487028647
 MeshRenderer:
@@ -435703,6 +435972,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1513800650
 MeshRenderer:
@@ -436443,6 +436713,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1515512532
 MeshRenderer:
@@ -438581,6 +438852,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1524671906
 MeshRenderer:
@@ -444484,6 +444756,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1549908555
 MeshRenderer:
@@ -445710,6 +445983,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1552650224
 MeshRenderer:
@@ -447287,6 +447561,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1559251159
 MeshRenderer:
@@ -448618,6 +448893,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1564753120
 MeshRenderer:
@@ -451573,6 +451849,7 @@ GameObject:
   - component: {fileID: 1576968587}
   - component: {fileID: 1576968589}
   - component: {fileID: 1576968588}
+  - component: {fileID: 1576968590}
   m_Layer: 5
   m_Name: OffscreenDirection6
   m_TagString: Untagged
@@ -451641,6 +451918,21 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1576968586}
   m_CullTransparentMesh: 1
+--- !u!114 &1576968590
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1576968586}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Outline
+  m_EffectColor: {r: 0.12, g: 0.02, b: 0.2, a: 0.95}
+  m_EffectDistance: {x: 2, y: -2}
+  m_UseGraphicAlpha: 1
 --- !u!1 &1577139002
 GameObject:
   m_ObjectHideFlags: 0
@@ -454474,6 +454766,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1579263855
 MeshRenderer:
@@ -455162,6 +455455,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1581819470
 MeshRenderer:
@@ -458742,6 +459036,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1591576010
 MeshRenderer:
@@ -466687,6 +466982,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1615009679
 MeshRenderer:
@@ -469557,6 +469853,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1621365557
 MeshRenderer:
@@ -469945,6 +470242,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1621917961
 MeshRenderer:
@@ -473303,6 +473601,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1633767470
 MeshRenderer:
@@ -474875,6 +475174,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1641530500
 MeshRenderer:
@@ -475662,6 +475962,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1644784818
 MeshRenderer:
@@ -476435,6 +476736,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1646667634
 MeshRenderer:
@@ -477822,6 +478124,7 @@ MonoBehaviour:
   - {fileID: 2800000, guid: 31654eda2ee072141b0acbc166f2a541, type: 3}
   hitCrit: {fileID: 2800000, guid: 619204dd6f195ae4c8b9cb055ddd2c50, type: 3}
   hitRing: {fileID: 2800000, guid: 261eb8f424f22744da82f3440278d247, type: 3}
+  muzzleFlash: {fileID: 2800000, guid: 2f08bf94709e0344ca7511ce0e80e077, type: 3}
 --- !u!4 &1652068622
 Transform:
   m_ObjectHideFlags: 0
@@ -481084,6 +481387,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1662083310
 MeshRenderer:
@@ -483385,6 +483689,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1669981054
 MeshRenderer:
@@ -486712,6 +487017,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1682216426
 MeshRenderer:
@@ -490726,6 +491032,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1699323450
 MeshRenderer:
@@ -492612,6 +492919,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1709047672
 MeshRenderer:
@@ -495855,6 +496163,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1719259232
 MeshRenderer:
@@ -496405,6 +496714,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1720299909
 MeshRenderer:
@@ -496567,6 +496877,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1720712058
 MeshRenderer:
@@ -499054,6 +499365,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1729292394
 MeshRenderer:
@@ -500154,6 +500466,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1733113991
 MeshRenderer:
@@ -501763,6 +502076,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1738445964
 MeshRenderer:
@@ -502152,6 +502466,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1739437781
 MeshRenderer:
@@ -503544,6 +503859,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1747812043
 MeshRenderer:
@@ -513961,6 +514277,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1784391079
 MeshRenderer:
@@ -521488,6 +521805,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1810946152
 MeshRenderer:
@@ -522001,6 +522319,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1812425273
 MeshRenderer:
@@ -524535,6 +524854,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1821821266
 MeshRenderer:
@@ -525302,6 +525622,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1824669428
 MeshRenderer:
@@ -525689,6 +526010,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1825949665
 MeshRenderer:
@@ -526571,6 +526893,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1829754027
 MeshRenderer:
@@ -526825,6 +527148,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1830023211
 MeshRenderer:
@@ -529291,6 +529615,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1838667156
 MeshRenderer:
@@ -529453,6 +529778,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1839016131
 MeshRenderer:
@@ -529662,6 +529988,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1840282487
 MeshRenderer:
@@ -532098,6 +532425,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1848623343
 MeshRenderer:
@@ -532708,6 +533036,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1852045246
 MeshRenderer:
@@ -536731,6 +537060,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1865777824
 MeshRenderer:
@@ -542028,6 +542358,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1880549559
 MeshRenderer:
@@ -542264,6 +542595,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1880864658
 MeshRenderer:
@@ -544487,6 +544819,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1886995528
 MeshRenderer:
@@ -546007,6 +546340,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1892523789
 MeshRenderer:
@@ -549398,6 +549732,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1904776851
 MeshRenderer:
@@ -550810,6 +551145,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1912546826
 MeshRenderer:
@@ -556199,6 +556535,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1930589242
 MeshRenderer:
@@ -564137,6 +564474,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1966162511
 MeshRenderer:
@@ -564439,6 +564777,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1966461721
 MeshRenderer:
@@ -565837,6 +566176,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1970440701
 MeshRenderer:
@@ -565999,6 +566339,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1970833345
 MeshRenderer:
@@ -566389,6 +566730,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1972253412
 MeshRenderer:
@@ -567364,6 +567706,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1975193074
 MeshRenderer:
@@ -567612,6 +567955,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1976050738
 MeshRenderer:
@@ -567866,6 +568210,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1976295851
 MeshRenderer:
@@ -568847,6 +569192,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1979084756
 MeshRenderer:
@@ -569526,6 +569872,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1981084561
 MeshRenderer:
@@ -571763,6 +572110,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &1987633940
 MeshRenderer:
@@ -579613,6 +579961,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &2020925290
 MeshRenderer:
@@ -579775,6 +580124,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &2021062526
 MeshRenderer:
@@ -586714,6 +587064,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &2045085123
 MeshRenderer:
@@ -587487,6 +587838,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &2046877650
 MeshRenderer:
@@ -589272,6 +589624,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &2052682674
 MeshRenderer:
@@ -595870,6 +596223,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &2079543639
 MeshRenderer:
@@ -596032,6 +596386,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &2079657746
 MeshRenderer:
@@ -597306,6 +597661,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &2082729760
 MeshRenderer:
@@ -597869,6 +598225,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &2083647278
 MeshRenderer:
@@ -599580,6 +599937,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &2093254425
 MeshRenderer:
@@ -600687,6 +601045,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &2095561494
 MeshRenderer:
@@ -602970,6 +603329,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &2107172753
 MeshRenderer:
@@ -603927,6 +604287,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &2110192364
 MeshRenderer:
@@ -605722,6 +606083,17 @@ MonoBehaviour:
   auraTimeSlip: {fileID: 2800000, guid: 8ef911eed0b980c40bac45b542f41d91, type: 3}
   auraShield: {fileID: 2800000, guid: ac685feea6b7b9a4eaf54cf50f18dfe7, type: 3}
   auraVoid: {fileID: 2800000, guid: f9300d4281f9c554dbf4e3325bf3b85a, type: 3}
+  strikeRocket: {fileID: 2800000, guid: b881463eb116cff47ac9a5ed92cd3d22, type: 3}
+  strikeTarget: {fileID: 2800000, guid: cff3afe36f9c1e4418dca6ad40a752cc, type: 3}
+  strikeFlash: {fileID: 2800000, guid: 822825c25150b31408b369c3809110e3, type: 3}
+  strikeHeight: 16
+  strikeLead: 7
+  strikeRocketLength: 3.4
+  strikeShake: 0.28
+  poisonSpike: {fileID: 2800000, guid: 0e2daa43289223e47920117a680e8a4b, type: 3}
+  spikeLength: 1.3
+  prismBeam: {fileID: 2800000, guid: b50b38126ca81a744ab744405da329ba, type: 3}
+  prismBeamWidth: 0.9
   framesPerSecond: 12
   maxDistance: 26
 --- !u!1 &2114249349
@@ -606061,6 +606433,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &2115135421
 MeshRenderer:
@@ -607675,6 +608048,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &2118705692
 MeshRenderer:
@@ -608605,6 +608979,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &2124835712
 MeshRenderer:
@@ -608951,6 +609326,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &2125349598
 MeshRenderer:
@@ -609113,6 +609489,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &2125494255
 MeshRenderer:
@@ -610195,6 +610572,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &2130272583
 MeshRenderer:
@@ -612308,6 +612686,7 @@ MonoBehaviour:
   ricochets: 0
   targetsLeft: 0
   internalWallsLeft: 0
+  returnAlongPath: 0
   element: 0
 --- !u!23 &2137845257
 MeshRenderer:
@@ -613846,7 +614225,6 @@ SceneRoots:
   - {fileID: 1258361596}
   - {fileID: 706927160}
   - {fileID: 809177188}
-  - {fileID: 603648760}
   - {fileID: 134031411}
   - {fileID: 1207676704}
   - {fileID: 363912273}

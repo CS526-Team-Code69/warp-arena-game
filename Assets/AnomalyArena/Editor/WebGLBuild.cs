@@ -6,10 +6,12 @@ using UnityEngine;
 
 namespace AnomalyArena.EditorTools
 {
+
     public static class WebGLBuild
     {
         public const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
         public const string Output = "Builds/WebGL-V2";
+
         public const int MaxTextureSize = 1024;
 
         [MenuItem("Anomaly Arena/Build WebGL (V2)")]

@@ -10,6 +10,7 @@ namespace AnomalyArena
         [Tooltip("V4 directional hit sparks; the texture points to +X and is rolled toward the hit direction on screen.")]
         public Texture[] hitSparks;
         public Texture hitCrit, hitRing;
+        [Tooltip("Muzzle flash for the player's shots; the texture points to +X.")] public Texture muzzleFlash;
         public static FxPool Active { get; private set; }
         float[] lives, total;
         Vector3[] velocities;

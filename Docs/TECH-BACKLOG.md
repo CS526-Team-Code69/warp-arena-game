@@ -1,6 +1,6 @@
 # Engineering backlog — performance and structure
 
-Tasks that make the code ready for the v2.0 design in [GDD.md](GDD.md). Written so that any team member can pick one up. How V2 is currently built is in [IMPLEMENTATION-NOTES.md](IMPLEMENTATION-NOTES.md).
+Tasks that make the code ready for the v2.0 design in [GDD.md](GDD.md). Written so that any team member can pick one up.
 
 | | |
 |---|---|
@@ -24,7 +24,7 @@ Tasks that make the code ready for the v2.0 design in [GDD.md](GDD.md). Written 
 ## Working rules
 
 - One task per branch and pull request. Say in the description what was measured before and after.
-- Tests must stay green: menu **Anomaly Arena → 4. Run Play Mode Tests**, then `Logs/TestResults.txt` must start with `FINISHED Passed: … failed 0` (87 Play Mode tests and 8 Edit Mode tests as of 2026-10-15, see [PROJECT-STATUS.md](PROJECT-STATUS.md)).
+- Tests must stay green: menu **Anomaly Arena → 4. Run Play Mode Tests**, then `Logs/TestResults.txt` must start with `FINISHED Passed: … failed 0` (70 Play Mode tests as of 2026-10-16).
 - A performance task changes no game rule. If a rule has to change, stop and raise it.
 - Do not hand-edit `.unity` or `.prefab` files; change them through editor scripts (`Editor/ArenaSetup.cs` shows the pattern). Do not create `.meta` files by hand.
 - Do not commit `.idea/`, local Unity caches (`Library/`, `Temp/`, `Logs/`, `UserSettings/`), `ProjectSettings/Packages/com.unity.connect.share/Settings.json` or `ProjectSettings/UnityConnectSettings.asset`.
@@ -200,7 +200,7 @@ Tasks that make the code ready for the v2.0 design in [GDD.md](GDD.md). Written 
 
 **What.** A `Stat` type with a base value, an additive percentage, a cap and a change event. Weapon effects read final values through the holder (`user.Stats`) rather than their own fields. Unit tests for stacking and caps.
 
-**Since V2.** `Scripts/Progression/RunStats.cs` holds the run stats with per-stat caps (crit capped at 60%, armor at 300). Since V4 the fourteen stats are offered through seven stat cards plus Element Penetration ([V4-NUMBERS.md](V4-NUMBERS.md) §3). Weapon effects in the 1.0 code still read their own fields.
+**Since V2.** `Scripts/Progression/RunStats.cs` holds the run stats with per-stat caps (crit capped at 60%, armor at 300). Since V4 the fourteen stats are offered through seven stat cards plus Element Penetration.
 
 ### T11. Run state machine and one owner of time
 
@@ -260,7 +260,7 @@ Tasks that make the code ready for the v2.0 design in [GDD.md](GDD.md). Written 
 
 **Done when.** The Play Mode tests named in GDD §16, M3b pass. In the stress scene of T0, with 40 enemies all burning and poisoned, applying and ticking statuses allocates nothing per frame.
 
-**Since V2.** Implemented as the `ElementStatus` component (a component per character, not a plain class) with numbers in `Data/StatusRules.asset`; see [PROGRESSION.md](PROGRESSION.md). Since the 2026-10-12 GDD clarification, Lightning jumps to any target within 4 and Frost only widens the jump (range 6) and boosts stacks (×1.5). The allocation check is not done.
+**Since V2.** Implemented as the `ElementStatus` component (a component per character, not a plain class) with numbers in `Data/StatusRules.asset`. Since the 2026-10-12 GDD clarification, Lightning jumps to any target within 4 and Frost only widens the jump (range 6) and boosts stacks (×1.5). The allocation check is not done.
 
 ### T19. Weapon instances and upgrade axes
 
@@ -277,7 +277,7 @@ Tasks that make the code ready for the v2.0 design in [GDD.md](GDD.md). Written 
 
 **Done when.** Two weapons with the same anomaly and different axes behave differently in one scene. An Edit Mode test checks that every hand anomaly defines a Twist, a Tame and at least one Reach value.
 
-**Since V2.** `Scripts/Weapons/V2/RunWeapon.cs` is the run-time instance: form, anomaly, Mk tier, axis flags and element. Since V4, draft cards add only Twist, Tame or Infusion (auto weapons: Infusion only), and damage growth comes from armory Mk tiers ([V4-NUMBERS.md](V4-NUMBERS.md) §2). The Edit Mode test is not written.
+**Since V2.** `Scripts/Weapons/V2/RunWeapon.cs` is the run-time instance: form, anomaly, Mk tier, axis flags and element. Since V4, draft cards add only Twist, Tame or Infusion (auto weapons: Infusion only), and damage growth comes from armory Mk tiers. The Edit Mode test is not written.
 
 ---
 

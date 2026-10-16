@@ -47,7 +47,7 @@ MonoBehaviour:
   bossControlStagger: 15
   playerControlMax: 1
   playerControlImmunity: 4
-  enemyFireStacks: 3
+  enemyFireStacks: 2
   enemyPoisonStacks: 1
   enemyFrostStacks: 3
   enemyLightningStacks: 3

@@ -11,7 +11,7 @@ namespace AnomalyArena
 
         public static float WaveScale
         {
-            get { var gm = GameManager.Instance; return gm && gm.useV2 && gm.waves ? Mathf.Max(1f, gm.waves.CombatScale) : 1f; }
+            get { var gm = GameManager.Instance; return gm && gm.waves ? Mathf.Max(1f, gm.waves.CombatScale) : 1f; }
         }
 
         public static Color ColorFor(ElementKind element) => element switch

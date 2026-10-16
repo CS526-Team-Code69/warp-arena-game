@@ -34,7 +34,7 @@ namespace AnomalyArena
         public string resultDetails = "";
         public string buildSummary = "";
         public ArenaUiSlot[] handSlots = { new(), new() };
-        public ArenaUiSlot[] autoSlots = { new(), new(), new() };
+        public ArenaUiSlot[] autoSlots = { new(), new() };
         public ArenaUiSlot[] skillSlots = { new(), new(), new() };
         public ArenaUiSlot[] replacementSlots = { new(), new(), new() };
         public int replacementCount = 2;

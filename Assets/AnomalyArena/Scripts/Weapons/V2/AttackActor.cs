@@ -3,6 +3,7 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
+
     public sealed class AttackActor : MonoBehaviour
     {
         public Renderer visual;
@@ -15,6 +16,9 @@ namespace AnomalyArena
         public bool pierce, hurtOwner, ignoreShield, followCursor;
         public int ricochets, targetsLeft;
         public int internalWallsLeft;
+        [Tooltip("At the first wall, fly straight back along the same line instead of stopping.")]
+        public bool returnAlongPath;
+        bool rebounded;
         public ElementKind element;
         public int Sequence { get; private set; }
         public bool IsReturning => returning;
@@ -63,7 +67,7 @@ namespace AnomalyArena
             if (type == AttackMode.Hook) flown = Query.Flat(transform.position - from.Position).magnitude;
             tickInterval = .25f; pierceDamageRetention = 1;
             struck.Clear(); knifeReturnHits.Clear(); passedWalls.Clear(); returning = attached = hookRetracting = stoppedOnWall = finalFieldPush = false;
-            attachedAge = 0; internalWallsLeft = 0;
+            attachedAge = 0; internalWallsLeft = 0; returnAlongPath = rebounded = false;
             knifeSeekTarget = null; HasKnifeCorpse = false; KnifeCorpseRadius = KnifeSpinAngle = 0;
             KnifeCorpseSprite = null; KnifeReturnPoint = Vector3.zero;
             KnifeCorpseSource = null; KnifeCorpseSpawnVersion = 0; knifeCorpseClaimedThisThrow = false;
@@ -191,6 +195,8 @@ namespace AnomalyArena
                 {
                     if (mode == AttackMode.Swarm && returning)
                     { transform.position = hit.point; hurtOwner = true; Explode(); Release(); return; }
+
+                    if (rebounded && hurtOwner && owner.IsAlive && struck.Add(owner)) Hit(owner, damage, 0f, direction);
                     continue;
                 }
                 if (body && (!body.IsAlive || struck.Contains(body))) continue;
@@ -200,6 +206,12 @@ namespace AnomalyArena
                     PlaySound(WeaponAudioPhase.Impact);
                     if (internalWallsLeft > 0 && !IsBoundary(hit.collider))
                     { passedWalls.Add(hit.collider); internalWallsLeft--; continue; }
+                    if (returnAlongPath && !rebounded)
+                    {
+                        rebounded = true; direction = -direction; flown = 0f; struck.Clear();
+                        transform.position = hit.point + direction * .3f;
+                        return;
+                    }
                     if (ricochets > 0)
                     {
                         ricochets--; direction = Query.Flat(Vector3.Reflect(direction, hit.normal)).normalized;
@@ -341,6 +353,7 @@ namespace AnomalyArena
                 Vector3 next = Query.AtCastHeight(from + direction * Mathf.Min(step, to.magnitude));
                 if (HasKnifeCorpse)
                 {
+
                     int count = Physics.OverlapCapsuleNonAlloc(from, next, KnifeCorpseRadius + .1f,
                         knifeContacts, GameManager.CharacterMask, QueryTriggerInteraction.Ignore);
                     for (int i = 0; i < count; i++)
@@ -422,6 +435,7 @@ namespace AnomalyArena
         void HitKnife(Combatant target, float amount, float push, HitKind kind)
         {
             var info = DamageInfo.Attack(amount, owner, direction, push, kind);
+            info.feel = WeaponFeel.Of(weapon);
             info.element = element; info.baseDamage = amount;
             info.builtInElement = weapon != null && weapon.builtInElement;
             if(target.ReceiveDamage(info))PlaySound(WeaponAudioPhase.Impact);
@@ -490,6 +504,7 @@ namespace AnomalyArena
                 var target = Combatant.From(hit.collider);
                 if (target && target != owner && target.IsAlive && target is not Enemy { Immovable: true })
                 {
+
                     Hit(target,Mathf.Max(1f,damage),0f,direction);
                     if(target.IsAlive){carrier=target;carrier.SetState(CharacterState.Hooked);}
                     else{flown+=hit.distance;transform.position=Query.AtCastHeight(owner.Position+direction*flown);hookRetracting=true;}
@@ -516,6 +531,7 @@ namespace AnomalyArena
         {
             if(mode is not (AttackMode.Field or AttackMode.Pull))PlaySound(WeaponAudioPhase.Explosion);
             if (mode is not (AttackMode.Field or AttackMode.Pull)) point = Query.Flat(transform.position);
+
             blastTargets.Clear();
             foreach (var body in Combatant.All)
             {
@@ -558,7 +574,7 @@ namespace AnomalyArena
             var info = DamageInfo.Attack(amount, owner, push < 0 ? -dir : dir, Mathf.Abs(push),
                 mode is AttackMode.Field or AttackMode.Blast or AttackMode.Sticky or AttackMode.Bouncy or AttackMode.Swarm ? HitKind.Blast : pierce ? HitKind.Pierce : HitKind.Bullet);
             info.element = element; info.baseDamage = amount;
-            info.builtInElement = weapon != null && weapon.builtInElement; info.ignoreShield = ignoreShield;
+            info.builtInElement = weapon != null && weapon.builtInElement; info.ignoreShield = ignoreShield; info.feel = WeaponFeel.Of(weapon);
             if(target.ReceiveDamage(info))PlaySound(WeaponAudioPhase.Impact);
         }
         void PlaySound(WeaponAudioPhase phase)
