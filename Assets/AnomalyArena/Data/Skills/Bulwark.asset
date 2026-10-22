@@ -15,43 +15,55 @@ MonoBehaviour:
   id: 4
   displayName: Bulwark
   element: 5
+  category: 0
   greaterVoid: 0
   cost: 30
   cooldown: 2
   advancedCooldown: 4
   duration:
-  - 5
+  - 8
   - 8
   - 8
   radius:
   - 4
-  - 4
-  - 4
+  - 5
+  - 6
   range:
   - 12
   - 12
   - 12
   strength:
-  - 0.2
-  - 0.3
-  - 0.3
+  - 0.15
+  - 0.25
+  - 0.4
   hitDamage: 6
   hitStacks: 3
   endDamage: 10
-  endKnockback: 5
+  endKnockback: 10
+  freezeHold: 3
+  contactKnockback:
+  - 4
+  - 6
+  - 8
+  statusResistance:
+  - 0
+  - 0
+  - 0
   healOnCast: 20
   energyReward: 20
   feedRange: 10
   trailSpacing: 0.5
+  overchargeRate: 2
+  overchargeDamageMultiplier: 1.25
   voidGravityWidth: 1
-  voidWalkHoleDiameter: 3
+  voidWalkMoveMultiplier: 1.6
   singularitySlowMultiplier: 0.5
   singularityBaseDamage: 10
   singularityDamagePerEnemy: 4
   descriptions:
-  - A wall 4 wide for 5 s; gain 10 Shield.
-  - A wall for 8 s; gain 15 Shield.
-  - 8 s wall; Medium push when it ends; 15 Shield.
+  - Unbreakable wall 4 wide for 8 s, contact push 4; Shield 15% max HP.
+  - Wall 5 wide, contact push 6; Shield 25% max HP.
+  - Wall 6 wide, contact push 8; Shield 40% max HP.
   icon: {fileID: 0}
   levelDamageGrowth: 1.35
   shieldScalesWithMaxHp: 1

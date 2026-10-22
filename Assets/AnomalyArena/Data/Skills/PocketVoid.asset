@@ -15,6 +15,7 @@ MonoBehaviour:
   id: 13
   displayName: Pocket Void
   element: 7
+  category: 0
   greaterVoid: 1
   cost: 50
   cooldown: 2
@@ -39,19 +40,30 @@ MonoBehaviour:
   hitStacks: 3
   endDamage: 10
   endKnockback: 10
+  freezeHold: 3
+  contactKnockback:
+  - 0
+  - 0
+  - 0
+  statusResistance:
+  - 0
+  - 0
+  - 0
   healOnCast: 20
   energyReward: 20
   feedRange: 10
   trailSpacing: 0.5
+  overchargeRate: 2
+  overchargeDamageMultiplier: 1.25
   voidGravityWidth: 1
-  voidWalkHoleDiameter: 3
+  voidWalkMoveMultiplier: 1.6
   singularitySlowMultiplier: 0.5
   singularityBaseDamage: 10
   singularityDamagePerEnemy: 4
   descriptions:
-  - "3\xD73 hole for 4 s, 1-wide gravity. It can swallow you too."
-  - "3\xD73 hole for 4 s."
-  - "3\xD73 hole for 4 s."
+  - 3x3 hole for 4 s, 1-wide gravity. Swallowed enemies give XP; bosses are immune; it can swallow you too.
+  - 3x3 hole for 4 s.
+  - 3x3 hole for 4 s.
   icon: {fileID: 0}
   levelDamageGrowth: 1.35
   shieldScalesWithMaxHp: 1

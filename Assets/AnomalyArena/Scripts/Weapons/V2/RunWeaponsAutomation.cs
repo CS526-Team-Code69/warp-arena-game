@@ -31,12 +31,14 @@ namespace AnomalyArena
         void TickAutoWeapons(float dt)
         {
             autoClock+=dt;
+
+            float rate=Mathf.Max(.01f,WeaponCooldownRate);
             for(int slot=0;slot<Auto.Length;slot++)
             {
                 var w=Auto[slot];if(w==null)continue;
 
                 if(w.whirled&&BattlefieldFrozen(w.whirled.gameObject))continue;
-                w.cooldown=Mathf.Max(0,w.cooldown-dt);w.orbitAngle+=orbitAngularSpeed*dt;
+                w.cooldown=Mathf.Max(0,w.cooldown-dt*rate);w.orbitAngle+=orbitAngularSpeed*dt;
                 var definition=roster.Get(w.form);
                 float hit=(w.variant==0?definition.damageA:definition.damageB)*DamageScale(w);
                 float range=(w.variant==0?definition.rangeA:definition.rangeB)*w.Reach;
@@ -51,7 +53,7 @@ namespace AnomalyArena
                             if(body==player||!body.IsAlive)continue;
                             if(autoHitTimes[slot].TryGetValue(body,out float next)&&next>autoClock)continue;
                             if(Query.Flat(body.Position-position).magnitude>body.radius+orbitBladeRadius)continue;
-                            autoHitTimes[slot][body]=autoClock+orbitHitInterval*CooldownScale(w);
+                            autoHitTimes[slot][body]=autoClock+orbitHitInterval*CooldownScale(w)/rate;
                             Damage(w,body,hit,w.variant==0?3:-1.5f,Query.Flat(body.Position-player.Position).normalized);
                             if(lastDamageAccepted)WeaponSound(w);
                         }

@@ -13,8 +13,9 @@ MonoBehaviour:
   m_Name: Decoy
   m_EditorClassIdentifier: AnomalyArena::AnomalyArena.SkillDefinition
   id: 11
-  displayName: Decoy
+  displayName: Mirror Image
   element: 0
+  category: 3
   greaterVoid: 0
   cost: 20
   cooldown: 2
@@ -39,19 +40,30 @@ MonoBehaviour:
   hitStacks: 3
   endDamage: 10
   endKnockback: 10
+  freezeHold: 3
+  contactKnockback:
+  - 0
+  - 0
+  - 0
+  statusResistance:
+  - 0
+  - 0
+  - 0
   healOnCast: 20
   energyReward: 20
   feedRange: 10
   trailSpacing: 0.5
+  overchargeRate: 2
+  overchargeDamageMultiplier: 1.25
   voidGravityWidth: 1
-  voidWalkHoleDiameter: 3
+  voidWalkMoveMultiplier: 1.6
   singularitySlowMultiplier: 0.5
   singularityBaseDamage: 10
   singularityDamagePerEnemy: 4
   descriptions:
-  - Enemies chase a dummy for 3 s.
+  - Enemies chase a mirror image for 3 s.
   - Enemies chase it for 5 s.
-  - 5 s dummy; explodes for 8 damage and Medium push.
+  - 5 s mirror; when it ends, another random skill of yours is cast there for free.
   icon: {fileID: 0}
   levelDamageGrowth: 1.35
   shieldScalesWithMaxHp: 1

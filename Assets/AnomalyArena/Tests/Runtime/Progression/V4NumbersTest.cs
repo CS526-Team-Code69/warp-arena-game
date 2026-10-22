@@ -34,20 +34,43 @@ namespace AnomalyArena
         }
 
         [Test]
-        public void RollStatCard_DefaultRules_OffersOnlyMergedCardsWithDamageCarryingCrit()
+        public void Defaults_StatCards_OfferEightDocumentCardsAndRetireKnockbackAndLuck()
         {
             var rules = ScriptableObject.CreateInstance<ProgressionRules>();
             try
             {
                 var offered = rules.statCards.Where(card => !card.retired).ToArray();
-                Assert.That(offered, Has.Length.EqualTo(8));
-                var damage = offered.Single(card => card.stat == StatId.Damage);
-                Assert.That(damage.bonus, Is.EqualTo(StatBonus.CritChance));
-                Assert.That(damage.BonusAt(CardRarity.Common), Is.GreaterThan(0f));
-                Assert.That(rules.statCards.Where(card => card.retired).Select(card => card.stat),
-                    Is.EquivalentTo(new[] { StatId.Regeneration, StatId.Stamina, StatId.Impact, StatId.PickupRange, StatId.Luck, StatId.EnergySiphon }));
+
+                Assert.That(offered.Select(card => card.stat), Is.EquivalentTo(new[] { StatId.MaxHp, StatId.MoveSpeed, StatId.Damage,
+                    StatId.AttackSpeed, StatId.CritChance, StatId.Protection, StatId.MaxEnergy, StatId.ElementPenetration }), "offered cards");
+                Assert.That(offered.Single(card => card.stat == StatId.Damage).bonus, Is.EqualTo(StatBonus.CritChance), "damage bonus");
+                Assert.That(offered.Single(card => card.stat == StatId.CritChance).bonus, Is.EqualTo(StatBonus.CritMultiplier), "crit bonus");
+                Assert.That(rules.statCards.Where(card => card.retired).Select(card => card.stat), Is.EquivalentTo(new[] { StatId.Regeneration,
+                    StatId.Stamina, StatId.Knockback, StatId.Impact, StatId.PickupRange, StatId.Luck, StatId.EnergySiphon }), "retired rows");
             }
             finally { Object.DestroyImmediate(rules); }
+        }
+
+        [Test]
+        public void Add_CritChancePastCap_StopsAtCritCap()
+        {
+            var stats = new RunStats();
+            stats.Add(StatId.CritChance, .5f);
+
+            stats.Add(StatId.CritChance, .5f);
+
+            Assert.That(stats.critChance, Is.EqualTo(stats.critCap).Within(.0001f));
+        }
+
+        [Test]
+        public void AddBonus_CritMultiplierPastCap_ReturnsOnlyTheGainUpToCap()
+        {
+            var stats = new RunStats();
+
+            float actual = stats.AddBonus(StatBonus.CritMultiplier, 5f);
+
+            Assert.That(stats.critMultiplier, Is.EqualTo(3.5f).Within(.0001f), "capped multiplier");
+            Assert.That(actual, Is.EqualTo(1.5f).Within(.0001f), "returned gain");
         }
 
         [Test]

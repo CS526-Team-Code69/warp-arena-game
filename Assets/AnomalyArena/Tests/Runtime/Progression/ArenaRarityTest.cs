@@ -1,3 +1,4 @@
+using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -20,11 +21,25 @@ namespace AnomalyArena
         [Test]
         public void ForWeapon_ReplacingVoidInfusion_RestoresUpgradeTierWithoutCountingInfusionTwice()
         {
-            var weapon = new RunWeapon { element = ElementKind.Void, axes = UpgradeAxis.Infusion | UpgradeAxis.Power };
+            var weapon = new RunWeapon { element = ElementKind.Void, axes = UpgradeAxis.Infusion };
 
             var actual = ArenaRarity.ForWeapon(weapon, UpgradeAxis.Infusion, ElementKind.Frost);
 
             Assert.That(actual, Is.EqualTo(CardRarity.Rare));
+        }
+
+        [TestCase(UpgradeAxis.None, CardRarity.Common)]
+        [TestCase(UpgradeAxis.Power, CardRarity.Rare)]
+        [TestCase(UpgradeAxis.Power | UpgradeAxis.Tempo, CardRarity.Exceptional)]
+        [TestCase(UpgradeAxis.Power | UpgradeAxis.Tempo | UpgradeAxis.Reach, CardRarity.Exceptional)]
+        [TestCase(UpgradeAxis.Power | UpgradeAxis.Tempo | UpgradeAxis.Reach | UpgradeAxis.Twist, CardRarity.Epic)]
+        public void ForWeapon_UpgradeCount_MapsToTier(UpgradeAxis axes, CardRarity expected)
+        {
+            var weapon = new RunWeapon { axes = axes };
+
+            var actual = ArenaRarity.ForWeapon(weapon);
+
+            Assert.That(actual, Is.EqualTo(expected));
         }
 
         [Test]
@@ -35,6 +50,16 @@ namespace AnomalyArena
             var actual = ArenaRarity.ForWeapon(weapon, UpgradeAxis.Tame);
 
             Assert.That(actual, Is.EqualTo(CardRarity.Legendary));
+        }
+
+        [TestCase(1, CardRarity.Common)]
+        [TestCase(2, CardRarity.Rare)]
+        [TestCase(3, CardRarity.Exceptional)]
+        public void ForSkill_OrdinarySkillLevel_MapsToTier(int level, CardRarity expected)
+        {
+            var actual = ArenaRarity.ForSkill(null, level);
+
+            Assert.That(actual, Is.EqualTo(expected));
         }
 
         [TestCase(1)]
@@ -51,6 +76,29 @@ namespace AnomalyArena
                 Assert.That(actual, Is.EqualTo(CardRarity.Void));
             }
             finally { Object.DestroyImmediate(definition); }
+        }
+
+        [Test]
+        public void Rank_AllTiers_FollowsDisplayOrderNotSerializedInts()
+        {
+            var tiers = new[] { CardRarity.Common, CardRarity.Rare, CardRarity.Exceptional, CardRarity.Epic, CardRarity.Legendary, CardRarity.Void };
+
+            var actual = tiers.Select(ArenaRarity.Rank).ToArray();
+
+            Assert.That(actual, Is.EqualTo(new[] { 0, 1, 2, 3, 4, 5 }));
+        }
+
+        [TestCase(CardRarity.Common, CardRarity.Rare)]
+        [TestCase(CardRarity.Rare, CardRarity.Exceptional)]
+        [TestCase(CardRarity.Exceptional, CardRarity.Epic)]
+        [TestCase(CardRarity.Epic, CardRarity.Legendary)]
+        [TestCase(CardRarity.Legendary, CardRarity.Legendary)]
+        [TestCase(CardRarity.Void, CardRarity.Void)]
+        public void Next_Tier_StepsUpAndStopsAtLegendaryOrVoid(CardRarity rarity, CardRarity expected)
+        {
+            var actual = ArenaRarity.Next(rarity);
+
+            Assert.That(actual, Is.EqualTo(expected));
         }
     }
 }

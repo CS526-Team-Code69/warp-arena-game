@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-    public enum OrbKind { Xp, Hp }
+    public enum OrbKind { Xp, Hp, Energy }
 
     public sealed class ExperienceOrb : MonoBehaviour
     {
@@ -36,7 +36,12 @@ namespace AnomalyArena
             if (material) visual.sharedMaterial = material;
             appearance ??= new MaterialPropertyBlock();
             appearance.Clear();
-            Color colour = kind == OrbKind.Xp ? new Color(0.3f, 0.88f, 1f) : new Color(0.36f, 1f, 0.55f);
+            Color colour = kind switch
+            {
+                OrbKind.Xp => new Color(0.3f, 0.88f, 1f),
+                OrbKind.Energy => new Color(.62f, .46f, 1f),
+                _ => new Color(0.36f, 1f, 0.55f)
+            };
             appearance.SetColor(BaseColor, colour); appearance.SetColor(ColorProperty, colour);
             if (texture) appearance.SetTexture(BaseMap, texture);
             visual.SetPropertyBlock(appearance);
@@ -100,9 +105,15 @@ namespace AnomalyArena
             var kind = Kind; float amount = Value; Vector3 at = Position;
 
             Release();
-            if (kind == OrbKind.Xp) progression?.GainXp(amount);
-            else if (player && player.IsAlive) player.Heal(amount);
-            V2Audio.Instance?.PlayWorld(kind == OrbKind.Xp ? ArenaSoundCue.PickupXp : ArenaSoundCue.PickupHp, at);
+            switch (kind)
+            {
+                case OrbKind.Xp: progression?.GainXp(amount); break;
+                case OrbKind.Energy: progression?.GainEnergy(amount); break;
+                default: if (player && player.IsAlive) player.Heal(amount); break;
+            }
+
+            if (kind == OrbKind.Energy) V3WorldAudio.Instance?.Play(ArenaWorldCue.PickupEnergy, at);
+            else V2Audio.Instance?.PlayWorld(kind == OrbKind.Xp ? ArenaSoundCue.PickupXp : ArenaSoundCue.PickupHp, at);
         }
         public void Release() { InUse = false; Value = 0f; repelVelocity = Vector3.zero; xpAttracted = false; magnetSuppressedFor = 0f; gameObject.SetActive(false); }
     }

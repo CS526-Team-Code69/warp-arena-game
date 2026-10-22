@@ -15,14 +15,15 @@ MonoBehaviour:
   id: 14
   displayName: Void Walk
   element: 7
+  category: 0
   greaterVoid: 1
   cost: 40
   cooldown: 2
   advancedCooldown: 4
   duration:
-  - 2
-  - 2
-  - 2
+  - 3
+  - 3
+  - 3
   radius:
   - 0
   - 0
@@ -39,19 +40,30 @@ MonoBehaviour:
   hitStacks: 3
   endDamage: 10
   endKnockback: 10
+  freezeHold: 3
+  contactKnockback:
+  - 0
+  - 0
+  - 0
+  statusResistance:
+  - 0
+  - 0
+  - 0
   healOnCast: 20
   energyReward: 20
   feedRange: 10
   trailSpacing: 0.5
+  overchargeRate: 2
+  overchargeDamageMultiplier: 1.25
   voidGravityWidth: 1
-  voidWalkHoleDiameter: 3
+  voidWalkMoveMultiplier: 1.6
   singularitySlowMultiplier: 0.5
   singularityBaseDamage: 10
   singularityDamagePerEnemy: 4
   descriptions:
-  - Blink; leave two small holes for 2 s.
-  - Blink; leave two small holes for 2 s.
-  - Blink; leave two small holes for 2 s.
+  - 'Enter the void for 3 s: move x1.6, cannot be targeted or damaged.'
+  - Void state for 3 s.
+  - Void state for 3 s.
   icon: {fileID: 0}
   levelDamageGrowth: 1.35
   shieldScalesWithMaxHp: 1

@@ -2,6 +2,7 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
+
     public sealed class SkillVisualPresentation : MonoBehaviour
     {
         public SkillLoadout skills;
@@ -12,6 +13,10 @@ namespace AnomalyArena
         [Tooltip("Decorative charging ring radius; this is not a damage or pull area.")]
         public float chargeRingRadius = 1.35f;
         public float absorbLineWidth = .045f;
+
+        readonly Vector3[] trail = new Vector3[16];
+        int trailHead;
+        float trailClock;
 
         void OnDisable() => HideAll();
         void HideAll()
@@ -27,21 +32,25 @@ namespace AnomalyArena
             var gm = GameManager.Instance;
             var camera = gm ? gm.cam : null;
             if (voidWalkAfterimages != null)
+            {
+                RecordTrail(gm);
                 for (int i = 0; i < voidWalkAfterimages.Length; i++)
                 {
                     var ghost = voidWalkAfterimages[i]; if (!ghost) continue;
-                    bool show = Art.Enabled && skills.VoidWalkFlash01 > 0f && character && character.illustration && character.illustration.sprite && camera;
+                    bool show = Art.Enabled && skills.VoidWalkActive && character && character.illustration && character.illustration.sprite && camera;
                     ghost.enabled = show;
                     if (!show) continue;
                     ghost.sprite = character.illustration.sprite;
                     ghost.flipX = character.illustration.flipX;
-                    var point = i == 0 ? skills.VoidWalkStart : skills.VoidWalkEnd;
+
+                    var point = TrailPoint((i + 1) * 3);
                     ghost.transform.position = point + Vector3.up * character.height * .5f - camera.transform.forward * .025f;
                     ghost.transform.rotation = camera.transform.rotation;
-                    float height = character.height * (1f + .08f * (1f - skills.VoidWalkFlash01));
+                    float height = character.height * (1f - .05f * i);
                     Size(ghost, height * ghost.sprite.bounds.size.x / Mathf.Max(.01f, ghost.sprite.bounds.size.y), height, false);
-                    ghost.color = new Color(.65f, .44f, 1f, .42f * skills.VoidWalkFlash01);
+                    ghost.color = new Color(.65f, .44f, 1f, .45f * Mathf.Max(.3f, skills.VoidWalkFlash01) / (1f + .7f * i));
                 }
+            }
             bool active = skills.SingularityActive;
             float progress = skills.SingularityProgress01;
             if (singularityChargeRing)
@@ -70,6 +79,23 @@ namespace AnomalyArena
                 line.startColor = new Color(.65f, .4f, 1f, Mathf.Lerp(.15f, .5f, progress));
                 line.endColor = new Color(.85f, .73f, 1f, Mathf.Lerp(.4f, .95f, progress));
             }
+        }
+
+        void RecordTrail(GameManager gm)
+        {
+            var player = gm ? gm.player : null;
+            if (!player) return;
+            trailClock += Time.deltaTime;
+            if (trailClock < .05f) return;
+            trailClock = 0f;
+            trailHead = (trailHead + 1) % trail.Length;
+            trail[trailHead] = player.Position;
+        }
+
+        Vector3 TrailPoint(int samplesBack)
+        {
+            int index = ((trailHead - samplesBack) % trail.Length + trail.Length) % trail.Length;
+            return trail[index];
         }
 
         static void Size(SpriteRenderer sprite, float width, float height, bool flat)

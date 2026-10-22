@@ -19,8 +19,18 @@ namespace AnomalyArena
         [NonSerialized] public RunWeapon upgradeOf;
         public ElementKind element;
         public bool builtInElement;
-        [NonSerialized] public float cooldown, reload, heldTime, heat, charge, chargeFullTime, executeBonus;
+        [NonSerialized] public float cooldown, reload, heldTime, heat, charge, chargeFullTime;
+
+        [NonSerialized] public float executeBonus;
         [NonSerialized] public int rounds;
+
+        [NonSerialized] public bool jammed;
+
+        [NonSerialized] public int burstLeft;
+        [NonSerialized] public float burstTimer, burstDamage;
+        [NonSerialized] public Vector3 burstDirection;
+
+        [NonSerialized] public int needlesFired;
         [NonSerialized] public bool charging, inFlight, recallPlanted;
         [NonSerialized] public Vector3 recallPoint;
         [NonSerialized] public Combatant hooked;
@@ -31,9 +41,8 @@ namespace AnomalyArena
         [NonSerialized] public AttackActor stickyActor;
         [NonSerialized] public float spinStored, spinRetentionLeft;
         [NonSerialized] public bool capacitorLeaking;
-        [NonSerialized] public System.Collections.Generic.HashSet<Combatant> suctionTargets = new();
         [NonSerialized] public float whirlLeft, orbitAngle, leechDamage;
-        [NonSerialized] public float streamFiredAt = -99f, tankReadyAt, coldClock;
+        [NonSerialized] public float tankReadyAt;
         public bool IsAuto => (int)form >= (int)WeaponForm.OrbitBlades;
         public bool Has(UpgradeAxis axis) => (axes & axis) != 0;
         public int Level { get { int n=1; for(int i=0;i<6;i++) if(Has((UpgradeAxis)(1<<i))) n++; return n; } }

@@ -33,9 +33,9 @@ namespace AnomalyArena
             WeaponForm.Rifle or WeaponForm.Railgun => HitFeel.HeavyShot,
             WeaponForm.CryoCannon => variant == 0 ? HitFeel.HeavyShot : HitFeel.Area,                                  
             WeaponForm.Minigun or WeaponForm.SentryDrone => HitFeel.LightShot,
-            WeaponForm.ScatterCannon => variant == 0 ? HitFeel.LightShot : HitFeel.Area,                          
+            WeaponForm.ScatterCannon => variant == 0 ? HitFeel.LightShot : HitFeel.HeavyShot,                              
             WeaponForm.SporeLauncher => variant == 1 ? HitFeel.LightShot : HitFeel.Area,                  
-            _ => HitFeel.Area,                                                   
+            _ => HitFeel.Area,                                                                    
         };
 
         public static HitFeel FromKind(HitKind kind) => kind switch

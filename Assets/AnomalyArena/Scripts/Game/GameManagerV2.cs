@@ -21,8 +21,10 @@ namespace AnomalyArena
         bool supplyChoiceOpened;
         public void MarkSupplyLanded(){if(RunPhase==ArenaUiState.SupplyDrop)SupplyDropReady=true;}
         public bool IsCombatActive => State==GameState.Playing&&RunPhase is ArenaUiState.WaveActive or ArenaUiState.VoidTrial or ArenaUiState.FinalBoss;
-        public bool CanPlayerMove => State==GameState.Playing&&RunPhase is ArenaUiState.WaveIntro or ArenaUiState.WaveActive or ArenaUiState.VoidTrial or ArenaUiState.FinalBoss;
-        public float WorldTimeScale => IsCombatActive && slipLeft > 0 ? slipScale : 1f;
+        public bool CanPlayerMove => State==GameState.Playing&&(RunPhase is ArenaUiState.WaveIntro or ArenaUiState.WaveActive or ArenaUiState.VoidTrial or ArenaUiState.FinalBoss or ArenaUiState.TrialReturn||BuildWalking);
+                                                                                                                                            
+        public bool BuildWalking => buildWalking&&RunPhase is ArenaUiState.Armory or ArenaUiState.Draft or ArenaUiState.Ready;
+        public float WorldTimeScale => RunPhase==ArenaUiState.TrialReturn ? 0f : IsCombatActive && slipLeft > 0 ? slipScale : 1f;
         public float WorldDeltaTime => Time.deltaTime * WorldTimeScale;
         public float WorldFixedDeltaTime => Time.fixedDeltaTime * WorldTimeScale;
         public float PlayerDeltaTime => Time.deltaTime;
@@ -30,7 +32,13 @@ namespace AnomalyArena
         bool MenuInputReady => ArenaText.Ready && Time.unscaledTime - phaseOpenedAt >= .4f && menuMouseReleased;
         readonly ArenaUiSnapshot snapshot=new();
         ArenaUiState resumePhase;
+        [Min(0f), Tooltip("Seconds the world stays frozen after returning from the Void Trial mid-wave (document 12.5: a short time pause, not invulnerability).")]
+        public float trialReturnPause = 1.5f;
+        ArenaUiState trialResumePhase;
+        float trialReturnLeft;
         float waveEndAt,menuCommandAt,slipLeft,slipScale=1;
+        bool buildWalking;
+        ArenaUiState cutsceneResumePhase;
         int pendingOffer=-1,pendingDraft=-1;
         bool greaterDraft;
         bool menuMouseReleased;
@@ -53,7 +61,7 @@ namespace AnomalyArena
             runWeapons.Revealed+=w=>{runNotice=w.Label;hud?.Toast(w.Label,ElementCombat.ColorFor(w.element));};
             skills.CastRefused+=(_,reason)=>hud?.Toast(reason,Color.yellow);
             waves.WaveCompleted+=OnV2WaveEnded;
-            waves.EnemyEliminated+=enemy=>{progression.GainDeathEnergy();if(enemy.SuppressRewards||enemy.IsTrialSummon||enemy.DeathCause==DeathCause.FellIntoGap)return;orbs?.Drop(enemy.Position,waves.ExperienceFor(enemy),enemy.Elite&&Random.value<orbs.eliteHpDropChance);};
+            waves.EnemyEliminated+=enemy=>{progression.GainDeathEnergy();if(enemy.SuppressRewards||enemy.IsTrialSummon||enemy.DeathCause==DeathCause.FellIntoGap)return;orbs?.Drop(enemy.Position,waves.ExperienceFor(enemy),enemy.Elite&&Random.value<orbs.eliteHpDropChance,enemy.Elite&&progression.EnergyUnlocked&&Random.value<orbs.eliteEnergyDropChance);};
             if(WorldMap.Active){WorldMap.Active.VoidTrialEntered+=EnterVoidTrial;WorldMap.Active.VoidTrialWon+=CompleteVoidTrial;WorldMap.Active.HoleFed+=_=>V2Audio.Instance?.PlayVoidFeed();}
             SkillWorldAPI.TimeSlip=(factor,seconds)=>{slipLeft=seconds<=0f?0f:Mathf.Max(slipLeft,seconds);slipScale=seconds<=0f?1f:factor;};
             SkillWorldAPI.HoleProtection=null;                                                                         
@@ -69,6 +77,7 @@ namespace AnomalyArena
         {
             bool needsSupply=!supplyChoiceOpened&&(phase is ArenaUiState.Loadout or ArenaUiState.Armory || phase==ArenaUiState.Draft&&!greaterDraft&&HasWeaponChoice());
             if(needsSupply){pendingSupplyChoice=phase;SupplyDropReady=false;phase=ArenaUiState.SupplyDrop;}
+            if(phase is not (ArenaUiState.Armory or ArenaUiState.Draft or ArenaUiState.Ready))buildWalking=false;
             RunPhase=phase;LockMenuInput();Time.timeScale=CanPlayerMove?1:0;
             if(phase==ArenaUiState.Paused)V2Audio.Instance?.PauseAll();else if(phase==ArenaUiState.Result)V2Audio.Instance?.StopAll();else if(CanPlayerMove)V2Audio.Instance?.ResumeAll();
             hud?.v2Hud?.RefreshView();
@@ -89,9 +98,14 @@ namespace AnomalyArena
                 if(kb.spaceKey.wasPressedThisFrame){if(RunPhase==ArenaUiState.Title)ExecuteUiCommand(ArenaUiCommand.Start);else if(RunPhase==ArenaUiState.SupplyDrop)ExecuteUiCommand(ArenaUiCommand.OpenSupply);else if(RunPhase is ArenaUiState.Armory or ArenaUiState.Draft or ArenaUiState.Ready)ExecuteUiCommand(ArenaUiCommand.StartNextWave);else if(RunPhase==ArenaUiState.WeaponIntro)ExecuteUiCommand(ArenaUiCommand.DismissWeaponIntro);}
                 if(kb.enterKey.wasPressedThisFrame||kb.numpadEnterKey.wasPressedThisFrame){if(RunPhase==ArenaUiState.SupplyDrop)ExecuteUiCommand(ArenaUiCommand.OpenSupply);else if(RunPhase==ArenaUiState.WeaponIntro)ExecuteUiCommand(ArenaUiCommand.DismissWeaponIntro);}
                 if(kb.tKey.wasPressedThisFrame&&RunPhase==ArenaUiState.Title)ToggleArt();
-                if(kb.rKey.wasPressedThisFrame){if(RunPhase==ArenaUiState.Result)ExecuteUiCommand(ArenaUiCommand.Restart);else if(RunPhase==ArenaUiState.Draft)ExecuteUiCommand(ArenaUiCommand.Reroll);}
+                                                                                                                   
+                if(kb.eKey.wasPressedThisFrame&&!BuildWalking&&RunPhase is ArenaUiState.Armory or ArenaUiState.Draft or ArenaUiState.Ready&&WorldMap.Active&&WorldMap.Active.HasOpenPortal)ExecuteUiCommand(ArenaUiCommand.EnterPortal);
+                                                                                                               
+                if(kb.tabKey.wasPressedThisFrame&&RunPhase is ArenaUiState.Armory or ArenaUiState.Draft or ArenaUiState.Ready)ExecuteUiCommand(ArenaUiCommand.ToggleBuildWalk);
+                if(RunPhase==ArenaUiState.Cutscene&&(kb.spaceKey.wasPressedThisFrame||kb.enterKey.wasPressedThisFrame||kb.escapeKey.wasPressedThisFrame||Mouse.current!=null&&Mouse.current.leftButton.wasPressedThisFrame))WorldMap.Active?.SkipHoleIntro();
+                if(kb.rKey.wasPressedThisFrame){if(RunPhase==ArenaUiState.Result)ExecuteUiCommand(ArenaUiCommand.Restart);else if(RunPhase==ArenaUiState.Draft&&!BuildWalking)ExecuteUiCommand(ArenaUiCommand.Reroll);}
                 int choice=kb.digit1Key.wasPressedThisFrame?0:kb.digit2Key.wasPressedThisFrame?1:kb.digit3Key.wasPressedThisFrame?2:-1;
-                if(choice>=0&&MenuInputReady)
+                if(choice>=0&&MenuInputReady&&!BuildWalking)
                 {
                     if(CanUseCombatInput)skills.TryCast(choice);
                     else if(RunPhase==ArenaUiState.Loadout)ExecuteUiCommand(ArenaUiCommand.ChooseLoadout,choice);
@@ -107,6 +121,7 @@ namespace AnomalyArena
                 Elapsed+=Time.deltaTime;progression.Tick(PlayerDeltaTime);ElementStatus.TickAll(WorldDeltaTime,PlayerDeltaTime);SkillLoadout.TickAll(PlayerDeltaTime);runWeapons.Tick(PlayerDeltaTime);orbs?.Tick(WorldDeltaTime);
                 slipLeft=Mathf.Max(0,slipLeft-PlayerDeltaTime);if(eligibilityWave!=waves.WaveIndex)UpdatePenetrationEligibility();
             }
+            else if(RunPhase==ArenaUiState.TrialReturn){trialReturnLeft-=Time.deltaTime;if(trialReturnLeft<=0f)SetPhase(ArenaUiState.WaveActive);}
             else if(RunPhase==ArenaUiState.WaveEnd&&Time.unscaledTime>=waveEndAt)OpenBuild();
             else if(RunPhase is ArenaUiState.Armory or ArenaUiState.Draft or ArenaUiState.Ready or ArenaUiState.ReplaceWeapon or ArenaUiState.ReplaceSkill)
             {if(!greaterDraft&&selectionTimeLimit>0f){buildTimeLeft=Mathf.Max(0,buildTimeLeft-Time.unscaledDeltaTime);if(buildTimeLeft<=0)BeginNextV2Wave(true);}}
@@ -115,15 +130,16 @@ namespace AnomalyArena
         void V2LateUpdate()
         {
             if(State!=GameState.Playing)return;
-
+                                                                                               
             if(finalWaveCleared){State=GameState.Won;ClearTransients();skills.ClearWaveEffects();SetPhase(ArenaUiState.Result);}
             else if(!player.IsAlive){LoseCause=player.DeathCause;State=GameState.Lost;ClearTransients();skills.ClearWaveEffects();SetPhase(ArenaUiState.Result);}
         }
         void OnV2WaveEnded(int wave)
         {
             if(!player.IsAlive)return;
-            player.ClearWaveState();skills.ClearWaveEffects();runWeapons.ClearWaveEffects();orbs?.CollectAll();
-            SetPhase(ArenaUiState.WaveEnd);waveEndAt=Time.unscaledTime+.8f;
+                                                                                                                       
+            player.ClearWaveState();skills.ClearWaveEffects();runWeapons.ClearWaveEffects();orbs?.Clear();
+            SetPhase(ArenaUiState.WaveEnd);waveEndAt=Time.unscaledTime+1f;
         }
         void OpenBuild(){supplyChoiceOpened=false;buildTimeLeft=Mathf.Max(0f,selectionTimeLimit);buildDraftCount=progression.BankedDrafts;buildSummary="";UpdatePenetrationEligibility();runWeapons.RollArmory(waves.WaveIndex+2);progression.BeginBuildPhase(waves.WaveIndex+1,runWeapons.RollUpgradeCard,()=>skills.RollCard(waves.WaveIndex+1));SetPhase(ArenaUiState.Armory);}
         void OpenDraft(){supplyChoiceOpened=false;UpdatePenetrationEligibility();pendingDraft=-1;pendingOffer=-1;if(progression.BankedDrafts>0){progression.DrawCards(waves.WaveIndex+1,runWeapons.RollUpgradeCard,()=>skills.RollCard(waves.WaveIndex+1));SetPhase(ArenaUiState.Draft);}else SetPhase(ArenaUiState.Ready);}
@@ -134,26 +150,36 @@ namespace AnomalyArena
             if(waves.WaveIndex+1>=waves.WaveCount){SetPhase(ArenaUiState.FinalBoss);waves.BeginFinalBoss();}
             else{SetPhase(ArenaUiState.WaveIntro);waves.BeginNextWave();V2Audio.Instance?.PlayWave();}
         }
-        public void EnterVoidTrial(){SetPhase(ArenaUiState.VoidTrial);skills.FreezeBattlefieldForTrial(true);runWeapons.FreezeBattlefieldForTrial(true);orbs?.FreezeForTrial(true);}
+                                                                                                                                             
+        public void BeginCutscene(){if(RunPhase==ArenaUiState.Cutscene)return;cutsceneResumePhase=RunPhase;SetPhase(ArenaUiState.Cutscene);}
+        public void EndCutscene(){if(RunPhase!=ArenaUiState.Cutscene)return;SetPhase(cutsceneResumePhase);}
+        public void EnterVoidTrial(){trialResumePhase=RunPhase;SetPhase(ArenaUiState.VoidTrial);skills.FreezeBattlefieldForTrial(true);runWeapons.FreezeBattlefieldForTrial(true);orbs?.FreezeForTrial(true);}
         public void CompleteVoidTrial(){progression.CompleteVoidTrial();UpdatePenetrationEligibility();player.Heal(player.maxHp);player.stamina.Refill();skills.FreezeBattlefieldForTrial(false);runWeapons.FreezeBattlefieldForTrial(false);orbs?.FreezeForTrial(false);greaterCards=skills.GreaterVoidCards();greaterDraft=true;SetPhase(ArenaUiState.Draft);}
-
+                                                                                                  
         void FinishGreaterReward()
         {
             greaterDraft=false;greaterCards=null;pendingDraft=pendingOffer=-1;
             snapshot.earlyStartConfirmation=false;UpdatePenetrationEligibility();
-            player.ProtectFor(2);SetPhase(ArenaUiState.WaveActive);
+                                                                                                                                                                            
+            if(trialResumePhase is ArenaUiState.Armory or ArenaUiState.Draft or ArenaUiState.Ready){SetPhase(trialResumePhase);return;}
+            trialReturnLeft=Mathf.Max(0f,trialReturnPause);
+            if(trialReturnLeft<=0f){SetPhase(ArenaUiState.WaveActive);return;}
+            SetPhase(ArenaUiState.TrialReturn);
+            V3WorldAudio.Instance?.Play(ArenaWorldCue.TimeHeld,player.Position);
+            hud?.Banner(ArenaText.Pair("TIME HELD","TIME HELD"),ArenaText.Pair($"The battlefield is frozen for {trialReturnPause:0.#} s. Move somewhere safe.",$"The battlefield is frozen for {trialReturnPause:0.#} s. Move somewhere safe."));
         }
         public void NotifyFinalBossDefeated()=>finalWaveCleared=true;
 
+                                                                                                
         RunWeapon introWeapon;
         System.Action afterIntro;
-
+                                                                                                                  
         void ShowWeaponIntro(RunWeapon weapon,System.Action then)
         {
             if(weapon==null){then?.Invoke();return;}
             runWeapons.RevealNow(weapon);introWeapon=weapon;afterIntro=then;SetPhase(ArenaUiState.WeaponIntro);
         }
-
+                                                                                                                       
         void NotifyCardPicked(ArenaUiState from,int index,CardRarity rarity){snapshot.cardPickSequence++;snapshot.cardPickState=from;snapshot.cardPickIndex=index;snapshot.cardPickRarity=rarity;}
         void DismissWeaponIntro()
         {
@@ -201,7 +227,7 @@ namespace AnomalyArena
         {
             if(!MenuInputReady||Time.unscaledTime-menuCommandAt<.15f)return;menuCommandAt=Time.unscaledTime;
             var previousPhase=RunPhase;var previousState=State;bool previousArt=Art.Enabled,previousConfirmation=snapshot.earlyStartConfirmation;
-            int previousDrafts=progression.BankedDrafts,previousRerolls=progression.RerollsRemaining,previousOffer=pendingOffer,previousDraft=pendingDraft;
+            int previousDrafts=progression.BankedDrafts,previousRerolls=progression.RerollsRemaining,previousOffer=pendingOffer,previousDraft=pendingDraft;bool previousWalking=buildWalking;
             switch(command)
             {
                 case ArenaUiCommand.Start:if(RunPhase==ArenaUiState.Title)SetPhase(ArenaUiState.Loadout);break;
@@ -235,9 +261,14 @@ namespace AnomalyArena
                 case ArenaUiCommand.Restart:V2Audio.Instance?.PlayUI(ArenaUiSound.Confirm);_=ReloadAfterUiFeedback();return;
                 case ArenaUiCommand.QuitToTitle:V2Audio.Instance?.PlayUI(ArenaUiSound.Cancel);_=ReloadAfterUiFeedback();return;
                 case ArenaUiCommand.DismissWeaponIntro:DismissWeaponIntro();break;
-                case ArenaUiCommand.EnterPortal:WorldMap.Active?.TryEnterPortal(player);break;
+                case ArenaUiCommand.ToggleBuildWalk:
+                                                                                                                                                    
+                    if(RunPhase is not (ArenaUiState.Armory or ArenaUiState.Draft or ArenaUiState.Ready))return;
+                    buildWalking=!buildWalking;snapshot.earlyStartConfirmation=false;pendingDraft=pendingOffer=-1;Time.timeScale=CanPlayerMove?1:0;if(buildWalking)V2Audio.Instance?.ResumeAll();
+                    hud?.v2Hud?.RefreshView();break;
+                case ArenaUiCommand.EnterPortal:WorldMap.Active?.TryEnterPortal(player,RunPhase is ArenaUiState.Armory or ArenaUiState.Draft or ArenaUiState.Ready);break;
             }
-            bool accepted=previousPhase!=RunPhase||previousState!=State||previousArt!=Art.Enabled||previousConfirmation!=snapshot.earlyStartConfirmation
+            bool accepted=previousWalking!=buildWalking||previousPhase!=RunPhase||previousState!=State||previousArt!=Art.Enabled||previousConfirmation!=snapshot.earlyStartConfirmation
                 ||previousDrafts!=progression.BankedDrafts||previousRerolls!=progression.RerollsRemaining||previousOffer!=pendingOffer||previousDraft!=pendingDraft;
             if(accepted)V2Audio.Instance?.PlayUI(command==ArenaUiCommand.Cancel?ArenaUiSound.Cancel:
                 command is ArenaUiCommand.OpenSupply or ArenaUiCommand.ChooseLoadout or ArenaUiCommand.TakeArmory or ArenaUiCommand.ReplaceWeapon or ArenaUiCommand.ChooseCard or ArenaUiCommand.ReplaceSkill?ArenaUiSound.Select:ArenaUiSound.Confirm);
@@ -262,13 +293,19 @@ namespace AnomalyArena
             get
             {
                 if(RunPhase==ArenaUiState.WeaponIntro)FillWeaponIntro();
-                snapshot.state=RunPhase;snapshot.supplyLanded=SupplyDropReady;snapshot.isGreaterReward=greaterDraft;snapshot.illustrated=Art.Enabled;snapshot.hp=player?player.Hp:50;snapshot.maxHp=player?player.maxHp:50;snapshot.stamina=player?player.stamina.Value:1;snapshot.staminaExhausted=player&&player.stamina.Exhausted;
-                if(progression){snapshot.level=progression.Level;snapshot.xp=progression.Xp;snapshot.xpNeeded=progression.XpRequired;snapshot.energy=progression.Energy;snapshot.maxEnergy=progression.Stats.maxEnergy;snapshot.energyUnlocked=progression.EnergyUnlocked;snapshot.voidEnergy=progression.VoidEnergy;snapshot.rainbowLevel=progression.RainbowBadge;snapshot.bankedDrafts=progression.BankedDrafts;snapshot.rerolls=progression.RerollsRemaining;}
+                snapshot.state=RunPhase;snapshot.buildWalking=BuildWalking;snapshot.supplyLanded=SupplyDropReady;snapshot.isGreaterReward=greaterDraft;snapshot.illustrated=Art.Enabled;snapshot.hp=player?player.Hp:50;snapshot.maxHp=player?player.maxHp:50;snapshot.stamina=player?player.stamina.Value:1;snapshot.staminaExhausted=player&&player.stamina.Exhausted;
+                if(progression){snapshot.level=progression.Level;snapshot.xp=progression.Xp;snapshot.xpNeeded=progression.XpRequired;snapshot.energy=progression.Energy;snapshot.maxEnergy=progression.Stats.maxEnergy;snapshot.energyUnlocked=progression.EnergyUnlocked;snapshot.voidEnergy=progression.VoidEnergy;snapshot.voidLevel=progression.VoidBadge;snapshot.maxLevel=progression.Rules?progression.Rules.maxLevel:12;snapshot.bankedDrafts=progression.BankedDrafts;snapshot.rerolls=progression.RerollsRemaining;}
                 var status=player?ElementStatus.For(player):null;snapshot.shield=status?status.Shield:0;snapshot.playerStatuses=status?ArenaText.Pair($"Fire {status.Fire:0.#} · Poison {status.Poison:0.#} · Frost {status.Frost:0.#} · Lightning {status.Lightning:0.#}",$"Fire {status.Fire:0.#} · Poison {status.Poison:0.#} · Frost {status.Frost:0.#} · Lightning {status.Lightning:0.#}"):"";
-                snapshot.wave=waves?Mathf.Max(1,waves.WaveIndex+1):1;snapshot.maxWaves=15;snapshot.waveTime=waves?waves.TimeLeft:0;snapshot.buildTime=buildTimeLeft;snapshot.selectionUnlimited=selectionTimeLimit<=0f;snapshot.kills=waves?waves.Kills:0;snapshot.charge01=runWeapons?runWeapons.Charge01:0;snapshot.hint=runNotice;
+                snapshot.wave=waves?Mathf.Max(1,waves.WaveIndex+1):1;snapshot.maxWaves=waves?waves.WaveCount:14;snapshot.waveTime=waves?waves.TimeLeft:0;snapshot.buildTime=buildTimeLeft;snapshot.selectionUnlimited=selectionTimeLimit<=0f;snapshot.kills=waves?waves.Kills:0;snapshot.charge01=runWeapons?runWeapons.Charge01:0;snapshot.hint=BuildWalking?(WorldMap.Active&&WorldMap.Active.HasOpenPortal&&!WorldMap.Active.TrialWon?ArenaText.Pair("WALKING · TAB BACK TO THE CARDS · STAND ON THE PORTAL AND PRESS E","WALKING · TAB BACK TO THE CARDS · STAND ON THE PORTAL AND PRESS E"):ArenaText.Pair("WALKING · TAB BACK TO THE CARDS · SPACE STARTS THE NEXT WAVE","WALKING · TAB BACK TO THE CARDS · SPACE STARTS THE NEXT WAVE")):runNotice;
                 snapshot.waveTimeExpired=waves&&waves.Phase==WavePhase.WaveActive&&waves.TimeExpired;snapshot.waveBatch=waves?waves.BatchIndex:0;snapshot.waveLiving=waves?waves.LivingCount:0;snapshot.wavePending=waves?waves.PendingCount:0;
                 snapshot.draftCount=greaterDraft?1:buildDraftCount;snapshot.draftIndex=greaterDraft?1:Mathf.Clamp(buildDraftCount-snapshot.bankedDrafts+1,1,Mathf.Max(1,buildDraftCount));snapshot.buildSummary=buildSummary.Trim();
-                snapshot.bossImmunities="";for(int i=0;i<3;i++){var immune=waves.TyrantImmunities[i];snapshot.bossImmunityIndices[i]=snapshot.wave>=11?ElementIndex(immune):-1;if(snapshot.wave>=11)snapshot.bossImmunities+=(i==0?ArenaText.Pair("Tyrant immunities: ","Tyrant immunities: "):" · ")+ArenaTerms.Element(immune);}
+                snapshot.bossImmunities="";
+                for(int i=0;i<snapshot.bossImmunityIndices.Length;i++)
+                {
+                    bool known=snapshot.wave>=11&&i<waves.TyrantImmunities.Length;var immune=known?waves.TyrantImmunities[i]:ElementKind.None;
+                    snapshot.bossImmunityIndices[i]=known?ElementIndex(immune):-1;
+                    if(known)snapshot.bossImmunities+=(i==0?ArenaText.Pair("Tyrant King immunities: ","Tyrant King immunities: "):" · ")+ArenaTerms.Element(immune);
+                }
                 snapshot.banner=RunPhase==ArenaUiState.WaveIntro?ArenaText.Pair("WAVE "+snapshot.wave,"WAVE "+snapshot.wave)+(snapshot.wave==11?"\n"+snapshot.bossImmunities:""):"";
                 snapshot.resultTitle=State==GameState.Won?ArenaText.Pair("EARTH IS WITHIN REACH","EARTH IS WITHIN REACH"):ArenaText.Pair("EXPLORER LOST","EXPLORER LOST");snapshot.resultDetails=ArenaText.Pair($"Wave {snapshot.wave} · Level {snapshot.level} · {snapshot.kills} kills\n{Elapsed:0} seconds on the Interstellar Battlefield",$"Wave {snapshot.wave} · Level {snapshot.level} · {snapshot.kills} kills\n{Elapsed:0} seconds on the Interstellar Battlefield");
                 if(runWeapons){for(int i=0;i<2;i++)WriteSlot(snapshot.handSlots[i],runWeapons.Hand[i],i==runWeapons.ActiveIndex);for(int i=0;i<snapshot.autoSlots.Length;i++)WriteSlot(snapshot.autoSlots[i],i<runWeapons.Auto.Length?runWeapons.Auto[i]:null,false);for(int i=0;i<snapshot.armoryOffers.Length;i++){var w=i<runWeapons.Offers.Length?runWeapons.Offers[i]:null;WriteArmoryOffer(snapshot.armoryOffers[i],w);}}
@@ -315,7 +352,7 @@ namespace AnomalyArena
         }
         void WriteSlot(ArenaUiSlot slot,RunWeapon w,bool active)
         {
-            slot.title=w?.Label??ArenaText.Pair("Empty slot","Empty slot");slot.detail=w==null?ArenaText.Pair("No weapon","No weapon"):ArenaText.Pair($"Lv {w.Level} · ",$"Lv {w.Level} · ")+ArenaTerms.Element(w.element)+(w.reload>0?ArenaText.Pair($" · Reload {w.reload:0.0}s",$" · Reload {w.reload:0.0}s"):"");slot.formIndex=w==null?-1:(int)w.form;slot.active=active;slot.elementIndex=w==null?-1:ElementIndex(w.element);slot.skillIndex=-1;slot.available=true;
+            slot.title=w?.Label??ArenaText.Pair("Empty slot","Empty slot");slot.detail=w==null?ArenaText.Pair("No weapon","No weapon"):ArenaText.Pair($"Lv {w.Level} · ",$"Lv {w.Level} · ")+ArenaTerms.Element(w.element)+(w.reload>0?ArenaText.Pair($" · Reload {w.reload:0.0}s",$" · Reload {w.reload:0.0}s"):"")+(w.jammed?ArenaText.Pair(" · JAMMED"," · JAMMED"):"");slot.formIndex=w==null?-1:(int)w.form;slot.active=active;slot.elementIndex=w==null?-1:ElementIndex(w.element);slot.skillIndex=-1;slot.available=true;
             slot.rarity=ArenaRarity.ForWeapon(w);if(w!=null)slot.detail=ArenaTerms.Rarity(slot.rarity)+" · "+slot.detail;
             float cooldown=runWeapons.GetCooldownDuration(w);
             slot.cooldown01=w==null?0:Mathf.Clamp01(w.cooldown/Mathf.Max(.01f,cooldown));
@@ -324,6 +361,8 @@ namespace AnomalyArena
         {
             view.title=skill.Name;view.detail=skill.Empty?ArenaText.Pair("Empty","Empty"):ArenaText.Pair($"Lv {skill.Level} · {skill.Cost:0} Energy",$"Lv {skill.Level} · {skill.Cost:0} Energy");view.cooldown01=skill.CooldownLeft/Mathf.Max(.01f,skill.Cooldown);view.elementIndex=skill.Empty?-1:ElementIndex(skill.Definition.element);view.skillIndex=skill.Empty?-1:(int)skill.Id;view.formIndex=-1;view.active=false;view.available=!skill.Empty&&skill.CooldownLeft<=0&&progression.Energy>=skill.Cost;
             view.rarity=ArenaRarity.ForSkill(skill.Definition,skill.Level);if(!skill.Empty)view.detail=ArenaTerms.Rarity(view.rarity)+" · "+view.detail;
+                                                                
+            if(!skill.Empty&&skill.Id==SkillId.Blink&&skills.BlinkChargesMax>1){view.detail+=ArenaText.Pair($" · Charges {skills.BlinkCharges}/{skills.BlinkChargesMax}",$" · Charges {skills.BlinkCharges}/{skills.BlinkChargesMax}");view.available=skills.BlinkCharges>0&&progression.Energy>=skill.Cost;}
         }
         static int UpgradeIndex(UpgradeAxis axis)=>axis switch{UpgradeAxis.Infusion=>0,UpgradeAxis.Power=>1,UpgradeAxis.Tempo=>2,UpgradeAxis.Reach=>3,UpgradeAxis.Twist=>4,UpgradeAxis.Tame=>5,_=>-1};
         static int ElementIndex(ElementKind e)=>e==ElementKind.None?-1:e==ElementKind.Light?5:e==ElementKind.Void?6:(int)e-1;

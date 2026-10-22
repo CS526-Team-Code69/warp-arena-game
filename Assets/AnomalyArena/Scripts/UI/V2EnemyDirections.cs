@@ -3,6 +3,7 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
+                                                                                                                           
     public sealed class V2EnemyDirections : MonoBehaviour
     {
         [Serializable]
@@ -16,7 +17,8 @@ namespace AnomalyArena
         public RectTransform canvasRect;
         public Indicator[] indicators;
         [Tooltip("Combine markers within each 45-degree sector; at most eight directions.")] public float refreshInterval = .1f;
-        public float horizontalInset = 92f, topInset = 148f, bottomInset = 170f;
+        [Tooltip("Canvas units kept clear at the sides, top and bottom (the bottom one is set by V2HudLayout).")]
+        public float horizontalInset = 92f, topInset = 148f, bottomInset = 200f;
         public Color arrowColor = new(1f, .61f, .37f);
         int[] counts;
         Vector2[] sums;
@@ -55,8 +57,10 @@ namespace AnomalyArena
                 if (!on) continue;
                 var direction = sums[i].normalized;
                 Vector2 centre = new(Screen.width * .5f, Screen.height * .5f);
-                float reachX = Mathf.Max(30f, centre.x - horizontalInset);
-                float reachY = Mathf.Max(30f, direction.y > 0f ? centre.y - topInset : centre.y - bottomInset);
+                                                                                                     
+                float unit = canvasRect && canvasRect.lossyScale.x > 0f ? canvasRect.lossyScale.x : 1f;
+                float reachX = Mathf.Max(30f, centre.x - horizontalInset * unit);
+                float reachY = Mathf.Max(30f, direction.y > 0f ? centre.y - topInset * unit : centre.y - bottomInset * unit);
                 float distance = Mathf.Min(reachX / Mathf.Max(.0001f, Mathf.Abs(direction.x)), reachY / Mathf.Max(.0001f, Mathf.Abs(direction.y)));
                 Vector2 screen = centre + direction * distance;
                 RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, screen, null, out var local);

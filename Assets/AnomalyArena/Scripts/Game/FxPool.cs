@@ -7,6 +7,12 @@ namespace AnomalyArena
     {
         public Renderer[] items;
         public Texture ring, spark, sector;
+        [Tooltip("Element cones for Fx.Cone: apex at the texture's bottom centre, 24-degree native half-angle; a frame is picked at random per emission.")]
+        public Texture[] coneFire, coneFrost, conePoison;
+        [Tooltip("Plain cone for strikes without an element, and the red enemy punch arc; same geometry as the element cones.")]
+        public Texture conePlain, telegraph;
+        [Tooltip("Flame puffs scattered along a fire cone (camera-facing).")]
+        public Texture[] flamePuffs;
         [Tooltip("V4 directional hit sparks; the texture points to +X and is rolled toward the hit direction on screen.")]
         public Texture[] hitSparks;
         public Texture hitCrit, hitRing;
@@ -19,12 +25,12 @@ namespace AnomalyArena
         bool[] pulses;
         MaterialPropertyBlock block;
         void Awake(){Active=this;block=new MaterialPropertyBlock();lives=new float[items.Length];total=new float[items.Length];velocities=new Vector3[items.Length];colors=new Color[items.Length];sizes=new float[items.Length];pulses=new bool[items.Length];}
-        public void Emit(Vector3 at,Color color,float size,float life,Vector3 velocity=default,Texture texture=null,Vector3 forward=default,bool flat=false,bool pulse=false,float roll=0f)
+        public void Emit(Vector3 at,Color color,float size,float life,Vector3 velocity=default,Texture texture=null,Vector3 forward=default,bool flat=false,bool pulse=false,float roll=0f,float width=1f)
         {
             for(int i=0;i<items.Length;i++)
             {
                 if(lives[i]>0)continue;var r=items[i];lives[i]=total[i]=Mathf.Max(.05f,life);velocities[i]=velocity;colors[i]=color;sizes[i]=size;pulses[i]=pulse||texture==ring||(!texture&&velocity.sqrMagnitude<.01f);
-                r.gameObject.SetActive(true);r.transform.position=at+Vector3.up*.1f;r.transform.localScale=new Vector3(size,size,1);
+                r.gameObject.SetActive(true);r.transform.position=at+Vector3.up*.1f;r.transform.localScale=new Vector3(size*width,size,1);
                 r.transform.rotation=flat?Quaternion.LookRotation(Vector3.up,forward.sqrMagnitude>0?forward:Vector3.forward):GameManager.Instance.cam.transform.rotation*Quaternion.Euler(0f,0f,roll);
                 block.Clear();block.SetColor("_BaseColor",color);block.SetTexture("_BaseMap",texture?texture:spark);r.SetPropertyBlock(block);return;
             }
@@ -35,6 +41,13 @@ namespace AnomalyArena
             var cam=GameManager.Instance?GameManager.Instance.cam:null;float roll=0f;
             if(cam&&worldDirection.sqrMagnitude>.0001f){var local=cam.transform.InverseTransformDirection(worldDirection);roll=Mathf.Atan2(local.y,local.x)*Mathf.Rad2Deg;}
             Emit(at,color,size,life,texture:texture,roll:roll);
+        }
+
+        public Texture ConeTexture(ElementKind element)
+        {
+            var set=element==ElementKind.Fire?coneFire:element==ElementKind.Frost?coneFrost:element==ElementKind.Poison?conePoison:null;
+            if(set!=null&&set.Length>0){var frame=set[Random.Range(0,set.Length)];if(frame)return frame;}
+            return conePlain;
         }
         void Update()
         {

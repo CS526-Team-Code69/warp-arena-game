@@ -7,70 +7,87 @@ namespace AnomalyArena
     {
         [Tooltip("Editable base player stats and caps; cloned per run so gameplay never writes back into this asset.")]
         public RunStats startingStats = new();
-        [Tooltip("GDD §7.1. Candidate curve, explicit to keep the documented rounding.")]
-        public int[] levelCosts = { 10, 16, 27, 45, 74, 122, 202, 333, 549 };
-        public int maxLevel = 10;
+        [Tooltip("XP needed to go from level n to n+1; one entry per level below maxLevel (maxLevel - 1 entries). "
+            + "Placeholder ascending curve, to be replaced by the modelled curve.")]
+        public int[] levelCosts = { 10, 16, 24, 34, 46, 60, 78, 100, 128, 160, 200 };
+        [Min(1), Tooltip("Highest level. After it every full XP bar grants a stat-only draft.")]
+        public int maxLevel = 12;
+        [Min(1), Tooltip("XP per stat-only draft once the player is at maxLevel.")]
         public int xpPerStatDraft = 549;
         public float energyMax = 100f;
-        [Header("Smooth level growth; stat cards add separately.")]
-        [Min(0f), Tooltip("Max HP gained per level. Candidate 6: 25 at level 1 to 79 at level 10.")] public float maxHpPerLevel = 6f;
-        [Min(0f), Tooltip("Max energy gained per level. Candidate 8: 100 at level 1 to 172 at level 10; energy cards remain additive.")] public float maxEnergyPerLevel = 8f;
+        [Header("Level growth; stat cards add on top")]
+        [Min(0f), Tooltip("Max HP gained on every real level-up. Candidate 6.")] public float maxHpPerLevel = 6f;
+        [Min(0f), Tooltip("Max Energy gained on every real level-up; the energy card budget is kept on top. Candidate 8.")] public float maxEnergyPerLevel = 8f;
         public float voidEnergyRegeneration = 4f;
         public float regenerationInterval = 5f;
-        public int epicPityCount = 8;
-        public float rareBasePercent = 25f;
-        public float rareCapPercent = 55f;
-        public float epicBasePercent = 5f;
-        public float epicCapPercent = 20f;
-        [Range(0f, 1f), Tooltip("Legendary share within high-tier stat cards. 0.2 times 5 percent gives a 1 percent base rate; blue and orange share pity.")] public float legendaryShareOfHighTier = .2f;
-        [Min(1f), Tooltip("Legendary stat-card multiplier relative to the former high tier; other tiers are unchanged.")] public float legendaryStatMultiplier = 1.2f;
+        [Header("Stat card rarity (wave bands)")]
+        [Range(0f, 100f), Tooltip("Percent chance that a stat card rolls its wave band's high tier instead of the low tier. Candidate 25.")]
+        public float highTierPercent = 25f;
+        [Min(1), Tooltip("After this many consecutive stat cards without the band's high tier, the next one is high tier. Candidate 4.")]
+        public int highTierPity = 4;
 
-        [Tooltip("Rows follow StatId: white Common / green Rare / blue Exceptional. Orange uses the blue value × legendaryStatMultiplier. "
-            + "V4 merges small stats into a bonus on a stronger card and retires the rest; see work/balance/v4_numbers.py.")]
+        [Tooltip("Rows follow StatId. Five tiers: white Common / green Rare / blue Exceptional / purple Epic / orange Legendary. "
+            + "Each offered card has a main effect and an optional bonus at the same tier; retired rows are never offered.")]
         public StatCardValues[] statCards =
         {
-            new(StatId.MaxHp, 15f, 25f, 40f, StatBonus.Regeneration, 1f, 1.5f, 2.5f), new(StatId.Regeneration, 1f, 1.5f, 2.5f, retired: true),
-            new(StatId.MoveSpeed, 0.08f, 0.12f, 0.16f, StatBonus.Stamina, .2f, .3f, .45f), new(StatId.Stamina, 0.15f, 0.25f, 0.35f, retired: true),
-            new(StatId.Damage, 0.12f, 0.18f, 0.25f, StatBonus.CritChance, .08f, .12f, .16f), new(StatId.AttackSpeed, 0.15f, 0.22f, 0.32f),
-            new(StatId.Knockback, 0.2f, 0.35f, 0.5f, StatBonus.Impact, 3f, 5f, 8f), new(StatId.Impact, 3f, 5f, 8f, retired: true),
-            new(StatId.PickupRange, 1.5f, 2.5f, 4f, retired: true), new(StatId.Protection, 25f, 40f, 60f),
-            new(StatId.Luck, 4f, 7f, 10f, retired: true), new(StatId.MaxEnergy, 25f, 40f, 60f, StatBonus.EnergySiphon, .4f, .7f, 1f),
-            new(StatId.EnergySiphon, 0.3f, 0.6f, 0.9f, retired: true), new(StatId.ElementPenetration, 0.20f, 0.35f, 0.50f)
+            new(StatId.MaxHp, 15f, StatBonus.Regeneration, 1f), new(StatId.Regeneration, 1f, retired: true),
+            new(StatId.MoveSpeed, .08f, StatBonus.Stamina, .2f), new(StatId.Stamina, .15f, retired: true),
+            new(StatId.Damage, .12f, StatBonus.CritChance, .08f), new(StatId.AttackSpeed, .15f),
+            new(StatId.Knockback, .2f, StatBonus.Impact, 3f, retired: true), new(StatId.Impact, 3f, retired: true),
+            new(StatId.PickupRange, 1.5f, retired: true), new(StatId.Protection, 25f),
+            new(StatId.Luck, 4f, retired: true), new(StatId.MaxEnergy, 25f, StatBonus.EnergySiphon, .4f),
+            new(StatId.EnergySiphon, .3f, retired: true), new(StatId.ElementPenetration, .2f),
+            new(StatId.CritChance, .1f, StatBonus.CritMultiplier, .15f)
         };
 
-        public CardRarity StatRarityFromRoll(float percentRoll, float luck, bool highTierPity)
+        public static void RarityBand(int wave, out CardRarity low, out CardRarity high)
         {
-            float high = Mathf.Clamp(epicBasePercent + luck * .5f, 0f, Mathf.Min(100f, epicCapPercent));
-            float rare = Mathf.Clamp(rareBasePercent + luck, 0f, Mathf.Min(100f - high, rareCapPercent));
-            if (highTierPity || percentRoll < high)
-            {
+            if (wave <= 2) { low = CardRarity.Common; high = CardRarity.Rare; }
+            else if (wave <= 8) { low = CardRarity.Rare; high = CardRarity.Exceptional; }
+            else if (wave <= 11) { low = CardRarity.Exceptional; high = CardRarity.Epic; }
+            else { low = CardRarity.Epic; high = CardRarity.Legendary; }
+        }
 
-                float highRoll = highTierPity ? percentRoll / 100f : percentRoll / high;
-                return highRoll < Mathf.Clamp01(legendaryShareOfHighTier) ? CardRarity.Legendary : CardRarity.Epic;
-            }
-            return percentRoll < high + rare ? CardRarity.Rare : CardRarity.Common;
+        public CardRarity StatRarity(int wave, float percentRoll, bool pity)
+        {
+            RarityBand(wave, out var low, out var high);
+            return pity || percentRoll < Mathf.Clamp(highTierPercent, 0f, 100f) ? high : low;
         }
     }
 
     [System.Serializable]
     public sealed class StatCardValues
     {
+
+        public static readonly float[] PlaceholderTierScale = { 1f, 1.5f, 2.1f, 2.8f, 3.6f };
+
         public StatId stat;
-        public float common, rare, epic;
+        [Tooltip("Main effect per tier: white Common, green Rare, blue Exceptional, purple Epic, orange Legendary.")]
+        public float common, rare, exceptional, epic, legendary;
         [Tooltip("Second effect granted by the same card, at the same rarity.")]
         public StatBonus bonus;
-        public float bonusCommon, bonusRare, bonusEpic;
+        public float bonusCommon, bonusRare, bonusExceptional, bonusEpic, bonusLegendary;
         [Tooltip("Retired rows stay for serialized IDs and old saves but are never offered.")]
         public bool retired;
-        public StatCardValues(StatId stat, float common, float rare, float epic, StatBonus bonus = StatBonus.None,
-            float bonusCommon = 0f, float bonusRare = 0f, float bonusEpic = 0f, bool retired = false)
+
+        public StatCardValues(StatId stat, float common, StatBonus bonus = StatBonus.None, float bonusCommon = 0f, bool retired = false)
         {
-            this.stat = stat; this.common = common; this.rare = rare; this.epic = epic;
-            this.bonus = bonus; this.bonusCommon = bonusCommon; this.bonusRare = bonusRare; this.bonusEpic = bonusEpic; this.retired = retired;
+            this.stat = stat; this.bonus = bonus; this.retired = retired;
+            var s = PlaceholderTierScale;
+            this.common = common; rare = common * s[1]; exceptional = common * s[2]; epic = common * s[3]; legendary = common * s[4];
+            this.bonusCommon = bonusCommon; bonusRare = bonusCommon * s[1]; bonusExceptional = bonusCommon * s[2];
+            bonusEpic = bonusCommon * s[3]; bonusLegendary = bonusCommon * s[4];
         }
+
         public float At(CardRarity rarity) => rarity switch
-        { CardRarity.Rare => rare, CardRarity.Epic or CardRarity.Legendary => epic, _ => common };
+        {
+            CardRarity.Rare => rare, CardRarity.Exceptional => exceptional, CardRarity.Epic => epic,
+            CardRarity.Legendary => legendary, _ => common
+        };
         public float BonusAt(CardRarity rarity) => rarity switch
-        { CardRarity.Rare => bonusRare, CardRarity.Epic or CardRarity.Legendary => bonusEpic, _ => bonusCommon };
+        {
+            CardRarity.Rare => bonusRare, CardRarity.Exceptional => bonusExceptional, CardRarity.Epic => bonusEpic,
+            CardRarity.Legendary => bonusLegendary, _ => bonusCommon
+        };
     }
 }

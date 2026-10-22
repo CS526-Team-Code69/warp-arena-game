@@ -13,8 +13,9 @@ MonoBehaviour:
   m_Name: TimeSlip
   m_EditorClassIdentifier: AnomalyArena::AnomalyArena.SkillDefinition
   id: 10
-  displayName: Time Slip
+  displayName: Time Stop
   element: 0
+  category: 1
   greaterVoid: 0
   cost: 40
   cooldown: 2
@@ -39,12 +40,23 @@ MonoBehaviour:
   hitStacks: 3
   endDamage: 10
   endKnockback: 10
+  freezeHold: 3
+  contactKnockback:
+  - 0
+  - 0
+  - 0
+  statusResistance:
+  - 0
+  - 0
+  - 0
   healOnCast: 20
   energyReward: 20
   feedRange: 10
   trailSpacing: 0.5
+  overchargeRate: 2
+  overchargeDamageMultiplier: 1.25
   voidGravityWidth: 1
-  voidWalkHoleDiameter: 3
+  voidWalkMoveMultiplier: 1.6
   singularitySlowMultiplier: 0.5
   singularityBaseDamage: 10
   singularityDamagePerEnemy: 4

@@ -28,4 +28,5 @@ MonoBehaviour:
   canElite: 1
   startShieldShare: 0
   spikePoisonStacks: 1
+  splitsOnDeath: 0
   colour: {r: 0.40499997, g: 0.49608004, b: 0.9, a: 1}

@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+                                                                                                                   
     public sealed class CameraRig : MonoBehaviour
     {
         public Transform target;
@@ -14,9 +14,27 @@ namespace AnomalyArena
         Vector3 follow, velocity, kick;
         float amplitude;
         bool started;
+                                                                                                                            
+        Vector3 focusPoint;
+        float focusWeight, focusTarget, focusZoom = 1f, focusSeconds = 1f;
+
+                                                                                                                                 
+        public void Focus(Vector3 point, float zoom, float seconds)
+        {
+            focusPoint = point; focusZoom = Mathf.Clamp(zoom, .2f, 1f); focusSeconds = Mathf.Max(.05f, seconds); focusTarget = 1f;
+        }
+
+                                                                            
+        public void ClearFocus(float seconds)
+        {
+            focusSeconds = Mathf.Max(.05f, seconds); focusTarget = 0f;
+        }
+
+        public bool Focused => focusTarget > 0f;
 
         public void Shake(float amount) => amplitude = Mathf.Max(amplitude, amount);
 
+                                                                                                                                                  
         public void Kick(Vector3 worldDirection, float amount)
         {
             Vector3 d = new Vector3(worldDirection.x, 0f, worldDirection.z);
@@ -41,7 +59,7 @@ namespace AnomalyArena
             if (WorldMap.Active && !WorldMap.Active.TrialActive)
             {
                 Bounds bounds = WorldMap.Active.Bounds;
-
+                                                                                                       
                 var plane = new Plane(Vector3.up, Vector3.zero);
                 Vector2 min = new Vector2(float.PositiveInfinity, float.PositiveInfinity), max = -min;
                 for (int y = 0; y < 2; y++) for (int x = 0; x < 2; x++)
@@ -55,12 +73,16 @@ namespace AnomalyArena
                 want.x = Mathf.Clamp(want.x, bounds.min.x - min.x, bounds.max.x - max.x);
                 want.z = Mathf.Clamp(want.z, bounds.min.z - min.y, bounds.max.z - max.y);
             }
+            focusWeight = Mathf.MoveTowards(focusWeight, focusTarget, Time.unscaledDeltaTime / focusSeconds);
+            float eased = focusWeight * focusWeight * (3f - 2f * focusWeight);
+            if (eased > 0f) want = Vector3.Lerp(want, focusPoint, eased);
             if (!started) { follow = want; started = true; }
             follow = Vector3.SmoothDamp(follow, want, ref velocity, smoothTime, Mathf.Infinity, Time.unscaledDeltaTime);
             amplitude = Mathf.MoveTowards(amplitude, 0f, 4f * Time.unscaledDeltaTime);
             Vector2 shake = amplitude > 0f ? Random.insideUnitCircle * amplitude : Vector2.zero;
             kick = Vector3.Lerp(kick, Vector3.zero, 1f - Mathf.Exp(-kickReturn * Time.unscaledDeltaTime));
-            transform.position = follow + offset + new Vector3(shake.x, 0f, shake.y) + kick;
+            Vector3 viewOffset = offset * Mathf.Lerp(1f, focusZoom, eased);
+            transform.position = follow + viewOffset + new Vector3(shake.x, 0f, shake.y) + kick;
         }
     }
 }

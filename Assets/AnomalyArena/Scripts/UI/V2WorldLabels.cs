@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+                                                                                                                         
     public class V2WorldLabels : MonoBehaviour
     {
         [Serializable]
@@ -25,6 +25,8 @@ namespace AnomalyArena
         public Color holeEdgeGlow = new(1f, .84f, 1f);
         [Min(0f)] public float holeEdgePulsePerSecond = 1.8f;
         [Min(1f)] public float holeEdgeScale = 1.35f;
+        [Tooltip("Canvas units kept clear above the bottom row and below the top texts for edge labels (the bottom one is set by V2HudLayout).")]
+        public float edgeBottomInset = 200f, edgeTopInset = 140f;
         Enemy[] bindings;
         float refresh;
         RectTransform canvasRect;
@@ -59,7 +61,7 @@ namespace AnomalyArena
                     bool show = hole && hole.Phase != HolePhase.Gone && !world.TrialActive;
                     if (!show) { label.gameObject.SetActive(false); continue; }
                     bool canEnter = hole.Phase == HolePhase.Portal && gm.player && gm.player.State == CharacterState.Normal
-                        && gm.waves.Phase == WavePhase.WaveActive && Mathf.Abs(gm.player.Position.x - hole.Centre.x) <= .5f
+                        && (gm.waves.Phase == WavePhase.WaveActive || gm.BuildWalking) && Mathf.Abs(gm.player.Position.x - hole.Centre.x) <= .5f
                         && Mathf.Abs(gm.player.Position.z - hole.Centre.z) <= .5f;
                     string text = hole.Phase == HolePhase.Portal ? ArenaText.Text(canEnter ? "ui.hole.enter" : "ui.hole.portal") + "\n" + ArenaText.Text("ui.hole.remaining", hole.WavesLeft)
                         : world.CanFeed && hole.Phase == HolePhase.Active ? $"{hole.Feeds} / {hole.feedsToOpen}" : "";
@@ -76,7 +78,8 @@ namespace AnomalyArena
                     }
                 }
             }
-
+                                                                                            
+                                                                                       
             if (gm.waves.preparedMarkers != null)
                 foreach (var marker in gm.waves.preparedMarkers)
                 {
@@ -104,7 +107,10 @@ namespace AnomalyArena
                 view.hp.fillAmount = enemy.maxHp > 0f ? Mathf.Clamp01(enemy.Hp / enemy.maxHp) : 0f;
                 view.shield.fillAmount = status && enemy.maxHp > 0f ? Mathf.Clamp01(status.Shield / enemy.maxHp) : 0f;
                 view.shield.gameObject.SetActive(status && status.Shield > 0f);
-                string name = enemy.IsBoss ? enemy.definition.kind == EnemyKind.Hollow ? ArenaText.Pair("THE HOLLOW","THE HOLLOW") : ArenaText.Pair("THE TYRANT","THE TYRANT") : enemy.Elite ? ArenaText.Text("ui.elite") : "";
+                                                                                                                      
+                string name = enemy.IsBoss ? enemy.definition.kind == EnemyKind.Hollow ? ArenaText.Pair("THE NASH PROPHET","THE NASH PROPHET") : ArenaText.Pair("THE TYRANT KING","THE TYRANT KING")
+                    : enemy.Elite ? ArenaText.Text("ui.elite") + (enemy.Affix != ElementKind.None ? " · " + ArenaTerms.Element(enemy.Affix) : "")
+                    : enemy.Chanted ? ArenaText.Pair("CHANTED","CHANTED") : "";
                 if (view.name.text != name) view.name.text = name;
                 V2Hud.SetElementIcon(view.affix, art, (int)enemy.Affix - 1);
                 for (int j = 0; j < 4; j++)
@@ -129,6 +135,7 @@ namespace AnomalyArena
             return true;
         }
 
+                                                                                                          
         void PlaceHoleEdge(UnityEngine.UI.Text label, Vector3 world, Camera cam, string value)
         {
             PlaceEdge(label, world, cam, value, false);
@@ -146,7 +153,7 @@ namespace AnomalyArena
             if (screen.z < 0f) { screen.x = Screen.width - screen.x; screen.y = Screen.height - screen.y; }
             float unit = canvasRect.lossyScale.x > 0f ? canvasRect.lossyScale.x : 1f;
             screen.x = Mathf.Clamp(screen.x, 110f * unit, Screen.width - 110f * unit);
-            screen.y = Mathf.Clamp(screen.y, 170f * unit, Screen.height - 140f * unit);
+            screen.y = Mathf.Clamp(screen.y, edgeBottomInset * unit, Screen.height - edgeTopInset * unit);
             RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, screen, null, out var local);
             label.rectTransform.position = canvasRect.TransformPoint(local);
             string arrow = Mathf.Abs(screen.x - Screen.width * .5f) > Mathf.Abs(screen.y - Screen.height * .5f)

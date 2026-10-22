@@ -7,8 +7,6 @@ namespace AnomalyArena
     [Serializable]
     public sealed class WeaponUpgradeTuning
     {
-        public float attractEndPush = 3f;
-        public float suctionReleasePush = 5f, suctionSafeGap = 2f;
         public float swapProtection = .5f, recallTimeout = 6f, stickyManualDelay = .3f;
         public float wildfireEndPush = 3f, blizzardLinger = 2f;
         [Min(1)] public int shatterLimit = 3;
@@ -16,22 +14,66 @@ namespace AnomalyArena
         public float executeFollowRange = 4f, executeFollowDamage = .5f;
         public float spinRetainTime = 1f, meltdownAngle = 90f, swarmMineDuration = 1f;
         [Header("V4 backfires — candidate values")]
-        [Tooltip("Flame Stream fuel tank: a hit taken within this many seconds of firing bursts the tank.")]
-        public float fuelTankWindow = .3f;
-        public float fuelTankRadius = 2.5f, fuelTankDamage = 4f, fuelTankSelfFire = 3f, fuelTankCooldown = 1.5f;
-        public float wildfireSelfStacks = 2f;
+        [Tooltip("Flame Stream fuel tank: a hit taken while the trigger is held bursts the tank (radius, damage, Fire stacks on you, seconds before it can burst again).")]
+        public float fuelTankRadius = 2.5f;
+        public float fuelTankDamage = 4f, fuelTankSelfFire = 3f, fuelTankCooldown = 1.5f;
         [Tooltip("Shatter fires three shards; the side shards leave the aim line by this many degrees.")]
         public float shatterSpread = 12f;
         public float iceRadius = .9f, iceLife = 5f, iceFrostPerSecond = 4f;
-        public float blizzardConeAngle = 50f, blizzardMaxRange = 7f, blizzardFrostPerTick = .8f, blizzardFrozenHold = .6f, blizzardSelfDamagePerSecond = 1f;
+        public float blizzardConeAngle = 50f, blizzardMaxRange = 7f, blizzardFrostPerTick = .8f, blizzardFrozenHold = .6f;
         public float chainReturnRadius = 3f, chainReturnDamage = 3f;
         [Min(0)] public int sporePods = 3;
         public float sporePodRadius = .7f, sporePodLife = 12f, sporeBurstRadius = 1.8f, sporeBurstLife = 3f;
-        public float executeReboundShare = .5f, executeReboundSpeed = 70f;
         public float spinUpMoveFloor = .8f, spinUpFreeTurn = 1080f, spinUpFullTurn = 90f;
-        [Range(0f, 1f)] public float needlerReloadMove = .5f;
         public float gunnerEnergyPerShot = 1f;
         [Range(0f, 1f)] public float leechHealShare = .5f;
+        [Header("10-21 design alignment — candidate values")]
+        [Min(0f), Tooltip("Reverse Shot Tame: seconds after firing before the reverse round turns around and flies along your aim.")]
+        public float reverseTurnDelay = .3f;
+        [Range(0f, 1f), Tooltip("Scatter Blast: damage share at the far edge of the cone. Point-blank deals 100%, falling off linearly with distance.")]
+        public float scatterFalloffMin = .4f;
+        [Min(0f), Tooltip("Scatter Blast: reload seconds once the two-round clip is empty (scaled like other reloads).")]
+        public float scatterReload = 1.2f;
+        [Range(0f, 1f), Tooltip("Scatter Blast backfire: chance that a reload jams. Tame never jams.")]
+        public float scatterJamChance = .25f;
+        [Min(0f), Tooltip("Scatter Blast backfire: extra repair seconds added to a jammed reload (scaled like other reloads).")]
+        public float scatterJamRepair = 2f;
+        [Min(.01f), Tooltip("Scatter Focus: seconds of holding for a full charge.")]
+        public float focusChargeTime = 1f;
+        [Min(1), Tooltip("Scatter Focus: bolts in the released burst; the weapon's damage is split evenly between them.")]
+        public int focusPellets = 6;
+        [Min(0f), Tooltip("Scatter Focus: seconds between bolts of the burst.")]
+        public float focusBurstInterval = .05f;
+        [Range(0f, 1f), Tooltip("Scatter Focus: damage share of an uncharged release; a full charge deals 100%.")]
+        public float focusMinChargeDamage = .4f;
+        [Min(1f), Tooltip("Scatter Focus: bolt speed in units per second.")]
+        public float focusPelletSpeed = 60f;
+        [Min(0f), Tooltip("Scatter Focus backfire: recoil knockback in units on an uncharged release.")]
+        public float focusRecoilMin = 2f;
+        [Min(0f), Tooltip("Scatter Focus backfire: recoil knockback in units on a full charge. It is a real knockback (a wall behind you hurts); Tame makes it a harmless push.")]
+        public float focusRecoilMax = 6f;
+        [Range(0f, 1f), Tooltip("Scatter Focus Twist: damage share a bolt keeps after piercing its first target.")]
+        public float focusPierceRetention = .6f;
+        [Range(.05f, 1f), Tooltip("Blizzard backfire: your movement multiplier while you spray. Tame removes it.")]
+        public float blizzardSelfSlow = .6f;
+        [Min(1), Tooltip("Needler backfire: needles fired per HP cost. Tame removes the cost.")]
+        public int needlerHpPerNeedles = 8;
+        [Min(0f), Tooltip("Needler backfire: HP you lose each time; it ignores Shield.")]
+        public float needlerHpCost = 1f;
+        [Range(0f, 1f), Tooltip("Execute: starting HP share below which a non-boss enemy is executed.")]
+        public float executeThreshold = .4f;
+        [Min(0f), Tooltip("Execute: threshold gained for every kill made with this weapon.")]
+        public float executeThresholdPerKill = .02f;
+        [Range(0f, 1f), Tooltip("Execute: highest threshold the kills can reach.")]
+        public float executeThresholdCap = .7f;
+        [Min(0f), Tooltip("Execute backfire: max HP you lose per execution. Tame removes it.")]
+        public float executeMaxHpLoss = 1f;
+        [Min(0f), Tooltip("Execute backfire: max HP never drops below this.")]
+        public float executeMaxHpFloor = 10f;
+        [Range(0f, 180f), Tooltip("Barrage backfire: widest rocket angle from the aim in degrees (180 = straight back).")]
+        public float barrageMaxAngle = 180f;
+        [Min(.01f), Tooltip("Barrage backfire: angle = ±max × r^exponent with r uniform in [0,1]. Higher keeps more rockets near the aim (3: about 55% within 30°).")]
+        public float barrageAngleExponent = 3f;
     }
 
     public enum GroundHazardKind { IcePatch, SporePod }
@@ -79,65 +121,73 @@ namespace AnomalyArena
                 Field(w,AttackMode.Field,player.Position+player.AimDirection*Mathf.Min(upgrades.blizzardMaxRange,d.rangeB*w.Reach)*.6f,d.damageB*DamageScale(w),0,2.5f*w.Reach,upgrades.blizzardLinger,0,false);
             }
             w.heldTime=0;
-            ReleaseSuction(w);
+            if(player)player.RemoveMovementModifier(w);
             ReleaseChannel(w);
-        }
-
-        void ReleaseSuction(RunWeapon w)
-        {
-            if(w.form!=WeaponForm.ScatterCannon||w.variant!=1||w.suctionTargets.Count==0)return;
-            bool released=false;
-            if(w.Has(UpgradeAxis.Twist))foreach(var body in w.suctionTargets)
-                if(body&&body.IsAlive&&!BattlefieldFrozen(body.gameObject)){body.Knockback(player.AimDirection,upgrades.suctionReleasePush*KnockScale,KnockKind.Hit);released=true;}
-            if(released)WeaponSound(w,WeaponAudioPhase.Launch);
-            w.suctionTargets.Clear();
-        }
-
-        void Suction(RunWeapon w,float range)
-        {
-            w.suctionTargets.Clear();
-            foreach(var body in Combatant.All)
-            {
-                if(body==player||!body.IsAlive||body is Enemy{Immovable:true}||!InCone(body,range,60))continue;
-                Vector3 toward=Query.Flat(player.Position-body.Position);
-                float stop=player.radius+body.radius+(w.Has(UpgradeAxis.Tame)?upgrades.suctionSafeGap:.1f);
-                float step=Mathf.Min(1f,Mathf.Max(0,toward.magnitude-stop));
-                if(step>0){body.SetMovePosition(body.Position+toward.normalized*step);w.suctionTargets.Add(body);}
-            }
-            if(w.suctionTargets.Count>0)WeaponSound(w);
-        }
-
-        void Repel(RunWeapon w,float range)
-        {
-            bool affected=false;
-            foreach(var body in Combatant.All)if(body!=player&&body.IsAlive&&Query.Flat(body.Position-player.Position).magnitude<=range+body.radius&&(!w.Has(UpgradeAxis.Twist)||InCone(body,range,180))){affected=true;break;}
-            if(w.Has(UpgradeAxis.Twist))Cone(w,range,180,0,10);else Area(w,player.Position,range,0,10,false);
-            var orbs=OrbPool.Instance;
-            if(orbs&&orbs.pool!=null)foreach(var orb in orbs.pool)
-            {
-                if(!orb||!orb.InUse)continue;
-                Vector3 to=Query.Flat(orb.Position-player.Position);
-                if(to.magnitude>range||w.Has(UpgradeAxis.Twist)&&Vector3.Dot(to,player.AimDirection)<0)continue;
-                orb.Repel(player.Position,orbs.repelDistance);
-                affected=true;
-            }
-            if(affected)WeaponSound(w);
-            if(!w.Has(UpgradeAxis.Tame))player.Push(-player.AimDirection,2);
         }
 
         void ScatterBlast(RunWeapon w,float range,float hit)
         {
             WeaponSound(w);
-            Fx.Sector(player.Position,player.AimDirection,range,60,ElementCombat.ColorFor(w.element));
+            Fx.Cone(player.Position,player.AimDirection,range,60,w.element);
             foreach(var body in Combatant.All)
             {
                 if(body==player||!body.IsAlive||!InCone(body,range,60))continue;
                 Vector3 delta=Query.Flat(body.Position-player.Position),push=delta.normalized;
                 if(w.Has(UpgradeAxis.Twist))
                 {push=player.AimDirection*Vector3.Dot(delta,player.AimDirection)-delta;push=push.sqrMagnitude>.0001f?push.normalized:player.AimDirection;}
-                Damage(w,body,hit,10,push);
+                float falloff=Mathf.Lerp(1f,upgrades.scatterFalloffMin,Mathf.Clamp01(delta.magnitude/Mathf.Max(.01f,range)));
+                Damage(w,body,hit*falloff,10,push);
             }
-            if(w.Has(UpgradeAxis.Tame))player.Push(-player.AimDirection,3);else player.Knockback(-player.AimDirection,3,KnockKind.Hit);
+            if(SpendRound(w,upgrades.scatterReload)&&!w.Has(UpgradeAxis.Tame)&&UnityEngine.Random.value<upgrades.scatterJamChance)
+            {w.reload+=upgrades.scatterJamRepair*CooldownScale(w);w.jammed=true;V3WorldAudio.Instance?.Play(ArenaWorldCue.WeaponJam,player.Position);}
+        }
+
+        void Focus(RunWeapon w,Vector3 aim,float damage)
+        {
+            float charge=Mathf.Clamp01(w.charge);
+            int pellets=Mathf.Max(1,upgrades.focusPellets);
+            w.burstLeft=pellets;w.burstTimer=0f;w.burstDirection=aim;
+            V3WorldAudio.Instance?.Play(ArenaWorldCue.WeaponFocusRelease,player.Position);
+            w.burstDamage=damage/pellets*Mathf.Lerp(upgrades.focusMinChargeDamage,1f,charge);
+            float recoil=Mathf.Lerp(upgrades.focusRecoilMin,upgrades.focusRecoilMax,charge);
+
+            if(w.Has(UpgradeAxis.Tame))player.Push(-aim,recoil);else player.Knockback(-aim,recoil,KnockKind.Hit);
+            TickBurst(w,0f);
+        }
+
+        void TickBurst(RunWeapon w,float dt)
+        {
+            if(!player||!player.IsAlive||!roster){w.burstLeft=0;return;}
+            var d=roster.Get(w.form);float range=(d!=null?d.rangeB:20f)*w.Reach;
+            bool twist=w.Has(UpgradeAxis.Twist);
+            w.burstTimer-=dt;
+            while(w.burstLeft>0&&w.burstTimer<=0f)
+            {
+                w.burstLeft--;w.burstTimer+=upgrades.focusBurstInterval;
+                var a=Bolt(w,w.burstDirection,w.burstDamage,0,range,upgrades.focusPelletSpeed,twist);
+
+                if(a&&twist){a.piercesLeft=1;a.pierceDamageRetention=upgrades.focusPierceRetention;}
+            }
+        }
+
+        float BarrageAngle()
+        {
+            float r=UnityEngine.Random.value;
+            return (UnityEngine.Random.value<.5f?-1f:1f)*upgrades.barrageMaxAngle*Mathf.Pow(r,Mathf.Max(.01f,upgrades.barrageAngleExponent));
+        }
+
+        void NeedlerCost(RunWeapon w)
+        {
+            if(w.Has(UpgradeAxis.Tame)||!player||++w.needlesFired<Mathf.Max(1,upgrades.needlerHpPerNeedles))return;
+            w.needlesFired=0;
+            player.ReceiveDamage(new DamageInfo{amount=upgrades.needlerHpCost,source=DamageSource.Burn,ignoreShield=true});
+        }
+
+        void BlizzardChill(RunWeapon w)
+        {
+            if(!player)return;
+            if(w==Active&&w.heldTime>0f&&!w.Has(UpgradeAxis.Tame))player.AddMovementModifier(w,upgrades.blizzardSelfSlow);
+            else player.RemoveMovementModifier(w);
         }
 
         void RecallBlast(RunWeapon w,Vector3 from,Vector3 to,float area,float hit)
@@ -169,7 +219,7 @@ namespace AnomalyArena
 
         void StreamSegment(RunWeapon w,Vector3 origin,Vector3 dir,float range,float hit)
         {
-            Fx.Sector(origin,dir,range,40,ElementCombat.ColorFor(w.element));
+            Fx.Cone(origin,dir,range,40,w.element);
             foreach(var body in Combatant.All)
             {
                 if(body==player||!body.IsAlive||upgradeHits.Contains(body))continue;
@@ -184,10 +234,10 @@ namespace AnomalyArena
             WeaponSound(w);
             bool frozen=ElementStatus.For(first).Frozen;
             Damage(w,first,hit*(frozen?2:1),0,player.AimDirection);
-            if(!frozen)return;
-            if(!w.Has(UpgradeAxis.Twist)){Area(w,first.Position,2.5f,8*DamageScale(w),0,false);return;}
+
+            if(!frozen||!w.Has(UpgradeAxis.Twist))return;
             upgradeHits.Clear();upgradeHits.Add(first);shatterCenters.Clear();shatterCenters.Add(first);
-            int limit=w.Has(UpgradeAxis.Twist)?Mathf.Max(1,upgrades.shatterLimit):1;
+            int limit=Mathf.Max(1,upgrades.shatterLimit);
             for(int i=0;i<shatterCenters.Count&&i<limit;i++)
             {
                 Vector3 center=shatterCenters[i].Position;
@@ -202,16 +252,24 @@ namespace AnomalyArena
             }
         }
 
+        public float ExecuteThreshold(RunWeapon w)=>w==null?upgrades.executeThreshold:Mathf.Min(upgrades.executeThresholdCap,upgrades.executeThreshold+w.executeBonus);
+        void RaiseExecuteThreshold(RunWeapon w)=>w.executeBonus=Mathf.Min(w.executeBonus+upgrades.executeThresholdPerKill,Mathf.Max(0f,upgrades.executeThresholdCap-upgrades.executeThreshold));
+
         void Execute(RunWeapon w,float range,float hit)
         {
             var target=RayTarget(player.AimDirection,range);if(!target)return;
             WeaponSound(w);
-            float primary=hit+w.executeBonus;
+            float primary=hit;
             Damage(w,target,primary,0,player.AimDirection);
-            if(target.IsAlive&&target.Hp/target.maxHp<.4f&&target is not Enemy{IsBossOrElite:true})target.Kill();
+
+            if(target.IsAlive&&target is Enemy{IsBoss:false}&&target.Hp/target.maxHp<ExecuteThreshold(w))
+            {
+                target.Kill();
+
+                if(!target.IsAlive&&!w.Has(UpgradeAxis.Tame)&&progression)progression.AdjustMaxHp(-upgrades.executeMaxHpLoss,upgrades.executeMaxHpFloor);
+            }
             if(target.IsAlive)return;
-            w.executeBonus=Mathf.Min(24,w.executeBonus+1);
-            ReboundSlug(w,target,primary*upgrades.executeReboundShare,range);
+            RaiseExecuteThreshold(w);
             if(!w.Has(UpgradeAxis.Twist))return;
             Combatant next=null;float nearest=upgrades.executeFollowRange*upgrades.executeFollowRange;
             foreach(var body in Combatant.All)
@@ -221,7 +279,9 @@ namespace AnomalyArena
                 if(distance>=nearest||Physics.Linecast(Query.AtCastHeight(target.Position),Query.AtCastHeight(body.Position),GameManager.WallMask))continue;
                 next=body;nearest=distance;
             }
-            if(next)Damage(w,next,primary*upgrades.executeFollowDamage,0,Query.Flat(next.Position-target.Position).normalized);
+            if(!next)return;
+            Damage(w,next,primary*upgrades.executeFollowDamage,0,Query.Flat(next.Position-target.Position).normalized);
+            if(!next.IsAlive)RaiseExecuteThreshold(w);
         }
 
         void ReturnCurrent(RunWeapon w,int jumps)
@@ -232,15 +292,6 @@ namespace AnomalyArena
                 if(body!=player&&body.IsAlive&&Query.Flat(body.Position-player.Position).magnitude<=upgrades.chainReturnRadius+body.radius)
                     Damage(w,body,upgrades.chainReturnDamage*jumps*DamageScale(w),0,Query.Flat(body.Position-player.Position).normalized);
             Fx.Ring(player.Position,upgrades.chainReturnRadius,ElementCombat.ColorFor(ElementKind.Lightning));
-        }
-
-        void ReboundSlug(RunWeapon w,Combatant victim,float damage,float range)
-        {
-            var dir=player.AimDirection;
-            var a=Bolt(w,dir,damage,0,range,upgrades.executeReboundSpeed,true);
-            if(!a)return;
-            a.transform.position=Query.AtCastHeight(victim.Position)+dir*(victim.radius+.2f);
-            a.returnAlongPath=true;a.hurtOwner=!w.Has(UpgradeAxis.Tame);
         }
 
         void ShatterFan(RunWeapon w,Vector3 aim,float range,float hit)
@@ -262,7 +313,7 @@ namespace AnomalyArena
         void BlizzardSpray(RunWeapon w,float range,float hit)
         {
             float reach=Mathf.Min(range,upgrades.blizzardMaxRange*w.Reach);
-            Fx.Sector(player.Position,player.AimDirection,reach,upgrades.blizzardConeAngle,ElementCombat.ColorFor(ElementKind.Frost));
+            Fx.Cone(player.Position,player.AimDirection,reach,upgrades.blizzardConeAngle,ElementKind.Frost);
             bool any=false;
             foreach(var body in Combatant.All)
             {
@@ -275,13 +326,6 @@ namespace AnomalyArena
                 any=true;
             }
             if(any)WeaponSound(w);
-            if(w.Has(UpgradeAxis.Tame))return;
-            w.coldClock+=roster.Get(w.form).cooldownB*CooldownScale(w);
-            while(w.coldClock>=1f)
-            {
-                w.coldClock-=1f;
-                player.ReceiveDamage(new DamageInfo{amount=upgrades.blizzardSelfDamagePerSecond,source=DamageSource.Burn,ignoreShield=true});
-            }
         }
 
         void WatchPlayerHits()
@@ -296,7 +340,8 @@ namespace AnomalyArena
         {
             var w=Active;
             if(w==null||w.form!=WeaponForm.Flamethrower||w.variant!=0||!player||!player.IsAlive)return;
-            if(Time.time-w.streamFiredAt>upgrades.fuelTankWindow||Time.time<w.tankReadyAt)return;
+
+            if(!inputHeld||w.heldTime<=0f||Time.time<w.tankReadyAt)return;
             w.tankReadyAt=Time.time+upgrades.fuelTankCooldown;
             WeaponSound(w,WeaponAudioPhase.Explosion);
             Area(w,player.Position,upgrades.fuelTankRadius,upgrades.fuelTankDamage*DamageScale(w),0,false);

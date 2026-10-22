@@ -3,6 +3,7 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
+
     public static class ProgressionDataSetup
     {
         public const string DataFolder = "Assets/AnomalyArena/Data";
@@ -53,6 +54,19 @@ namespace AnomalyArena
             {
                 var definition = AssetDatabase.LoadAssetAtPath<SkillDefinition>(DataFolder + "/Skills/" + id + ".asset");
                 if (!definition) throw new System.InvalidOperationException("Missing Greater Void skill: " + id);
+                definition.SetDefaults(id); EditorUtility.SetDirty(definition);
+            }
+            AssetDatabase.SaveAssets();
+        }
+
+        public static void ApplyDocumentSkillDefaults()
+        {
+            CreateAssets();
+            for (int i = 0; i <= (int)SkillId.Singularity; i++)
+            {
+                var id = (SkillId)i;
+                var definition = AssetDatabase.LoadAssetAtPath<SkillDefinition>(DataFolder + "/Skills/" + id + ".asset");
+                if (!definition) throw new System.InvalidOperationException("Missing skill: " + id);
                 definition.SetDefaults(id); EditorUtility.SetDirty(definition);
             }
             AssetDatabase.SaveAssets();

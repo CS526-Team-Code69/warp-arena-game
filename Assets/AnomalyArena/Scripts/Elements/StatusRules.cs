@@ -14,8 +14,8 @@ namespace AnomalyArena
         public float lightningThreshold = 6f, lightningDuration = 4f, lightningDecay = 1f, lightningImmunity = 3f;
         public float twitchInterval = 1f, twitchLength = 0.3f;
         public float lightningJumpRadius = 4f, lightningJumpDamage = 3f;
-        [Tooltip("Lightning-Frost conduction radius; base Lightning also conducts.")] public float frostLightningJumpRadius = 6f;
-        [Tooltip("Additional Lightning stacks when the target has Frost.")] public float frostLightningStackMultiplier = 1.5f;
+        [Tooltip("Jump radius when the origin carries Frost; plain Lightning also jumps (lightningJumpRadius).")] public float frostLightningJumpRadius = 6f;
+        [Tooltip("Lightning stack multiplier on a target that carries Frost.")] public float frostLightningStackMultiplier = 1.5f;
         public int lightningJumpMax = 5;
         public float earthShare = 0.10f, lightShare = 0.05f, voidShare = 0.10f, lightAgainstVoid = 1.5f;
         public float shieldDirectFactor = 0.7f;
@@ -25,22 +25,30 @@ namespace AnomalyArena
         public float enemyFireStacks = 3f, enemyPoisonStacks = 1f, enemyFrostStacks = 3f, enemyLightningStacks = 3f;
         public float enemyVoidDrain = 10f;
 
-        [Header("V4 element formulas on enemies (the player keeps the rules above)")]
-        [Tooltip("Fire, exponential burn-out: each tick burns this fraction of the current stacks. 0.206 ≈ 1.5 s half-life at a 0.5 s interval.")]
-        [Range(0.01f, 1f)] public float fireBurnFraction = 0.206f;
-        [Tooltip("Fire: total damage each stack deals before it burns out (wave-1 value, multiplied by R(w)). Steady burn ≈ weapon DPS × this ÷ damagePerStack = 30%.")]
+        [Header("Element formulas on enemies (the player keeps the integer rules above)")]
+        [Tooltip("Fire on an enemy: every fireInterval one stack burns off and deals this much (wave-1 value, times R(w)).")]
         [Min(0f)] public float fireDamagePerStack = 1.5f;
-        [Tooltip("Poison, additive build-up: no decay; damage per stack per second (wave-1 value, multiplied by R(w)). After t seconds of hits ≈ weapon DPS × this × t ÷ damagePerStack.")]
+        [Tooltip("Poison on an enemy: every poisonInterval it deals stacks × this (wave-1 value, times R(w)), then loses one stack.")]
         [Min(0f)] public float poisonOnEnemyDamagePerStack = 0.12f;
-        [Tooltip("Poison stack cap on enemies; full stacks on wave 15 deal about 20×0.12×5.33 ≈ 12.8 damage/s.")]
+        [Tooltip("Cap on Poison stacks carried by an enemy.")]
         [Min(1f)] public float poisonOnEnemyCap = 20f;
-        [Tooltip("Frost, division chill: speed × 1/(1 + this × stacks/freeze threshold); about ×0.4 just before freezing.")]
+        [Tooltip("Frost division slow: speed × 1/(1 + this × stacks/freeze threshold); about ×0.4 just before freezing.")]
         [Min(0f)] public float frostChill = 1.5f;
-        [Tooltip("Lightning paralysis: continuous speed multiplier, multiplied with the Frost chill; twitches only interrupt windups and no longer root.")]
+        [Tooltip("Enemy speed and timer rate between paralysis twitches, chained with the Frost slow; during a twitch the body can neither move nor act.")]
         [Range(0.05f, 1f)] public float lightningSlow = 0.55f;
-        [Tooltip("Lightning chain: the first jump keeps full damage and stacks; every later jump multiplies them by this value again.")]
+        [Tooltip("Lightning jump: the first jump is full, every further jump multiplies damage and stacks by this again.")]
         [Range(0f, 1f)] public float lightningChainFalloff = 0.7f;
         [Tooltip("Light lifesteal × (1 + this × missing HP fraction): heals more at low HP.")]
         [Min(0f)] public float lightMissingHpBonus = 2f;
+
+        [Header("Control vulnerability (both teams)")]
+        [Tooltip("Damage multiplier on attacks against a frozen target (1.3 = +30%). Damage over time is not affected.")]
+        [Min(1f)] public float frozenDamageTaken = 1.3f;
+        [Tooltip("Player attacks on a paralysed enemy deal +this per paralysed enemy within paralysedBonusRadius, the target included.")]
+        [Min(0f)] public float paralysedBonusPerNeighbour = 0.1f;
+        [Tooltip("Radius (units) in which paralysed enemies count toward the paralysed damage bonus.")]
+        [Min(0f)] public float paralysedBonusRadius = 4f;
+        [Tooltip("Most paralysed enemies (target included) the bonus counts.")]
+        [Min(1)] public int paralysedBonusMax = 5;
     }
 }

@@ -75,10 +75,10 @@ namespace AnomalyArena
         {
             float pitch = rarity switch
             {
-                CardRarity.Rare => 1.08f, CardRarity.Epic => 1.16f, CardRarity.Legendary => 1.26f, CardRarity.Void => .86f, _ => 1f
+                CardRarity.Rare => 1.08f, CardRarity.Exceptional => 1.16f, CardRarity.Epic => 1.21f, CardRarity.Legendary => 1.26f, CardRarity.Void => .86f, _ => 1f
             };
             TryPlay(ArenaSoundCue.UiConfirm, true, pitch, true);
-            if (rarity >= CardRarity.Epic) TryPlay(ArenaSoundCue.PickupXp, true, pitch * 1.25f, true);
+            if (ArenaRarity.Rank(rarity) >= ArenaRarity.Rank(CardRarity.Exceptional)) TryPlay(ArenaSoundCue.PickupXp, true, pitch * 1.25f, true);
         }
 
         public void PlayWorld(ArenaSoundCue cue, Vector3 at)

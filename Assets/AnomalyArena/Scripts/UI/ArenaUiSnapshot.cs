@@ -12,9 +12,13 @@ namespace AnomalyArena
         public bool illustrated;
         public bool energyUnlocked;
         public bool voidEnergy;
-        public bool rainbowLevel;
+        public bool voidLevel;
         public bool earlyStartConfirmation;
+
         public bool isGreaterReward;
+
+        public bool buildWalking;
+
         public bool staminaExhausted;
 
         public int[] bossImmunityIndices = { -1, -1, -1 };
@@ -24,7 +28,7 @@ namespace AnomalyArena
         public bool waveTimeExpired;
         public int waveBatch, waveLiving, wavePending;
         public float bossHp, bossMaxHp, bossShield;
-        public int level = 1, wave = 1, maxWaves = 15, kills, bankedDrafts, rerolls = 1;
+        public int level = 1, maxLevel = 12, wave = 1, maxWaves = 14, kills, bankedDrafts, rerolls = 1;
         public int draftIndex = 1, draftCount;
         public string banner = "";
         public string hint = "";
@@ -32,9 +36,11 @@ namespace AnomalyArena
         public string bossImmunities = "";
         public string resultTitle = "RUN ENDED";
         public string resultDetails = "";
+
         public string buildSummary = "";
 
         public string weaponIntroTitle = "", weaponIntroBody = "", weaponIntroHint = "", weaponIntroContinue = "";
+
         public int weaponIntroForm = -1;
 
         public int cardPickSequence, cardPickIndex = -1;

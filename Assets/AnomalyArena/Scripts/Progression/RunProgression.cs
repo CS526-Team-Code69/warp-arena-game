@@ -8,18 +8,20 @@ namespace AnomalyArena
     [DisallowMultipleComponent]
     public sealed class RunProgression : MonoBehaviour
     {
-        [field: SerializeField, Tooltip("All progression candidates from GDD §6–7.")]
+        [field: SerializeField, Tooltip("Levels, stat cards and energy rules (GDD §9).")]
         public ProgressionRules Rules { get; set; }
         [field: SerializeField] public RunStats Stats { get; private set; } = new();
         public int Level { get; private set; } = 1;
         public float Xp { get; private set; }
-        public int XpRequired => Level >= Rules.maxLevel ? Rules.xpPerStatDraft : Rules.levelCosts[Level - 1];
+        public int XpRequired => Level >= Rules.maxLevel ? Rules.xpPerStatDraft
+            : Rules.levelCosts[Mathf.Clamp(Level - 1, 0, Rules.levelCosts.Length - 1)];
         public int BankedDrafts => drafts.Count;
         public bool NextDraftIsStatOnly => drafts.Count > 0 && drafts.Peek();
         public float Energy { get; private set; }
         public bool EnergyUnlocked { get; private set; }
         public bool VoidEnergy { get; private set; }
-        public bool RainbowBadge => Level >= Rules.maxLevel && VoidEnergy;
+
+        public bool VoidBadge => Level >= Rules.maxLevel && VoidEnergy;
         public bool MayOfferPenetration { get; set; }
         public bool MustOfferPenetration { get; set; }
         public DraftCard[] CurrentCards { get; private set; } = Array.Empty<DraftCard>();
@@ -34,7 +36,7 @@ namespace AnomalyArena
         readonly Queue<bool> drafts = new();
         readonly List<StatCardValues> eligible = new();
         float regenerationClock;
-        int statsWithoutEpic;
+        int statsWithoutHighTier;
         int draftWave;
         Func<DraftCard> weaponCardFactory;
         Func<DraftCard> skillCardFactory;
@@ -44,7 +46,7 @@ namespace AnomalyArena
             Stats = Rules.startingStats.Copy(); Stats.maxEnergy = Rules.energyMax;
             Level = 1; Xp = 0f; Energy = 0f; EnergyUnlocked = false; VoidEnergy = false;
             LastLevelHpGain = LastLevelEnergyGain = 0f;
-            MayOfferPenetration = MustOfferPenetration = false; regenerationClock = 0f; statsWithoutEpic = 0; drafts.Clear();
+            MayOfferPenetration = MustOfferPenetration = false; regenerationClock = 0f; statsWithoutHighTier = 0; draftWave = 0; drafts.Clear();
             CurrentCards = Array.Empty<DraftCard>(); RerollsRemaining = 0;
             OnChanged();
         }
@@ -176,6 +178,18 @@ namespace AnomalyArena
             }
         }
 
+        public void AdjustMaxHp(float delta, float floor)
+        {
+            float before = Stats.maxHp;
+            float after = Mathf.Max(before + delta, Mathf.Min(before, floor));
+            if (Mathf.Approximately(after, before)) return;
+            Stats.maxHp = after;
+            float actual = after - before;
+            OnStatChanged(StatId.MaxHp, actual);
+            if (actual > 0f) OnHealingRequested(actual);
+            OnChanged();
+        }
+
         public void ApplyStat(StatCardOffer offer)
         {
             float gained = Stats.Add(offer.Stat, offer.Value);
@@ -198,11 +212,12 @@ namespace AnomalyArena
             }
             if (eligible.Count == 0) return new StatCardOffer(StatId.MaxHp, CardRarity.Common, 12f);
             var picked = eligible[UnityEngine.Random.Range(0, eligible.Count)];
-            float roll = UnityEngine.Random.value * 100f;
-            CardRarity rarity = Rules.StatRarityFromRoll(roll, Stats.luck, statsWithoutEpic >= Rules.epicPityCount);
-            statsWithoutEpic = rarity is CardRarity.Epic or CardRarity.Legendary ? 0 : statsWithoutEpic + 1;
-            float legendary = rarity == CardRarity.Legendary ? Mathf.Max(1f, Rules.legendaryStatMultiplier) : 1f;
-            return new StatCardOffer(picked.stat, rarity, picked.At(rarity) * legendary, picked.bonus, picked.BonusAt(rarity) * legendary);
+
+            bool pity = statsWithoutHighTier >= Mathf.Max(1, Rules.highTierPity);
+            CardRarity rarity = Rules.StatRarity(draftWave, UnityEngine.Random.value * 100f, pity);
+            ProgressionRules.RarityBand(draftWave, out _, out var high);
+            statsWithoutHighTier = rarity == high ? 0 : statsWithoutHighTier + 1;
+            return new StatCardOffer(picked.stat, rarity, picked.At(rarity), picked.bonus, picked.BonusAt(rarity));
         }
 
         void OnChanged() => Changed?.Invoke();

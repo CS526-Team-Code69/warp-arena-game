@@ -86,7 +86,7 @@ namespace AnomalyArena
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
-        public async Task FrostNovaAndPocketVoid_SavedSkillAndWorldHooks_FreezeAndSwallowWithoutXpReward()
+        public async Task FrostNovaAndPocketVoid_SavedSkillAndWorldHooks_FreezeAndSwallowWithDirectXp()
         {
             var sandbox = await StartSandbox();
             var game = sandbox.game;
@@ -107,11 +107,13 @@ namespace AnomalyArena
             Assert.That(hole.gravityCells, Is.EqualTo(1f), "pocket void gravity border");
             Assert.That(hole.Contains(swallowed.Position, game.player), Is.True, "Pocket Void also accepts its own caster into the kill core");
             Assert.That(game.progression.Energy, Is.EqualTo(before - 80f), "both costs are paid exactly once");
+            float expectedXp = game.waves.ExperienceFor(swallowed);
             await Until(() => !swallowed.IsAlive, 3f, "saved world loop swallows target inside temporary hole");
 
             Assert.That(swallowed.DeathCause, Is.EqualTo(DeathCause.FellIntoGap), "void uses the fall death path");
             Assert.That(game.orbs.pool, Has.None.Matches<ExperienceOrb>(o => o && o.InUse), "swallowed enemy drops no XP orb");
-            Assert.That(game.progression.Xp, Is.Zero, "swallow gives no direct XP");
+
+            Assert.That(game.progression.Xp, Is.EqualTo(expectedXp), "swallow pays the enemy's experience directly");
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]

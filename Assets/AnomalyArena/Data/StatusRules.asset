@@ -52,11 +52,14 @@ MonoBehaviour:
   enemyFrostStacks: 3
   enemyLightningStacks: 3
   enemyVoidDrain: 10
-  fireBurnFraction: 0.206
   fireDamagePerStack: 1.5
-  poisonOnEnemyDamagePerStack: 0.12
+  poisonOnEnemyDamagePerStack: 0.15
   poisonOnEnemyCap: 20
   frostChill: 1.5
   lightningSlow: 0.55
   lightningChainFalloff: 0.7
   lightMissingHpBonus: 2
+  frozenDamageTaken: 1.3
+  paralysedBonusPerNeighbour: 0.1
+  paralysedBonusRadius: 4
+  paralysedBonusMax: 5
