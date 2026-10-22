@@ -88,9 +88,11 @@ namespace AnomalyArena
             OnChanged();
         }
 
+        public void BeginWave() { RerollsRemaining = 1; OnChanged(); }
+
         public void BeginBuildPhase(int wave, Func<DraftCard> weaponFactory = null, Func<DraftCard> skillFactory = null)
         {
-            RerollsRemaining = 1; draftWave = wave;
+            draftWave = wave;
             weaponCardFactory = weaponFactory; skillCardFactory = skillFactory;
             CurrentCards = Array.Empty<DraftCard>();
             OnChanged();

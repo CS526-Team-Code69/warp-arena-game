@@ -142,7 +142,7 @@ namespace AnomalyArena
             else if (s.cardPickSequence != seenPick) { seenPick = s.cardPickSequence; PlayCardPick(s); }
                                                                                                                     
             bool gameplay = s.state is ArenaUiState.SupplyDrop or ArenaUiState.WaveIntro or ArenaUiState.WaveActive or ArenaUiState.WaveEnd
-                or ArenaUiState.VoidTrial or ArenaUiState.FinalBoss or ArenaUiState.TrialReturn or ArenaUiState.Cutscene || s.buildWalking;
+                or ArenaUiState.VoidTrial or ArenaUiState.FinalBoss or ArenaUiState.TrialReturn or ArenaUiState.Cutscene or ArenaUiState.LevelUp || s.buildWalking;
             gameplayRoot.SetActive(gameplay);
             if (waveLabel) waveLabel.gameObject.SetActive(s.state != ArenaUiState.SupplyDrop);
             if (themeBackground) themeBackground.gameObject.SetActive(s.state is ArenaUiState.Title or ArenaUiState.Loadout);
@@ -203,7 +203,8 @@ namespace AnomalyArena
             RenderSlots(handSlots, s.handSlots); RenderSlots(autoSlots, s.autoSlots); RenderSlots(skillSlots, s.skillSlots);
             foreach (var screen in screens)
             {
-                bool active = screen.state == s.state && !(s.buildWalking && screen.state is ArenaUiState.Armory or ArenaUiState.Draft or ArenaUiState.Ready);
+                                                                      
+                bool active = (screen.state == s.state || screen.state == ArenaUiState.Draft && s.state == ArenaUiState.LevelUp) && !(s.buildWalking && screen.state is ArenaUiState.Armory or ArenaUiState.Draft or ArenaUiState.Ready);
                 if (screen.gameObject.activeSelf != active) screen.gameObject.SetActive(active);
                 if (active) RenderScreen(screen, s);
             }
@@ -250,7 +251,7 @@ namespace AnomalyArena
             if (screen.reroll) screen.reroll.gameObject.SetActive(!s.isGreaterReward);
             if (screen.startNext)
                 SetText(screen.startNext.GetComponentInChildren<UnityEngine.UI.Text>(), s.isGreaterReward
-                    ? ArenaText.Text("ui.return.reward") : ArenaText.Text("ui.nextwave"));
+                    ? ArenaText.Text("ui.return.reward") : s.state == ArenaUiState.LevelUp ? ArenaText.Pair("PICK LATER","PICK LATER") : ArenaText.Text("ui.nextwave"));
             ArenaUiCard[] cards = null;
             switch (s.state)
             {
@@ -261,27 +262,34 @@ namespace AnomalyArena
                     break;
                 case ArenaUiState.Loadout:
                     cards = s.loadoutChoices;
-                    SetText(screen.body, ArenaText.Pair("Pick one familiar form. Its anomaly and backfire are revealed the moment you take it.\nAim manually; use the terrain.","Pick one familiar form. Its anomaly and backfire are revealed the moment you take it.\nAim manually; use the terrain."));
+                    SetText(screen.body, ArenaText.Pair("Pick one familiar form. Which backfire it has is unknown until you take it; the moment you choose, the game pauses and the weapon card appears.\nAim manually; use the terrain.","Pick one familiar form. Which backfire it has is unknown until you take it; the moment you choose, the game pauses and the weapon card appears.\nAim manually; use the terrain."));
                     break;
                 case ArenaUiState.Armory:
                     cards = s.armoryOffers;
-                    SetText(screen.body, ArenaText.Pair("Pick one of three: a new weapon, or a stronger Mk of one you hold. You may skip. Replaced weapons lose their upgrades.","Pick one of three: a new weapon, or a stronger Mk of one you hold. You may skip. Replaced weapons lose their upgrades.") + PortalHint() + WalkHint());
+                    SetText(screen.body, ArenaText.Pair("Pick one of three: a new weapon, or a higher Mk of one you hold (weapons grow stronger through higher Mks from the armory). You may skip. Upgrades stay with the weapon: replace it and they are gone with it.","Pick one of three: a new weapon, or a higher Mk of one you hold (weapons grow stronger through higher Mks from the armory). You may skip. Upgrades stay with the weapon: replace it and they are gone with it.") + PortalHint() + WalkHint());
                     break;
                 case ArenaUiState.Draft:
                     cards = s.draftCards;
                     SetText(screen.heading, s.isGreaterReward ? ArenaText.Text("ui.greater.heading") : ArenaText.Text("ui.draft.counter", s.draftIndex, Mathf.Max(1, s.draftCount)));
-                    SetText(screen.body, s.isGreaterReward ? ArenaText.Pair("Pick one Greater Void skill, or return without changing your skills. 1 / 2 / 3 select.","Pick one Greater Void skill, or return without changing your skills. 1 / 2 / 3 select.")
-                        : ArenaText.Pair("Pick a stat, a weapon change, or a skill. 1 / 2 / 3 select; R rerolls.","Pick a stat, a weapon change, or a skill. 1 / 2 / 3 select; R rerolls.") + WalkHint());
+                    SetText(screen.body, s.isGreaterReward ? ArenaText.Pair("Pick one of three Greater Void skills (or none); they have no further levels. 1 / 2 / 3 select.","Pick one of three Greater Void skills (or none); they have no further levels. 1 / 2 / 3 select.")
+                        : ArenaText.Pair("Three cards, one of each: a stat card, a weapon card (an upgrade direction a revealed weapon has not taken yet) and a skill card (a new skill, or one level for a skill you own). 1 / 2 / 3 select; R rerolls (once per build phase).","Three cards, one of each: a stat card, a weapon card (an upgrade direction a revealed weapon has not taken yet) and a skill card (a new skill, or one level for a skill you own). 1 / 2 / 3 select; R rerolls (once per build phase).") + WalkHint());
+                    if (screen.reroll) screen.reroll.interactable = s.rerolls > 0;
+                    SetText(screen.rerollLabel, ArenaText.Text("ui.reroll.counter", s.rerolls));
+                    break;
+                case ArenaUiState.LevelUp:
+                    cards = s.draftCards;
+                    SetText(screen.heading, ArenaText.Pair($"LEVEL UP · PICK ONE ({s.bankedDrafts} LEFT)",$"LEVEL UP · PICK ONE ({s.bankedDrafts} LEFT)"));
+                    SetText(screen.body, ArenaText.Pair("1 / 2 / 3 select; R rerolls (once per wave); Esc or Space picks later, T opens this again in combat.","1 / 2 / 3 select; R rerolls (once per wave); Esc or Space picks later, T opens this again in combat."));
                     if (screen.reroll) screen.reroll.interactable = s.rerolls > 0;
                     SetText(screen.rerollLabel, ArenaText.Text("ui.reroll.counter", s.rerolls));
                     break;
                 case ArenaUiState.ReplaceWeapon:
                     RenderReplacement(screen, s.replacementSlots, s.replacementCount);
-                    SetText(screen.body, ArenaText.Pair("Choose the weapon to replace. Its upgrades will be lost.","Choose the weapon to replace. Its upgrades will be lost."));
+                    SetText(screen.body, ArenaText.Pair("Choose the weapon to replace. Upgrades stay with the weapon: replace it and they are gone with it.","Choose the weapon to replace. Upgrades stay with the weapon: replace it and they are gone with it."));
                     break;
                 case ArenaUiState.ReplaceSkill:
                     RenderReplacement(screen, s.skillSlots, 3);
-                    SetText(screen.body, ArenaText.Pair("Choose the skill to replace. The new skill starts at level 1.","Choose the skill to replace. The new skill starts at level 1."));
+                    SetText(screen.body, ArenaText.Pair("With 3 skills already, taking a new one means replacing an old one; the new skill starts at level 1.","With 3 skills already, taking a new one means replacing an old one; the new skill starts at level 1."));
                     break;
                 case ArenaUiState.Ready:
                     SetText(screen.body, ArenaText.Pair("Build choices complete. Space starts the next wave.","Build choices complete. Space starts the next wave.") + PortalHint() + WalkHint());

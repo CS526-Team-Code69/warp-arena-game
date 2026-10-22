@@ -6,8 +6,9 @@ using UnityEngine;
 
 namespace AnomalyArena.EditorTools
 {
+
     [InitializeOnLoad]
-    internal static class TestResultsWriter
+    public static class TestResultsWriter
     {
         const string Dir = "Logs";
         const string XmlPath = Dir + "/TestResults.xml";
@@ -19,10 +20,26 @@ namespace AnomalyArena.EditorTools
         }
 
         [MenuItem("Anomaly Arena/4. Run Play Mode Tests")]
-        public static void RunPlayModeTests()
+        public static void RunPlayModeTests() => RunPlayMode(null);
+
+        public static bool RunPlayMode(string[] groupNames)
         {
+            if (EditorApplication.isPlaying || EditorApplication.isPlayingOrWillChangePlaymode || EditorApplication.isCompiling) return false;
+            SaveOpenScenesIfDirty();
             var filter = new Filter { testMode = TestMode.PlayMode, assemblyNames = new[] { "AnomalyArena.Tests" } };
+            if (groupNames != null && groupNames.Length > 0) filter.groupNames = groupNames;
             ScriptableObject.CreateInstance<TestRunnerApi>().Execute(new ExecutionSettings(filter));
+            return true;
+        }
+
+        public static void SaveOpenScenesIfDirty()
+        {
+            for (int i = 0; i < UnityEditor.SceneManagement.EditorSceneManager.sceneCount; i++)
+                if (UnityEditor.SceneManagement.EditorSceneManager.GetSceneAt(i).isDirty)
+                {
+                    UnityEditor.SceneManagement.EditorSceneManager.SaveOpenScenes();
+                    return;
+                }
         }
 
         sealed class Callbacks : ICallbacks

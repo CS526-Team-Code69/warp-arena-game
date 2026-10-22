@@ -68,32 +68,36 @@ namespace AnomalyArena
         string ChineseDescription(int level) =>EnglishDescription(level);
         string EnglishDescription(int level) => id switch
         {
-            SkillId.FlameWake => $"Leave a burning trail for {Duration(level):0.#} s: {Strength(level):0.#} Fire/s"
-                + (level >= 3 ? "; twice as wide." : "."),
-            SkillId.Contagion => $"{Strength(level):0.#} Poison to every enemy within {Radius(level):0.#}; for {Duration(level):0.#} s, Poison jumps on death to "
-                + (level >= 3 ? "the two nearest enemies" : "the nearest enemy") + $" within {Radius(level):0.#}.",
-            SkillId.FrostNova => $"{Strength(level):0.#} Frost within {Radius(level):0.#}"
-                + (level >= 3 ? $"; enemies it freezes stay frozen at least {freezeHold:0.#} s." : "."),
-            SkillId.StormCall => $"{Strength(level):0} bolts within {Radius(level):0.#} over {Duration(level):0.#} s: {ScaledDamage(hitDamage, level):0.#} damage (grows with waves and Damage cards) and {hitStacks:0.#} Lightning."
-                + (level >= 3 ? " Bolts chain to nearby enemies." : ""),
-            SkillId.Bulwark => $"An unbreakable wall {Radius(level):0.#} wide for {Duration(level):0.#} s; enemies that touch it are pushed {ContactKnockback(level):0.#}. "
-                + (shieldScalesWithMaxHp ? $"Shield equal to {Strength(level) * 100f:0}% of max HP." : $"{Strength(level):0.#} Shield."),
-            SkillId.Radiance => $"Clear statuses; for {Duration(level):0.#} s hits heal {Strength(level) * 100f:0}% and status resistance is {StatusResistance(level) * 100f:0}%."
-                + (level >= 3 ? $" Heal {healOnCast:0.#} HP now." : ""),
-            SkillId.Devour => $"Swallow an enemy (elites too, never bosses) below {Strength(level) * 100f:0}% HP within {Range(level):0.#}; gain {energyReward:0.#} Energy. Cooldown {Cooldown(level):0.#} s.",
-            SkillId.Blink => $"Teleport up to {Range(level):0.#}; cancel knockback." + (level >= 3 ? " Two charges, each with its own cooldown." : ""),
-            SkillId.Shockwave => $"Push {Strength(level):0.#} within {Radius(level):0.#}." + (level >= 3 ? " Reflect enemy projectiles." : ""),
-            SkillId.GravityWell => $"Pull within {Radius(level):0.#} at {Strength(level):0.#}/s for {Duration(level):0.#} s."
-                + (level >= 3 ? $" End: {ScaledDamage(endDamage, level):0.#} damage (grows with waves), push {endKnockback:0.#}." : ""),
-            SkillId.TimeSlip => $"Everything except you runs at {Strength(level) * 100f:0}% for {Duration(level):0.#} s."
-                + (level >= 3 ? " Your Attack Speed +50%." : ""),
-            SkillId.Decoy => $"Enemies chase a mirror image of you for {Duration(level):0.#} s."
-                + (level >= 3 ? " When it ends, another random skill of yours is cast there for free at its current level." : ""),
-            SkillId.Overcharge => $"Every weapon (hand and auto) cools down {overchargeRate:0.#}x as fast for {Duration(level):0.#} s."
-                + (level >= 3 ? $" Weapon damage +{(overchargeDamageMultiplier - 1f) * 100f:0}%." : ""),
-            SkillId.PocketVoid => $"A circular hole in a {Radius(level):0.#}×{Radius(level):0.#} footprint, with a {voidGravityWidth:0.#}-wide gravity ring, for {Duration(level):0.#} s. Swallowed enemies still give XP; bosses cannot be swallowed; it can swallow you too.",
-            SkillId.VoidWalk => $"Enter the void for {Duration(level):0.#} s: move speed x{voidWalkMoveMultiplier:0.#}; enemies cannot target or damage you.",
-            SkillId.Singularity => $"Draw on-screen enemies {Strength(level):0.#} toward you at {singularitySlowMultiplier*100:0}% move speed. You cannot move or act for {Duration(level):0.#} s; then blast within {Radius(level):0.#} for {ScaledDamage(singularityBaseDamage, level):0.#}+{ScaledDamage(singularityDamagePerEnemy, level):0.#} per distinct absorbed enemy, growing with waves and Damage cards.",
+            SkillId.FlameWake => $"For a while you leave a burning trail behind you; enemies that touch it are set alight ({Duration(level):0.#} s, {Strength(level):0.#} Fire per second)."
+                + (level >= 2 ? " Lasts longer" + (level >= 3 ? "; at max level the trail is wider" : "") + "." : ""),
+            SkillId.Contagion => $"Stacks Poison on nearby enemies; for a while, whenever a poisoned enemy dies the poison jumps to a nearby enemy ({Strength(level):0.#} Poison within {Radius(level):0.#}, for {Duration(level):0.#} s)."
+                + (level >= 2 ? " Lasts longer" + (level >= 3 ? "; at max level it jumps to two enemies at once, spreading the infection outward" : "") + "." : ""),
+            SkillId.FrostNova => $"Stacks Frost on the enemies around you; small enemies freeze on the spot ({Strength(level):0.#} Frost within {Radius(level):0.#})."
+                + (level >= 2 ? " Larger area" + (level >= 3 ? $"; at max level frozen enemies stay frozen longer (at least {freezeHold:0.#} s)" : "") + "." : ""),
+            SkillId.StormCall => $"Calls down a few random lightning bolts near the cursor, dealing damage and stacking Lightning ({Strength(level):0} bolts within {Radius(level):0.#} over {Duration(level):0.#} s, {ScaledDamage(hitDamage, level):0.#} damage and {hitStacks:0.#} Lightning each; damage grows with waves and Damage cards)."
+                + (level >= 2 ? " More bolts over a larger area" + (level >= 3 ? "; at max level a bolt that hits an enemy also chains to enemies within range" : "") + "." : ""),
+            SkillId.Bulwark => $"Raises an unbreakable wall at the cursor; enemies that run into it are knocked back, and you gain a Shield based on your max HP (wall {Radius(level):0.#} wide for {Duration(level):0.#} s, knockback {ContactKnockback(level):0.#}, "
+                + (shieldScalesWithMaxHp ? $"Shield {Strength(level) * 100f:0}% of max HP)." : $"Shield {Strength(level):0.#}).")
+                + (level >= 2 ? " Thicker Shield, farther knockback, longer wall" + (level >= 3 ? "; at max level the Shield becomes especially thick" : "") + "." : ""),
+            SkillId.Radiance => $"Clears every status on you; for a while your attacks heal you and your status resistance rises ({Duration(level):0.#} s, {Strength(level) * 100f:0}% lifesteal, {StatusResistance(level) * 100f:0}% resistance)."
+                + (level >= 2 ? " Lasts longer, higher resistance" + (level >= 3 ? $"; at max level it also heals some HP at once ({healOnCast:0.#} HP)" : "") + "." : ""),
+            SkillId.Devour => $"Swallows one low-HP enemy nearby outright and restores your Energy (an enemy below {Strength(level) * 100f:0}% HP within {Range(level):0.#}, elites too, never bosses; {energyReward:0.#} Energy, cooldown {Cooldown(level):0.#} s)."
+                + (level >= 2 ? " Higher HP line to swallow, raising the threshold" + (level >= 3 ? "; at max level the cooldown is shorter" : "") + "." : ""),
+            SkillId.Blink => $"Teleports a distance toward the cursor and cancels any knockback in progress (up to {Range(level):0.#})."
+                + (level >= 2 ? " Farther" + (level >= 3 ? "; at max level it can be used twice (two charges, each with its own cooldown)" : "") + "." : ""),
+            SkillId.Shockwave => $"Shoves every enemy around you away hard (push {Strength(level):0.#} within {Radius(level):0.#})."
+                + (level >= 2 ? " Larger area" + (level >= 3 ? "; at max level it also reflects enemy projectiles" : "") + "." : ""),
+            SkillId.GravityWell => $"Creates a gravity well at the target point that pulls nearby enemies toward its centre for a while (pull {Strength(level):0.#}/s within {Radius(level):0.#} for {Duration(level):0.#} s)."
+                + (level >= 2 ? " Lasts longer" + (level >= 3 ? $"; at max level it explodes when its time runs out ({ScaledDamage(endDamage, level):0.#} damage, push {endKnockback:0.#}; damage grows with waves)" : "") + "." : ""),
+            SkillId.TimeSlip => $"Everything except you slows down for a while (runs at {Strength(level) * 100f:0}% speed for {Duration(level):0.#} s)."
+                + (level >= 2 ? " Lasts longer" + (level >= 3 ? "; at max level your Attack Speed rises while it lasts (+50%)" : "") + "." : ""),
+            SkillId.Decoy => $"Places a mirror image of you that enemies chase ({Duration(level):0.#} s)."
+                + (level >= 2 ? " Lasts longer" + (level >= 3 ? "; at max level, when it dies it casts one of your other skills at random (at that skill's current level, for free)" : "") + "." : ""),
+            SkillId.Overcharge => $"For a while every weapon attacks twice as often (hand and auto, cooldown timers x{overchargeRate:0.#}, for {Duration(level):0.#} s)."
+                + (level >= 2 ? " Lasts longer" + (level >= 3 ? $"; at max level weapons also deal more damage (+{(overchargeDamageMultiplier - 1f) * 100f:0}%)" : "") + "." : ""),
+            SkillId.PocketVoid => $"Opens a small black hole at the cursor that swallows everything except bosses, and you gain the XP of the monsters it swallows ({Radius(level):0.#}×{Radius(level):0.#} footprint, {voidGravityWidth:0.#}-wide gravity ring, {Duration(level):0.#} s; it can swallow you too).",
+            SkillId.VoidWalk => $"Enters the void state: faster movement, and you cannot be targeted or damaged until the time runs out ({Duration(level):0.#} s, move speed x{voidWalkMoveMultiplier:0.#}).",
+            SkillId.Singularity => $"Drags every enemy on screen toward you and slows them; you hold still like a black hole for a moment, then explode, and the more enemies you drew in the higher the damage (pull {Strength(level):0.#}, slow to {singularitySlowMultiplier * 100:0}%, held {Duration(level):0.#} s, blast radius {Radius(level):0.#}, {ScaledDamage(singularityBaseDamage, level):0.#} + {ScaledDamage(singularityDamagePerEnemy, level):0.#} per distinct absorbed enemy; grows with waves and Damage cards).",
             _ => descriptions[Mathf.Clamp(level - 1, 0, 2)]
         };
 

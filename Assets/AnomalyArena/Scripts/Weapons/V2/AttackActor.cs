@@ -62,6 +62,7 @@ namespace AnomalyArena
         Vector3 lastCarrierPoint;
         Vector3 arcStart;
         Vector3 launchDirection;
+        Vector3 launchPoint;                                                                                   
         float arcElapsed, arcDuration, arcHeight, landedDuration;
 
         public void Configure(AttackMode type, Combatant from, RunWeapon w, Vector3 at, Vector3 dir,
@@ -71,6 +72,7 @@ namespace AnomalyArena
             transform.position = Query.AtCastHeight(at);
             direction = Query.Flat(dir).normalized; point = Query.Flat(at);
             launchDirection = direction;
+            launchPoint = Query.AtCastHeight(from ? from.Position : at);
             damage = hit; knock = push; range = reach; speed = velocity;
             radius = area; remaining = lifetime; delay = tick = flown = 0;
             if (type == AttackMode.Hook) flown = Query.Flat(transform.position - from.Position).magnitude;
@@ -313,7 +315,7 @@ namespace AnomalyArena
             if (returning) return;
             returning = true; killReturn = afterKill; knifeSeekTarget = null; knifeReturnHits.Clear();
 
-            KnifeReturnPoint = Query.AtCastHeight(owner ? owner.Position : transform.position);
+            KnifeReturnPoint = launchPoint;
         }
         Combatant NextKnifeTarget(Vector3 from)
         {

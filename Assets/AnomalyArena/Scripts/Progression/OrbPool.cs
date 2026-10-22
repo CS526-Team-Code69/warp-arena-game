@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace AnomalyArena
@@ -36,6 +37,31 @@ namespace AnomalyArena
         public void MarkPressurePickupApplied() => pressurePickupRevision = 1;
         [field: SerializeField] public float repelDistance { get; set; } = 3f;
         public static OrbPool Instance { get; private set; }
+
+        public bool XpUncollected => progression && progression.Level == 1 && progression.Xp <= 0f;
+
+        public ExperienceOrb NearestXp(Vector3 from, Func<Vector3, bool> accept = null)
+        {
+            ExperienceOrb best = null; float distance = float.MaxValue;
+            if (pool == null) return null;
+            foreach (var orb in pool)
+            {
+                if (!orb || !orb.InUse || orb.Kind != OrbKind.Xp) continue;
+                if (accept != null && !accept(orb.Position)) continue;
+                float d = Query.Flat(orb.Position - from).sqrMagnitude;
+                if (d < distance) { best = orb; distance = d; }
+            }
+            return best;
+        }
+
+        public int CountXp(out float value)
+        {
+            int count = 0; value = 0f;
+            if (pool == null) return 0;
+            foreach (var orb in pool)
+                if (orb && orb.InUse && orb.Kind == OrbKind.Xp) { count++; value += orb.Value; }
+            return count;
+        }
         bool frozenForTrial;
 
         void Awake() => Instance = this;

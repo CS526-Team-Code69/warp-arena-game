@@ -175,7 +175,8 @@ namespace AnomalyArena
                             break;
                         case ArenaUiState.WeaponIntro: game.ExecuteUiCommand(ArenaUiCommand.DismissWeaponIntro); break;
                         case ArenaUiState.Armory: game.ExecuteUiCommand(ArenaUiCommand.SkipArmory); break;
-                        case ArenaUiState.Draft: game.ExecuteUiCommand(ArenaUiCommand.ChooseCard, 0); break;
+                        case ArenaUiState.Draft:
+                        case ArenaUiState.LevelUp: game.ExecuteUiCommand(ArenaUiCommand.ChooseCard, 0); break;
                         case ArenaUiState.ReplaceSkill:
                         case ArenaUiState.ReplaceWeapon: game.ExecuteUiCommand(ArenaUiCommand.Cancel); break;
                         case ArenaUiState.Ready:

@@ -127,7 +127,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 818548761
-    m_Localized: "10 \xB7 MAX"
+    m_Localized: "12 \xB7 MAX"
     m_Metadata:
       m_Items: []
   - m_Id: 818548762
@@ -195,7 +195,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 818548778
-    m_Localized: SHADE
+    m_Localized: SHADE INCOMING
     m_Metadata:
       m_Items: []
   - m_Id: 818548779
@@ -203,7 +203,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 818548780
-    m_Localized: Pick one Greater Void skill, or return without changing your skills. 1 / 2 / 3 select.
+    m_Localized: Pick one of three Greater Void skills (or none); they have no further levels. 1 / 2 / 3 select.
     m_Metadata:
       m_Items: []
   - m_Id: 818548781
@@ -215,25 +215,25 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 818548783
-    m_Localized: 'Pick one familiar form. Its anomaly stays unknown until you use it.
+    m_Localized: 'Pick one familiar form. Which backfire it has is unknown until you take it; the moment you choose, the game pauses and the weapon card appears.
 
-      Every anomaly has a backfire. Aim manually; use the terrain.'
+      Aim manually; use the terrain.'
     m_Metadata:
       m_Items: []
   - m_Id: 818548784
-    m_Localized: Take one unrevealed weapon, or skip. Replaced weapons lose their upgrades.
+    m_Localized: 'Pick one of three: a new weapon, or a higher Mk of one you hold (weapons grow stronger through higher Mks from the armory). You may skip. Upgrades stay with the weapon: replace it and they are gone with it.'
     m_Metadata:
       m_Items: []
   - m_Id: 818548785
-    m_Localized: Pick a stat, a weapon change, or a skill. 1 / 2 / 3 select; R rerolls.
+    m_Localized: 'Three cards, one of each: a stat card, a weapon card (an upgrade direction a revealed weapon has not taken yet) and a skill card (a new skill, or one level for a skill you own). 1 / 2 / 3 select; R rerolls (once per build phase).'
     m_Metadata:
       m_Items: []
   - m_Id: 818548786
-    m_Localized: Choose the weapon to replace. Its upgrades will be lost.
+    m_Localized: 'Choose the weapon to replace. Upgrades stay with the weapon: replace it and they are gone with it.'
     m_Metadata:
       m_Items: []
   - m_Id: 818548787
-    m_Localized: Choose the skill to replace. The new skill starts at level 1.
+    m_Localized: With 3 skills already, taking a new one means replacing an old one; the new skill starts at level 1.
     m_Metadata:
       m_Items: []
   - m_Id: 818548788
@@ -277,7 +277,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 818548798
-    m_Localized: 'Tyrant immunities: {0}'
+    m_Localized: 'Tyrant King immunities: {0}'
     m_Metadata:
       m_Items: []
   - m_Id: 818548799
@@ -329,11 +329,11 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 818548811
-    m_Localized: Unknown anomaly
+    m_Localized: Backfire unrevealed
     m_Metadata:
       m_Items: []
   - m_Id: 818548812
-    m_Localized: Unknown anomaly. First use may backfire.
+    m_Localized: Which backfire it has is unknown until you take it; it is revealed the moment you choose.
     m_Metadata:
       m_Items: []
   - m_Id: 818548813
@@ -385,11 +385,11 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 818548825
-    m_Localized: Add the anomaly's extra behaviour
+    m_Localized: Adds a new variant to this anomaly
     m_Metadata:
       m_Items: []
   - m_Id: 818548826
-    m_Localized: Soften this weapon's backfire
+    m_Localized: Removes or softens this anomaly's backfire
     m_Metadata:
       m_Items: []
   - m_Id: 818548827
@@ -529,7 +529,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 818548861
-    m_Localized: Suction
+    m_Localized: Focus
     m_Metadata:
       m_Items: []
   - m_Id: 818548862
@@ -593,7 +593,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 818548877
-    m_Localized: Spore Launcher
+    m_Localized: Venom Launcher
     m_Metadata:
       m_Items: []
   - m_Id: 818548878
@@ -637,7 +637,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 818548888
-    m_Localized: Carpet
+    m_Localized: Bombard
     m_Metadata:
       m_Items: []
   - m_Id: 818548889
@@ -645,11 +645,11 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 818548890
-    m_Localized: Saw
+    m_Localized: Closed Blade
     m_Metadata:
       m_Items: []
   - m_Id: 818548891
-    m_Localized: Magnet
+    m_Localized: Open Blade
     m_Metadata:
       m_Items: []
   - m_Id: 818548892
@@ -717,11 +717,11 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 818548908
-    m_Localized: Time Slip
+    m_Localized: Time Stop
     m_Metadata:
       m_Items: []
   - m_Id: 818548909
-    m_Localized: Decoy
+    m_Localized: Mirror Image
     m_Metadata:
       m_Items: []
   - m_Id: 818548910
@@ -785,11 +785,11 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 818548925
-    m_Localized: THE HOLLOW
+    m_Localized: THE NASH PROPHET
     m_Metadata:
       m_Items: []
   - m_Id: 818548926
-    m_Localized: THE TYRANT
+    m_Localized: THE TYRANT KING
     m_Metadata:
       m_Items: []
   - m_Id: 818548927
@@ -829,7 +829,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 818548936
-    m_Localized: "WASD MOVE \xB7 MOUSE AIM \xB7 LMB USE \xB7 RMB SWITCH \xB7 SHIFT SPRINT \xB7 1/2/3 SKILLS \xB7 E ENTER"
+    m_Localized: "WASD MOVE \xB7 MOUSE AIM \xB7 LMB USE WEAPON \xB7 RMB SWITCH SLOTS \xB7 LEFT SHIFT SPRINT \xB7 1/2/3 SKILLS \xB7 E ENTER TRIAL"
     m_Metadata:
       m_Items: []
   - m_Id: 818548937
@@ -889,7 +889,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 818548951
-    m_Localized: Charging no longer slows your movement.
+    m_Localized: Charging no longer slows you.
     m_Metadata:
       m_Items: []
   - m_Id: 818548952
@@ -897,7 +897,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 818548953
-    m_Localized: Firing no longer pushes you forward.
+    m_Localized: Reverse rounds turn toward your aim 0.3 s after leaving.
     m_Metadata:
       m_Items: []
   - m_Id: 818548954
@@ -905,7 +905,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 818548955
-    m_Localized: The returning corpse no longer damages or knocks you back; it still hits others.
+    m_Localized: The straight return after a kill no longer hurts you; it still cuts enemies on the way.
     m_Metadata:
       m_Items: []
   - m_Id: 818548956
@@ -953,15 +953,15 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 818548967
-    m_Localized: Still move back by 3, using a push without wall-impact damage.
+    m_Localized: Reloading never jams.
     m_Metadata:
       m_Items: []
   - m_Id: 818548968
-    m_Localized: On release, push gathered enemies forward by 5 once.
+    m_Localized: Focused pellets pierce the first target; later targets take 60%.
     m_Metadata:
       m_Items: []
   - m_Id: 818548969
-    m_Localized: Stop suction at a 2-unit body gap; enemies can still walk closer.
+    m_Localized: The release recoil becomes a push that never causes wall damage.
     m_Metadata:
       m_Items: []
   - m_Id: 818548970
@@ -1009,7 +1009,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 818548981
-    m_Localized: Your patches do not hurt or burn you; other fire still can.
+    m_Localized: Your own fire patches no longer burn you; other fire still can.
     m_Metadata:
       m_Items: []
   - m_Id: 818548982
@@ -1025,7 +1025,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 818548985
-    m_Localized: Your cloud spares your HP and Frost; holding still slows you to 70%.
+    m_Localized: Spraying no longer slows you.
     m_Metadata:
       m_Items: []
   - m_Id: 818548986
@@ -1057,7 +1057,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 818548993
-    m_Localized: Reloading no longer slows movement; clip and reload duration stay.
+    m_Localized: Firing no longer costs you HP.
     m_Metadata:
       m_Items: []
   - m_Id: 818548994
@@ -1073,7 +1073,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 818548997
-    m_Localized: A failed kill adds no 1.5 s jam; normal cooldown remains.
+    m_Localized: Executions no longer lower your max HP.
     m_Metadata:
       m_Items: []
   - m_Id: 818548998
@@ -1097,7 +1097,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 818549003
-    m_Localized: Missed rockets disappear instead of returning.
+    m_Localized: Rockets never hurt you.
     m_Metadata:
       m_Items: []
   - m_Id: 818549004
@@ -1105,7 +1105,35 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 818549005
-    m_Localized: Carpet blasts spare your HP but still displace you.
+    m_Localized: Bombard blasts spare your HP but still displace you.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818549006
+    m_Localized: 'Portal open: press E to enter the Void Trial'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818549007
+    m_Localized: TIME HELD
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818549008
+    m_Localized: Crit
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818549009
+    m_Localized: Chanter
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818549010
+    m_Localized: Exceptional
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818549011
+    m_Localized: Legendary
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818549012
+    m_Localized: Void
     m_Metadata:
       m_Items: []
   references:

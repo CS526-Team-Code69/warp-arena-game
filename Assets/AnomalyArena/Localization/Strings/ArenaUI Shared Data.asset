@@ -1103,6 +1103,34 @@ MonoBehaviour:
     m_Key: upgrade.expanded.SwarmLauncher.1.tame
     m_Metadata:
       m_Items: []
+  - m_Id: 818549006
+    m_Key: ui.hole.enter.build
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818549007
+    m_Key: ui.trial.return
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818549008
+    m_Key: stat.CritChance
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818549009
+    m_Key: enemy.Chanter
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818549010
+    m_Key: card.rarity.Exceptional
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818549011
+    m_Key: card.rarity.Legendary
+    m_Metadata:
+      m_Items: []
+  - m_Id: 818549012
+    m_Key: card.rarity.Void
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

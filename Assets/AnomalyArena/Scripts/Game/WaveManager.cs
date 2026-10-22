@@ -112,7 +112,8 @@ namespace AnomalyArena
             if (enemy.Mini) return Mathf.Max(0f, miniExperienceReward);
             if (!enemy.Elite && IsSwarm(enemy.definition)) return Mathf.Max(0f, swarmExperienceReward);
             var balance = waveSet ? waveSet.encounterBalance : null;
-            float body = balance ? Mathf.Max(0f, xpPerReferenceSecond) * balance.TargetSeconds(enemy.definition, enemy.Elite)
+            float body = experienceTable.TryGetValue((enemy.definition.kind, enemy.Elite), out float tabled) ? tabled
+                : balance ? Mathf.Max(0f, xpPerReferenceSecond) * balance.TargetSeconds(enemy.definition, enemy.Elite)
                 : enemy.definition.xp * (enemy.Elite ? 5f : 1f);                                                   
             float affix = enemy.Affix != ElementKind.None ? Mathf.Max(0f, affixExperienceBonus) : 0f;
             return (body + affix) * Mathf.Max(0f, experienceRateMultiplier);
@@ -207,9 +208,32 @@ namespace AnomalyArena
 
         static float OrdinaryAffixShare(int index) => index < 4 ? 0f : index < 7 ? .1f : index < 10 ? .15f : .25f;
 
+        readonly Dictionary<(EnemyKind kind, bool elite), float> experienceTable = new();
+        void BuildExperienceTable()
+        {
+            experienceTable.Clear();
+            var balance = waveSet ? waveSet.encounterBalance : null;
+            if (!balance || roster == null) return;
+            var rows = new List<string>();
+            foreach (var data in roster)
+            {
+                if (!data || IsSwarm(data) || data.kind is EnemyKind.Hollow or EnemyKind.Tyrant) continue;                             
+                for (int e = 0; e < 2; e++)
+                {
+                    bool elite = e == 1;
+                    if (elite && !data.canElite) continue;
+                    float xp = Mathf.Max(0f, xpPerReferenceSecond) * balance.TargetSeconds(data, elite);
+                    experienceTable[(data.kind, elite)] = xp;
+                    rows.Add($"{data.kind}{(elite ? "*" : "")}={xp:0.00}");
+                }
+            }
+            if (rows.Count > 0) Debug.Log($"[Waves] wave {WaveIndex + 1} experience table: {string.Join(" ", rows)}");
+        }
+
         void BeginV2Wave(int index)
         {
             WaveIndex = index;
+            BuildExperienceTable();
             Phase = WavePhase.WaveIntro;
             TimeLeft = 3f;
             BetweenWaves = false;
@@ -603,16 +627,22 @@ namespace AnomalyArena
             for (int offset = 0; offset < 8 && found < wanted; offset++)
             {
                 int sector = (spawnSectorCursor + offset) % 8;
-                for (int attempt = 0; attempt < perSector + 4; attempt++)
+                for (int pass = 0; pass < 2; pass++)
                 {
-                    float angle = sector * 45f + (attempt < perSector ? Random.Range(-18f,18f) : 0f);
-                    float distance = attempt < perSector ? Random.Range(minimum,maximum) : Mathf.Lerp(minimum,maximum,(attempt-perSector+.5f)/4f);
-                    Vector3 candidate = GM.player.Position + Quaternion.Euler(0f,angle,0f) * Vector3.forward * distance;
-                    if (!ValidSpawnPoint(candidate, data)) continue;
-                    int crowd = stomper ? CrowdAround(candidate, stomperCrowdRadius) : 0;
-                    if (crowd < bestCrowd) { bestCrowd = crowd; best = candidate; bestSector = sector; }
-                    found++;
-                    break;                                                                              
+                    bool taken = false;
+                    for (int attempt = 0; attempt < perSector + 4 && !taken; attempt++)
+                    {
+                        float angle = sector * 45f + (attempt < perSector ? Random.Range(-18f,18f) : 0f);
+                        float distance = attempt < perSector ? Random.Range(minimum,maximum) : Mathf.Lerp(minimum,maximum,(attempt-perSector+.5f)/4f);
+                        Vector3 candidate = GM.player.Position + Quaternion.Euler(0f,angle,0f) * Vector3.forward * distance;
+                        if (pass == 0 && !OffscreenSpawn(candidate)) continue;                               
+                        if (!ValidSpawnPoint(candidate, data)) continue;
+                        int crowd = stomper ? CrowdAround(candidate, stomperCrowdRadius) : 0;
+                        if (crowd < bestCrowd) { bestCrowd = crowd; best = candidate; bestSector = sector; }
+                        found++;
+                        taken = true;                                                                              
+                    }
+                    if (taken) break;
                 }
             }
             if (found == 0) { point = Vector3.zero; return false; }

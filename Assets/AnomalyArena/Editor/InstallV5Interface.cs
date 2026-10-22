@@ -44,6 +44,23 @@ namespace AnomalyArena.EditorTools
                 layout.hud = hud;
                 EditorUtility.SetDirty(layout);
                 layout.Apply();
+
+                var labels = hud.GetComponentInChildren<V2WorldLabels>(true);
+                if (labels && !labels.orbHintLabel && labels.holeLabels != null && labels.holeLabels.Length > 0 && labels.holeLabels[0])
+                {
+                    var source = labels.holeLabels[0];
+                    var clone = UnityEngine.Object.Instantiate(source.gameObject, source.transform.parent);
+                    clone.name = "OrbHintLabel";
+                    clone.SetActive(false);
+                    var text = clone.GetComponent<UnityEngine.UI.Text>();
+                    text.text = "";
+                    text.fontStyle = FontStyle.Bold;
+                    Undo.RegisterCreatedObjectUndo(clone, "Orb hint label");
+                    Undo.RecordObject(labels, "Orb hint label");
+                    labels.orbHintLabel = text;
+                    EditorUtility.SetDirty(labels);
+                    log.Append("  orb hint label added\n");
+                }
                 EditorSceneManager.MarkSceneDirty(scene);
                 EditorSceneManager.SaveScene(scene);
                 log.Append(
