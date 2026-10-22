@@ -77,6 +77,9 @@ namespace AnomalyArena
         public int BossAttackIndex => bossAttack;
         public bool TelegraphActive => windup && telegraph && telegraph.gameObject.activeSelf;
 
+        public bool WindupTinted => windup && specialWindup;
+        bool specialWindup;
+
         public bool LineTelegraph => definition && (definition.kind == EnemyKind.Rammer ||
                                                     definition.kind == EnemyKind.Tyrant && bossAttack == 2);
 
@@ -340,11 +343,15 @@ namespace AnomalyArena
 
         public bool IsLarge => large;
         public bool WindingUp => windup;
+
+        public bool PushesPlayer => definition && EnemyRoles.KnocksBackPlayer(definition.kind);
         public bool Charging => charging;
         public float CooldownRemaining => Mathf.Max(0f, cooldown);
         public float WindupSecondsRemaining => windup ? Mathf.Max(0f, windupTimer) : 0f;
 
         public int AttackSequence { get; private set; }
+
+        public int PulseSequence { get; private set; }
 
         public override Team Team => Team.Enemy;
         public override Vector3 AimDirection => facing;
@@ -434,7 +441,7 @@ namespace AnomalyArena
         bool DealHit(Combatant target, float damage, Vector3 direction, float knock)
         {
             var player = target as PlayerController;
-            if (player && !IsBoss) knock = 0f;
+            if (player && !PushesPlayer) knock = 0f;
             bool lethal = player && definition && definition.kind == EnemyKind.Shade && !player.Protected &&
                           player.State != CharacterState.Dashing;
             float beforeHp = target.Hp;
@@ -567,7 +574,7 @@ namespace AnomalyArena
                 if (InFist(player))
                 {
 
-                    bool landed = DealHit(player, IsBoss ? 20 : attackDamage, facing, IsBoss ? 8 : 0);
+                    bool landed = DealHit(player, IsBoss ? 20 : attackDamage, facing, IsBoss ? 8 : definition.knockback);
                     if (landed && !IsBoss && player.IsAlive)
                     {
                         player.Stun(definition.chargeStun);
@@ -726,6 +733,7 @@ namespace AnomalyArena
             if (IsBoss && bossPhase == 3)
                 time = Mathf.Max(0.8f, time / (definition.kind == EnemyKind.Hollow ? 1.3f : 1.25f));
             windup = true;
+            specialWindup = true;
             windupTimer = time;
             if (definition.kind == EnemyKind.Bloater)
                 V2Audio.Instance?.PlayWorld(ArenaSoundCue.BloaterWarning, Position);
@@ -745,7 +753,8 @@ namespace AnomalyArena
                 telegraph.rotation = Quaternion.LookRotation(facing);
                 telegraph.localScale =
                     line ? new Vector3(radius * 2f, 0.025f, range) : new Vector3(range * 2f, 0.025f, range * 2f);
-                telegraph.gameObject.SetActive(true);
+
+                telegraph.gameObject.SetActive(definition.kind == EnemyKind.Spire || line || CleaveTelegraph);
             }
 
             if (definition.kind == EnemyKind.Shade)
@@ -775,12 +784,12 @@ namespace AnomalyArena
                     return true;
                 case EnemyKind.Spire:
                     V3WorldAudio.Instance?.Play(ArenaWorldCue.NpcPulse, Position);
-                    AreaAttack(definition.pulseRadius, attackDamage, 5f);
+                    PlayerPulse(definition.pulseRadius, attackDamage, 5f);
                     TryLockLaser(definition.pulseRadius);
                     return true;
                 case EnemyKind.Stomper:
                     V3WorldAudio.Instance?.Play(ArenaWorldCue.NpcPulse, Position);
-                    AreaAttack(definition.pulseRadius, attackDamage, 8f);
+                    ConeSlam(definition.pulseRadius, definition.coneAngle, attackDamage, definition.knockback);
                     return true;
                 case EnemyKind.Hollow:
                     if (bossAttack == 0)
@@ -860,6 +869,21 @@ namespace AnomalyArena
                     DealHit(target, damage, target.Position - Position, push);
         }
 
+        void PlayerPulse(float reach, float damage, float push)
+        {
+            PulseSequence++;                                                                                                 
+            var player = GM ? GM.player : null;
+            if (player && player.IsAlive && Query.Flat(player.Position - Position).magnitude - player.Radius <= reach)
+                DealHit(player, damage, player.Position - Position, push);
+        }
+
+        void ConeSlam(float reach, float arcDeg, float damage, float push)
+        {
+            Fx.Sector(Position, facing, reach, arcDeg, definition.colour);
+            foreach (var target in Query.InSector(this, Position, facing, reach, arcDeg))
+                if (target.IsAlive) DealHit(target, damage, target.Position - Position, push);
+        }
+
         void Explode()
         {
             V3WorldAudio.Instance?.Play(ArenaWorldCue.NpcBloaterBlast, Position);
@@ -894,6 +918,7 @@ namespace AnomalyArena
         {
             if (!windup) return;
             windup = false;
+            specialWindup = false;
             SetLook(false);
             if (telegraph) telegraph.gameObject.SetActive(false);
         }

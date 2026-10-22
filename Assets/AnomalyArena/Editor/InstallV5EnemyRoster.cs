@@ -18,7 +18,7 @@ namespace AnomalyArena.EditorTools
         {
             (EnemyKind.Grunt, 5f, .25f, .8f, 5.4f, .5f, false),
             (EnemyKind.Brute, 8f, .45f, 1f, 4.4f, 1f, false),
-            (EnemyKind.Skitter, 3f, .2f, .8f, 6.2f, .3f, false),
+            (EnemyKind.Skitter, 3f, .2f, .8f, 6.2f, .4f, false),
             (EnemyKind.Splitter, 5f, .25f, .8f, 5.0f, .5f, true),
         };
 

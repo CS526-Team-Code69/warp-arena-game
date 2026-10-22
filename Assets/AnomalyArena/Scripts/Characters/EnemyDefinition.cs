@@ -32,7 +32,8 @@ namespace AnomalyArena
         public static bool IsSupport(EnemyKind kind) => kind is EnemyKind.Warden or EnemyKind.Chanter;
 
         public static bool IsBoss(EnemyKind kind) => kind is EnemyKind.Hollow or EnemyKind.Tyrant;
-        public static bool KnocksBackPlayer(EnemyKind kind) => IsBoss(kind);
+
+        public static bool KnocksBackPlayer(EnemyKind kind) => IsBoss(kind) || kind is EnemyKind.Stomper or EnemyKind.Rammer;
     }
 
     [CreateAssetMenu(menuName = "Anomaly Arena/Enemies/Definition")]
@@ -73,7 +74,8 @@ namespace AnomalyArena
         [Min(0f), Tooltip("Rammer: length of the charge and of its telegraph line.")] public float chargeDistance = 12f;
         [Min(.1f), Tooltip("Rammer: charge speed before the scene's global movement multiplier (WaveManager.movementSpeedMultiplier, 0.5 now: 36 runs at 18 cells per second).")] public float chargeSpeed = 16f;
         [Min(0f), Tooltip("Rammer: seconds the player is stunned when the charge lands.")] public float chargeStun = 1f;
-        [Min(0f), Tooltip("Spire pulse, Stomper slam and Bloater blast radius; the telegraph ring is this big.")] public float pulseRadius = 6f;
+        [Min(0f), Tooltip("Spire pulse radius (its warning circle is this big), Bloater blast radius, and the length of the Stomper's slam cone.")] public float pulseRadius = 6f;
+        [Range(10f, 180f), Tooltip("Stomper: width of the slam cone in front of it, in degrees, aimed at the player when the wind-up begins.")] public float coneAngle = 60f;
         [Min(0f), Tooltip("Spire: seconds between the pulse catching the player and the laser.")] public float laserDelay = .6f;
         [Min(0f), Tooltip("Spire: laser length; walls cut it short.")] public float laserLength = 12f;
         [Min(0f), Tooltip("Spire: half width of the laser line; the player's radius is added.")] public float laserHalfWidth = .6f;

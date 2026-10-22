@@ -289,8 +289,9 @@ namespace AnomalyArena
                     Vector3 direction = Query.Flat(enemy.LaserDirection).sqrMagnitude > .001f ? Query.Flat(enemy.LaserDirection).normalized : Vector3.forward;
                     float length = Mathf.Max(1f, enemy.LaserLength);
                     Vector3 from = Query.AtCastHeight(enemy.Position) + direction * enemy.radius;
-                    float width = fired ? prismBeamWidth * 1.6f : prismBeamWidth * .28f * (.8f + .2f * Mathf.Sin(time * 40f));
-                    Color color = fired ? new Color(1f, .55f, .35f, .95f) : new Color(1f, .25f, .2f, .75f);
+
+                    float width = fired ? prismBeamWidth : prismBeamWidth * .22f;
+                    Color color = fired ? new Color(1f, .55f, .35f, .85f) : new Color(1f, .3f, .25f, .5f);
                     PlaceStretched(prismBeam, from + direction * length * .5f, ScreenRoll(direction), length, width, color);
                 }
             }
