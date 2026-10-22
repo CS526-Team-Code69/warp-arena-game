@@ -36,6 +36,7 @@ namespace AnomalyArena
         [Min(.01f)] public float hookExtendSpeed = 40f;
         [Min(.01f)] public float hookPullSpeed = 25f;
         [Min(.01f)] public float hookRetractSpeed = 60f;
+        [Min(0f), Tooltip("Seconds before the hook can go out again after it comes back empty or the caught enemy is flung; the starting-form cycle factor does not shorten it.")] public float hookCooldown = .8f;
         [field: SerializeField, Tooltip("Candidate Phase Dagger flight speed in units/second; GDD does not prescribe it.")]
         public float DaggerSpeed { get; set; } = 20f;
         [field: SerializeField, Tooltip("Candidate maximum Recall arc height, above the interpolated start/end height.")]
@@ -341,10 +342,13 @@ namespace AnomalyArena
         static float WeaponCooldownRate=>Skills?Skills.WeaponCooldownRate:1f;
         float ChargeSeconds(RunWeapon w)=>w.form==WeaponForm.Railgun?.5f:w.form==WeaponForm.ScatterCannon?Mathf.Max(.01f,upgrades.focusChargeTime):1f;
         float CooldownScale(RunWeapon w)=>StartingFormCycleFactor(w.form)*w.Tempo*(progression?progression.Stats.CooldownMultiplier:1)/(GameManager.Instance.skills?GameManager.Instance.skills.AttackSpeedMultiplier:1);
+                                                                                                                                                                                 
+        public float HookCooldown(RunWeapon w)=>hookCooldown*w.Tempo*(progression?progression.Stats.CooldownMultiplier:1)/(GameManager.Instance.skills?GameManager.Instance.skills.AttackSpeedMultiplier:1);
         public float GetCooldownDuration(RunWeapon w)
         {
             if(w==null||!roster)return 0f;
             var definition=roster.Get(w.form);if(definition==null)return 0f;
+            if(w.form==WeaponForm.Knife&&w.variant==1)return HookCooldown(w);                                           
             float duration=w.form==WeaponForm.Minigun&&w.variant==0?1f/Mathf.Lerp(4f,12f,Mathf.Clamp01(w.heldTime/3f)):w.variant==0?definition.cooldownA:definition.cooldownB;
             return duration*CooldownScale(w);
         }
@@ -439,7 +443,7 @@ namespace AnomalyArena
         public int ClipSize(WeaponForm f,int v)=>f==WeaponForm.Rifle&&v==1?Mathf.Max(1,rifleClipSize):f==WeaponForm.ScatterCannon&&v==0?2:f==WeaponForm.SporeLauncher&&v==1?24:int.MaxValue;
                                                                                                               
         bool SpendRound(RunWeapon w,float reload){if(--w.rounds>0)return false;w.reload=reload*CooldownScale(w);w.rounds=ClipSize(w.form,w.variant);return true;}
-        void Fling(RunWeapon w){if(!w.hooked||!w.hooked.IsAlive||BattlefieldFrozen(w.hooked.gameObject))return;var target=w.hooked;target.SetState(CharacterState.Normal);target.Throw(player.AimDirection,8,new ThrowImpact{dealer=player,damage=roster.Get(w.form).damageB*DamageScale(w),sizeExponent=1,radius=1.5f*w.Reach,knockback=5*KnockScale,element=w.element,stunSeconds=w.Has(UpgradeAxis.Tame)?1.5f:0});if(target.State==CharacterState.Thrown)WeaponSound(w,WeaponAudioPhase.Launch);w.hooked=null;w.cooldown=.2f*CooldownScale(w);}
+        void Fling(RunWeapon w){if(!w.hooked||!w.hooked.IsAlive||BattlefieldFrozen(w.hooked.gameObject))return;var target=w.hooked;target.SetState(CharacterState.Normal);target.Throw(player.AimDirection,8,new ThrowImpact{dealer=player,damage=roster.Get(w.form).damageB*DamageScale(w),sizeExponent=1,radius=1.5f*w.Reach,knockback=5*KnockScale,element=w.element,stunSeconds=w.Has(UpgradeAxis.Tame)?1.5f:0});if(target.State==CharacterState.Thrown)WeaponSound(w,WeaponAudioPhase.Launch);w.hooked=null;w.cooldown=Mathf.Max(w.cooldown,HookCooldown(w));}
         void LimitWildfire(RunWeapon w)
         {
             int count=0;AttackActor oldest=null;

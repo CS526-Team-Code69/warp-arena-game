@@ -17,6 +17,8 @@ git lfs install
 git clone https://github.com/CS526-Team-Code69/warp-arena-game.git
 ```
 
+To try enemies one at a time, open `Assets/AnomalyArena/Scenes/EnemyLab.unity` instead: there are no waves, the panel on the right spawns any enemy, and the numbers live on the assets under `Assets/AnomalyArena/V2/Data/Enemies` (edit one, then press F6 to respawn).
+
 ## Controls
 
 | Action | Input |

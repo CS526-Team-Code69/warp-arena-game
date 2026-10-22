@@ -30,3 +30,5 @@ MonoBehaviour:
   spikePoisonStacks: 1
   splitsOnDeath: 0
   colour: {r: 0.54261, g: 0.40499997, b: 0.9, a: 1}
+  triggerDistance: 4
+  pulseRadius: 5

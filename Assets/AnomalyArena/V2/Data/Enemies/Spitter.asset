@@ -18,8 +18,8 @@ MonoBehaviour:
   speed: 4
   radius: 0.5
   damage: 6
-  windup: 0.8
-  interval: 1.5
+  windup: 0.45
+  interval: 1
   reach: 0.8
   knockback: 0
   knockbackScale: 1
@@ -30,3 +30,6 @@ MonoBehaviour:
   spikePoisonStacks: 1
   splitsOnDeath: 0
   colour: {r: 0.64953, g: 0.9, b: 0.40499997, a: 1}
+  rangedNear: 8
+  rangedFar: 10
+  projectileSpeed: 14

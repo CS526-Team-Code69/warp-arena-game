@@ -65,6 +65,18 @@ namespace AnomalyArena
         [Tooltip(
             "When killed by HP (not swallowed, not a trial summon) it leaves mini copies of itself that never split again (Splitter).")]
         public bool splitsOnDeath;
+        [Header("Special behaviour (design document 10.2); the enemy lab shows these live")]
+        [Min(0f), Tooltip("Spitter: backs away when the player is closer than this.")] public float rangedNear = 8f;
+        [Min(0f), Tooltip("Spitter: closes in when the player is farther than this; the wind-up ring is this big.")] public float rangedFar = 10f;
+        [Min(.1f), Tooltip("Spitter: speed of the spit, cells per second.")] public float projectileSpeed = 7f;
+        [Min(0f), Tooltip("Rammer and Stomper: the wind-up starts when the player is within this distance.")] public float triggerDistance = 16f;
+        [Min(0f), Tooltip("Rammer: length of the charge and of its telegraph line.")] public float chargeDistance = 12f;
+        [Min(.1f), Tooltip("Rammer: charge speed before the scene's global movement multiplier (WaveManager.movementSpeedMultiplier, 0.5 now: 36 runs at 18 cells per second).")] public float chargeSpeed = 16f;
+        [Min(0f), Tooltip("Rammer: seconds the player is stunned when the charge lands.")] public float chargeStun = 1f;
+        [Min(0f), Tooltip("Spire pulse, Stomper slam and Bloater blast radius; the telegraph ring is this big.")] public float pulseRadius = 6f;
+        [Min(0f), Tooltip("Spire: seconds between the pulse catching the player and the laser.")] public float laserDelay = .6f;
+        [Min(0f), Tooltip("Spire: laser length; walls cut it short.")] public float laserLength = 12f;
+        [Min(0f), Tooltip("Spire: half width of the laser line; the player's radius is added.")] public float laserHalfWidth = .6f;
 
         public Color colour = new Color(0.9f, 0.3f, 0.4f);
     }

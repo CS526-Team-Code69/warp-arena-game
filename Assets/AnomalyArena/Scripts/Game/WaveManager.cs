@@ -52,18 +52,15 @@ namespace AnomalyArena
         [Min(1), Tooltip("First wave with the support basic (Warden); the wave weights encode it as well.")] public int supportFirstWave = 3;
         [Min(1), Tooltip("From this wave two Shades may be alive or pending at once; before it, one.")] public int shadePairWave = 14;
         [SerializeField, HideInInspector] int v5RosterRevision;
+        [Tooltip("Enemy lab: the wave never spawns on its own, never times out and never ends; the lab spawns by hand.")] public bool labMode;
         [Header("Enemy behaviours (system doc §10.2) — candidate values")]
         [Min(.1f), Tooltip("Seconds between a Chanter's chants (cue and animation only; its aura is always on).")] public float chantInterval = 3f;
         [Min(0f), Tooltip("Radius around a living Chanter in which other non-boss enemies deal bonus damage.")] public float chantRadius = 6f;
         [Min(0f), Tooltip("Damage bonus of enemies inside a Chanter aura: 0.3 = +30%. Several Chanters do not stack.")] public float chantDamageBonus = .3f;
-        [Min(0f), Tooltip("Seconds the player is stunned when a Rammer's charge hits (it no longer knocks the player back).")] public float rammerStunSeconds = 1f;
         [Min(0f), Tooltip("Radius of the radiation zone a Bloater leaves where it explodes.")] public float radiationRadius = 3f;
         [Min(0f), Tooltip("Seconds a radiation zone lasts.")] public float radiationLife = 4f;
         [Min(.05f), Tooltip("Seconds of exposure per radiation tick while the player stands inside any zone (zones do not stack).")] public float radiationTickSeconds = .5f;
         [Min(0f), Tooltip("HP lost per radiation tick; ignores Shield and is not an attack.")] public float radiationTickDamage = 1f;
-        [Min(0f), Tooltip("Seconds between a Spire's pulse catching the player and its laser firing along the locked direction.")] public float spireLaserDelay = .6f;
-        [Min(0f), Tooltip("Laser length from the Spire; walls cut it short.")] public float spireLaserLength = 12f;
-        [Min(0f), Tooltip("Half width of the laser line; the player's body radius is added.")] public float spireLaserHalfWidth = .6f;
         [Min(0), Tooltip("Mini Splitters left by a full Splitter killed by HP.")] public int splitterMiniCount = 2;
         [Min(0f), Tooltip("Sideways offset of each mini Splitter from the dead parent.")] public float splitterMiniOffset = .6f;
         [Range(.1f,1f), Tooltip("Mini Splitter body radius and model scale as a share of the full Splitter (HP share lives in EncounterBalance).")] public float splitterMiniScale = .6f;
@@ -277,6 +274,12 @@ namespace AnomalyArena
             if (dt <= 0f || trialSuspended || Phase == WavePhase.WaitingBuild || Phase == WavePhase.Idle) return;
             SpawnPendingSplits();
             TickRadiation(dt);
+            if (labMode)
+            {
+                if (Phase == WavePhase.WaveIntro) { Phase = WavePhase.WaveActive; TimeLeft = 3599f; }
+                TickPreparedMarkers(dt);
+                return;
+            }
             if (Phase == WavePhase.WaveIntro)
             {
                 TimeLeft -= dt;
@@ -583,6 +586,32 @@ namespace AnomalyArena
                 var enemy = SpawnPrepared(data, at, false);
                 if (enemy) { enemy.SuppressRewards = bossSummon; enemy.IsTrialSummon = trialSuspended; }
             }
+        }
+
+        public Enemy SpawnLab(EnemyKind kind, Vector3 at, bool elite, ElementKind affix)
+        {
+            var data = DefinitionOf(kind);
+            if (!data) return null;
+            bool asElite = elite && data.canElite;
+            return SpawnPrepared(data, at, asElite, asElite || data.canAffix ? affix : ElementKind.None);
+        }
+
+        public Enemy SpawnLabTyrant(Vector3 at)
+        {
+            if (!tyrant || tyrant.IsAlive) return tyrant;
+            tyrant.gameObject.SetActive(true);
+            tyrant.transform.position = new Vector3(at.x, 0f, at.z);
+            tyrant.Configure(tyrant.definition, waveSet ? Mathf.Max(1f, waveSet.finalBossHpFactor) : 1f, false);
+            var board = ElementStatus.For(tyrant);
+            foreach (var element in TyrantImmunities) board?.SetImmunity(element, 1f);
+            Track(tyrant);
+            return tyrant;
+        }
+
+        public void ClearLab()
+        {
+            foreach (var enemy in alive.ToArray())
+                if (enemy && enemy.IsAlive) { enemy.SuppressRewards = true; enemy.Kill(); }
         }
 
         public Enemy SpawnIntroFodder(Vector3 at)

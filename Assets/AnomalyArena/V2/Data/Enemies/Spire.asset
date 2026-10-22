@@ -30,3 +30,7 @@ MonoBehaviour:
   spikePoisonStacks: 1
   splitsOnDeath: 0
   colour: {r: 0.40499997, g: 0.49608004, b: 0.9, a: 1}
+  pulseRadius: 18
+  laserDelay: 0.6
+  laserLength: 20
+  laserHalfWidth: 0.6

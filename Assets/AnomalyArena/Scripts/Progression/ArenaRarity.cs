@@ -41,10 +41,8 @@ namespace AnomalyArena
             if (weapon == null) return CardRarity.Common;
             ElementKind element = (added & UpgradeAxis.Infusion) != 0 ? infusion : weapon.element;
             if (element == ElementKind.Void) return CardRarity.Void;
-            UpgradeAxis axes = weapon.axes | added;
             int upgrades = 0;
-            for (int i = 0; i < 6; i++) if ((axes & (UpgradeAxis)(1 << i)) != 0) upgrades++;
-            upgrades += Mathf.Max(0, weapon.mk - 1);
+            for (int i = 0; i < 6; i++) if ((weapon.axes & (UpgradeAxis)(1 << i)) != 0) upgrades++;
             return upgrades >= 5 ? CardRarity.Legendary : upgrades >= 4 ? CardRarity.Epic
                 : upgrades >= 2 ? CardRarity.Exceptional : upgrades >= 1 ? CardRarity.Rare : CardRarity.Common;
         }

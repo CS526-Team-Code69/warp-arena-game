@@ -14,12 +14,12 @@ namespace AnomalyArena.EditorTools
         const string BalancePath = "Assets/AnomalyArena/Data/EncounterBalance.asset";
         const int OrdinaryWaves = 14;
 
-        static readonly (EnemyKind kind, float damage, float windup, float speed, float radius, bool splits)[] Melee =
+        static readonly (EnemyKind kind, float damage, float windup, float interval, float speed, float radius, bool splits)[] Melee =
         {
-            (EnemyKind.Grunt, 5f, .5f, 5.4f, .5f, false),
-            (EnemyKind.Brute, 8f, .9f, 4.4f, 1f, false),
-            (EnemyKind.Skitter, 3f, .3f, 6.2f, .3f, false),
-            (EnemyKind.Splitter, 5f, .5f, 5.0f, .5f, true),
+            (EnemyKind.Grunt, 5f, .25f, .8f, 5.4f, .5f, false),
+            (EnemyKind.Brute, 8f, .45f, 1f, 4.4f, 1f, false),
+            (EnemyKind.Skitter, 3f, .2f, .8f, 6.2f, .3f, false),
+            (EnemyKind.Splitter, 5f, .25f, .8f, 5.0f, .5f, true),
         };
 
         static readonly EnemyKind[] Specials = { EnemyKind.Rammer, EnemyKind.Bloater, EnemyKind.Spire, EnemyKind.Stomper, EnemyKind.Shade, EnemyKind.Chanter };
@@ -75,16 +75,16 @@ namespace AnomalyArena.EditorTools
             var log = new StringBuilder("V5 enemy roster installed:\n");
 
             var grunt = Load(EnemyKind.Grunt);
-            foreach (var (kind, damage, windup, speed, radius, splits) in Melee)
+            foreach (var (kind, damage, windup, interval, speed, radius, splits) in Melee)
             {
                 var data = Load(kind);
                 if (data != grunt)
                 {
 
-                    data.hp = grunt.hp; data.interval = grunt.interval; data.reach = grunt.reach; data.xp = grunt.xp;
+                    data.hp = grunt.hp; data.reach = grunt.reach; data.xp = grunt.xp;
                     data.knockbackScale = grunt.knockbackScale; data.canAffix = grunt.canAffix; data.startShieldShare = grunt.startShieldShare;
                 }
-                data.damage = damage; data.windup = windup; data.speed = speed; data.radius = radius; data.splitsOnDeath = splits;
+                data.damage = damage; data.windup = windup; data.interval = interval; data.speed = speed; data.radius = radius; data.splitsOnDeath = splits;
                 data.knockback = 0f;
                 data.canElite = false;
                 Save(data, log);
