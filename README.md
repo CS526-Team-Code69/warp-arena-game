@@ -3,6 +3,7 @@
 A top-down arena survival game about unpredictable weapons, elemental builds and dangerous void phenomena, built in Unity.
 
 **Play in the browser:** https://cs526-team-code69.github.io/warp-arena-game/ (desktop Chrome, Edge or Firefox).
+**中文版:** https://cs526-team-code69.github.io/warp-arena-game/zh/
 
 ## The game
 

@@ -242,7 +242,6 @@ namespace AnomalyArena
                 GM.BeginCutscene();
                 holeIntroRig = GM.cam ? GM.cam.GetComponent<CameraRig>() : null;
                 holeIntroRig?.Focus(seen.Centre, HoleIntroZoom, HoleIntroApproach);
-                GM.hud?.Banner(ArenaText.Pair("BLACK HOLE","BLACK HOLE"), ArenaText.Pair("Enemies swallowed alive are counted. Feed it 40 to open the portal.","Enemies swallowed alive are counted. Feed it 40 to open the portal."));
                 return;
             }
             float dt = Time.unscaledDeltaTime;
@@ -398,27 +397,9 @@ namespace AnomalyArena
             var body = combatant.GetComponent<Rigidbody>();
             if (body && !body.isKinematic) body.linearVelocity += pull * (combatant.Team == Team.Player ? 1f : GM.WorldTimeScale);
         }
-        void ApplyHolePull(Combatant combatant)
-        {
-            ApplyPull(combatant,GetPull(combatant.Position,combatant));
-            if(combatant is not PlayerController player||player.stamina.Sprinting||player.State!=CharacterState.Normal)return;
-            var body=player.GetComponent<Rigidbody>();if(!body||body.isKinematic)return;
-            if(!TrialActive)foreach(var hole in holes)ConstrainWalkingInGravity(player,body,hole);
-            for(int i=0;i<TemporaryHoleCount;i++){var hole=TemporaryHoleAt(i);if(hole&&hole.gameObject.activeSelf)ConstrainWalkingInGravity(player,body,hole);}
-        }
-        static void ConstrainWalkingInGravity(PlayerController player,Rigidbody body,BlackHole hole)
-        {
-            if(!hole||hole.Pull(player.Position,player).sqrMagnitude<.001f)return;
-            Vector3 offset=Query.Flat(player.Position-hole.Centre);float radius=offset.magnitude;
-            if(radius<.001f)return;
-            float dt=Time.fixedDeltaTime;Vector3 next=offset+Query.Flat(body.linearVelocity)*dt;
-                                                                                                                              
-            if(next.sqrMagnitude>radius*radius)
-            {
-                Vector3 velocity=(next.normalized*radius-offset)/Mathf.Max(.001f,dt);
-                body.linearVelocity=new Vector3(velocity.x,body.linearVelocity.y,velocity.z);
-            }
-        }
+                                                                                                                                      
+                                                                                                       
+        void ApplyHolePull(Combatant combatant) => ApplyPull(combatant,GetPull(combatant.Position,combatant));
         void TickCorpses(float dt)
         {
             if(GM.waves.preparedEnemies!=null)foreach(var enemy in GM.waves.preparedEnemies)

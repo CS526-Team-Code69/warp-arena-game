@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace AnomalyArena
@@ -20,6 +21,12 @@ namespace AnomalyArena
         public EnemyLabel[] enemyLabels;
         public UnityEngine.UI.Text[] holeLabels;
         public UnityEngine.UI.Text[] edgeLabels;
+        [Tooltip("Follows the nearest XP orb until the player has collected any XP in the run (created by the interface installer).")]
+        public UnityEngine.UI.Text orbHintLabel;
+        [Tooltip("After the first pickup an edge notice still points at off-screen XP once at least this many XP orbs lie on the ground ...")]
+        public int xpEdgeMinOrbs = 6;
+        [Tooltip("... or once the XP on the ground is at least this share of the XP the next level needs.")] [Range(0f, 1f)]
+        public float xpEdgeMinShareOfLevel = .3f;
         [Header("Offscreen black hole marker")]
         public Color holeEdgeColor = new(.78f, .36f, 1f);
         public Color holeEdgeGlow = new(1f, .84f, 1f);
@@ -30,6 +37,8 @@ namespace AnomalyArena
         Enemy[] bindings;
         float refresh;
         RectTransform canvasRect;
+        readonly List<Vector2> placedEdges = new();
+        static readonly Color XpEdgeColor = new(.45f, .8f, 1f);
 
         void Awake()
         {
@@ -52,6 +61,7 @@ namespace AnomalyArena
                 if (view.root.gameObject.activeSelf != show) view.root.gameObject.SetActive(show);
             }
             int edges = 0;
+            placedEdges.Clear();
             var world = WorldMap.Active;
             if (world && world.holes != null)
             {
@@ -87,6 +97,45 @@ namespace AnomalyArena
                         || edges >= edgeLabels.Length || !Offscreen(marker.transform.position, gm.cam)) continue;
                     PlaceEdge(edgeLabels[edges++], marker.transform.position, gm.cam, ArenaText.Text("ui.shade.incoming"), true);
                 }
+                                                                                                                                         
+                                                                                                                                     
+            var orbs = OrbPool.Instance;
+            bool orbLabelOn = false;
+            if (orbs && gm.player && gm.IsCombatActive)
+            {
+                var cam = gm.cam;
+                var nearest = orbs.NearestXp(gm.player.Position);
+                if (orbs.XpUncollected && nearest && orbHintLabel)
+                {
+                    string text = ArenaText.Pair("XP · PICK UP TO LEVEL UP","XP · PICK UP TO LEVEL UP");
+                    if (Offscreen(nearest.Position, cam))
+                    {
+                        if (edges < edgeLabels.Length) { PlaceEdge(edgeLabels[edges++], nearest.Position, cam, text, true); edgeLabels[edges - 1].color = XpEdgeColor; }
+                    }
+                    else
+                    {
+                        if (orbHintLabel.text != text) orbHintLabel.text = text;
+                        float pulse = .5f + .5f * Mathf.Sin(Time.unscaledTime * 2f * Mathf.PI * 2f);
+                        orbHintLabel.color = Color.Lerp(new Color(.45f, .8f, 1f), Color.white, pulse);
+                        orbLabelOn = PlaceWorld(orbHintLabel.rectTransform, nearest.Position + cam.transform.up * 1.2f, cam);
+                    }
+                }
+                else if (nearest)
+                {
+                    int onGround = orbs.CountXp(out float xpOnGround);
+                    float needed = orbs.progression ? Mathf.Max(1, orbs.progression.XpRequired) : 1f;
+                    if (onGround >= xpEdgeMinOrbs || xpOnGround >= xpEdgeMinShareOfLevel * needed)
+                    {
+                        var away = orbs.NearestXp(gm.player.Position, p => Offscreen(p, cam));
+                        if (away && edges < edgeLabels.Length)
+                        {
+                            PlaceEdge(edgeLabels[edges++], away.Position, cam, ArenaText.Pair($"XP ×{onGround}",$"XP ×{onGround}"), true);
+                            edgeLabels[edges - 1].color = XpEdgeColor;
+                        }
+                    }
+                }
+            }
+            if (orbHintLabel && orbHintLabel.gameObject.activeSelf != orbLabelOn) orbHintLabel.gameObject.SetActive(orbLabelOn);
             for (int i = edges; i < edgeLabels.Length; i++) edgeLabels[i].gameObject.SetActive(false);
         }
 
@@ -154,6 +203,16 @@ namespace AnomalyArena
             float unit = canvasRect.lossyScale.x > 0f ? canvasRect.lossyScale.x : 1f;
             screen.x = Mathf.Clamp(screen.x, 110f * unit, Screen.width - 110f * unit);
             screen.y = Mathf.Clamp(screen.y, edgeBottomInset * unit, Screen.height - edgeTopInset * unit);
+                                                                                        
+            float step = 30f * unit;
+            for (int attempt = 0; attempt < 6; attempt++)
+            {
+                bool clash = false;
+                foreach (var p in placedEdges) if (Mathf.Abs(p.x - screen.x) < 170f * unit && Mathf.Abs(p.y - screen.y) < step * .9f) { clash = true; break; }
+                if (!clash) break;
+                screen.y += screen.y > Screen.height * .5f ? -step : step;
+            }
+            placedEdges.Add(new Vector2(screen.x, screen.y));
             RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, screen, null, out var local);
             label.rectTransform.position = canvasRect.TransformPoint(local);
             string arrow = Mathf.Abs(screen.x - Screen.width * .5f) > Mathf.Abs(screen.y - Screen.height * .5f)

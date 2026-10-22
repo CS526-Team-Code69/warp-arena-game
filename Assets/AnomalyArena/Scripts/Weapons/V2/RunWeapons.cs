@@ -290,7 +290,9 @@ namespace AnomalyArena
                 player.BounceFromWall(Query.Flat(hit.point)-dashDirection*player.radius,hit.normal,3,!weapon.Has(UpgradeAxis.Tame));
                 WeaponSound(weapon,WeaponAudioPhase.Impact);dashLeft=0;dashWeapon=null;return;
             }
-            player.SetMovePosition(from+dashDirection*travel);dashLeft-=travel;
+                                                                                                                             
+            Vector3 drift=WorldMap.Active?Query.Flat(WorldMap.Active.GetPull(from,player))*Time.fixedDeltaTime:Vector3.zero;
+            player.SetMovePosition(from+dashDirection*travel+drift);dashLeft-=travel;
             if(dashLeft<=0)
             {
                 player.SetState(CharacterState.Normal);
@@ -523,7 +525,7 @@ namespace AnomalyArena
             bool reinfuse=CanReinfuse(weapon)&&(axes.Count==0||UnityEngine.Random.value<.15f);
             var upgrade=reinfuse?UpgradeAxis.Infusion:axes[UnityEngine.Random.Range(0,axes.Count)];
             ElementKind element=upgrade==UpgradeAxis.Infusion?RollElement(weapon.element):weapon.element;
-            string desc=upgrade==UpgradeAxis.Infusion?ArenaText.Pair("Infuse ","Infuse ")+ArenaTerms.Element(element)+(weapon.element!=ElementKind.None?ArenaText.Pair(", replaces ",", replaces ")+ArenaTerms.Element(weapon.element):""):upgrade switch{UpgradeAxis.Power=>ArenaText.Pair("Damage +40%","Damage +40%"),UpgradeAxis.Tempo=>ArenaText.Pair("Cooldown, charge and reload -30%","Cooldown, charge and reload -30%"),UpgradeAxis.Reach=>ArenaText.Pair("Range, area or targets +40%","Range, area or targets +40%"),UpgradeAxis.Twist=>ArenaText.Pair("Add the anomaly's extra behaviour","Add the anomaly's extra behaviour"),_=>ArenaText.Pair("Soften this weapon's backfire","Soften this weapon's backfire")};
+            string desc=upgrade==UpgradeAxis.Infusion?ArenaText.Pair("Infuse ","Infuse ")+ArenaTerms.Element(element)+(weapon.element!=ElementKind.None?ArenaText.Pair(", replaces ",", replaces ")+ArenaTerms.Element(weapon.element):""):upgrade switch{UpgradeAxis.Power=>ArenaText.Pair("Damage +40%","Damage +40%"),UpgradeAxis.Tempo=>ArenaText.Pair("Cooldown, charge and reload -30%","Cooldown, charge and reload -30%"),UpgradeAxis.Reach=>ArenaText.Pair("Range, area or targets +40%","Range, area or targets +40%"),UpgradeAxis.Twist=>ArenaText.Pair("Adds a new variant to this anomaly","Adds a new variant to this anomaly"),_=>ArenaText.Pair("Removes or softens this anomaly's backfire","Removes or softens this anomaly's backfire")};
             if(upgrade is UpgradeAxis.Twist or UpgradeAxis.Tame)desc=(int)weapon.form<3?CoreAnomalyUpgradeDescription(weapon,upgrade):ArenaTerms.ExpandedUpgradeDescription(weapon.form,weapon.variant,upgrade);
             return new DraftCard(DraftCardKind.Weapon,weapon.Label+" / "+ArenaTerms.Upgrade(upgrade),desc,_=>{weapon.axes|=upgrade;if(upgrade==UpgradeAxis.Infusion)weapon.element=element;return true;},payload:new WeaponUpgradeOffer(weapon,upgrade,element));
         }
@@ -533,7 +535,7 @@ namespace AnomalyArena
             return (w.form,w.variant,twist) switch
             {
                 (WeaponForm.Rifle,0,true)=>ArenaText.Pair("Fully charged shots can bounce off walls up to 2 times.","Fully charged shots can bounce off walls up to 2 times."),
-                (WeaponForm.Rifle,0,false)=>ArenaText.Pair("Charging no longer slows your movement.","Charging no longer slows your movement."),
+                (WeaponForm.Rifle,0,false)=>ArenaText.Pair("Charging no longer slows you.","Charging no longer slows you."),
                 (WeaponForm.Rifle,1,true)=>ArenaText.Pair("Reverse shots can bounce off walls 3 times instead of 1.","Reverse shots can bounce off walls 3 times instead of 1."),
                 (WeaponForm.Rifle,1,false)=>ArenaText.Pair("Reverse rounds turn around after 0.3 s and fly the way you were aiming.","Reverse rounds turn around after 0.3 s and fly the way you were aiming."),
                 (WeaponForm.Knife,0,true)=>ArenaText.Pair("The throwing knife can bounce off walls up to 2 times.","The throwing knife can bounce off walls up to 2 times."),
@@ -544,7 +546,7 @@ namespace AnomalyArena
                 (WeaponForm.RocketLauncher,0,false)=>ArenaText.Pair("Your explosion no longer damages you, but still displaces you.","Your explosion no longer damages you, but still displaces you."),
                 (WeaponForm.RocketLauncher,1,true)=>ArenaText.Pair("Ending the flight on open ground pushes enemies within radius 3 outward by 8 units.","Ending the flight on open ground pushes enemies within radius 3 outward by 8 units."),
                 (WeaponForm.RocketLauncher,1,false)=>ArenaText.Pair("Hitting a wall no longer damages you; you still bounce back 3 units.","Hitting a wall no longer damages you; you still bounce back 3 units."),
-                _=>ArenaText.Pair("Add the anomaly's extra behaviour","Add the anomaly's extra behaviour")
+                _=>ArenaText.Pair("Adds a new variant to this anomaly","Adds a new variant to this anomaly")
             };
         }
         static bool CanReinfuse(RunWeapon w)=>!w.builtInElement&&w.element!=ElementKind.None;

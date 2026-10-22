@@ -138,3 +138,8 @@ InitTestScene*.unity*
 !/[Aa]ssets/AddressableAssetsData.meta
 
 /work/
+
+# Custom WebGL page template (the published page fills the window at 16:9).
+!/[Aa]ssets/WebGLTemplates/
+!/[Aa]ssets/WebGLTemplates.meta
+!/[Aa]ssets/WebGLTemplates/**

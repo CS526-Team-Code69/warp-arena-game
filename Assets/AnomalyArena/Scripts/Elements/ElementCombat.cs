@@ -71,7 +71,7 @@ namespace AnomalyArena
                 case ElementKind.Poison: receiver.Add(element, rules.enemyPoisonStacks, attacker); break;
                 case ElementKind.Frost: receiver.Add(element, rules.enemyFrostStacks, attacker); break;
                 case ElementKind.Lightning: receiver.Add(element, rules.enemyLightningStacks, attacker); break;
-                case ElementKind.Light: if (attacker && actualDamage > 0f) attacker.Heal(actualDamage); break;
+                case ElementKind.Light: if (attacker && actualDamage > 0f) attacker.Heal(actualDamage * Mathf.Max(0f, rules.lightAffixLifesteal)); break;
                 case ElementKind.Void: target.GetComponent<RunProgression>()?.GainEnergy(-rules.enemyVoidDrain); break;
             }
         }

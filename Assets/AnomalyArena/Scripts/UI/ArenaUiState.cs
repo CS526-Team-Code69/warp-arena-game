@@ -22,6 +22,8 @@ namespace AnomalyArena
                                                                                                                     
         TrialReturn,
                                                                                                     
-        Cutscene
+        Cutscene,
+                                                                                                                                  
+        LevelUp
     }
 }

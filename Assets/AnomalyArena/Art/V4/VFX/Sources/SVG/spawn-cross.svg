@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Enemy spawn warning: a bold cross; the game tints it red (purple for Shades). -->
+  <g stroke-linecap="round" fill="none">
+    <path d="M34 34 L222 222 M222 34 L34 222" stroke="#14000a" stroke-width="44"/>
+    <path d="M34 34 L222 222 M222 34 L34 222" stroke="#ffffff" stroke-width="30"/>
+  </g>
+</svg>

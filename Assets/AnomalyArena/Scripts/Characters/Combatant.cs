@@ -534,7 +534,8 @@ namespace AnomalyArena
         public virtual bool ReceiveDamage(DamageInfo info)
         {
             if (!IsAlive || InVoidWalk) return false;
-            if (info.isAttack && (Protected || State == CharacterState.Dashing)) return false;
+                                                                                                                                           
+            if (info.isAttack && Protected) return false;
             float beforeHp=Hp,beforeShield=elementStatus?elementStatus.Shield:0;
             bool crit=false;
             var runStats=GM&&GM.progression?GM.progression.Stats:null;

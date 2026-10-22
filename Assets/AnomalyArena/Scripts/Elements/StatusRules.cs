@@ -24,6 +24,7 @@ namespace AnomalyArena
         public float playerControlMax = 1f, playerControlImmunity = 4f;
         public float enemyFireStacks = 3f, enemyPoisonStacks = 1f, enemyFrostStacks = 3f, enemyLightningStacks = 3f;
         public float enemyVoidDrain = 10f;
+        [Tooltip("Share of each hit's damage a Light-affixed enemy heals back (design document: 15%).")] public float lightAffixLifesteal = .15f;
 
         [Header("Element formulas on enemies (the player keeps the integer rules above)")]
         [Tooltip("Fire on an enemy: every fireInterval one stack burns off and deals this much (wave-1 value, times R(w)).")]
