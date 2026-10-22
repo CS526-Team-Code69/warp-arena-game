@@ -1,0 +1,46 @@
+{
+  "name": "WARP ARENA V5 document-alignment sprites",
+  "generator": "work/art-plans/make-v5-vfx.cjs",
+  "sprites": [
+    {
+      "id": "radiation-ground",
+      "png": "Assets/AnomalyArena/Art/V4/VFX/Textures/radiation-ground.png",
+      "width": 256,
+      "height": 256,
+      "placement": "flat",
+      "blend": "additive",
+      "tint": "white-tintable",
+      "purpose": "Bloater radiation zone on the ground (document 10.2); scale to the zone diameter and fade with its life."
+    },
+    {
+      "id": "chant-aura",
+      "png": "Assets/AnomalyArena/Art/V4/VFX/Textures/chant-aura.png",
+      "width": 256,
+      "height": 256,
+      "placement": "flat",
+      "blend": "additive",
+      "tint": "authored-colour",
+      "purpose": "Chanter aura under the chanter (document 10.2); scale to the aura diameter, rotate slowly."
+    },
+    {
+      "id": "orb-energy",
+      "png": "Assets/AnomalyArena/Art/V4/VFX/Textures/orb-energy.png",
+      "width": 128,
+      "height": 128,
+      "placement": "billboard",
+      "blend": "alpha",
+      "tint": "authored-colour",
+      "purpose": "Energy pickup dropped by elites (document 10.6); replaces the XP orb texture for OrbKind.Energy."
+    },
+    {
+      "id": "stat-crit",
+      "png": "Assets/AnomalyArena/Art/V2/Textures/stat-crit.png",
+      "width": 192,
+      "height": 192,
+      "placement": "ui",
+      "blend": "alpha",
+      "tint": "authored-colour",
+      "purpose": "Crit stat card icon (StatId.CritChance, V2ArtSet.statIcons[14])."
+    }
+  ]
+}

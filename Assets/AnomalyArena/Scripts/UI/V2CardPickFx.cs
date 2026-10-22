@@ -27,8 +27,9 @@ namespace AnomalyArena
 
         public static float Power(CardRarity rarity) => rarity switch
         {
-            CardRarity.Rare => .5f,
-            CardRarity.Epic => .75f,
+            CardRarity.Rare => .45f,
+            CardRarity.Exceptional => .6f,
+            CardRarity.Epic => .8f,
             CardRarity.Legendary or CardRarity.Void => 1f,
             _ => .3f
         };
@@ -36,7 +37,8 @@ namespace AnomalyArena
         public static int SparkCount(CardRarity rarity) => rarity switch
         {
             CardRarity.Rare => 10,
-            CardRarity.Epic => 16,
+            CardRarity.Exceptional => 14,
+            CardRarity.Epic => 18,
             CardRarity.Legendary or CardRarity.Void => 24,
             _ => 6
         };

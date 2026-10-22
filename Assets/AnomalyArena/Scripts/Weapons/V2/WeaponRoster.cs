@@ -37,19 +37,22 @@ namespace AnomalyArena
             WeaponForm.Railgun => 11,
             _ => 6
         };
-        public static string FormName(WeaponForm f) => f switch { WeaponForm.RocketLauncher=>"Rocket Launcher",WeaponForm.GravGun=>"Grav Gun",WeaponForm.ScatterCannon=>"Scatter Cannon",WeaponForm.PhaseDagger=>"Phase Dagger",WeaponForm.PlasmaLauncher=>"Plasma Launcher",WeaponForm.CryoCannon=>"Cryo Cannon",WeaponForm.ArcCoil=>"Arc Coil",WeaponForm.SporeLauncher=>"Spore Launcher",WeaponForm.SwarmLauncher=>"Swarm Launcher",WeaponForm.OrbitBlades=>"Orbit Blades",WeaponForm.SentryDrone=>"Sentry Drone",WeaponForm.ShieldRing=>"Shield Ring",_=>f.ToString()};
-        static readonly string[] Names={"Charged Shot","Reverse Shot","Throwing Knife","Hook","Strike","Launch Yourself","Attract","Repel","Blast","Suction","Swap","Recall","Sticky","Bouncy","Stream","Wildfire","Shatter","Blizzard","Chain","Capacitor","Cloud","Needler","Lance","Execute","Spin-up","Meltdown","Barrage","Carpet","Saw","Magnet","Gunner","Whirl","Repulsor","Leech"};
+
+        public static bool IsRetired(WeaponForm form) => form is WeaponForm.GravGun or WeaponForm.PhaseDagger or WeaponForm.PlasmaLauncher;
+        public static string FormName(WeaponForm f) => f switch { WeaponForm.RocketLauncher=>"Rocket Launcher",WeaponForm.GravGun=>"Grav Gun",WeaponForm.ScatterCannon=>"Scatter Cannon",WeaponForm.PhaseDagger=>"Phase Dagger",WeaponForm.PlasmaLauncher=>"Plasma Launcher",WeaponForm.CryoCannon=>"Cryo Cannon",WeaponForm.ArcCoil=>"Arc Coil",WeaponForm.SporeLauncher=>"Venom Launcher",WeaponForm.SwarmLauncher=>"Swarm Launcher",WeaponForm.OrbitBlades=>"Orbit Blades",WeaponForm.SentryDrone=>"Sentry Drone",WeaponForm.ShieldRing=>"Shield Ring",_=>f.ToString()};
+        static readonly string[] Names={"Charged Shot","Reverse Shot","Throwing Knife","Hook","Strike","Launch Yourself","Attract","Repel","Blast","Focus","Swap","Recall","Sticky","Bouncy","Stream","Wildfire","Shatter","Blizzard","Chain","Capacitor","Cloud","Needler","Lance","Execute","Spin-up","Meltdown","Barrage","Bombard","Closed Blade","Open Blade","Gunner","Whirl","Repulsor","Leech"};
         public static string AnomalyName(WeaponForm f,int variant)=>Names[(int)f*2+Mathf.Clamp(variant,0,1)];
         public void SetDefaults()
         {
             definitions=new Definition[17];
             float[] da={9,6.100529f,10,0,8,5,12,2,18,6,1,36,3,4,4,5,0};
-            float[] db={1.6f,12,4,0,0,8,12,1,1.5f,15,2,24,3,6,4,5,1};
+
+            float[] db={1.8f,12,4,0,16,8,12,1,1.5f,15,2,24,3,6,4,5,1};
             float[] ca={.35f,.3f,1.5f,2,1,.6f,1.6f,.25f,1,.9f,3,2.2f,.25f,1.8f,.5f,1.2f,4};
-            float[] cb={.12f,.2f,1.8f,2,.25f,1,1.8f,1.5f,.25f,1,.125f,1.2f,.1f,2.5f,.5f,5,1};
+            float[] cb={.12f,.2f,1.8f,2,1,1,1.8f,1.5f,.25f,1,.125f,1.2f,.1f,2.5f,.5f,5,1};
             float[] ra={40,12,20,4,5,12,12,6,14,8,10,30,14,9,2.5f,10,3};
-            float[] rb={40,10,15,4,8,12,12,10,10,5,12,20,14,12,2.5f,6,3};
-            for(int i=0;i<17;i++) definitions[i]=new Definition{form=(WeaponForm)i,unlockWave=DefaultUnlockWave((WeaponForm)i),damageA=da[i],damageB=db[i],cooldownA=ca[i],cooldownB=cb[i],rangeA=ra[i],rangeB=rb[i]};
+            float[] rb={40,10,15,4,20,12,12,10,10,5,12,20,14,12,2.5f,6,3};
+            for(int i=0;i<17;i++) definitions[i]=new Definition{form=(WeaponForm)i,unlockWave=DefaultUnlockWave((WeaponForm)i),retired=IsRetired((WeaponForm)i),damageA=da[i],damageB=db[i],cooldownA=ca[i],cooldownB=cb[i],rangeA=ra[i],rangeB=rb[i]};
             RifleMinimumChargeDamage=7f/3f;StarterBalanceRevision=1;
         }
     }

@@ -5,7 +5,7 @@ using UnityEngine.InputSystem;
 
 namespace AnomalyArena
 {
-
+                                                                                                     
     [DefaultExecutionOrder(200)]
     public sealed class WorldMap : MonoBehaviour
     {
@@ -51,6 +51,16 @@ namespace AnomalyArena
         public event Action VoidTrialEntered;
         public event Action VoidTrialWon;
         public event Action<BlackHole> HoleFed;
+                                                                                                                                  
+                                                                                                                                      
+        enum HoleIntroStage { Idle, Approach, Pull, Hold, Done }
+        sealed class IntroFodder { public Enemy body; public float angle, startRadius, radius, fedAt; public bool fed, gone; public Vector3 scale; }
+        HoleIntroStage holeIntroStage;
+        float holeIntroClock;
+        readonly List<IntroFodder> holeIntroFodder = new();
+        BlackHole holeIntroHole;
+        CameraRig holeIntroRig;
+        public bool HoleIntroPlaying => holeIntroStage is HoleIntroStage.Approach or HoleIntroStage.Pull or HoleIntroStage.Hold;
         public bool CanFeed
         {
             get
@@ -59,6 +69,11 @@ namespace AnomalyArena
                 foreach (var hole in holes) if (hole.Phase == HolePhase.Portal || hole.Phase == HolePhase.Collapsing) return false;
                 return true;
             }
+        }
+                                                                                                                      
+        public bool HasOpenPortal
+        {
+            get { foreach (var hole in holes) if (hole && hole.Phase == HolePhase.Portal) return true; return false; }
         }
         Vector3 returnPoint;
         BlackHole enteredHole;
@@ -118,13 +133,11 @@ namespace AnomalyArena
             SkillWorldAPI.IsElite = target => target is Enemy enemy && (enemy.Elite || enemy.IsBoss);
             SkillWorldAPI.Swallow = (victim, owner) => victim.OnEnterFallZone(Vector3.zero);
             SkillWorldAPI.CreateDecoy = CreateDecoy;
-            AttackActor.ClaimKnifeCorpse=(enemy,version)=>enemy&&enemy.TryClaimCorpse(version);
-            AttackActor.DropKnifeCorpse=(enemy,version,point)=>{if(enemy)enemy.DropCorpse(version,point);};
         }
 
         void OnDestroy()
         {
-            if (Active == this){Active = null;AttackActor.ClaimKnifeCorpse=null;AttackActor.DropKnifeCorpse=null;}
+            if (Active == this) Active = null;
         }
 
         public bool Contains(Vector3 point, float margin = 0f) => Mathf.Abs(point.x) <= Bounds.extents.x - margin && Mathf.Abs(point.z) <= Bounds.extents.z - margin;
@@ -170,10 +183,11 @@ namespace AnomalyArena
         void Update()
         {
             if (!GM || !GM.player) return;
+            TickHoleIntro();
             if (GM.IsCombatActive || GM.CanPlayerMove)
             {
                 float dt = GM.WorldDeltaTime;
-
+                                                                                                  
                 if (!TrialActive) foreach (var hole in holes) hole.Tick(dt);
                 for(int i=0;i<TemporaryHoleCount;i++){var hole=TemporaryHoleAt(i);if(hole&&hole.gameObject.activeSelf)hole.Tick(dt);}
                 int index = Grid.Index(GM.player.Position);
@@ -190,6 +204,124 @@ namespace AnomalyArena
             }
         }
 
+        const float HoleIntroApproach = .9f, HoleIntroSpiral = 2.4f, HoleIntroStagger = .45f, HoleIntroSink = .6f, HoleIntroHold = 1.6f, HoleIntroZoom = .62f;
+
+                                                                                                                                       
+                                                                                               
+        void TickHoleIntro()
+        {
+            if (holeIntroStage == HoleIntroStage.Done) return;
+            if (holeIntroStage == HoleIntroStage.Idle)
+            {
+                if (TrialActive || !GM.IsCombatActive || GM.waves.Phase != WavePhase.WaveActive) return;
+                BlackHole seen = null;
+                foreach (var hole in holes)
+                    if (hole && hole.Phase == HolePhase.Active && hole.Feeds == 0 && (SkillWorldAPI.IsOnScreen?.Invoke(hole.Centre) ?? false)) { seen = hole; break; }
+                if (!seen) return;
+                holeIntroHole = seen;
+                Vector3 toPlayer = Query.Flat(GM.player.Position - seen.Centre);
+                toPlayer = toPlayer.sqrMagnitude > .01f ? toPlayer.normalized : Vector3.forward;
+                float startRadius = seen.GravityRadius - .35f;
+                for (int i = 0; i < 3; i++)
+                {
+                    Vector3 dir = Quaternion.Euler(0f, 70f + 120f * i, 0f) * toPlayer;
+                    Vector3 at = seen.Centre + dir * startRadius;
+                    if (!Contains(at, .5f) || IsWall(at, .5f)) continue;
+                    var body = GM.waves.SpawnIntroFodder(at);
+                    if (!body) continue;
+                    body.enabled = false;                                                               
+                    holeIntroFodder.Add(new IntroFodder
+                    {
+                        body = body, angle = Mathf.Atan2(dir.x, dir.z), startRadius = startRadius, radius = startRadius,
+                        scale = body.bodyRenderer ? body.bodyRenderer.transform.localScale : Vector3.one,
+                    });
+                }
+                if (holeIntroFodder.Count == 0) { holeIntroStage = HoleIntroStage.Done; return; }
+                holeIntroStage = HoleIntroStage.Approach;
+                holeIntroClock = 0f;
+                GM.BeginCutscene();
+                holeIntroRig = GM.cam ? GM.cam.GetComponent<CameraRig>() : null;
+                holeIntroRig?.Focus(seen.Centre, HoleIntroZoom, HoleIntroApproach);
+                GM.hud?.Banner(ArenaText.Pair("BLACK HOLE","BLACK HOLE"), ArenaText.Pair("Enemies swallowed alive are counted. Feed it 40 to open the portal.","Enemies swallowed alive are counted. Feed it 40 to open the portal."));
+                return;
+            }
+            float dt = Time.unscaledDeltaTime;
+            holeIntroClock += dt;
+            if (holeIntroStage == HoleIntroStage.Approach)
+            {
+                if (holeIntroClock >= HoleIntroApproach) { holeIntroStage = HoleIntroStage.Pull; holeIntroClock = 0f; }
+                return;
+            }
+            if (holeIntroStage == HoleIntroStage.Pull)
+            {
+                bool allGone = true;
+                for (int i = 0; i < holeIntroFodder.Count; i++)
+                {
+                    var f = holeIntroFodder[i];
+                    if (!f.body || f.gone) continue;
+                    allGone = false;
+                    if (f.fed)
+                    {
+                                                                                                                               
+                        float k = Mathf.Clamp01((holeIntroClock - f.fedAt) / HoleIntroSink);
+                        f.angle += dt * 5f;
+                        MoveBody(f.body, holeIntroHole.Centre + Orbit(f.angle) * (f.radius * (1f - k)) + Vector3.down * (1.2f * k));
+                        if (f.body.bodyRenderer) f.body.bodyRenderer.transform.localScale = f.scale * (1f - k);
+                        if (k >= 1f) { f.gone = true; f.body.FinishFallNow(); }
+                        continue;
+                    }
+                    float t = Mathf.Clamp01((holeIntroClock - i * HoleIntroStagger) / HoleIntroSpiral);
+                    if (t <= 0f) continue;
+                    float eased = t * t;
+                    f.radius = Mathf.Lerp(f.startRadius, 0f, eased);
+                    f.angle += dt * (1.6f + 3.5f * eased);
+                    MoveBody(f.body, holeIntroHole.Centre + Orbit(f.angle) * f.radius);
+                    if (f.radius <= holeIntroHole.KillRadius * .55f) FeedIntroFodder(f);
+                }
+                if (allGone) { holeIntroStage = HoleIntroStage.Hold; holeIntroClock = 0f; }
+                return;
+            }
+            if (holeIntroStage == HoleIntroStage.Hold && holeIntroClock >= HoleIntroHold) FinishHoleIntro();
+        }
+
+        static Vector3 Orbit(float angle) => new(Mathf.Sin(angle), 0f, Mathf.Cos(angle));
+
+                                                                                                                                  
+        public void SkipHoleIntro()
+        {
+            if (!HoleIntroPlaying) return;
+            foreach (var f in holeIntroFodder)
+            {
+                if (!f.body || f.gone) continue;
+                if (!f.fed) { MoveBody(f.body, holeIntroHole.Centre); FeedIntroFodder(f); }
+                f.gone = true; f.body.FinishFallNow();
+            }
+            FinishHoleIntro();
+        }
+
+        void FeedIntroFodder(IntroFodder f)
+        {
+            f.fed = true; f.fedAt = holeIntroClock;
+            holeIntroHole.Feed(1, GM.waves.WaveIndex + 1);
+            HoleFed?.Invoke(holeIntroHole);
+            f.body.OnEnterFallZone(Vector3.zero);
+        }
+
+        void FinishHoleIntro()
+        {
+            holeIntroStage = HoleIntroStage.Done;
+            foreach (var f in holeIntroFodder) if (f.body) f.body.enabled = true;                                                     
+            holeIntroRig?.ClearFocus(.8f);
+            GM.EndCutscene();
+        }
+
+        static void MoveBody(Combatant body, Vector3 pos)
+        {
+            var rb = body.GetComponent<Rigidbody>();
+            if (rb) rb.position = pos;
+            body.transform.position = pos;
+        }
+
         static void TickDecoy(ref float remaining, Transform visual, bool endBlast, Combatant owner, float dt)
         {
             if (!visual || !visual.gameObject.activeSelf) return;
@@ -197,6 +329,8 @@ namespace AnomalyArena
             if (remaining > 0f) return;
             if (endBlast) foreach (var victim in Query.Characters(visual.position, 3f)) if (victim.Team == Team.Enemy) victim.ReceiveDamage(DamageInfo.Attack(8f, owner, victim.Position - visual.position, 5f, HitKind.Blast));
             visual.gameObject.SetActive(false);
+                                                                                                                            
+            SkillWorldAPI.DecoyEnded?.Invoke(visual.position);
         }
 
         void FixedUpdate()
@@ -218,7 +352,7 @@ namespace AnomalyArena
                         if (combatant.Team == Team.Enemy && combatant != hollow && hollow && hollow.IsAlive)
                             hollow.ReceiveDamage(DamageInfo.Attack(hollow.maxHp * 0.05f, GM.player));
                     }
-                    else if (IsTemporaryHole(combatant.Position,combatant) && combatant != hollow) combatant.OnEnterFallZone(Vector3.zero);
+                    else if (IsTemporaryHole(combatant.Position,combatant) && combatant != hollow) SwallowIntoVoid(combatant);
                     else if (distance > trialRadius - 2f) ApplyPull(combatant, Query.Flat(combatant.Position - trialPlatform.position).normalized * 3f);
                     else ApplyHolePull(combatant);
                     if (hollow && hollow.IsAlive && hollow.Inhaling && combatant != hollow)
@@ -239,14 +373,23 @@ namespace AnomalyArena
                     swallowed = true;
                     break;
                 }
-                if (!swallowed && IsTemporaryHole(combatant.Position,combatant)) { combatant.OnEnterFallZone(Vector3.zero); swallowed = true; }
+                                                                                
+                if (!swallowed && IsTemporaryHole(combatant.Position,combatant) && !(combatant is Enemy { IsBoss: true })) { SwallowIntoVoid(combatant); swallowed = true; }
                 if (!swallowed) ApplyHolePull(combatant);
             }
             TickCorpses(GM.WorldFixedDeltaTime);
-
+                                                                                                             
             if (AttackPool.Instance)
                 foreach (var projectile in AttackPool.Instance.actors)
-                    if (projectile && projectile.gameObject.activeSelf && projectile.AffectedByHoles && IsHole(projectile.transform.position)) projectile.Release();
+                    if (projectile && projectile.gameObject.activeSelf && projectile.AffectedByHoles && IsHole(projectile.transform.position)) projectile.SwallowedByHole();
+        }
+
+                                                                                                                                                  
+        void SwallowIntoVoid(Combatant combatant)
+        {
+            if (combatant is Enemy enemy && enemy.IsAlive && !enemy.SuppressRewards && !enemy.IsTrialSummon && GM.progression && GM.waves)
+                GM.progression.GainXp(GM.waves.ExperienceFor(enemy));
+            combatant.OnEnterFallZone(Vector3.zero);
         }
 
         static void ApplyPull(Combatant combatant, Vector3 pull)
@@ -269,7 +412,7 @@ namespace AnomalyArena
             Vector3 offset=Query.Flat(player.Position-hole.Centre);float radius=offset.magnitude;
             if(radius<.001f)return;
             float dt=Time.fixedDeltaTime;Vector3 next=offset+Query.Flat(body.linearVelocity)*dt;
-
+                                                                                                                              
             if(next.sqrMagnitude>radius*radius)
             {
                 Vector3 velocity=(next.normalized*radius-offset)/Mathf.Max(.001f,dt);
@@ -291,21 +434,6 @@ namespace AnomalyArena
                 }
                 if(enemy.CorpseActive&&IsTemporaryHole(enemy.Position))enemy.DespawnCorpse(enemy.SpawnVersion);
             }
-            if(!AttackPool.Instance)return;
-            foreach(var actor in AttackPool.Instance.actors)
-            {
-                if(!actor||!actor.gameObject.activeSelf||!actor.HasKnifeCorpse)continue;
-                var source=actor.KnifeCorpseSource;int version=actor.KnifeCorpseSpawnVersion;
-                Vector3 at=actor.KnifeCorpsePosition;
-                bool swallowed=false;
-                if(!TrialActive)foreach(var hole in holes)
-                {
-                    if(!hole.Contains(at))continue;
-                    FeedCorpse(hole,source,version);swallowed=true;break;
-                }
-                if(IsTemporaryHole(at)){if(source)source.DespawnCorpse(version);swallowed=true;}
-                if(swallowed)actor.TryConsumeKnifeCorpse(out _);
-            }
         }
         void FeedCorpse(BlackHole hole,Enemy source,int version)
         {
@@ -313,17 +441,23 @@ namespace AnomalyArena
             if(!hole.Temporary&&CanFeed){hole.Feed(1,GM.waves.WaveIndex+1);HoleFed?.Invoke(hole);}
         }
 
-        public bool TryEnterPortal(PlayerController player)
+                                                                                                                                                                         
+        public bool TryEnterPortal(PlayerController player, bool fromBuild = false)
         {
-            if (!GM.IsCombatActive || GM.waves.Phase != WavePhase.WaveActive || TrialActive || TrialWon || player.State != CharacterState.Normal) return false;
+            if (!player || TrialActive || TrialWon) return false;
+            bool build = fromBuild && GM.RunPhase is ArenaUiState.Armory or ArenaUiState.Draft or ArenaUiState.Ready;
+                                                                                                               
+            bool walking = !fromBuild && GM.BuildWalking && player.State == CharacterState.Normal;
+            if (!build && !walking && (!GM.IsCombatActive || GM.waves.Phase != WavePhase.WaveActive || player.State != CharacterState.Normal)) return false;
             foreach (var hole in holes)
             {
-                if (hole.Phase != HolePhase.Portal || Mathf.Abs(player.Position.x - hole.Centre.x) > 0.5f || Mathf.Abs(player.Position.z - hole.Centre.z) > 0.5f) continue;
+                if (hole.Phase != HolePhase.Portal) continue;
+                if (!build && (Mathf.Abs(player.Position.x - hole.Centre.x) > 0.5f || Mathf.Abs(player.Position.z - hole.Centre.z) > 0.5f)) continue;
                 enteredHole = hole;
                 returnPoint = hole.Centre;
                 frozen.Clear();
                 foreach (var enemy in GM.waves.Alive) if (enemy && enemy.gameObject.activeSelf) Freeze(enemy.gameObject);
-
+                                                                                                                  
             foreach(var enemy in GM.waves.preparedEnemies)if(enemy&&enemy.gameObject.activeSelf)Freeze(enemy.gameObject);
                 if (AttackPool.Instance) foreach (var projectile in AttackPool.Instance.actors) if (projectile && projectile.gameObject.activeSelf) Freeze(projectile.gameObject);
                 foreach (var bolt in GM.waves.preparedBolts) if (bolt.gameObject.activeSelf) Freeze(bolt.gameObject);
@@ -376,8 +510,8 @@ namespace AnomalyArena
             GM.waves.ResumeAfterTrial();
             MovePlayer(GM.player, returnPoint);
             GM.player.Heal(GM.player.maxHp);
-            GM.player.ProtectFor(2f);
-            enteredHole.Close();
+                                                                                                                         
+            foreach (var hole in holes) if (hole && hole.Phase != HolePhase.Gone) hole.Close();
             hollow.gameObject.SetActive(false);
             trialPlatform.gameObject.SetActive(false);
             VoidTrialWon?.Invoke();
@@ -414,7 +548,8 @@ namespace AnomalyArena
             {
                 if(!enemy)continue;
                 if(enemy.CorpseActive)enemy.DespawnCorpse(enemy.SpawnVersion);
-
+                                                                                             
+                                                                                                 
                 else if(enemy.State is CharacterState.Dead or CharacterState.Falling)enemy.DiscardWithoutReward();
             }
         }

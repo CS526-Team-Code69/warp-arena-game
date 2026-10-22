@@ -27,4 +27,5 @@ MonoBehaviour:
   canAffix: 0
   canElite: 0
   startShieldShare: 0.1
+  splitsOnDeath: 0
   colour: {r: 0.9, g: 0.40499997, b: 0.57131994, a: 1}

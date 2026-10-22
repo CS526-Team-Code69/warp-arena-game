@@ -4,7 +4,13 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-    public enum GameState { Title, Playing, Won, Lost }
+    public enum GameState
+    {
+        Title,
+        Playing,
+        Won,
+        Lost
+    }
 
     [DefaultExecutionOrder(-100)]
     public partial class GameManager : MonoBehaviour
@@ -12,38 +18,73 @@ namespace AnomalyArena
         [Serializable]
         public class Rules
         {
-            [Tooltip("Damage for hitting a wall after being knocked back / thrown (ignores protection)")] public float wallDamage = 5f;
-            [Tooltip("Speed toward the wall at impact must exceed this to count as a hit (to be tuned)")] public float wallHitSpeed = 3f;
-            [Tooltip("Knockback damping: initial speed = distance × damping")] public float knockDamping = 6f;
+            [Tooltip("Damage for hitting a wall after being knocked back / thrown (ignores protection)")]
+            public float wallDamage = 5f;
+
+            [Tooltip("Speed toward the wall at impact must exceed this to count as a hit (to be tuned)")]
+            public float wallHitSpeed = 3f;
+
+            [Tooltip("Knockback damping: initial speed = distance × damping")]
+            public float knockDamping = 6f;
         }
 
         [Serializable]
         public class Feedback
         {
-            [Tooltip("Seconds the white flash lasts")] public float flashTime = 0.1f;
-            [Tooltip("How much the body is squashed on hit (0 = no deformation)")] public float squash = 0.35f;
-            [Tooltip("Damage at which a hit counts as heavy")] public float heavyDamage = 10f;
+            [Tooltip("Seconds the white flash lasts")]
+            public float flashTime = 0.1f;
 
-            [Header("Player hit: hit stun instead of knockback (bosses still knock back)")]
-            [Min(0f), Tooltip("Seconds the player cannot move or act after a basic enemy's hit.")] public float basicHitStun = .12f;
-            [Min(0f), Tooltip("Seconds of hit stun from an elite (special) enemy's hit.")] public float eliteHitStun = .22f;
-            [Min(0f), Tooltip("Once a hit stun starts, no new one for this many seconds; damage still applies.")] public float hitStunWindow = .8f;
-            [Min(0f), Tooltip("Camera push away from a basic enemy's hit.")] public float basicHitKick = .18f;
-            [Min(0f), Tooltip("Camera push away from an elite's hit.")] public float eliteHitKick = .3f;
-            [Min(0f), Tooltip("Camera push from a boss hit.")] public float bossHitKick = .4f;
-            [Min(0f), Tooltip("How far the player model flinches along the hit (units).")] public float playerFlinch = .18f;
+            [Tooltip("How much the body is squashed on hit (0 = no deformation)")]
+            public float squash = 0.35f;
+
+            [Tooltip("Damage at which a hit counts as heavy")]
+            public float heavyDamage = 10f;
+
+            [Header("Player hit: feedback only (no stun, no push); bosses still knock back")]
+            [Min(0f), Tooltip("Camera push away from a basic enemy's hit.")]
+            public float basicHitKick = .18f;
+
+            [Min(0f), Tooltip("Camera push away from an elite's hit.")]
+            public float eliteHitKick = .3f;
+
+            [Min(0f), Tooltip("Camera push from a boss hit.")]
+            public float bossHitKick = .4f;
+
+            [Min(0f), Tooltip("How far the player model flinches along the hit (units).")]
+            public float playerFlinch = .18f;
 
             [Header("Hits the player lands")]
-            [Min(0f), Tooltip("Real seconds before the same enemy can hold its pose again, so rapid fire never freezes it.")] public float victimHoldCooldown = .25f;
-            [Min(0f), Tooltip("Real seconds between camera pushes from landed hits, so crowds never blur the screen.")] public float hitKickInterval = .12f;
+            [Min(0f),
+             Tooltip("Real seconds before the same enemy can hold its pose again, so rapid fire never freezes it.")]
+            public float victimHoldCooldown = .25f;
+
+            [Min(0f), Tooltip("Real seconds between camera pushes from landed hits, so crowds never blur the screen.")]
+            public float hitKickInterval = .12f;
+
             [Tooltip("Knife, hook, body slam, orbit blades, shield ring: the target bites back.")]
-            public HitFeelProfile melee = new() { victimHold = .07f, victimHeavyHold = .1f, victimJolt = .18f, attackerHold = .04f, hitKick = .06f, heavyHitKick = .12f, splash = 1.4f, fireRecoil = -.12f };
+            public HitFeelProfile melee = new()
+            {
+                victimHold = .07f, victimHeavyHold = .1f, victimJolt = .18f, attackerHold = .04f, hitKick = .06f,
+                heavyHitKick = .12f, splash = 1.4f, fireRecoil = -.12f
+            };
+
             [Tooltip("Rifle, railgun, shatter shards: a heavy round with a short hold on heavy hits.")]
-            public HitFeelProfile heavyShot = new() { victimHold = .03f, victimHeavyHold = .07f, victimJolt = .16f, heavyHitKick = .1f, splash = 1f, fireRecoil = .14f, fireKick = .12f, muzzleFlash = 1.3f };
+            public HitFeelProfile heavyShot = new()
+            {
+                victimHold = .03f, victimHeavyHold = .07f, victimJolt = .16f, heavyHitKick = .1f, splash = 1f,
+                fireRecoil = .14f, fireKick = .12f, muzzleFlash = 1.3f
+            };
+
             [Tooltip("Minigun, needler, scatter, sentry: many small rounds, no hold, only a jolt.")]
-            public HitFeelProfile lightShot = new() { victimJolt = .07f, heavyHitKick = .05f, splash = .7f, fireRecoil = .05f, fireKick = .03f, muzzleFlash = .75f };
+            public HitFeelProfile lightShot = new()
+            {
+                victimJolt = .07f, heavyHitKick = .05f, splash = .7f, fireRecoil = .05f, fireKick = .03f,
+                muzzleFlash = .75f
+            };
+
             [Tooltip("Flames, frost, lightning, spores, explosions: flash only, never a hold.")]
-            public HitFeelProfile area = new() { victimJolt = .04f, heavyHitKick = .1f, splash = .6f, fireRecoil = .03f };
+            public HitFeelProfile area = new()
+                { victimJolt = .04f, heavyHitKick = .1f, splash = .6f, fireRecoil = .03f };
 
             public HitFeelProfile For(HitFeel feel) => feel switch
             {
@@ -63,14 +104,13 @@ namespace AnomalyArena
         public Rules rules = new Rules();
         public Feedback feedback = new Feedback();
 
-        [Header("Refs")]
-        public PlayerController player;
+        [Header("Refs")] public PlayerController player;
         public WaveManager waves;
         public Hud hud;
         public Camera cam;
 
-        [Header("Materials")]
-        [Tooltip("Base material for whitebox objects created at runtime (URP Lit)")] public Material litMaterial;
+        [Header("Materials")] [Tooltip("Base material for whitebox objects created at runtime (URP Lit)")]
+        public Material litMaterial;
 
         public GameState State { get; private set; } = GameState.Title;
         public DeathCause LoseCause { get; private set; }
@@ -92,9 +132,15 @@ namespace AnomalyArena
             Time.timeScale = 1f;
         }
 
-        public void Shake(float amount) { if (cam && cam.TryGetComponent<CameraRig>(out var rig)) rig.Shake(amount); }
+        public void Shake(float amount)
+        {
+            if (cam && cam.TryGetComponent<CameraRig>(out var rig)) rig.Shake(amount);
+        }
 
-        public void Kick(Vector3 dir, float amount) { if (amount > 0f && cam && cam.TryGetComponent<CameraRig>(out var rig)) rig.Kick(dir, amount); }
+        public void Kick(Vector3 dir, float amount)
+        {
+            if (amount > 0f && cam && cam.TryGetComponent<CameraRig>(out var rig)) rig.Kick(dir, amount);
+        }
 
         public void HitKick(Vector3 dir, float amount)
         {

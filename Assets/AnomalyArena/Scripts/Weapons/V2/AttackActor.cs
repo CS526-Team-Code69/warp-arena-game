@@ -15,36 +15,45 @@ namespace AnomalyArena
         public float pierceDamageRetention = 1f;
         public bool pierce, hurtOwner, ignoreShield, followCursor;
         public int ricochets, targetsLeft;
+        [Tooltip("Bodies a piercing bolt may still pass through before it stops; Configure resets it to no limit.")]
+        public int piercesLeft = int.MaxValue;
         public int internalWallsLeft;
-        [Tooltip("At the first wall, fly straight back along the same line instead of stopping.")]
-        public bool returnAlongPath;
-        bool rebounded;
+        [Tooltip("Seconds after launch at which the bolt turns to steerDirection (0 = never). Used by Reverse Shot Tame.")]
+        public float steerAfter;
+        public Vector3 steerDirection;
         public ElementKind element;
         public int Sequence { get; private set; }
         public bool IsReturning => returning;
         public bool PlantedRecall { get; private set; }
         public bool LobInFlight => mode == AttackMode.Lob || mode == AttackMode.Recall && !PlantedRecall;
-        public bool AffectedByHoles => mode is not (AttackMode.Field or AttackMode.Pull or AttackMode.Blast) && !LobInFlight && !(mode == AttackMode.Swarm && stoppedOnWall);
+
+        public bool AffectedByHoles => mode is not (AttackMode.Field or AttackMode.Pull or AttackMode.Blast) && !(mode == AttackMode.Swarm && stoppedOnWall);
         public bool KnifeReturning => mode == AttackMode.Knife && returning;
-        public bool HasKnifeCorpse { get; private set; }
-        public float KnifeCorpseRadius { get; private set; }
-        public Sprite KnifeCorpseSprite { get; private set; }
-        public Enemy KnifeCorpseSource { get; private set; }
-        public int KnifeCorpseSpawnVersion { get; private set; }
+
+        public bool KnifeKillReturn => mode == AttackMode.Knife && returning && killReturn;
+
+        public bool HasKnifeCorpse => false;
+        public float KnifeCorpseRadius => 0f;
+        public Sprite KnifeCorpseSprite => null;
+        public Enemy KnifeCorpseSource => null;
+        public int KnifeCorpseSpawnVersion => 0;
         public Vector3 KnifeCorpsePosition => Query.Flat(transform.position);
         public static System.Func<Enemy,int,bool> ClaimKnifeCorpse;
         public static System.Action<Enemy,int,Vector3> DropKnifeCorpse;
         public Vector3 KnifeReturnPoint { get; private set; }
         public float KnifeSpinAngle { get; private set; }
         static int nextSequence;
+        const float KnifeRadius = .35f;
+
+        const float SwarmOwnerArmDistance = 1f;
         readonly RaycastHit[] hits = new RaycastHit[32];
         readonly HashSet<Combatant> struck = new();
         readonly Collider[] knifeContacts = new Collider[128];
         readonly HashSet<Combatant> knifeReturnHits = new();
         readonly HashSet<Collider> passedWalls = new();
         readonly List<(Combatant body, Vector3 dir)> blastTargets = new();
-        float flown, tick, corpseDamage;
-        bool returning, hookRetracting, stoppedOnWall, finalFieldPush, knifeCorpseClaimedThisThrow;
+        float flown, tick;
+        bool returning, killReturn, lostToHole, hookRetracting, stoppedOnWall, finalFieldPush;
         float attachedAge;
         Combatant knifeSeekTarget;
         Combatant carrier;
@@ -65,13 +74,11 @@ namespace AnomalyArena
             damage = hit; knock = push; range = reach; speed = velocity;
             radius = area; remaining = lifetime; delay = tick = flown = 0;
             if (type == AttackMode.Hook) flown = Query.Flat(transform.position - from.Position).magnitude;
-            tickInterval = .25f; pierceDamageRetention = 1;
-            struck.Clear(); knifeReturnHits.Clear(); passedWalls.Clear(); returning = attached = hookRetracting = stoppedOnWall = finalFieldPush = false;
-            attachedAge = 0; internalWallsLeft = 0; returnAlongPath = rebounded = false;
-            knifeSeekTarget = null; HasKnifeCorpse = false; KnifeCorpseRadius = KnifeSpinAngle = 0;
-            KnifeCorpseSprite = null; KnifeReturnPoint = Vector3.zero;
-            KnifeCorpseSource = null; KnifeCorpseSpawnVersion = 0; knifeCorpseClaimedThisThrow = false;
-            corpseDamage = attachedLeft = 0; carrier = null;
+            tickInterval = .25f; pierceDamageRetention = 1; piercesLeft = int.MaxValue;
+            struck.Clear(); knifeReturnHits.Clear(); passedWalls.Clear(); returning = killReturn = lostToHole = attached = hookRetracting = stoppedOnWall = finalFieldPush = false;
+            attachedAge = 0; internalWallsLeft = 0; steerAfter = 0; steerDirection = Vector3.zero;
+            knifeSeekTarget = null; KnifeSpinAngle = 0; KnifeReturnPoint = Vector3.zero;
+            attachedLeft = 0; carrier = null;
             PlantedRecall = false; arcElapsed = arcDuration = arcHeight = landedDuration = 0f;
             hurtOwner = ignoreShield = followCursor = pierce = false;
             ricochets = 0; targetsLeft = 4; element = w?.element ?? ElementKind.None;
@@ -93,8 +100,6 @@ namespace AnomalyArena
 
         public void Release()
         {
-            if (HasKnifeCorpse && KnifeCorpseSource)
-                DropKnifeCorpse?.Invoke(KnifeCorpseSource,KnifeCorpseSpawnVersion,KnifeCorpsePosition);
             if (carrier)
             {
                 carrier.RemoveMovementModifier(this);
@@ -105,7 +110,8 @@ namespace AnomalyArena
                 if (mode == AttackMode.Knife)
                 {
                     weapon.inFlight = false;
-                    weapon.cooldown = Mathf.Max(weapon.cooldown, GameManager.Instance.runWeapons.ReturnCooldown(weapon));
+
+                    if (!lostToHole) weapon.cooldown = Mathf.Max(weapon.cooldown, GameManager.Instance.runWeapons.ReturnCooldown(weapon));
                 }
                 if (mode == AttackMode.Hook) weapon.hookBusy = false;
                 if (weapon.channelledField == this) weapon.channelledField = null;
@@ -115,20 +121,20 @@ namespace AnomalyArena
                 }
                 if (weapon.stickyActor == this) weapon.stickyActor = null;
             }
-            carrier = knifeSeekTarget = null; attached = PlantedRecall = HasKnifeCorpse = false;
-            KnifeCorpseSprite = null;
-            KnifeCorpseSource = null; KnifeCorpseSpawnVersion = 0;
+            carrier = knifeSeekTarget = null; attached = PlantedRecall = lostToHole = false;
             gameObject.SetActive(false);
         }
-        public bool TryConsumeKnifeCorpse(out Vector3 at)
-        {
-            at = KnifeCorpsePosition;
-            if (!HasKnifeCorpse) return false;
-            HasKnifeCorpse = false; corpseDamage = 0f; KnifeCorpseSprite = null;
-            KnifeCorpseSource = null; KnifeCorpseSpawnVersion = 0;
 
-            return true;
+        public void SwallowedByHole()
+        {
+            var lost = mode == AttackMode.Knife ? weapon : null;
+            var weapons = lost != null && owner ? owner.GetComponent<RunWeapons>() : null;
+            lostToHole = lost != null;
+            Release();
+            if (weapons) weapons.LoseWeapon(lost);
         }
+
+        public bool TryConsumeKnifeCorpse(out Vector3 at) { at = KnifeCorpsePosition; return false; }
 
         void FixedUpdate()
         {
@@ -166,7 +172,6 @@ namespace AnomalyArena
             if (remaining <= 0)
             {
                 if (mode == AttackMode.Bouncy || mode == AttackMode.Swarm && !stoppedOnWall) Explode();
-                if (mode == AttackMode.Pull && weapon.Has(UpgradeAxis.Twist)) PushEnemies(owner.GetComponent<RunWeapons>().upgrades.attractEndPush);
                 Release(); return;
             }
             if (mode == AttackMode.Blast) { Explode(); Release(); return; }
@@ -181,8 +186,12 @@ namespace AnomalyArena
                     { Explode(); Release(); break; }
                 return;
             }
-            if(mode==AttackMode.Swarm&&returning)
-                direction=Query.Flat(owner.Position-transform.position).normalized;
+            if (steerAfter > 0f)
+            {
+                steerAfter -= dt;
+
+                if (steerAfter <= 0f && steerDirection.sqrMagnitude > .0001f) { direction = Query.Flat(steerDirection).normalized; flown = 0f; }
+            }
             float distance = speed * dt;
             int count = Physics.SphereCastNonAlloc(transform.position, .16f, direction, hits, distance,
                 GameManager.WallMask | GameManager.CharacterMask, QueryTriggerInteraction.Ignore);
@@ -193,10 +202,9 @@ namespace AnomalyArena
                 var body = Combatant.From(hit.collider);
                 if (body == owner)
                 {
-                    if (mode == AttackMode.Swarm && returning)
-                    { transform.position = hit.point; hurtOwner = true; Explode(); Release(); return; }
 
-                    if (rebounded && hurtOwner && owner.IsAlive && struck.Add(owner)) Hit(owner, damage, 0f, direction);
+                    if (mode == AttackMode.Swarm && hurtOwner && owner.IsAlive && flown >= SwarmOwnerArmDistance)
+                    { transform.position = hit.point; Explode(); Release(); return; }
                     continue;
                 }
                 if (body && (!body.IsAlive || struck.Contains(body))) continue;
@@ -206,12 +214,6 @@ namespace AnomalyArena
                     PlaySound(WeaponAudioPhase.Impact);
                     if (internalWallsLeft > 0 && !IsBoundary(hit.collider))
                     { passedWalls.Add(hit.collider); internalWallsLeft--; continue; }
-                    if (returnAlongPath && !rebounded)
-                    {
-                        rebounded = true; direction = -direction; flown = 0f; struck.Clear();
-                        transform.position = hit.point + direction * .3f;
-                        return;
-                    }
                     if (ricochets > 0)
                     {
                         ricochets--; direction = Query.Flat(Vector3.Reflect(direction, hit.normal)).normalized;
@@ -255,23 +257,14 @@ namespace AnomalyArena
                 struck.Add(body);
                 Hit(body, damage, knock, direction);
                 damage *= pierceDamageRetention;
-                if (!pierce) { Release(); return; }
+                if (!pierce || piercesLeft-- <= 0) { Release(); return; }
             }
             transform.position += direction * distance; flown += distance;
             if (flown >= range && mode != AttackMode.Bouncy)
             {
-                if (mode == AttackMode.Swarm && !returning)
-                {
-                    if (weapon.Has(UpgradeAxis.Tame)) { Release(); return; }
-                    returning = true; direction = Query.Flat(owner.Position - transform.position).normalized;
-                    flown = 0; range = Vector3.Distance(Query.Flat(owner.Position), Query.Flat(transform.position)) + 1;
-                    hurtOwner = true;
-                }
-                else
-                {
-                    if (mode == AttackMode.Swarm) Explode();
-                    Release();
-                }
+
+                if (mode == AttackMode.Swarm) Explode();
+                Release();
             }
         }
 
@@ -315,10 +308,10 @@ namespace AnomalyArena
             transform.localScale = new Vector3(radius * 2f, .035f, radius * 2f);
         }
 
-        void BeginReturn()
+        void BeginReturn(bool afterKill)
         {
             if (returning) return;
-            returning = true; knifeSeekTarget = null;
+            returning = true; killReturn = afterKill; knifeSeekTarget = null; knifeReturnHits.Clear();
 
             KnifeReturnPoint = Query.AtCastHeight(owner ? owner.Position : transform.position);
         }
@@ -351,16 +344,16 @@ namespace AnomalyArena
                 float step = (weapons ? weapons.knifeReturnSpeed : 14f) / cycle * dt;
                 if (to.sqrMagnitude > .000001f) direction = to.normalized;
                 Vector3 next = Query.AtCastHeight(from + direction * Mathf.Min(step, to.magnitude));
-                if (HasKnifeCorpse)
+                if (killReturn)
                 {
 
-                    int count = Physics.OverlapCapsuleNonAlloc(from, next, KnifeCorpseRadius + .1f,
+                    int count = Physics.OverlapCapsuleNonAlloc(from, next, KnifeRadius,
                         knifeContacts, GameManager.CharacterMask, QueryTriggerInteraction.Ignore);
                     for (int i = 0; i < count; i++)
                     {
                         var body = Combatant.From(knifeContacts[i]);
                         if (!body || !body.IsAlive || body == owner && weapon.Has(UpgradeAxis.Tame) || !knifeReturnHits.Add(body)) continue;
-                        HitKnife(body, corpseDamage, 5f, HitKind.Slam);
+                        HitKnife(body, damage, 0f, HitKind.Pierce);
                     }
                 }
                 transform.position = next;
@@ -370,7 +363,7 @@ namespace AnomalyArena
             if (knifeSeekTarget)
             {
                 if (!knifeSeekTarget.IsAlive || struck.Contains(knifeSeekTarget)) knifeSeekTarget = NextKnifeTarget(transform.position);
-                if (!knifeSeekTarget) { BeginReturn(); return; }
+                if (!knifeSeekTarget) { BeginReturn(false); return; }
                 direction = Query.Flat(knifeSeekTarget.Position - transform.position).normalized;
             }
             Vector3 start = transform.position;
@@ -378,7 +371,7 @@ namespace AnomalyArena
             bool wallHit = Physics.Raycast(start, direction, out var wall, distance, GameManager.WallMask, QueryTriggerInteraction.Ignore);
             float available = wallHit ? Mathf.Max(0f, wall.distance - .1f) : distance;
             Vector3 end = start + direction * available;
-            int found = Physics.OverlapCapsuleNonAlloc(start, end, .35f, knifeContacts,
+            int found = Physics.OverlapCapsuleNonAlloc(start, end, KnifeRadius, knifeContacts,
                 GameManager.CharacterMask, QueryTriggerInteraction.Ignore);
             Combatant first = null; float nearest = float.PositiveInfinity;
             for (int i = 0; i < found; i++)
@@ -387,7 +380,7 @@ namespace AnomalyArena
                 if (!body || !body.IsAlive || body == owner || struck.Contains(body)) continue;
                 Vector3 delta = Query.Flat(body.Position - start);
                 float along = Vector3.Dot(delta, direction);
-                float combined = body.radius + .35f;
+                float combined = body.radius + KnifeRadius;
                 float perpendicularSq = Mathf.Max(0f, delta.sqrMagnitude - along * along);
                 if (perpendicularSq > combined * combined) continue;
                 float enter = Mathf.Max(0f, along - Mathf.Sqrt(combined * combined - perpendicularSq));
@@ -398,27 +391,12 @@ namespace AnomalyArena
             {
                 transform.position = start + direction * nearest;
                 struck.Add(first);
-
-                float capturedDamage = first.CorpseDamage, capturedRadius = first.radius;
-                var capturedSource = first as Enemy;
-                int capturedVersion = first.SpawnVersion;
-                var look = first.GetComponent<V2CharacterIllustration>();
-                Sprite capturedSprite = look && look.illustration ? look.illustration.sprite : null;
                 Vector3 struckPoint = first.Position;
                 HitKnife(first, damage, 0f, HitKind.Pierce);
-                if (!first.IsAlive && !knifeCorpseClaimedThisThrow)
-                {
-                    knifeCorpseClaimedThisThrow = true;
-                    if (capturedSource && ClaimKnifeCorpse?.Invoke(capturedSource,capturedVersion) == true)
-                    {
-                        HasKnifeCorpse = true; KnifeCorpseRadius = capturedRadius; KnifeCorpseSprite = capturedSprite;
-                        KnifeCorpseSource = capturedSource; KnifeCorpseSpawnVersion = capturedVersion;
-                        corpseDamage = capturedDamage * (weapons ? weapons.StartingFormDamageFactor(WeaponForm.Knife) : .5f);
-                        knifeReturnHits.Add(first);
-                    }
-                }
+
+                if (!first.IsAlive) { V3WorldAudio.Instance?.Play(ArenaWorldCue.WeaponKnifeReturn, transform.position); BeginReturn(true); return; }
                 knifeSeekTarget = --targetsLeft > 0 ? NextKnifeTarget(struckPoint) : null;
-                if (!knifeSeekTarget) BeginReturn();
+                if (!knifeSeekTarget) BeginReturn(false);
                 return;
             }
             transform.position = end; flown += available;
@@ -427,9 +405,9 @@ namespace AnomalyArena
                 PlaySound(WeaponAudioPhase.Impact);
                 if (ricochets > 0)
                 { ricochets--; direction = Query.Flat(Vector3.Reflect(direction, wall.normal)).normalized; knifeSeekTarget = null; }
-                else BeginReturn();
+                else BeginReturn(false);
             }
-            else if (!knifeSeekTarget && flown >= range) BeginReturn();
+            else if (!knifeSeekTarget && flown >= range) BeginReturn(false);
         }
 
         void HitKnife(Combatant target, float amount, float push, HitKind kind)
@@ -454,25 +432,12 @@ namespace AnomalyArena
                 point = Vector3.MoveTowards(point, target, 3 * dt);
                 transform.position = Query.AtCastHeight(point);
             }
-            if (mode == AttackMode.Pull)
+            tick -= dt;
+            if (tick <= 0)
             {
-                foreach (var body in Combatant.All)
-                {
-                    if (!body.IsAlive || body is Enemy { Immovable: true } || body == owner && weapon.Has(UpgradeAxis.Tame)) continue;
-                    Vector3 to = point - Query.Flat(body.Position);
-                    if (to.magnitude >= radius) continue;
-                    body.SetMovePosition(body.Position + to.normalized * speed * dt * (body == owner ? .5f : 1f));
-                }
-            }
-            else
-            {
-                tick -= dt;
-                if (tick <= 0)
-                {
-                    tick += tickInterval; Explode();
-                    if (!finalFieldPush && remaining <= tickInterval && weapon?.form == WeaponForm.Flamethrower && weapon.variant == 1 && weapon.Has(UpgradeAxis.Twist))
-                    { finalFieldPush=true;PushEnemies(owner.GetComponent<RunWeapons>().upgrades.wildfireEndPush); }
-                }
+                tick += tickInterval; Explode();
+                if (!finalFieldPush && remaining <= tickInterval && weapon?.form == WeaponForm.Flamethrower && weapon.variant == 1 && weapon.Has(UpgradeAxis.Twist))
+                { finalFieldPush=true;PushEnemies(owner.GetComponent<RunWeapons>().upgrades.wildfireEndPush); }
             }
         }
         void TickHook(float dt)

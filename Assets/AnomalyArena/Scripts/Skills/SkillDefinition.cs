@@ -8,27 +8,39 @@ namespace AnomalyArena
         public SkillId id;
         public string displayName;
         public ElementKind element;
+        [Tooltip("Draft band (system doc §11.2): the waves that may offer this skill as a NEW card. Upgrades of an owned skill ignore it.")]
+        public SkillCategory category;
         public bool greaterVoid;
         public float cost = 30f;
         public float cooldown = 2f;
-        [Tooltip("Devour's level-3 cooldown from GDD §6.3.")] public float advancedCooldown = 4f;
+        [Tooltip("Devour's level-3 cooldown.")] public float advancedCooldown = 4f;
         public float[] duration = { 0f, 0f, 0f };
         public float[] radius = { 0f, 0f, 0f };
         public float[] range = { 12f, 12f, 12f };
         public float[] strength = { 0f, 0f, 0f };
         [Tooltip("Storm Call direct damage per bolt.")] public float hitDamage = 6f;
-        [Tooltip("Storm Call Lightning stacks per bolt.")] public float hitStacks = 3f;
+        [Tooltip("Storm Call Lightning stacks per bolt. Levels 1-2 do not chain; level 3 chains through ElementCombat.ApplyStacks.")] public float hitStacks = 3f;
         [Tooltip("Gravity Well level 3 ending hit.")] public float endDamage = 10f;
-        [Tooltip("Gravity Well ending push, or Bulwark level 3 ending push.")] public float endKnockback = 10f;
+        [Tooltip("Gravity Well level 3 ending push.")] public float endKnockback = 10f;
+        [Tooltip("Frost Nova level 3: an enemy frozen by the cast stays frozen at least this many seconds in total (rules freeze 1.5 s + 1.5 s extra).")]
+        [Min(0f)] public float freezeHold = 3f;
+        [Tooltip("Bulwark: knockback distance per level for enemies that touch the wall (independent of Strength, which is the shield).")]
+        public float[] contactKnockback = { 0f, 0f, 0f };
+        [Tooltip("Radiance: status resistance per level while active, 0..1. Stacks enemies put on the player are multiplied by (1 - resistance).")]
+        public float[] statusResistance = { 0f, 0f, 0f };
         [Tooltip("Radiance level 3 immediate heal.")] public float healOnCast = 20f;
         [Tooltip("Devour payout after its Energy cost.")] public float energyReward = 20f;
         [Tooltip("Devour can feed a hole within this distance.")] public float feedRange = 10f;
         [Tooltip("Candidate spacing between Flame Wake trail samples.")] public float trailSpacing = 0.5f;
+        [Tooltip("Overcharge: cooldown timer rate of every weapon (hand and auto) while active.")]
+        [Min(1f)] public float overchargeRate = 2f;
+        [Tooltip("Overcharge level 3: weapon damage multiplier while active.")]
+        [Min(1f)] public float overchargeDamageMultiplier = 1.25f;
         [Header("Greater Void — latest user revision")]
-        [Tooltip("Gravity ring width around a temporary void hole, in grid units. Pocket Void: user-specified 1.")]
+        [Tooltip("Gravity ring width around a Pocket Void hole, in grid units. User-specified 1.")]
         [Min(0f)] public float voidGravityWidth = 1f;
-        [Tooltip("Candidate diameter of each Void Walk hole; the user specified two small holes.")]
-        [Min(0.1f)] public float voidWalkHoleDiameter = 3f;
+        [Tooltip("Void Walk: player move speed multiplier during the void state.")]
+        [Min(1f)] public float voidWalkMoveMultiplier = 1.6f;
         [Tooltip("Candidate movement multiplier for enemies drawn by Singularity.")]
         [Range(0f, 1f)] public float singularitySlowMultiplier = 0.5f;
         [Tooltip("Candidate Singularity base blast damage, before the run Damage stat.")]
@@ -41,9 +53,12 @@ namespace AnomalyArena
         public float Radius(int level) => radius[Mathf.Clamp(level - 1, 0, 2)];
         public float Range(int level) => range[Mathf.Clamp(level - 1, 0, 2)];
         public float Strength(int level) => strength[Mathf.Clamp(level - 1, 0, 2)];
-        [Min(1f), Tooltip("V4 exponential level growth: direct damage × this^(level-1), then × the wave scale R(w) and the player's damage multiplier.")]
+        public float ContactKnockback(int level) => At(contactKnockback, level);
+        public float StatusResistance(int level) => Mathf.Clamp01(At(statusResistance, level));
+        static float At(float[] values, int level) => values is { Length: > 0 } ? values[Mathf.Clamp(level - 1, 0, values.Length - 1)] : 0f;
+        [Min(1f), Tooltip("Exponential level growth: direct damage × this^(level-1), then × wave scale R(w) and the player's damage multiplier.")]
         public float levelDamageGrowth = 1.35f;
-        [Tooltip("V4: Bulwark strength is a share of max HP as Shield (0.2 = 20% of max HP); when off, it is flat points.")]
+        [Tooltip("Bulwark: Strength is a fraction of max HP given as Shield (0.2 = 20% max HP); off = flat points.")]
         public bool shieldScalesWithMaxHp = true;
 
         public float ScaledDamage(float baseDamage, int level, float damageMultiplier = 1f) =>
@@ -55,28 +70,29 @@ namespace AnomalyArena
         {
             SkillId.FlameWake => $"Leave a burning trail for {Duration(level):0.#} s: {Strength(level):0.#} Fire/s"
                 + (level >= 3 ? "; twice as wide." : "."),
-            SkillId.Contagion => $"{Strength(level):0.#} Poison; for {Duration(level):0.#} s, jump on death to "
-                + (level >= 3 ? "two enemies" : "one enemy") + $" within {Radius(level):0.#}.",
+            SkillId.Contagion => $"{Strength(level):0.#} Poison to every enemy within {Radius(level):0.#}; for {Duration(level):0.#} s, Poison jumps on death to "
+                + (level >= 3 ? "the two nearest enemies" : "the nearest enemy") + $" within {Radius(level):0.#}.",
             SkillId.FrostNova => $"{Strength(level):0.#} Frost within {Radius(level):0.#}"
-                + (level >= 3 ? "; frozen targets are knocked 50% further." : "."),
-            SkillId.StormCall => $"{Strength(level):0} bolts over {Duration(level):0.#} s: {ScaledDamage(hitDamage, level):0.#} damage (grows with waves and Damage cards) and {hitStacks:0.#} Lightning."
-                + (level >= 3 ? " Additional level-3 upgrade is not yet defined." : ""),
-            SkillId.Bulwark => $"A wall {Radius(level):0.#} wide for {Duration(level):0.#} s; " + (shieldScalesWithMaxHp ? $"Shield equal to {Strength(level) * 100f:0}% of max HP." : $"{Strength(level):0.#} Shield.")
-                + (level >= 3 ? $" Push {endKnockback:0.#} when it ends." : ""),
-            SkillId.Radiance => $"Clear statuses; hits heal {Strength(level) * 100f:0}% for {Duration(level):0.#} s."
+                + (level >= 3 ? $"; enemies it freezes stay frozen at least {freezeHold:0.#} s." : "."),
+            SkillId.StormCall => $"{Strength(level):0} bolts within {Radius(level):0.#} over {Duration(level):0.#} s: {ScaledDamage(hitDamage, level):0.#} damage (grows with waves and Damage cards) and {hitStacks:0.#} Lightning."
+                + (level >= 3 ? " Bolts chain to nearby enemies." : ""),
+            SkillId.Bulwark => $"An unbreakable wall {Radius(level):0.#} wide for {Duration(level):0.#} s; enemies that touch it are pushed {ContactKnockback(level):0.#}. "
+                + (shieldScalesWithMaxHp ? $"Shield equal to {Strength(level) * 100f:0}% of max HP." : $"{Strength(level):0.#} Shield."),
+            SkillId.Radiance => $"Clear statuses; for {Duration(level):0.#} s hits heal {Strength(level) * 100f:0}% and status resistance is {StatusResistance(level) * 100f:0}%."
                 + (level >= 3 ? $" Heal {healOnCast:0.#} HP now." : ""),
-            SkillId.Devour => $"Swallow a non-elite below {Strength(level) * 100f:0}% HP within {Range(level):0.#}; gain {energyReward:0.#} Energy.",
-            SkillId.Blink => $"Teleport up to {Range(level):0.#}; cancel knockback." + (level >= 3 ? " Leave a 2 s decoy." : ""),
+            SkillId.Devour => $"Swallow an enemy (elites too, never bosses) below {Strength(level) * 100f:0}% HP within {Range(level):0.#}; gain {energyReward:0.#} Energy. Cooldown {Cooldown(level):0.#} s.",
+            SkillId.Blink => $"Teleport up to {Range(level):0.#}; cancel knockback." + (level >= 3 ? " Two charges, each with its own cooldown." : ""),
             SkillId.Shockwave => $"Push {Strength(level):0.#} within {Radius(level):0.#}." + (level >= 3 ? " Reflect enemy projectiles." : ""),
             SkillId.GravityWell => $"Pull within {Radius(level):0.#} at {Strength(level):0.#}/s for {Duration(level):0.#} s."
                 + (level >= 3 ? $" End: {ScaledDamage(endDamage, level):0.#} damage (grows with waves), push {endKnockback:0.#}." : ""),
             SkillId.TimeSlip => $"Everything except you runs at {Strength(level) * 100f:0}% for {Duration(level):0.#} s."
                 + (level >= 3 ? " Your Attack Speed +50%." : ""),
-            SkillId.Decoy => $"Enemies chase a dummy for {Duration(level):0.#} s." + (level >= 3 ? " Ends: 8 damage, Medium push." : ""),
-            SkillId.Overcharge => $"Hand-weapon cooldowns run twice as fast for {Duration(level):0.#} s."
-                + (level >= 3 ? " Knockback +50%." : ""),
-            SkillId.PocketVoid => $"A circular hole in a {Radius(level):0.#}×{Radius(level):0.#} footprint, with a {voidGravityWidth:0.#}-wide gravity ring, for {Duration(level):0.#} s. No XP from swallowed enemies; it can swallow you too.",
-            SkillId.VoidWalk => $"Blink up to {Range(level):0.#}; leave a small hole of diameter {voidWalkHoleDiameter:0.#} at both ends for {Duration(level):0.#} s. Only these two holes spare you.",
+            SkillId.Decoy => $"Enemies chase a mirror image of you for {Duration(level):0.#} s."
+                + (level >= 3 ? " When it ends, another random skill of yours is cast there for free at its current level." : ""),
+            SkillId.Overcharge => $"Every weapon (hand and auto) cools down {overchargeRate:0.#}x as fast for {Duration(level):0.#} s."
+                + (level >= 3 ? $" Weapon damage +{(overchargeDamageMultiplier - 1f) * 100f:0}%." : ""),
+            SkillId.PocketVoid => $"A circular hole in a {Radius(level):0.#}×{Radius(level):0.#} footprint, with a {voidGravityWidth:0.#}-wide gravity ring, for {Duration(level):0.#} s. Swallowed enemies still give XP; bosses cannot be swallowed; it can swallow you too.",
+            SkillId.VoidWalk => $"Enter the void for {Duration(level):0.#} s: move speed x{voidWalkMoveMultiplier:0.#}; enemies cannot target or damage you.",
             SkillId.Singularity => $"Draw on-screen enemies {Strength(level):0.#} toward you at {singularitySlowMultiplier*100:0}% move speed. You cannot move or act for {Duration(level):0.#} s; then blast within {Radius(level):0.#} for {ScaledDamage(singularityBaseDamage, level):0.#}+{ScaledDamage(singularityDamagePerEnemy, level):0.#} per distinct absorbed enemy, growing with waves and Damage cards.",
             _ => descriptions[Mathf.Clamp(level - 1, 0, 2)]
         };
@@ -87,67 +103,66 @@ namespace AnomalyArena
             switch (skill)
             {
                 case SkillId.FlameWake:
-                    displayName = "Flame Wake"; element = ElementKind.Fire; cost = 25f;
+                    displayName = "Flame Wake"; element = ElementKind.Fire; category = SkillCategory.BasicElement; cost = 25f;
                     duration = new[] { 4f, 6f, 6f }; radius = new[] { 0.75f, 0.75f, 1.5f }; strength = new[] { 3f, 3f, 3f };
                     descriptions = new[] { "Leave a burning trail for 4 s: 3 Fire/s.", "Leave a burning trail for 6 s: 3 Fire/s.", "A 6 s trail, twice as wide: 3 Fire/s." }; break;
                 case SkillId.Contagion:
-                    displayName = "Contagion"; element = ElementKind.Poison; cost = 20f;
+                    displayName = "Contagion"; element = ElementKind.Poison; category = SkillCategory.BasicElement; cost = 20f;
                     duration = new[] { 8f, 12f, 12f }; radius = new[] { 5f, 5f, 5f }; strength = new[] { 6f, 6f, 6f };
-                    descriptions = new[] { "6 Poison. For 8 s, Poison jumps on death within 5.", "6 Poison. For 12 s, Poison jumps on death within 5.", "For 12 s, Poison jumps to the two nearest on death." }; break;
+                    descriptions = new[] { "6 Poison to all within 5. For 8 s, Poison jumps on death within 5.", "6 Poison to all within 5. For 12 s, Poison jumps on death within 5.", "6 Poison to all within 5. For 12 s, Poison jumps to the two nearest on death." }; break;
                 case SkillId.FrostNova:
-                    displayName = "Frost Nova"; element = ElementKind.Frost; cost = 30f;
-                    radius = new[] { 4f, 5.5f, 5.5f }; strength = new[] { 6f, 6f, 6f };
-                    descriptions = new[] { "6 Frost within 4: small enemies freeze.", "6 Frost within 5.5.", "6 Frost within 5.5; frozen enemies are knocked 50% further." }; break;
+                    displayName = "Frost Nova"; element = ElementKind.Frost; category = SkillCategory.BasicElement; cost = 30f;
+                    radius = new[] { 4f, 5.5f, 5.5f }; strength = new[] { 6f, 6f, 6f }; freezeHold = 3f;
+                    descriptions = new[] { "6 Frost within 4: small enemies freeze.", "6 Frost within 5.5.", "6 Frost within 5.5; enemies it freezes stay frozen at least 3 s." }; break;
                 case SkillId.StormCall:
-                    displayName = "Storm Call"; element = ElementKind.Lightning; cost = 30f;
-                    duration = new[] { 1.5f, 1.5f, 1.5f }; radius = new[] { 5f, 5f, 5f }; strength = new[] { 3f, 5f, 5f };
-                    descriptions = new[] { "3 bolts over 1.5 s: 6 damage and 3 Lightning each.", "5 bolts over 1.5 s.", "Additional level-3 upgrade is not yet defined." }; break;
+                    displayName = "Storm Call"; element = ElementKind.Lightning; category = SkillCategory.BasicElement; cost = 30f;
+                    duration = new[] { 1.5f, 1.5f, 1.5f }; radius = new[] { 5f, 6f, 6f }; strength = new[] { 3f, 5f, 6f };
+                    descriptions = new[] { "3 bolts within 5 over 1.5 s: 6 damage and 3 Lightning each.", "5 bolts within 6 over 1.5 s.", "6 bolts within 6 over 1.5 s; bolts chain to nearby enemies." }; break;
                 case SkillId.Bulwark:
-                    displayName = "Bulwark"; element = ElementKind.Earth; cost = 30f;
-                    endKnockback = 5f;
-                    duration = new[] { 5f, 8f, 8f }; radius = new[] { 4f, 4f, 4f }; strength = new[] { 10f, 15f, 15f };
-                    descriptions = new[] { "A wall 4 wide for 5 s; gain 10 Shield.", "A wall for 8 s; gain 15 Shield.", "8 s wall; Medium push when it ends; 15 Shield." }; break;
+                    displayName = "Bulwark"; element = ElementKind.Earth; category = SkillCategory.BasicElement; cost = 30f;
+                    duration = new[] { 8f, 8f, 8f }; radius = new[] { 4f, 5f, 6f }; strength = new[] { 0.15f, 0.25f, 0.4f };
+                    contactKnockback = new[] { 4f, 6f, 8f }; shieldScalesWithMaxHp = true;
+                    descriptions = new[] { "Unbreakable wall 4 wide for 8 s, contact push 4; Shield 15% max HP.", "Wall 5 wide, contact push 6; Shield 25% max HP.", "Wall 6 wide, contact push 8; Shield 40% max HP." }; break;
                 case SkillId.Radiance:
-                    displayName = "Radiance"; element = ElementKind.Light; cost = 30f;
-                    duration = new[] { 5f, 7f, 7f }; strength = new[] { 0.25f, 0.25f, 0.25f };
-                    descriptions = new[] { "Clear statuses; hits heal 25% for 5 s.", "Clear statuses; hits heal 25% for 7 s.", "Clear statuses, heal 20 HP; hits heal 25% for 7 s." }; break;
+                    displayName = "Radiance"; element = ElementKind.Light; category = SkillCategory.AdvancedElement; cost = 30f;
+                    duration = new[] { 5f, 7f, 7f }; strength = new[] { 0.25f, 0.25f, 0.25f }; statusResistance = new[] { 0.3f, 0.5f, 0.7f };
+                    descriptions = new[] { "Clear statuses; for 5 s hits heal 25%, status resistance 30%.", "For 7 s hits heal 25%, status resistance 50%.", "Heal 20 HP; for 7 s hits heal 25%, status resistance 70%." }; break;
                 case SkillId.Devour:
-                    displayName = "Devour"; element = ElementKind.Void; cost = 10f; cooldown = 6f;
-                    range = new[] { 6f, 6f, 6f }; strength = new[] { 0.3f, 0.4f, 0.4f };
-                    descriptions = new[] { "Swallow a non-elite below 30% HP within 6; gain 20 Energy.", "Target below 40% HP; gain 20 Energy.", "Target below 40% HP; cooldown 4 s; gain 20 Energy." }; break;
+                    displayName = "Devour"; element = ElementKind.Void; category = SkillCategory.AdvancedElement; cost = 10f; cooldown = 6f; advancedCooldown = 4f;
+                    range = new[] { 6f, 6f, 6f }; strength = new[] { 0.3f, 0.4f, 0.5f };
+                    descriptions = new[] { "Swallow an enemy (elites too, not bosses) below 30% HP within 6; gain 20 Energy.", "Target below 40% HP; gain 20 Energy.", "Target below 50% HP; cooldown 4 s; gain 20 Energy." }; break;
                 case SkillId.Blink:
-                    displayName = "Blink"; element = ElementKind.None; cost = 20f;
+                    displayName = "Blink"; element = ElementKind.None; category = SkillCategory.BasicMechanic; cost = 20f;
                     range = new[] { 6f, 8f, 8f };
-                    descriptions = new[] { "Teleport up to 6; cancel knockback.", "Teleport up to 8; cancel knockback.", "Teleport up to 8; leave a decoy for 2 s." }; break;
+                    descriptions = new[] { "Teleport up to 6; cancel knockback.", "Teleport up to 8; cancel knockback.", "Teleport up to 8; two charges, each with its own cooldown." }; break;
                 case SkillId.Shockwave:
-                    displayName = "Shockwave"; element = ElementKind.None; cost = 30f;
+                    displayName = "Shockwave"; element = ElementKind.None; category = SkillCategory.AdvancedMechanic; cost = 30f;
                     radius = new[] { 4f, 5f, 5f }; strength = new[] { 8f, 8f, 8f };
                     descriptions = new[] { "Heavy push within 4.", "Heavy push within 5.", "Heavy push within 5; reflect enemy projectiles." }; break;
                 case SkillId.GravityWell:
-                    displayName = "Gravity Well"; element = ElementKind.None; cost = 35f;
+                    displayName = "Gravity Well"; element = ElementKind.None; category = SkillCategory.AdvancedMechanic; cost = 35f;
                     radius = new[] { 3f, 3f, 3f }; duration = new[] { 3f, 4.5f, 4.5f }; strength = new[] { 4f, 4f, 4f };
                     descriptions = new[] { "Pull enemies within 3 at 4/s for 3 s.", "Pull for 4.5 s.", "Pull for 4.5 s; end with 10 damage and Launch push." }; break;
                 case SkillId.TimeSlip:
-                    displayName = "Time Slip"; element = ElementKind.None; cost = 40f;
+                    displayName = "Time Stop"; element = ElementKind.None; category = SkillCategory.BasicMechanic; cost = 40f;
                     duration = new[] { 2.5f, 3.5f, 3.5f }; strength = new[] { 0.3f, 0.3f, 0.3f };
                     descriptions = new[] { "Everything except you runs at 30% for 2.5 s.", "30% speed for 3.5 s.", "30% speed for 3.5 s; your Attack Speed +50%." }; break;
                 case SkillId.Decoy:
-                    displayName = "Decoy"; element = ElementKind.None; cost = 20f;
+                    displayName = "Mirror Image"; element = ElementKind.None; category = SkillCategory.AdvancedMechanic; cost = 20f;
                     duration = new[] { 3f, 5f, 5f };
-                    descriptions = new[] { "Enemies chase a dummy for 3 s.", "Enemies chase it for 5 s.", "5 s dummy; explodes for 8 damage and Medium push." }; break;
+                    descriptions = new[] { "Enemies chase a mirror image for 3 s.", "Enemies chase it for 5 s.", "5 s mirror; when it ends, another random skill of yours is cast there for free." }; break;
                 case SkillId.Overcharge:
-                    displayName = "Overcharge"; element = ElementKind.None; cost = 25f;
-                    duration = new[] { 4f, 6f, 6f };
-                    descriptions = new[] { "Hand-weapon cooldowns run twice as fast for 4 s.", "Twice as fast for 6 s.", "Twice as fast for 6 s; Knockback +50%." }; break;
+                    displayName = "Overcharge"; element = ElementKind.None; category = SkillCategory.BasicMechanic; cost = 25f;
+                    duration = new[] { 4f, 6f, 6f }; overchargeRate = 2f; overchargeDamageMultiplier = 1.25f;
+                    descriptions = new[] { "All weapon cooldowns run twice as fast for 4 s.", "Twice as fast for 6 s.", "Twice as fast for 6 s; weapon damage +25%." }; break;
                 case SkillId.PocketVoid:
                     displayName = "Pocket Void"; element = ElementKind.Void; cost = 50f;
-                    duration = new[] { 4f, 4f, 4f }; radius = new[] { 3f, 3f, 3f };
-                    descriptions = new[] { "3×3 hole for 4 s, 1-wide gravity. It can swallow you too.", "3×3 hole for 4 s.", "3×3 hole for 4 s." }; break;
+                    duration = new[] { 4f, 4f, 4f }; radius = new[] { 3f, 3f, 3f }; voidGravityWidth = 1f;
+                    descriptions = new[] { "3x3 hole for 4 s, 1-wide gravity. Swallowed enemies give XP; bosses are immune; it can swallow you too.", "3x3 hole for 4 s.", "3x3 hole for 4 s." }; break;
                 case SkillId.VoidWalk:
                     displayName = "Void Walk"; element = ElementKind.Void; cost = 40f;
-                    duration = new[] { 2f, 2f, 2f }; range = new[] { 8f, 8f, 8f };
-                    voidWalkHoleDiameter = 3f; voidGravityWidth = 1f;
-                    descriptions = new[] { "Blink; leave two small holes for 2 s.", "Blink; leave two small holes for 2 s.", "Blink; leave two small holes for 2 s." }; break;
+                    duration = new[] { 3f, 3f, 3f }; voidWalkMoveMultiplier = 1.6f;
+                    descriptions = new[] { "Enter the void for 3 s: move x1.6, cannot be targeted or damaged.", "Void state for 3 s.", "Void state for 3 s." }; break;
                 case SkillId.Singularity:
                     displayName = "Singularity"; element = ElementKind.Void; cost = 60f;
                     strength = new[] { 6f, 6f, 6f }; duration = new[] { 2f, 2f, 2f }; radius = new[] { 6f, 6f, 6f };

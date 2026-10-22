@@ -8,7 +8,7 @@ namespace AnomalyArena
         Enemy owner;
         Combatant dealer;
         Team targetTeam = Team.Player;
-        float life;
+        float life, damageFactor = 1f;
         public Vector3 Direction => direction;
 
         public bool IsPoisonSpike => owner && owner.definition && owner.definition.spikePoisonStacks > 0f;
@@ -18,6 +18,10 @@ namespace AnomalyArena
             owner = enemy;
             dealer = enemy;
             targetTeam = Team.Player;
+            damageFactor =
+                enemy
+                    ? enemy.OutgoingDamageFactor
+                    : 1f;                                                                  
             transform.position = Query.AtCastHeight(at);
             direction = Query.Flat(dir).normalized;
             life = 6f;
@@ -53,7 +57,8 @@ namespace AnomalyArena
                 float beforeShield = board ? board.Shield : 0f;
                 bool atPlayer = targetTeam == Team.Player;
 
-                var hit = DamageInfo.Attack(owner ? owner.attackDamage : 6f, dealer, direction,
+                var hit = DamageInfo.Attack((owner ? owner.attackDamage : 6f) * (atPlayer ? damageFactor : 1f), dealer,
+                    direction,
                     atPlayer ? (owner ? owner.attackKnockback : 0f) : 3f, HitKind.Bullet);
                 if (atPlayer && owner) hit.element = owner.Affix;
                 if (character.ReceiveDamage(hit) && atPlayer && owner)

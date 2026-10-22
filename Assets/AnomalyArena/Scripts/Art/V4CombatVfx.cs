@@ -42,6 +42,10 @@ namespace AnomalyArena
         public Texture prismBeam;
 
         [Min(.1f)] public float prismBeamWidth = .9f;
+        [Tooltip("Seconds the fired Spire laser stays bright after it lands.")] [Min(.02f)] public float laserFlashSeconds = .18f;
+        [Header("Special enemies (document 10.2)")]
+        [Tooltip("Bloater radiation zone on the ground; reuses the poison mist when empty.")] public Texture radiationGround;
+        [Tooltip("Chanter aura ring under every chanter; reuses the Radiance aura when empty.")] public Texture chantAura;
         [Min(1f)] public float framesPerSecond = 12f;
 
         [Tooltip("Element layers stop beyond this distance from the player so crowds stay readable and cheap.")]
@@ -65,6 +69,8 @@ namespace AnomalyArena
 
         readonly Dictionary<AttackActor, Strike> strikes = new();
         readonly List<AttackActor> ended = new();
+
+        readonly Dictionary<Enemy, (int sequence, float at)> lasers = new();
         Renderer[] boltBodies;
 
         void Awake()
@@ -113,6 +119,8 @@ namespace AnomalyArena
             DrawStrikes(gm, time);
             DrawHazards(gm, time);
             DrawBolts(gm);
+            DrawRadiation(time);
+            DrawSpecialEnemies(gm, time);
             if (player && player.IsAlive) DrawPlayerBuffs(player, gm, time);
             Vector3 centre = player ? player.Position : cameraTransform.position;
             float maxSqr = maxDistance * maxDistance;
@@ -242,6 +250,51 @@ namespace AnomalyArena
                         h.radius * 1.6f, new Color(1f, 1f, 1f, fade));
                 }
             }
+        }
+
+        void DrawRadiation(float time)
+        {
+            var zones = Enemy.RadiationZones;
+            if (zones == null) return;
+            var ground = radiationGround ? radiationGround : poisonMist;
+            for (int i = 0; i < zones.Count && used < items.Length; i++)
+            {
+                var zone = zones[i];
+                float fade = Mathf.Clamp01(zone.timeLeft / Mathf.Max(.01f, Mathf.Min(1f, zone.life)));
+                float pulse = .85f + .15f * Mathf.Sin(time * 9f + i);
+                Flat(ground, zone.position + Vector3.up * .06f, zone.radius * 2.3f * pulse, new Color(.95f, 1f, .35f, .5f * fade), time * 12f + i * 51f);
+                if (slowRing) Flat(slowRing, zone.position + Vector3.up * .07f, zone.radius * 2f, new Color(1f, .9f, .3f, .35f * fade), -time * 30f);
+            }
+        }
+
+        void DrawSpecialEnemies(GameManager gm, float time)
+        {
+            if (!gm.waves) return;
+            var aura = chantAura ? chantAura : auraRadiance;
+            foreach (var enemy in gm.waves.Alive)
+            {
+                if (!enemy || !enemy.IsAlive || !enemy.gameObject.activeInHierarchy || !enemy.definition || used >= items.Length) continue;
+                if (enemy.definition.kind == EnemyKind.Chanter)
+                {
+                    float pulse = .5f + .5f * Mathf.Sin(time * 3f);
+                    Flat(aura, new Vector3(enemy.Position.x, .07f, enemy.Position.z), Enemy.ChantRadius * 2f * (.96f + .04f * pulse),
+                        new Color(.8f, .55f, 1f, .22f + .12f * pulse), time * 20f);
+                }
+                else if (enemy.definition.kind == EnemyKind.Spire && prismBeam)
+                {
+                    bool fired = lasers.TryGetValue(enemy, out var last) && last.sequence == enemy.LaserSequence && time - last.at < laserFlashSeconds;
+                    if (!lasers.TryGetValue(enemy, out last) || last.sequence != enemy.LaserSequence)
+                    { lasers[enemy] = (enemy.LaserSequence, time); fired = enemy.LaserSequence > 0; }
+                    if (!enemy.LaserLocking && !fired) continue;
+                    Vector3 direction = Query.Flat(enemy.LaserDirection).sqrMagnitude > .001f ? Query.Flat(enemy.LaserDirection).normalized : Vector3.forward;
+                    float length = Mathf.Max(1f, enemy.LaserLength);
+                    Vector3 from = Query.AtCastHeight(enemy.Position) + direction * enemy.radius;
+                    float width = fired ? prismBeamWidth * 1.6f : prismBeamWidth * .28f * (.8f + .2f * Mathf.Sin(time * 40f));
+                    Color color = fired ? new Color(1f, .55f, .35f, .95f) : new Color(1f, .25f, .2f, .75f);
+                    PlaceStretched(prismBeam, from + direction * length * .5f, ScreenRoll(direction), length, width, color);
+                }
+            }
+            if (lasers.Count > 64) lasers.Clear();
         }
 
         void DrawBolts(GameManager gm)

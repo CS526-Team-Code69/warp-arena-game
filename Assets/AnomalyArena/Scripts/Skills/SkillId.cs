@@ -6,4 +6,6 @@ namespace AnomalyArena
         Blink, Shockwave, GravityWell, TimeSlip, Decoy, Overcharge,
         PocketVoid, VoidWalk, Singularity
     }
+
+    public enum SkillCategory { BasicElement, BasicMechanic, AdvancedElement, AdvancedMechanic }
 }

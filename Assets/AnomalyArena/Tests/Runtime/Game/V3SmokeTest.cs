@@ -63,7 +63,7 @@ namespace AnomalyArena
             var balance = game.waves.waveSet.encounterBalance;
             float fodderHp = Mathf.Max(1f, Mathf.Round(balance.DpsAt(1) * balance.fodderSeconds));
             Assert.That(spawned, Has.All.Matches<Enemy>(e => !e.Elite && e.maxHp == fodderHp), "opening wave contains fodder only, at the wave-1 TTK budget");
-            Assert.That(spawned, Has.All.Matches<Enemy>(e => Mathf.Abs(game.waves.ExperienceFor(e) - .1f) < .0001f), "fodder reward");
+            Assert.That(spawned, Has.All.Matches<Enemy>(e => Mathf.Abs(game.waves.ExperienceFor(e) - .5f) < .0001f), "fodder reward: fixed 0.5 XP (system doc §9.2)");
 
             await Until(() => game.waves.TimeExpired, 12f, "wave timer expiry");
             Assert.That(game.waves.PendingCount, Is.Zero, "births stop after expiry");
@@ -149,28 +149,29 @@ namespace AnomalyArena
             var progression = game.progression;
             game.player.ReceiveDamage(new DamageInfo { amount = 5f, source = DamageSource.Poison, ignoreShield = true });
 
-            progression.GainXp(10f);
+            progression.GainXp(15f);
 
             Assert.That(progression.Level, Is.EqualTo(2), "level two");
-            Assert.That(game.player.maxHp, Is.EqualTo(31f), "level-two max HP");
-            Assert.That(game.player.Hp, Is.EqualTo(26f), "only six HP restored, existing deficit retained");
-            Assert.That(progression.Stats.maxEnergy, Is.EqualTo(108f), "capacity grows before first skill");
+            Assert.That(game.player.maxHp, Is.EqualTo(30f), "level-two max HP");
+            Assert.That(game.player.Hp, Is.EqualTo(25f), "only five HP restored, existing deficit retained");
+            Assert.That(progression.Stats.maxEnergy, Is.EqualTo(106f), "capacity grows before first skill");
             Assert.That(progression.EnergyUnlocked, Is.False, "levelling alone does not unlock skills");
 
             progression.UnlockEnergy();
             progression.ApplyStat(new StatCardOffer(StatId.MaxEnergy, CardRarity.Common, 1000f));
-            progression.GainXp(1368f);
-            Assert.That(progression.Level, Is.EqualTo(10), "level cap");
-            Assert.That(game.player.maxHp, Is.EqualTo(79f), "max-level HP without HP cards");
-            Assert.That(progression.Stats.maxEnergy, Is.EqualTo(322f), "level growth retains original 150 mana card budget");
-            Assert.That(progression.Energy, Is.EqualTo(322f), "unlocked mana refills on true level-up");
+
+            progression.GainXp(899f);
+            Assert.That(progression.Level, Is.EqualTo(12), "level cap");
+            Assert.That(game.player.maxHp, Is.EqualTo(80f), "max-level HP without HP cards");
+            Assert.That(progression.Stats.maxEnergy, Is.EqualTo(316f), "level growth retains original 150 mana card budget");
+            Assert.That(progression.Energy, Is.EqualTo(316f), "unlocked mana refills on true level-up");
             int before = progression.BankedDrafts;
 
-            progression.GainXp(549f);
+            progression.GainXp(123f);
 
             Assert.That(progression.BankedDrafts, Is.EqualTo(before + 1), "post-cap XP grants one further card choice");
-            Assert.That(game.player.maxHp, Is.EqualTo(79f), "post-cap draft grants no extra level HP");
-            Assert.That(progression.Stats.maxEnergy, Is.EqualTo(322f), "post-cap draft grants no extra level mana");
+            Assert.That(game.player.maxHp, Is.EqualTo(80f), "post-cap draft grants no extra level HP");
+            Assert.That(progression.Stats.maxEnergy, Is.EqualTo(316f), "post-cap draft grants no extra level mana");
             Assert.That(game.RunPhase, Is.EqualTo(ArenaUiState.Title), "XP does not independently open a menu");
         }
 
@@ -369,13 +370,12 @@ namespace AnomalyArena
         }
 
         [Test, LoadScene(SceneCn), Category("Integration"), Timeout(30000)]
-        public async Task PlayerHit_NonBossEnemiesStunWithoutKnockback_BossesStillPush_GameNeverSlows()
+        public async Task PlayerHit_NonBossEnemiesNeitherStunNorPush_BossesStillPush_GameNeverSlows()
         {
             var game = await ReadyScene();
             await BeginCombat(game);
             game.waves.enabled = false;
             var player = game.player;
-            var feedback = game.feedback;
             player.protectionTime = 0f;
             player.ClearWaveState();
             Enemy Attacker(EnemyKind kind, bool elite)
@@ -391,21 +391,13 @@ namespace AnomalyArena
             Assert.That(player.ReceiveDamage(DamageInfo.Attack(1f, grunt, Vector3.right, 6f)), Is.True, "the basic hit lands");
             Assert.That(Time.timeScale, Is.EqualTo(1f), "a hit on the player never slows the game");
             Assert.That(player.State, Is.EqualTo(CharacterState.Normal), "basic enemies do not knock the player back");
-            Assert.That(player.Stunned, Is.True, "a basic hit stuns the player");
-            float basicStart = Time.time;
-            await Until(() => !player.Stunned, 2f, "basic hit stun ends");
-            float basicStun = Time.time - basicStart;
-            Assert.That(basicStun, Is.LessThan(feedback.basicHitStun + .15f), "the basic hit stun is short");
+            Assert.That(player.Stunned, Is.False, "a basic hit does not stun the player");
             Assert.That(player.ReceiveDamage(DamageInfo.Attack(1f, grunt, Vector3.right, 6f)), Is.True, "a second hit still deals damage");
-            Assert.That(player.Stunned, Is.False, "no second hit stun inside the window");
 
-            await Until(() => Time.time - basicStart >= feedback.hitStunWindow + .05f, 3f, "hit stun window passes");
             var rammer = Attacker(EnemyKind.Rammer, true);
             Assert.That(player.ReceiveDamage(DamageInfo.Attack(1f, rammer, Vector3.right, 8f)), Is.True, "the elite hit lands");
             Assert.That(player.State, Is.EqualTo(CharacterState.Normal), "elites do not knock the player back either");
-            float eliteStart = Time.time;
-            await Until(() => !player.Stunned, 2f, "elite hit stun ends");
-            Assert.That(Time.time - eliteStart, Is.GreaterThan(basicStun), "an elite stuns longer than a basic enemy");
+            Assert.That(player.Stunned, Is.False, "an elite's plain hit does not stun either (only a Rammer charge stuns, in Enemy)");
 
             player.ClearWaveState();
             var boss = game.waves.tyrant;
@@ -415,7 +407,8 @@ namespace AnomalyArena
             Assert.That(Time.timeScale, Is.EqualTo(1f), "a boss hit does not slow the game either");
 
             player.ClearWaveState();
-            game.ExecuteUiCommand(ArenaUiCommand.Pause);
+
+            await CommandUntil(game, ArenaUiCommand.Pause, () => game.RunPhase == ArenaUiState.Paused);
             Assert.That(game.RunPhase, Is.EqualTo(ArenaUiState.Paused), "pause menu is accepted after a hit");
             Assert.That(Time.timeScale, Is.Zero, "menu has fully paused time");
             await CommandUntil(game, ArenaUiCommand.Resume, () => game.RunPhase == ArenaUiState.WaveActive);

@@ -18,19 +18,22 @@ namespace AnomalyArena
         public float impact;
         public float pickupRange = 2f;
         public float protection = 0.5f;
-        public float luck;
         public float maxEnergy = 100f;
         public float energySiphon;
         public float elementPenetration;
-        [Tooltip("Chance for a player hit on an enemy to deal CritMultiplier damage; Damage cards add to it.")]
+        [Tooltip("Chance for a player hit on an enemy to deal CritMultiplier damage; Damage and Crit cards add to it, up to critCap.")]
         public float critChance;
         public float critCap = .6f;
-        [Min(1f)] public float critMultiplier = 2f;
+        [Min(1f), Tooltip("Damage factor of a critical hit; Crit cards add to it, up to critMultiplierCap.")]
+        public float critMultiplier = 2f;
+        [Min(1f), Tooltip("Highest crit multiplier the Crit card bonus can reach. Candidate 3.5.")]
+        public float critMultiplierCap = 3.5f;
         [Tooltip("Protection cards add armor: damage taken × armorConstant / (armorConstant + armor), so each point adds the same share of effective HP.")]
         public float armor;
         [Min(1f)] public float armorConstant = 100f;
         public float armorCap = 300f;
-        [Tooltip("Caps follow StatId order; negative means uncapped. MoveSpeed is in world units/s, bonuses are fractions.")]
+        [Tooltip("Caps follow StatId order; negative means uncapped. MoveSpeed is in world units/s, bonuses are fractions. "
+            + "Index 10 (Luck) is an unused slot kept for the index order; Protection uses armorCap and CritChance uses critCap.")]
         public float[] caps = { -1f, 5f, 8.4f, 1.75f, -1f, 0.5f, 1f, -1f, 10f, 1f, 30f, 250f, 2f, 1f };
 
         public float DamageMultiplier => 1f + damageBonus;
@@ -39,7 +42,12 @@ namespace AnomalyArena
         public float DamageTakenMultiplier => armorConstant / (armorConstant + Mathf.Max(0f, armor));
         public float KnockbackMultiplier => 1f + knockbackBonus;
 
-        public float Cap(StatId stat) => stat == StatId.Protection ? armorCap : caps != null && (int)stat < caps.Length ? caps[(int)stat] : -1f;
+        public float Cap(StatId stat) => stat switch
+        {
+            StatId.Protection => armorCap,
+            StatId.CritChance => critCap,
+            _ => caps != null && (int)stat < caps.Length ? caps[(int)stat] : -1f
+        };
         public bool AtCap(StatId stat) => Cap(stat) >= 0f && Value(stat) >= Cap(stat);
         float Limit(StatId stat, float value) => Cap(stat) < 0f ? value : Mathf.Min(Cap(stat), value);
         public RunStats Copy()
@@ -64,10 +72,10 @@ namespace AnomalyArena
                 case StatId.Impact: impact += amount; break;
                 case StatId.PickupRange: pickupRange = Limit(stat, pickupRange + amount); break;
                 case StatId.Protection: armor = Limit(stat, armor + amount); break;
-                case StatId.Luck: luck = Limit(stat, luck + amount); break;
                 case StatId.MaxEnergy: maxEnergy = Limit(stat, maxEnergy + amount); break;
                 case StatId.EnergySiphon: energySiphon = Limit(stat, energySiphon + amount); break;
                 case StatId.ElementPenetration: elementPenetration = Limit(stat, elementPenetration + amount); break;
+                case StatId.CritChance: critChance = Limit(stat, critChance + amount); break;
             }
             return Value(stat) - before;
         }
@@ -76,11 +84,17 @@ namespace AnomalyArena
         {
             switch (bonus)
             {
-                case StatBonus.CritChance: { float before = critChance; critChance = Mathf.Min(critCap, critChance + amount); return critChance - before; }
+                case StatBonus.CritChance: return Add(StatId.CritChance, amount);
                 case StatBonus.Regeneration: return Add(StatId.Regeneration, amount);
                 case StatBonus.Stamina: return Add(StatId.Stamina, amount);
                 case StatBonus.Impact: return Add(StatId.Impact, amount);
                 case StatBonus.EnergySiphon: return Add(StatId.EnergySiphon, amount);
+                case StatBonus.CritMultiplier:
+                {
+                    float before = critMultiplier;
+                    critMultiplier = Mathf.Min(critMultiplierCap, before + amount);
+                    return critMultiplier - before;
+                }
                 default: return 0f;
             }
         }
@@ -90,8 +104,8 @@ namespace AnomalyArena
             StatId.MaxHp => maxHp, StatId.Regeneration => regeneration, StatId.MoveSpeed => moveSpeed,
             StatId.Stamina => sprintDuration, StatId.Damage => damageBonus, StatId.AttackSpeed => attackSpeedBonus,
             StatId.Knockback => knockbackBonus, StatId.Impact => impact, StatId.PickupRange => pickupRange,
-            StatId.Protection => armor, StatId.Luck => luck, StatId.MaxEnergy => maxEnergy,
-            StatId.EnergySiphon => energySiphon, StatId.ElementPenetration => elementPenetration, _ => 0f
+            StatId.Protection => armor, StatId.MaxEnergy => maxEnergy, StatId.EnergySiphon => energySiphon,
+            StatId.ElementPenetration => elementPenetration, StatId.CritChance => critChance, _ => 0f
         };
     }
 }

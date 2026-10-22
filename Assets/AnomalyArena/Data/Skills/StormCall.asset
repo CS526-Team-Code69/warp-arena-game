@@ -15,6 +15,7 @@ MonoBehaviour:
   id: 3
   displayName: Storm Call
   element: 4
+  category: 0
   greaterVoid: 0
   cost: 30
   cooldown: 2
@@ -25,8 +26,8 @@ MonoBehaviour:
   - 1.5
   radius:
   - 5
-  - 5
-  - 5
+  - 6
+  - 6
   range:
   - 12
   - 12
@@ -34,24 +35,35 @@ MonoBehaviour:
   strength:
   - 3
   - 5
-  - 5
+  - 6
   hitDamage: 6
   hitStacks: 3
   endDamage: 10
   endKnockback: 10
+  freezeHold: 3
+  contactKnockback:
+  - 0
+  - 0
+  - 0
+  statusResistance:
+  - 0
+  - 0
+  - 0
   healOnCast: 20
   energyReward: 20
   feedRange: 10
   trailSpacing: 0.5
+  overchargeRate: 2
+  overchargeDamageMultiplier: 1.25
   voidGravityWidth: 1
-  voidWalkHoleDiameter: 3
+  voidWalkMoveMultiplier: 1.6
   singularitySlowMultiplier: 0.5
   singularityBaseDamage: 10
   singularityDamagePerEnemy: 4
   descriptions:
-  - '3 bolts over 1.5 s: 6 damage and 3 Lightning each.'
-  - 5 bolts over 1.5 s.
-  - 5 bolts; each jumps as if its target carried Frost.
+  - '3 bolts within 5 over 1.5 s: 6 damage and 3 Lightning each.'
+  - 5 bolts within 6 over 1.5 s.
+  - 6 bolts within 6 over 1.5 s; bolts chain to nearby enemies.
   icon: {fileID: 0}
   levelDamageGrowth: 1.35
   shieldScalesWithMaxHp: 1

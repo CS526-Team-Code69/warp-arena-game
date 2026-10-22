@@ -156,7 +156,7 @@ namespace AnomalyArena.EditorTools
             roster.mkDamage = new[] { 1f, 1.4f, 1.65f, 1.9f, 2.1f, 2.3f };
             roster.mkWaveSpacing = 3;
             foreach (var definition in roster.definitions)
-                definition.retired = definition.form is WeaponForm.PlasmaLauncher or WeaponForm.PhaseDagger;
+                definition.retired = WeaponRoster.IsRetired(definition.form);
             EditorUtility.SetDirty(roster);
             receipt.mkDamage = roster.mkDamage;
 

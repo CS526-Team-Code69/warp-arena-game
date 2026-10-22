@@ -17,8 +17,8 @@ MonoBehaviour:
   hp: 3
   speed: 6.2
   radius: 0.3
-  damage: 5
-  windup: 0.5
+  damage: 3
+  windup: 0.3
   interval: 1
   reach: 0.8
   knockback: 0
@@ -28,4 +28,5 @@ MonoBehaviour:
   canElite: 0
   startShieldShare: 0
   spikePoisonStacks: 1
+  splitsOnDeath: 0
   colour: {r: 0.87821996, g: 0.9, b: 0.40499997, a: 1}

@@ -84,7 +84,8 @@ namespace AnomalyArena
         }
         static bool Lifecycle(ArenaWorldCue cue)=>cue is ArenaWorldCue.BossEnter or ArenaWorldCue.BossPhase or ArenaWorldCue.BossDeath
             or ArenaWorldCue.PlayerHit or ArenaWorldCue.PlayerDeath or ArenaWorldCue.PortalOpen or ArenaWorldCue.PortalEnter or ArenaWorldCue.PortalClose
-            or ArenaWorldCue.LevelUp or ArenaWorldCue.CardReveal or ArenaWorldCue.CardReroll or ArenaWorldCue.WaveEnd or ArenaWorldCue.Victory or ArenaWorldCue.Defeat;
+            or ArenaWorldCue.LevelUp or ArenaWorldCue.CardReveal or ArenaWorldCue.CardReroll or ArenaWorldCue.WaveEnd or ArenaWorldCue.Victory or ArenaWorldCue.Defeat
+            or ArenaWorldCue.PlayerStunned or ArenaWorldCue.PickupEnergy or ArenaWorldCue.TimeHeld or ArenaWorldCue.SkillVoidWalk;
         void Update()
         {
             var gm=GameManager.Instance;

@@ -2,7 +2,10 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+                 
+                                                                                                      
+                                                                                               
+                  
     public class V2Hud : MonoBehaviour
     {
         [Header("Run and independent interstellar art")]
@@ -79,7 +82,7 @@ namespace AnomalyArena
             flash = Mathf.Max(0f, flash - dt * 3f);
             if (damageFlash) damageFlash.color = new Color(1f, .1f, .04f, flash * .15f);
             TickDamage(dt);
-
+                                                                                          
             if (lastSnapshot != null && lastSnapshot.cardPickSequence != seenPick) nextRefresh = 0f;
             if (source == null || Time.unscaledTime < nextRefresh) return;
             nextRefresh = Time.unscaledTime + Mathf.Max(.02f, refreshInterval);
@@ -134,11 +137,12 @@ namespace AnomalyArena
         {
             if (s == null) return;
             lastSnapshot = s;
-
+                                                                                                
             if (seenPick < 0) seenPick = s.cardPickSequence;
             else if (s.cardPickSequence != seenPick) { seenPick = s.cardPickSequence; PlayCardPick(s); }
+                                                                                                                    
             bool gameplay = s.state is ArenaUiState.SupplyDrop or ArenaUiState.WaveIntro or ArenaUiState.WaveActive or ArenaUiState.WaveEnd
-                or ArenaUiState.VoidTrial or ArenaUiState.FinalBoss;
+                or ArenaUiState.VoidTrial or ArenaUiState.FinalBoss or ArenaUiState.TrialReturn or ArenaUiState.Cutscene || s.buildWalking;
             gameplayRoot.SetActive(gameplay);
             if (waveLabel) waveLabel.gameObject.SetActive(s.state != ArenaUiState.SupplyDrop);
             if (themeBackground) themeBackground.gameObject.SetActive(s.state is ArenaUiState.Title or ArenaUiState.Loadout);
@@ -153,9 +157,10 @@ namespace AnomalyArena
             SetText(energyLabel, ArenaText.Text(s.voidEnergy ? "ui.energy.void" : "ui.energy", Mathf.CeilToInt(s.energy), Mathf.CeilToInt(s.maxEnergy)));
             SetFill(energyFill, s.energy, s.maxEnergy);
             energyFill.color = s.voidEnergy ? ElementColors[6] : new Color(.22f, .68f, .93f);
-            string level = s.level >= 10 ? ArenaText.Text("ui.level.max") : s.level.ToString();
+            string level = s.level >= s.maxLevel ? ArenaText.Text("ui.level.max") : s.level.ToString();
             SetText(xpLabel, ArenaText.Text("ui.xp", level, Mathf.FloorToInt(s.xp), Mathf.CeilToInt(s.xpNeeded), s.bankedDrafts));
-            xpLabel.color = s.rainbowLevel ? Color.HSVToRGB(Mathf.Repeat(Time.unscaledTime * .1f, 1f), .6f, 1f) : Color.white;
+                                                                                                  
+            xpLabel.color = s.voidLevel ? ElementColors[6] : Color.white;
             SetFill(xpFill, s.xp, s.xpNeeded);
             if (draftPips != null)
                 for (int i = 0; i < Mathf.Min(10, draftPips.Length); i++)
@@ -165,15 +170,16 @@ namespace AnomalyArena
                     if (draftPips[i].gameObject.activeSelf != visible) draftPips[i].gameObject.SetActive(visible);
                 }
             SetText(waveLabel, s.state is ArenaUiState.FinalBoss or ArenaUiState.VoidTrial
-                ? ArenaText.Text("ui.boss.hp", s.state == ArenaUiState.FinalBoss ? ArenaText.Pair("THE TYRANT","THE TYRANT") : ArenaText.Pair("THE HOLLOW","THE HOLLOW"), Mathf.CeilToInt(s.bossHp), Mathf.CeilToInt(s.bossMaxHp), Mathf.CeilToInt(s.bossShield))
+                ? ArenaText.Text("ui.boss.hp", s.state == ArenaUiState.FinalBoss ? ArenaText.Pair("THE TYRANT KING","THE TYRANT KING") : ArenaText.Pair("THE NASH PROPHET","THE NASH PROPHET"), Mathf.CeilToInt(s.bossHp), Mathf.CeilToInt(s.bossMaxHp), Mathf.CeilToInt(s.bossShield))
                 : s.waveTimeExpired ? ArenaText.Pair($"WAVE {s.wave:00} / {s.maxWaves:00} · CLEAR SURVIVORS",$"WAVE {s.wave:00} / {s.maxWaves:00} · CLEAR SURVIVORS")
                 : ArenaText.Text("ui.wave", s.wave.ToString("00"), s.maxWaves.ToString("00"), Mathf.CeilToInt(s.waveTime).ToString("00")));
             if (batchLabel)
             {
                 batchLabel.gameObject.SetActive(s.state == ArenaUiState.WaveActive);
+                batchLabel.supportRichText = true;                                   
                 SetText(batchLabel, s.waveTimeExpired
-                    ? ArenaText.Pair($"SPAWNING STOPPED · {s.waveLiving} ALIVE",$"SPAWNING STOPPED · {s.waveLiving} ALIVE")
-                    : ArenaText.Pair($"BATCH {s.waveBatch} · {s.waveLiving} ALIVE · {s.wavePending} PENDING",$"BATCH {s.waveBatch} · {s.waveLiving} ALIVE · {s.wavePending} PENDING"));
+                    ? ArenaText.Pair($"SPAWNING STOPPED · <color=#FF5F4F>{s.waveLiving} ALIVE</color>",$"SPAWNING STOPPED · <color=#FF5F4F>{s.waveLiving} ALIVE</color>")
+                    : ArenaText.Pair($"<color=#FF5F4F>{s.waveLiving} ALIVE</color> · <color=#FFD24A>{s.wavePending} PENDING</color>",$"<color=#FF5F4F>{s.waveLiving} ALIVE</color> · <color=#FFD24A>{s.wavePending} PENDING</color>"));
             }
             bool boss = s.state is ArenaUiState.VoidTrial or ArenaUiState.FinalBoss;
             waveLabel.color = !boss && s.waveTime <= 5f ? new Color(1f, .53f, .31f) : Color.white;
@@ -184,7 +190,7 @@ namespace AnomalyArena
             RenderPlayerStatuses(s.playerStatuses);
             SetText(immunityLabel, s.bossImmunities);
             if (bossImmunityIcons != null)
-                for (int i = 0; i < Mathf.Min(3, bossImmunityIcons.Length); i++)
+                for (int i = 0; i < bossImmunityIcons.Length; i++)
                 {
                     int index = s.wave >= 11 && s.bossImmunityIndices != null && i < s.bossImmunityIndices.Length ? s.bossImmunityIndices[i] : -1;
                     SetElementIcon(bossImmunityIcons[i], art, index);
@@ -197,7 +203,7 @@ namespace AnomalyArena
             RenderSlots(handSlots, s.handSlots); RenderSlots(autoSlots, s.autoSlots); RenderSlots(skillSlots, s.skillSlots);
             foreach (var screen in screens)
             {
-                bool active = screen.state == s.state;
+                bool active = screen.state == s.state && !(s.buildWalking && screen.state is ArenaUiState.Armory or ArenaUiState.Draft or ArenaUiState.Ready);
                 if (screen.gameObject.activeSelf != active) screen.gameObject.SetActive(active);
                 if (active) RenderScreen(screen, s);
             }
@@ -223,7 +229,7 @@ namespace AnomalyArena
             if (views == null || values == null) return;
             for (int i = 0; i < views.Length; i++)
             {
-
+                                                                                                                  
                 bool used = i < values.Length;
                 if (views[i] && views[i].gameObject.activeSelf != used) views[i].gameObject.SetActive(used);
                 if (used && views[i]) views[i].Render(values[i], art);
@@ -249,7 +255,7 @@ namespace AnomalyArena
             switch (s.state)
             {
                 case ArenaUiState.Title:
-
+                                                                                                                     
                     SetText(screen.heading, "WARP ARENA");
                     SetText(screen.body, "");
                     break;
@@ -259,13 +265,13 @@ namespace AnomalyArena
                     break;
                 case ArenaUiState.Armory:
                     cards = s.armoryOffers;
-                    SetText(screen.body, ArenaText.Pair("Pick one of three: a new weapon, or a stronger Mk of one you hold. You may skip. Replaced weapons lose their upgrades.","Pick one of three: a new weapon, or a stronger Mk of one you hold. You may skip. Replaced weapons lose their upgrades."));
+                    SetText(screen.body, ArenaText.Pair("Pick one of three: a new weapon, or a stronger Mk of one you hold. You may skip. Replaced weapons lose their upgrades.","Pick one of three: a new weapon, or a stronger Mk of one you hold. You may skip. Replaced weapons lose their upgrades.") + PortalHint() + WalkHint());
                     break;
                 case ArenaUiState.Draft:
                     cards = s.draftCards;
                     SetText(screen.heading, s.isGreaterReward ? ArenaText.Text("ui.greater.heading") : ArenaText.Text("ui.draft.counter", s.draftIndex, Mathf.Max(1, s.draftCount)));
                     SetText(screen.body, s.isGreaterReward ? ArenaText.Pair("Pick one Greater Void skill, or return without changing your skills. 1 / 2 / 3 select.","Pick one Greater Void skill, or return without changing your skills. 1 / 2 / 3 select.")
-                        : ArenaText.Pair("Pick a stat, a weapon change, or a skill. 1 / 2 / 3 select; R rerolls.","Pick a stat, a weapon change, or a skill. 1 / 2 / 3 select; R rerolls."));
+                        : ArenaText.Pair("Pick a stat, a weapon change, or a skill. 1 / 2 / 3 select; R rerolls.","Pick a stat, a weapon change, or a skill. 1 / 2 / 3 select; R rerolls.") + WalkHint());
                     if (screen.reroll) screen.reroll.interactable = s.rerolls > 0;
                     SetText(screen.rerollLabel, ArenaText.Text("ui.reroll.counter", s.rerolls));
                     break;
@@ -278,7 +284,7 @@ namespace AnomalyArena
                     SetText(screen.body, ArenaText.Pair("Choose the skill to replace. The new skill starts at level 1.","Choose the skill to replace. The new skill starts at level 1."));
                     break;
                 case ArenaUiState.Ready:
-                    SetText(screen.body, ArenaText.Pair("Build choices complete. Space starts the next wave.","Build choices complete. Space starts the next wave."));
+                    SetText(screen.body, ArenaText.Pair("Build choices complete. Space starts the next wave.","Build choices complete. Space starts the next wave.") + PortalHint() + WalkHint());
                     break;
                 case ArenaUiState.WeaponIntro:
                     SetText(screen.heading, s.weaponIntroTitle);
@@ -299,6 +305,13 @@ namespace AnomalyArena
             for (int i = 0; i < screen.choices.Length; i++)
                 screen.choices[i].Render(i < cards.Length ? cards[i] : null, art);
         }
+
+                                                                                                                                          
+        static string WalkHint() => ArenaText.Pair("\nTab puts this panel away so you can walk the empty arena; standing on a portal and pressing E also enters the trial.","\nTab puts this panel away so you can walk the empty arena; standing on a portal and pressing E also enters the trial.");
+
+                                                                                                                     
+        static string PortalHint() => WorldMap.Active && WorldMap.Active.HasOpenPortal && !WorldMap.Active.TrialWon
+            ? ArenaText.Pair("\nA portal is open: press E to enter the Void Trial (failure ends the run).","\nA portal is open: press E to enter the Void Trial (failure ends the run).") : "";
 
         void RenderReplacement(V2UiScreen screen, ArenaUiSlot[] slots, int count)
         {

@@ -7,6 +7,9 @@ namespace AnomalyArena
         BossEnter, BossPhase, BossCleave, BossSlam, BossCharge, BossInhale, BossDeath,
         PlayerStepMetal, PlayerStepStone, PlayerSprint, PlayerHit, PlayerDeath,
         PortalOpen, PortalEnter, PortalClose, LevelUp, CardReveal, CardReroll, WaveEnd, Victory, Defeat,
-        AmbientWreck, AmbientDust, AmbientRift, CombatMusic
+        AmbientWreck, AmbientDust, AmbientRift, CombatMusic,
+
+        NpcChant, NpcLaserLock, NpcLaserFire, NpcRadiation, PlayerStunned, WeaponJam, WeaponRepair, WeaponFocusCharge, WeaponFocusRelease, WeaponKnifeReturn,
+        SkillVoidWalk, SkillMirrorEcho, PickupEnergy, TimeHeld
     }
 }
