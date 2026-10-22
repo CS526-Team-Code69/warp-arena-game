@@ -14,12 +14,8 @@ namespace AnomalyArena
         public float spireLineWidth = .1f;
         [Tooltip("Spire warning circle colour while winding up.")]
         public Color spireLineColor = new Color(1f, .62f, .3f, .55f);
-        [Tooltip("Seconds the circle stays brighter after the pulse fires.")]
-        public float spirePulseFlash = .15f;
         const int SpireSegments = 96;
         LineRenderer spireLine;
-        int seenPulse;
-        float flashUntil;
 
         void LateUpdate()
         {
@@ -43,15 +39,14 @@ namespace AnomalyArena
 
                 illustration.transform.localScale = new Vector3(1f / Mathf.Max(.01f, sprite.bounds.size.x), 1f / Mathf.Max(.01f, sprite.bounds.size.y), 1f);
             }
-            illustration.color = Art.Enabled ? enemy.IsBoss && enemy.BossPhase == 3 ? new Color(1f, .44f, .22f, .75f)
+            Color telegraphColor = Art.Enabled ? enemy.IsBoss && enemy.BossPhase == 3 ? new Color(1f, .44f, .22f, .75f)
                 : enemy.IsBoss && enemy.BossPhase == 2 ? new Color(.83f, .57f, 1f, .75f) : new Color(1f, .72f, .36f, .75f) : whiteboxColor;
+            illustration.color = WithWindupAlpha(telegraphColor);
         }
 
         void DrawSpireCircle()
         {
-            if (enemy.PulseSequence != seenPulse) { seenPulse = enemy.PulseSequence; flashUntil = Time.time + spirePulseFlash; }
-            bool flash = Time.time < flashUntil;
-            if (!enemy.TelegraphActive && !flash) { if (spireLine) spireLine.enabled = false; return; }
+            if (!enemy.TelegraphActive) { if (spireLine) spireLine.enabled = false; return; }
             if (!spireLine)
             {
                 var line = new GameObject("SpireWarningCircle");
@@ -74,11 +69,21 @@ namespace AnomalyArena
                 float a = i * Mathf.PI * 2f / SpireSegments;
                 spireLine.SetPosition(i, centre + new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * radius);
             }
-            Color c = Art.Enabled ? spireLineColor : whiteboxColor;
-            if (flash) c.a = Mathf.Min(1f, c.a + .35f);
+            Color c = WithWindupAlpha(Art.Enabled ? spireLineColor : whiteboxColor);
             spireLine.startColor = spireLine.endColor = c;
-            spireLine.widthMultiplier = flash ? spireLineWidth * 2.5f : spireLineWidth;
+            spireLine.widthMultiplier = spireLineWidth;
             spireLine.enabled = true;
+        }
+
+        Color WithWindupAlpha(Color color)
+        {
+            float remaining = Mathf.Clamp01(enemy.WindupSecondsRemaining / Mathf.Max(.01f, enemy.windupTime));
+            float progress = 1f - remaining;
+            float alpha = Mathf.Lerp(.4f, 1f, progress);
+            if (enemy.WindupSecondsRemaining <= .2f)
+                alpha = Mathf.Sin((.2f - enemy.WindupSecondsRemaining) * Mathf.PI * 20f) >= 0f ? 1f : .4f;
+            color.a = alpha;
+            return color;
         }
     }
 }
