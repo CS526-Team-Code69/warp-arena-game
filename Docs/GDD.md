@@ -4,184 +4,219 @@
 
 | | |
 |---|---|
-| Genre | Top-down arena survival; a build grows inside each run, nothing carries over between runs |
-| View | Top-down 3D; the camera follows the player across a bounded map |
-| Platform | Web browser (Unity WebGL), desktop Chrome, Edge or Firefox; mouse and keyboard |
+| Genre | Top-down roguelike survival; a build grows inside each run, and the only thing that carries between runs is the player's own understanding of the game |
+| View | Top-down play on a flat, bounded map; the camera follows the player and stops at the map edge |
+| Platform | Web browser (Unity WebGL); mouse and keyboard |
 | Engine | Unity 6 (URP) |
-| A run | 15 timed waves and a final boss: about 11 minutes of wave combat, plus build phases and the boss fight |
-| Origin | Grew out of an earlier single-arena prototype with three weapons |
+| A run | 14 timed waves with a build phase between them, then the final boss; roughly ten to fifteen minutes |
 
-This document gives the big picture. Exact rules, numbers and edge cases are kept in separate design notes and change with tuning.
+This document gives the big picture. The exact rules live in the system design document and every number in its companion numbers sheet; both change with tuning.
 
 ---
 
 ## 1. What the game is
 
-Earth is under attack, and its first line of defence is an interstellar battlefield outside the solar system. You are the last explorer of your squad. Survive wave after wave of alien monsters until the evacuation ship arrives, then defeat the Tyrant who comes to stop it.
+Warp Arena is a roguelike survival game played in the browser with mouse and keyboard. The arena lies in warp space, and its power is behind everything strange in the game: it is what makes every weapon anomalous, it is what the skills draw on, and it shows itself on the field as black holes that swallow anything that enters them, with the void waiting behind.
 
-A strange interstellar energy saturates the battlefield and distorts every weapon: a rifle may fire out of your back, a knife may become a hook, a rocket launcher may launch *you*. Under the battlefield lies a deeper force, the void, which shows itself as black holes that swallow anything that falls in.
+What a weapon really does, and what it costs you, stays hidden until the moment you take it. During each wave you kill for experience, experience buys levels, and levels buy the weapons, skills and stats that get you through the next wave. Survive all fourteen waves and defeat the final boss, the Tyrant, to win.
 
-Moment to moment you move, aim with the mouse, sprint out of trouble, swap between two hand weapons, cast up to three skills, and keep looking for the wall or black hole that will do the killing for you.
+Moment to moment you move, aim with the mouse, sprint out of trouble, swap between two hand weapons while two auto weapons act on their own, cast up to three skills, and keep looking for the wall or black hole that will do the killing for you.
 
-## 2. Target experience
+## 2. Design pillars
 
-| The player should feel | Because |
+| Pillar | How the systems deliver it |
 |---|---|
-| **Surprise, then mastery:** "It does *what*? … Oh, I can use that." | You pick a weapon without knowing what it really does; the moment you take it, a weapon card reveals the effect and its backfire. There is no use limit, so a trick can be practised. |
-| **"The map did the killing."** | Attacks push enemies different distances; walls make them slam and rebound; black holes swallow anything, and enemies avoid holes on their own. |
-| **"My build came together."** | Weapons, elements, skills and stat cards are chosen one at a time between waves, and they combine. |
-| **"Do I risk it?"** | Feeding a black hole costs XP and terrain, opens a door for only three waves, and losing what waits behind it ends the run. |
+| **Anomalous weapons, from first surprise to mastery.** | You pick a weapon without knowing what it does; the moment you take it, a weapon card shows the effect and its backfire. Every effect has a backfire, and nothing limits how often a weapon is used, so a trick can be practised. Later upgrades can soften a backfire, and a good player turns one into a move. |
+| **The terrain is a weapon, for both sides.** | Walls deal slam damage and rebound whatever hits them. Black holes swallow everything, enemies and player alike. Enemies path around the holes on their own, but they can be knocked in. |
+| **A build of your own, inside one run.** | Two hand weapons, two auto weapons, three skills and a set of stat cards. Enemy types, counts and the boss are fixed, and so is the pool of weapons and skills; what changes is the build you assemble from the first pick onward. Growth inside a run is the build; growth between runs is your own understanding of the game. |
 
-## 3. Design pillars
-
-1. **Anomalous weapons.** Familiar form, hidden function, a backfire on every one. The backfire is part of the weapon: a good player turns it into a move.
-2. **The terrain is a weapon — for both sides.** Anything that can kill an enemy can kill you: black holes, gravity, walls, your own explosions.
-3. **A build that grows.** Levels buy cards; weapons, elements and skills all get stronger and stack into a plan.
-4. **A hidden door.** Feeding the void is optional, costly and dangerous, and winning the trial behind it changes the rest of the run.
-5. **One job per piece.** Every enemy asks one question, every element does one thing, every upgrade changes one aspect of a weapon, so a player can learn the whole game within a run.
-
-## 4. Core loop
+## 3. Core loop
 
 ```mermaid
 flowchart TD
     Fight["Fight a timed wave<br/>aim, dodge, sprint, cast skills"] --> Terrain["Use the terrain<br/>knock enemies into black holes, slam them into walls"]
     Terrain --> Rewards["Killed enemies drop XP<br/>swallowed enemies feed the hole"]
-    Rewards --> Level["Level up<br/>Energy refills, a draft is banked"]
-    Level --> Build["Build phase<br/>supply crate: a new weapon or a higher Mk<br/>drafts: a stat, a weapon change or a skill"]
+    Rewards --> Level["Level up<br/>Energy refills and a card pick opens at once:<br/>a stat, a weapon change or a skill, or keep it for later"]
+    Level --> Build["Build phase<br/>Armory: a new weapon or a higher Mk<br/>card picks kept for later"]
     Build --> Stronger["A stronger, stranger build"]
     Stronger --> Fight
     Rewards -. "a hole is fed 40 times" .-> Portal["Void portal opens for three waves"]
     Portal -. "enter and win" .-> Trial["Void trial: defeat the Hollow<br/>Void Energy and a greater void skill"]
     Trial -.-> Stronger
-    Stronger -- "after wave 15" --> Boss["Final boss: the Tyrant"]
+    Stronger -- "after wave 14" --> Boss["Final boss: the Tyrant"]
 ```
 
-The inner loop is fight → grow → fight harder. The dotted branch is the optional gamble.
+The inner loop is fight → grow → fight harder; every turn of it makes the build stronger and stranger. The dotted branch is the optional gamble, and losing it ends the run.
 
-## 5. A run, start to finish
+## 4. A run, start to finish
 
-1. **Pick a starting weapon:** Rifle, Knife or Rocket Launcher. Which of its two anomalies you got stays hidden until you fire it.
-2. **Fight a wave.** Enemies keep arriving around you while the wave timer runs. At zero, spawning stops and the survivors must be cleared. Waves grow from 30 to 50 seconds and from a handful of enemies to a crowd.
-3. **Wave end.** Every orb on the map flies to you, HP is restored and statuses clear.
-4. **Build phase.** The battlefield freezes. A supply crate drops; open it to see the Armory (three offers: a new weapon, or a higher Mk of one you hold). Then pick one card from a draft of three for every level gained in the wave.
-5. **The gamble (optional).** A black hole fed 40 times collapses into a portal that stays open for three waves. Step on it and press E to enter the void trial. Losing the trial ends the run.
-6. **The end.** After wave 15 comes one last build phase, then the Tyrant. Kill it to evacuate and win.
+1. **Pick a starting weapon.** The title screen leads to a choice of three: Rifle, Knife or Rocket Launcher. Each weapon carries one of its form's two anomalies, rolled when the weapon is made and hidden until you choose. The moment you do, the game pauses on a weapon card that explains how it fires, what it does, what element it carries and what its backfire is.
+2. **Fight a wave.** A short countdown with no enemies, then they arrive on a ring around you, preferably off screen, each spawn point marked by a red cross a moment before. While the wave timer runs, killing enemies only brings the next batch, so the field stays close to full. At zero, spawning stops and the survivors must be cleared. Every level gained raises max HP and max Energy, refills Energy and opens a card pick on the spot: the world freezes while you choose one of three. You can also keep the pick for later and reopen it during combat with T.
+3. **Wave end.** The field freezes. Your statuses clear (Shield stays), corpses, projectiles and leftover orbs are removed, and HP is refilled before the next wave starts. Black-hole feed counts, open portals, weapons, upgrades, skills, Energy and stats all carry over.
+4. **Build phase.** Time stays frozen. The Armory offers a new weapon or a higher Mk of one you hold; a new weapon can replace an old one, and it is revealed on its own weapon card. Then any card pick you kept during the wave is shown here. A wave has exactly one reroll, shared by the picks made during the wave and in its build phase. Tab puts the build panel away so you can walk the empty arena, and brings it back. Starting the next wave with picks still open asks you to confirm, then picks at random for you.
+5. **The gamble (optional).** A black hole fed 40 times collapses into a portal that stays open for three waves. Step on it and press E to enter the void trial, from the build phase or in the middle of a wave. Dying inside, or falling off its platform, ends the run.
+6. **The end.** After wave 14 comes the Tyrant. Kill it to win; if you and the Tyrant fall in the same instant, you win. Dying anywhere else brings the result screen, and a new run starts from there.
 
-## 6. Main systems
+## 5. Main systems
 
-**Anomalous weapons.** Each weapon form has two anomalies; a new weapon rolls one of them, hidden until you take it. The moment you do, the game pauses on a weapon card that explains how it fires, its damage and its backfire. Every anomaly has a backfire, from recoil that can walk you into a black hole to a corpse that flies back at you. You carry two hand weapons (right mouse button swaps) and up to two auto weapons that act on their own. There is no unarmed attack.
+**The player.** Survival comes from moving and aiming by hand, not from standing still and letting the build fire. The stamina bar is deliberately short, so a sprint is a decision: get clear of a projectile or a skill, open distance, or lead enemies into a black hole. Sprinting makes you much faster; it needs a minimum of stamina to start, then keeps going until you release the key or the bar runs dry, and the bar turns grey while it is below the starting threshold. Stamina refills on its own whenever you are not sprinting. Shield comes from Earth and from Bulwark: while you have it, damage is reduced and taken from the Shield first; it is capped at a share of your max HP and decays once you stop gaining it.
 
-**Weapon growth.** Damage growth comes from the Armory, which offers higher Mk tiers of weapons you already hold. Draft cards change a weapon instead of inflating it: *Twist* adds a behaviour, *Tame* softens the backfire, *Infusion* adds an element.
+**States and getting hit.** Player and enemies share one set of states. Knocked back or thrown: no control until the slide nearly stops, and no resisting a black hole's pull meanwhile. Hooked: the hook owns your position, and nothing can push, pull or swallow you. Missile flight: no control, and immune to knockback only. Frozen cannot move; paralysed cannot act at all. Burning and poisoned only hurt. A hit from an ordinary enemy costs HP with clear feedback, a flash at the screen edge, a nudge of the camera, a flinch and a sound, but never knocks you back, so a crowd cannot take the controls away from you; only the bosses knock you around. Every hit is followed by a brief protection window; slamming into a wall ignores it.
 
-**Elements and Shield.** Seven elements, each with one job. Fire, Poison, Frost and Lightning stay on the target; Earth, Light and Void give something back to whoever wields them. Shield sits in front of HP and cuts direct damage; burn is halved by it and poison ignores it, so which damage you deal matters. Enemies with an element affix use the same rules against you.
+**Damage, knockback and walls.** Damage is direct (weapons, collisions, some skills) or mechanical (statuses and the black holes, which simply kill). A hit resolves in order: a dead target ignores it; a protected target ignores it; Shield reduces it and absorbs it first; at zero HP the kill and its reward are paid once, and the corpse stays for a moment and can still be pushed into a hole; a surviving target is displaced by the attack's knockback tier; elements are applied last, and only to a living target. Tiers run from none (rapid-fire bullets, the throwing knife, Reverse Shot) through light, medium and heavy to launch (a full Charged Shot, the Tyrant's ground slam). Bigger bodies resist more, the Spire never moves, elites resist more than their ordinary kind, and bosses cannot be moved at all; knockback on a boss builds stagger instead, and a full bar stuns it for a while. A new knockback interrupts one in progress, so you can keep an enemy at arm's length. A knocked or thrown body that hits a wall, a pillar, the map edge or a Bulwark at speed takes slam damage, player or enemy, and rebounds with less force, sometimes into another wall or a black hole. Recoil that pushes you is not knockback and never causes slam damage. Bullets vanish on walls unless the weapon's bullets are built to bounce.
 
-**Skills and Energy.** Up to three skills on keys 1–3: one press, one cast. Energy unlocks with the first skill and refills completely at each level-up, so it should be spent, not saved. Late in a run Energy gets scarce on purpose; leech effects and the void trial are the ways out.
+**Anomalous weapons.** A weapon is a form plus an anomaly, and each anomaly brings its own backfire. Each form has two anomalies; a new weapon rolls one of them, and the roll never changes. What you got is hidden until you choose the weapon, and then the game pauses on a weapon card. Nothing limits how often a weapon fires except cooldown, magazine and reload. You never hold two weapons of the same form. Two hand slots swap with the right mouse button, and a stowed weapon's cooldown keeps running; there is no unarmed attack. Two auto slots hold weapons that act on their own. Swapping needs a normal state: it cancels a charge, is refused while the hook is out or you are in missile flight, flings a hooked enemy first, and is allowed while the knife is out, which then returns to its own slot.
 
-**Black holes, gravity and walls.** Each run has two black holes, one large and one small, placed at random from fixed spots. Anything whose centre enters one dies, player included. A gravity ring around each pulls everything inward, and only sprinting gets you out. Walls and the map edge make knocked bodies slam, take damage and rebound, sometimes into a hole.
+**Weapon strength and growth.** The six anomalies of the three starting weapons are tuned to the same strength; they differ in how they aim, how much they cover, how they control and what they cost, not in damage, so no opener is best. Every other weapon follows one rule: a weapon that hits hard hits few (one target, or a line that weakens), and a weapon that hits many starts weak and grows more, because damage and element cards apply to every hit. By mid-run all four slots are full. Damage growth comes only from the Armory, which offers higher Mk tiers of weapons you hold, so a weapon raised from the start is not easily replaced, changing builds has a cost, and the Armory stays worth opening late. Weapon cards from the draft change a weapon instead of inflating it: *Infusion* adds an element the weapon leaves on enemies (a new infusion overwrites the old; a built-in element cannot be replaced; hand and auto weapons alike), *Twist* adds a new variant of the anomaly (hand weapons), *Tame* removes or softens the backfire (hand weapons). Only a revealed weapon gets cards; Twist and Tame come once each per weapon; an infused weapon occasionally sees a card that swaps its element. A weapon's slot colour climbs with its upgrades, white, green, blue, orange, and a Void-infused weapon shows black. Upgrades belong to the weapon and leave with it when it is replaced.
 
-**The void portal and the trial.** Enemies swallowed alive give no XP but count toward their hole; a damage-killed corpse can still feed a hole once, without a second reward. At 40 the hole becomes a portal for three waves. Inside, the Hollow waits on a floating platform, and pushing its minions off the edge is how you hurt it. Winning turns Energy into self-recharging Void Energy and grants one of three greater void skills, but from then on you carry Void, and Light-affixed enemies hit you harder.
+**Elements and Shield.** Seven elements, each with one job: two deal damage over time, two control, three buff whoever wields them. Fire, Poison, Frost and Lightning stay on the target; Earth, Light and Void give something back to the wielder. Choosing an element card or an infusion is choosing a mechanic. Shield sits in front of HP and reduces direct damage, so what kind of damage you deal matters: burn is halved by it, poison ignores it, and the Railgun's Lance ignores it. Shield stops neither knockback nor status stacks. From mid-run some ordinary enemies spawn with an element affix, more of them and more kinds the later the wave, but each wave uses only two affixes, named on the wave banner before the fight; Wardens never carry one. An affixed enemy's hits put the element on you, and every status on you clears at the wave end, Shield excepted. Elites take their affix from all seven, each elite a different one. Only the Tyrant is immune to elements, two of them per run, and the Element Penetration card lets your elements work on an immune target at reduced strength.
 
-**Growth.** Killed enemies drop XP orbs that fly to you. There are ten levels; each one adds max HP and max Energy, refills Energy and banks a draft. A draft offers a stat card, a weapon card and a skill card. After level 10 every further bar becomes a stat-only draft. Stat cards come in five rarities.
+**Skills and Energy.** Up to three skills on keys 1, 2 and 3: one press, one cast, toward or at the cursor; there are no channelled, toggled or passive skills. Energy appears, full, with your first skill. Its cap rises with level and with Energy Cap cards, and every time the XP bar fills, each level and each stat pick after the cap, Energy refills completely; whatever was unspent is wasted, so spend it. Beyond that, Energy trickles in from the Energy Cap card's kill bonus, Void-infused weapons, Devour and the Shield Ring's Leech, and it goes to skills, to the hits of Void-affixed enemies and to every shot of the Sentry Drone's Gunner. A press without Energy does nothing; each skill has a cooldown, but Energy is the real limit. You can cast while knocked back, not in missile flight, paralysed or frozen. Targeted skills have a maximum range, and a target inside a wall, a hole or off the map moves to the nearest legal point toward you, or the cast fails. Skills have three levels: a card for a skill you hold raises it, and with three skills held a new one replaces one of them and starts at level one. Seven element skills (one per element) and six mechanic skills, each basic or advanced, enter the card pool at fixed waves. After the void trial, Energy becomes purple Void Energy that regenerates on its own.
 
-**Enemies and waves.** Three basic types fill every wave. Five special types appear only as elites, from wave 6, at most three at a time and each with a different element. From wave 5 some ordinary enemies carry an element affix, and the wave banner names the two in use. Enemy toughness follows a fixed per-wave budget: fodder falls in well under a second to an ordinary build, elites take several seconds, bosses about a minute.
+**Growth and cards.** Enemies within a wave are unlimited: the faster you kill, the faster you level and the more picks you earn, and the first levels come fast so a build takes shape early. Killed enemies drop XP orbs that are pulled to you; an orb that lands in a gravity ring drifts into the hole, and whatever is left on the ground vanishes at the wave end. Fodder gives a fixed amount; Spitters, Wardens and the other special enemies give more, and at the start of each wave the game sets their XP, and the elites', from the wave's composition so that experience per point of enemy health stays roughly steady; an affixed ranged or support enemy gives a little more; an elite gives several times a special; summons of a boss or of the trial give nothing. The level cap is 12. Each level needs more than the last, and the final levels take a large share of the whole. Every level raises max HP and max Energy, refills Energy and opens a card pick at once, freezing the world while you choose; Esc, Space or the pick-later button keep it for later, T reopens a kept pick during combat, and whatever is still unspent is shown in the build phase. Past the cap the bar keeps filling, and every fill gives a pick of three random stat cards. A normal pick shows three different cards: a stat card, a weapon card for a revealed weapon's untaken upgrade, and a skill card (a new skill while you hold few, mostly upgrades once you hold three). Each wave has exactly one reroll, shared by the picks made during the wave and in its build phase. Stat cards come in five rarities, common to legendary; most are common, the top tiers are rare, and a long run without a good card guarantees one. The card pool's rarities and skill tiers rise at fixed waves.
 
-**Hit feel.** Hits never slow the game down; all feedback stays local. Melee hits freeze the struck enemy for an instant, heavy shots kick and flash, rapid fire only shakes the target, and area damage barely moves it. Ordinary enemies and elites make the player stagger for a moment instead of knocking them back; only bosses still knock the player around.
+**Enemies and waves.** Each enemy asks the player one question, and no two ask the same: three basic roles (melee, ranged, support) and six special roles (buff, control, self-destruct, sentinel, displacement, assassin). Enemy health is set by what a normal build can put out in that wave, not by your current damage: fodder breaks at a touch, specials take a moment, elites take a while, and a boss is a fight of a minute or two, so a strong build plays faster without a weak one being walled. From mid-run enemies hit harder every wave and move slightly faster, and elites hit harder than their ordinary kind; enemies are kept deliberately slow so there is room to move and to use the terrain. They path around walls, holes and gravity rings and never walk into a hole themselves, with one exception: fast enemies follow you into a ring, where the pull outruns them, so standing at a ring's edge is a way to feed the hole. The Rammer's charge turns for nothing. Wave 1 is Grunts only; Spitters join at wave 2 and Wardens at wave 3; the specials arrive one or two kinds at a time from the early waves on, and Shades only in the last two. Early waves ramp gently so you learn the weapons and movement before the crowd. Enemies spawn on a ring around you, preferably off screen, never in a wall, a hole, a gravity ring or under your feet, each spot marked by a red cross first. Elites appear from mid-run, drawn from the six special types, at most three at once and each with a different affix; they are tougher, hit harder and resist knockback more, wear a buff label beside their health bar, and have a small chance to drop a health or Energy orb. When the timer hits zero, spawning stops and pending spawn marks disappear, but the fight runs until the last enemy is down.
 
-## 7. Content
+**Black holes, the portal and the void trial.** Each run has two black holes, one large and one small, placed at random from the layout's preset spots. Anything that enters one is swallowed: player, enemies, XP, health and Energy orbs, projectiles; a knife that falls in is lost, anything flying over it is taken, and only fields on the ground are spared. The gravity ring around a hole pulls everything inward harder than walking, so without sprinting you cannot get out and are slowly drawn in; a sprint crosses it, at the cost of most of your stamina. Every enemy swallowed counts once toward its hole, an elite the same as a Grunt, and a corpse pushed in counts too, but an enemy swallowed alive gives no XP: feeding is trading growth for a chance at the trial. At 40 the hole collapses, its shrinking area still killing but no longer pulling or counting, and becomes a harmless portal for three waves, not counting the one it opened in. Only one portal exists at a time, and while it is open the other hole still pulls and kills but does not count. An unused portal expires and takes its hole with it; the other hole keeps counting, so a run gets one more chance. The trial is a circular platform floating in the void, shrinking with the boss's phases, and its edge is death. Enter from the build phase and you return to it; enter during a wave and the battlefield freezes until you come back to the portal's spot, with a short pause before the wave resumes. Winning turns Energy into self-regenerating Void Energy and offers one of three greater void skills, which you may decline, and makes every black hole vanish. You carry Void only once the void boss is beaten and a void skill is equipped, a Void-infused weapon alone does not count, and from then on Light-affixed enemies hit you harder.
 
-### Hand weapons (12 forms, 24 anomalies)
+**The arena.** A bounded rectangle; you start at its centre, and the camera follows you until the edge. The edge and the walls, straight and L-shaped, block movement and projectiles, and the slam and rebound rules apply to all of them. Three looks, each with its own wall layouts, and a black hole's possible positions come with the layout.
 
-| Form | Family | Anomalies | In one line |
+**Readability.** The wave banner names the wave's two affixes before it starts; a red cross marks every spawn point; elites wear a buff label beside their health bar; the stamina bar greys below the sprint threshold; the Energy bar appears with your first skill and turns purple after the trial. One colour scale runs through the game: white, green, blue, purple, orange for card rarity, black for Void, weapons coloured by their upgrades and skills by their level. At the cap the level reads MAX, in purple if the trial is won. A card panel or menu ignores clicks for a moment after opening and until the fire button is released, so a level-up in the middle of a fight never picks a card for you.
+
+## 6. Content
+
+### Hand weapons (11 forms, 22 anomalies)
+
+| Form | Anomaly | What it does | Backfire |
 |---|---|---|---|
-| Rifle | Trick | Charged Shot · Reverse Shot | A charged shot that pierces a line, or bullets that leave from your back and push you forward. |
-| Knife | Trick | Throwing Knife · Hook | A knife that ricochets between enemies and drags a corpse back, or a hook that holds an enemy so you can fling it. |
-| Rocket Launcher | Trick | Strike · Launch Yourself | A rocket that lands where you pointed a moment later, or you become the rocket. |
-| Grav Gun | Trick | Attract · Repel | Pull everything toward a point, or blast everything away from you. |
-| Scatter Cannon | Trick | Blast · Suction | A short cone that blows enemies away, or one that drags them to the muzzle. |
-| Flamethrower | Element (Fire) | Stream · Wildfire | A cone of flame, or lobbed fireballs that leave burning ground. |
-| Cryo Cannon | Element (Frost) | Shatter · Blizzard | A fan of ice shards that freeze and shatter, or a snow spray that keeps enemies frozen. |
-| Arc Coil | Element (Lightning) | Chain · Capacitor | A bolt that jumps between enemies, or a charge built by walking and released around you. |
-| Spore Launcher | Element (Poison) | Cloud · Needler | A lingering poison cloud, or a fast stream of poison needles. |
-| Railgun | Killing | Lance · Execute | A slug that pierces a line and ignores Shield, or a shot that finishes weakened enemies and grows with every kill. |
-| Minigun | Killing | Spin-up · Meltdown | A fire rate that climbs while you hold, or full rate from the start until it overheats and explodes. |
-| Swarm Launcher | Killing | Barrage · Carpet | A fan of small rockets, or a line of blasts walking away from you. |
+| Rifle | Charged Shot | Hold to charge, release a shot that pierces a whole line; a fuller charge hurts more and pushes farther. | You walk very slowly while charging. |
+| Rifle | Reverse Shot | Hold to fire a stream; the bullets bounce off a wall once; reload when the magazine is empty. | The bullets leave from your back. |
+| Knife | Throwing Knife | The knife bounces between a few nearby enemies, then returns to the spot you threw it from, not to you. | After a kill it comes straight back and hurts everything on its path. |
+| Knife | Hook | Hooks the first enemy and drags it in front of you as a shield; click again to fling it into the others. | You cannot move while the hook goes out or comes back. |
+| Rocket Launcher | Strike | Marks the ground under the cursor; a moment later a rocket falls and blasts the area. | The blast is late, and it hurts you as much as them. |
+| Rocket Launcher | Human Missile | You become the rocket and hurt every enemy on your path. | Hitting a wall costs HP; a black hole on the path swallows you. |
+| Scatter Cannon | Blast | A short cone of pellets; the closer, the more it hurts; two shots, then reload. | A reload can jam at random and must be cleared before you fire again. |
+| Scatter Cannon | Focus | Hold to gather every pellet into one point, then fire a fast burst that reaches far. | The recoil throws you a long way backward. |
+| Flamethrower | Stream | Hold to spray fire ahead and ignite the cone (built-in Fire). | Getting hit while spraying bursts the tank, burning everything around you, and you. |
+| Flamethrower | Wildfire | Lobs a fireball that leaves burning ground; only so many patches at once. | Your own fire burns you. |
+| Cryo Cannon | Shatter | A fan of three ice shards; double damage against a frozen target (built-in Frost). | The shards leave ice on the ground that stacks Frost on you when you step on it. |
+| Cryo Cannon | Blizzard | Hold to spray snow that freezes quickly and keeps enemies frozen as long as you spray. | You are slowed by Frost while spraying. |
+| Arc Coil | Chain | An arc hits the nearest enemy ahead and jumps between nearby enemies several times (built-in Lightning). | With too few enemies to jump to, the arc comes back to you, and enough of it paralyses you. |
+| Arc Coil | Capacitor | Charges as you walk; click to discharge it on everything around you. | Held full for too long, it discharges on you by itself. |
+| Venom Launcher | Cloud | Lobs a pod that bursts into a lingering poison cloud (built-in Poison). | The fading cloud leaves a spore pod that bursts on whoever steps on it, you included. |
+| Venom Launcher | Needler | Hold to fire poison needles, each stacking Poison; reload when empty. | Firing costs you HP. |
+| Railgun | Lance | A short wind-up, then a slug that pierces a line and ignores Shield; each target behind the first takes less. | The recoil truly knocks you back, into a wall behind you or into the crowd. |
+| Railgun | Execute | A single heavy hit that kills a weakened enemy outright; every kill raises the execution threshold. | Every execution lowers your max HP. |
+| Minigun | Spin-up | Hold to fire; the rate climbs the longer you hold. | The faster it spins, the slower you can turn to aim. |
+| Minigun | Meltdown | Full rate from the first shot, but heat builds while you fire. | Overheating explodes beside you and stops the gun for a while. |
+| Swarm Launcher | Barrage | A swarm of small rockets that burst on enemies. | They leave at random angles, some straight into your face. |
+| Swarm Launcher | Carpet | A chain of blasts walking in a straight line away from you. | The first blast is right in front of you; walk forward and you walk into it. |
 
 ### Auto weapons (3 forms, 6 anomalies)
 
-| Form | Anomalies | In one line |
-|---|---|---|
-| Orbit Blades | Saw · Magnet | Blades circle you and push enemies out, or pull them in. |
-| Sentry Drone | Gunner · Whirl | A drone that shoots the nearest enemy and is paid for in Energy, or one that grabs an enemy and swings it into others. |
-| Shield Ring | Repulsor · Leech | A ring that pushes everything away, or one that drains nearby enemies for Energy. |
+| Form | Anomaly | What it does | Backfire |
+|---|---|---|---|
+| Orbit Blades | Saw | Blades circle you; enemies they touch are hurt and pushed outward. | They bat XP orbs away too. |
+| Orbit Blades | Magnet | Blades circle you; enemies they touch are hurt and pulled inward. | Enemies end up dragged into your face. |
+| Sentry Drone | Gunner | A drone shoots the nearest enemy on its own. | Every shot costs Energy; when Energy is gone, it stops. |
+| Sentry Drone | Whirl | A drone grabs an enemy, swings it around you and slams it into the others. | You do not choose where it lets go, and the swung enemy blocks your bullets. |
+| Shield Ring | Repulsor | Every so often, shoves everything near you hard. | XP orbs, and the crowd you just lined up, scatter with it. |
+| Shield Ring | Leech | Drains HP from nearby enemies and turns it into your Energy. | Part of what it drains flows into the weakest wounded enemy in the ring. |
 
 ### Elements
 
-| Element | Its one job |
-|---|---|
-| Fire | Fast damage over time that burns itself out |
-| Poison | Slow damage over time that never fades and ignores Shield |
-| Frost | Slows, then freezes |
-| Lightning | Slows and interrupts, and jumps between targets |
-| Earth | Gives the wielder Shield |
-| Light | Heals the wielder; hits Void carriers harder |
-| Void | Gives the wielder Energy; takes more from Light |
+| Element | Kind | On the target (your weapons and skills) | As an enemy affix |
+|---|---|---|---|
+| Fire | Damage over time | A fast-ticking burn, reduced by Shield; each tick removes a stack | Its hits set you burning |
+| Poison | Damage over time | A slow, long poison that ignores Shield; each tick removes a stack | Its hits poison you |
+| Frost | Control | Slows movement and attacks; at full stacks the target freezes and takes extra damage; fades over time | Its hits stack Frost on you |
+| Lightning | Control | Spreads between targets; at full stacks the target is paralysed in bursts, and hitting a paralysed enemy deals extra damage, more for every paralysed enemy near it; fades over time | Its hits stack Lightning on you |
+| Earth | Buff | Gives the wielder Shield | It spawns with Shield |
+| Light | Buff | Heals the wielder for a share of its damage; counters Void | It heals for a share of the damage it deals, and hits a Void carrier harder |
+| Void | Buff | Restores the wielder's Energy | It acts more often, and its hits drain your Energy |
 
 ### Skills (13, plus 3 greater void skills)
 
-| Group | Skills |
+| Skill | Element · tier | What it does | Levelling up |
+|---|---|---|---|
+| Flame Wake | Fire · basic | For a while a burning trail follows you; enemies that touch it catch fire | Lasts longer; at max level the trail is wider |
+| Contagion | Poison · basic | Poisons nearby enemies; for a while, a poisoned enemy that dies passes its poison to a neighbour | Lasts longer; at max level each death infects two |
+| Frost Nova | Frost · basic | Stacks Frost on everything around you; fodder freezes on the spot | Bigger; at max level the freeze lasts longer |
+| Storm Call | Lightning · basic | Random lightning strikes near the cursor, hurting and stacking Lightning | More bolts over a wider area; at max level a bolt that hits chains to nearby enemies |
+| Bulwark | Earth · basic | Raises an indestructible wall at the cursor that enemies slam into and bounce off, and gives you Shield scaled to your max HP | Thicker Shield, farther knockback, longer wall; at max level the Shield is very thick |
+| Radiance | Light · advanced | Clears every status on you; for a while your attacks heal you and you resist statuses | Longer, more resistance; at max level it also heals at once |
+| Devour | Void · advanced | Swallows one weakened enemy nearby and restores Energy | A higher health threshold; at max level a shorter cooldown |
+| Blink | Mechanic · basic | Teleports you toward the cursor and cancels a knockback in progress | Farther; at max level two uses |
+| Shockwave | Mechanic · advanced | Shoves every enemy around you hard | Bigger; at max level it also reflects enemy projectiles |
+| Gravity Well | Mechanic · advanced | A well at the target that pulls nearby enemies to its centre for a while | Longer; at max level it explodes when it ends |
+| Time Slip | Mechanic · basic | Everything but you slows down for a while | Longer; at max level your attacks are faster meanwhile |
+| Decoy | Mechanic · advanced | Places a mirror of you that enemies chase | Longer; at max level it casts a random other skill when it dies |
+| Overcharge | Mechanic · basic | All your weapons fire much faster for a while | Longer; at max level it also adds damage |
+
+The greater void skills appear only after the trial is won, as a choice of one from three, and never level up.
+
+| Greater void skill | What it does |
 |---|---|
-| Element skills | Flame Wake (burning trail), Contagion (poison that spreads on death), Frost Nova (freeze around you), Storm Call (lightning strikes at the cursor), Bulwark (a temporary wall and Shield), Radiance (cleanse and lifesteal), Devour (swallow a weakened enemy for Energy) |
-| Mechanic skills | Blink (teleport), Shockwave (push everything away), Gravity Well (pull to a point), Time Slip (slow everything but you), Decoy (a dummy enemies chase), Overcharge (faster hand-weapon cooldowns) |
-| Greater void skills (trial reward) | Pocket Void (open a temporary black hole), Void Walk (blink that leaves small holes behind), Singularity (become a black hole, then explode) |
+| Pocket Void | Opens a small black hole at the cursor that swallows anything but a boss, and you receive the XP of what it swallows |
+| Void Walk | You slip into the void: faster, untargetable and unhurtable, until it ends |
+| Singularity | Drags every enemy on screen toward you and slows them while you hang in place like a black hole, then you explode; the more pulled in, the more it hurts |
+
+### Stat cards
+
+| Card | Main effect | Side effect |
+|---|---|---|
+| Max HP | More max HP, and heals the same amount when taken | Heals a little over time |
+| Move Speed | Walk faster | Sprint lasts longer |
+| Damage | All damage up | Crit chance up |
+| Attack Speed | Shorter weapon cooldowns | — |
+| Crit | Crit chance up | Crit multiplier up |
+| Protection | Armour that reduces the damage you take | — |
+| Energy Cap | Higher max Energy (appears once Energy is unlocked) | A little Energy for every enemy that dies |
+| Element Penetration | Your elements work on an immune target at reduced strength | — |
 
 ### Enemies
 
-| Enemy | Role |
-|---|---|
-| Grunt | Basic melee: walks up and punches. Also appears with Skitter, Splitter and Brute bodies. |
-| Spitter | Basic ranged: keeps its distance and shoots poison spikes. |
-| Warden | Basic support: never attacks, shields every ally near it. |
-| Rammer (elite only) | Telegraphs a line, then charges along it. |
-| Bloater (elite only) | Explodes when killed or when it reaches you, hurting everyone nearby. |
-| Spire (elite only) | An immovable tower that pulses damage around itself. |
-| Stomper (elite only) | Arrives shielded and slams the ground. |
-| Shade (elite only) | Cloaks after it appears, then reveals itself to strike very hard. |
+| Enemy | Role | Behaviour |
+|---|---|---|
+| Grunt | Basic · melee | Walks up, locks its facing and punches. Three bodies: the Brute winds up long, hits hard and is slow; the Skitter is fast with a short wind-up but weak; the Splitter sits between them and splits into small Splitters when killed. |
+| Spitter | Basic · ranged (from wave 2) | Keeps its distance, charges when it has line of sight, and fires a poison spike. |
+| Warden | Basic · support (from wave 3) | Never attacks; hides behind allies and shields those around it, topping them up over time. Never carries an affix. |
+| Chanter | Special · buff | Never attacks; hides behind allies and chants, raising the damage of every ally in range. |
+| Rammer | Special · control | Draws a charge line, then charges along it without turning; a player it hits is stunned. A wall stuns it; a black hole swallows it. |
+| Bloater | Special · self-destruct | Walks straight at you, swells and explodes up close, hurting everything; it explodes when killed too, and leaves a radiation patch that hurts you. |
+| Spire | Special · sentinel | Never moves. Draws a warning circle, pulses around itself, then locks on a player inside the circle and fires a laser. |
+| Stomper | Special · displacement | Closes in, winds up and slams the ground, launching everything nearby. Spawns with Shield, away from the crowd. |
+| Shade | Special · assassin | Announces itself with its own colour and sound, shows for a moment, then cloaks; its strike can kill you outright. Any damage reveals it, its health is very low, and only a few exist at once. |
 
 ### Bosses
 
 | Boss | Where | What it tests |
 |---|---|---|
-| The Hollow | The void trial | Pushing things off the edge: it cannot be moved, but every minion knocked off the platform costs it health. |
-| The Tyrant | After wave 15 | The whole build: a shielded single target that summons crowds and is immune to three random elements, announced at wave 11. Charging into a wall stuns it and breaks its Shield. |
+| The Hollow | The void trial | Positioning: using the platform's terrain and dodging its projectiles. It has no Shield, is always immune to Lightning and Frost, cannot be pushed, and its summons give no XP; the platform shrinks with each of its phases. |
+| The Tyrant | After wave 14 | The whole build: a thick, shielded single target (do you have high damage or Shield-piercing?), it gathers crowds (do you have area damage?), and it is immune to two random elements fixed at the start and announced at wave 11 (is your damage one-note?). It re-shields at every new phase and cannot be pushed; knockback builds stagger instead, and a full bar stuns it for a while. Its hits, like the Hollow's, knock you back. |
 
 ### Biomes
 
-Wreck Field, Dust Flats and Rift Zone: each is a look and a set of wall layouts. Biomes never change the rules.
+Dust Flats, Wreck Field and Rift Zone: each is a look with its own wall layouts.
 
-## 8. Controls
+## 7. Controls
 
 | Action | Input |
 |---|---|
-| Move / sprint | WASD / hold Shift |
-| Aim / use hand weapon | Mouse / left mouse button (hold to charge or to keep firing, depending on the weapon) |
-| Swap hand weapon | Right mouse button |
-| Cast skill / pick a card | 1, 2, 3 |
-| Enter the void portal | E while standing on it |
-| Open a landed supply crate | Click it, Enter or Space |
-| Start the next wave | Space or the on-screen button |
-| Pause | Esc |
-| Restart (result screen) / reroll (draft) | R |
-| Switch between illustrated and whitebox art (title screen) | T |
+| Move | WASD |
+| Aim | Mouse |
+| Use the held weapon | Left mouse button (hold to charge or to keep firing, depending on the weapon) |
+| Swap the two hand slots | Right mouse button |
+| Sprint | Hold left Shift |
+| Cast a skill / select a card while a card panel is open | 1, 2, 3 |
+| Open the banked card pick during combat / switch art mode on the title screen | T |
+| Put the build panel away to walk the empty arena, and bring it back | Tab |
+| Enter the void trial | E while standing on the portal |
+| Start, open the crate, close the weapon card, start the next wave; pick later on a mid-wave card panel | Space or Enter |
+| Pause / resume; pick later on a mid-wave card panel | Esc |
+| Reroll while a card panel is open (once per wave) / restart on the result screen | R |
 
-## 9. Art and audio
-
-The game has two art modes, illustrated and whitebox, which can be switched on the title screen. In the current Alpha build the illustrated mode is the default. The illustrated mode's 3D models and character animation were made with Meshy, and its sound effects and music with ElevenLabs; the UI and VFX were built, and these assets brought into the game, with Claude (see External References).
-
-## 10. Next
-
-The next version is being designed around a 14-wave structure with a mid-run boss, two balance profiles chosen on the title screen, and one signature move for each elite.
-
-## 11. External References
+## 8. External References
 
 AI tools used in making the game:
 
