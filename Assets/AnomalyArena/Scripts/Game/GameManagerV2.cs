@@ -12,6 +12,12 @@ namespace AnomalyArena
         public SkillLoadout skills;
         public OrbPool orbs;
         public float buildTimeLeft;
+        [Min(0f), Tooltip("Seconds into the black-hole cutscene before Space, Enter or Esc can skip it; a left click never skips it (players keep clicking while they fight, which used to skip it at once).")]
+        public float cutsceneSkipDelay = 1f;
+                                                                                                                                        
+                                                                                                                              
+        public static bool SkipsCutscene(bool space, bool enter, bool escape, bool leftClick, float secondsIn, float delay)
+            => secondsIn >= delay && (space || enter || escape);
         [Min(0f), Tooltip("Weapon and skill choice time limit. Zero means unlimited and disables automatic selection.")]
         public float selectionTimeLimit;
         public ArenaUiState RunPhase { get; private set; }=ArenaUiState.Title;
@@ -104,7 +110,8 @@ namespace AnomalyArena
                 if(kb.eKey.wasPressedThisFrame&&!BuildWalking&&RunPhase is ArenaUiState.Armory or ArenaUiState.Draft or ArenaUiState.Ready&&WorldMap.Active&&WorldMap.Active.HasOpenPortal)ExecuteUiCommand(ArenaUiCommand.EnterPortal);
                                                                                                                
                 if(kb.tabKey.wasPressedThisFrame&&RunPhase is ArenaUiState.Armory or ArenaUiState.Draft or ArenaUiState.Ready)ExecuteUiCommand(ArenaUiCommand.ToggleBuildWalk);
-                if(RunPhase==ArenaUiState.Cutscene&&(kb.spaceKey.wasPressedThisFrame||kb.enterKey.wasPressedThisFrame||kb.escapeKey.wasPressedThisFrame||Mouse.current!=null&&Mouse.current.leftButton.wasPressedThisFrame))WorldMap.Active?.SkipHoleIntro();
+                if(RunPhase==ArenaUiState.Cutscene&&SkipsCutscene(kb.spaceKey.wasPressedThisFrame,kb.enterKey.wasPressedThisFrame,kb.escapeKey.wasPressedThisFrame,
+                    Mouse.current!=null&&Mouse.current.leftButton.wasPressedThisFrame,Time.unscaledTime-phaseOpenedAt,cutsceneSkipDelay))WorldMap.Active?.SkipHoleIntro();
                 if(kb.rKey.wasPressedThisFrame){if(RunPhase==ArenaUiState.Result)ExecuteUiCommand(ArenaUiCommand.Restart);else if(RunPhase is (ArenaUiState.Draft or ArenaUiState.LevelUp)&&!BuildWalking)ExecuteUiCommand(ArenaUiCommand.Reroll);}
                 int choice=kb.digit1Key.wasPressedThisFrame?0:kb.digit2Key.wasPressedThisFrame?1:kb.digit3Key.wasPressedThisFrame?2:-1;
                 if(choice>=0&&MenuInputReady&&!BuildWalking)
