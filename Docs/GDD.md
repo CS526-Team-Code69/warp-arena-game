@@ -92,7 +92,7 @@ The inner loop is fight → grow → fight harder; every turn of it makes the bu
 | Rifle | Charged Shot | Hold to charge, release a shot that pierces a whole line; a fuller charge hurts more and pushes farther. | You walk very slowly while charging. |
 | Rifle | Reverse Shot | Hold to fire a stream; the bullets bounce off a wall once; reload when the magazine is empty. | The bullets leave from your back. |
 | Knife | Throwing Knife | The knife bounces between a few nearby enemies, then returns to the spot you threw it from, not to you. | After a kill it comes straight back and hurts everything on its path. |
-| Knife | Hook | Hooks the first enemy and drags it in front of you as a shield; click again to fling it into the others. | You cannot move while the hook goes out or comes back. |
+| Knife | Hook | Hooks the first enemy and drags it in front of you as a shield; click again to fling it into the others. | You cannot move while the hook goes out or comes back. After it comes back empty or flings an enemy, it needs a moment before it can go out again. |
 | Rocket Launcher | Strike | Marks the ground under the cursor; a moment later a rocket falls and blasts the area. | The blast is late, and it hurts you as much as them. |
 | Rocket Launcher | Human Missile | You become the rocket and hurt every enemy on your path. | Hitting a wall costs HP; a black hole on the path swallows you. |
 | Scatter Cannon | Blast | A short cone of pellets; the closer, the more it hurts; two shots, then reload. | A reload can jam at random and must be cleared before you fire again. |

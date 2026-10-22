@@ -115,7 +115,12 @@ namespace AnomalyArena
 
                     if (!lostToHole) weapon.cooldown = Mathf.Max(weapon.cooldown, GameManager.Instance.runWeapons.ReturnCooldown(weapon));
                 }
-                if (mode == AttackMode.Hook) weapon.hookBusy = false;
+                if (mode == AttackMode.Hook)
+                {
+                    weapon.hookBusy = false;
+
+                    if (weapon.hooked == null) weapon.cooldown = Mathf.Max(weapon.cooldown, GameManager.Instance.runWeapons.HookCooldown(weapon));
+                }
                 if (weapon.channelledField == this) weapon.channelledField = null;
                 if (weapon.recallActor == this)
                 {

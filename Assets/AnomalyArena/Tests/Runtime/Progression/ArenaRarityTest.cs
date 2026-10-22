@@ -33,6 +33,7 @@ namespace AnomalyArena
         [TestCase(UpgradeAxis.Power | UpgradeAxis.Tempo, CardRarity.Exceptional)]
         [TestCase(UpgradeAxis.Power | UpgradeAxis.Tempo | UpgradeAxis.Reach, CardRarity.Exceptional)]
         [TestCase(UpgradeAxis.Power | UpgradeAxis.Tempo | UpgradeAxis.Reach | UpgradeAxis.Twist, CardRarity.Epic)]
+        [TestCase(UpgradeAxis.Power | UpgradeAxis.Tempo | UpgradeAxis.Reach | UpgradeAxis.Twist | UpgradeAxis.Tame, CardRarity.Legendary)]
         public void ForWeapon_UpgradeCount_MapsToTier(UpgradeAxis axes, CardRarity expected)
         {
             var weapon = new RunWeapon { axes = axes };
@@ -43,13 +44,26 @@ namespace AnomalyArena
         }
 
         [Test]
-        public void ForWeapon_FifthUpgradePreview_ReachesLegendary()
+        public void ForWeapon_CardPreview_ShowsTheTierAlreadyTakenNotTheOneAfter()
         {
             var weapon = new RunWeapon { axes = UpgradeAxis.Infusion | UpgradeAxis.Power | UpgradeAxis.Tempo | UpgradeAxis.Reach };
 
             var actual = ArenaRarity.ForWeapon(weapon, UpgradeAxis.Tame);
 
-            Assert.That(actual, Is.EqualTo(CardRarity.Legendary));
+            Assert.That(actual, Is.EqualTo(CardRarity.Epic), "four upgrades taken: the fifth card is still purple");
+        }
+
+        [TestCase(4, UpgradeAxis.None, CardRarity.Common)]
+        [TestCase(4, UpgradeAxis.Power, CardRarity.Rare)]
+        [TestCase(6, UpgradeAxis.Power | UpgradeAxis.Tempo, CardRarity.Exceptional)]
+        public void ForWeapon_ArmoryMk_NeverCountsAsAnUpgrade(int mk, UpgradeAxis axes, CardRarity expected)
+        {
+            var weapon = new RunWeapon { mk = mk, axes = axes };
+            var card = new DraftCard(DraftCardKind.Weapon, "Upgrade", "", _ => true,
+                payload: new WeaponUpgradeOffer(weapon, UpgradeAxis.Twist, ElementKind.None));
+
+            Assert.That(ArenaRarity.ForWeapon(weapon), Is.EqualTo(expected), "slot colour");
+            Assert.That(card.Rarity, Is.EqualTo(expected), "card colour");
         }
 
         [TestCase(1, CardRarity.Common)]

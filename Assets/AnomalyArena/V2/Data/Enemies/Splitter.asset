@@ -18,8 +18,8 @@ MonoBehaviour:
   speed: 5
   radius: 0.5
   damage: 5
-  windup: 0.5
-  interval: 1
+  windup: 0.25
+  interval: 0.8
   reach: 0.8
   knockback: 0
   knockbackScale: 1

@@ -41,6 +41,8 @@ namespace AnomalyArena
         public CharacterState State { get; private set; } = CharacterState.Normal;
         public DeathCause DeathCause { get; private set; }
         public bool Protected => protectTimer > 0f;
+                                                                                                                          
+        [System.NonSerialized] public bool Invulnerable;
 
         public event Action<Combatant> Eliminated;
                                                                                                              
@@ -608,7 +610,7 @@ namespace AnomalyArena
                                                                                                                                                
         public void Kill()
         {
-            if (!IsAlive || InVoidWalk) return;
+            if (!IsAlive || InVoidWalk || Invulnerable) return;
             PlayHitFeedback(Mathf.Max(Hp, GM.feedback.heavyDamage), Vector3.zero, HitKind.Pierce);
             Hp = 0f;
             Die(DeathCause.HpDepleted);
@@ -617,6 +619,7 @@ namespace AnomalyArena
         protected void Die(DeathCause cause)
         {
             if (!IsAlive) return;
+            if (Invulnerable) { Hp = Mathf.Max(Hp, 1f); return; }
             DeathVelocity=rb&&!rb.isKinematic?Query.Flat(rb.linearVelocity):Vector3.zero;
             if(DeathVelocity.sqrMagnitude<.01f)DeathVelocity=LastHitDirection*3f;
             Hp = Mathf.Max(0f, Hp);

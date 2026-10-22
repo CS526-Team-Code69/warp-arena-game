@@ -11,6 +11,8 @@ namespace AnomalyArena
         float life, damageFactor = 1f;
         public Vector3 Direction => direction;
 
+        float Speed => owner && owner.definition ? Mathf.Max(.1f, owner.definition.projectileSpeed) : 7f;
+
         public bool IsPoisonSpike => owner && owner.definition && owner.definition.spikePoisonStacks > 0f;
 
         public void Launch(Enemy enemy, Vector3 at, Vector3 dir)
@@ -42,7 +44,7 @@ namespace AnomalyArena
             if (!GameManager.Instance.IsCombatActive) return;
             float dt = GameManager.Instance.WorldFixedDeltaTime;
             Vector3 from = transform.position;
-            Vector3 to = from + direction * (7f * dt);
+            Vector3 to = from + direction * (Speed * dt);
             if (Query.WallBetween(from, to, out _) || (WorldMap.Active && WorldMap.Active.IsHole(to)))
             {
                 gameObject.SetActive(false);

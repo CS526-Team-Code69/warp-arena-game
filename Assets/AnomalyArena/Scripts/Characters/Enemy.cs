@@ -178,10 +178,9 @@ namespace AnomalyArena
 
         public static void ClearRadiationZones() => radiationZones.Clear();
 
-        static float RammerStunSeconds => GM && GM.waves ? Mathf.Max(0f, GM.waves.rammerStunSeconds) : 1f;
-        static float SpireLaserDelay => GM && GM.waves ? Mathf.Max(.01f, GM.waves.spireLaserDelay) : .6f;
-        static float SpireLaserLength => GM && GM.waves ? Mathf.Max(0f, GM.waves.spireLaserLength) : 12f;
-        static float SpireLaserHalfWidth => GM && GM.waves ? Mathf.Max(0f, GM.waves.spireLaserHalfWidth) : .6f;
+        float SpireLaserDelay => definition ? Mathf.Max(.01f, definition.laserDelay) : .6f;
+        float SpireLaserLength => definition ? Mathf.Max(0f, definition.laserLength) : 12f;
+        float SpireLaserHalfWidth => definition ? Mathf.Max(0f, definition.laserHalfWidth) : .6f;
         static float ChantInterval => GM && GM.waves ? Mathf.Max(.1f, GM.waves.chantInterval) : 3f;
 
         static float VoidIntervalFactor =>
@@ -341,6 +340,8 @@ namespace AnomalyArena
 
         public bool IsLarge => large;
         public bool WindingUp => windup;
+        public bool Charging => charging;
+        public float CooldownRemaining => Mathf.Max(0f, cooldown);
         public float WindupSecondsRemaining => windup ? Mathf.Max(0f, windupTimer) : 0f;
 
         public int AttackSequence { get; private set; }
@@ -535,7 +536,7 @@ namespace AnomalyArena
 
             if (charging)
             {
-                float speed = IsBoss ? 18f * (bossPhase == 3 ? 1.25f : 1f) : 16f;
+                float speed = IsBoss ? 18f * (bossPhase == 3 ? 1.25f : 1f) : definition.chargeSpeed;
                 speed *= GM && GM.waves ? GM.waves.MovementSpeedScale : 1f;
                 float step = speed * dt;
                 bool wall = Query.WallBetween(Query.AtCastHeight(Position),
@@ -569,7 +570,7 @@ namespace AnomalyArena
                     bool landed = DealHit(player, IsBoss ? 20 : attackDamage, facing, IsBoss ? 8 : 0);
                     if (landed && !IsBoss && player.IsAlive)
                     {
-                        player.Stun(RammerStunSeconds);
+                        player.Stun(definition.chargeStun);
                         V3WorldAudio.Instance?.Play(ArenaWorldCue.PlayerStunned, player.Position);
                     }
                     charging = false;
@@ -593,9 +594,9 @@ namespace AnomalyArena
             switch (definition.kind)
             {
                 case EnemyKind.Spitter:
-                    MoveTowards(player.Position, distance < 8f ? -1f : distance > 10f ? 1f : 0f, dt);
+                    MoveTowards(player.Position, distance < definition.rangedNear ? -1f : distance > definition.rangedFar ? 1f : 0f, dt);
                     if (cooldown <= 0f && !Query.WallBetween(Query.AtCastHeight(Position),
-                            Query.AtCastHeight(player.Position), out _)) BeginWindup(0.8f, 10f);
+                            Query.AtCastHeight(player.Position), out _)) BeginWindup(windupTime, definition.rangedFar);
                     return true;
                 case EnemyKind.Warden:
                     supportTimer -= dt;
@@ -638,20 +639,20 @@ namespace AnomalyArena
                     HoldBehindAllies(player, distance, dt);
                     return true;
                 case EnemyKind.Spire:
-                    if (cooldown <= 0f) BeginWindup(0.8f, 6f);
+                    if (cooldown <= 0f) BeginWindup(windupTime, definition.pulseRadius);
                     return true;
                 case EnemyKind.Stomper:
-                    if (distance <= 4f && cooldown <= 0f)
+                    if (distance <= definition.triggerDistance && cooldown <= 0f)
                     {
-                        BeginWindup(1f, 5f);
+                        BeginWindup(windupTime, definition.pulseRadius);
                         return true;
                     }
 
                     break;
                 case EnemyKind.Rammer:
-                    if (distance <= 16f && cooldown <= 0f)
+                    if (distance <= definition.triggerDistance && cooldown <= 0f)
                     {
-                        BeginWindup(0.8f, 12f);
+                        BeginWindup(windupTime, definition.chargeDistance);
                         return true;
                     }
 
@@ -659,7 +660,7 @@ namespace AnomalyArena
                 case EnemyKind.Bloater:
                     if (distance <= radius + player.Radius + 0.5f)
                     {
-                        BeginWindup(0.4f, 3f);
+                        BeginWindup(windupTime, definition.pulseRadius);
                         return true;
                     }
 
@@ -763,7 +764,7 @@ namespace AnomalyArena
                     return true;
                 case EnemyKind.Rammer:
                     charging = true;
-                    chargeLeft = 12f;
+                    chargeLeft = definition.chargeDistance;
                     V3WorldAudio.Instance?.Play(ArenaWorldCue.NpcChargeRush, Position);
                     return true;
                 case EnemyKind.Bloater:
@@ -774,12 +775,12 @@ namespace AnomalyArena
                     return true;
                 case EnemyKind.Spire:
                     V3WorldAudio.Instance?.Play(ArenaWorldCue.NpcPulse, Position);
-                    AreaAttack(6f, attackDamage, 5f);
-                    TryLockLaser(6f);
+                    AreaAttack(definition.pulseRadius, attackDamage, 5f);
+                    TryLockLaser(definition.pulseRadius);
                     return true;
                 case EnemyKind.Stomper:
                     V3WorldAudio.Instance?.Play(ArenaWorldCue.NpcPulse, Position);
-                    AreaAttack(5f, attackDamage, 8f);
+                    AreaAttack(definition.pulseRadius, attackDamage, 8f);
                     return true;
                 case EnemyKind.Hollow:
                     if (bossAttack == 0)
@@ -862,7 +863,7 @@ namespace AnomalyArena
         void Explode()
         {
             V3WorldAudio.Instance?.Play(ArenaWorldCue.NpcBloaterBlast, Position);
-            AreaAttack(3f, attackDamage, 5f);
+            AreaAttack(definition ? definition.pulseRadius : 3f, attackDamage, 5f);
             var waves = GM ? GM.waves : null;
             AddRadiationZone(Position, waves ? waves.radiationRadius : 3f, waves ? waves.radiationLife : 4f);
             V3WorldAudio.Instance?.Play(ArenaWorldCue.NpcRadiation, Position);
