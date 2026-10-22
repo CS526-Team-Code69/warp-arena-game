@@ -232,7 +232,7 @@ namespace AnomalyArena
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
-        public async Task Configure_EachRosterKind_OnlyBossesKnockBackThePlayer()
+        public async Task Configure_EachRosterKind_OnlyBossesStomperAndRammerKnockBackThePlayer()
         {
             var sandbox = await V3CombatSmokeTest.StartSandbox();
             var target = sandbox.targets[0];
@@ -240,7 +240,9 @@ namespace AnomalyArena
             {
                 target.Configure(data, 1f, EnemyRoles.IsSpecial(data.kind) && data.canElite);
                 target.enabled = false;
-                if (EnemyRoles.IsBoss(data.kind))
+                Assert.That(EnemyRoles.KnocksBackPlayer(data.kind),
+                    Is.EqualTo(EnemyRoles.IsBoss(data.kind) || data.kind is EnemyKind.Stomper or EnemyKind.Rammer), data.kind + " push rule");
+                if (EnemyRoles.KnocksBackPlayer(data.kind))
                     Assert.That(target.attackKnockback, Is.EqualTo(data.knockback), data.kind + " keeps its knockback");
                 else Assert.That(target.attackKnockback, Is.Zero, data.kind + " never pushes the player");
             }

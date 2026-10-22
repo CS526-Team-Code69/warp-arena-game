@@ -573,8 +573,8 @@ namespace AnomalyArena
                 Hp = 0f;
                 Die(DeathCause.HpDepleted);
             }
-                                                                                                      
-            else if (info.knockDistance > 0f && !(Team == Team.Player && info.dealer?.Owner is Enemy { IsBoss: false }))
+                                                                                                                                  
+            else if (info.knockDistance > 0f && !(Team == Team.Player && info.dealer?.Owner is Enemy { PushesPlayer: false }))
                 Knockback(info.knockDir, info.knockDistance, KnockKind.Hit);
             if(!tick&&info.source==DamageSource.Hit&&info.dealer?.Owner is Combatant { Team: Team.Player } source)
                 ElementCombat.ApplyHit(this,info.element,info.baseDamage>0?info.baseDamage:info.amount,actualDamage,source,info.builtInElement);

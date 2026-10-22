@@ -237,7 +237,7 @@ namespace AnomalyArena
                         text.AppendLine(ArenaText.Pair(                            $"pulse radius {data.pulseRadius:0.#} · laser delay {data.laserDelay:0.##} s · length {data.laserLength:0.#} · half width {data.laserHalfWidth:0.##}",                            $"pulse radius {data.pulseRadius:0.#} · laser delay {data.laserDelay:0.##} s · length {data.laserLength:0.#} · half width {data.laserHalfWidth:0.##}"));
                         break;
                     case EnemyKind.Stomper:
-                        text.AppendLine(ArenaText.Pair(                            $"trigger {data.triggerDistance:0.#} · slam radius {data.pulseRadius:0.#}",                            $"trigger {data.triggerDistance:0.#} · slam radius {data.pulseRadius:0.#}"));
+                        text.AppendLine(ArenaText.Pair(                            $"trigger {data.triggerDistance:0.#} · cone length {data.pulseRadius:0.#} · width {data.coneAngle:0}°",                            $"trigger {data.triggerDistance:0.#} · cone length {data.pulseRadius:0.#} · width {data.coneAngle:0}°"));
                         break;
                     case EnemyKind.Bloater:
                         text.AppendLine(ArenaText.Pair($"blast radius {data.pulseRadius:0.#}",$"blast radius {data.pulseRadius:0.#}"));

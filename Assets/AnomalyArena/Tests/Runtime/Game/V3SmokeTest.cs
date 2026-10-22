@@ -394,10 +394,18 @@ namespace AnomalyArena
             Assert.That(player.Stunned, Is.False, "a basic hit does not stun the player");
             Assert.That(player.ReceiveDamage(DamageInfo.Attack(1f, grunt, Vector3.right, 6f)), Is.True, "a second hit still deals damage");
 
-            var rammer = Attacker(EnemyKind.Rammer, true);
-            Assert.That(player.ReceiveDamage(DamageInfo.Attack(1f, rammer, Vector3.right, 8f)), Is.True, "the elite hit lands");
+            var spire = Attacker(EnemyKind.Spire, true);
+            Assert.That(player.ReceiveDamage(DamageInfo.Attack(1f, spire, Vector3.right, 8f)), Is.True, "the elite hit lands");
             Assert.That(player.State, Is.EqualTo(CharacterState.Normal), "elites do not knock the player back either");
             Assert.That(player.Stunned, Is.False, "an elite's plain hit does not stun either (only a Rammer charge stuns, in Enemy)");
+
+            foreach (var kind in new[] { EnemyKind.Stomper, EnemyKind.Rammer })
+            {
+                player.ClearWaveState();
+                var pusher = Attacker(kind, false);
+                Assert.That(player.ReceiveDamage(DamageInfo.Attack(1f, pusher, Vector3.right, pusher.definition.knockback)), Is.True, kind + " hit lands");
+                Assert.That(player.State, Is.EqualTo(CharacterState.Knocked), kind + " knocks the player back");
+            }
 
             player.ClearWaveState();
             var boss = game.waves.tyrant;

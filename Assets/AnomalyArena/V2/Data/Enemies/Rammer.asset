@@ -21,7 +21,7 @@ MonoBehaviour:
   windup: 0.6
   interval: 3
   reach: 0.8
-  knockback: 8
+  knockback: 2
   knockbackScale: 0.75
   xp: 3
   canAffix: 1

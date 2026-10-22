@@ -3,6 +3,7 @@ using UnityEngine.Rendering;
 
 namespace AnomalyArena
 {
+
     [DefaultExecutionOrder(1000)]
     public class V2CharacterIllustration : MonoBehaviour
     {
@@ -61,7 +62,7 @@ namespace AnomalyArena
             var status = ElementStatus.For(body);
             Color tint = enemy && enemy.definition && enemy.definition.kind == EnemyKind.Hollow ? V2Hud.ElementColors[6] : Color.white;
             if (status && status.Frozen) tint = V2Hud.ElementColors[2];
-            if (enemy && enemy.TelegraphActive) tint = new Color(1f, .87f, .45f);
+            if (enemy && enemy.WindupTinted) tint = new Color(1f, .87f, .45f);
             if (enemy && enemy.Cloaked)
             {
                 float distance = gm && gm.player ? Vector3.Distance(body.Position, gm.player.Position) : 16f;

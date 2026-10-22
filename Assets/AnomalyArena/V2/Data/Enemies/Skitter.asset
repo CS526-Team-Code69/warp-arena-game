@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Skitter
   hp: 3
   speed: 6.2
-  radius: 0.3
+  radius: 0.4
   damage: 3
   windup: 0.2
   interval: 0.8

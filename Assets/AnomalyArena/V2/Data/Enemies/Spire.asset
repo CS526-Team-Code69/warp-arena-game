@@ -18,8 +18,8 @@ MonoBehaviour:
   speed: 0
   radius: 0.8
   damage: 8
-  windup: 0.8
-  interval: 3
+  windup: 0.6
+  interval: 2
   reach: 0.8
   knockback: 5
   knockbackScale: 0
@@ -30,7 +30,7 @@ MonoBehaviour:
   spikePoisonStacks: 1
   splitsOnDeath: 0
   colour: {r: 0.40499997, g: 0.49608004, b: 0.9, a: 1}
-  pulseRadius: 18
+  pulseRadius: 15
   laserDelay: 0.6
   laserLength: 20
   laserHalfWidth: 0.6
