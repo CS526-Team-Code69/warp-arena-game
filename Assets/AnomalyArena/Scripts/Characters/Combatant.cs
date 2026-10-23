@@ -654,6 +654,7 @@ namespace AnomalyArena
         public void OnEnterFallZone(Vector3 outward)
         {
             if (!IsAlive || State == CharacterState.Hooked) return;
+            if (Invulnerable && WorldMap.Active) { WorldMap.Active.SetBackOnSafeGround(this); return; }
             DeathCause = DeathCause.FellIntoGap;
             Vector3 v = State == CharacterState.Dashing || rb.isKinematic
                 ? Vector3.zero

@@ -317,12 +317,14 @@ function countFormula_(cause, wave) {
   return formula + ')';
 }
 
+// ROWS(UNIQUE(...)), not COUNTUNIQUE: when FILTER matches nothing it returns #N/A, and COUNTUNIQUE counts that error
+// as one value (seen in the live sheet), while ROWS(UNIQUE(#N/A)) stays an error that IFERROR turns into 0.
 function distinctRunsFormula_(event) {
-  return '=IFERROR(COUNTUNIQUE(FILTER(runs!$C$2:$C,runs!$B$2:$B="' + event + '",runs!$E$2:$E<>"test")),0)';
+  return '=IFERROR(ROWS(UNIQUE(FILTER(runs!$C$2:$C,runs!$B$2:$B="' + event + '",runs!$E$2:$E<>"test"))),0)';
 }
 
 // Distinct runs that sent run_start and never sent run_end (the tab was closed).
 function unfinishedRunsFormula_() {
-  return '=IFERROR(COUNTUNIQUE(FILTER(runs!$C$2:$C,runs!$B$2:$B="run_start",runs!$E$2:$E<>"test",' +
-    'COUNTIFS(runs!$C$2:$C,runs!$C$2:$C,runs!$B$2:$B,"run_end")=0)),0)';
+  return '=IFERROR(ROWS(UNIQUE(FILTER(runs!$C$2:$C,runs!$B$2:$B="run_start",runs!$E$2:$E<>"test",' +
+    'COUNTIFS(runs!$C$2:$C,runs!$C$2:$C,runs!$B$2:$B,"run_end")=0))),0)';
 }

@@ -31,6 +31,9 @@ namespace AnomalyArena
         public TemporaryWall[] temporaryWalls;
         public Transform trialPlatform;
         public Enemy hollow;
+        [Tooltip("Seconds after entering the void trial before the Hollow may start its first attack. The player is set down inside " +
+                 "its slam reach, and a slam carries them off the platform.")]
+        public float trialOpeningGrace = 3f;
         public Transform decoy;
         public Transform trialDecoy;
         int TemporaryHoleCount => 1 + (TrialActive ? trialExtraTemporaryHoles?.Length ?? 0 : extraTemporaryHoles?.Length ?? 0);
@@ -77,6 +80,7 @@ namespace AnomalyArena
         }
         Vector3 returnPoint;
         BlackHole enteredHole;
+        bool labTrial;
         int lastCell = -1;
         float gridTimer;
         float decoyLife;
@@ -122,6 +126,16 @@ namespace AnomalyArena
                 holes[1].transform.position = new Vector3(layout.holeAnchors[second].x, 0, layout.holeAnchors[second].y);
             }
             Grid.Rebuild(this);
+                                                                                                                                           
+                                                                                                                                           
+                                                                                                                  
+            if (trialPlatform && trialPlatform.TryGetComponent(out CapsuleCollider capsule))
+            {
+                var box = trialPlatform.gameObject.AddComponent<BoxCollider>();
+                box.center = capsule.center;
+                box.size = new Vector3(capsule.radius * 2f, capsule.height, capsule.radius * 2f);
+                Destroy(capsule);
+            }
             SkillWorldAPI.CreateWall = CreateWall;
             SkillWorldAPI.CreateTemporaryHole = CreateTemporaryHole;
             SkillWorldAPI.CreateVoidHole = CreateVoidHole;
@@ -435,31 +449,78 @@ namespace AnomalyArena
                 if (hole.Phase != HolePhase.Portal) continue;
                 if (!build && (Mathf.Abs(player.Position.x - hole.Centre.x) > 0.5f || Mathf.Abs(player.Position.z - hole.Centre.z) > 0.5f)) continue;
                 enteredHole = hole;
-                returnPoint = hole.Centre;
-                frozen.Clear();
-                foreach (var enemy in GM.waves.Alive) if (enemy && enemy.gameObject.activeSelf) Freeze(enemy.gameObject);
-                                                                                                                  
-            foreach(var enemy in GM.waves.preparedEnemies)if(enemy&&enemy.gameObject.activeSelf)Freeze(enemy.gameObject);
-                if (AttackPool.Instance) foreach (var projectile in AttackPool.Instance.actors) if (projectile && projectile.gameObject.activeSelf) Freeze(projectile.gameObject);
-                foreach (var bolt in GM.waves.preparedBolts) if (bolt.gameObject.activeSelf) Freeze(bolt.gameObject);
-                GM.waves.SuspendForTrial();
-                foreach (var wall in temporaryWalls) if (wall && wall.gameObject.activeSelf) wall.BattlefieldFrozen = true;
-                if (decoy && decoy.gameObject.activeSelf) Freeze(decoy.gameObject);
-                TrialActive = true;
-                trialRadius = 12f;
-                trialPlatform.gameObject.SetActive(true);
-                MovePlayer(player, trialPlatform.position + Vector3.back * 6f);
-                ElementStatus.For(player)?.ClearStatuses();
-                hollow.gameObject.SetActive(true);
-                hollow.transform.position = trialPlatform.position;
-                hollow.Configure(hollow.definition, GM.waves.HpMultiplier, false);
-                hollow.IsTrialSummon = true;
-                hollow.SuppressRewards = true;
-                GM.waves.TrackBoss(hollow);
-                VoidTrialEntered?.Invoke();
+                BeginTrial(player, hole.Centre, false);
                 return true;
             }
             return false;
+        }
+                                                                                                                                          
+                                                                                                                                                 
+        public bool EnterLabTrial(PlayerController player)
+        {
+            if (!player || TrialActive || TrialWon || !hollow || !trialPlatform || !GM.IsCombatActive || GM.waves.Phase != WavePhase.WaveActive) return false;
+            enteredHole = null;
+            BeginTrial(player, player.Position, true);
+            return true;
+        }
+        void BeginTrial(PlayerController player, Vector3 returnTo, bool lab)
+        {
+            labTrial = lab;
+            returnPoint = returnTo;
+            frozen.Clear();
+            foreach (var enemy in GM.waves.Alive) if (enemy && enemy.gameObject.activeSelf) Freeze(enemy.gameObject);
+                                                                                                                  
+            foreach(var enemy in GM.waves.preparedEnemies)if(enemy&&enemy.gameObject.activeSelf)Freeze(enemy.gameObject);
+            if (AttackPool.Instance) foreach (var projectile in AttackPool.Instance.actors) if (projectile && projectile.gameObject.activeSelf) Freeze(projectile.gameObject);
+            foreach (var bolt in GM.waves.preparedBolts) if (bolt.gameObject.activeSelf) Freeze(bolt.gameObject);
+            GM.waves.SuspendForTrial();
+            foreach (var wall in temporaryWalls) if (wall && wall.gameObject.activeSelf) wall.BattlefieldFrozen = true;
+            if (decoy && decoy.gameObject.activeSelf) Freeze(decoy.gameObject);
+            TrialActive = true;
+            trialRadius = 12f;
+            trialPlatform.gameObject.SetActive(true);
+            MovePlayer(player, trialPlatform.position + Vector3.back * 6f);
+            ElementStatus.For(player)?.ClearStatuses();
+            hollow.gameObject.SetActive(true);
+            hollow.transform.position = trialPlatform.position;
+            hollow.Configure(hollow.definition, GM.waves.HpMultiplier, false);
+            hollow.HoldAttacks(trialOpeningGrace);
+            hollow.IsTrialSummon = true;
+            hollow.SuppressRewards = true;
+            GM.waves.TrackBoss(hollow);
+            VoidTrialEntered?.Invoke();
+        }
+                                                                                                                                      
+                                                                                                                                                 
+        public void SetBackOnSafeGround(Combatant body)
+        {
+            Vector3 at = body.Position;
+            if (TrialActive)
+            {
+                Vector3 outward = Query.Flat(at - trialPlatform.position);
+                if (outward.sqrMagnitude < .01f) outward = Vector3.back;
+                at = trialPlatform.position + outward.normalized * Mathf.Max(0f, trialRadius - 4f);
+            }
+            else
+            {
+                foreach (var hole in holes)
+                {
+                    if (!hole || hole.Phase == HolePhase.Gone || Query.Flat(at - hole.Centre).magnitude > hole.GravityRadius) continue;
+                    Vector3 away = Query.Flat(at - hole.Centre);
+                    if (away.sqrMagnitude < .01f) away = Vector3.back;
+                                                                                                       
+                    for (int step = 0; step < 8; step++)
+                    {
+                        Vector3 spot = ClampPoint(hole.Centre + Quaternion.Euler(0f, 45f * step, 0f) * away.normalized * (hole.GravityRadius + 1.5f), body.Radius);
+                        if (!IsWall(spot, body.Radius)) { at = spot; break; }
+                    }
+                }
+                at = ClampPoint(at, body.Radius);
+            }
+            at.y = 0f;
+            body.CancelDisplacement();
+            body.GetComponent<Rigidbody>().position = at;
+            body.transform.position = at;
         }
         void Freeze(GameObject go) { frozen.Add(go); go.SetActive(false); }
         public bool IsBattlefieldFrozen(GameObject go) => TrialActive && frozen.Contains(go);
@@ -485,14 +546,14 @@ namespace AnomalyArena
             if (trialTemporaryHole) trialTemporaryHole.gameObject.SetActive(false);
             if(trialExtraTemporaryHoles!=null)foreach(var hole in trialExtraTemporaryHoles)if(hole)hole.gameObject.SetActive(false);
             TrialActive = false;
-            TrialWon = true;
+            TrialWon = !labTrial;
             foreach (var go in frozen) if (go) go.SetActive(true);
             frozen.Clear();
             GM.waves.ResumeAfterTrial();
             MovePlayer(GM.player, returnPoint);
             GM.player.Heal(GM.player.maxHp);
                                                                                                                          
-            foreach (var hole in holes) if (hole && hole.Phase != HolePhase.Gone) hole.Close();
+            if (!labTrial) foreach (var hole in holes) if (hole && hole.Phase != HolePhase.Gone) hole.Close();
             hollow.gameObject.SetActive(false);
             trialPlatform.gameObject.SetActive(false);
             VoidTrialWon?.Invoke();
