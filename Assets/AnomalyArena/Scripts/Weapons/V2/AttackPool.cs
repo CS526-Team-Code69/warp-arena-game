@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-    public enum AttackMode { Bolt, Knife, Blast, Field, Pull, Sticky, Bouncy, Swarm, Hook, Swap, Recall, Lob }
+    public enum AttackMode { Bolt, Knife, Blast, Field, Pull, Sticky, Bouncy, Swarm, Hook, Swap, Recall, Lob, Shard }
 
     public sealed class AttackPool : MonoBehaviour
     {

@@ -18,9 +18,9 @@ MonoBehaviour:
   speed: 3.5
   radius: 0.6
   damage: 12
-  windup: 0.4
+  windup: 0.25
   interval: 1
-  reach: 0.8
+  reach: 1.2
   knockback: 5
   knockbackScale: 1
   xp: 2
@@ -30,4 +30,7 @@ MonoBehaviour:
   spikePoisonStacks: 1
   splitsOnDeath: 0
   colour: {r: 0.40499997, g: 0.9, b: 0.61785, a: 1}
+  triggerDistance: 7
+  chargeDistance: 14
+  chargeSpeed: 16
   pulseRadius: 3
