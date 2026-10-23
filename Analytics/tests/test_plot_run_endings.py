@@ -4,12 +4,15 @@ Run from the repository root:
     python -m unittest discover -s Analytics/tests -v
 """
 
+import contextlib
+import io
 import json
 import os
 import re
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(HERE))
@@ -185,6 +188,31 @@ class TestParsing(unittest.TestCase):
     def test_completely_empty_text(self):
         self.assertEqual(pre.parse_csv_text(""), [])
 
+    def test_non_finite_numbers_fall_back_to_default(self):
+        text = ("event,run_id,edition,outcome,cause,stage,wave,level,kills,run_seconds\n"
+                "run_end,%s,en,defeat,enemy,wave,nan,1e400,inf,Infinity\n"
+                "run_end,%s,en,defeat,enemy,wave,-inf,NaN,Infinity,nan\n") % ("e" * 32, "f" * 32)
+        rows = pre.parse_csv_text(text)
+        self.assertEqual([(r["wave"], r["level"], r["kills"], r["run_seconds"]) for r in rows],
+                         [(0, 0, 0, 0.0)] * 2)
+        self.assertEqual(pre.aggregate(rows)["counts"]["1"]["enemy"], 2)
+
+    def test_bom_before_event_column(self):
+        text = chr(0xFEFF) + "event,received_at,run_id\nrun_start,2026-10-22T10:00:00Z,%s\n" % ("a" * 32)
+        rows = pre.parse_csv_text(text)
+        self.assertEqual([(r["event"], r["received_at"]) for r in rows],
+                         [("run_start", "2026-10-22T10:00:00Z")])
+
+    def test_first_character_kept_without_bom(self):
+        text = "received_at,event,run_id\n2026-10-22T10:00:00Z,run_start,%s\n" % ("a" * 32)
+        rows = pre.parse_csv_text(text)
+        self.assertEqual(rows[0]["received_at"], "2026-10-22T10:00:00Z")
+
+    def test_source_has_no_literal_bom(self):
+        with open(pre.__file__, encoding="utf-8") as f:
+            self.assertNotIn(chr(0xFEFF), f.read())
+        self.assertEqual(pre.BOM, chr(0xFEFF))
+
 
 class TestSummary(unittest.TestCase):
     def test_summary_mentions_totals(self):
@@ -272,6 +300,53 @@ class TestSendTestEvent(unittest.TestCase):
     def test_bad_event_rejected(self):
         with self.assertRaises(ValueError):
             ste.build_event("level_up")
+
+
+class FakeResponse:
+    def __init__(self, status, body):
+        self.status = status
+        self.body = body
+
+    def read(self):
+        return self.body.encode("utf-8")
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+
+class TestSendTestEventReply(unittest.TestCase):
+    """main() passes only when the endpoint replies 2xx with {"ok": true}."""
+
+    def run_main(self, status, body):
+        reply = FakeResponse(status, body)
+        out, err = io.StringIO(), io.StringIO()
+        with mock.patch.object(ste.urllib.request, "urlopen", return_value=reply) as urlopen, \
+                contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = ste.main(["--url", "https://example.invalid/exec"])
+        urlopen.assert_called_once()
+        return code, err.getvalue()
+
+    def test_accepted_event_passes(self):
+        self.assertEqual(self.run_main(200, '{"ok":true}'), (0, ""))
+
+    def test_rejected_event_fails(self):
+        code, err = self.run_main(200, '{"ok":false,"error":"bad schema"}')
+        self.assertEqual(code, 1)
+        self.assertIn("endpoint rejected the event: bad schema", err)
+
+    def test_html_reply_fails(self):
+        code, err = self.run_main(200, "<!DOCTYPE html><html><body>Sign in</body></html>")
+        self.assertEqual(code, 1)
+        self.assertIn("not JSON", err)
+
+    def test_check_reply(self):
+        self.assertFalse(ste.check_reply(500, '{"ok":true}')[0])
+        self.assertFalse(ste.check_reply(200, "[]")[0])
+        self.assertFalse(ste.check_reply(200, '{"ok":"true"}')[0])
+        self.assertTrue(ste.check_reply(200, '{"ok":true,"status":"ready"}')[0])
 
 
 if __name__ == "__main__":

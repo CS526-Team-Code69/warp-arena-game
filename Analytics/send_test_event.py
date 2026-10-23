@@ -79,6 +79,21 @@ def send(url, payload, timeout=30):
         return error.code, error.read().decode("utf-8", errors="replace")
 
 
+def check_reply(status, body):
+    """Return (passed, message). Code.gs answers every request with HTTP 200, so the JSON decides."""
+    if not 200 <= status < 300:
+        return False, "endpoint answered HTTP %d" % status
+    try:
+        reply = json.loads(body)
+    except ValueError:
+        return False, "reply was not JSON (check the deployment access is Anyone)"
+    if not isinstance(reply, dict):
+        return False, "reply was not a JSON object"
+    if reply.get("ok") is not True:
+        return False, "endpoint rejected the event: %s" % (reply.get("error") or "no error given")
+    return True, "endpoint accepted the event"
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Send one edition='test' event to the analytics endpoint.")
     parser.add_argument("url_arg", nargs="?", metavar="URL", help="web app URL (same as --url)")
@@ -102,7 +117,12 @@ def main(argv=None):
         return 1
     print("HTTP %d" % status)
     print(body)
-    return 0 if 200 <= status < 300 else 1
+    passed, message = check_reply(status, body)
+    if not passed:
+        print("error: " + message, file=sys.stderr)
+        return 1
+    print(message)
+    return 0
 
 
 if __name__ == "__main__":

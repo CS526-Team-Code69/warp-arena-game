@@ -159,6 +159,7 @@ class MockSheet {
     this.charts = [];
     this.frozenRows = 0;
     this.appendsWithoutLock = 0;
+    this.columnFormats = {}; // column number -> number format
   }
   getName() { return this.name; }
   setName(n) { this.name = n; return this; }
@@ -179,13 +180,17 @@ class MockSheet {
     return 0;
   }
   getRange(row, col, numRows, numCols) {
-    if (typeof row !== 'number') throw new Error('A1 notation is not supported by the mock');
+    if (typeof row === 'string') return new MockColumnRange(this, row);
     return new MockRange(this, row, col, numRows === undefined ? 1 : numRows, numCols === undefined ? 1 : numCols);
   }
   appendRow(row) {
     if (!this.env.lock.held) this.appendsWithoutLock++;
     const at = this.getLastRow() + 1;
-    Array.from(row).forEach((v, j) => this.setCell(at, j + 1, v, ''));
+    Array.from(row).forEach((v, j) => {
+      const plainText = this.columnFormats[j + 1] === '@';
+      const value = typeof v === 'string' && !plainText && NUMBER_TEXT.test(v) ? Number(v) : v;
+      this.setCell(at, j + 1, value, '');
+    });
     return this;
   }
   insertRowBefore(row) {
@@ -561,7 +566,39 @@ test('free text is trimmed, cut to 64 chars and can never become a formula', () 
   row = lastRow(env);
   assert.strictEqual(row[COL.enemy], '');
   assert.strictEqual(row[COL.starting_weapon], '');
+  // Stays text only because the build column is plain text (the mock parses numbers like Sheets).
+  assert.strictEqual(runsSheet(env).columnFormats[COL.build + 1], '@');
   assert.strictEqual(row[COL.build], '1.0');
+});
+
+test('text columns of "runs" are plain text, so number-like text is stored as sent', () => {
+  const TEXT = ['event', 'run_id', 'session_id', 'edition', 'build', 'outcome', 'cause', 'enemy', 'stage', 'starting_weapon'];
+  const OTHER = ['received_at', 'elite', 'wave', 'run_seconds', 'level', 'kills'];
+  const checkFormats = (sheet, label) => {
+    for (const name of TEXT) assert.strictEqual(sheet.columnFormats[COL[name] + 1], '@', label + ': ' + name);
+    for (const name of OTHER) assert.strictEqual(sheet.columnFormats[COL[name] + 1], undefined, label + ': ' + name);
+  };
+
+  // Without the format, the mock turns number-like text into numbers, as Sheets does.
+  const plain = makeEnv().ss.insertSheet('scratch');
+  plain.appendRow(['2', '1234e5', 'x']);
+  assert.deepStrictEqual(plain.rowValues(1), [2, 123400000, 'x']);
+
+  const env = readyEnv();
+  checkFormats(runsSheet(env), 'after setup');
+  const digitsId = '1234567890e1234567890123456789012'.slice(0, 32);
+  assert.ok(/^[0-9a-f]{32}$/.test(digitsId));
+  assert.deepStrictEqual(post(env, endEvent({ build: '2', run_id: digitsId, session_id: '9'.repeat(32) })).json, { ok: true });
+  const row = lastRow(env);
+  assert.strictEqual(row[COL.build], '2');
+  assert.strictEqual(row[COL.run_id], digitsId);
+  assert.strictEqual(row[COL.session_id], '9'.repeat(32));
+  assert.strictEqual(row[COL.wave], 9);
+  assert.strictEqual(row[COL.elite], false);
+
+  const bound = makeEnv();
+  post(bound, endEvent());
+  checkFormats(runsSheet(bound), 'sheet created by doPost');
 });
 
 test('doPost never throws: missing spreadsheet or lock timeout give ok:false', () => {
