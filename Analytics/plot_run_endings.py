@@ -10,6 +10,7 @@ library, so load_rows(), parse_csv_text() and aggregate() can be used on their o
 import argparse
 import csv
 import io
+import math
 import os
 import sys
 import urllib.request
@@ -28,9 +29,9 @@ BOSS = "Boss"
 BUCKETS = [str(w) for w in range(1, MAX_WAVE + 1)] + [BOSS]
 MAX_ENEMY_BARS = 10  # more enemy kinds than this fold into one "Other" bar
 
-# One colour per cause. Defeat causes use a colour-blind-checked categorical order
-# (neighbours in the stack stay apart under protan/deutan simulation), "unknown" is
-# a dark grey, victory is green, and the two ways of leaving are light greys.
+# One colour per cause. Every pair stays at least 11 CIELAB dE76 apart under normal
+# vision and under protan/deutan simulation (Machado 2009, severity 1.0). "unknown"
+# is a dark grey, victory is green, and the two ways of leaving are light greys.
 CAUSE_COLORS = {
     "enemy": "#2a78d6",
     "tyrant": "#eb6834",
@@ -38,7 +39,7 @@ CAUSE_COLORS = {
     "wall_slam": "#eda100",
     "status": "#e34948",
     "black_hole": "#6250d6",
-    "void_trial": "#e87ba4",
+    "void_trial": "#9c3d8c",
     "unknown": "#5f5e5a",
     "victory": "#008300",
     "restart": "#b1afa8",
@@ -65,6 +66,7 @@ INK_MUTED = "#898781"
 GRID = "#e1e0d9"
 AXIS = "#c3c2b7"
 
+BOM = "\ufeff"  # byte order mark some spreadsheet exports put before the header
 TRUE_TEXT = {"true", "1", "yes", "y", "t"}
 TEXT_FIELDS = ("event", "run_id", "session_id", "edition", "build", "outcome", "cause",
                "enemy", "stage", "starting_weapon")
@@ -79,9 +81,10 @@ def _to_bool(value):
 
 def _to_number(value, default=0.0):
     try:
-        return float(str(value).strip().replace(",", ""))
+        n = float(str(value).strip().replace(",", ""))
     except ValueError:
         return default
+    return n if math.isfinite(n) else default  # float() accepts "nan", "inf", "1e400"
 
 
 def _to_int(value, default=0):
@@ -105,7 +108,7 @@ def normalize_row(raw):
 
 def parse_csv_text(text):
     """Parse CSV text with a header row. Columns are matched by name, in any order."""
-    if text.startswith("﻿"):
+    if text.startswith(BOM):
         text = text[1:]
     reader = csv.reader(io.StringIO(text, newline=""))
     header = None
@@ -114,7 +117,7 @@ def parse_csv_text(text):
         if not any(cell.strip() for cell in record):
             continue  # blank line or a row of empty cells
         if header is None:
-            header = [cell.strip().lstrip("﻿").lower() for cell in record]
+            header = [cell.strip().lstrip(BOM).lower() for cell in record]
             if "event" not in header:
                 raise ValueError("the CSV has no 'event' column; is this an export of the 'runs' sheet?")
             continue
@@ -335,8 +338,10 @@ def render(agg, out_path, source="sheet export"):
         bottoms = [0] * len(BUCKETS)
         for cause in present:
             heights = [agg["counts"][b][cause] for b in BUCKETS]
+            drawn = [i for i, h in enumerate(heights) if h]
             # A thin edge in the surface colour leaves a gap between stacked segments.
-            ax.bar(x, heights, width=0.62, bottom=bottoms, color=CAUSE_COLORS[cause],
+            ax.bar([x[i] for i in drawn], [heights[i] for i in drawn], width=0.62,
+                   bottom=[bottoms[i] for i in drawn], color=CAUSE_COLORS[cause],
                    edgecolor=SURFACE, linewidth=1.0, zorder=3)
             bottoms = [b + h for b, h in zip(bottoms, heights)]
         top = max(bottoms)
@@ -372,9 +377,9 @@ def render(agg, out_path, source="sheet export"):
         left = [0] * len(kinds)
         for cause in ENEMY_CAUSES:
             widths = [entry[cause] for _, entry in kinds]
-            if not any(widths):
-                continue
-            side.barh(y, widths, left=left, height=0.62, color=CAUSE_COLORS[cause],
+            drawn = [i for i, w in enumerate(widths) if w]
+            side.barh([y[i] for i in drawn], [widths[i] for i in drawn],
+                      left=[left[i] for i in drawn], height=0.62, color=CAUSE_COLORS[cause],
                       edgecolor=SURFACE, linewidth=1.0, zorder=3)
             left = [l + w for l, w in zip(left, widths)]
         most = max(left)
@@ -385,7 +390,8 @@ def render(agg, out_path, source="sheet export"):
             side.text(entry["total"] + most * 0.03, yi, label, va="center", fontsize=9,
                       color=INK_2, zorder=4)
         side.set_yticks(y, names)
-        side.invert_yaxis()
+        # Keep room for a full list so a few kinds do not turn into very thick bars.
+        side.set_ylim(max(len(kinds), MAX_ENEMY_BARS) - 0.5, -0.5)
         side.set_xlim(0, most * 1.55)
         side.xaxis.set_major_locator(MaxNLocator(integer=True, nbins=4))
         side.grid(axis="x", color=GRID, linewidth=0.8, zorder=0)

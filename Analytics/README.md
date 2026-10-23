@@ -103,10 +103,10 @@ The game reads the endpoint from `analytics.json` in StreamingAssets:
 { "endpoint": "https://script.google.com/macros/s/<DEPLOYMENT_ID>/exec" }
 ```
 
-- New builds: put the file at `Assets/StreamingAssets/analytics.json` before building.
-- The published site, without rebuilding: upload the same file to `StreamingAssets/analytics.json` of both builds, the English one at `/` and the Chinese one at `/zh/`.
+- The source of truth is `Assets/StreamingAssets/analytics.json` in the repository: every build copies it into its `StreamingAssets/` folder, so commit the endpoint there and the next deploy keeps it.
+- To switch the live site on at once, also edit `StreamingAssets/analytics.json` on the `gh-pages` branch (the English build at `/`, the Chinese one at `/zh/`). A later deploy replaces that branch, which is why the repository file must hold the same URL.
 
-With no file or an empty endpoint, the game sends nothing.
+With no file or an empty endpoint, the game sends nothing. If the file cannot be read because of a network error, the game tries again on the next event, up to three times per page load.
 
 ## Check a deployment
 
@@ -127,20 +127,28 @@ This sends one event with `edition = "test"`. A new row should appear at the bot
    - the export URL, when the sheet is shared as "Anyone with the link: Viewer":
      `https://docs.google.com/spreadsheets/d/<SPREADSHEET_ID>/export?format=csv&gid=<GID>`
      (`<GID>` is the number after `gid=` in the address bar while "runs" is open).
-2. Run the script:
+2. Run the script with exactly one of `--csv` or `--url`:
 
 ```
-python Analytics/plot_run_endings.py runs.csv --out run_endings.png
-python Analytics/plot_run_endings.py "https://docs.google.com/spreadsheets/d/<SPREADSHEET_ID>/export?format=csv&gid=<GID>" --out run_endings.png
+python Analytics/plot_run_endings.py --csv runs.csv --out run-endings.png
+python Analytics/plot_run_endings.py --url "https://docs.google.com/spreadsheets/d/<SPREADSHEET_ID>/export?format=csv&gid=<GID>" --out run-endings.png
 ```
 
-The chart stacks run endings by cause for each wave bucket and reports the number of unfinished runs. Run `python Analytics/plot_run_endings.py --help` for all options.
+Options:
+
+- `--out PATH` PNG to write (default `run-endings.png` in the current folder).
+- `--include-test` keeps the `edition = "test"` rows, which are left out by default.
+- `--edition en` or `--edition zh` counts one edition only.
+
+The main panel stacks run endings by cause for each wave bucket (1 to 14 and Boss); the side panel lists the enemy kinds behind `enemy` and `tyrant` deaths. A footer line gives runs started, runs ended and unfinished runs. The same counts are printed as a plain-text table. With no `run_end` rows yet, the script still writes a PNG that says so. Run `python Analytics/plot_run_endings.py --help` for all options.
 
 ## Tests
 
+Run from the repository root:
+
 ```
 node Analytics/apps-script/test/run-tests.js
-python -m pytest Analytics/tests
+python -m unittest discover -s Analytics/tests -v
 ```
 
-The Node tests load `Code.gs` with mocked Apps Script services and send no network requests.
+The Node tests load `Code.gs` with mocked Apps Script services and send no network requests. The Python tests use the CSV files in `tests/fixtures/`, render charts to a temporary folder (needs `matplotlib`) and also send no network requests.
