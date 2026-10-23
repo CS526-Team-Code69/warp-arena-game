@@ -7,7 +7,9 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+                                                                                                                                        
+                                                                                                                                           
+                                                                                         
     [TestFixture]
     [Category("V3Smoke")]
     public class VoidTrialPlatformTest
@@ -48,10 +50,12 @@ namespace AnomalyArena
             await StandStill(game, 2f);
             Assert.That(game.player.State, Is.Not.EqualTo(CharacterState.Falling), "standing still, the player does not slide off the platform");
             Assert.That(world.TrialActive, Is.True, "the trial is still running");
-            Assert.That(Query.Flat(game.player.Position - world.trialPlatform.position).magnitude, Is.EqualTo(6f).Within(.3f), "the player stays where they were set down");
+                                                                                              
+            Assert.That(Query.Flat(game.player.Position - world.trialPlatform.position).magnitude, Is.EqualTo(world.trialEntryDistance).Within(.3f), "the player stays where they were set down");
             Assert.That(game.player.Position.y, Is.EqualTo(0f).Within(.3f), "the player stands on the platform's top face");
         }
 
+                                                                                                                                                  
         internal static async Task StandStill(GameManager game, float seconds)
         {
             var hollow = WorldMap.Active.hollow;

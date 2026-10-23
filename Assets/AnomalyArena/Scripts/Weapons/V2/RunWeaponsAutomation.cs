@@ -52,7 +52,7 @@ namespace AnomalyArena
                         {
                             if(body==player||!body.IsAlive)continue;
                             if(autoHitTimes[slot].TryGetValue(body,out float next)&&next>autoClock)continue;
-                            if(Query.Flat(body.Position-position).magnitude>body.radius+orbitBladeRadius)continue;
+                            if(Query.Flat(body.Position-position).magnitude>body.radius+orbitBladeRadius||WallBlocks(player.Position,body.Position))continue;
                             autoHitTimes[slot][body]=autoClock+orbitHitInterval*CooldownScale(w)/rate;
                             Damage(w,body,hit,w.variant==0?3:-1.5f,Query.Flat(body.Position-player.Position).normalized);
                             if(lastDamageAccepted)WeaponSound(w);
@@ -68,12 +68,14 @@ namespace AnomalyArena
                     w.whirlLeft-=dt;
                     float radians=w.orbitAngle*Mathf.Deg2Rad;
                     Vector3 at=player.Position+new Vector3(Mathf.Cos(radians),0,Mathf.Sin(radians))*whirlOrbitRadius*w.Reach;
+
+                    if(!ValidTeleportPoint(at,w.whirled.radius)){EndWhirl(w);continue;}
                     w.whirled.SetMovePosition(at);
                     foreach(var body in Combatant.All)
                     {
                         if(body==player||body==w.whirled||!body.IsAlive)continue;
                         if(autoHitTimes[slot].TryGetValue(body,out float next)&&next>autoClock)continue;
-                        if(Query.Flat(body.Position-at).magnitude>body.radius+w.whirled.radius)continue;
+                        if(Query.Flat(body.Position-at).magnitude>body.radius+w.whirled.radius||WallBlocks(at,body.Position))continue;
                         autoHitTimes[slot][body]=autoClock+.5f;
                         Damage(w,body,hit,5,Query.Flat(body.Position-at).normalized);
                     }
@@ -81,17 +83,17 @@ namespace AnomalyArena
                     continue;
                 }
                 if(w.cooldown>0)continue;
-                var target=Nearest(range);
                 if(w.form==WeaponForm.SentryDrone)
                 {
-                    if(!target)continue;
+
+                    var target=w.variant==0?NearestVisible(range):NearestVisible(range,WhirlCandidate);
+                    if(!target){if(w.variant==1)w.cooldown=upgrades.whirlRetry;continue;}
 
                     if(w.variant==0&&progression)
                     {
                         if(!progression.EnergyUnlocked)progression.UnlockEnergy();
-                        if(!progression.TrySpendEnergy(upgrades.gunnerEnergyPerShot))continue;
+                        if(!progression.TrySpendEnergy(upgrades.gunnerEnergyCost))continue;
                     }
-                    if(w.variant==1 && target is Enemy { Immovable:true })continue;
                     Reveal(w);
                     w.cooldown=(w.variant==0?definition.cooldownA:definition.cooldownB)*CooldownScale(w);
                     if(w.variant==0)
@@ -115,7 +117,7 @@ namespace AnomalyArena
                         foreach(var body in Combatant.All)if(body!=player&&body.IsAlive&&Query.Flat(body.Position-player.Position).magnitude<=range+body.radius){affected=true;break;}
                         var orbs=OrbPool.Instance;
                         if(orbs&&orbs.pool!=null)foreach(var orb in orbs.pool)if(orb&&orb.InUse&&Query.Flat(orb.Position-player.Position).sqrMagnitude<=range*range){affected=true;break;}
-                        Area(w,player.Position,range,0,5,false);orbs?.Repel(player.Position,range);
+                        Area(w,player.Position,range,hit,5,false);orbs?.Repel(player.Position,range);
                         if(affected)WeaponSound(w);
                     }
                     else
@@ -123,7 +125,7 @@ namespace AnomalyArena
                         float drained=0;Combatant weakest=null;
                         foreach(var body in Combatant.All)
                         {
-                            if(body==player||!body.IsAlive||Query.Flat(body.Position-player.Position).magnitude>range+body.radius)continue;
+                            if(body==player||!body.IsAlive||Query.Flat(body.Position-player.Position).magnitude>range+body.radius||WallBlocks(player.Position,body.Position))continue;
                             float before=body.Hp;
                             Damage(w,body,hit,0,Vector3.zero);
                             if(lastDamageAccepted)WeaponSound(w);
@@ -138,6 +140,7 @@ namespace AnomalyArena
                 }
             }
         }
+        static bool WhirlCandidate(Combatant body)=>body is not Enemy{Immovable:true}&&body.State!=CharacterState.Hooked;
         void EndWhirl(RunWeapon w)
         {
             if(w.whirled && w.whirled.IsAlive)w.whirled.SetState(CharacterState.Normal);

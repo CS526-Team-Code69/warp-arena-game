@@ -17,42 +17,77 @@ namespace AnomalyArena
         public static string Skill(SkillId id) => ArenaText.Pair(SkillEn[(int)id],SkillEn[(int)id]);
         public static string Stat(StatId id) => (int)id < StatZh.Length ? ArenaText.Pair(StatEn[(int)id],StatEn[(int)id]) : id.ToString();
         static readonly string[] ExpandedTwistZh = {
-            "Push enemies out by 3 when the pull ends; no extra damage.", "Repel only in the aimed 180-degree half circle.", "Push side targets toward the aim line; push centred targets forward.", "Focused pellets pierce the first target; later targets take 60%.",
+            "Push enemies out by 3 when the pull ends; no extra damage.", "Repel only in the aimed 180-degree half circle.", "The second round of each clip pulls in enemies within {vacuumRange} cells ahead, then blasts them for {vacuumShare}% damage.", "Each pellet passes through the first enemy; the second takes {focusPierce}% damage.",
             "Pierce the first body and swap with the second valid target; hit each once.", "Blast at departure too; overlapping blasts hit each enemy once.", "Click again after 0.3 s attached to detonate early.", "Stick to the wall after the third bounce, keeping the original fuse.",
-            "Reflect the flame once at the first wall; hit each body once per shot.", "Push out by 3 when a fire patch ends; no extra damage.", "Frozen bodies can chain-shatter: at most 3 bursts, each body once.", "On release, the frost mist lingers ahead for 2 s and keeps freezing.",
-            "Later jumps prefer the most Lightning stacks, then the nearest target.", "Knockback and thrown travel also charge: 1 per unit, cap 30.", "Cloud drifts 1 unit/s along its launch direction, blocked by walls and bounds.", "Needles bounce once off a wall; no body piercing.",
-            "Pierce one interior wall, never bounds; body damage still decays.", "On a kill, fire one half-damage follow-up at the nearest target within 4; it cannot execute or chain another follow-up.", "Keep spin-up for 1 s after release; release still restores movement.", "Enemy blast becomes a forward 90-degree cone; self-damage and lockout remain.",
-            "Wall hit leaves a 1 s mine; blast if an enemy enters 1.5, without making new mines.", "Reverse the six blasts from far to near; other values stay the same."
+            "While spraying, the flame burns enemy projectiles in its cone (spikes, boss shots); no extra damage.", "Two fire patches within {fenceRange} with no wall between form a fence; touching it deals {fenceMult}x a patch tick, once per {fenceCd} s per body, you included.", "A shard knocks a frozen enemy {throwDist} away (not bosses or Spires); when it stops it shatters, taking the shard with its frozen bonus, and others within {burstR} take {splash}% of a shard.", "Release after holding {minHold} s or more: frozen enemies in the cone thaw at once, taking {shatterPerSec} per second frozen under the spray, {shatterCap} at most (scaled like the weapon).",
+            "The first target is unchanged; each later jump goes to the enemy nearest your aim point within 4 of the last target, never through walls.", "A discharge also strikes the path you walked in the last {trailSec} s: enemies within {trailWidth} of it take the same damage, once each.", "While you stand in your landed cloud, it moves toward you at {cloudFollow} cells/s, blocked by walls and bounds.", "An enemy hit by {needleCount} needles within {needleWindow} s bursts: other enemies within {needleR} take {needleShare}x needle damage; it does not.",
+            "The slug's path stays for {lanceSec} s; where the next slug crosses it, a blast: radius {lanceR}, {lanceShare}% base damage, ignores Shield.", "For {markSec} s, any damage that drops an enemy you hit under the execute line executes it (not bosses; up to {markMax}).", "Switch at full spin ({turretSpin} s) with fire held: the minigun stays and fires the same way for {turretSec} s; switching back recalls it.", "Each enemy your bullets kill removes {vent}% heat; an elite kill clears it (not bosses).",
+            "Rockets stick to enemies and merge into one blast after {hiveFuse} s: damage adds up, +{hiveR} radius per extra rocket.", "Each of the {bombardBlasts} blasts lands along your aim at that moment; sweep the mouse to bend the line into an arc."
         };
         static readonly string[] ExpandedTwistEn = {
-            "Push enemies out by 3 when the pull ends; no extra damage.", "Repel only in the aimed 180-degree half circle.", "Push side targets toward the aim line; push centred targets forward.", "Focused pellets pierce the first target; later targets take 60%.",
+            "Push enemies out by 3 when the pull ends; no extra damage.", "Repel only in the aimed 180-degree half circle.", "The second round of each clip pulls in enemies within {vacuumRange} cells ahead, then blasts them for {vacuumShare}% damage.", "Each pellet passes through the first enemy; the second takes {focusPierce}% damage.",
             "Pierce the first body and swap with the second valid target; hit each once.", "Blast at departure too; overlapping blasts hit each enemy once.", "Click again after 0.3 s attached to detonate early.", "Stick to the wall after the third bounce, keeping the original fuse.",
-            "Reflect the flame once at the first wall; hit each body once per shot.", "Push out by 3 when a fire patch ends; no extra damage.", "Frozen bodies can chain-shatter: at most 3 bursts, each body once.", "On release, the frost mist lingers ahead for 2 s and keeps freezing.",
-            "Later jumps prefer the most Lightning stacks, then the nearest target.", "Knockback and thrown travel also charge: 1 per unit, cap 30.", "Cloud drifts 1 unit/s along its launch direction, blocked by walls and bounds.", "Needles bounce once off a wall; no body piercing.",
-            "Pierce one interior wall, never bounds; body damage still decays.", "On a kill, fire one half-damage follow-up at the nearest target within 4; it cannot execute or chain another follow-up.", "Keep spin-up for 1 s after release; release still restores movement.", "Enemy blast becomes a forward 90-degree cone; self-damage and lockout remain.",
-            "Wall hit leaves a 1 s mine; blast if an enemy enters 1.5, without making new mines.", "Reverse the six blasts from far to near; other values stay the same."
+            "While spraying, the flame burns enemy projectiles in its cone (spikes, boss shots); no extra damage.", "Two fire patches within {fenceRange} with no wall between form a fence; touching it deals {fenceMult}x a patch tick, once per {fenceCd} s per body, you included.", "A shard knocks a frozen enemy {throwDist} away (not bosses or Spires); when it stops it shatters, taking the shard with its frozen bonus, and others within {burstR} take {splash}% of a shard.", "Release after holding {minHold} s or more: frozen enemies in the cone thaw at once, taking {shatterPerSec} per second frozen under the spray, {shatterCap} at most (scaled like the weapon).",
+            "The first target is unchanged; each later jump goes to the enemy nearest your aim point within 4 of the last target, never through walls.", "A discharge also strikes the path you walked in the last {trailSec} s: enemies within {trailWidth} of it take the same damage, once each.", "While you stand in your landed cloud, it moves toward you at {cloudFollow} cells/s, blocked by walls and bounds.", "An enemy hit by {needleCount} needles within {needleWindow} s bursts: other enemies within {needleR} take {needleShare}x needle damage; it does not.",
+            "The slug's path stays for {lanceSec} s; where the next slug crosses it, a blast: radius {lanceR}, {lanceShare}% base damage, ignores Shield.", "For {markSec} s, any damage that drops an enemy you hit under the execute line executes it (not bosses; up to {markMax}).", "Switch at full spin ({turretSpin} s) with fire held: the minigun stays and fires the same way for {turretSec} s; switching back recalls it.", "Each enemy your bullets kill removes {vent}% heat; an elite kill clears it (not bosses).",
+            "Rockets stick to enemies and merge into one blast after {hiveFuse} s: damage adds up, +{hiveR} radius per extra rocket.", "Each of the {bombardBlasts} blasts lands along your aim at that moment; sweep the mouse to bend the line into an arc."
         };
         static readonly string[] ExpandedTameZh = {
-            "Your attraction field no longer pulls you.", "Remove your 2-unit recoil; orbs are still repelled.", "Reloading never jams.", "The release recoil becomes a push that never causes wall damage.",
+            "Your attraction field no longer pulls you.", "Remove your 2-unit recoil; orbs are still repelled.", "Reloads never jam; press fire at {quickStart}–{quickEnd}% of a reload to finish it and fire at once.", "Recoil causes no wall damage and makes you immune to attacks for {guardMin}–{guardMax} s (by charge).",
             "Gain 0.5 s hit protection after a swap; no status clear or hole immunity.", "Recall the unused planted dagger after 6 s, without teleporting or exploding.", "Attached carriers no longer speed up; the blast can still hurt you.", "The blast spares your HP but still displaces you.",
-            "The fuel-tank burst no longer sets you alight; the ring still burns enemies.", "Your own fire patches no longer burn you; other fire still can.", "Broken shards leave no ice patches.", "Spraying no longer slows you.",
-            "Returning current no longer adds Lightning to you; it still shocks enemies around you.", "After 4 s full, drain 1 charge/s instead of self-blasting.", "Spore pods never burst under you, and their bursts spare you.", "Firing no longer costs you HP.",
-            "Still move back by 4, using a push without wall-impact damage.", "Executions no longer lower your max HP.", "Full spin no longer limits turning or slows you.", "Overheat spares your HP; the 3 s lockout remains.",
-            "Rockets never hurt you.", "Bombard blasts spare your HP but still displace you."
+            "The fuel-tank burst no longer sets you alight and knocks enemies within {tankR} back by {tankPush} (a real knockback; bosses take stagger).", "Your own patches and fences no longer burn you (ones already down too); while your centre is in one, you move x{wildfireSpeed}.", "Ice patches no longer chill you; they add {iceFrost} Frost per second to enemies on them instead; {iceCap} per weapon at most.", "Spraying no longer slows you; enemies within {auraR} of you move at x{auraSlow} instead.",
+            "Unused jumps no longer return through you; they are stored for the next discharge, up to +{chainStore}.", "Held full in your hand for 4 s, it discharges by itself at full strength and spares you.", "Stepping on a spore pod kicks it {kick} away, where it bursts; pod mists never poison you.", "Firing no longer costs HP; every {needlerEvery} needles give you {needlerShield} Shield instead.",
+            "Wall within {braceDist} behind you: no recoil, +{braceBonus}% damage; no wall: slide back 4 without losing control.", "Executions add {tameHp} max HP and heal {tameHp} instead of lowering it (up to +{tameHpCap} from this gun).", "Turning is free; after {anchorSec} s of firing, knockback on you drops to {anchorKnock}% and black holes cannot drag you.", "Meltdown no longer hurts you; it gives you {meltShield} Shield instead. Still a 3 s lockout.",
+            "Rockets never hurt you; backward rockets fly at the nearest visible enemy within {rearRange} behind you.", "Your own blasts no longer hurt or push you, and touching one cuts that shot's cooldown by {bombardCut}%."
         };
         static readonly string[] ExpandedTameEn = {
-            "Your attraction field no longer pulls you.", "Remove your 2-unit recoil; orbs are still repelled.", "Reloading never jams.", "The release recoil becomes a push that never causes wall damage.",
+            "Your attraction field no longer pulls you.", "Remove your 2-unit recoil; orbs are still repelled.", "Reloads never jam; press fire at {quickStart}–{quickEnd}% of a reload to finish it and fire at once.", "Recoil causes no wall damage and makes you immune to attacks for {guardMin}–{guardMax} s (by charge).",
             "Gain 0.5 s hit protection after a swap; no status clear or hole immunity.", "Recall the unused planted dagger after 6 s, without teleporting or exploding.", "Attached carriers no longer speed up; the blast can still hurt you.", "The blast spares your HP but still displaces you.",
-            "The fuel-tank burst no longer sets you alight; the ring still burns enemies.", "Your own fire patches no longer burn you; other fire still can.", "Broken shards leave no ice patches.", "Spraying no longer slows you.",
-            "Returning current no longer adds Lightning to you; it still shocks enemies around you.", "After 4 s full, drain 1 charge/s instead of self-blasting.", "Spore pods never burst under you, and their bursts spare you.", "Firing no longer costs you HP.",
-            "Still move back by 4, using a push without wall-impact damage.", "Executions no longer lower your max HP.", "Full spin no longer limits turning or slows you.", "Overheat spares your HP; the 3 s lockout remains.",
-            "Rockets never hurt you.", "Bombard blasts spare your HP but still displace you."
+            "The fuel-tank burst no longer sets you alight and knocks enemies within {tankR} back by {tankPush} (a real knockback; bosses take stagger).", "Your own patches and fences no longer burn you (ones already down too); while your centre is in one, you move x{wildfireSpeed}.", "Ice patches no longer chill you; they add {iceFrost} Frost per second to enemies on them instead; {iceCap} per weapon at most.", "Spraying no longer slows you; enemies within {auraR} of you move at x{auraSlow} instead.",
+            "Unused jumps no longer return through you; they are stored for the next discharge, up to +{chainStore}.", "Held full in your hand for 4 s, it discharges by itself at full strength and spares you.", "Stepping on a spore pod kicks it {kick} away, where it bursts; pod mists never poison you.", "Firing no longer costs HP; every {needlerEvery} needles give you {needlerShield} Shield instead.",
+            "Wall within {braceDist} behind you: no recoil, +{braceBonus}% damage; no wall: slide back 4 without losing control.", "Executions add {tameHp} max HP and heal {tameHp} instead of lowering it (up to +{tameHpCap} from this gun).", "Turning is free; after {anchorSec} s of firing, knockback on you drops to {anchorKnock}% and black holes cannot drag you.", "Meltdown no longer hurts you; it gives you {meltShield} Shield instead. Still a 3 s lockout.",
+            "Rockets never hurt you; backward rockets fly at the nearest visible enemy within {rearRange} behind you.", "Your own blasts no longer hurt or push you, and touching one cuts that shot's cooldown by {bombardCut}%."
         };
         public static string ExpandedUpgradeDescription(AnomalyArena.WeaponForm form,int variant,UpgradeAxis axis)
         {
             int index=((int)form-3)*2+(variant==0?0:1);
             if(index<0||index>=ExpandedTwistZh.Length)return "";
-            return axis==UpgradeAxis.Twist?ArenaText.Pair(ExpandedTwistEn[index],ExpandedTwistEn[index]):axis==UpgradeAxis.Tame?ArenaText.Pair(ExpandedTameEn[index],ExpandedTameEn[index]):"";
+            return Fill(axis==UpgradeAxis.Twist?ArenaText.Pair(ExpandedTwistEn[index],ExpandedTwistEn[index]):axis==UpgradeAxis.Tame?ArenaText.Pair(ExpandedTameEn[index],ExpandedTameEn[index]):"");
+        }
+
+        static string Fill(string text)
+        {
+            if(string.IsNullOrEmpty(text)||text.IndexOf('{')<0)return text;
+            var weapons=GameManager.Instance?GameManager.Instance.runWeapons:null;
+            var u=weapons?weapons.upgrades:new WeaponUpgradeTuning();
+            string P(float share)=>(share*100f).ToString("0.#");
+            string N(float value)=>value.ToString("0.##");
+            var tokens=new (string key,string value)[]
+            {
+
+                ("{vacuumRange}",N(u.scatterVacuumRange)),("{vacuumShare}",P(u.scatterVacuumShare)),("{focusPierce}",P(u.focusPierceRetention)),
+                ("{quickStart}",P(u.scatterQuickStart)),("{quickEnd}",P(u.scatterQuickEnd)),("{guardMin}",N(u.focusGuardMin)),("{guardMax}",N(u.focusGuardMax)),
+
+                ("{fenceRange}",N(u.wildfireFenceRange)),("{fenceMult}",N(u.wildfireFenceDamage)),("{fenceCd}",N(u.wildfireFenceCooldown)),
+                ("{tankR}",N(u.fuelTankRadius)),("{tankPush}",N(u.fuelTankTamePush)),("{wildfireSpeed}",N(u.wildfireTameSpeed)),
+                ("{throwDist}",N(u.shatterThrowDistance)),("{burstR}",N(u.shatterBurstRadius)),("{splash}",P(u.shatterSplashShare)),
+                ("{iceFrost}",N(u.iceFrostPerSecond)),("{iceCap}",u.icePatchTamedCap.ToString()),
+                ("{minHold}",N(u.blizzardShatterMinHold)),("{shatterPerSec}",N(u.blizzardShatterPerSecond)),("{shatterCap}",N(u.blizzardShatterCap)),
+                ("{auraR}",N(u.blizzardAuraRadius)),("{auraSlow}",N(u.blizzardSelfSlow)),("{chainStore}",u.chainStoreMax.ToString()),
+                ("{trailSec}",N(u.capacitorTrailSeconds)),("{trailWidth}",N(u.capacitorTrailWidth)),("{cloudFollow}",N(u.cloudFollowSpeed)),("{kick}",N(u.sporeKickDistance)),
+                ("{needleCount}",u.needleBurstCount.ToString()),("{needleWindow}",N(u.needleBurstWindow)),("{needleR}",N(u.needleBurstRadius)),("{needleShare}",N(u.needleBurstShare)),
+                ("{needlerEvery}",u.needlerHpPerNeedles.ToString()),("{needlerShield}",N(u.needlerTameShield)),
+
+                ("{lanceSec}",N(u.lanceTrailSeconds)),("{lanceR}",N(u.lanceCrossRadius)),("{lanceShare}",P(u.lanceCrossShare)),
+                ("{braceDist}",N(u.lanceBraceDistance)),("{braceBonus}",P(u.lanceBraceDamage-1f)),
+                ("{markSec}",N(u.executeMarkSeconds)),("{markMax}",u.executeMarkMax.ToString()),("{tameHp}",N(u.executeTameHpGain)),("{tameHpCap}",N(u.executeTameHpCap)),
+                ("{turretSpin}",N(u.turretSpinSeconds)),("{turretSec}",N(u.turretSeconds)),("{anchorSec}",N(u.spinAnchorSpinSeconds)),("{anchorKnock}",P(u.spinAnchorKnockFactor)),
+                ("{vent}",P(u.meltdownKillVent/4f)),("{meltShield}",N(u.meltdownTameShield)),
+                ("{hiveFuse}",N(u.swarmHiveFuse)),("{hiveR}",N(u.swarmHivePerRocketRadius)),("{rearRange}",N(u.barrageRearRange)),
+                ("{bombardBlasts}",System.Math.Max(1,u.bombardBlasts).ToString()),("{bombardCut}",P(u.bombardTameCooldownCut)),
+            };
+            foreach(var (key,value) in tokens)if(text.Contains(key))text=text.Replace(key,value);
+            return text;
         }
         public static string Upgrade(UpgradeAxis axis) => axis switch
         {

@@ -31,13 +31,27 @@ namespace AnomalyArena
         public TemporaryWall[] temporaryWalls;
         public Transform trialPlatform;
         public Enemy hollow;
-        [Tooltip("Seconds after entering the void trial before the Hollow may start its first attack. The player is set down inside " +
-                 "its slam reach, and a slam carries them off the platform.")]
+        [Tooltip("Seconds after entering the void trial before the Nash Prophet (Hollow) may start its first move.")]
         public float trialOpeningGrace = 3f;
+        [Tooltip("Cells from the platform centre where the player is set down on entering the trial; outside the Nash Prophet's pulse " +
+                 "range, so its first move is a shot.")]
+        public float trialEntryDistance = 8f;
+        [Min(0), Tooltip("Hole slots kept for the Nash Prophet's prophecy landings (copies of the trial temporary hole made at start), " +
+                         "so its holes never take the player's own Pocket Void or blink slots.")]
+        public int bossHoleSlots = 2;
+        BlackHole[] bossHoles = Array.Empty<BlackHole>();
         public Transform decoy;
         public Transform trialDecoy;
-        int TemporaryHoleCount => 1 + (TrialActive ? trialExtraTemporaryHoles?.Length ?? 0 : extraTemporaryHoles?.Length ?? 0);
-        BlackHole TemporaryHoleAt(int index) => index == 0 ? TrialActive ? trialTemporaryHole : temporaryHole : TrialActive ? trialExtraTemporaryHoles[index-1] : extraTemporaryHoles[index-1];
+        int TemporaryHoleCount => 1 + (TrialActive ? (trialExtraTemporaryHoles?.Length ?? 0) + bossHoles.Length : extraTemporaryHoles?.Length ?? 0);
+                                                                                                   
+        int PlayerHoleCount => TemporaryHoleCount - (TrialActive ? bossHoles.Length : 0);
+        BlackHole TemporaryHoleAt(int index)
+        {
+            if (index == 0) return TrialActive ? trialTemporaryHole : temporaryHole;
+            if (!TrialActive) return extraTemporaryHoles[index-1];
+            int extra = trialExtraTemporaryHoles?.Length ?? 0;
+            return index - 1 < extra ? trialExtraTemporaryHoles[index-1] : bossHoles[index-1-extra];
+        }
         bool IsTemporaryHole(Vector3 point, Combatant actor = null)
         {
             for(int i=0;i<TemporaryHoleCount;i++){var hole=TemporaryHoleAt(i);if(hole&&hole.gameObject.activeSelf&&hole.Contains(point,actor))return true;}
@@ -114,6 +128,16 @@ namespace AnomalyArena
                     block.SetColor("_BaseColor", biome.floor.color);
                     block.SetColor("_Color", biome.floor.color);
                     floorRenderer.SetPropertyBlock(block);
+                }
+            }
+            if (trialTemporaryHole && bossHoleSlots > 0)
+            {
+                bossHoles = new BlackHole[bossHoleSlots];
+                for (int i = 0; i < bossHoleSlots; i++)
+                {
+                    bossHoles[i] = Instantiate(trialTemporaryHole, trialTemporaryHole.transform.parent);
+                    bossHoles[i].name = trialTemporaryHole.name + " (boss " + (i + 1) + ")";
+                    bossHoles[i].gameObject.SetActive(false);
                 }
             }
             Grid = new MapGrid(layout ? layout.width : 100, layout ? layout.height : 70);
@@ -361,18 +385,19 @@ namespace AnomalyArena
                     float distance = Query.Flat(combatant.Position - trialPlatform.position).magnitude;
                     if (distance > trialRadius)
                     {
+                                                                                                                      
+                        bool summon = combatant.Team == Team.Enemy && combatant != hollow;
                         combatant.OnEnterFallZone(Vector3.zero);
-                        if (combatant.Team == Team.Enemy && combatant != hollow && hollow && hollow.IsAlive)
-                            hollow.ReceiveDamage(DamageInfo.Attack(hollow.maxHp * 0.05f, GM.player));
+                        if (summon && hollow && hollow.IsAlive) hollow.SummonFell();
                     }
                     else if (IsTemporaryHole(combatant.Position,combatant) && combatant != hollow) SwallowIntoVoid(combatant);
                     else if (distance > trialRadius - 2f) ApplyPull(combatant, Query.Flat(combatant.Position - trialPlatform.position).normalized * 3f);
-                    else ApplyHolePull(combatant);
-                    if (hollow && hollow.IsAlive && hollow.Inhaling && combatant != hollow)
+                    else if (!(combatant is Enemy { IsBoss: true })) ApplyHolePull(combatant);
+                    if (hollow && hollow.IsAlive && hollow.Inhaling && combatant != hollow && combatant.IsAlive)
                     {
-                        ApplyPull(combatant, Query.Flat(hollow.Position - combatant.Position).normalized * 4f);
+                        ApplyPull(combatant, Query.Flat(hollow.Position - combatant.Position).normalized * BossNumbers.inhalePull);
                         if (Query.Flat(hollow.Position - combatant.Position).magnitude <= hollow.Radius + combatant.Radius)
-                            combatant.ReceiveDamage(DamageInfo.Attack(10f, hollow, combatant.Position - hollow.Position, 8f));
+                            hollow.InhaleContact(combatant);
                     }
                     continue;
                 }
@@ -388,7 +413,8 @@ namespace AnomalyArena
                 }
                                                                                 
                 if (!swallowed && IsTemporaryHole(combatant.Position,combatant) && !(combatant is Enemy { IsBoss: true })) { SwallowIntoVoid(combatant); swallowed = true; }
-                if (!swallowed) ApplyHolePull(combatant);
+                                                                                                                 
+                if (!swallowed && !(combatant is Enemy { IsBoss: true })) ApplyHolePull(combatant);
             }
             TickCorpses(GM.WorldFixedDeltaTime);
                                                                                                              
@@ -402,8 +428,58 @@ namespace AnomalyArena
         {
             if (combatant is Enemy enemy && enemy.IsAlive && !enemy.SuppressRewards && !enemy.IsTrialSummon && GM.progression && GM.waves)
                 GM.progression.GainXp(GM.waves.ExperienceFor(enemy));
+            bool summon = TrialActive && combatant is Enemy { IsAlive: true } && combatant != hollow;
             combatant.OnEnterFallZone(Vector3.zero);
+            if (summon && hollow && hollow.IsAlive) hollow.SummonFell();                                             
         }
+
+        static BossTuning BossNumbers => GM && GM.waves && GM.waves.bosses != null ? GM.waves.bosses : BossTuning.Defaults;
+
+                                                                                                                                        
+                                                                                                                                              
+        public float LimitBossKnockback(Vector3 from, Vector3 dir, float distance)
+        {
+            if (!TrialActive || !trialPlatform || distance <= 0f) return distance;
+            dir = Query.Flat(dir);
+            if (dir.sqrMagnitude < 1e-6f) return distance;
+            dir.Normalize();
+            var numbers = BossNumbers;
+            Vector3 p = Query.Flat(from - trialPlatform.position);
+            float safe = Mathf.Max(0f, trialRadius - numbers.edgeKnockMargin);
+            float b = Vector3.Dot(p, dir), c = p.sqrMagnitude - safe * safe;
+                                                                                                               
+            distance = Mathf.Min(distance, c <= 0f ? -b + Mathf.Sqrt(Mathf.Max(0f, b * b - c)) : b > 0f ? 0f : distance);
+            for (int i = 0; i < TemporaryHoleCount; i++)
+            {
+                var hole = TemporaryHoleAt(i);
+                if (!hole || !hole.gameObject.activeSelf || hole.Phase is not (HolePhase.Active or HolePhase.Collapsing)) continue;
+                Vector3 q = Query.Flat(from - hole.Centre);
+                float r = hole.KillRadius + numbers.holeKnockMargin;
+                float hb = Vector3.Dot(q, dir), hc = q.sqrMagnitude - r * r;
+                if (hc <= 0f) { if (hb < 0f) distance = 0f; continue; }                                           
+                float disc = hb * hb - hc;
+                if (hb >= 0f || disc < 0f) continue;                                
+                distance = Mathf.Min(distance, Mathf.Max(0f, -hb - Mathf.Sqrt(disc)));
+            }
+            return Mathf.Max(0f, distance);
+        }
+
+                                                                                                                                                         
+        public void CreateBossHole(Vector3 at, float diameter, float life, Combatant owner)
+        {
+            if (!TrialActive) return;
+            BlackHole slot = null;
+            foreach (var hole in bossHoles)
+            {
+                if (!hole) continue;
+                if (!hole.gameObject.activeSelf) { slot = hole; break; }
+                if (!slot || hole.TemporarySecondsLeft < slot.TemporarySecondsLeft) slot = hole;
+            }
+            if (!slot) { CreateVoidHole(at, diameter, 0f, life, owner, true); return; }
+            slot.MakeTemporary(new Vector3(at.x, trialTemporaryHole.transform.position.y, at.z), diameter, life, owner, true, 0f);
+            HoleChanged();
+        }
+        void HideBossHoles() { foreach (var hole in bossHoles) if (hole) hole.gameObject.SetActive(false); }
 
         static void ApplyPull(Combatant combatant, Vector3 pull)
         {
@@ -413,7 +489,12 @@ namespace AnomalyArena
         }
                                                                                                                                       
                                                                                                        
-        void ApplyHolePull(Combatant combatant) => ApplyPull(combatant,GetPull(combatant.Position,combatant));
+        void ApplyHolePull(Combatant combatant)
+        {
+                                                                                                                                        
+            if (combatant == GM.player && GM.runWeapons && GM.runWeapons.Anchored) return;
+            ApplyPull(combatant,GetPull(combatant.Position,combatant));
+        }
         void TickCorpses(float dt)
         {
             if(GM.waves.preparedEnemies!=null)foreach(var enemy in GM.waves.preparedEnemies)
@@ -477,9 +558,10 @@ namespace AnomalyArena
             foreach (var wall in temporaryWalls) if (wall && wall.gameObject.activeSelf) wall.BattlefieldFrozen = true;
             if (decoy && decoy.gameObject.activeSelf) Freeze(decoy.gameObject);
             TrialActive = true;
-            trialRadius = 12f;
+            trialRadius = BossNumbers.prophetPlatformRadii.x;
             trialPlatform.gameObject.SetActive(true);
-            MovePlayer(player, trialPlatform.position + Vector3.back * 6f);
+            trialPlatform.localScale = new Vector3(trialRadius * 2f, trialPlatform.localScale.y, trialRadius * 2f);
+            MovePlayer(player, trialPlatform.position + Vector3.back * trialEntryDistance);
             ElementStatus.For(player)?.ClearStatuses();
             hollow.gameObject.SetActive(true);
             hollow.transform.position = trialPlatform.position;
@@ -539,6 +621,8 @@ namespace AnomalyArena
             if (!TrialActive) return;
             foreach(var enemy in GM.waves.preparedEnemies)if(enemy&&enemy.CorpseActive&&enemy.IsTrialSummon)enemy.DespawnCorpse(enemy.SpawnVersion);
             GM.waves.ClearTrialSummons();
+            if (hollow) hollow.ClearBossMarks();
+            HideBossHoles();
             foreach (var wall in trialWalls) if (wall) wall.gameObject.SetActive(false);
             trialWalls.Clear();
             foreach (var wall in temporaryWalls) if (wall) wall.BattlefieldFrozen = false;
@@ -547,6 +631,10 @@ namespace AnomalyArena
             if(trialExtraTemporaryHoles!=null)foreach(var hole in trialExtraTemporaryHoles)if(hole)hole.gameObject.SetActive(false);
             TrialActive = false;
             TrialWon = !labTrial;
+                                                                                                                             
+            if (GM.waves.preparedBolts != null)
+                foreach (var bolt in GM.waves.preparedBolts)
+                    if (bolt && bolt.gameObject.activeSelf && !frozen.Contains(bolt.gameObject)) bolt.gameObject.SetActive(false);
             foreach (var go in frozen) if (go) go.SetActive(true);
             frozen.Clear();
             GM.waves.ResumeAfterTrial();
@@ -567,6 +655,7 @@ namespace AnomalyArena
             if (trialTemporaryHole) trialTemporaryHole.gameObject.SetActive(false);
             if(extraTemporaryHoles!=null)foreach(var hole in extraTemporaryHoles)if(hole)hole.gameObject.SetActive(false);
             if(trialExtraTemporaryHoles!=null)foreach(var hole in trialExtraTemporaryHoles)if(hole)hole.gameObject.SetActive(false);
+            HideBossHoles();
             if (decoy) decoy.gameObject.SetActive(false);
             if (trialDecoy) trialDecoy.gameObject.SetActive(false);
             HoleChanged();
@@ -579,6 +668,7 @@ namespace AnomalyArena
             if(trialTemporaryHole)trialTemporaryHole.gameObject.SetActive(false);
             if(extraTemporaryHoles!=null)foreach(var hole in extraTemporaryHoles)if(hole)hole.gameObject.SetActive(false);
             if(trialExtraTemporaryHoles!=null)foreach(var hole in trialExtraTemporaryHoles)if(hole)hole.gameObject.SetActive(false);
+            HideBossHoles();
             foreach(var wall in temporaryWalls)if(wall){wall.BattlefieldFrozen=false;wall.gameObject.SetActive(false);}
             if(decoy)decoy.gameObject.SetActive(false);if(trialDecoy)trialDecoy.gameObject.SetActive(false);
             if(Grid!=null)HoleChanged();
@@ -612,7 +702,7 @@ namespace AnomalyArena
         public void CreateVoidHole(Vector3 at,float diameter,float gravityWidth,float life,Combatant owner,bool protectOwner)
         {
             BlackHole slot=null;
-            for(int i=0;i<TemporaryHoleCount;i++){var hole=TemporaryHoleAt(i);if(!hole)continue;if(!hole.gameObject.activeSelf){slot=hole;break;}if(!slot||hole.TemporarySecondsLeft<slot.TemporarySecondsLeft)slot=hole;}
+            for(int i=0;i<PlayerHoleCount;i++){var hole=TemporaryHoleAt(i);if(!hole)continue;if(!hole.gameObject.activeSelf){slot=hole;break;}if(!slot||hole.TemporarySecondsLeft<slot.TemporarySecondsLeft)slot=hole;}
             if(slot){slot.MakeTemporary(at,diameter,life,owner,protectOwner,gravityWidth);HoleChanged();}
         }
         public void FeedNearestHole(Vector3 at, float reach, int count)

@@ -9,13 +9,42 @@ namespace AnomalyArena
         Combatant dealer;
         Team targetTeam = Team.Player;
         float life, damageFactor = 1f;
+                                                                                                              
+        float shotDamage = -1f, shotKnockback = -1f, shotSpeed = -1f;
         public Vector3 Direction => direction;
+                                                                                                                                  
+        float Speed => shotSpeed > 0f ? shotSpeed : owner && owner.definition ? Mathf.Max(.1f, owner.definition.projectileSpeed) : 7f;
+                                                                                                                         
+        public bool IsBossShot => shotSpeed > 0f;
+                                                                                                         
+        public bool Hostile => targetTeam == Team.Player;
+                                                                            
+        public const float HitRadius = .2f;
+        static readonly Color BossShotColour = new(.93f, .82f, 1f);
+        bool tinted;
 
-        float Speed => owner && owner.definition ? Mathf.Max(.1f, owner.definition.projectileSpeed) : 7f;
-
-        public bool IsPoisonSpike => owner && owner.definition && owner.definition.spikePoisonStacks > 0f;
+                                                                                                                                 
+        public bool IsPoisonSpike => !IsBossShot && owner && owner.definition && owner.definition.spikePoisonStacks > 0f;
 
         public void Launch(Enemy enemy, Vector3 at, Vector3 dir)
+        {
+            shotDamage = shotKnockback = shotSpeed = -1f;
+            if (tinted && TryGetComponent(out Renderer body)) body.SetPropertyBlock(null);
+            tinted = false;
+            LaunchFrom(enemy, at, dir, true);
+        }
+
+                                                                                  
+        public void Launch(Enemy enemy, Vector3 at, Vector3 dir, float damage, float knockback, float speed)
+        {
+            shotDamage = Mathf.Max(0f, damage);
+            shotKnockback = Mathf.Max(0f, knockback);
+            shotSpeed = Mathf.Max(.1f, speed);
+            if (TryGetComponent(out Renderer body)) { Art.Tint(body, BossShotColour); tinted = true; }
+            LaunchFrom(enemy, at, dir, false);                                                       
+        }
+
+        void LaunchFrom(Enemy enemy, Vector3 at, Vector3 dir, bool sound)
         {
             owner = enemy;
             dealer = enemy;
@@ -28,8 +57,11 @@ namespace AnomalyArena
             direction = Query.Flat(dir).normalized;
             life = 6f;
             gameObject.SetActive(true);
-            V3WorldAudio.Instance?.Play(ArenaWorldCue.NpcSpit, at);
+            if (sound) V3WorldAudio.Instance?.Play(ArenaWorldCue.NpcSpit, at);
         }
+
+                                                                                                              
+        public void Burn() => gameObject.SetActive(false);
 
         public void Reflect(Combatant newOwner)
         {
@@ -51,21 +83,31 @@ namespace AnomalyArena
                 return;
             }
 
-            foreach (var character in Query.CharactersAlong(from, to, 0.2f))
+                                                                                                              
+            var world = WorldMap.Active;
+            if (world && world.TrialActive && world.trialPlatform &&
+                Query.Flat(to - world.trialPlatform.position).magnitude > world.trialRadius + 2f)
+            {
+                gameObject.SetActive(false);
+                return;
+            }
+
+            foreach (var character in Query.CharactersAlong(from, to, HitRadius))
             {
                 if (character.Team != targetTeam || !character.IsAlive) continue;
                 float beforeHp = character.Hp;
                 var board = ElementStatus.For(character);
                 float beforeShield = board ? board.Shield : 0f;
                 bool atPlayer = targetTeam == Team.Player;
-
-                var hit = DamageInfo.Attack((owner ? owner.attackDamage : 6f) * (atPlayer ? damageFactor : 1f), dealer,
-                    direction,
-                    atPlayer ? (owner ? owner.attackKnockback : 0f) : 3f, HitKind.Bullet);
+                                                                                                                                   
+                float damage = shotDamage >= 0f ? shotDamage : owner ? owner.attackDamage : 6f;
+                float push = shotKnockback >= 0f ? shotKnockback : owner ? owner.attackKnockback : 0f;
+                var hit = DamageInfo.Attack(damage * (atPlayer ? damageFactor : 1f), dealer, direction, atPlayer ? push : 3f,
+                    HitKind.Bullet);
                 if (atPlayer && owner) hit.element = owner.Affix;
                 if (character.ReceiveDamage(hit) && atPlayer && owner)
                 {
-                    if (owner.definition && owner.definition.spikePoisonStacks > 0f)
+                    if (!IsBossShot && owner.definition && owner.definition.spikePoisonStacks > 0f)
                         ElementCombat.ApplyStacks(character, ElementKind.Poison, owner.definition.spikePoisonStacks,
                             owner);
                     if (owner.Affix != ElementKind.None)

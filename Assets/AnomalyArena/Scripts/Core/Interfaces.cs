@@ -62,6 +62,8 @@ namespace AnomalyArena
         public float baseDamage;
         public bool ignoreShield;
         public bool builtInElement;
+                                                                                                                                       
+        public bool noLightningJump;
                                                                                   
         public HitFeel feel;
 
@@ -99,6 +101,9 @@ namespace AnomalyArena
         public float knockback;
         public ElementKind element;
         public float stunSeconds;
+
+                                                                                                                                
+        public RunWeapon chainHook;
 
         public float SizeFactor(float bodyRadius) => Mathf.Pow(bodyRadius / ReferenceRadius, sizeExponent);
 

@@ -76,14 +76,15 @@ namespace AnomalyArena
 
             Assert.That(AttackPool.Instance.actors.Count(a => a && a.gameObject.activeSelf && a.mode == AttackMode.Shard), Is.EqualTo(3), "three shards are in flight");
             await Until(() => game.runWeapons.Hazards.Count(h => h.kind == GroundHazardKind.IcePatch) == 3, 2f, "the three shards land");
-            Equip(game, WeaponForm.CryoCannon, 0, UpgradeAxis.Tame);
+
+            var tamed = Equip(game, WeaponForm.CryoCannon, 0, UpgradeAxis.Tame);
             game.runWeapons.HandleInput(true, true, false);
             await Until(() => !AttackPool.Instance.actors.Any(a => a && a.gameObject.activeSelf && a.mode == AttackMode.Shard), 2f, "the tamed shards land");
-            Assert.That(game.runWeapons.Hazards.Count, Is.Zero, "Tame shards leave no patches");
+            Assert.That(game.runWeapons.Hazards.Count(h => h.kind == GroundHazardKind.IcePatch && h.weapon == tamed), Is.EqualTo(3), "Tame shards leave their patches too");
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
-        public async Task Execute_TargetLeftUnderThreshold_ExecutesRaisesThresholdAndCostsMaxHpUnlessTamed()
+        public async Task Execute_TargetLeftUnderThreshold_ExecutesRaisesThresholdAndCostsMaxHpTamedGainsIt()
         {
             var (game, targets) = await V3CombatSmokeTest.StartSandbox();
             var tuning = game.runWeapons.upgrades;
@@ -108,7 +109,8 @@ namespace AnomalyArena
             await Awaitable.NextFrameAsync();
 
             Assert.That(second.IsAlive, Is.False, "the tamed gun still executes");
-            Assert.That(game.progression.Stats.maxHp, Is.EqualTo(maxHp).Within(.001f), "Tame executions keep max HP");
+
+            Assert.That(game.progression.Stats.maxHp, Is.EqualTo(maxHp + tuning.executeTameHpGain).Within(.001f), "Tame executions add max HP");
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
@@ -252,14 +254,17 @@ namespace AnomalyArena
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
-        public async Task ReverseShot_Tamed_TurnsAroundAndHitsTargetAhead()
+        public async Task ReverseShot_Tamed_FiresFromTheMuzzleAndHitsTargetAhead()
         {
             var (game, targets) = await V3CombatSmokeTest.StartSandbox();
-            Equip(game, WeaponForm.Rifle, 1, UpgradeAxis.Tame);
+            var rifle = Equip(game, WeaponForm.Rifle, 1, UpgradeAxis.Tame);
 
             game.runWeapons.HandleInput(true, true, false);
 
-            await Until(() => targets[0].Hp < targets[0].maxHp, 3f, "the reverse round turns around and hits the target ahead");
+            var round = AttackPool.Instance.actors.Single(a => a && a.gameObject.activeSelf && a.weapon == rifle);
+            Assert.That(Vector3.Dot(round.direction, Vector3.forward), Is.GreaterThan(.99f), "the tamed round flies forward from the start");
+
+            await Until(() => targets[0].Hp < targets[0].maxHp, 3f, "the tamed round hits the target ahead");
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]

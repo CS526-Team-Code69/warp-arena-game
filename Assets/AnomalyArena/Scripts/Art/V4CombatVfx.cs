@@ -87,7 +87,7 @@ namespace AnomalyArena
 
         public static bool IsRocketStrike(AttackActor actor) =>
             actor && actor.gameObject.activeInHierarchy && actor.mode == AttackMode.Blast && actor.weapon != null
-            && actor.weapon.form == WeaponForm.RocketLauncher && actor.weapon.variant == 0;
+            && actor.weapon.form == WeaponForm.RocketLauncher && actor.weapon.variant == 0 && !actor.chainChild;                                                    
 
         public static bool DrawsRocketStrike(AttackActor actor) => Active && Active.isActiveAndEnabled &&
                                                                    Active.strikeRocket && Art.Enabled &&
@@ -106,7 +106,7 @@ namespace AnomalyArena
         {
             used = 0;
             var gm = GameManager.Instance;
-            if (items == null || !gm || !gm.cam || !Art.Enabled)
+            if (items == null || !gm || !gm.cam)
             {
                 HideRest();
                 ShowBoltBodies();
@@ -116,11 +116,23 @@ namespace AnomalyArena
             cameraTransform = gm.cam.transform;
             float time = Time.unscaledTime;
             var player = gm.player;
+            if (!Art.Enabled)
+            {
+
+                DrawTracers(gm, time);
+                DrawWeaponMarks(gm, player, time);
+                HideRest();
+                ShowBoltBodies();
+                return;
+            }
+
             DrawStrikes(gm, time);
             DrawHazards(gm, time);
             DrawBolts(gm);
             DrawRadiation(time);
             DrawSpecialEnemies(gm, time);
+            DrawTracers(gm, time);
+            DrawWeaponMarks(gm, player, time);
             if (player && player.IsAlive) DrawPlayerBuffs(player, gm, time);
             Vector3 centre = player ? player.Position : cameraTransform.position;
             float maxSqr = maxDistance * maxDistance;
@@ -234,14 +246,18 @@ namespace AnomalyArena
         void DrawHazards(GameManager gm, float time)
         {
             if (!gm.runWeapons) return;
+            if (gm.runWeapons.BlizzardAuraActive && gm.player && frostRing)
+                Flat(frostRing, new Vector3(gm.player.Position.x, .065f, gm.player.Position.z), gm.runWeapons.BlizzardAuraRadius * 2f,
+                    new Color(.6f, .85f, 1f, .45f), -time * 35f);
             var hazards = gm.runWeapons.Hazards;
             for (int i = 0; i < hazards.Count && used < items.Length; i++)
             {
                 var h = hazards[i];
                 float fade = Mathf.Clamp01(h.timeLeft / Mathf.Max(.01f, Mathf.Min(1f, h.life)));
+
                 if (h.kind == GroundHazardKind.IcePatch)
                     Flat(frostRing, h.position + Vector3.up * .06f, h.radius * 2.4f,
-                        new Color(.7f, .95f, 1f, .75f * fade), i * 37f);
+                        h.weapon != null && h.weapon.Has(UpgradeAxis.Tame) ? new Color(.35f, .55f, 1f, .8f * fade) : new Color(.7f, .95f, 1f, .75f * fade), i * 37f);
                 else
                 {
                     Flat(poisonMist, h.position + Vector3.up * .06f, h.radius * 2.6f,
@@ -296,6 +312,39 @@ namespace AnomalyArena
                 }
             }
             if (lasers.Count > 64) lasers.Clear();
+        }
+
+        void DrawTracers(GameManager gm, float time)
+        {
+            if (!gm.runWeapons || !prismBeam) return;
+            var tracers = gm.runWeapons.Tracers;
+            for (int i = 0; i < tracers.Count && used < items.Length; i++)
+            {
+                var tracer = tracers[i];
+                if (time > tracer.until) continue;
+                Vector3 line = Query.Flat(tracer.to - tracer.from);
+                float length = line.magnitude;
+                if (length < .05f) continue;
+                Vector3 direction = line / length;
+                PlaceStretched(prismBeam, tracer.from + direction * length * .5f, ScreenRoll(direction), length, tracer.width, tracer.color);
+            }
+        }
+
+        void DrawWeaponMarks(GameManager gm, Combatant player, float time)
+        {
+            var weapons = gm.runWeapons;
+            if (!weapons) return;
+            if (slowRing)
+                foreach (var body in Combatant.All)
+                {
+                    if (used >= items.Length) break;
+                    if (!body || !body.IsAlive || !weapons.IsChargeSlowed(body)) continue;
+                    Flat(slowRing, new Vector3(body.Position.x, .075f, body.Position.z), Mathf.Max(.35f, body.radius) * 2.6f,
+                        new Color(.55f, .85f, 1f, .7f), -time * 60f);
+                }
+
+            if (player && player.IsAlive && weapons.FocusGuardActive)
+                Billboard(auraShield, Query.AtCastHeight(player.Position) + Vector3.up * .3f, 2.4f, new Color(.85f, .9f, 1f, .6f));
         }
 
         void DrawBolts(GameManager gm)

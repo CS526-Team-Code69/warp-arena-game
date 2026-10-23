@@ -89,7 +89,7 @@ namespace AnomalyArena
                                                                                                       
         public Combatant HeldShield => GM && GM.runWeapons && this is PlayerController ? GM.runWeapons.HeldEnemy : null;
 
-        public bool MovementLocked => GM && this is PlayerController && ((GM.runWeapons && GM.runWeapons.HandHookBusy)||(GM.skills&&GM.skills.MovementLocked));
+        public bool MovementLocked => GM && this is PlayerController && ((GM.runWeapons && GM.runWeapons.HookLocksMovement)||(GM.skills&&GM.skills.MovementLocked));
 
         public static Combatant From(Collider col)
         {
@@ -247,9 +247,10 @@ namespace AnomalyArena
         {
             var fb = GM.feedback;
             bool big = heavy || crit;
-                                                                                                           
+                                                                                                                                     
+                                                                                                      
             float hold = big ? profile.victimHeavyHold : profile.victimHold;
-            if (hold > 0f && Time.unscaledTime >= hitPauseReadyAt)
+            if (hold > 0f && Time.unscaledTime >= hitPauseReadyAt && !(this is Enemy { IsBoss: true }))
             {
                 hitPauseTimer = Mathf.Max(hitPauseTimer, hold);
                 hitPauseReadyAt = Time.unscaledTime + hold + fb.victimHoldCooldown;
@@ -450,6 +451,8 @@ namespace AnomalyArena
             dir.Normalize();
             wallSlams=0;
             if (kind == KnockKind.Hit) distance *= knockbackScale;
+                                                                                                            
+            if (GM && GM.runWeapons && this == (Combatant)GM.player && GM.runWeapons.Anchored) distance *= GM.runWeapons.upgrades.spinAnchorKnockFactor;
             knockVel = dir * (distance * GM.rules.knockDamping);
             Vector3 cur = Query.Flat(rb.linearVelocity);
             rb.AddForce(knockVel - cur, ForceMode.VelocityChange);
@@ -505,11 +508,15 @@ namespace AnomalyArena
             {
                 if (!victim.IsAlive || victim.Team == Team.Player) continue;
                 bool self = victim == this;
+                                                                                           
+                if (!self && Query.WallBetween(Query.AtCastHeight(center), Query.AtCastHeight(victim.Position), out _)) continue;
                 Vector3 away = self ? Vector3.zero : Query.Flat(victim.Position - center);
                 var info=DamageInfo.Attack(damage,impact.dealer,away,self?0:push,HitKind.Slam);
                 info.element=impact.element;info.baseDamage=damage;
                 victim.ReceiveDamage(info);
             }
+                                                                                                                   
+            if (impact.chainHook != null && hit.IsAlive && GM && GM.runWeapons) GM.runWeapons.ChainHook(impact.chainHook, hit);
         }
 
                                                                                                                                           
@@ -551,8 +558,11 @@ namespace AnomalyArena
         public virtual bool ReceiveDamage(DamageInfo info)
         {
             if (!IsAlive || InVoidWalk) return false;
+                                                                                                                                
+                                                                                    
+            bool selfHit = info.dealer != null && info.dealer.Owner == this;
                                                                                                                                            
-            if (info.isAttack && Protected) return false;
+            if (info.isAttack && Protected && !selfHit) return false;
             float beforeHp=Hp,beforeShield=elementStatus?elementStatus.Shield:0;
             bool crit=false;
             var runStats=GM&&GM.progression?GM.progression.Stats:null;
@@ -568,7 +578,7 @@ namespace AnomalyArena
             float dealt=elementStatus?elementStatus.ResolveDamage(raw,info.source,info.ignoreShield):raw;
             if(dealt>0f)dealt=Mathf.Max(1f,dealt);                                                                 
             Hp -= dealt;
-            if (info.isAttack && raw>0f && protectionTime > 0f) protectTimer = protectionTime;
+            if (info.isAttack && raw>0f && protectionTime > 0f && !selfHit) protectTimer = protectionTime;
             bool tick=info.source==DamageSource.Burn||info.source==DamageSource.Poison;
             float hpDamage=Mathf.Min(beforeHp,Mathf.Max(0f,dealt));
             float shieldDamage=Mathf.Max(0f,beforeShield-(elementStatus?elementStatus.Shield:0));
@@ -591,9 +601,17 @@ namespace AnomalyArena
             }
                                                                                                                                   
             else if (info.knockDistance > 0f && !(Team == Team.Player && info.dealer?.Owner is Enemy { PushesPlayer: false }))
-                Knockback(info.knockDir, info.knockDistance, KnockKind.Hit);
-            if(!tick&&info.source==DamageSource.Hit&&info.dealer?.Owner is Combatant { Team: Team.Player } source)
-                ElementCombat.ApplyHit(this,info.element,info.baseDamage>0?info.baseDamage:info.amount,actualDamage,source,info.builtInElement);
+            {
+                float distance = info.knockDistance;
+                                                                                                                                 
+                                                                 
+                if (Team == Team.Player && info.dealer?.Owner is Enemy { IsBoss: true } && WorldMap.Active && WorldMap.Active.TrialActive)
+                    distance = WorldMap.Active.LimitBossKnockback(Position, info.knockDir, distance * knockbackScale) / Mathf.Max(.0001f, knockbackScale);
+                if (distance > 0f) Knockback(info.knockDir, distance, KnockKind.Hit);
+            }
+                                                                                    
+            if(!tick&&!selfHit&&info.source==DamageSource.Hit&&info.dealer?.Owner is Combatant { Team: Team.Player } source)
+                ElementCombat.ApplyHit(this,info.element,info.baseDamage>0?info.baseDamage:info.amount,actualDamage,source,info.builtInElement,info.noLightningJump);
             return true;
         }
 

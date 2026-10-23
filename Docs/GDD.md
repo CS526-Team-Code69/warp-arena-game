@@ -41,7 +41,7 @@ flowchart TD
     Build --> Stronger["A stronger, stranger build"]
     Stronger --> Fight
     Rewards -. "a hole is fed 40 times" .-> Portal["Void portal opens for three waves"]
-    Portal -. "enter and win" .-> Trial["Void trial: defeat the Hollow<br/>Void Energy and a greater void skill"]
+    Portal -. "enter and win" .-> Trial["Void trial: defeat the Nash Prophet<br/>Void Energy and a greater void skill"]
     Trial -.-> Stronger
     Stronger -- "after wave 14" --> Boss["Final boss: the Tyrant"]
 ```
@@ -98,12 +98,12 @@ The inner loop is fight → grow → fight harder; every turn of it makes the bu
 | Scatter Cannon | Blast | A short cone of pellets; the closer, the more it hurts; two shots, then reload. | A reload can jam at random and must be cleared before you fire again. |
 | Scatter Cannon | Focus | Hold to gather every pellet into one point, then fire a fast burst that reaches far. | The recoil throws you a long way backward. |
 | Flamethrower | Stream | Hold to spray fire ahead and ignite the cone (built-in Fire). | Getting hit while spraying bursts the tank, burning everything around you, and you. |
-| Flamethrower | Wildfire | Lobs a fireball that leaves burning ground; only so many patches at once. | Your own fire burns you. |
-| Cryo Cannon | Shatter | A fan of three ice shards; double damage against a frozen target (built-in Frost). | The shards leave ice on the ground that stacks Frost on you when you step on it. |
-| Cryo Cannon | Blizzard | Hold to spray snow that freezes quickly and keeps enemies frozen as long as you spray. | You are slowed by Frost while spraying. |
-| Arc Coil | Chain | An arc hits the nearest enemy ahead and jumps between nearby enemies several times (built-in Lightning). | With too few enemies to jump to, the arc comes back to you, and enough of it paralyses you. |
-| Arc Coil | Capacitor | Charges as you walk; click to discharge it on everything around you. | Held full for too long, it discharges on you by itself. |
-| Venom Launcher | Cloud | Lobs a pod that bursts into a lingering poison cloud (built-in Poison). | The fading cloud leaves a spore pod that bursts on whoever steps on it, you included. |
+| Flamethrower | Wildfire | Lobs a fireball that leaves burning ground where it lands; up to three patches at once. | Your own fire burns you. |
+| Cryo Cannon | Shatter | A fan of three flying ice shards, each enemy hit by at most one per shot; double damage against a frozen target (built-in Frost). | The shards leave ice where they stop that stacks Frost on you when you step on it, though never enough to freeze you. |
+| Cryo Cannon | Blizzard | Hold to spray snow that freezes quickly and keeps enemies frozen as long as you spray. | You move slower while spraying. |
+| Arc Coil | Chain | An arc hits the nearest enemy in a cone ahead of the crosshair and jumps between nearby enemies several times, never through walls; with nobody ahead it does not fire (built-in Lightning). | With too few enemies to jump to, the arc comes back to you, and enough of it paralyses you. |
+| Arc Coil | Capacitor | Charges as you walk with it in hand, faster with enemies close; click to discharge it on everything around you, harder when full. | Held full for too long, it discharges on you by itself. |
+| Venom Launcher | Cloud | Lobs a pod that bursts into a lingering poison cloud (built-in Poison). | The fading cloud leaves spore pods that burst on whoever steps on them: enemies are poisoned, and you lose HP. |
 | Venom Launcher | Needler | Hold to fire poison needles, each stacking Poison; reload when empty. | Firing costs you HP. |
 | Railgun | Lance | A short wind-up, then a slug that pierces a line and ignores Shield; each target behind the first takes less. | The recoil truly knocks you back, into a wall behind you or into the crowd. |
 | Railgun | Execute | A single heavy hit that kills a weakened enemy outright; every kill raises the execution threshold. | Every execution lowers your max HP. |
@@ -120,7 +120,7 @@ The inner loop is fight → grow → fight harder; every turn of it makes the bu
 | Orbit Blades | Magnet | Blades circle you; enemies they touch are hurt and pulled inward. | Enemies end up dragged into your face. |
 | Sentry Drone | Gunner | A drone shoots the nearest enemy on its own. | Every shot costs Energy; when Energy is gone, it stops. |
 | Sentry Drone | Whirl | A drone grabs an enemy, swings it around you and slams it into the others. | You do not choose where it lets go, and the swung enemy blocks your bullets. |
-| Shield Ring | Repulsor | Every so often, shoves everything near you hard. | XP orbs, and the crowd you just lined up, scatter with it. |
+| Shield Ring | Repulsor | Every so often, shoves everything near you hard and deals a little damage. | XP orbs, and the crowd you just lined up, scatter with it. |
 | Shield Ring | Leech | Drains HP from nearby enemies and turns it into your Energy. | Part of what it drains flows into the weakest wounded enemy in the ring. |
 
 ### Elements
@@ -192,8 +192,8 @@ The greater void skills appear only after the trial is won, as a choice of one f
 
 | Boss | Where | What it tests |
 |---|---|---|
-| The Hollow | The void trial | Positioning: using the platform's terrain and dodging its projectiles. It has no Shield, is always immune to Lightning and Frost, cannot be pushed, and its summons give no XP; the platform shrinks with each of its phases. |
-| The Tyrant | After wave 14 | The whole build: a thick, shielded single target (do you have high damage or Shield-piercing?), it gathers crowds (do you have area damage?), and it is immune to two random elements fixed at the start and announced at wave 11 (is your damage one-note?). It re-shields at every new phase and cannot be pushed; knockback builds stagger instead, and a full bar stuns it for a while. Its hits, like the Hollow's, knock you back. |
+| The Nash Prophet | The void trial | Positioning: using the platform's terrain and dodging its projectiles. It has no Shield, is always immune to Lightning and Frost, cannot be pushed, and its summons give no XP; the platform shrinks with each of its phases. Up close it pulses you away and inhales; at range it fires predictive shots and rings of bullets; in its last phase it marks landing zones that become holes. Its own hits never push you off the platform or into a hole, and pushing its summons off the platform hurts it. |
+| The Tyrant | After wave 14 | The whole build: a thick, shielded single target (do you have high damage or Shield-piercing?), it gathers crowds (do you have area damage?), and it is immune to two random elements fixed at the start and announced at wave 11 (is your damage one-note?). It re-shields at every new phase and cannot be pushed; knockback builds stagger instead, and a full bar stuns it for a while. Its hits, like the Nash Prophet's, knock you back. It picks moves by distance: a cleave up close (with a back slash from phase 2), a slam and a charge at mid range, a leap from afar. A charge into a wall, a Bulwark or a black hole stuns it, strips its Shield and costs it HP. |
 
 ### Biomes
 

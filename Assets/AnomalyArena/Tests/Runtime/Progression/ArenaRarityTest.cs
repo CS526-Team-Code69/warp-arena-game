@@ -29,11 +29,10 @@ namespace AnomalyArena
         }
 
         [TestCase(UpgradeAxis.None, CardRarity.Common)]
-        [TestCase(UpgradeAxis.Power, CardRarity.Rare)]
-        [TestCase(UpgradeAxis.Power | UpgradeAxis.Tempo, CardRarity.Exceptional)]
-        [TestCase(UpgradeAxis.Power | UpgradeAxis.Tempo | UpgradeAxis.Reach, CardRarity.Exceptional)]
-        [TestCase(UpgradeAxis.Power | UpgradeAxis.Tempo | UpgradeAxis.Reach | UpgradeAxis.Twist, CardRarity.Epic)]
-        [TestCase(UpgradeAxis.Power | UpgradeAxis.Tempo | UpgradeAxis.Reach | UpgradeAxis.Twist | UpgradeAxis.Tame, CardRarity.Legendary)]
+        [TestCase(UpgradeAxis.Infusion, CardRarity.Rare)]
+        [TestCase(UpgradeAxis.Infusion | UpgradeAxis.Twist, CardRarity.Exceptional)]
+        [TestCase(UpgradeAxis.Infusion | UpgradeAxis.Twist | UpgradeAxis.Tame, CardRarity.Legendary)]
+        [TestCase(UpgradeAxis.Power | UpgradeAxis.Tempo | UpgradeAxis.Reach | UpgradeAxis.Twist, CardRarity.Legendary)]
         public void ForWeapon_UpgradeCount_MapsToTier(UpgradeAxis axes, CardRarity expected)
         {
             var weapon = new RunWeapon { axes = axes };
@@ -46,11 +45,24 @@ namespace AnomalyArena
         [Test]
         public void ForWeapon_CardPreview_ShowsTheTierAlreadyTakenNotTheOneAfter()
         {
-            var weapon = new RunWeapon { axes = UpgradeAxis.Infusion | UpgradeAxis.Power | UpgradeAxis.Tempo | UpgradeAxis.Reach };
+            var weapon = new RunWeapon { axes = UpgradeAxis.Infusion | UpgradeAxis.Twist };
 
             var actual = ArenaRarity.ForWeapon(weapon, UpgradeAxis.Tame);
 
-            Assert.That(actual, Is.EqualTo(CardRarity.Epic), "four upgrades taken: the fifth card is still purple");
+            Assert.That(actual, Is.EqualTo(CardRarity.Exceptional), "two upgrades taken: the third card is still blue");
+        }
+
+        [TestCase(UpgradeAxis.Infusion, CardRarity.Common)]
+        [TestCase(UpgradeAxis.Infusion | UpgradeAxis.Twist, CardRarity.Rare)]
+        [TestCase(UpgradeAxis.Infusion | UpgradeAxis.Twist | UpgradeAxis.Tame, CardRarity.Exceptional)]
+        public void ForWeapon_BuiltInElement_IsNotAnUpgrade(UpgradeAxis axes, CardRarity expected)
+        {
+            var weapon = new RunWeapon { form = WeaponForm.Flamethrower, element = ElementKind.Fire, builtInElement = true, axes = axes };
+            var card = new DraftCard(DraftCardKind.Weapon, "Upgrade", "", _ => true,
+                payload: new WeaponUpgradeOffer(weapon, UpgradeAxis.Tame, ElementKind.None));
+
+            Assert.That(ArenaRarity.ForWeapon(weapon), Is.EqualTo(expected), "slot colour");
+            Assert.That(card.Rarity, Is.EqualTo(expected), "card colour");
         }
 
         [TestCase(4, UpgradeAxis.None, CardRarity.Common)]

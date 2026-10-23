@@ -39,10 +39,40 @@ namespace AnomalyArena
         [NonSerialized] public AttackActor channelledField;
         [NonSerialized] public AttackActor recallActor;
         [NonSerialized] public AttackActor stickyActor;
-        [NonSerialized] public float spinStored, spinRetentionLeft;
-        [NonSerialized] public bool capacitorLeaking;
+
+        [NonSerialized] public Vector3 lanceTrailFrom, lanceTrailTo;
+        [NonSerialized] public float lanceTrailLeft;
+
+        [NonSerialized] public float executeHpGained;
+
+        [NonSerialized] public float turretLeft, turretClock;
+        [NonSerialized] public Vector3 turretPoint, turretDir;
+
+        [NonSerialized] public int bombardLeft;
+        [NonSerialized] public float bombardTimer;
+        [NonSerialized] public Vector3 bombardOrigin;
+
+        [NonSerialized] public bool bombardRefunded;
+
+        [NonSerialized] public Vector3[] trailPoints;
+        [NonSerialized] public float[] trailTimes;
+        [NonSerialized] public int trailHead, trailCount;
+
+        [NonSerialized] public int chainStoredJumps;
         [NonSerialized] public float whirlLeft, orbitAngle, leechDamage;
         [NonSerialized] public float tankReadyAt;
+
+        [NonSerialized] public float holeReturnSpan;
+
+        [NonSerialized] public bool knifeCaught;
+
+        [NonSerialized] public bool hookChainUsed;
+
+        [NonSerialized] public float vacuumTimer;
+        [NonSerialized] public Vector3 vacuumDirection;
+
+        [NonSerialized] public float reloadTotal;
+        [NonSerialized] public bool quickReloadTried;
         public bool IsAuto => (int)form >= (int)WeaponForm.OrbitBlades;
         public bool Has(UpgradeAxis axis) => (axes & axis) != 0;
         public int Level { get { int n=1; for(int i=0;i<6;i++) if(Has((UpgradeAxis)(1<<i))) n++; return n; } }

@@ -34,6 +34,8 @@ namespace AnomalyArena
 
         public void ExtendFreeze(float seconds) { if (Frozen && !ImmuneToControl) freezeTimer = Mathf.Max(freezeTimer, seconds); }
 
+        public void BreakFreeze() { if (!Frozen) return; freezeTimer = 0f; if (Rules) frostImmune = Rules.frostImmunity; }
+
         public float SpeedMultiplier
         {
             get

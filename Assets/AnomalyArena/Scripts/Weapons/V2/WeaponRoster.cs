@@ -45,13 +45,13 @@ namespace AnomalyArena
         public void SetDefaults()
         {
             definitions=new Definition[17];
-            float[] da={9,6.100529f,10,0,8,5,12,2,18,6,1,36,3,4,4,5,0};
+            float[] da={9,6.100529f,10,0,8,5,12,1.25f,18,6,1,36,2.5f,4,4,5,3};
 
-            float[] db={1.8f,12,4,0,16,8,12,1,1.5f,15,2,24,3,6,4,5,1};
+            float[] db={1.8f,12,7,0,16,8,12,1,1.5f,15,2,24,3,6,4,5,1};
             float[] ca={.35f,.3f,1.5f,2,1,.6f,1.6f,.25f,1,.9f,3,2.2f,.25f,1.8f,.5f,1.2f,4};
             float[] cb={.12f,.2f,1.8f,2,1,1,1.8f,1.5f,.25f,1,.125f,1.2f,.1f,2.5f,.5f,5,1};
             float[] ra={40,12,20,4,5,12,12,6,14,8,10,30,14,9,2.5f,10,3};
-            float[] rb={40,10,15,4,20,12,12,10,10,5,12,20,14,12,2.5f,6,3};
+            float[] rb={40,10,15,4,20,12,12,10,10,5,12,20,14,12.75f,2.5f,6,3};
             for(int i=0;i<17;i++) definitions[i]=new Definition{form=(WeaponForm)i,unlockWave=DefaultUnlockWave((WeaponForm)i),retired=IsRetired((WeaponForm)i),damageA=da[i],damageB=db[i],cooldownA=ca[i],cooldownB=cb[i],rangeA=ra[i],rangeB=rb[i]};
             RifleMinimumChargeDamage=7f/3f;StarterBalanceRevision=1;
         }
