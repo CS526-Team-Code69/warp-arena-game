@@ -87,7 +87,11 @@ namespace AnomalyArena
                         ? target.maxHp * balance.tyrantPhaseShieldShare * 2f
                         : 0f;
 
-                    float dps = data.kind == EnemyKind.Tyrant ? balance.DpsAt(balance.referenceDps.Length) : balance.DpsAt(wave);
+                    float dps = balance.DpsAt(balance.BudgetWave(data, wave));
+                    if (data.kind == EnemyKind.Hollow)
+                        Assert.That(target.maxHp, Is.EqualTo(Mathf.Round(balance.DpsAt(balance.prophetBudgetWave) * balance.bossSeconds
+                            / (1f + EncounterBalance.InitialShieldShare(data, ElementKind.None) / balance.ShieldDirectFactor))),
+                            "the Prophet's HP does not depend on the wave the trial is entered");
                     float modeled = (target.maxHp + (actualShield + phases) / balance.ShieldDirectFactor) / dps;
                     if (target.IsBoss) Assert.That(modeled, Is.InRange(80f, 100f), data.kind + " boss budget (90 s)");
                     else if (elite) Assert.That(modeled, Is.InRange(5f, 10f), data.kind + " elite budget");
