@@ -9,12 +9,26 @@ namespace AnomalyArena
         public UnityEngine.UI.Image weaponIcon;
         public UnityEngine.UI.Image contentIcon;
         public UnityEngine.UI.Button button;
+        [Range(.3f, 1f), Tooltip("Smallest body size, as a share of the saved font size, that a long card text may shrink to so it stays inside its box.")]
+        public float minBodyScale = .6f;
+
+        void Awake() => FitBody();
+
+        public void FitBody()
+        {
+            if (!body || body.resizeTextForBestFit) return;
+            body.resizeTextMaxSize = body.fontSize;
+            body.resizeTextMinSize = Mathf.Max(8, Mathf.RoundToInt(body.fontSize * minBodyScale));
+            body.verticalOverflow = UnityEngine.VerticalWrapMode.Truncate;
+            body.resizeTextForBestFit = true;
+        }
 
         public void Render(ArenaUiCard card, V2ArtSet art)
         {
             bool show = card != null && !string.IsNullOrEmpty(card.title);
             if (gameObject.activeSelf != show) gameObject.SetActive(show);
             if (!show) return;
+            FitBody();
             if (title.text != card.title) title.text = card.title;
             if (body.text != card.body) body.text = card.body;
             if (kind.text != card.kind) kind.text = card.kind;
