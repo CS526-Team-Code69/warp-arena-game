@@ -179,6 +179,7 @@ namespace AnomalyArena
             if (remaining <= 0)
             {
                 if (mode == AttackMode.Bouncy || mode == AttackMode.Swarm && !stoppedOnWall) Explode();
+                if (mode == AttackMode.Shard) Shooter?.ShardLanded(this, Query.Flat(transform.position));
                 Release(); return;
             }
             if (mode == AttackMode.Blast) { Explode(); Release(); return; }
@@ -235,6 +236,7 @@ namespace AnomalyArena
                         remaining=owner.GetComponent<RunWeapons>().upgrades.swarmMineDuration;return;
                     }
                     if (mode is AttackMode.Bouncy or AttackMode.Swarm) Explode();
+                    if (mode == AttackMode.Shard) Shooter?.ShardLanded(this, Query.Flat(hit.point) - direction * .4f);
                     Release(); return;
                 }
                 if (mode == AttackMode.Sticky)
@@ -249,6 +251,13 @@ namespace AnomalyArena
                 }
                 if (mode is AttackMode.Bouncy or AttackMode.Swarm)
                 { transform.position = hit.point; Explode(); Release(); return; }
+                if (mode == AttackMode.Shard)
+                {
+
+                    struck.Add(body);
+                    Shooter?.ShardStruck(this, body);
+                    Release(); return;
+                }
                 if (mode == AttackMode.Swap)
                 {
                     bool movable = body.State != CharacterState.Hooked && body is not Enemy { Immovable: true };
@@ -271,9 +280,12 @@ namespace AnomalyArena
             {
 
                 if (mode == AttackMode.Swarm) Explode();
+                if (mode == AttackMode.Shard) Shooter?.ShardLanded(this, Query.Flat(transform.position));
                 Release();
             }
         }
+
+        RunWeapons Shooter => owner ? owner.GetComponent<RunWeapons>() : null;
 
         void TickArc(float dt)
         {

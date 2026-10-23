@@ -70,9 +70,9 @@ namespace AnomalyArena
         [Min(0f), Tooltip("Spitter: backs away when the player is closer than this.")] public float rangedNear = 8f;
         [Min(0f), Tooltip("Spitter: closes in when the player is farther than this; the wind-up ring is this big.")] public float rangedFar = 10f;
         [Min(.1f), Tooltip("Spitter: speed of the spit, cells per second.")] public float projectileSpeed = 7f;
-        [Min(0f), Tooltip("Rammer and Stomper: the wind-up starts when the player is within this distance.")] public float triggerDistance = 16f;
-        [Min(0f), Tooltip("Rammer: length of the charge and of its telegraph line.")] public float chargeDistance = 12f;
-        [Min(.1f), Tooltip("Rammer: charge speed before the scene's global movement multiplier (WaveManager.movementSpeedMultiplier, 0.5 now: 36 runs at 18 cells per second).")] public float chargeSpeed = 16f;
+        [Min(0f), Tooltip("Rammer and Stomper: the wind-up starts when the player is within this distance. Bloater: starts rushing the player from this distance.")] public float triggerDistance = 16f;
+        [Min(0f), Tooltip("Rammer: length of the charge and of its telegraph line. Bloater: how far one rush goes before it gives up for an interval.")] public float chargeDistance = 12f;
+        [Min(.1f), Tooltip("Rammer charge and Bloater rush speed before the scene's global movement multiplier (WaveManager.movementSpeedMultiplier, 0.5 now: 36 runs at 18 cells per second).")] public float chargeSpeed = 16f;
         [Min(0f), Tooltip("Rammer: seconds the player is stunned when the charge lands.")] public float chargeStun = 1f;
         [Min(0f), Tooltip("Spire pulse radius (its warning circle is this big), Bloater blast radius, and the length of the Stomper's slam cone.")] public float pulseRadius = 6f;
         [Range(10f, 180f), Tooltip("Stomper: width of the slam cone in front of it, in degrees, aimed at the player when the wind-up begins.")] public float coneAngle = 60f;

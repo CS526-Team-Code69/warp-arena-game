@@ -59,10 +59,13 @@ namespace AnomalyArena
 
         public float MiniShare(bool mini) => mini ? Mathf.Clamp01(splitterMiniHpShare) : 1f;
 
+        int BudgetWave(EnemyDefinition enemy, int wave) =>
+            enemy.kind == EnemyKind.Tyrant && referenceDps is { Length: > 0 } ? referenceDps.Length : wave;
+
         public float MaxHp(EnemyDefinition enemy, int wave, bool elite, ElementKind affix = ElementKind.None,
             bool mini = false) =>
             Mathf.Max(1f,
-                Mathf.Round(DpsAt(wave) * TargetSeconds(enemy, elite) * MiniShare(mini) /
+                Mathf.Round(DpsAt(BudgetWave(enemy, wave)) * TargetSeconds(enemy, elite) * MiniShare(mini) /
                             (1f + ShieldBudgetShare(enemy, affix) / ShieldDirectFactor)));
 
         public float EffectiveHp(EnemyDefinition enemy, int wave, bool elite, ElementKind affix = ElementKind.None,

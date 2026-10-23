@@ -52,6 +52,19 @@ namespace AnomalyArena
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
+        public async Task ShatterShard_AimedAtALane_FliesAndHitsTheFirstEnemy()
+        {
+            var (game, targets) = await V3CombatSmokeTest.StartSandbox();
+            Equip(game, WeaponForm.CryoCannon, 0);
+            game.player.DebugSetAim(Vector3.forward);
+            float hp = targets[0].Hp;
+
+            game.runWeapons.HandleInput(true, true, false);
+            await Until(() => targets[0].Hp < hp, 1f, "the middle shard reaches the first enemy in the lane");
+            await Until(() => game.runWeapons.Hazards.Any(h => h.kind == GroundHazardKind.IcePatch && Query.Flat(h.position - targets[0].Position).magnitude < .5f), 1f, "an ice patch where it hit");
+        }
+
+        [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task ShatterFan_AimedAwayFromEnemies_LeavesThreeIcePatches()
         {
             var (game, _) = await V3CombatSmokeTest.StartSandbox();
@@ -61,10 +74,11 @@ namespace AnomalyArena
             game.runWeapons.HandleInput(true, true, false);
             await Awaitable.NextFrameAsync();
 
-            Assert.That(game.runWeapons.Hazards.Count(h => h.kind == GroundHazardKind.IcePatch), Is.EqualTo(3));
+            Assert.That(AttackPool.Instance.actors.Count(a => a && a.gameObject.activeSelf && a.mode == AttackMode.Shard), Is.EqualTo(3), "three shards are in flight");
+            await Until(() => game.runWeapons.Hazards.Count(h => h.kind == GroundHazardKind.IcePatch) == 3, 2f, "the three shards land");
             Equip(game, WeaponForm.CryoCannon, 0, UpgradeAxis.Tame);
             game.runWeapons.HandleInput(true, true, false);
-            await Awaitable.NextFrameAsync();
+            await Until(() => !AttackPool.Instance.actors.Any(a => a && a.gameObject.activeSelf && a.mode == AttackMode.Shard), 2f, "the tamed shards land");
             Assert.That(game.runWeapons.Hazards.Count, Is.Zero, "Tame shards leave no patches");
         }
 

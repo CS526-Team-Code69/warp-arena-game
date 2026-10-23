@@ -19,6 +19,8 @@ namespace AnomalyArena
         public float fuelTankDamage = 4f, fuelTankSelfFire = 3f, fuelTankCooldown = 1.5f;
         [Tooltip("Shatter fires three shards; the side shards leave the aim line by this many degrees.")]
         public float shatterSpread = 12f;
+        [Min(1f), Tooltip("Shatter: flight speed of each ice shard, cells per second. The shards are real projectiles that stop on the first body or wall.")]
+        public float shardSpeed = 40f;
         public float iceRadius = .9f, iceLife = 5f, iceFrostPerSecond = 4f;
         public float blizzardConeAngle = 50f, blizzardMaxRange = 7f, blizzardFrostPerTick = .8f, blizzardFrozenHold = .6f;
         public float chainReturnRadius = 3f, chainReturnDamage = 3f;
@@ -297,17 +299,27 @@ namespace AnomalyArena
         void ShatterFan(RunWeapon w,Vector3 aim,float range,float hit)
         {
             WeaponSound(w);
+            float speed=Mathf.Max(1f,upgrades.shardSpeed);
             foreach(float angle in new[]{-upgrades.shatterSpread,0f,upgrades.shatterSpread})
             {
                 Vector3 dir=Quaternion.Euler(0f,angle,0f)*aim;
-                var target=RayTarget(dir,range);
-                Vector3 end;
-                if(target){Shatter(w,target,hit);end=Query.Flat(target.Position);}
-                else if(Physics.Raycast(Query.AtCastHeight(player.Position),dir,out var wall,range,GameManager.WallMask,QueryTriggerInteraction.Ignore))end=Query.Flat(wall.point)-dir*.4f;
-                else end=Query.Flat(player.Position+dir*range);
-                Fx.Ring(end,.4f,ElementCombat.ColorFor(ElementKind.Frost));
-                if(!w.Has(UpgradeAxis.Tame))AddHazard(GroundHazardKind.IcePatch,end,upgrades.iceRadius,upgrades.iceLife,w);
+                var a=AttackPool.Instance?AttackPool.Instance.Acquire():null;
+                if(a)a.Configure(AttackMode.Shard,player,w,player.Position+dir*.7f,dir,hit,0,range,speed,0,range/speed+3);
             }
+        }
+
+        public void ShardStruck(AttackActor shard,Combatant body)
+        {
+            if(shard.weapon==null)return;
+            Shatter(shard.weapon,body,shard.damage);
+            ShardLanded(shard,Query.Flat(body.Position));
+        }
+
+        public void ShardLanded(AttackActor shard,Vector3 end)
+        {
+            if(shard.weapon==null)return;
+            Fx.Ring(end,.4f,ElementCombat.ColorFor(ElementKind.Frost));
+            if(!shard.weapon.Has(UpgradeAxis.Tame))AddHazard(GroundHazardKind.IcePatch,end,upgrades.iceRadius,upgrades.iceLife,shard.weapon);
         }
 
         void BlizzardSpray(RunWeapon w,float range,float hit)

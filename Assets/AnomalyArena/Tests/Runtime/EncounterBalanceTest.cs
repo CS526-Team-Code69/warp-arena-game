@@ -83,8 +83,9 @@ namespace AnomalyArena
                     float phases = data.kind == EnemyKind.Tyrant
                         ? target.maxHp * balance.tyrantPhaseShieldShare * 2f
                         : 0f;
-                    float modeled = (target.maxHp + (actualShield + phases) / balance.ShieldDirectFactor) /
-                                    balance.DpsAt(wave);
+
+                    float dps = data.kind == EnemyKind.Tyrant ? balance.DpsAt(balance.referenceDps.Length) : balance.DpsAt(wave);
+                    float modeled = (target.maxHp + (actualShield + phases) / balance.ShieldDirectFactor) / dps;
                     if (target.IsBoss) Assert.That(modeled, Is.InRange(80f, 100f), data.kind + " boss budget (90 s)");
                     else if (elite) Assert.That(modeled, Is.InRange(5f, 10f), data.kind + " elite budget");
                     else if (EnemyRoles.IsMelee(data.kind))

@@ -183,7 +183,7 @@ The greater void skills appear only after the trial is won, as a choice of one f
 | Warden | Basic · support (from wave 3) | Never attacks; hides behind allies and shields those around it, topping them up over time. Never carries an affix. |
 | Chanter | Special · buff | Never attacks; hides behind allies and chants, raising the damage of every ally in range. |
 | Rammer | Special · control | Draws a charge line, then charges along it without turning; a player it hits is pushed back a little and stunned. A wall stuns it; a black hole swallows it. |
-| Bloater | Special · self-destruct | Walks straight at you, swells and explodes up close, hurting everything; it explodes when killed too, and leaves a radiation patch that hurts you. |
+| Bloater | Special · self-destruct | Walks at you; within about 7 cells it turns yellow and rushes you, then swells and explodes almost as soon as it reaches you, hurting everything; it explodes when killed too, and leaves a radiation patch that hurts you. |
 | Spire | Special · sentinel | Never moves. Draws a warning circle, sends out a pulse that hurts only the player, then locks on a player inside the circle and fires a laser. |
 | Stomper | Special · displacement | Closes in, winds up and slams a small cone in front of it toward you, launching everything in it; you are thrown far back. Spawns with Shield, away from the crowd. |
 | Shade | Special · assassin | Announces itself with its own colour and sound, shows for a moment, then cloaks; its strike can kill you outright. Any damage reveals it, its health is very low, and only a few exist at once. |

@@ -66,7 +66,8 @@ namespace AnomalyArena
             laserTimer;
 
         public bool Inhaling => IsBoss && definition.kind == EnemyKind.Hollow && inhaleLeft > 0f;
-        bool charging, dyingExplosion;
+        bool charging, rushing, dyingExplosion;
+        const float TyrantChargeDistance = 20f;
         float explosionTimer;
 
         public bool BloaterWarningActive => definition && definition.kind == EnemyKind.Bloater &&
@@ -77,7 +78,9 @@ namespace AnomalyArena
         public int BossAttackIndex => bossAttack;
         public bool TelegraphActive => windup && telegraph && telegraph.gameObject.activeSelf;
 
-        public bool WindupTinted => windup && specialWindup;
+        public bool WindupTinted => windup && specialWindup || rushing;
+
+        public bool Rushing => rushing;
         bool specialWindup;
 
         public bool LineTelegraph => definition && (definition.kind == EnemyKind.Rammer ||
@@ -231,7 +234,7 @@ namespace AnomalyArena
             ResetForSpawn();
             AttackSequence = 0;
             windup = false;
-            charging = false;
+            charging = rushing = false;
             dyingExplosion = false;
             SuppressRewards = false;
             cooldown = 0.5f;
@@ -612,7 +615,8 @@ namespace AnomalyArena
                     {
                         bool shieldAdded = false;
                         foreach (var enemy in GM.waves.Alive)
-                            if (enemy && enemy != this && Query.Flat(enemy.Position - Position).magnitude < 5f)
+
+                            if (enemy && enemy != this && !enemy.IsBoss && Query.Flat(enemy.Position - Position).magnitude < 5f)
                             {
                                 var board = ElementStatus.For(enemy);
                                 if (board != null)
@@ -666,9 +670,32 @@ namespace AnomalyArena
 
                     break;
                 case EnemyKind.Bloater:
-                    if (distance <= radius + player.Radius + 0.5f)
+
+                    if (distance <= radius + player.Radius + definition.reach)
                     {
+                        rushing = false;
                         BeginWindup(windupTime, definition.pulseRadius);
+                        return true;
+                    }
+
+                    if (!rushing && cooldown <= 0f && distance <= definition.triggerDistance)
+                    {
+                        rushing = true;
+                        chargeLeft = definition.chargeDistance;
+                        V2Audio.Instance?.PlayWorld(ArenaSoundCue.BloaterWarning, Position);
+                    }
+
+                    if (rushing)
+                    {
+                        float rush = definition.chargeSpeed * (GM && GM.waves ? GM.waves.MovementSpeedScale : 1f);
+                        MoveAt(player.Position, rush, dt);
+                        chargeLeft -= rush * dt;
+                        if (chargeLeft <= 0f)
+                        {
+                            rushing = false;
+                            cooldown = attackInterval;
+                        }
+
                         return true;
                     }
 
@@ -687,7 +714,8 @@ namespace AnomalyArena
                     if (cooldown <= 0f && distance < 20f)
                     {
                         bossAttack = UnityEngine.Random.Range(0, 3);
-                        BeginWindup(bossAttack == 0 ? 0.8f : 1f, bossAttack == 1 ? 8f : 5f);
+
+                        BeginWindup(bossAttack == 0 ? 0.8f : 1f, bossAttack == 1 ? 8f : bossAttack == 2 ? TyrantChargeDistance : 5f);
                         return true;
                     }
 
@@ -720,12 +748,14 @@ namespace AnomalyArena
                 distance < 6f ? -1f : Query.Flat(supportPoint - Position).magnitude > 1f ? 1f : 0f, dt);
         }
 
-        void MoveTowards(Vector3 point, float sign, float dt)
+        void MoveTowards(Vector3 point, float sign, float dt) => MoveAt(point, moveSpeed * sign, dt);
+
+        void MoveAt(Vector3 point, float speed, float dt)
         {
             Vector3 direction = WorldMap.Active
-                ? WorldMap.Active.GetChaseDirection(Position, point, moveSpeed)
+                ? WorldMap.Active.GetChaseDirection(Position, point, Mathf.Abs(speed))
                 : Query.Flat(point - Position).normalized;
-            Vector3 v = KeepOffEdges(direction * moveSpeed * sign, dt);
+            Vector3 v = KeepOffEdges(direction * speed, dt);
             rb.linearVelocity = new Vector3(v.x, rb.linearVelocity.y, v.z);
         }
 
@@ -810,7 +840,7 @@ namespace AnomalyArena
                     if (bossAttack == 2)
                     {
                         charging = true;
-                        chargeLeft = 20f;
+                        chargeLeft = TyrantChargeDistance;
                         V3WorldAudio.Instance?.Play(ArenaWorldCue.BossCharge, Position);
                     }
                     else if (bossAttack == 1)
