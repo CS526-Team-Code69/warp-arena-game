@@ -324,7 +324,7 @@ def render(agg, out_path, source="sheet export"):
     _style_axes(side)
 
     present = causes_present(agg)
-    fig.suptitle("How runs end, by wave (%d runs)" % agg["ended"], x=0.01, ha="left",
+    fig.suptitle("How runs end, by wave (%d run%s)" % (agg["ended"], "" if agg["ended"] == 1 else "s"), x=0.01, ha="left",
                  fontsize=14, fontweight="semibold", color=INK)
     x = list(range(len(BUCKETS)))
 
