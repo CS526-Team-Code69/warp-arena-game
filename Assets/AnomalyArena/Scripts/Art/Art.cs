@@ -12,7 +12,7 @@ namespace AnomalyArena
         public static void EnsureV2Default()
         {
             if (v2ChoiceInitialized) return;
-            Enabled = true; v2ChoiceInitialized = true;
+            Enabled = false; v2ChoiceInitialized = true;
         }
 
         public static void Tint(Renderer r, Color c)

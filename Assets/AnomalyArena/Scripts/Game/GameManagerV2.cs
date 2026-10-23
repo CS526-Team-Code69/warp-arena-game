@@ -142,8 +142,8 @@ namespace AnomalyArena
         {
             if(State!=GameState.Playing)return;
                                                                                                
-            if(finalWaveCleared){State=GameState.Won;ClearTransients();skills.ClearWaveEffects();SetPhase(ArenaUiState.Result);}
-            else if(!player.IsAlive){LoseCause=player.DeathCause;State=GameState.Lost;ClearTransients();skills.ClearWaveEffects();SetPhase(ArenaUiState.Result);}
+            if(finalWaveCleared){State=GameState.Won;RunAnalytics.RunEnded(this,RunPhase==ArenaUiState.Paused?resumePhase:RunPhase);ClearTransients();skills.ClearWaveEffects();SetPhase(ArenaUiState.Result);}
+            else if(!player.IsAlive){LoseCause=player.DeathCause;State=GameState.Lost;RunAnalytics.RunEnded(this,RunPhase==ArenaUiState.Paused?resumePhase:RunPhase);ClearTransients();skills.ClearWaveEffects();SetPhase(ArenaUiState.Result);}
         }
         void OnV2WaveEnded(int wave)
         {
@@ -169,7 +169,8 @@ namespace AnomalyArena
         public void BeginCutscene(){if(RunPhase==ArenaUiState.Cutscene)return;cutsceneResumePhase=RunPhase;SetPhase(ArenaUiState.Cutscene);}
         public void EndCutscene(){if(RunPhase!=ArenaUiState.Cutscene)return;SetPhase(cutsceneResumePhase);}
         public void EnterVoidTrial(){trialResumePhase=RunPhase;SetPhase(ArenaUiState.VoidTrial);skills.FreezeBattlefieldForTrial(true);runWeapons.FreezeBattlefieldForTrial(true);orbs?.FreezeForTrial(true);}
-        public void CompleteVoidTrial(){progression.CompleteVoidTrial();UpdatePenetrationEligibility();player.Heal(player.maxHp);player.stamina.Refill();skills.FreezeBattlefieldForTrial(false);runWeapons.FreezeBattlefieldForTrial(false);orbs?.FreezeForTrial(false);greaterCards=skills.GreaterVoidCards();greaterDraft=true;SetPhase(ArenaUiState.Draft);}
+        public void CompleteVoidTrial(){if(!player.IsAlive)return;                                                                                     
+            progression.CompleteVoidTrial();UpdatePenetrationEligibility();player.Heal(player.maxHp);player.stamina.Refill();skills.FreezeBattlefieldForTrial(false);runWeapons.FreezeBattlefieldForTrial(false);orbs?.FreezeForTrial(false);greaterCards=skills.GreaterVoidCards();greaterDraft=true;SetPhase(ArenaUiState.Draft);}
                                                                                                   
         void FinishGreaterReward()
         {
@@ -252,7 +253,7 @@ namespace AnomalyArena
                     supplyChoiceOpened=true;SupplyDropReady=false;SetPhase(pendingSupplyChoice);pendingSupplyChoice=ArenaUiState.Title;break;
                 case ArenaUiCommand.ToggleArt:if(RunPhase==ArenaUiState.Title)ToggleArt();break;
                 case ArenaUiCommand.ChooseLoadout:
-                    if(RunPhase!=ArenaUiState.Loadout||index<0||index>2)return;runWeapons.GiveStarting(index==0?WeaponForm.RocketLauncher:index==1?WeaponForm.Rifle:WeaponForm.Knife);NotifyCardPicked(ArenaUiState.Loadout,index,CardRarity.Common);ShowWeaponIntro(runWeapons.Hand[0],()=>{State=GameState.Playing;SetPhase(ArenaUiState.WaveIntro);waves.StartWaves();V2Audio.Instance?.PlayWave();});break;
+                    if(RunPhase!=ArenaUiState.Loadout||index<0||index>2)return;runWeapons.GiveStarting(index==0?WeaponForm.RocketLauncher:index==1?WeaponForm.Rifle:WeaponForm.Knife);NotifyCardPicked(ArenaUiState.Loadout,index,CardRarity.Common);ShowWeaponIntro(runWeapons.Hand[0],()=>{State=GameState.Playing;SetPhase(ArenaUiState.WaveIntro);waves.StartWaves();V2Audio.Instance?.PlayWave();RunAnalytics.RunStarted(this);});break;
                 case ArenaUiCommand.TakeArmory:
                     if(RunPhase!=ArenaUiState.Armory||index<0||index>=runWeapons.Offers.Length||runWeapons.Offers[index]==null)return;var offered=runWeapons.Offers[index];var offeredRarity=ArenaRarity.ForWeapon(offered);string taken=offered.FormName+(offered.upgradeOf!=null?" "+offered.MkLabel:"");if(runWeapons.TakeOffer(index)){buildSummary+=ArenaText.Pair("\nArmory: ","\nArmory: ")+taken;NotifyCardPicked(ArenaUiState.Armory,index,offeredRarity);ShowWeaponIntro(offered.upgradeOf??offered,OpenDraft);}else{pendingOffer=index;SetPhase(ArenaUiState.ReplaceWeapon);}break;
                 case ArenaUiCommand.SkipArmory:if(RunPhase==ArenaUiState.Armory)OpenDraft();break;
@@ -275,8 +276,8 @@ namespace AnomalyArena
                 case ArenaUiCommand.Cancel:snapshot.earlyStartConfirmation=false;if(RunPhase==ArenaUiState.ReplaceWeapon)SetPhase(ArenaUiState.Armory);else if(RunPhase==ArenaUiState.ReplaceSkill)SetPhase(replaceReturn);else if(RunPhase==ArenaUiState.LevelUp)CloseLevelUp();break;
                 case ArenaUiCommand.Pause:if(CanPlayerMove){resumePhase=RunPhase;SetPhase(ArenaUiState.Paused);}break;
                 case ArenaUiCommand.Resume:if(RunPhase==ArenaUiState.Paused)SetPhase(resumePhase);break;
-                case ArenaUiCommand.Restart:V2Audio.Instance?.PlayUI(ArenaUiSound.Confirm);_=ReloadAfterUiFeedback();return;
-                case ArenaUiCommand.QuitToTitle:V2Audio.Instance?.PlayUI(ArenaUiSound.Cancel);_=ReloadAfterUiFeedback();return;
+                case ArenaUiCommand.Restart:ReportAbandoned("restart");V2Audio.Instance?.PlayUI(ArenaUiSound.Confirm);_=ReloadAfterUiFeedback();return;
+                case ArenaUiCommand.QuitToTitle:ReportAbandoned("quit_to_title");V2Audio.Instance?.PlayUI(ArenaUiSound.Cancel);_=ReloadAfterUiFeedback();return;
                 case ArenaUiCommand.DismissWeaponIntro:DismissWeaponIntro();break;
                 case ArenaUiCommand.ToggleBuildWalk:
                                                                                                                                                     
@@ -296,6 +297,8 @@ namespace AnomalyArena
                 if(RunPhase==ArenaUiState.Draft&&HasWeaponChoice()){supplyChoiceOpened=false;SetPhase(ArenaUiState.Draft);}
             }
         }
+                                                                                                                                                       
+        void ReportAbandoned(string cause){if(State==GameState.Playing)RunAnalytics.RunEnded(this,RunPhase==ArenaUiState.Paused?resumePhase:RunPhase,cause);}
         async Awaitable ReloadAfterUiFeedback()
         {
             try
