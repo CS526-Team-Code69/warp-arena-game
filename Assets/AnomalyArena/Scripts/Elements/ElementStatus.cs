@@ -47,7 +47,6 @@ namespace AnomalyArena
         }
         public event Action<ElementKind> StatusApplied;
         public event Action<float, DamageSource, Combatant> DamageTicked;
-        public event Action<float> OnControlThreshold;
         public event Action ShieldBroken;
         Combatant body, fireSource, poisonSource;
         float fireClock, poisonClock, freezeTimer, paralysisTimer, frostImmune, lightningImmune;
@@ -124,7 +123,8 @@ namespace AnomalyArena
                     if (Frost >= Rules.frostThreshold * ControlThresholdFactor)
                     {
                         Frost = 0f;
-                        if (ImmuneToControl) { frostImmune = Rules.frostImmunity; OnControlThreshold?.Invoke(Rules.bossControlStagger); }
+
+                        if (ImmuneToControl) frostImmune = Rules.frostImmunity;
 
                         else freezeTimer = Rules.frostDuration;
                     }
@@ -135,7 +135,7 @@ namespace AnomalyArena
                     if (Lightning >= Rules.lightningThreshold * ControlThresholdFactor)
                     {
                         Lightning = 0f;
-                        if (ImmuneToControl) { lightningImmune = Rules.lightningImmunity; OnControlThreshold?.Invoke(Rules.bossControlStagger); }
+                        if (ImmuneToControl) lightningImmune = Rules.lightningImmunity;
                         else
                         {
                             paralysisTimer = Rules.lightningDuration;

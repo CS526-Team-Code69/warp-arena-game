@@ -20,7 +20,7 @@ namespace AnomalyArena
         public float earthShare = 0.10f, lightShare = 0.05f, voidShare = 0.10f, lightAgainstVoid = 1.5f;
         public float shieldDirectFactor = 0.7f;
         public float playerShieldCapShare = 0.5f, shieldDecayDelay = 3f, shieldDecayPerSecond = 1f;
-        public float largeThresholdFactor = 2f, bossControlStagger = 15f;
+        public float largeThresholdFactor = 2f;
         public float playerControlMax = 1f, playerControlImmunity = 4f;
         public float enemyFireStacks = 3f, enemyPoisonStacks = 1f, enemyFrostStacks = 3f, enemyLightningStacks = 3f;
         public float enemyVoidDrain = 10f;

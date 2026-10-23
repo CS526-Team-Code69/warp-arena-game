@@ -351,8 +351,8 @@ namespace AnomalyArena
             {
                 var contact=dashContacts[i];dashContacts[i]=default;var body=contact.body;
                 if(!body||!body.IsAlive||body.SpawnVersion!=contact.spawnVersion||!dashHits.Add(contact))continue;
-                                                                                                                                   
-                float push=!weapon.Has(UpgradeAxis.Twist)?0f:body is Enemy{IsBoss:true}?upgrades.rocketCueExtra:Mathf.Min(upgrades.rocketCueMax,Mathf.Max(0f,dashLeft-dashContactDistances[i])+upgrades.rocketCueExtra);
+                                                                                                                         
+                float push=!weapon.Has(UpgradeAxis.Twist)||body is Enemy{IsBoss:true}?0f:Mathf.Min(upgrades.rocketCueMax,Mathf.Max(0f,dashLeft-dashContactDistances[i])+upgrades.rocketCueExtra);
                 Damage(weapon,body,contactDamage,push,dashDirection);
             }
         }
@@ -663,20 +663,34 @@ namespace AnomalyArena
             }
             return best;
         }
-        public DraftCard RollUpgradeCard()
+                                                                                                                                   
+                                                                                           
+        public DraftCard RollUpgradeCard(WeaponUpgradeOffer avoid=null)
         {
             var choices=new System.Collections.Generic.List<RunWeapon>();
             foreach(var slots in new[]{Hand,Auto})foreach(var w in slots)
-                if(w!=null&&w.revealed&&AvailableAxes(w).Count>0)choices.Add(w);
-            if(choices.Count==0)return null;
+                if(w!=null&&w.revealed&&AvailableAxes(w).Count>0&&!OnlyOffers(w,avoid))choices.Add(w);
+            if(choices.Count==0)return avoid!=null?RollUpgradeCard():null;
             var weapon=choices[UnityEngine.Random.Range(0,choices.Count)];var axes=AvailableAxes(weapon);
+            bool canReinfuse=CanReinfuse(weapon);
+            if(avoid!=null&&avoid.Weapon==weapon){axes.Remove(avoid.Axis);if(avoid.Axis==UpgradeAxis.Infusion)canReinfuse=false;}
                                                                                                                               
-            bool reinfuse=CanReinfuse(weapon)&&UnityEngine.Random.value<upgrades.reinfuseChance;
+            bool reinfuse=canReinfuse&&(axes.Count==0||UnityEngine.Random.value<upgrades.reinfuseChance);
             var upgrade=reinfuse?UpgradeAxis.Infusion:axes[UnityEngine.Random.Range(0,axes.Count)];
             ElementKind element=upgrade==UpgradeAxis.Infusion?RollElement(weapon.element):weapon.element;
             string desc=upgrade==UpgradeAxis.Infusion?ArenaText.Pair("Infuse ","Infuse ")+ArenaTerms.Element(element)+(weapon.element!=ElementKind.None?ArenaText.Pair(", replaces ",", replaces ")+ArenaTerms.Element(weapon.element):""):upgrade switch{UpgradeAxis.Power=>ArenaText.Pair("Damage +40%","Damage +40%"),UpgradeAxis.Tempo=>ArenaText.Pair("Cooldown, charge and reload -30%","Cooldown, charge and reload -30%"),UpgradeAxis.Reach=>ArenaText.Pair("Range, area or targets +40%","Range, area or targets +40%"),UpgradeAxis.Twist=>ArenaText.Pair("Adds a new variant to this anomaly","Adds a new variant to this anomaly"),_=>ArenaText.Pair("Removes or softens this anomaly's backfire","Removes or softens this anomaly's backfire")};
             if(upgrade is UpgradeAxis.Twist or UpgradeAxis.Tame)desc=(int)weapon.form<3?CoreAnomalyUpgradeDescription(weapon,upgrade):ArenaTerms.ExpandedUpgradeDescription(weapon.form,weapon.variant,upgrade);
-            return new DraftCard(DraftCardKind.Weapon,weapon.Label+" / "+ArenaTerms.Upgrade(upgrade),desc,_=>{weapon.axes|=upgrade;if(upgrade==UpgradeAxis.Infusion)weapon.element=element;return true;},payload:new WeaponUpgradeOffer(weapon,upgrade,element));
+                                                                                                          
+            var axesBefore=weapon.axes;var elementBefore=weapon.element;
+            return new DraftCard(DraftCardKind.Weapon,weapon.Label+" / "+ArenaTerms.Upgrade(upgrade),desc,_=>{weapon.axes|=upgrade;if(upgrade==UpgradeAxis.Infusion)weapon.element=element;return true;},payload:new WeaponUpgradeOffer(weapon,upgrade,element),
+                stillFits:()=>(Array.IndexOf(Hand,weapon)>=0||Array.IndexOf(Auto,weapon)>=0)&&weapon.axes==axesBefore&&weapon.element==elementBefore);
+        }
+                                                                                                
+        static bool OnlyOffers(RunWeapon w,WeaponUpgradeOffer avoid)
+        {
+            if(avoid==null||avoid.Weapon!=w)return false;
+            var axes=AvailableAxes(w);axes.Remove(avoid.Axis);
+            return axes.Count==0&&(!CanReinfuse(w)||avoid.Axis==UpgradeAxis.Infusion);
         }
                                                                                                                                                         
         string CoreAnomalyUpgradeDescription(RunWeapon w,UpgradeAxis axis)

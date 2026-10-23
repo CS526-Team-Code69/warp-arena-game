@@ -12,7 +12,7 @@ namespace AnomalyArena
         [Tooltip("Flame Stream fuel tank: a hit taken while the trigger is held bursts the tank (radius, damage, Fire stacks on you, seconds before it can burst again).")]
         public float fuelTankRadius = 2.5f;
         public float fuelTankDamage = 4f, fuelTankSelfFire = 3f, fuelTankCooldown = 1.5f;
-        [Min(0f), Tooltip("Stream Tame: the fuel-tank burst knocks enemies in its ring back this far (scaled by knockback stats; large enemies and elites by their own factor). Bosses take it as stagger.")]
+        [Min(0f), Tooltip("Stream Tame: the fuel-tank burst knocks enemies in its ring back this far (scaled by knockback stats; large enemies and elites by their own factor). Bosses are not knocked back.")]
         public float fuelTankTamePush = 4f;
         [Min(0f), Tooltip("Wildfire Twist: two of your fire patches whose centres are at most this far apart, with no wall between, are joined by a fire fence.")]
         public float wildfireFenceRange = 9f;
@@ -84,7 +84,7 @@ namespace AnomalyArena
         public int strikeChainMax = 6;
         [Min(0f), Tooltip("Strike Tame: your own blast pushes you this many cells instead of hurting and knocking you back.")]
         public float strikeJumpDistance = 6f;
-        [Min(0f), Tooltip("Launch Yourself Twist: knockback of an enemy you hit is the flight left plus this many cells (a boss takes only this as stagger).")]
+        [Min(0f), Tooltip("Launch Yourself Twist: knockback of an enemy you hit is the flight left plus this many cells (bosses are not knocked back).")]
         public float rocketCueExtra = 3f;
         [Min(0f), Tooltip("Launch Yourself Twist: most cells that knockback can reach.")]
         public float rocketCueMax = 10f;
