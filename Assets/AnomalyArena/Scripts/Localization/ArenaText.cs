@@ -29,7 +29,7 @@ namespace AnomalyArena
             get
             {
                 var selection = LocalizationSettings.SelectedLocaleAsync;
-                return loaded && table && font && selection.IsDone && selection.Result
+                return loaded && table && selection.IsDone && selection.Result
                     && table.LocaleIdentifier == selection.Result.Identifier;
             }
         }
@@ -85,16 +85,22 @@ namespace AnomalyArena
 
                 acquiredFont = Addressables.ResourceManager.Acquire(fontOperation);
                 await WaitAsync(textOperation, cancellationToken);
-                await WaitAsync(acquiredFont, cancellationToken);
                 if (request != revision || LocalizationSettings.SelectedLocaleAsync.Result != locale) return;
                 if (!textOperation.IsValid() || textOperation.Status != AsyncOperationStatus.Succeeded || !textOperation.Result)
                 { Fail("ArenaUI StringTable did not load for " + locale.Identifier.Code); return; }
+                table = textOperation.Result;
+                missingKeys.Clear(); LoadError = ""; loaded = true; OnChanged();
+
+                await WaitAsync(acquiredFont, cancellationToken);
+                if (request != revision || LocalizationSettings.SelectedLocaleAsync.Result != locale) return;
                 if (!acquiredFont.IsValid() || acquiredFont.Status != AsyncOperationStatus.Succeeded || !acquiredFont.Result)
-                { Fail("ArenaAssets/font.ui did not load for " + locale.Identifier.Code); return; }
+                {
+                    LoadError = "ArenaAssets/font.ui did not load for " + locale.Identifier.Code;
+                    Debug.LogError(LoadError); return;
+                }
                 if (fontLease.IsValid()) Addressables.Release(fontLease);
                 fontLease = acquiredFont; acquiredFont = default;
-                table = textOperation.Result; font = fontLease.Result;
-                missingKeys.Clear(); LoadError = ""; loaded = true; OnChanged();
+                font = fontLease.Result; OnChanged();
             }
             catch (OperationCanceledException) { throw; }
             catch (Exception exception)

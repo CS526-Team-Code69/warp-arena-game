@@ -71,7 +71,7 @@ namespace AnomalyArena
         {
             if (localizedCanvas && localizedCanvas.enabled != ArenaText.Ready) localizedCanvas.enabled = ArenaText.Ready;
             if (!ArenaText.Ready) return;
-            if (appliedFont != ArenaText.Font)
+            if (ArenaText.Font && appliedFont != ArenaText.Font)
             {
                 appliedFont = ArenaText.Font;
                 if (fontLabels != null) foreach (var label in fontLabels) if (label) label.font = appliedFont;
