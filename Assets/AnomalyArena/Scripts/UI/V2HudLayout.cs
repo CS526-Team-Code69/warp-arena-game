@@ -120,17 +120,17 @@ namespace AnomalyArena
                                                                                                                                 
         [SerializeField, HideInInspector] string appliedState;
 
+                                                                                                                                       
+                                                                                                                                  
+                                                                                                                                       
         string CurrentState()
         {
-            string json = JsonUtility.ToJson(this);
-            foreach (var key in new[] { "\"appliedState\"", "\"hud\"" })
-            {
-                int at = json.IndexOf(key, StringComparison.Ordinal);
-                if (at < 0) continue;
-                int end = json.IndexOf(',', at); if (end < 0) end = json.LastIndexOf('}');
-                json = json.Remove(at, end - at);
-            }
-            return json;
+            string saved = appliedState;
+            var savedHud = hud;
+            appliedState = null;
+            hud = null;
+            try { return JsonUtility.ToJson(this); }
+            finally { appliedState = saved; hud = savedHud; }
         }
 
         void XpHeader()
@@ -341,10 +341,11 @@ namespace AnomalyArena
         }
 
 #if UNITY_EDITOR
+        // OnValidate also runs while the editor restores objects after a script reload; the comparison waits until the editor is idle.
         void OnValidate()
         {
-            if (Application.isPlaying || CurrentState() == appliedState) return;
-            UnityEditor.EditorApplication.delayCall += () => { if (this && hud) Apply(); };
+            if (Application.isPlaying) return;
+            UnityEditor.EditorApplication.delayCall += () => { if (this && hud && CurrentState() != appliedState) Apply(); };
         }
 #endif
     }

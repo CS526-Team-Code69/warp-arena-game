@@ -21,7 +21,8 @@ namespace AnomalyArena
         static readonly EnemyKind[] Kinds =
         {
             EnemyKind.Grunt, EnemyKind.Brute, EnemyKind.Skitter, EnemyKind.Splitter, EnemyKind.Spitter, EnemyKind.Warden,
-            EnemyKind.Chanter, EnemyKind.Rammer, EnemyKind.Bloater, EnemyKind.Spire, EnemyKind.Stomper, EnemyKind.Shade, EnemyKind.Tyrant,
+            EnemyKind.Chanter, EnemyKind.Rammer, EnemyKind.Bloater, EnemyKind.Spire, EnemyKind.Stomper, EnemyKind.Shade, EnemyKind.Hollow,
+            EnemyKind.Tyrant,
         };
 
         static string Name(EnemyKind kind) => kind switch
@@ -38,6 +39,7 @@ namespace AnomalyArena
             EnemyKind.Spire => ArenaText.Pair("Spire","Spire"),
             EnemyKind.Stomper => ArenaText.Pair("Stomper","Stomper"),
             EnemyKind.Shade => ArenaText.Pair("Shade","Shade"),
+            EnemyKind.Hollow => ArenaText.Pair("Nash Prophet (void trial)","Nash Prophet (void trial)"),
             EnemyKind.Tyrant => ArenaText.Pair("Tyrant","Tyrant"),
             _ => kind.ToString()
         };
@@ -95,10 +97,12 @@ namespace AnomalyArena
         {
             if (!gm || !gm.player || !gm.waves || !gm.IsCombatActive) return null;
             var player = gm.player;
+            var world = WorldMap.Active;
+            if (world && world.TrialActive) return null;
+            if (selected == EnemyKind.Hollow) return last = world && world.EnterLabTrial(player) ? world.hollow : null;
             Vector3 at = player.Position + Query.Flat(player.AimDirection).normalized * spawnDistance;
             var data = gm.waves.DefinitionOf(selected);
             float body = data ? data.radius : 1f;
-            var world = WorldMap.Active;
             if (world)
             {
                 at = world.ClampPoint(at, body);

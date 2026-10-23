@@ -389,7 +389,7 @@ function evalCountifs(formula, runs) {
 }
 
 function evalDistinct(formula, runs) {
-  const m = /^=IFERROR\(COUNTUNIQUE\(FILTER\(runs!\$C\$2:\$C,runs!\$B\$2:\$B="(\w+)",runs!\$E\$2:\$E<>"test"(?:,COUNTIFS\(runs!\$C\$2:\$C,runs!\$C\$2:\$C,runs!\$B\$2:\$B,"(\w+)"\)=0)?\)\),0\)$/.exec(formula);
+  const m = /^=IFERROR\(ROWS\(UNIQUE\(FILTER\(runs!\$C\$2:\$C,runs!\$B\$2:\$B="(\w+)",runs!\$E\$2:\$E<>"test"(?:,COUNTIFS\(runs!\$C\$2:\$C,runs!\$C\$2:\$C,runs!\$B\$2:\$B,"(\w+)"\)=0)?\)\)\),0\)$/.exec(formula);
   if (!m) throw new Error('Unexpected distinct formula: ' + formula);
   const rows = runs.dataRows();
   // The optional COUNTIFS(...)=0 term drops every run_id that has a row with that event, in any edition.
@@ -678,8 +678,9 @@ test('setup creates the header, stores the id, builds the Summary grid and one c
   assert.ok(started.indexOf('runs!$C$2:$C') > 0 && started.indexOf('runs!$B$2:$B="run_start"') > 0 && started.indexOf('runs!$E$2:$E<>"test"') > 0, started);
   assert.ok(ended.indexOf('runs!$B$2:$B="run_end"') > 0, ended);
   for (const f of [started, ended, unfinished]) assert.ok(f.startsWith('=IFERROR('), f);
-  assert.strictEqual(unfinished, '=IFERROR(COUNTUNIQUE(FILTER(runs!$C$2:$C,runs!$B$2:$B="run_start",runs!$E$2:$E<>"test",' +
-    'COUNTIFS(runs!$C$2:$C,runs!$C$2:$C,runs!$B$2:$B,"run_end")=0)),0)');
+  assert.strictEqual(unfinished, '=IFERROR(ROWS(UNIQUE(FILTER(runs!$C$2:$C,runs!$B$2:$B="run_start",runs!$E$2:$E<>"test",' +
+    'COUNTIFS(runs!$C$2:$C,runs!$C$2:$C,runs!$B$2:$B,"run_end")=0))),0)');
+  for (const f of [started, ended, unfinished]) assert.ok(f.indexOf('COUNTUNIQUE') < 0, 'COUNTUNIQUE counts an empty FILTER (#N/A) as 1: ' + f);
 
   assert.strictEqual(summary.charts.length, 1);
   const spec = summary.charts[0].spec;

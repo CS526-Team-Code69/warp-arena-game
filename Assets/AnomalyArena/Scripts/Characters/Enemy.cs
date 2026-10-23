@@ -348,6 +348,7 @@ namespace AnomalyArena
         public bool Charging => charging;
         public float CooldownRemaining => Mathf.Max(0f, cooldown);
 
+        public void HoldAttacks(float seconds) => cooldown = Mathf.Max(cooldown, seconds);
         public float WindupSecondsRemaining => windup ? Mathf.Max(0f, windupTimer) : 0f;
 
         public int AttackSequence { get; private set; }
