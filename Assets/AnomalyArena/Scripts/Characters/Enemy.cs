@@ -64,7 +64,6 @@ namespace AnomalyArena
             revealTimer,
             supportTimer,
             summonTimer,
-            stagger,
             bossStun,
             chargeLeft,
             inhaleLeft,
@@ -135,10 +134,8 @@ namespace AnomalyArena
         EnemyKind summonKind;
         float summonWarning;
 
-                                                                            
-        public float StaggerRatio => IsBoss ? Mathf.Clamp01(stagger / StaggerLimit) : 0f;
+                                                                                                                                                   
         public bool BossStunned => bossStun > 0f;
-        float StaggerLimit => definition && definition.kind == EnemyKind.Hollow ? Boss.prophetStaggerLimit : Boss.tyrantStaggerLimit;
 
                                                                                                                               
         public void ForceNextBossMove(int move) => forcedMove = move;
@@ -311,7 +308,6 @@ namespace AnomalyArena
             revealTimer = spawnVisible;
             supportTimer = 0f;
             summonTimer = data.kind == EnemyKind.Hollow ? Boss.prophetSummonInterval : Boss.tyrantSummonInterval;
-            stagger = 0f;
             bossStun = 0f;
             bossPhase = 1;
             inhaleLeft = bossRecovery = 0f;
@@ -336,8 +332,6 @@ namespace AnomalyArena
                 statusBoard.StatusApplied += OnStatusApplied;
                 statusBoard.ImmuneToControl = IsBoss;
                 statusBoard.ControlThresholdFactor = (large ? 2f : 1f) * (elite ? 2f : 1f);
-                statusBoard.OnControlThreshold -= AddStagger;
-                if (IsBoss) statusBoard.OnControlThreshold += AddStagger;
                 if (data.kind == EnemyKind.Hollow)
                 {
                                                                                                           
@@ -364,31 +358,13 @@ namespace AnomalyArena
 
         void OnStatusApplied(ElementKind element) => revealTimer = 2f;
 
-                                                                                                                                                        
-        public void AddStagger(float amount)
-        {
-            if (!IsBoss || amount <= 0f) return;
-            stagger += amount;
-            if (stagger < StaggerLimit) return;
-            stagger = 0f;
-            bossStun = definition.kind == EnemyKind.Hollow ? Boss.prophetStunSeconds
-                : bossPhase == 3 ? Boss.tyrantPhase3StunSeconds : Boss.tyrantStunSeconds;
-            charging = false;
-            chargesLeft = 0;
-            followUp = -1;
-            inhaleLeft = 0f;
-            ringsLeft = 0;
-            volleyTimer = 0f;
-            CancelWindup();
-        }
-
         public override bool ReceiveDamage(DamageInfo info)
         {
             if (IsBoss)
             {
-                if (info.knockDistance > 0f) AddStagger(info.knockDistance);
-                                                                                                 
+                                                                                                                                                     
                 if (bossStun > 0f && info.source != DamageSource.Wall) info.amount *= 1.5f;
+                                                                                                                          
                 info.knockDistance = 0f;
             }
             else if (Immovable) info.knockDistance = 0f;
@@ -583,7 +559,7 @@ namespace AnomalyArena
                                                                                                                
                 TickLandingZones(dt);
                 TickSummonWarning(dt);
-                                                                                                                          
+                                                                                                                                
                 if (bossStun > 0f)
                 {
                     bossStun -= dt;
@@ -1239,12 +1215,11 @@ namespace AnomalyArena
         }
 
                                                                                                                                          
-                                                                  
+                                                 
         public void SummonFell()
         {
             if (!IsAlive) return;
             ReceiveDamage(new DamageInfo { amount = maxHp * Boss.summonFallHpShare, source = DamageSource.Wall, kind = HitKind.Slam });
-            AddStagger(Boss.summonFallStagger);
         }
 
                                                                                                                                                           

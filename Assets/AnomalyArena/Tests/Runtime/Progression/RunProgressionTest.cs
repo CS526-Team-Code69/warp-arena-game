@@ -67,6 +67,7 @@ namespace AnomalyArena
             sut.GainXp(rules.levelCosts.Sum());
 
             sut.CompleteVoidTrial();
+            sut.GrantVoidLevel();
 
             Assert.That(sut.VoidBadge, Is.True);
         }

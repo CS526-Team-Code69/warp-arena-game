@@ -159,7 +159,7 @@ namespace AnomalyArena
             energyFill.color = s.voidEnergy ? ElementColors[6] : new Color(.22f, .68f, .93f);
             string level = s.level >= s.maxLevel ? ArenaText.Text("ui.level.max") : s.level.ToString();
             SetText(xpLabel, ArenaText.Text("ui.xp", level, Mathf.FloorToInt(s.xp), Mathf.CeilToInt(s.xpNeeded), s.bankedDrafts));
-                                                                                                  
+                                                                                                                       
             xpLabel.color = s.voidLevel ? ElementColors[6] : Color.white;
             SetFill(xpFill, s.xp, s.xpNeeded);
             if (draftPips != null)
@@ -187,9 +187,6 @@ namespace AnomalyArena
             SetFill(bossHpFill, s.bossHp, s.bossMaxHp);
             SetFill(bossShieldFill, s.bossShield, s.bossMaxHp);
             if (bossShieldFill) bossShieldFill.transform.parent.gameObject.SetActive(s.bossShield > 0f);
-            if (boss) EnsureStaggerBar();
-            SetFill(bossStaggerFill, s.bossStagger, 1f);
-            if (bossStaggerFill) bossStaggerFill.transform.parent.gameObject.SetActive(boss && s.bossStagger > 0f);
             RenderPlayerStatuses(s.playerStatuses);
             SetText(immunityLabel, s.bossImmunities);
             if (bossImmunityIcons != null)
@@ -276,7 +273,7 @@ namespace AnomalyArena
                     cards = s.draftCards;
                     SetText(screen.heading, s.isGreaterReward ? ArenaText.Text("ui.greater.heading") : ArenaText.Text("ui.draft.counter", s.draftIndex, Mathf.Max(1, s.draftCount)));
                     SetText(screen.body, s.isGreaterReward ? ArenaText.Pair("Pick one of three Greater Void skills (or none); they have no further levels. 1 / 2 / 3 select.","Pick one of three Greater Void skills (or none); they have no further levels. 1 / 2 / 3 select.")
-                        : ArenaText.Pair("Three cards, one of each: a stat card, a weapon card (an upgrade direction a revealed weapon has not taken yet) and a skill card (a new skill, or one level for a skill you own). 1 / 2 / 3 select; R rerolls (once per build phase).","Three cards, one of each: a stat card, a weapon card (an upgrade direction a revealed weapon has not taken yet) and a skill card (a new skill, or one level for a skill you own). 1 / 2 / 3 select; R rerolls (once per build phase).") + WalkHint());
+                        : ArenaText.Pair("Three cards, one of each: a stat card, a weapon card (an upgrade direction a revealed weapon has not taken yet) and a skill card (a new skill, or one level for a skill you own). 1 / 2 / 3 select; R rerolls all three (once per wave).","Three cards, one of each: a stat card, a weapon card (an upgrade direction a revealed weapon has not taken yet) and a skill card (a new skill, or one level for a skill you own). 1 / 2 / 3 select; R rerolls all three (once per wave).") + WalkHint());
                     if (screen.reroll) screen.reroll.interactable = s.rerolls > 0;
                     SetText(screen.rerollLabel, ArenaText.Text("ui.reroll.counter", s.rerolls));
                     break;
@@ -367,27 +364,6 @@ namespace AnomalyArena
         static void SetText(UnityEngine.UI.Text label, string value)
         {
             if (label && label.text != (value ?? "")) label.text = value ?? "";
-        }
-
-        [Tooltip("Colour of the boss stagger bar under the shield bar (full = the boss is stunned).")]
-        public Color bossStaggerColor = new(1f, .62f, .2f, 1f);
-        UnityEngine.UI.Image bossStaggerFill;
-        bool staggerBarMade;
-
-                                                                                                                                 
-        void EnsureStaggerBar()
-        {
-            if (staggerBarMade || !bossShieldFill || bossShieldFill.transform.parent is not RectTransform source) return;
-            staggerBarMade = true;
-            var copy = Instantiate(source.gameObject, source.parent);
-            copy.name = "BossStaggerBackground";
-            var rect = (RectTransform)copy.transform;
-            rect.anchoredPosition = source.anchoredPosition + new Vector2(0f, -(source.sizeDelta.y + 2f));
-            foreach (var image in copy.GetComponentsInChildren<UnityEngine.UI.Image>(true))
-                if (image.name == bossShieldFill.name) bossStaggerFill = image;
-            if (!bossStaggerFill) return;
-            bossStaggerFill.name = "BossStaggerFill";
-            bossStaggerFill.color = bossStaggerColor;
         }
 
         [Tooltip("Colour of the quick-reload window marked on the charge bar (Scatter Blast Tame).")]

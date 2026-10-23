@@ -21,7 +21,7 @@ namespace AnomalyArena
         public bool EnergyUnlocked { get; private set; }
         public bool VoidEnergy { get; private set; }
 
-        public bool VoidBadge => Level >= Rules.maxLevel && VoidEnergy;
+        public bool VoidBadge { get; private set; }
         public bool MayOfferPenetration { get; set; }
         public bool MustOfferPenetration { get; set; }
         public DraftCard[] CurrentCards { get; private set; } = Array.Empty<DraftCard>();
@@ -35,16 +35,18 @@ namespace AnomalyArena
         public event Action<StatId, float> StatChanged;
         readonly Queue<bool> drafts = new();
         readonly List<StatCardValues> eligible = new();
+        readonly List<StatId> draftStats = new(), shownStats = new();
         float regenerationClock;
         int statsWithoutHighTier;
         int draftWave;
-        Func<DraftCard> weaponCardFactory;
-        Func<DraftCard> skillCardFactory;
+
+        Func<DraftCard, DraftCard> weaponCardFactory;
+        Func<DraftCard, DraftCard> skillCardFactory;
 
         public void ResetRun()
         {
             Stats = Rules.startingStats.Copy(); Stats.maxEnergy = Rules.energyMax;
-            Level = 1; Xp = 0f; Energy = 0f; EnergyUnlocked = false; VoidEnergy = false;
+            Level = 1; Xp = 0f; Energy = 0f; EnergyUnlocked = false; VoidEnergy = false; VoidBadge = false;
             LastLevelHpGain = LastLevelEnergyGain = 0f;
             MayOfferPenetration = MustOfferPenetration = false; regenerationClock = 0f; statsWithoutHighTier = 0; draftWave = 0; drafts.Clear();
             CurrentCards = Array.Empty<DraftCard>(); RerollsRemaining = 0;
@@ -60,10 +62,23 @@ namespace AnomalyArena
                 Xp -= XpRequired;
                 bool statOnly = Level >= Rules.maxLevel;
                 if (!statOnly) { Level++; GrowLevelResources(); OnLevelGained(Level); }
-                drafts.Enqueue(statOnly);
-                if (EnergyUnlocked) { Energy = Stats.maxEnergy; OnEnergyRefilled(); }
+                BankDraft(statOnly);
             }
             OnChanged();
+        }
+
+        public void GrantVoidLevel()
+        {
+            VoidBadge = true;
+            GrowLevelResources();
+            BankDraft(Level >= Rules.maxLevel);
+            OnChanged();
+        }
+
+        void BankDraft(bool statOnly)
+        {
+            drafts.Enqueue(statOnly);
+            if (EnergyUnlocked) { Energy = Stats.maxEnergy; OnEnergyRefilled(); }
         }
 
         void GrowLevelResources()
@@ -90,33 +105,65 @@ namespace AnomalyArena
 
         public void BeginWave() { RerollsRemaining = 1; OnChanged(); }
 
-        public void BeginBuildPhase(int wave, Func<DraftCard> weaponFactory = null, Func<DraftCard> skillFactory = null)
+        public void BeginBuildPhase(int wave, Func<DraftCard, DraftCard> weaponFactory = null, Func<DraftCard, DraftCard> skillFactory = null)
         {
             draftWave = wave;
             weaponCardFactory = weaponFactory; skillCardFactory = skillFactory;
-            CurrentCards = Array.Empty<DraftCard>();
             OnChanged();
         }
 
-        public DraftCard[] DrawCards(int wave, Func<DraftCard> weaponFactory = null, Func<DraftCard> skillFactory = null)
+        public DraftCard[] DrawCards(int wave, Func<DraftCard, DraftCard> weaponFactory = null, Func<DraftCard, DraftCard> skillFactory = null)
         {
             draftWave = wave;
             if (weaponFactory != null) weaponCardFactory = weaponFactory;
             if (skillFactory != null) skillCardFactory = skillFactory;
             if (BankedDrafts == 0) return CurrentCards = Array.Empty<DraftCard>();
-            StatCardOffer first = RollStatCard(forcePenetration: MustOfferPenetration);
-            DraftCard middle = NextDraftIsStatOnly ? null : weaponCardFactory?.Invoke();
-            DraftCard last = NextDraftIsStatOnly ? null : skillCardFactory?.Invoke();
-            StatId? secondStat = null;
-            if (middle == null) { var second = RollStatCard(first.Stat); secondStat = second.Stat; middle = MakeStat(second); }
-            if (last == null) last = MakeStat(RollStatCard(first.Stat, secondStat));
-            return CurrentCards = new[] { MakeStat(first), middle, last };
+            if (CurrentCards.Length > 0) { ReplaceOutgrownCards(); return CurrentCards; }
+            return CurrentCards = Draw(null);
         }
 
         public bool Reroll()
         {
             if (RerollsRemaining <= 0 || BankedDrafts == 0) return false;
-            RerollsRemaining--; DrawCards(draftWave); OnChanged(); return true;
+            RerollsRemaining--; CurrentCards = Draw(CurrentCards); OnChanged(); return true;
+        }
+
+        DraftCard[] Draw(DraftCard[] before)
+        {
+            if (BankedDrafts == 0) return Array.Empty<DraftCard>();
+            bool statOnly = NextDraftIsStatOnly;
+            draftStats.Clear(); shownStats.Clear();
+            if (before != null) foreach (var card in before) if (card?.Payload is StatCardOffer shown) shownStats.Add(shown.Stat);
+            var cards = new DraftCard[3];
+            for (int i = 0; i < cards.Length; i++)
+            {
+                var old = before != null && i < before.Length ? before[i] : null;
+                if (!statOnly && i == 1) cards[i] = weaponCardFactory?.Invoke(old?.Kind == DraftCardKind.Weapon ? old : null);
+                else if (!statOnly && i == 2) cards[i] = skillCardFactory?.Invoke(old?.Kind == DraftCardKind.Skill ? old : null);
+                if (cards[i] != null) continue;
+                StatId? replaced = old?.Payload is StatCardOffer oldStat ? oldStat.Stat : null;
+                var offer = RollStatCard(draftStats, shownStats, replaced, forcePenetration: i == 0 && MustOfferPenetration);
+                draftStats.Add(offer.Stat); cards[i] = MakeStat(offer);
+            }
+            shownStats.Clear();
+            return cards;
+        }
+
+        void ReplaceOutgrownCards()
+        {
+            for (int i = 0; i < CurrentCards.Length; i++)
+            {
+                var old = CurrentCards[i];
+                if (old == null || old.StillFits) continue;
+                var card = old.Kind == DraftCardKind.Weapon ? weaponCardFactory?.Invoke(old) : old.Kind == DraftCardKind.Skill ? skillCardFactory?.Invoke(old) : null;
+                if (card == null)
+                {
+                    draftStats.Clear(); shownStats.Clear();
+                    foreach (var other in CurrentCards) if (other?.Payload is StatCardOffer stat) draftStats.Add(stat.Stat);
+                    card = MakeStat(RollStatCard(draftStats, shownStats, null, false));
+                }
+                CurrentCards[i] = card;
+            }
         }
 
         public bool ApplyCard(int index, int replacementIndex = -1)
@@ -129,7 +176,7 @@ namespace AnomalyArena
         {
             while (BankedDrafts > 0)
             {
-                if (CurrentCards.Length == 0) DrawCards(draftWave);
+                DrawCards(draftWave);
                 int eligibleCount = 0;
                 foreach (var card in CurrentCards) if (!card.NeedsReplacement) eligibleCount++;
                 int pick = UnityEngine.Random.Range(0, eligibleCount);
@@ -203,15 +250,17 @@ namespace AnomalyArena
 
         public StatCardOffer RollStatCard(StatId? excludeA = null, StatId? excludeB = null, bool forcePenetration = false)
         {
-            eligible.Clear();
-            foreach (var card in Rules.statCards)
-            {
-                if (card.retired || card.stat == excludeA || card.stat == excludeB || Stats.AtCap(card.stat)) continue;
-                if(forcePenetration&&card.stat!=StatId.ElementPenetration)continue;
-                if (!EnergyUnlocked && card.stat is StatId.MaxEnergy or StatId.EnergySiphon) continue;
-                if (card.stat == StatId.ElementPenetration && !MayOfferPenetration) continue;
-                eligible.Add(card);
-            }
+            draftStats.Clear(); shownStats.Clear();
+            if (excludeA.HasValue) draftStats.Add(excludeA.Value);
+            if (excludeB.HasValue) draftStats.Add(excludeB.Value);
+            return RollStatCard(draftStats, shownStats, null, forcePenetration);
+        }
+
+        StatCardOffer RollStatCard(List<StatId> taken, List<StatId> shown, StatId? replaced, bool forcePenetration)
+        {
+            if (CollectEligible(stat => taken.Contains(stat) || shown.Contains(stat), forcePenetration) == 0
+                && (replaced == null || CollectEligible(stat => taken.Contains(stat) || stat == replaced, forcePenetration) == 0))
+                CollectEligible(taken.Contains, forcePenetration);
             if (eligible.Count == 0) return new StatCardOffer(StatId.MaxHp, CardRarity.Common, 12f);
             var picked = eligible[UnityEngine.Random.Range(0, eligible.Count)];
 
@@ -220,6 +269,20 @@ namespace AnomalyArena
             ProgressionRules.RarityBand(draftWave, out _, out var high);
             statsWithoutHighTier = rarity == high ? 0 : statsWithoutHighTier + 1;
             return new StatCardOffer(picked.stat, rarity, picked.At(rarity), picked.bonus, picked.BonusAt(rarity));
+        }
+
+        int CollectEligible(Func<StatId, bool> skip, bool forcePenetration)
+        {
+            eligible.Clear();
+            foreach (var card in Rules.statCards)
+            {
+                if (card.retired || skip(card.stat) || Stats.AtCap(card.stat)) continue;
+                if(forcePenetration&&card.stat!=StatId.ElementPenetration)continue;
+                if (!EnergyUnlocked && card.stat is StatId.MaxEnergy or StatId.EnergySiphon) continue;
+                if (card.stat == StatId.ElementPenetration && !MayOfferPenetration) continue;
+                eligible.Add(card);
+            }
+            return eligible.Count;
         }
 
         void OnChanged() => Changed?.Invoke();

@@ -169,23 +169,26 @@ namespace AnomalyArena
             : wave <= 11 ? category is SkillCategory.AdvancedElement or SkillCategory.BasicMechanic
             : category is SkillCategory.AdvancedElement or SkillCategory.AdvancedMechanic;
 
-        public DraftCard RollCard(int wave = 1)
+        public DraftCard RollCard(int wave = 1, SkillId? avoid = null)
         {
             if (!Catalog || Catalog.skills == null) return null;
             candidates.Clear(); upgradeable.Clear();
             foreach (var definition in Catalog.skills)
-                if (definition && !definition.greaterVoid && OffersNewSkill(definition.category, wave) && SlotOf(definition.id) < 0)
+                if (definition && !definition.greaterVoid && OffersNewSkill(definition.category, wave) && SlotOf(definition.id) < 0 && definition.id != avoid)
                     candidates.Add(definition);
             for (int i = 0; i < Slots.Length; i++)
-                if (!Slots[i].Empty && Slots[i].Level < 3 && !Slots[i].Definition.greaterVoid) upgradeable.Add(i);
+                if (!Slots[i].Empty && Slots[i].Level < 3 && !Slots[i].Definition.greaterVoid && Slots[i].Id != avoid) upgradeable.Add(i);
+            if (avoid.HasValue && candidates.Count == 0 && upgradeable.Count == 0) return RollCard(wave);
             float upgradeChance = OwnedCount == 0 ? 0f : OwnedCount < 3 ? 0.3f : 0.6f;
             if (upgradeable.Count > 0 && (candidates.Count == 0 || UnityEngine.Random.value < upgradeChance))
             {
                 var slot = Slots[upgradeable[UnityEngine.Random.Range(0, upgradeable.Count)]];
-                SkillId id = slot.Id; int next = slot.Level + 1;
+                SkillId id = slot.Id; int level = slot.Level, next = level + 1;
+
                 return new DraftCard(DraftCardKind.Skill, ArenaText.Pair($"{slot.Name} · Level {next}",$"{slot.Name} · Level {next}"),
                     $"{slot.Definition.Description(slot.Level)} → {slot.Definition.Description(next)}",
-                    _ => Learn(id), payload: id, rarity: ArenaRarity.ForSkill(slot.Definition, next));
+                    _ => Learn(id), payload: id, rarity: ArenaRarity.ForSkill(slot.Definition, next),
+                    stillFits: () => SlotOf(id) >= 0 && Slots[SlotOf(id)].Level == level);
             }
             if (candidates.Count == 0) return null;
             var picked = candidates[UnityEngine.Random.Range(0, candidates.Count)];
@@ -203,10 +206,15 @@ namespace AnomalyArena
             return result;
         }
 
-        DraftCard MakeLearnCard(SkillDefinition definition) => new(DraftCardKind.Skill, ArenaTerms.Skill(definition.id),
-            definition.Description(1) + ArenaText.Pair($"\n{definition.cost:0} Energy",$"\n{definition.cost:0} Energy"),
-            replacement => Learn(definition.id, replacement), OwnedCount >= 3, definition.id,
-            ArenaRarity.ForSkill(definition, 1));
+        DraftCard MakeLearnCard(SkillDefinition definition)
+        {
+
+            bool full = OwnedCount >= 3;
+            return new(DraftCardKind.Skill, ArenaTerms.Skill(definition.id),
+                definition.Description(1) + ArenaText.Pair($"\n{definition.cost:0} Energy",$"\n{definition.cost:0} Energy"),
+                replacement => Learn(definition.id, replacement), full, definition.id,
+                ArenaRarity.ForSkill(definition, 1), () => SlotOf(definition.id) < 0 && (OwnedCount >= 3) == full);
+        }
 
         public bool TryCast(int index)
         {

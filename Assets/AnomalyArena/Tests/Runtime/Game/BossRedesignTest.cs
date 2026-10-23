@@ -152,7 +152,7 @@ namespace AnomalyArena
         }
 
         [Test, LoadScene(LabScene), Category("Integration"), Timeout(60000)]
-        public async Task SummonFall_OffTheEdgeOrIntoAHole_CostsAFixedShareAndStagger_EvenWhileStunned()
+        public async Task SummonFall_OffTheEdgeOrIntoAHole_CostsAFixedShare_AndNeverStuns()
         {
             var (game, world, hollow) = await StartTrial();
             hollow.enabled = false;
@@ -163,16 +163,15 @@ namespace AnomalyArena
             game.waves.SpawnExtrasAt(EnemyKind.Grunt, new[] { centre + Vector3.right * (world.trialRadius + 1f) }, true);
             await Until(() => hollow.Hp < hp, 2f, "a summon off the edge costs the Prophet HP");
             Assert.That(hollow.Hp, Is.EqualTo(hp - share).Within(.01f), "a fixed 4% (not a player hit, no crit)");
-            Assert.That(hollow.StaggerRatio, Is.EqualTo(b.summonFallStagger / b.prophetStaggerLimit).Within(.001f), "and some stagger");
+            Assert.That(hollow.BossStunned, Is.False, "and nothing else: no stagger, no stun");
 
-            hollow.AddStagger(b.prophetStaggerLimit);
-            Assert.That(hollow.BossStunned, Is.True, "a full stagger stuns it");
             hp = hollow.Hp;
             Vector3 hole = centre + Vector3.forward * 6f;
             world.CreateBossHole(hole, 3f, 10f, hollow);
             game.waves.SpawnExtrasAt(EnemyKind.Grunt, new[] { hole }, true);
             await Until(() => hollow.Hp < hp, 2f, "a summon in a hole counts as a fall");
-            Assert.That(hollow.Hp, Is.EqualTo(hp - share).Within(.01f), "still exactly 4% while stunned (no stun bonus on a fixed share)");
+            Assert.That(hollow.Hp, Is.EqualTo(hp - share).Within(.01f), "the same fixed 4%");
+            Assert.That(hollow.BossStunned, Is.False, "two falls still do not stun it");
         }
 
         [Test, LoadScene(LabScene), Category("Integration"), Timeout(60000)]
@@ -570,7 +569,7 @@ namespace AnomalyArena
             return (game, targets, tyrant);
         }
 
-        static async Task<(GameManager game, WorldMap world, Enemy hollow)> StartTrial()
+        internal static async Task<(GameManager game, WorldMap world, Enemy hollow)> StartTrial()
         {
             await Awaitable.NextFrameAsync();
             await Until(() => GameManager.Instance && ArenaText.Ready && WorldMap.Active && Object.FindAnyObjectByType<EnemyLab>(), 12f,

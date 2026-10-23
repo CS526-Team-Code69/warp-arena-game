@@ -36,6 +36,9 @@ namespace AnomalyArena
         [Range(0f,1f), Tooltip("Melee swarm share of a full batch.")] public float swarmShare = .6f;
         [Range(0f,1f), Tooltip("Spitter, Warden and ordinary specials share of a full batch (ramps in over waves 1-5).")] public float functionShare = .2f;
         [Range(0f,1f), Tooltip("Elite share of a full batch from firstEliteWave; capped by maxConcurrentElites, the rest becomes swarm.")] public float eliteShare = .2f;
+        [Range(0f,.5f), Tooltip("Smallest share of its group's spawn weight (melee, functional or elite, after the map tilt) that every kind the wave lists keeps " +
+            "while it can spawn: 0.1 = 10%. A map may shift the mix but never removes a listed kind; a group with too many kinds for this share splits evenly.")]
+        public float minKindShare = .1f;
         [SerializeField] int crowdBalanceRevision;
         int swarmRemaining, functionRemaining, eliteRemaining;
         [Header("Experience (system doc §9.2)")]
@@ -153,6 +156,13 @@ namespace AnomalyArena
         bool trialSuspended;
         bool finalBossPending;
         ElementKind waveAffixA, waveAffixB;
+                                                                                                                                                
+        public ElementKind WaveAffixA => waveAffixA;
+        public ElementKind WaveAffixB => waveAffixB;
+                                                                                                                                          
+        readonly HashSet<EnemyKind> seenThisWave = new(), unplaceable = new();
+        float[] rollWeights;
+        bool[] rollListed;
         int batchSpawnsRemaining, deathSequence;
         float radiationClock;
         readonly Dictionary<Enemy, int> corpseOrder = new();
@@ -252,10 +262,12 @@ namespace AnomalyArena
             spawnTimer = 0f;
             BatchIndex = 0; TimeExpired = false; batchSpawnsRemaining = 0;
             spawnSectorCursor = Random.Range(0,8);
+            seenThisWave.Clear();
                                                                                                                          
+                                                                                                         
             int available = index < 4 ? 0 : index < 7 ? 3 : index < 10 ? 5 : 7;
             waveAffixA = available > 0 ? (ElementKind)Random.Range(1, available + 1) : ElementKind.None;
-            waveAffixB = available > 0 ? (ElementKind)Random.Range(1, available + 1) : ElementKind.None;
+            waveAffixB = available > 1 ? (ElementKind)(1 + ((int)waveAffixA - 1 + Random.Range(1, available)) % available) : waveAffixA;
             if (GM.hud) GM.hud.Banner(ArenaText.Pair($"Wave {index + 1} / {WaveCount}",$"Wave {index + 1} / {WaveCount}"), available > 0 ? $"{ArenaTerms.Element(waveAffixA)} · {ArenaTerms.Element(waveAffixB)}" : ArenaText.Pair("Interstellar Battlefield","Interstellar Battlefield"));
         }
 
@@ -389,6 +401,7 @@ namespace AnomalyArena
         void IssueBatchMarkers()
         {
             float affixShare = OrdinaryAffixShare(WaveIndex);
+            unplaceable.Clear();
             while (batchSpawnsRemaining > 0 && !TimeExpired && TimeLeft > 0f)
             {
                 int roll = Random.Range(0, batchSpawnsRemaining);
@@ -405,7 +418,13 @@ namespace AnomalyArena
                     : elite ? PickEliteAffix()
                     : EnemyRoles.IsSpecial(data.kind) ? ElementKind.None
                     : Random.value < affixShare ? Random.value < .5f ? waveAffixA : waveAffixB : ElementKind.None;
-                if (!PlaceMarker(data, elite, affix)) break;
+                if (!PlaceMarker(data, elite, affix))
+                {
+                                                                                                                                                   
+                                                                                          
+                    if (group < 2 && !seenThisWave.Contains(data.kind) && unplaceable.Add(data.kind)) continue;
+                    break;
+                }
                 if (quota == 0) swarmRemaining--; else if (quota == 1) functionRemaining--; else eliteRemaining--;
                 batchSpawnsRemaining--;
             }
@@ -423,22 +442,81 @@ namespace AnomalyArena
         }
                      
                                                                                                                                        
-                                                                                                          
+                                                                                                                                                  
+                                                                                                                                                          
                       
-        int BatchWeight(WaveSet.Definition wave, int index, int group, bool constrainActive = true)
+        bool ListedWeight(int wave1, int index, int group, bool constrainActive, out int weight)
         {
-            if (roster == null || index >= roster.Length || !roster[index] || EnemyRoles.IsBoss(roster[index].kind)) return 0;
+            weight = 0;
+            if (roster == null || index >= roster.Length || !roster[index] || EnemyRoles.IsBoss(roster[index].kind)) return false;
             var data = roster[index];
             bool allowed = group == 0 ? IsSwarm(data) : group == 1 ? !IsSwarm(data) : EnemyRoles.IsSpecial(data.kind) && data.canElite;
-            if (!allowed) return 0;
-            int wave1 = WaveIndex + 1;
+            if (!allowed) return false;
             if (data.kind == EnemyKind.Spitter && wave1 < rangedFirstWave || data.kind == EnemyKind.Warden && wave1 < supportFirstWave
-                || group == 2 && wave1 < firstEliteWave) return 0;
-            int weight = TiltedWeight(wave, (int)data.kind);
-            if (weight <= 0) return 0;
-            if (constrainActive && data.kind == EnemyKind.Shade && ShadeCount() >= ShadeCap) return 0;
-            if (constrainActive && !HasSpawnCapacity(data)) return 0;
-            return weight;
+                || group == 2 && wave1 < firstEliteWave) return false;
+            var wave = waveSet.waves[Mathf.Clamp(wave1 - 1, 0, waveSet.waves.Length - 1)];
+            int kind = (int)data.kind;
+            if (wave.weights == null || kind >= wave.weights.Length || wave.weights[kind] <= 0) return false;
+            if (constrainActive && data.kind == EnemyKind.Shade && ShadeCount() >= ShadeCap) return false;
+            if (constrainActive && !HasSpawnCapacity(data)) return false;
+            weight = TiltedWeight(wave, kind);
+            return true;
+        }
+                     
+                                                                                                                                                
+                                                                                                                                                  
+                                                                                        
+                      
+        void FillGroupWeights(int wave1, int group, bool constrainActive, float[] weights, bool[] listed)
+        {
+            for (int i = 0; i < weights.Length; i++)
+            {
+                listed[i] = ListedWeight(wave1, i, group, constrainActive, out int weight);
+                weights[i] = weight;
+            }
+            ApplyShareFloor(weights, listed, minKindShare);
+        }
+                                                                                                                                                     
+                                                                                                                                                                    
+        public float[] GroupWeights(int wave, int group)
+        {
+            var weights = new float[roster != null ? roster.Length : 0];
+            if (!waveSet || waveSet.waves == null || waveSet.waves.Length == 0) return weights;
+            FillGroupWeights(wave, group, false, weights, new bool[weights.Length]);
+            return weights;
+        }
+                     
+                                                                                                                                             
+                                                                                                                                                   
+                                                                                                                                    
+                      
+        public static void ApplyShareFloor(float[] weights, bool[] listed, float minShare)
+        {
+            int count = 0;
+            float total = 0f;
+            for (int i = 0; i < weights.Length; i++) if (listed[i]) { count++; total += Mathf.Max(0f, weights[i]); }
+            if (count == 0 || minShare <= 0f) return;
+            if (total <= 0f || minShare * count >= 1f)
+            {
+                for (int i = 0; i < weights.Length; i++) if (listed[i]) weights[i] = total > 0f ? total / count : 1f;
+                return;
+            }
+                                                                                                                                                  
+                                                                                                                                 
+            float floorTotal = total;
+            int raisedBefore = 0;
+            for (int pass = 0; pass <= count; pass++)
+            {
+                float line = minShare * floorTotal, kept = 0f;
+                int raised = 0;
+                for (int i = 0; i < weights.Length; i++) if (listed[i]) { if (weights[i] < line) raised++; else kept += weights[i]; }
+                if (raised == raisedBefore) break;
+                if (kept <= 0f) { for (int i = 0; i < weights.Length; i++) if (listed[i]) weights[i] = total / count; return; }
+                raisedBefore = raised;
+                floorTotal = kept / (1f - raised * minShare);
+            }
+            float lifted = minShare * floorTotal;
+            for (int i = 0; i < weights.Length; i++) if (listed[i] && weights[i] < lifted) weights[i] = lifted;
         }
         bool HasSpawnCapacity(EnemyDefinition data)
         {
@@ -454,14 +532,32 @@ namespace AnomalyArena
         }
         EnemyDefinition RollBatchEnemy(int group)
         {
-            var wave = waveSet.waves[WaveIndex];
-            int total = 0;
-            for (int i = 0; i < roster.Length; i++) total += BatchWeight(wave, i, group);
-            if (total <= 0) return null;
-            int roll = Random.Range(0, total);
-            for (int i = 0; i < roster.Length; i++) { roll -= BatchWeight(wave, i, group); if (roll < 0) return roster[i]; }
-            return null;
+            if (roster == null) return null;
+            if (rollWeights == null || rollWeights.Length != roster.Length) { rollWeights = new float[roster.Length]; rollListed = new bool[roster.Length]; }
+            FillGroupWeights(WaveIndex + 1, group, true, rollWeights, rollListed);
+                                                                                                                                                 
+                                                                                                                                           
+            if (group < 2)
+            {
+                bool unseen = false;
+                for (int i = 0; i < roster.Length; i++) unseen |= rollWeights[i] > 0f && FirstAppearance(roster[i].kind);
+                if (unseen) for (int i = 0; i < roster.Length; i++) if (rollWeights[i] > 0f && !FirstAppearance(roster[i].kind)) rollWeights[i] = 0f;
+            }
+            float total = 0f;
+            for (int i = 0; i < roster.Length; i++) total += rollWeights[i];
+            if (total <= 0f) return null;
+            float roll = Random.value * total;
+            int last = -1;
+            for (int i = 0; i < roster.Length; i++)
+            {
+                if (rollWeights[i] <= 0f) continue;
+                last = i;
+                roll -= rollWeights[i];
+                if (roll < 0f) return roster[i];
+            }
+            return roster[last];                                      
         }
+        bool FirstAppearance(EnemyKind kind) => !seenThisWave.Contains(kind) && !unplaceable.Contains(kind);
 
         EnemyDefinition RollEnemy(WaveSet.Definition wave)
         {
@@ -495,6 +591,7 @@ namespace AnomalyArena
                 {
                     if (!TryFindV2SpawnPoint(data, out var point)) return false;
                     marker.Begin(point, data, elite, affix);
+                    seenThisWave.Add(data.kind);
                     return true;
                 }
             return false;

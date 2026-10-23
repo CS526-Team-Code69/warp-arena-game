@@ -32,8 +32,6 @@ namespace AnomalyArena
         public bool waveTimeExpired;
         public int waveBatch, waveLiving, wavePending;
         public float bossHp, bossMaxHp, bossShield;
-                                                                      
-        public float bossStagger;
         public int level = 1, maxLevel = 12, wave = 1, maxWaves = 14, kills, bankedDrafts, rerolls = 1;
         public int draftIndex = 1, draftCount;
         public string banner = "";

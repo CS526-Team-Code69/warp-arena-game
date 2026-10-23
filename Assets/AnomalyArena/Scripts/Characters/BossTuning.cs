@@ -59,7 +59,7 @@ namespace AnomalyArena
         [Range(0f, 1f), Tooltip("The second landing circle lies on the line from the Prophet to the player, between this share of the way...")] public float prophecyBetweenMin = .3f;
         [Range(0f, 1f), Tooltip("...and this share (picked at random).")] public float prophecyBetweenMax = .8f;
 
-        [Header("Nash Prophet: summons and stagger")]
+        [Header("Nash Prophet: summons")]
         [Min(.1f), Tooltip("Seconds between summons (phase 3 runs the clock 1.3 times faster).")] public float prophetSummonInterval = 10f;
         [Min(0), Tooltip("Summons per call.")] public int prophetSummonCount = 4;
         [Min(0), Tooltip("Living summons never exceed this.")] public int prophetSummonCap = 8;
@@ -67,9 +67,6 @@ namespace AnomalyArena
         [Min(0f), Tooltip("Summons appear on a circle of this radius around the Prophet.")] public float prophetSummonRingRadius = 4f;
         [Min(.1f), Tooltip("Phase 3: the Prophet's summon clock runs this many times faster.")] public float prophetPhase3SummonRate = 1.3f;
         [Range(0f, 1f), Tooltip("Share of its max HP the Prophet loses for each summon that falls off the platform or into a hole.")] public float summonFallHpShare = .04f;
-        [Min(0f), Tooltip("Stagger the Prophet gains for each summon that falls.")] public float summonFallStagger = 8f;
-        [Min(1f), Tooltip("Stagger that stuns the Prophet.")] public float prophetStaggerLimit = 40f;
-        [Min(0f), Tooltip("Seconds the Prophet stays stunned; the platform stops shrinking and the summon clock stops meanwhile.")] public float prophetStunSeconds = 3f;
 
         [Header("Nash Prophet: knockback guard")]
         [Min(0f), Tooltip("A boss hit never pushes the player closer than this to the trial platform edge.")] public float edgeKnockMargin = 2.5f;
@@ -119,16 +116,13 @@ namespace AnomalyArena
         [Min(0f), Tooltip("Cells the landing pushes the player.")] public float leapPush = 6f;
         [Min(0f), Tooltip("Seconds it stands still after landing.")] public float leapRecovery = 1.2f;
 
-        [Header("Tyrant: royal shield and stagger")]
+        [Header("Tyrant: royal shield and summons")]
         [Min(0f), Tooltip("Seconds it stands yellow while raising the royal shield at a phase change (the shield share is EncounterBalance.tyrantPhaseShieldShare).")] public float royalShieldCast = 1.2f;
         [Min(1f), Tooltip("While the royal shield holds, the summon clock runs this many times faster.")] public float royalShieldSummonRate = 2f;
         [Min(.1f), Tooltip("Seconds between Tyrant summons.")] public float tyrantSummonInterval = 15f;
         [Min(0), Tooltip("Tyrant summons per call in phases 1-2.")] public int tyrantSummonCount = 6;
         [Min(0), Tooltip("Tyrant summons per call in phase 3.")] public int tyrantPhase3SummonCount = 9;
         [Min(.1f), Tooltip("Phase 3: the Tyrant's summon clock runs this many times faster.")] public float tyrantPhase3SummonRate = 1.25f;
-        [Min(1f), Tooltip("Stagger that stuns the Tyrant.")] public float tyrantStaggerLimit = 60f;
-        [Min(0f), Tooltip("Seconds a full stagger stuns it in phases 1-2.")] public float tyrantStunSeconds = 2.5f;
-        [Min(0f), Tooltip("Seconds a full stagger stuns it in phase 3.")] public float tyrantPhase3StunSeconds = 2f;
 
         public static readonly BossTuning Defaults = new();
     }
