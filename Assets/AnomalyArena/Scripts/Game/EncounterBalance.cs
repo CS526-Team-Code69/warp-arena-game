@@ -18,6 +18,10 @@ namespace AnomalyArena
             "Seconds of reference DPS a boss takes to kill, shields included (system doc §10.3: one to two minutes).")]
         public float bossSeconds = 90f;
 
+        [Min(1), Tooltip(
+            "The Nash Prophet's HP is the same whenever the trial is entered: budgeted against this wave's reference DPS, so an early trial is a hard fight and a late one an easier one (wave 8: about 2 min at wave 5, 1 min at wave 12).")]
+        public int prophetBudgetWave = 8;
+
         public StatusRules statusRules;
         public float ShieldDirectFactor => statusRules ? Mathf.Max(.01f, statusRules.shieldDirectFactor) : .7f;
 
@@ -59,8 +63,12 @@ namespace AnomalyArena
 
         public float MiniShare(bool mini) => mini ? Mathf.Clamp01(splitterMiniHpShare) : 1f;
 
-        int BudgetWave(EnemyDefinition enemy, int wave) =>
-            enemy.kind == EnemyKind.Tyrant && referenceDps is { Length: > 0 } ? referenceDps.Length : wave;
+        public int BudgetWave(EnemyDefinition enemy, int wave) => enemy.kind switch
+        {
+            EnemyKind.Tyrant when referenceDps is { Length: > 0 } => referenceDps.Length,
+            EnemyKind.Hollow => Mathf.Max(1, prophetBudgetWave),
+            _ => wave
+        };
 
         public float MaxHp(EnemyDefinition enemy, int wave, bool elite, ElementKind affix = ElementKind.None,
             bool mini = false) =>
