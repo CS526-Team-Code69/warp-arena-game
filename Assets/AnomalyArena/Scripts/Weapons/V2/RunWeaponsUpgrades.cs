@@ -180,7 +180,7 @@ namespace AnomalyArena
         {
             if(w.Has(UpgradeAxis.Tame)||!player||++w.needlesFired<Mathf.Max(1,upgrades.needlerHpPerNeedles))return;
             w.needlesFired=0;
-            player.ReceiveDamage(new DamageInfo{amount=upgrades.needlerHpCost,source=DamageSource.Burn,ignoreShield=true});
+            player.ReceiveDamage(new DamageInfo{amount=upgrades.needlerHpCost,source=DamageSource.Burn,ignoreShield=true,dealer=player});                                                
         }
 
         void BlizzardChill(RunWeapon w)

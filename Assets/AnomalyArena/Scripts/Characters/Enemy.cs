@@ -271,7 +271,7 @@ namespace AnomalyArena
                 if (savedBodyScale == Vector3.zero) savedBodyScale = bodyRenderer.transform.localScale;
                 bodyRenderer.transform.localScale = savedBodyScale * bodyScale;
                 bodyRenderer.enabled = true;
-                Art.Tint(bodyRenderer, data.colour);
+                RefreshBodyTint();
             }
 
             if (telegraph) telegraph.gameObject.SetActive(false);
@@ -347,6 +347,7 @@ namespace AnomalyArena
         public bool PushesPlayer => definition && EnemyRoles.KnocksBackPlayer(definition.kind);
         public bool Charging => charging;
         public float CooldownRemaining => Mathf.Max(0f, cooldown);
+
         public float WindupSecondsRemaining => windup ? Mathf.Max(0f, windupTimer) : 0f;
 
         public int AttackSequence { get; private set; }
@@ -453,7 +454,7 @@ namespace AnomalyArena
             if (landed && Affix != ElementKind.None)
                 ElementCombat.ApplyAffix(this, target, Affix,
                     Mathf.Max(0f, beforeHp - target.Hp) + Mathf.Max(0f, beforeShield - (board ? board.Shield : 0f)));
-            if (landed && lethal && target.IsAlive) target.Kill();                                  
+            if (landed && lethal && target.IsAlive) target.Kill(this);                                  
             return landed;
         }
 
@@ -462,8 +463,7 @@ namespace AnomalyArena
             revealTimer -= dt;
             if (definition.kind == EnemyKind.Shade)
             {
-                if (bodyRenderer)
-                    Art.Tint(bodyRenderer, Cloaked ? new Color(0.38f, 0.45f, 0.7f, 0.22f) : definition.colour);
+                RefreshBodyTint();
                 if (spawnVisible > 0f)
                 {
                     spawnVisible -= dt;
@@ -925,8 +925,18 @@ namespace AnomalyArena
 
         void SetLook(bool yellow)
         {
-            if (bodyRenderer) bodyRenderer.sharedMaterial = yellow && windupMaterial ? windupMaterial : normalMaterial;
+            if (!bodyRenderer) return;
+            if (windupMaterial) bodyRenderer.sharedMaterial = yellow ? windupMaterial : normalMaterial;
+            RefreshBodyTint();
         }
+
+        public static readonly Color WindupBodyColour = new Color(1f, .85f, .25f);
+        static readonly Color ShadeCloakColour = new Color(0.38f, 0.45f, 0.7f, 0.22f);
+
+        protected override Color? BodyTint => !definition ? null
+            : windup ? WindupBodyColour
+            : definition.kind == EnemyKind.Shade && Cloaked ? ShadeCloakColour
+            : definition.colour;
 
         protected override void OnStateChanged(CharacterState from, CharacterState to)
         {

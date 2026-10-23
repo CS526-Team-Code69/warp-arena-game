@@ -8,6 +8,8 @@ A top-down arena survival game about unpredictable weapons, elemental builds and
 
 Survive fourteen waves in the arena, then defeat the Tyrant. Every weapon hides one of two anomalies, each with its own backfire; black holes and walls are weapons for both sides; and a build of weapons, elements, skills and stat cards grows through each run.
 
+The game starts in whitebox mode; press T on the title screen for the optional illustrated mode.
+
 ## Open the project
 
 Use **Unity 6000.6.3f1**. Clone with Git LFS, add the folder in Unity Hub, open `Assets/AnomalyArena/Scenes/ArenaV2_EN.unity` and press Play.
@@ -38,6 +40,7 @@ To try enemies one at a time, open `Assets/AnomalyArena/Scenes/EnemyLab.unity` i
 ## Documentation
 
 - [Game design document](Docs/GDD.md)
+- [Analytics: how runs end](Analytics/README.md): the WebGL build reports how each run ends to a Google Sheet (wave, cause, run time; random ids only). The collection code is in `Assets/AnomalyArena/Scripts/Analytics`.
 
 ## Team
 

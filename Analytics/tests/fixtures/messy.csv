@@ -1,0 +1,11 @@
+﻿kills, cause ,run_id,EVENT,note,wave,stage,elite,outcome,enemy,edition,received_at,session_id,build,level,run_seconds,starting_weapon
+0,,bbbbbbbbbbbbbbbbbbbbbbbbbbbbb101,run_start,"first, with comma",1,wave,FALSE,,,en,10/22/2026 18:00:00,66666666666666666666666666666666,1.0.0+3fa2b1c9,"4",95.4,Knife
+
+57,enemy,bbbbbbbbbbbbbbbbbbbbbbbbbbbbb101,run_end,"",7.0,wave,TRUE,defeat,Grunt,en,10/22/2026 18:00:00,66666666666666666666666666666666,1.0.0+3fa2b1c9,"4",95.4,Knife
+0,,bbbbbbbbbbbbbbbbbbbbbbbbbbbbb102,run_start,"",1,wave,false,,,en,10/22/2026 18:00:00,66666666666666666666666666666666,1.0.0+3fa2b1c9,"4",95.4,Knife
+,,,,,,,,,,,,,,,,
+ 61 ,enemy,bbbbbbbbbbbbbbbbbbbbbbbbbbbbb102,run_end,"", 4 ,build,false,defeat,Brute,en,10/22/2026 18:00:00,66666666666666666666666666666666,1.0.0+3fa2b1c9,"4",95.4,Knife
+0,,bbbbbbbbbbbbbbbbbbbbbbbbbbbbb103,Run_Start,"",1,wave,False,,,en,10/22/2026 18:00:00,66666666666666666666666666666666,1.0.0+3fa2b1c9,"4",95.4,Knife
+
+33,status,bbbbbbbbbbbbbbbbbbbbbbbbbbbbb103,run_end,"",4,wave,FALSE,defeat,,en,10/22/2026 18:00:00,66666666666666666666666666666666,1.0.0+3fa2b1c9,"4",95.4,Knife
+880,tyrant,bbbbbbbbbbbbbbbbbbbbbbbbbbbbb104,run_end,"",14,final_boss,true,defeat,Tyrant,en,10/22/2026 18:00:00,66666666666666666666666666666666,1.0.0+3fa2b1c9,"4",95.4,Knife

@@ -127,6 +127,10 @@ InitTestScene*.unity*
 !/[Aa]ssets/SourceFiles/Settings.meta
 !/[Aa]ssets/SourceFiles/InputSystem/
 !/[Aa]ssets/SourceFiles/InputSystem.meta
+# The analytics endpoint the game reads at run time (Addressables output under StreamingAssets/aa stays ignored)
+!/[Aa]ssets/StreamingAssets/
+!/[Aa]ssets/StreamingAssets.meta
+/[Aa]ssets/StreamingAssets/aa*
 /.claude/
 
 # JetBrains Rider IDE settings (any level): personal environment, not committed

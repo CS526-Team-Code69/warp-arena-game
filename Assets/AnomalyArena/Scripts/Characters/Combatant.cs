@@ -40,8 +40,11 @@ namespace AnomalyArena
         public float Hp { get; protected set; }
         public CharacterState State { get; private set; } = CharacterState.Normal;
         public DeathCause DeathCause { get; private set; }
+                                                                                                                                                                    
+        public Combatant LastDamagedBy { get; private set; }
+        public DamageSource LastDamageSource { get; private set; }
         public bool Protected => protectTimer > 0f;
-                                                                                                                          
+                                                                                                                                                                 
         [System.NonSerialized] public bool Invulnerable;
 
         public event Action<Combatant> Eliminated;
@@ -110,7 +113,7 @@ namespace AnomalyArena
         {
             SpawnVersion++;DeathVelocity=Vector3.zero;
             if(!rb)rb=GetComponent<Rigidbody>();
-            Hp=maxHp;State=CharacterState.Normal;DeathCause=DeathCause.None;eliminated=false;
+            Hp=maxHp;State=CharacterState.Normal;DeathCause=DeathCause.None;eliminated=false;LastDamagedBy=null;LastDamageSource=DamageSource.Hit;
             stunTimer=0;wallSlams=0;movementModifiers.Clear();
             protectTimer=fallTimer=0;knockVel=pushVel=Vector3.zero;throwImpact=null;
             SetFlash(false);flashTimer=squashTimer=0;LastHitDirection=Vector3.forward;
@@ -296,15 +299,27 @@ namespace AnomalyArena
             flashing = on;
             if (bodyRenderer)
             {
-                                                                                                                                                            
+                                                                                                   
                 if (on)
                 {
                     flashBlock ??= new MaterialPropertyBlock();
                     flashBlock.SetColor("_BaseColor", Color.white);
                     bodyRenderer.SetPropertyBlock(flashBlock);
                 }
-                else bodyRenderer.SetPropertyBlock(null);
+                else RefreshBodyTint();                                                                                         
             }
+        }
+
+                                                                                                                                 
+        protected virtual Color? BodyTint => null;
+
+                                                                                                                 
+        protected void RefreshBodyTint()
+        {
+            if (!bodyRenderer || flashing) return;
+            var tint = BodyTint;
+            if (tint.HasValue) Art.Tint(bodyRenderer, tint.Value);
+            else bodyRenderer.SetPropertyBlock(null);
         }
 
                                     
@@ -558,6 +573,7 @@ namespace AnomalyArena
             float hpDamage=Mathf.Min(beforeHp,Mathf.Max(0f,dealt));
             float shieldDamage=Mathf.Max(0f,beforeShield-(elementStatus?elementStatus.Shield:0));
             float actualDamage=hpDamage+shieldDamage;
+            if(actualDamage>0f){LastDamagedBy=info.dealer?.Owner;LastDamageSource=info.source;}
             if(!tick&&actualDamage>0f)
             {
                 PlayHitFeedback(hpDamage,info.knockDir,info.kind,crit,info.feel,info.dealer?.Owner);
@@ -607,10 +623,12 @@ namespace AnomalyArena
 
         public void Heal(float amount){float gained=Mathf.Min(maxHp-Hp,amount);Hp+=gained;if(elementStatus&&gained>0)elementStatus.OnHeal();}
 
-                                                                                                                                               
-        public void Kill()
+                                                                                                                                     
+                                                                                                                        
+        public void Kill(Combatant by = null)
         {
             if (!IsAlive || InVoidWalk || Invulnerable) return;
+            LastDamagedBy = by; LastDamageSource = DamageSource.Hit;
             PlayHitFeedback(Mathf.Max(Hp, GM.feedback.heavyDamage), Vector3.zero, HitKind.Pierce);
             Hp = 0f;
             Die(DeathCause.HpDepleted);
@@ -631,7 +649,8 @@ namespace AnomalyArena
             ReportEliminated();
         }
 
-                                                                                                                            
+                                                                                                                                     
+                                                                         
         public void OnEnterFallZone(Vector3 outward)
         {
             if (!IsAlive || State == CharacterState.Hooked) return;
