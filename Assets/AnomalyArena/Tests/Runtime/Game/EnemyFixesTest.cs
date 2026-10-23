@@ -6,7 +6,8 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+                                                                                                                                    
+                                                                                                                                           
     [TestFixture]
     [Category("V3Smoke")]
     public class EnemyFixesTest
@@ -34,7 +35,7 @@ namespace AnomalyArena
             float seconds = Time.time - start;
 
             Assert.That(game.player.Hp, Is.LessThan(playerHp), "the blast hurts the player");
-
+                                                                                                                       
             Assert.That(seconds, Is.LessThan(1.5f), "rush and fuse are quick");
         }
 
@@ -54,7 +55,7 @@ namespace AnomalyArena
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(60000)]
-        public async Task TyrantCharge_LineTelegraph_IsAsLongAsTheCharge()
+        public async Task TyrantCharge_LineTelegraph_ReachesTheFirstWallOrHoleOrTheWholeCharge()
         {
             var (game, targets) = await V3CombatSmokeTest.StartSandbox();
             foreach (var t in targets) t.DiscardWithoutReward();
@@ -63,9 +64,18 @@ namespace AnomalyArena
             Assume.That(tyrant && tyrant.IsBoss, Is.True, "the scene keeps the Tyrant");
             try
             {
-
-                await Until(() => tyrant.WindingUp && tyrant.LineTelegraph, 55f, "the Tyrant winds up a charge");
-                Assert.That(tyrant.TelegraphRange, Is.EqualTo(20f).Within(.01f), "the line covers the 20-cell charge, not 5 cells");
+                tyrant.ForceNextBossMove(Enemy.ChargeMove);
+                await Until(() => tyrant.WindingUp && tyrant.LineTelegraph, 6f, "the Tyrant winds up a charge");
+                                                                                                                                         
+                Vector3 from = tyrant.Position, facing = tyrant.TelegraphFacing;
+                float expected = 20f;
+                if (Physics.Raycast(Query.AtCastHeight(from), facing, out var hit, expected, GameManager.WallMask, QueryTriggerInteraction.Ignore))
+                    expected = Query.Flat(hit.point - from).magnitude;
+                for (float d = .5f; d < expected; d += .5f)
+                    if (WorldMap.Active.IsHole(from + facing * d)) { expected = d; break; }
+                Assert.That(tyrant.TelegraphRange, Is.EqualTo(expected).Within(.05f), "the line shows where the charge will stop");
+                                                                                                                                      
+                if (expected > 5f) Assert.That(tyrant.TelegraphRange, Is.GreaterThan(5f), "never the old 5-cell stub when the way is open past it");
             }
             finally { game.player.Invulnerable = false; }
         }
@@ -98,6 +108,7 @@ namespace AnomalyArena
             finally { game.player.Invulnerable = false; }
         }
 
+                                                                                                                
         static void Release(Enemy enemy, EnemyDefinition data, Vector3 at)
         {
             enemy.Configure(data, 1f, false);

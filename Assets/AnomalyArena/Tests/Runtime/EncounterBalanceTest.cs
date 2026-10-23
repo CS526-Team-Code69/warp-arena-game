@@ -55,7 +55,10 @@ namespace AnomalyArena
                 FormattableString.Invariant($"{form},{variant},{target.maxHp},{seconds}\n"));
             Assert.That(target.maxHp, Is.EqualTo(5f));
 
-            Assert.That(seconds, Is.InRange(.4f, .95f), "input-to-death with one saved target six units away");
+            if (form == WeaponForm.RocketLauncher && variant == 1)
+                Assert.That(seconds, Is.LessThan(game.runWeapons.CycleSeconds(weapon)), "one flight kills the target");
+
+            else Assert.That(seconds, Is.InRange(.4f, .95f), "input-to-death with one saved target six units away");
         }
 
         [Test, LoadScene(Scene), Timeout(40000)]

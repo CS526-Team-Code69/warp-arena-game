@@ -39,7 +39,7 @@ MonoBehaviour:
     unlockWave: 1
     retired: 0
     damageA: 10
-    damageB: 4
+    damageB: 7
     cooldownA: 1.5
     cooldownB: 1
     rangeA: 20
@@ -93,7 +93,7 @@ MonoBehaviour:
   - form: 7
     unlockWave: 3
     retired: 0
-    damageA: 2
+    damageA: 1.25
     damageB: 1
     cooldownA: 0.25
     cooldownB: 1.5
@@ -148,7 +148,7 @@ MonoBehaviour:
   - form: 12
     unlockWave: 6
     retired: 0
-    damageA: 3
+    damageA: 2.5
     damageB: 3
     cooldownA: 0.25
     cooldownB: 0.1
@@ -164,7 +164,7 @@ MonoBehaviour:
     cooldownA: 1.8
     cooldownB: 2.5
     rangeA: 9
-    rangeB: 12
+    rangeB: 12.75
     backfireA: 
     backfireB: 
   - form: 14
@@ -192,7 +192,7 @@ MonoBehaviour:
   - form: 16
     unlockWave: 3
     retired: 0
-    damageA: 0
+    damageA: 3
     damageB: 1
     cooldownA: 4
     cooldownB: 1

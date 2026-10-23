@@ -19,7 +19,7 @@ MonoBehaviour:
   radius: 1.8
   damage: 5
   windup: 0.8
-  interval: 3
+  interval: 2.6
   reach: 0.8
   knockback: 5
   knockbackScale: 0
@@ -27,5 +27,6 @@ MonoBehaviour:
   canAffix: 0
   canElite: 0
   startShieldShare: 0
+  spikePoisonStacks: 0
   splitsOnDeath: 0
   colour: {r: 0.9, g: 0.40499997, b: 0.80001, a: 1}

@@ -34,16 +34,74 @@ namespace AnomalyArena
         [Min(1f)] public float holeEdgeScale = 1.35f;
         [Tooltip("Canvas units kept clear above the bottom row and below the top texts for edge labels (the bottom one is set by V2HudLayout).")]
         public float edgeBottomInset = 200f, edgeTopInset = 140f;
+        [Header("Execute line (Railgun Execute held)")]
+        [Tooltip("Colour of an HP bar whose enemy is already below the held Execute's threshold.")]
+        public Color executeBarColor = new(1f, .06f, .1f);
+        [Tooltip("Colour of the tick that marks the execute threshold on every non-boss HP bar.")]
+        public Color executeTickColor = Color.white;
+        [Min(1f), Tooltip("Width of that tick in canvas units.")] public float executeTickWidth = 2f;
         Enemy[] bindings;
         float refresh;
         RectTransform canvasRect;
         readonly List<Vector2> placedEdges = new();
         static readonly Color XpEdgeColor = new(.45f, .8f, 1f);
+                                                                                                            
+        UnityEngine.UI.Image[] executeTicks;
+        Color[] hpColors;
+        bool[] executeBelow;
 
         void Awake()
         {
             bindings = new Enemy[enemyLabels.Length];
             canvasRect = GetComponentInParent<Canvas>().transform as RectTransform;
+            executeTicks = new UnityEngine.UI.Image[enemyLabels.Length];
+            hpColors = new Color[enemyLabels.Length];
+            executeBelow = new bool[enemyLabels.Length];
+            for (int i = 0; i < enemyLabels.Length; i++) hpColors[i] = enemyLabels[i].hp ? enemyLabels[i].hp.color : Color.white;
+        }
+
+                                                                                                                                
+        public bool ShowsExecuteLine(Enemy enemy, out bool belowLine)
+        {
+            belowLine = false;
+            for (int i = 0; i < bindings.Length; i++)
+            {
+                if (bindings[i] != enemy) continue;
+                var tick = executeTicks[i];
+                belowLine = executeBelow[i];
+                return tick && tick.gameObject.activeSelf;
+            }
+            return false;
+        }
+
+                                                                                                                                             
+        void ShowExecuteLine(int index, Enemy enemy, float threshold)
+        {
+            var view = enemyLabels[index];
+            if (!view.hp) return;
+            bool show = threshold > 0f && !enemy.IsBoss;
+            var tick = executeTicks[index];
+            if (show && !tick)
+            {
+                var go = new GameObject("ExecuteTick", typeof(RectTransform), typeof(UnityEngine.UI.Image));
+                go.transform.SetParent(view.hp.rectTransform, false);
+                tick = executeTicks[index] = go.GetComponent<UnityEngine.UI.Image>();
+                tick.raycastTarget = false;
+            }
+            if (tick)
+            {
+                if (tick.gameObject.activeSelf != show) tick.gameObject.SetActive(show);
+                if (show)
+                {
+                    var rect = tick.rectTransform;
+                    rect.anchorMin = new Vector2(threshold, -.25f); rect.anchorMax = new Vector2(threshold, 1.25f);
+                    rect.pivot = new Vector2(.5f, .5f); rect.sizeDelta = new Vector2(executeTickWidth, 0f); rect.anchoredPosition = Vector2.zero;
+                    tick.color = executeTickColor;
+                }
+            }
+            bool below = executeBelow[index] = show && enemy.maxHp > 0f && enemy.Hp / enemy.maxHp < threshold;
+            Color color = below ? executeBarColor : hpColors[index];
+            if (view.hp.color != color) view.hp.color = color;
         }
 
         void Update()
@@ -148,10 +206,13 @@ namespace AnomalyArena
         void RefreshEnemyData(GameManager gm)
         {
             int index = 0;
+            var weapons = gm.runWeapons; var held = weapons ? weapons.Active : null;
+            float executeLine = held != null && held.revealed && held.form == WeaponForm.Railgun && held.variant == 1 ? weapons.ExecuteThreshold(held) : 0f;
             foreach (var enemy in gm.waves.Alive)
             {
                 if (!enemy || !enemy.IsAlive || !enemy.gameObject.activeInHierarchy || index >= bindings.Length) continue;
                 bindings[index] = enemy;
+                ShowExecuteLine(index, enemy, executeLine);
                 var view = enemyLabels[index++]; var status = ElementStatus.For(enemy);
                 view.hp.fillAmount = enemy.maxHp > 0f ? Mathf.Clamp01(enemy.Hp / enemy.maxHp) : 0f;
                 view.shield.fillAmount = status && enemy.maxHp > 0f ? Mathf.Clamp01(status.Shield / enemy.maxHp) : 0f;
@@ -160,6 +221,8 @@ namespace AnomalyArena
                 string name = enemy.IsBoss ? enemy.definition.kind == EnemyKind.Hollow ? ArenaText.Pair("THE NASH PROPHET","THE NASH PROPHET") : ArenaText.Pair("THE TYRANT KING","THE TYRANT KING")
                     : enemy.Elite ? ArenaText.Text("ui.elite") + (enemy.Affix != ElementKind.None ? " · " + ArenaTerms.Element(enemy.Affix) : "")
                     : enemy.Chanted ? ArenaText.Pair("CHANTED","CHANTED") : "";
+                                                                       
+                if (weapons && weapons.IsExecuteMarked(enemy)) name = (name.Length > 0 ? name + " · " : "") + ArenaText.Pair("MARKED","MARKED");
                 if (view.name.text != name) view.name.text = name;
                 V2Hud.SetElementIcon(view.affix, art, (int)enemy.Affix - 1);
                 for (int j = 0; j < 4; j++)

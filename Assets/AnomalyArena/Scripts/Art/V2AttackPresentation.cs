@@ -94,9 +94,11 @@ namespace AnomalyArena
             }
             if (!knifeReturnMarker) return;
 
-            knifeReturnMarker.enabled = knife && actor.KnifeKillReturn && actor.KnifeReturning;
+            bool spinHome = knife && actor.weapon != null && actor.weapon.Has(UpgradeAxis.Twist);
+            knifeReturnMarker.enabled = knife && (spinHome || actor.KnifeKillReturn && actor.KnifeReturning);
             if (!knifeReturnMarker.enabled || !knifeReturnMarker.sprite) return;
-            knifeReturnMarker.transform.position = new Vector3(actor.KnifeReturnPoint.x, groundOffset, actor.KnifeReturnPoint.z);
+            Vector3 home = actor.KnifeReturning ? actor.KnifeReturnPoint : actor.KnifeHomePoint;
+            knifeReturnMarker.transform.position = new Vector3(home.x, groundOffset, home.z);
             knifeReturnMarker.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
             Scale(knifeReturnMarker.transform, 1.15f, 1.15f, knifeReturnMarker.sprite, true);
         }

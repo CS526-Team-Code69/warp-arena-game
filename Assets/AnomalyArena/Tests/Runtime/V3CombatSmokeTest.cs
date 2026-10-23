@@ -51,18 +51,21 @@ namespace AnomalyArena
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
-        public async Task HumanRocket_ThreeTargetsInFlight_DealsThreeToEachWithoutRepeatedContacts()
+        public async Task HumanRocket_ThreeTargetsInFlight_DealsTheSameHitToEachWithoutRepeatedContacts()
         {
             var sandbox = await StartSandbox();
             var game = sandbox.game;
             Equip(game, WeaponForm.RocketLauncher, 1);
+
+            float hit = game.runWeapons.roster.Get(WeaponForm.RocketLauncher).damageB
+                * game.runWeapons.startingDamageFactor * game.runWeapons.crowdDamageMultiplier;
 
             game.runWeapons.HandleInput(true, true, false);
             Assert.That(game.player.State, Is.EqualTo(CharacterState.Dashing), "accepted rocket launch begins flight");
             await Until(() => game.player.State != CharacterState.Dashing, 4f, "human rocket flight ends");
 
             Assert.That(sandbox.targets.Select(e => e.Hp).ToArray(),
-                Is.EqualTo(new[] { 97f, 97f, 97f }).Within(.001f), "all three contacts deal uniform three damage exactly once");
+                Is.EqualTo(new[] { TargetHp - hit, TargetHp - hit, TargetHp - hit }).Within(.001f), "all three contacts deal the same hit exactly once");
             Assert.That(game.player.State, Is.EqualTo(CharacterState.Normal), "flight restores normal control");
             Assert.That(game.player.Hp, Is.EqualTo(25f), "clear flight does not cause wall/self damage");
         }

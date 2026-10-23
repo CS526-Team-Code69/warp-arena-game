@@ -35,7 +35,7 @@ namespace AnomalyArena
         }
 
         public static void ApplyHit(Combatant target, ElementKind element, float baseDamage, float actualDamage,
-            Combatant source, bool builtInElement = false)
+            Combatant source, bool builtInElement = false, bool noLightningJump = false)
         {
             if (source && actualDamage > 0f) source.GetComponent<SkillLoadout>()?.HealFromDamage(actualDamage);
             var targetBoard = ElementStatus.For(target);
@@ -51,7 +51,7 @@ namespace AnomalyArena
             float stacks = baseDamage / (targetBoard.Rules.damagePerStack * (targetBoard.IsPlayer ? 1f : WaveScale))
                 * (builtInElement ? targetBoard.Rules.builtInElementStackFactor : 1f);
             targetBoard.Add(element, stacks, source);
-            if (element == ElementKind.Lightning) JumpLightning(target, stacks, source, targetBoard.Rules);
+            if (element == ElementKind.Lightning && !noLightningJump) JumpLightning(target, stacks, source, targetBoard.Rules);
         }
 
         public static float DirectDamageFactor(Combatant target, ElementKind element)

@@ -187,6 +187,9 @@ namespace AnomalyArena
             SetFill(bossHpFill, s.bossHp, s.bossMaxHp);
             SetFill(bossShieldFill, s.bossShield, s.bossMaxHp);
             if (bossShieldFill) bossShieldFill.transform.parent.gameObject.SetActive(s.bossShield > 0f);
+            if (boss) EnsureStaggerBar();
+            SetFill(bossStaggerFill, s.bossStagger, 1f);
+            if (bossStaggerFill) bossStaggerFill.transform.parent.gameObject.SetActive(boss && s.bossStagger > 0f);
             RenderPlayerStatuses(s.playerStatuses);
             SetText(immunityLabel, s.bossImmunities);
             if (bossImmunityIcons != null)
@@ -200,6 +203,7 @@ namespace AnomalyArena
             SetText(artLabel, ArenaText.Text(s.illustrated ? "ui.art.illustrated" : "ui.art.whitebox"));
             chargeFill.gameObject.SetActive(s.charge01 > 0f);
             SetFill(chargeFill, s.charge01, 1f);
+            ShowChargeWindow(s.chargeWindowStart, s.chargeWindowEnd);
             RenderSlots(handSlots, s.handSlots); RenderSlots(autoSlots, s.autoSlots); RenderSlots(skillSlots, s.skillSlots);
             foreach (var screen in screens)
             {
@@ -364,6 +368,60 @@ namespace AnomalyArena
         {
             if (label && label.text != (value ?? "")) label.text = value ?? "";
         }
+
+        [Tooltip("Colour of the boss stagger bar under the shield bar (full = the boss is stunned).")]
+        public Color bossStaggerColor = new(1f, .62f, .2f, 1f);
+        UnityEngine.UI.Image bossStaggerFill;
+        bool staggerBarMade;
+
+                                                                                                                                 
+        void EnsureStaggerBar()
+        {
+            if (staggerBarMade || !bossShieldFill || bossShieldFill.transform.parent is not RectTransform source) return;
+            staggerBarMade = true;
+            var copy = Instantiate(source.gameObject, source.parent);
+            copy.name = "BossStaggerBackground";
+            var rect = (RectTransform)copy.transform;
+            rect.anchoredPosition = source.anchoredPosition + new Vector2(0f, -(source.sizeDelta.y + 2f));
+            foreach (var image in copy.GetComponentsInChildren<UnityEngine.UI.Image>(true))
+                if (image.name == bossShieldFill.name) bossStaggerFill = image;
+            if (!bossStaggerFill) return;
+            bossStaggerFill.name = "BossStaggerFill";
+            bossStaggerFill.color = bossStaggerColor;
+        }
+
+        [Tooltip("Colour of the quick-reload window marked on the charge bar (Scatter Blast Tame).")]
+        public Color chargeWindowColor = new(.55f, 1f, .75f, .55f);
+        UnityEngine.UI.Image chargeWindow;
+
+                                                                                                                                                 
+        void ShowChargeWindow(float start, float end)
+        {
+            bool show = end > start && chargeFill && chargeFill.gameObject.activeSelf;
+            if (!show)
+            {
+                if (chargeWindow && chargeWindow.gameObject.activeSelf) chargeWindow.gameObject.SetActive(false);
+                return;
+            }
+
+            if (!chargeWindow)
+            {
+                chargeWindow = Instantiate(chargeFill, chargeFill.transform.parent);
+                chargeWindow.name = "ChargeWindowMarker";
+                chargeWindow.type = UnityEngine.UI.Image.Type.Simple;
+                chargeWindow.raycastTarget = false;
+            }
+
+            chargeWindow.color = chargeWindowColor;
+            var rect = (RectTransform)chargeWindow.transform;
+            rect.anchorMin = new Vector2(Mathf.Clamp01(start), 0f);
+            rect.anchorMax = new Vector2(Mathf.Clamp01(end), 1f);
+            rect.offsetMin = rect.offsetMax = Vector2.zero;
+            if (!chargeWindow.gameObject.activeSelf) chargeWindow.gameObject.SetActive(true);
+        }
+
+                                                                                                              
+        public UnityEngine.UI.Image ChargeWindowMarker => chargeWindow;
 
         static void SetFill(UnityEngine.UI.Image image, float amount, float max)
         {

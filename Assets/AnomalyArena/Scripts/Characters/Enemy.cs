@@ -4,7 +4,11 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+                 
+                                                                                                                                                                             
+                                                                                                                                                                                                     
+                                                                                                                                                         
+                  
     public class Enemy : Combatant
     {
         [Header("Attack")] public float attackDamage = 5f;
@@ -42,11 +46,13 @@ namespace AnomalyArena
         public ElementKind Affix { get; private set; }
         public bool Elite { get; private set; }
 
+                                                                                                                      
         public bool Mini { get; private set; }
 
         public bool IsBoss => definition && EnemyRoles.IsBoss(definition.kind);
         public bool IsBossOrElite => IsBoss || Elite;
 
+                                                                                                                                                          
         public bool IsSpecial => Elite || definition && EnemyRoles.IsSpecial(definition.kind);
 
         public bool Immovable => IsBoss || definition && definition.kind == EnemyKind.Spire;
@@ -73,41 +79,98 @@ namespace AnomalyArena
         public bool BloaterWarningActive => definition && definition.kind == EnemyKind.Bloater &&
                                             (IsAlive && windup || dyingExplosion && explosionTimer > 0f);
 
+                                                                      
+        public const int PulseMove = 0, InhaleMove = 1, DoubleShotMove = 2, RingMove = 3, ProphecyMove = 4;
+                  
+        public const int CleaveMove = 0, SlamMove = 1, ChargeMove = 2, BackSlashMove = 3, LeapMove = 4, RoyalShieldMove = 5;
+
         int bossPhase = 1, bossAttack;
         public int BossPhase => bossPhase;
         public int BossAttackIndex => bossAttack;
-        public bool TelegraphActive => windup && telegraph && telegraph.gameObject.activeSelf;
-
+        public bool TelegraphActive => (windup || leaping) && telegraph && telegraph.gameObject.activeSelf;
+                                                                                                                                                   
         public bool WindupTinted => windup && specialWindup || rushing;
-
+                                                                                       
         public bool Rushing => rushing;
         bool specialWindup;
 
         public bool LineTelegraph => definition && (definition.kind == EnemyKind.Rammer ||
-                                                    definition.kind == EnemyKind.Tyrant && bossAttack == 2);
+                                                    definition.kind == EnemyKind.Tyrant && bossAttack == ChargeMove);
 
-        public bool CleaveTelegraph => definition && definition.kind == EnemyKind.Tyrant && bossAttack == 0;
+        public bool CleaveTelegraph => definition && definition.kind == EnemyKind.Tyrant &&
+                                       bossAttack is CleaveMove or BackSlashMove;
+
+                                                                                                                                                     
+        public bool CircleTelegraph => IsBoss && (definition.kind == EnemyKind.Hollow && bossAttack == PulseMove ||
+                                                  definition.kind == EnemyKind.Tyrant && bossAttack is SlamMove or LeapMove);
+
+        static BossTuning Boss => GM && GM.waves && GM.waves.bosses != null ? GM.waves.bosses : BossTuning.Defaults;
+
+                                                                                                                                  
+        int forcedMove = -1, followUp = -1, chargesLeft, ringsLeft, ringIndex;
+        float ringTimer, volleyTimer, leapTimer;
+                                                                                                     
+        float ringBaseAngle;
+                                                                                                                             
+        bool royalCastPending;
+        bool leaping, royalShield, openingMove, inhaleHit;
+        Vector3 leapFrom, leapTarget;
+
+                                                                                                        
+        public bool Leaping => leaping;
+        public Vector3 LeapTarget => leapTarget;
+
+                                                                                                                                 
+        public struct LandingZone
+        {
+            public Vector3 centre;
+            public float radius, age, fill;
+            public float Fill01 => fill > 0f ? Mathf.Clamp01(age / fill) : 1f;
+        }
+
+        readonly List<LandingZone> landingZones = new();
+        public IReadOnlyList<LandingZone> LandingZones => landingZones;
+        readonly List<WaveSpawnMarker> summonMarkers = new();
+        readonly List<Vector3> summonPoints = new();
+        EnemyKind summonKind;
+        float summonWarning;
+
+                                                                            
+        public float StaggerRatio => IsBoss ? Mathf.Clamp01(stagger / StaggerLimit) : 0f;
+        public bool BossStunned => bossStun > 0f;
+        float StaggerLimit => definition && definition.kind == EnemyKind.Hollow ? Boss.prophetStaggerLimit : Boss.tyrantStaggerLimit;
+
+                                                                                                                              
+        public void ForceNextBossMove(int move) => forcedMove = move;
         public float TelegraphRange { get; private set; }
         public Vector3 TelegraphFacing => facing;
         ElementStatus statusBoard;
         Vector3 savedBodyScale;
         float savedCapsuleRadius = -1f;
 
+                                                     
+                                                                                                                                            
         public bool LaserLocking => laserTimer > 0f;
 
+                                                                                            
         public Vector3 LaserDirection { get; private set; } = Vector3.forward;
 
+                                                                                                        
         public float LaserLength { get; private set; }
 
+                                                                                
         public int LaserSequence { get; private set; }
 
+                                                      
         float chantStamp = -1f;
         bool chantCached;
 
+                                                                                  
         public static float ChantRadius => GM && GM.waves ? Mathf.Max(0f, GM.waves.chantRadius) : 6f;
 
         static float ChantDamageBonus => GM && GM.waves ? Mathf.Max(0f, GM.waves.chantDamageBonus) : .3f;
 
+                                                                                                                                                       
         public bool Chanted
         {
             get
@@ -123,6 +186,7 @@ namespace AnomalyArena
             }
         }
 
+                                                                                                                          
         public float OutgoingDamageFactor => Chanted ? 1f + ChantDamageBonus : 1f;
 
         bool ScanChanters()
@@ -142,6 +206,8 @@ namespace AnomalyArena
             return false;
         }
 
+                                                           
+                                                                                                                                                            
         [Serializable]
         public struct RadiationZone
         {
@@ -162,6 +228,7 @@ namespace AnomalyArena
                 { position = Query.Flat(at), radius = radius, timeLeft = life, life = life });
         }
 
+                                                                                                                              
         public static bool TickRadiationZones(float dt, Vector3 point)
         {
             bool inside = false;
@@ -184,6 +251,7 @@ namespace AnomalyArena
 
         public static void ClearRadiationZones() => radiationZones.Clear();
 
+                                                                                                                              
         float SpireLaserDelay => definition ? Mathf.Max(.01f, definition.laserDelay) : .6f;
         float SpireLaserLength => definition ? Mathf.Max(0f, definition.laserLength) : 12f;
         float SpireLaserHalfWidth => definition ? Mathf.Max(0f, definition.laserHalfWidth) : .6f;
@@ -195,6 +263,7 @@ namespace AnomalyArena
         static float MiniScale => GM && GM.waves ? Mathf.Clamp(GM.waves.splitterMiniScale, .1f, 1f) : .6f;
         static float MiniDamageShare => GM && GM.waves ? Mathf.Clamp01(GM.waves.splitterMiniDamageShare) : .6f;
 
+                                                                                                                                               
         public void Configure(EnemyDefinition data, float hpMultiplier, bool elite,
             ElementKind affix = ElementKind.None, bool mini = false)
         {
@@ -241,11 +310,19 @@ namespace AnomalyArena
             spawnVisible = data.kind == EnemyKind.Shade ? 2f : 0f;
             revealTimer = spawnVisible;
             supportTimer = 0f;
-            summonTimer = data.kind == EnemyKind.Hollow ? 10f : 15f;
+            summonTimer = data.kind == EnemyKind.Hollow ? Boss.prophetSummonInterval : Boss.tyrantSummonInterval;
             stagger = 0f;
             bossStun = 0f;
             bossPhase = 1;
             inhaleLeft = bossRecovery = 0f;
+            ClearBossMarks();
+            forcedMove = followUp = -1;
+            chargesLeft = ringsLeft = ringIndex = 0;
+            ringTimer = volleyTimer = leapTimer = ringBaseAngle = 0f;
+            royalCastPending = false;
+            leaping = royalShield = inhaleHit = false;
+            openingMove = data.kind == EnemyKind.Hollow;
+            if (EnemyRoles.IsBoss(data.kind) && !GetComponent<V2BossGroundMarks>()) gameObject.AddComponent<V2BossGroundMarks>();
             laserTimer = 0f;
             LaserLength = 0f;
             chantStamp = -1f;
@@ -263,7 +340,7 @@ namespace AnomalyArena
                 if (IsBoss) statusBoard.OnControlThreshold += AddStagger;
                 if (data.kind == EnemyKind.Hollow)
                 {
-
+                                                                                                          
                     statusBoard.SetImmunity(ElementKind.Frost, 1f);
                     statusBoard.SetImmunity(ElementKind.Lightning, 1f);
                 }
@@ -287,15 +364,21 @@ namespace AnomalyArena
 
         void OnStatusApplied(ElementKind element) => revealTimer = 2f;
 
-        void AddStagger(float amount)
+                                                                                                                                                        
+        public void AddStagger(float amount)
         {
+            if (!IsBoss || amount <= 0f) return;
             stagger += amount;
-            float limit = definition.kind == EnemyKind.Hollow ? 40f : 60f;
-            if (stagger < limit) return;
+            if (stagger < StaggerLimit) return;
             stagger = 0f;
-            bossStun = definition.kind == EnemyKind.Hollow ? 3f : 2.5f;
+            bossStun = definition.kind == EnemyKind.Hollow ? Boss.prophetStunSeconds
+                : bossPhase == 3 ? Boss.tyrantPhase3StunSeconds : Boss.tyrantStunSeconds;
             charging = false;
+            chargesLeft = 0;
+            followUp = -1;
             inhaleLeft = 0f;
+            ringsLeft = 0;
+            volleyTimer = 0f;
             CancelWindup();
         }
 
@@ -304,12 +387,17 @@ namespace AnomalyArena
             if (IsBoss)
             {
                 if (info.knockDistance > 0f) AddStagger(info.knockDistance);
-                if (bossStun > 0f) info.amount *= 1.5f;
+                                                                                                 
+                if (bossStun > 0f && info.source != DamageSource.Wall) info.amount *= 1.5f;
                 info.knockDistance = 0f;
             }
             else if (Immovable) info.knockDistance = 0f;
 
-            return base.ReceiveDamage(info);
+            bool accepted = base.ReceiveDamage(info);
+                                                                                                                               
+                                                                 
+            if (accepted && IsAlive && GM && GM.runWeapons) GM.runWeapons.CheckExecuteMark(this);
+            return accepted;
         }
 
         protected override void FixedUpdate()
@@ -334,6 +422,9 @@ namespace AnomalyArena
 
         void Update()
         {
+                                                                                                                                
+            if (telegraph && (leaping || windup && IsBoss && definition.kind == EnemyKind.Tyrant && bossAttack == LeapMove))
+                telegraph.position = leapTarget + Vector3.up * .03f;
             if (!dyingExplosion || !GM.IsCombatActive) return;
             float dt = GM.WorldDeltaTime;
             explosionTimer -= dt;
@@ -346,16 +437,17 @@ namespace AnomalyArena
 
         public bool IsLarge => large;
         public bool WindingUp => windup;
-
+                                                                                                           
         public bool PushesPlayer => definition && EnemyRoles.KnocksBackPlayer(definition.kind);
         public bool Charging => charging;
         public float CooldownRemaining => Mathf.Max(0f, cooldown);
-
+                                                                                                                
         public void HoldAttacks(float seconds) => cooldown = Mathf.Max(cooldown, seconds);
         public float WindupSecondsRemaining => windup ? Mathf.Max(0f, windupTimer) : 0f;
 
+                                                                                                                    
         public int AttackSequence { get; private set; }
-
+                                                                                                     
         public int PulseSequence { get; private set; }
 
         public override Team Team => Team.Enemy;
@@ -383,7 +475,7 @@ namespace AnomalyArena
 
             if (windup)
             {
-
+                                                                       
                 Stop();
                 windupTimer -= dt;
                 if (windupTimer <= 0f)
@@ -434,7 +526,7 @@ namespace AnomalyArena
             var shield = p.HeldShield;
             if (shield != null && shield != this && InFist(shield))
             {
-
+                                                                                                                     
                 DealHit(shield, attackDamage, shield.Position - Position, 0f);
                 return;
             }
@@ -443,6 +535,10 @@ namespace AnomalyArena
                 DealHit(p, attackDamage, p.Position - Position, attackKnockback);
         }
 
+                     
+                                                                                                                                     
+                                                                                                                                          
+                      
         bool DealHit(Combatant target, float damage, Vector3 direction, float knock)
         {
             var player = target as PlayerController;
@@ -478,42 +574,16 @@ namespace AnomalyArena
 
             if (IsBoss)
             {
-                summonTimer -= dt * (bossPhase == 3 ? definition.kind == EnemyKind.Hollow ? 1.3f : 1.25f : 1f);
-                if (summonTimer <= 0f)
+                if (leaping)
                 {
-                    int count = definition.kind == EnemyKind.Hollow ? 4 : bossPhase == 3 ? 9 : 6;
-                    if (definition.kind == EnemyKind.Hollow)
-                        GM.waves.SpawnExtras(bossPhase == 3 ? EnemyKind.Skitter : EnemyKind.Grunt, count, Position,
-                            true);
-                    else GM.waves.SpawnTyrantSummons(count, Position);
-                    summonTimer = definition.kind == EnemyKind.Hollow ? 10f : 15f;
+                    TickLeap(dt);
+                    return true;
                 }
 
-                float hpRatio = Hp / maxHp;
-                int nextPhase = hpRatio < (definition.kind == EnemyKind.Hollow ? 0.3f : 0.33f) ? 3 :
-                    hpRatio < (definition.kind == EnemyKind.Hollow ? 0.6f : 0.66f) ? 2 : 1;
-                if (nextPhase > bossPhase)
-                {
-                    bossPhase = nextPhase;
-                    if (definition.kind == EnemyKind.Tyrant)
-                    {
-                        var balance = GM.waves.waveSet ? GM.waves.waveSet.encounterBalance : null;
-                        statusBoard?.SetShield(balance ? maxHp * balance.tyrantPhaseShieldShare : 400f);
-                        var immunities = GM.waves.TyrantImmunities;
-                        if (Affix == ElementKind.None && immunities.Length > 0)
-                            SetAffix(immunities[UnityEngine.Random.Range(0, immunities.Length)]);
-                    }
-                }
-
-                if (definition.kind == EnemyKind.Hollow && WorldMap.Active)
-                {
-                    float goal = bossPhase == 3 ? 7f : bossPhase == 2 ? 9f : 12f;
-                    WorldMap.Active.trialRadius = Mathf.MoveTowards(WorldMap.Active.trialRadius, goal, dt * 0.3f);
-                    var platform = WorldMap.Active.trialPlatform;
-                    platform.localScale = new Vector3(WorldMap.Active.trialRadius * 2, 0.3f,
-                        WorldMap.Active.trialRadius * 2);
-                }
-
+                                                                                                               
+                TickLandingZones(dt);
+                TickSummonWarning(dt);
+                                                                                                                          
                 if (bossStun > 0f)
                 {
                     bossStun -= dt;
@@ -521,10 +591,24 @@ namespace AnomalyArena
                     return true;
                 }
 
+                TickSummonClock(dt);
+                TickBossPhase();
+                if (definition.kind == EnemyKind.Hollow)
+                {
+                    TickPlatform(dt);
+                    TickVolleys(dt, player);
+                }
+
                 if (inhaleLeft > 0f)
                 {
                     inhaleLeft -= dt;
-                    if (inhaleLeft <= 0f) bossRecovery = 1.5f;
+                    if (inhaleLeft <= 0f)
+                    {
+                                                                    
+                        bossAttack = PulseMove;
+                        BeginWindup(Boss.inhaleFollowWindup, PulseReach, false);
+                    }
+
                     Stop();
                     return true;
                 }
@@ -535,11 +619,26 @@ namespace AnomalyArena
                     Stop();
                     return true;
                 }
+
+                if (followUp >= 0 && !windup && !charging)
+                {
+                    int move = followUp;
+                    followUp = -1;
+                    StartBossMove(move, player);
+                    return true;
+                }
+
+                if (royalCastPending && !windup && !charging)
+                {
+                    royalCastPending = false;
+                    StartBossMove(RoyalShieldMove, player);
+                    return true;
+                }
             }
 
             if (laserTimer > 0f)
             {
-
+                                                                                                           
                 laserTimer -= dt;
                 if (laserTimer <= 0f) FireLaser(player);
                 return true;
@@ -559,8 +658,13 @@ namespace AnomalyArena
                     Stop();
                     if (IsBoss)
                     {
-                        bossStun = 2.5f;
+                                                                                                                        
+                                                                    
+                        chargesLeft = 0;
                         statusBoard?.SetShield(0f);
+                        ReceiveDamage(new DamageInfo
+                            { amount = maxHp * Boss.wallHitHpShare, source = DamageSource.Wall, kind = HitKind.Slam });
+                        bossStun = Boss.wallHitStun;
                     }
                     else
                     {
@@ -577,22 +681,35 @@ namespace AnomalyArena
                 chargeLeft -= step;
                 if (InFist(player))
                 {
-
-                    bool landed = DealHit(player, IsBoss ? 20 : attackDamage, facing, IsBoss ? 8 : definition.knockback);
+                                                                                                                                      
+                    bool landed = DealHit(player, IsBoss ? attackDamage * Boss.chargeDamage : attackDamage, facing,
+                        IsBoss ? Boss.chargePush : definition.knockback);
                     if (landed && !IsBoss && player.IsAlive)
                     {
                         player.Stun(definition.chargeStun);
                         V3WorldAudio.Instance?.Play(ArenaWorldCue.PlayerStunned, player.Position);
                     }
                     charging = false;
-                    if (IsBoss) bossRecovery = 1.5f;
+                    if (IsBoss)
+                    {
+                        chargesLeft = 0;                                            
+                        bossRecovery = 1.5f;
+                    }
                 }
 
                 if (chargeLeft <= 0f)
                 {
+                    bool ranOut = charging;
                     charging = false;
                     cooldown = 1.5f;
-                    if (IsBoss) bossRecovery = 1.5f;
+                    if (IsBoss && ranOut && --chargesLeft > 0)
+                    {
+                                                                                           
+                        FacePlayer(player);
+                        bossAttack = ChargeMove;
+                        BeginWindup(Boss.chargeReaim, ChargeLineLength(), false);
+                    }
+                    else if (IsBoss) bossRecovery = 1.5f;
                 }
 
                 return true;
@@ -615,7 +732,7 @@ namespace AnomalyArena
                     {
                         bool shieldAdded = false;
                         foreach (var enemy in GM.waves.Alive)
-
+                                                                                                                           
                             if (enemy && enemy != this && !enemy.IsBoss && Query.Flat(enemy.Position - Position).magnitude < 5f)
                             {
                                 var board = ElementStatus.For(enemy);
@@ -639,7 +756,7 @@ namespace AnomalyArena
                     HoldBehindAllies(player, distance, dt);
                     return true;
                 case EnemyKind.Chanter:
-
+                                                                                                            
                     supportTimer -= dt;
                     if (supportTimer <= 0f)
                     {
@@ -670,7 +787,8 @@ namespace AnomalyArena
 
                     break;
                 case EnemyKind.Bloater:
-
+                                                                                                                                     
+                                                                                                       
                     if (distance <= radius + player.Radius + definition.reach)
                     {
                         rushing = false;
@@ -702,20 +820,14 @@ namespace AnomalyArena
                     MoveTowards(player.Position, 1f, dt);
                     return true;
                 case EnemyKind.Hollow:
-                    if (cooldown <= 0f)
-                    {
-                        bossAttack = bossPhase >= 2 && UnityEngine.Random.value < 0.5f ? 1 : 0;
-                        BeginWindup(0.8f, bossAttack == 1 ? 10f : 6f);
-                    }
-
+                    if (cooldown <= 0f) StartBossMove(ChooseBossMove(distance), player);
                     Stop();
                     return true;
                 case EnemyKind.Tyrant:
-                    if (cooldown <= 0f && distance < 20f)
+                                                                                                                    
+                    if (cooldown <= 0f)
                     {
-                        bossAttack = UnityEngine.Random.Range(0, 3);
-
-                        BeginWindup(bossAttack == 0 ? 0.8f : 1f, bossAttack == 1 ? 8f : bossAttack == 2 ? TyrantChargeDistance : 5f);
+                        StartBossMove(ChooseBossMove(distance), player);
                         return true;
                     }
 
@@ -725,6 +837,417 @@ namespace AnomalyArena
             return false;
         }
 
+                                              
+
+                                                                                                                                
+                                                                                                                    
+        public static int ProphetMoveFor(int phase, bool close, float roll, BossTuning b)
+        {
+            if (close) return phase == 2 && roll >= b.phase2ClosePulseShare ? InhaleMove : PulseMove;
+            if (phase <= 1) return roll < b.phase1DoubleShotShare ? DoubleShotMove : RingMove;
+            if (phase == 2)
+                return roll < b.phase2DoubleShotShare ? DoubleShotMove
+                    : roll < b.phase2DoubleShotShare + b.phase2RingShare ? RingMove : InhaleMove;
+            return roll < b.phase3DoubleShotShare ? DoubleShotMove
+                : roll < b.phase3DoubleShotShare + b.phase3RingShare ? RingMove : ProphecyMove;
+        }
+
+                                                                                                                               
+                                                                                                 
+        public static int TyrantMoveFor(float distance, bool onScreen, float roll, BossTuning b)
+        {
+            if (distance > b.tyrantFarRange || !onScreen) return LeapMove;
+            if (distance <= b.tyrantCloseRange)
+                return roll < b.closeCleaveShare ? CleaveMove
+                    : roll < b.closeCleaveShare + b.closeSlamShare ? SlamMove : ChargeMove;
+            if (distance <= b.tyrantMidRange) return roll < b.midSlamShare ? SlamMove : ChargeMove;
+            return roll < b.farChargeShare ? ChargeMove : LeapMove;
+        }
+
+        int ChooseBossMove(float distance)
+        {
+            float roll = UnityEngine.Random.value;
+            int move;
+            if (definition.kind == EnemyKind.Hollow)
+            {
+                bool close = distance <= (bossPhase == 3 ? Boss.prophetPhase3CloseRange : Boss.prophetCloseRange);
+                move = ProphetMoveFor(bossPhase, close, roll, Boss);
+                                                                                             
+                if (openingMove && !close) move = DoubleShotMove;
+                openingMove = false;
+            }
+            else move = TyrantMoveFor(distance, SkillWorldAPI.IsOnScreen?.Invoke(Position) ?? true, roll, Boss);
+
+            if (forcedMove >= 0)
+            {
+                move = forcedMove;
+                forcedMove = -1;
+            }
+
+            return move;
+        }
+
+        float PulseReach => bossPhase == 3 ? Boss.phase3PulseReach : Boss.pulseReach;
+
+                                                                                                                                   
+        public float PlatformGoal => bossPhase == 3 ? Boss.prophetPlatformRadii.z
+            : bossPhase == 2 ? Boss.prophetPlatformRadii.y : Boss.prophetPlatformRadii.x;
+
+        void FacePlayer(PlayerController player)
+        {
+            if (!player) return;
+            Vector3 to = Query.Flat(player.Position - Position);
+            if (to.sqrMagnitude > 1e-4f) facing = to.normalized;
+        }
+
+        void StartBossMove(int move, PlayerController player)
+        {
+            FacePlayer(player);
+            bossAttack = move;
+            var b = Boss;
+            if (definition.kind == EnemyKind.Hollow)
+            {
+                switch (move)
+                {
+                    case PulseMove: BeginWindup(b.pulseWindup, PulseReach); break;
+                    case InhaleMove: BeginWindup(b.inhaleWindup, 0f); break;
+                    case DoubleShotMove: BeginWindup(b.shotWindup, 0f); break;
+                    case RingMove: BeginWindup(b.ringWindup, 0f); break;
+                    default: BeginWindup(b.prophecyWindup, 0f); break;
+                }
+
+                return;
+            }
+
+            switch (move)
+            {
+                case CleaveMove: BeginWindup(b.cleaveWindup, b.cleaveRange); break;
+                case BackSlashMove: BeginWindup(b.backSlashWindup, b.cleaveRange); break;
+                case SlamMove: BeginWindup(b.slamWindup, b.slamRange); break;
+                case ChargeMove:
+                    chargesLeft = bossPhase == 3 ? b.phase3Charges : bossPhase == 2 ? b.phase2Charges : 1;
+                    BeginWindup(b.chargeWindup, ChargeLineLength());
+                    break;
+                case LeapMove:
+                                                                                                    
+                    leapTarget = LeapLanding(player ? player.Position : Position);
+                    BeginWindup(b.leapWindup, b.leapRadius);
+                    break;
+                default: BeginWindup(b.royalShieldCast, 0f, false); break;                                             
+            }
+        }
+
+                                                                                                                                                
+        float ChargeLineLength()
+        {
+            float length = TyrantChargeDistance;
+            if (Query.WallBetween(Query.AtCastHeight(Position), Query.AtCastHeight(Position + facing * length), out var hit))
+                length = Query.Flat(hit.point - Position).magnitude;
+            var world = WorldMap.Active;
+            if (world)
+                for (float d = .5f; d < length; d += .5f)
+                    if (world.IsHole(Position + facing * d))
+                    {
+                        length = d;
+                        break;
+                    }
+
+            return Mathf.Max(.5f, length);
+        }
+
+                                                                                                                                      
+                                                                                                                           
+        Vector3 LeapLanding(Vector3 aim)
+        {
+            aim = Query.Flat(aim);
+            var world = WorldMap.Active;
+            if (!world) return aim;
+            Vector3 from = Query.Flat(Position);
+            Vector3 delta = aim - from;
+            Vector3 dir = delta.sqrMagnitude > 1e-4f ? delta.normalized : facing;
+            for (float d = delta.magnitude; d >= 0f; d -= .5f)
+            {
+                Vector3 at = from + dir * d;
+                if (world.IsWalkable(at, radius) && !world.IsHole(at + dir * radius)) return at;
+            }
+
+            return from;
+        }
+
+        void BeginLeap()
+        {
+            leaping = true;
+            leapTimer = 0f;
+            leapFrom = Query.Flat(Position);
+            if (!rb.isKinematic) rb.linearVelocity = Vector3.zero;
+            rb.isKinematic = true;                              
+            var capsule = GetComponent<CapsuleCollider>();
+            if (capsule) capsule.enabled = false;
+            V3WorldAudio.Instance?.Play(ArenaWorldCue.BossCharge, Position);
+        }
+
+        void TickLeap(float dt)
+        {
+            leapTimer += dt;
+            float t = Mathf.Clamp01(leapTimer / Mathf.Max(.1f, Boss.leapFlight));
+            rb.MovePosition(Vector3.Lerp(leapFrom, leapTarget, t) + Vector3.up * (Boss.leapHeight * 4f * t * (1f - t)));
+            if (t < 1f) return;
+            leaping = false;
+            rb.position = leapTarget;
+            transform.position = leapTarget;
+            rb.isKinematic = false;
+            var capsule = GetComponent<CapsuleCollider>();
+            if (capsule) capsule.enabled = true;
+            if (telegraph) telegraph.gameObject.SetActive(false);
+            V3WorldAudio.Instance?.Play(ArenaWorldCue.BossSlam, leapTarget);
+            Fx.Ring(leapTarget, Boss.leapRadius, definition.colour);
+            PlayerBlast(leapTarget, Boss.leapRadius, attackDamage * Boss.leapDamage, Boss.leapPush);
+            bossRecovery = Boss.leapRecovery;
+        }
+
+                                                                                                                          
+        bool PlayerBlast(Vector3 centre, float reach, float damage, float push)
+        {
+            var player = GM ? GM.player : null;
+            if (!player || !player.IsAlive) return false;
+            Vector3 to = Query.Flat(player.Position - centre);
+            if (to.magnitude - player.Radius > reach) return false;
+            return DealHit(player, damage, to.sqrMagnitude > 1e-4f ? to : facing, push);
+        }
+
+        void TickBossPhase()
+        {
+            float hpRatio = Hp / maxHp;
+            int nextPhase = hpRatio < (definition.kind == EnemyKind.Hollow ? 0.3f : 0.33f) ? 3 :
+                hpRatio < (definition.kind == EnemyKind.Hollow ? 0.6f : 0.66f) ? 2 : 1;
+            if (nextPhase <= bossPhase) return;
+            bossPhase = nextPhase;
+            if (definition.kind != EnemyKind.Tyrant) return;
+                                                                                                       
+            var balance = GM.waves.waveSet ? GM.waves.waveSet.encounterBalance : null;
+            statusBoard?.SetShield(maxHp * (balance ? balance.tyrantPhaseShieldShare : .15f));
+            royalShield = true;
+            var immunities = GM.waves.TyrantImmunities;
+            if (Affix == ElementKind.None && immunities.Length > 0)
+                SetAffix(immunities[UnityEngine.Random.Range(0, immunities.Length)]);
+                                                                                                     
+            royalCastPending = true;
+        }
+
+        void TickSummonClock(float dt)
+        {
+            var b = Boss;
+            float rate = bossPhase == 3 ? definition.kind == EnemyKind.Hollow ? b.prophetPhase3SummonRate : b.tyrantPhase3SummonRate : 1f;
+            if (royalShield && statusBoard && statusBoard.Shield > 0f) rate *= b.royalShieldSummonRate;
+            summonTimer -= dt * rate;
+            if (summonTimer > 0f) return;
+            if (definition.kind == EnemyKind.Hollow)
+            {
+                BeginProphetSummon();
+                summonTimer = b.prophetSummonInterval;
+            }
+            else
+            {
+                GM.waves.SpawnTyrantSummons(bossPhase == 3 ? b.tyrantPhase3SummonCount : b.tyrantSummonCount, Position);
+                summonTimer = b.tyrantSummonInterval;
+            }
+        }
+
+                                                                                                                                        
+                                             
+        void BeginProphetSummon()
+        {
+            if (summonPoints.Count > 0 || !GM || !GM.waves) return;
+            int living = 0;
+            foreach (var enemy in GM.waves.Alive)
+                if (enemy && enemy != this && enemy.IsAlive && enemy.IsTrialSummon) living++;
+            int count = Mathf.Min(Boss.prophetSummonCount, Boss.prophetSummonCap - living);
+            if (count <= 0) return;
+            summonKind = bossPhase == 3 ? EnemyKind.Skitter : EnemyKind.Grunt;
+            var data = GM.waves.DefinitionOf(summonKind);
+            if (!data) return;
+            for (int i = 0; i < count; i++)
+            {
+                Vector3 at = Query.Flat(Position) + Quaternion.Euler(0f, 360f * i / count, 0f) * Vector3.forward * Boss.prophetSummonRingRadius;
+                summonPoints.Add(at);
+                var marker = GM.waves.BorrowMarker();
+                if (!marker) continue;
+                marker.Begin(at, data, false, ElementKind.None);
+                summonMarkers.Add(marker);
+            }
+
+            summonWarning = Boss.prophetSummonWarning;
+        }
+
+        void TickSummonWarning(float dt)
+        {
+            if (summonPoints.Count == 0) return;
+            summonWarning -= dt;
+            if (summonWarning > 0f) return;
+            foreach (var marker in summonMarkers)
+                if (marker)
+                    marker.gameObject.SetActive(false);
+            summonMarkers.Clear();
+            GM.waves.SpawnExtrasAt(summonKind, summonPoints, true);
+            summonPoints.Clear();
+        }
+
+                                                                                                                     
+        public void ClearBossMarks()
+        {
+            foreach (var marker in summonMarkers)
+                if (marker)
+                    marker.gameObject.SetActive(false);
+            summonMarkers.Clear();
+            summonPoints.Clear();
+            landingZones.Clear();
+        }
+
+        void TickPlatform(float dt)
+        {
+            var world = WorldMap.Active;
+            if (!world || !world.TrialActive || !world.trialPlatform) return;
+            world.trialRadius = Mathf.MoveTowards(world.trialRadius, PlatformGoal, dt * Boss.platformShrinkSpeed);
+            world.trialPlatform.localScale = new Vector3(world.trialRadius * 2, 0.3f, world.trialRadius * 2);
+        }
+
+        void TickVolleys(float dt, PlayerController player)
+        {
+            if (volleyTimer > 0f)
+            {
+                volleyTimer -= dt;
+                if (volleyTimer <= 0f) FirePredictiveVolley(player);
+            }
+
+            if (ringsLeft > 0)
+            {
+                ringTimer -= dt;
+                if (ringTimer <= 0f) FireRing(player);
+            }
+        }
+
+                                                                                                                                  
+                                                                                                                              
+        void FirePredictiveVolley(PlayerController player)
+        {
+            if (!player || !player.IsAlive) return;
+            var b = Boss;
+            Vector3 from = Query.Flat(Position);
+            Vector3 now = Query.Flat(player.Position);
+            var body = player.GetComponent<Rigidbody>();
+            Vector3 velocity = body ? Query.Flat(body.linearVelocity) : Vector3.zero;
+            float flight = Query.Flat(now - from).magnitude / b.shotSpeed;
+            flight = Query.Flat(now + velocity * flight - from).magnitude / b.shotSpeed;
+            float damage = attackDamage * b.shotDamage;
+            Shoot(now, damage, b.shotSpeed);
+            Shoot(now + velocity * flight, damage, b.shotSpeed);
+            if (bossPhase >= 2) Shoot(now - velocity * flight, damage, b.shotSpeed);
+            V3WorldAudio.Instance?.Play(ArenaWorldCue.NpcSpit, Position);
+        }
+
+                                                                                                                                        
+                                                                         
+        void FireRing(PlayerController player)
+        {
+            var b = Boss;
+            int count = Mathf.Max(1, bossPhase == 3 ? b.phase3RingShots : b.ringShots);
+            float spacing = 360f / count;
+                                                                                                               
+            float turn = bossPhase >= 2 ? spacing / Mathf.Max(1, bossPhase == 3 ? b.phase3Rings : b.phase2Rings) : 0f;
+            if (ringIndex == 0)
+            {
+                Vector3 aim = player ? Query.Flat(player.Position - Position) : facing;
+                if (aim.sqrMagnitude < 1e-4f) aim = facing;
+                ringBaseAngle = Mathf.Atan2(aim.x, aim.z) * Mathf.Rad2Deg;
+            }
+
+                                                                                                                
+            float baseAngle = ringBaseAngle + turn * ringIndex;
+            float damage = attackDamage * b.ringDamage;
+            for (int i = 0; i < count; i++)
+            {
+                float angle = (baseAngle + spacing * i) * Mathf.Deg2Rad;
+                Shoot(Query.Flat(Position) + new Vector3(Mathf.Sin(angle), 0f, Mathf.Cos(angle)) * 10f, damage, b.ringSpeed);
+            }
+
+            V3WorldAudio.Instance?.Play(ArenaWorldCue.NpcSpit, Position);
+            ringIndex++;
+            ringsLeft--;
+            ringTimer = b.ringInterval;
+        }
+
+        void Shoot(Vector3 point, float damage, float speed)
+        {
+            Vector3 direction = Query.Flat(point - Position);
+            if (direction.sqrMagnitude < 1e-4f) direction = facing;
+            direction.Normalize();
+            GM.waves.LaunchBossBolt(this, Position + direction * (radius + .3f), direction, damage, 0f, speed);
+        }
+
+                                                                                                                                       
+                                                                                      
+        void PlaceLandingZones(PlayerController player)
+        {
+            var world = WorldMap.Active;
+            if (!world || !world.TrialActive || !player || !player.IsAlive) return;
+            var b = Boss;
+            float zone = b.prophecyDiameter * .5f;
+            var body = player.GetComponent<Rigidbody>();
+            Vector3 velocity = body ? Query.Flat(body.linearVelocity) : Vector3.zero;
+            AddLandingZone(Query.Flat(player.Position) + velocity * b.prophecyFill, zone, world);
+            AddLandingZone(Vector3.Lerp(Query.Flat(Position), Query.Flat(player.Position), UnityEngine.Random.Range(b.prophecyBetweenMin, Mathf.Max(b.prophecyBetweenMin, b.prophecyBetweenMax))), zone,
+                world);
+            V3WorldAudio.Instance?.Play(ArenaWorldCue.BossInhale, Position);
+        }
+
+        void AddLandingZone(Vector3 point, float zone, WorldMap world)
+        {
+            Vector3 centre = Query.Flat(world.trialPlatform.position);
+                                                                                                                                 
+            float limit = Mathf.Max(0f, Mathf.Min(world.trialRadius, PlatformGoal) - Boss.prophecyEdgeMargin);
+            Vector3 off = point - centre;
+            if (off.magnitude > limit) point = centre + off.normalized * limit;
+            Vector3 fromBody = point - Query.Flat(Position);
+            float clear = radius + zone + .2f;
+            if (fromBody.magnitude < clear) point = Query.Flat(Position) + (fromBody.sqrMagnitude > 1e-4f ? fromBody.normalized : -facing) * clear;
+            landingZones.Add(new LandingZone { centre = point, radius = zone, fill = Boss.prophecyFill });
+        }
+
+        void TickLandingZones(float dt)
+        {
+            for (int i = landingZones.Count - 1; i >= 0; i--)
+            {
+                var zone = landingZones[i];
+                zone.age += dt;
+                if (zone.age < zone.fill)
+                {
+                    landingZones[i] = zone;
+                    continue;
+                }
+
+                landingZones.RemoveAt(i);
+                                                                                        
+                if (WorldMap.Active) WorldMap.Active.CreateBossHole(zone.centre, zone.radius * 2f, Boss.prophecyHoleLife, this);
+            }
+        }
+
+                                                                                                                                              
+        public void InhaleContact(Combatant body)
+        {
+            if (!Inhaling || inhaleHit || body is not PlayerController player || !player.IsAlive) return;
+            inhaleHit = DealHit(player, attackDamage * Boss.inhaleContactDamage, player.Position - Position, Boss.inhaleContactPush);
+        }
+
+                                                                                                                                         
+                                                                  
+        public void SummonFell()
+        {
+            if (!IsAlive) return;
+            ReceiveDamage(new DamageInfo { amount = maxHp * Boss.summonFallHpShare, source = DamageSource.Wall, kind = HitKind.Slam });
+            AddStagger(Boss.summonFallStagger);
+        }
+
+                                                                                                                                                          
         void HoldBehindAllies(PlayerController player, float distance, float dt)
         {
             Enemy nearestGroup = null;
@@ -750,6 +1273,7 @@ namespace AnomalyArena
 
         void MoveTowards(Vector3 point, float sign, float dt) => MoveAt(point, moveSpeed * sign, dt);
 
+                                                                                  
         void MoveAt(Vector3 point, float speed, float dt)
         {
             Vector3 direction = WorldMap.Active
@@ -759,9 +1283,10 @@ namespace AnomalyArena
             rb.linearVelocity = new Vector3(v.x, rb.linearVelocity.y, v.z);
         }
 
-        void BeginWindup(float time, float range)
+                                                                                                                                            
+        void BeginWindup(float time, float range, bool scaled = true)
         {
-            if (IsBoss && bossPhase == 3)
+            if (scaled && IsBoss && bossPhase == 3)
                 time = Mathf.Max(0.8f, time / (definition.kind == EnemyKind.Hollow ? 1.3f : 1.25f));
             windup = true;
             specialWindup = true;
@@ -770,7 +1295,7 @@ namespace AnomalyArena
                 V2Audio.Instance?.PlayWorld(ArenaSoundCue.BloaterWarning, Position);
             else
                 V3WorldAudio.Instance?.Play(
-                    definition.kind == EnemyKind.Rammer || definition.kind == EnemyKind.Tyrant && bossAttack == 2
+                    definition.kind == EnemyKind.Rammer || definition.kind == EnemyKind.Tyrant && bossAttack == ChargeMove
                         ? ArenaWorldCue.NpcChargeWarning
                         : ArenaWorldCue.NpcWindup, Position);
             SetLook(true);
@@ -778,14 +1303,19 @@ namespace AnomalyArena
             if (telegraph)
             {
                 bool line = definition.kind == EnemyKind.Rammer ||
-                            definition.kind == EnemyKind.Tyrant && bossAttack == 2;
+                            definition.kind == EnemyKind.Tyrant && bossAttack == ChargeMove;
                 TelegraphRange = range;
-                telegraph.position = Position + (line ? facing * range * .5f : Vector3.zero) + Vector3.up * .03f;
+                                                                                                       
+                Vector3 origin = definition.kind == EnemyKind.Tyrant && bossAttack == LeapMove ? leapTarget : Position;
+                telegraph.position = origin + (line ? facing * range * .5f : Vector3.zero) + Vector3.up * .03f;
                 telegraph.rotation = Quaternion.LookRotation(facing);
                 telegraph.localScale =
                     line ? new Vector3(radius * 2f, 0.025f, range) : new Vector3(range * 2f, 0.025f, range * 2f);
-
-                telegraph.gameObject.SetActive(definition.kind == EnemyKind.Spire || line || CleaveTelegraph);
+                                                                                                                                        
+                                                                                                                                            
+                                 
+                telegraph.gameObject.SetActive(range > 0f &&
+                                               (definition.kind == EnemyKind.Spire || line || CleaveTelegraph || CircleTelegraph));
             }
 
             if (definition.kind == EnemyKind.Shade)
@@ -823,36 +1353,62 @@ namespace AnomalyArena
                     ConeSlam(definition.pulseRadius, definition.coneAngle, attackDamage, definition.knockback);
                     return true;
                 case EnemyKind.Hollow:
-                    if (bossAttack == 0)
+                    var prophet = Boss;
+                    switch (bossAttack)
                     {
-                        V3WorldAudio.Instance?.Play(ArenaWorldCue.BossSlam, Position);
-                        AreaAttack(6f, 5f, 8f);
-                        bossRecovery = 1.5f;
-                    }
-                    else
-                    {
-                        inhaleLeft = 2f;
-                        V3WorldAudio.Instance?.Play(ArenaWorldCue.BossInhale, Position);
+                        case PulseMove:
+                            V3WorldAudio.Instance?.Play(ArenaWorldCue.BossSlam, Position);
+                            Fx.Ring(Position, PulseReach, definition.colour);
+                            PlayerBlast(Position, PulseReach, attackDamage * prophet.pulseDamage, prophet.pulsePush);
+                            break;
+                        case InhaleMove:
+                            inhaleLeft = prophet.inhaleSeconds;
+                            inhaleHit = false;
+                            V3WorldAudio.Instance?.Play(ArenaWorldCue.BossInhale, Position);
+                            break;
+                        case DoubleShotMove:
+                            FirePredictiveVolley(GM.player);
+                            if (bossPhase == 3) volleyTimer = prophet.shotSecondVolleyDelay;
+                            break;
+                        case RingMove:
+                            ringIndex = 0;
+                            ringsLeft = bossPhase == 3 ? prophet.phase3Rings : bossPhase == 2 ? prophet.phase2Rings : 1;
+                            FireRing(GM.player);
+                            break;
+                        default:
+                            PlaceLandingZones(GM.player);
+                            break;
                     }
 
                     return true;
                 case EnemyKind.Tyrant:
-                    if (bossAttack == 2)
+                    var tyrant = Boss;
+                    switch (bossAttack)
                     {
-                        charging = true;
-                        chargeLeft = TyrantChargeDistance;
-                        V3WorldAudio.Instance?.Play(ArenaWorldCue.BossCharge, Position);
-                    }
-                    else if (bossAttack == 1)
-                    {
-                        V3WorldAudio.Instance?.Play(ArenaWorldCue.BossSlam, Position);
-                        AreaAttack(8f, 10f, 10f);
-                    }
-                    else
-                    {
-                        V3WorldAudio.Instance?.Play(ArenaWorldCue.BossCleave, Position);
-                        foreach (var target in Query.InSector(this, Position, facing, 5f, 150f))
-                            DealHit(target, 15f, target.Position - Position, 8f);
+                        case ChargeMove:
+                            charging = true;
+                            chargeLeft = TyrantChargeDistance;
+                            V3WorldAudio.Instance?.Play(ArenaWorldCue.BossCharge, Position);
+                            break;
+                        case SlamMove:
+                            V3WorldAudio.Instance?.Play(ArenaWorldCue.BossSlam, Position);
+                            Fx.Ring(Position, tyrant.slamRange, definition.colour);
+                            PlayerBlast(Position, tyrant.slamRange, attackDamage * tyrant.slamDamage, tyrant.slamPush);
+                            break;
+                        case LeapMove:
+                            BeginLeap();
+                            break;
+                        case RoyalShieldMove:
+                            break;
+                        default:
+                            V3WorldAudio.Instance?.Play(ArenaWorldCue.BossCleave, Position);
+                            float share = bossAttack == BackSlashMove ? tyrant.backSlashDamage : tyrant.cleaveDamage;
+                            foreach (var target in Query.InSector(this, Position, facing, tyrant.cleaveRange, tyrant.cleaveArc))
+                                if (target.Team != Team.Enemy)                         
+                                    DealHit(target, attackDamage * share, target.Position - Position, tyrant.cleavePush);
+                                                                                                                
+                            if (bossAttack == CleaveMove && bossPhase >= 2 && OutsideCut(GM.player, tyrant)) followUp = BackSlashMove;
+                            break;
                     }
 
                     return true;
@@ -861,6 +1417,7 @@ namespace AnomalyArena
             return false;
         }
 
+                                                                                                                                                 
         void TryLockLaser(float pulseRadius)
         {
             var player = GM.player;
@@ -892,6 +1449,15 @@ namespace AnomalyArena
                 DealHit(player, attackDamage, LaserDirection, 0f);
         }
 
+                                                                                                                         
+        bool OutsideCut(PlayerController player, BossTuning b)
+        {
+            if (!player || !player.IsAlive) return false;
+            Vector3 to = Query.Flat(player.Position - Position);
+            float d = to.magnitude;
+            return d - player.Radius <= b.cleaveRange && d > player.Radius && Vector3.Angle(facing, to) > b.cleaveArc * .5f;
+        }
+
         void AreaAttack(float reach, float damage, float push)
         {
             Fx.Ring(Position, reach, definition.colour);
@@ -900,6 +1466,7 @@ namespace AnomalyArena
                     DealHit(target, damage, target.Position - Position, push);
         }
 
+                                                                                                                                          
         void PlayerPulse(float reach, float damage, float push)
         {
             PulseSequence++;                                                                                                 
@@ -908,6 +1475,8 @@ namespace AnomalyArena
                 DealHit(player, damage, player.Position - Position, push);
         }
 
+                                                                                                                           
+                                                                                                    
         void ConeSlam(float reach, float arcDeg, float damage, float push)
         {
             Fx.Sector(Position, facing, reach, arcDeg, definition.colour);
@@ -915,6 +1484,7 @@ namespace AnomalyArena
                 if (target.IsAlive) DealHit(target, damage, target.Position - Position, push);
         }
 
+                                                                                                             
         void Explode()
         {
             V3WorldAudio.Instance?.Play(ArenaWorldCue.NpcBloaterBlast, Position);
@@ -924,6 +1494,7 @@ namespace AnomalyArena
             V3WorldAudio.Instance?.Play(ArenaWorldCue.NpcRadiation, Position);
         }
 
+                                                                                                                                                                             
         bool InFist(Combatant c)
         {
             Vector3 to = Query.Flat(c.Position - Position);
@@ -932,6 +1503,10 @@ namespace AnomalyArena
             return d <= radius + c.Radius * 0.5f || Vector3.Angle(facing, to) <= attackArc * 0.5f;
         }
 
+                     
+                                                                                                             
+                                                                                                                                                                                          
+                      
         Vector3 KeepOffEdges(Vector3 v, float dt)
         {
             if (!WorldMap.Active || WorldMap.Active.TrialActive) return v;
@@ -951,7 +1526,7 @@ namespace AnomalyArena
             windup = false;
             specialWindup = false;
             SetLook(false);
-            if (telegraph) telegraph.gameObject.SetActive(false);
+            if (telegraph && !leaping) telegraph.gameObject.SetActive(false);                                                    
         }
 
         void SetLook(bool yellow)
@@ -961,6 +1536,7 @@ namespace AnomalyArena
             RefreshBodyTint();
         }
 
+                                                                                                                                                   
         public static readonly Color WindupBodyColour = new Color(1f, .85f, .25f);
         static readonly Color ShadeCloakColour = new Color(0.38f, 0.45f, 0.7f, 0.22f);
 
@@ -1076,6 +1652,7 @@ namespace AnomalyArena
                 if (definition.kind == EnemyKind.Tyrant) GM.NotifyFinalBossDefeated();
             }
 
+                                                                                                                           
             if (definition && definition.splitsOnDeath && !Mini && !IsTrialSummon &&
                 DeathCause == DeathCause.HpDepleted && GM && GM.waves)
                 GM.waves.QueueSplit(this);

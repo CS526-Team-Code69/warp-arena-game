@@ -42,9 +42,13 @@ namespace AnomalyArena
             ElementKind element = (added & UpgradeAxis.Infusion) != 0 ? infusion : weapon.element;
             if (element == ElementKind.Void) return CardRarity.Void;
             int upgrades = 0;
-            for (int i = 0; i < 6; i++) if ((weapon.axes & (UpgradeAxis)(1 << i)) != 0) upgrades++;
-            return upgrades >= 5 ? CardRarity.Legendary : upgrades >= 4 ? CardRarity.Epic
-                : upgrades >= 2 ? CardRarity.Exceptional : upgrades >= 1 ? CardRarity.Rare : CardRarity.Common;
+            for (int i = 0; i < 6; i++)
+            {
+                var axis = (UpgradeAxis)(1 << i);
+                if ((weapon.axes & axis) != 0 && !(axis == UpgradeAxis.Infusion && weapon.builtInElement)) upgrades++;
+            }
+            return upgrades >= 3 ? CardRarity.Legendary : upgrades >= 2 ? CardRarity.Exceptional
+                : upgrades >= 1 ? CardRarity.Rare : CardRarity.Common;
         }
 
         public static CardRarity ForSkill(SkillDefinition definition, int level)

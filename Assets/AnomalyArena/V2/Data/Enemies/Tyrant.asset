@@ -17,7 +17,7 @@ MonoBehaviour:
   hp: 4000
   speed: 3.5
   radius: 2.2
-  damage: 15
+  damage: 12
   windup: 1
   interval: 3
   reach: 0.8

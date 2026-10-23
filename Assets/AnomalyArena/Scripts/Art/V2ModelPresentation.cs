@@ -212,6 +212,10 @@ namespace AnomalyArena
             if (status.Poison > .5f) glow += new Color(.14f, .32f, .04f);
             if (status.Twitching) glow += new Color(.8f, .68f, .16f);
             else if (status.Paralysed) glow += new Color(.22f, .19f, .04f) * flicker;
+
+            var weapons = GameManager.Instance ? GameManager.Instance.runWeapons : null;
+            if (weapons && enemy && weapons.IsChargeSlowed(body)) glow += new Color(.12f, .3f, .55f);
+            if (weapons && !enemy && body is PlayerController && weapons.FocusGuardActive) glow += new Color(.7f, .7f, .75f);
             return glow;
         }
     }

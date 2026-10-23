@@ -31,7 +31,7 @@ MonoBehaviour:
   fodderSeconds: 0.65
   bossSeconds: 90
   statusRules: {fileID: 11400000, guid: 12b76a00311dd644b9a7e5b71c7eeff6, type: 2}
-  tyrantPhaseShieldShare: 0.1
+  tyrantPhaseShieldShare: 0.15
   functionSeconds:
   - 0.65
   - 2.6
