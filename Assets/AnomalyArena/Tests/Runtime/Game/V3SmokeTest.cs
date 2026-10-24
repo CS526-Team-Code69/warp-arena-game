@@ -143,7 +143,7 @@ namespace AnomalyArena
         }
 
         [Test, LoadScene(SceneCn), Category("Integration"), Timeout(25000)]
-        public async Task GainXp_TrueLevelsAndPostCapDrafts_PreservesDeficitAndManaCardBudget()
+        public async Task GainXp_TrueLevelsAndPostCapDrafts_RefillHpAndKeepManaCardBudget()
         {
             var game = await ReadyScene();
             var progression = game.progression;
@@ -153,16 +153,19 @@ namespace AnomalyArena
 
             Assert.That(progression.Level, Is.EqualTo(2), "level two");
             Assert.That(game.player.maxHp, Is.EqualTo(30f), "level-two max HP");
-            Assert.That(game.player.Hp, Is.EqualTo(25f), "only five HP restored, existing deficit retained");
+            Assert.That(game.player.Hp, Is.EqualTo(30f), "a level-up restores HP to full, the earlier deficit included");
             Assert.That(progression.Stats.maxEnergy, Is.EqualTo(106f), "capacity grows before first skill");
             Assert.That(progression.EnergyUnlocked, Is.False, "levelling alone does not unlock skills");
 
             progression.UnlockEnergy();
             progression.ApplyStat(new StatCardOffer(StatId.MaxEnergy, CardRarity.Common, 1000f));
+            Assert.That(progression.TrySpendEnergy(40f), Is.True, "spend some Energy before levelling");
+            game.player.ReceiveDamage(new DamageInfo { amount = 10f, source = DamageSource.Poison, ignoreShield = true });
 
             progression.GainXp(899f);
             Assert.That(progression.Level, Is.EqualTo(12), "level cap");
             Assert.That(game.player.maxHp, Is.EqualTo(80f), "max-level HP without HP cards");
+            Assert.That(game.player.Hp, Is.EqualTo(80f), "HP is full again after the level-ups");
             Assert.That(progression.Stats.maxEnergy, Is.EqualTo(316f), "level growth retains original 150 mana card budget");
             Assert.That(progression.Energy, Is.EqualTo(316f), "unlocked mana refills on true level-up");
             int before = progression.BankedDrafts;
