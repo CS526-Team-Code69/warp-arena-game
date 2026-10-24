@@ -75,7 +75,7 @@ namespace AnomalyArena
             Assert.That(sut.BankedDrafts, Is.EqualTo(1), "one card pick");
             Assert.That(sut.NextDraftIsStatOnly, Is.False, "a stat, weapon and skill draft below max level");
             Assert.That(sut.Stats.maxHp, Is.EqualTo(hp + rules.maxHpPerLevel).Within(.0001f), "max HP grows by a level's amount");
-            Assert.That(healed, Is.EqualTo(rules.maxHpPerLevel).Within(.0001f), "the gained max HP is healed");
+            Assert.That(healed, Is.GreaterThanOrEqualTo(sut.Stats.maxHp), "a full heal is requested, like a level-up (the body clamps it to max HP)");
             Assert.That(sut.Stats.maxEnergy, Is.EqualTo(energy + rules.maxEnergyPerLevel).Within(.0001f), "max energy grows by a level's amount");
             Assert.That(sut.Energy, Is.EqualTo(sut.Stats.maxEnergy), "energy refills");
             Assert.That(sut.VoidBadge, Is.True, "the level reads in void purple");

@@ -93,7 +93,7 @@ namespace AnomalyArena
             if (LastLevelHpGain > 0f) OnStatChanged(StatId.MaxHp,LastLevelHpGain);
             if (LastLevelEnergyGain > 0f) OnStatChanged(StatId.MaxEnergy,LastLevelEnergyGain);
 
-            if (LastLevelHpGain > 0f) OnHealingRequested(LastLevelHpGain);
+            OnHealingRequested(float.MaxValue);
         }
 
         public void ConsumeDraft()
