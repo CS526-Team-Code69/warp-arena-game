@@ -11,6 +11,8 @@ namespace AnomalyArena
         float life, damageFactor = 1f;
                                                                                                               
         float shotDamage = -1f, shotKnockback = -1f, shotSpeed = -1f;
+                                                                                                                       
+        float trackTurn, trackLeft;
         public Vector3 Direction => direction;
                                                                                                                                   
         float Speed => shotSpeed > 0f ? shotSpeed : owner && owner.definition ? Mathf.Max(.1f, owner.definition.projectileSpeed) : 7f;
@@ -44,6 +46,14 @@ namespace AnomalyArena
             LaunchFrom(enemy, at, dir, false);                                                       
         }
 
+                                                                                                                             
+                                                                                                       
+        public void Track(float turnDegreesPerSecond, float seconds)
+        {
+            trackTurn = Mathf.Max(0f, turnDegreesPerSecond);
+            trackLeft = trackTurn > 0f ? Mathf.Max(0f, seconds) : 0f;
+        }
+
         void LaunchFrom(Enemy enemy, Vector3 at, Vector3 dir, bool sound)
         {
             owner = enemy;
@@ -56,6 +66,7 @@ namespace AnomalyArena
             transform.position = Query.AtCastHeight(at);
             direction = Query.Flat(dir).normalized;
             life = 6f;
+            trackTurn = trackLeft = 0f;
             gameObject.SetActive(true);
             if (sound) V3WorldAudio.Instance?.Play(ArenaWorldCue.NpcSpit, at);
         }
@@ -68,6 +79,7 @@ namespace AnomalyArena
             dealer = newOwner;
             targetTeam = Team.Enemy;
             direction = -direction;
+            trackLeft = 0f;
             life = 6f;
         }
 
@@ -76,6 +88,19 @@ namespace AnomalyArena
             if (!GameManager.Instance.IsCombatActive) return;
             float dt = GameManager.Instance.WorldFixedDeltaTime;
             Vector3 from = transform.position;
+                                                                                                                                
+            if (trackLeft > 0f)
+            {
+                trackLeft -= dt;
+                var target = GameManager.Instance.player;
+                if (Hostile && target && target.IsAlive)
+                {
+                    var body = target.GetComponent<Rigidbody>();
+                    Vector3 meet = Enemy.VolleyLeadPoint(from, target.Position, body ? body.linearVelocity : Vector3.zero, Speed);
+                    direction = Query.Steer(direction, meet - Query.Flat(from), trackTurn * dt);
+                }
+            }
+
             Vector3 to = from + direction * (Speed * dt);
             if (Query.WallBetween(from, to, out _) || (WorldMap.Active && WorldMap.Active.IsHole(to)))
             {
@@ -83,10 +108,10 @@ namespace AnomalyArena
                 return;
             }
 
-                                                                                                              
+                                                                                                                                
             var world = WorldMap.Active;
             if (world && world.TrialActive && world.trialPlatform &&
-                Query.Flat(to - world.trialPlatform.position).magnitude > world.trialRadius + 2f)
+                Query.Flat(to - world.trialPlatform.position).magnitude > world.TrialGroundReach + 2f)
             {
                 gameObject.SetActive(false);
                 return;

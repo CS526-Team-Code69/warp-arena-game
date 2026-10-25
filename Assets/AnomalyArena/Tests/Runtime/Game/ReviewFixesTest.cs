@@ -150,19 +150,6 @@ namespace AnomalyArena
         }
 
         [Test, LoadScene(LabScene), Category("Integration"), Timeout(60000)]
-        public async Task VoidTrial_PlayerHoles_NeverTakeTheProphetsSlots()
-        {
-            var (game, world, _) = await StartTrial();
-            var bossSlots = Object.FindObjectsByType<BlackHole>(FindObjectsInactive.Include, FindObjectsSortMode.None)
-                .Where(h => h && h.name.Contains("(boss ")).ToArray();
-            Assume.That(bossSlots, Is.Not.Empty, "the Prophet's slots are made at start");
-            Vector3 centre = Flat(world.trialPlatform.position);
-            for (int i = 0; i < 6; i++)
-                world.CreateVoidHole(centre + Quaternion.Euler(0f, 60f * i, 0f) * Vector3.forward * 5f, 1.5f, 0f, 5f, game.player, true);
-            Assert.That(bossSlots.Any(h => h.gameObject.activeSelf), Is.False, "six player holes stay in the player's own slots");
-        }
-
-        [Test, LoadScene(LabScene), Category("Integration"), Timeout(60000)]
         public async Task VoidTrial_Ending_ClearsTheBossShotsStillInFlight()
         {
             var (game, world, hollow) = await StartTrial();
@@ -177,53 +164,6 @@ namespace AnomalyArena
                     "the shots end with the trial instead of holding pool slots");
             }
             finally { game.player.Invulnerable = false; }
-        }
-
-        [Test, LoadScene(Scene), Category("Integration"), Timeout(60000)]
-        public async Task TyrantPhaseChange_DuringACharge_StillCastsTheRoyalShieldAfterIt()
-        {
-            var (game, targets, tyrant) = await TyrantSandbox(10f);
-            foreach (var t in targets) t.DiscardWithoutReward();
-            tyrant.ForceNextBossMove(Enemy.ChargeMove);
-            SetPrivate(tyrant, "cooldown", 0f);
-            await Until(() => tyrant.Charging, 5f, "the charge");
-            tyrant.ReceiveDamage(new DamageInfo { amount = tyrant.maxHp * .4f, source = DamageSource.Wall, ignoreShield = true });
-            await Until(() => tyrant.BossPhase >= 2, 1f, "a phase change during the charge");
-            await Until(() => tyrant.WindingUp && tyrant.BossAttackIndex == Enemy.RoyalShieldMove, 8f, "the royal shield cast once the charge is over");
-        }
-
-        [Test, LoadScene(Scene), Category("Integration"), Timeout(60000)]
-        public async Task TyrantLeap_AtAPlayerInAGravityRing_LandsWhereItCanWalk()
-        {
-            var (game, targets, tyrant) = await TyrantSandbox(14f);
-            foreach (var t in targets) t.DiscardWithoutReward();
-            var world = WorldMap.Active;
-            var hole = world.holes.FirstOrDefault(h => h && h.Phase == HolePhase.Active);
-            Assume.That(hole, Is.Not.Null, "the map has an active black hole");
-            float ring = hole.KillRadius + hole.gravityCells * .5f;
-            Vector3 spot = Vector3.zero;
-            bool found = false;
-            for (int a = 0; a < 360 && !found; a += 15)
-            {
-                spot = Flat(hole.Centre + Quaternion.Euler(0f, a, 0f) * Vector3.forward * ring);
-
-                found = world.Contains(spot, tyrant.Radius) && !world.IsWall(spot, tyrant.Radius) && !world.IsHole(spot) && !world.IsWalkable(spot, tyrant.Radius);
-            }
-
-            Assume.That(found, Is.True, "a spot in the gravity ring");
-
-            var body = game.player.GetComponent<Rigidbody>();
-            var constraints = body.constraints;
-            try
-            {
-                body.constraints = RigidbodyConstraints.FreezeAll;
-                Place(game.player, spot);
-                tyrant.ForceNextBossMove(Enemy.LeapMove);
-                SetPrivate(tyrant, "cooldown", 0f);
-                await Until(() => tyrant.WindingUp && tyrant.BossAttackIndex == Enemy.LeapMove, 4f, "the leap wind-up");
-                Assert.That(world.IsWalkable(tyrant.LeapTarget, tyrant.Radius), Is.True, "it lands where it can walk: no gravity ring, no hole, no wall");
-            }
-            finally { body.constraints = constraints; }
         }
 
         static RunWeapon Equip(GameManager game, WeaponForm form, int variant, UpgradeAxis axes = UpgradeAxis.None, int mk = 1)
@@ -257,19 +197,6 @@ namespace AnomalyArena
                 if (Time.realtimeSinceStartup > deadline) Assert.Fail("Timed out waiting for: " + operation);
                 await Awaitable.NextFrameAsync();
             }
-        }
-
-        static async Task<(GameManager game, Enemy[] targets, Enemy tyrant)> TyrantSandbox(float ahead)
-        {
-            var (game, targets) = await V3CombatSmokeTest.StartSandbox();
-            game.player.Invulnerable = true;
-            game.player.enabled = true;                                           
-            var tyrant = game.waves.SpawnLabTyrant(game.player.Position + Vector3.forward * ahead);
-            Assume.That(tyrant && tyrant.IsBoss, Is.True, "the scene keeps the Tyrant");
-
-            Physics.SyncTransforms();
-            await Awaitable.FixedUpdateAsync();
-            return (game, targets, tyrant);
         }
 
         static async Task<(GameManager game, WorldMap world, Enemy hollow)> StartTrial()

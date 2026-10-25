@@ -7,7 +7,7 @@ namespace AnomalyArena
 {
                                                                                                      
     [DefaultExecutionOrder(200)]
-    public sealed class WorldMap : MonoBehaviour
+    public sealed partial class WorldMap : MonoBehaviour
     {
         public static WorldMap Active { get; private set; }
         public MapLayout layout;
@@ -385,23 +385,7 @@ namespace AnomalyArena
                 if (SkillWorldAPI.HoleProtection != null && SkillWorldAPI.HoleProtection(combatant)) continue;
                 if (TrialActive)
                 {
-                    float distance = Query.Flat(combatant.Position - trialPlatform.position).magnitude;
-                    if (distance > trialRadius)
-                    {
-                                                                                                                      
-                        bool summon = combatant.Team == Team.Enemy && combatant != hollow;
-                        combatant.OnEnterFallZone(Vector3.zero);
-                        if (summon && hollow && hollow.IsAlive) hollow.SummonFell();
-                    }
-                    else if (IsTemporaryHole(combatant.Position,combatant) && combatant != hollow) SwallowIntoVoid(combatant);
-                    else if (distance > trialRadius - 2f) ApplyPull(combatant, Query.Flat(combatant.Position - trialPlatform.position).normalized * 3f);
-                    else if (!(combatant is Enemy { IsBoss: true })) ApplyHolePull(combatant);
-                    if (hollow && hollow.IsAlive && hollow.Inhaling && combatant != hollow && combatant.IsAlive)
-                    {
-                        ApplyPull(combatant, Query.Flat(hollow.Position - combatant.Position).normalized * BossNumbers.inhalePull);
-                        if (Query.Flat(hollow.Position - combatant.Position).magnitude <= hollow.Radius + combatant.Radius)
-                            hollow.InhaleContact(combatant);
-                    }
+                    TickTrialBody(combatant);                                                                                     
                     continue;
                 }
                 bool swallowed = false;
@@ -431,15 +415,14 @@ namespace AnomalyArena
         {
             if (combatant is Enemy enemy && enemy.IsAlive && !enemy.SuppressRewards && !enemy.IsTrialSummon && GM.progression && GM.waves)
                 GM.progression.GainXp(GM.waves.ExperienceFor(enemy));
-            bool summon = TrialActive && combatant is Enemy { IsAlive: true } && combatant != hollow;
             combatant.OnEnterFallZone(Vector3.zero);
-            if (summon && hollow && hollow.IsAlive) hollow.SummonFell();                                             
         }
 
         static BossTuning BossNumbers => GM && GM.waves && GM.waves.bosses != null ? GM.waves.bosses : BossTuning.Defaults;
 
-                                                                                                                                        
                                                                                                                                               
+                                                                                                                                             
+                                                              
         public float LimitBossKnockback(Vector3 from, Vector3 dir, float distance)
         {
             if (!TrialActive || !trialPlatform || distance <= 0f) return distance;
@@ -447,11 +430,6 @@ namespace AnomalyArena
             if (dir.sqrMagnitude < 1e-6f) return distance;
             dir.Normalize();
             var numbers = BossNumbers;
-            Vector3 p = Query.Flat(from - trialPlatform.position);
-            float safe = Mathf.Max(0f, trialRadius - numbers.edgeKnockMargin);
-            float b = Vector3.Dot(p, dir), c = p.sqrMagnitude - safe * safe;
-                                                                                                               
-            distance = Mathf.Min(distance, c <= 0f ? -b + Mathf.Sqrt(Mathf.Max(0f, b * b - c)) : b > 0f ? 0f : distance);
             for (int i = 0; i < TemporaryHoleCount; i++)
             {
                 var hole = TemporaryHoleAt(i);
@@ -578,7 +556,12 @@ namespace AnomalyArena
             hollow.HoldAttacks(trialOpeningGrace);
             hollow.IsTrialSummon = true;
             hollow.SuppressRewards = true;
+            hollow.BeginProphetFight();
+            if (!hollow.GetComponent<V2ProphetTrialMarks>()) hollow.gameObject.AddComponent<V2ProphetTrialMarks>();
+            BuildTrialTerrain();                                                                                
             GM.waves.TrackBoss(hollow);
+            if (GM.hud) GM.hud.Banner(ArenaText.Pair("THE NASH PROPHET","THE NASH PROPHET"),
+                ArenaText.Pair("Black-hole portals lead to the fragments. While its summons live it takes no damage.","Black-hole portals lead to the fragments. While its summons live it takes no damage."));
             VoidTrialEntered?.Invoke();
         }
                                                                                                                                       
@@ -632,6 +615,7 @@ namespace AnomalyArena
             GM.waves.ClearTrialSummons();
             if (hollow) hollow.ClearBossMarks();
             HideBossHoles();
+            HideTrialTerrain();
             foreach (var wall in trialWalls) if (wall) wall.gameObject.SetActive(false);
             trialWalls.Clear();
             foreach (var wall in temporaryWalls) if (wall) wall.BattlefieldFrozen = false;
@@ -737,13 +721,17 @@ namespace AnomalyArena
         public Vector3? ValidPoint(Vector3 from, Vector3 desired)
         {
             if (TrialActive)
-                desired = trialPlatform.position + Vector3.ClampMagnitude(Query.Flat(desired-trialPlatform.position),Mathf.Max(0f,trialRadius-.5f));
+            {
+                                                                                                                       
+                if (!OnTrialGround(desired, .5f))
+                    desired = trialPlatform.position + Vector3.ClampMagnitude(Query.Flat(desired-trialPlatform.position),Mathf.Max(0f,trialRadius-.5f));
+            }
             else desired = ClampPoint(desired);
             Vector3 delta = Query.Flat(desired - from);
             for (float distance = delta.magnitude; distance >= 0f; distance -= 0.5f)
             {
                 Vector3 at = from + delta.normalized * distance;
-                bool inside = TrialActive ? Query.Flat(at-trialPlatform.position).magnitude <= trialRadius-.5f : Contains(at,.5f);
+                bool inside = TrialActive ? OnTrialGround(at, .5f) : Contains(at,.5f);
                 if (inside && !IsWall(at, 0.5f) && !IsHole(at) && !IsTemporaryHole(at)) return at;
             }
             return null;

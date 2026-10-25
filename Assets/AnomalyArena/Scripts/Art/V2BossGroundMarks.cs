@@ -64,11 +64,6 @@ namespace AnomalyArena
 
             Vector3 centre = Query.Flat(world.trialPlatform.position);
             float radius = world.trialRadius;
-            if (!edgeBand) edgeBand = Make("TrialEdgeBand", Segments, true);
-            Circle(edgeBand, centre, radius - 1f, .045f);
-            edgeBand.widthMultiplier = 2f;
-            edgeBand.startColor = edgeBand.endColor = edgeBandColor;
-            edgeBand.enabled = true;
 
             float goal = enemy.PlatformGoal;
             bool shrinking = radius - goal > .05f;

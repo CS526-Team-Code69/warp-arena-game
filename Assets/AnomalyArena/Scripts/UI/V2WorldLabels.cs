@@ -222,6 +222,8 @@ namespace AnomalyArena
                     : enemy.Chanted ? ArenaText.Pair("CHANTED","CHANTED") : "";
                                                                        
                 if (weapons && weapons.IsExecuteMarked(enemy)) name = (name.Length > 0 ? name + " · " : "") + ArenaText.Pair("MARKED","MARKED");
+                                                                                                     
+                if (enemy.ProphetWarded) name += " · " + ArenaText.Pair("INVULNERABLE","INVULNERABLE");
                 if (view.name.text != name) view.name.text = name;
                 V2Hud.SetElementIcon(view.affix, art, (int)enemy.Affix - 1);
                 for (int j = 0; j < 4; j++)

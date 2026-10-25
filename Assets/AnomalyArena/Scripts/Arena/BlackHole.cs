@@ -102,6 +102,17 @@ namespace AnomalyArena
             if (WorldMap.Active) WorldMap.Active.HoleChanged();
         }
 
+        public void ShowAsTrialPortal(Vector3 at)
+        {
+            transform.position = at;
+            protectedOwner = null;
+            Temporary = true;
+            temporaryLife = float.PositiveInfinity;
+            Phase = HolePhase.Portal;
+            gameObject.SetActive(true);
+            RefreshLook();
+        }
+
         void RefreshLook()
         {
             if (killVisual) { killVisual.gameObject.SetActive(Phase == HolePhase.Active || Phase == HolePhase.Collapsing); killVisual.localScale = new Vector3(size, 0.05f, size); }

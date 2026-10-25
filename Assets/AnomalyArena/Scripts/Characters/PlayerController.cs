@@ -20,6 +20,8 @@ namespace AnomalyArena
 
         [System.NonSerialized] public bool? debugSprintHeld;
 
+        [System.NonSerialized] public Vector2? debugMoveHeld;
+
         [System.NonSerialized] public bool debugLockAim;
 
         public override Team Team => Team.Player;
@@ -43,6 +45,7 @@ namespace AnomalyArena
                 if (kb.aKey.isPressed) moveInput.x -= 1f;
                 if (moveInput.sqrMagnitude > 1f) moveInput.Normalize();
             }
+            if (playing && debugMoveHeld.HasValue) moveInput = Vector2.ClampMagnitude(debugMoveHeld.Value, 1f);
 
             TickSprint(playing, kb);
             if (!playing || mouse == null || !GM.CanUseCombatInput) return;
@@ -57,7 +60,7 @@ namespace AnomalyArena
         {
             bool held = debugSprintHeld ?? (kb != null && (kb.leftShiftKey.isPressed || kb.rightShiftKey.isPressed));
             bool moving = moveInput.sqrMagnitude > 0.01f || debugSprintHeld == true;
-            bool want = playing && held && moving && State == CharacterState.Normal && !MovementLocked;
+            bool want = playing && held && moving && State == CharacterState.Normal && !WalkHeld;
             float recovery = GM.runWeapons ? GM.runWeapons.StaminaRecoveryMultiplier : 1f;
             sprintMultiplier = stamina.Tick(Time.deltaTime, want, recovery);
             if (!stamina.Sprinting) return;
@@ -100,10 +103,12 @@ namespace AnomalyArena
             if (d.sqrMagnitude > 0.01f) aim = d.normalized;
         }
 
+        bool WalkHeld => MovementLocked || WorldMap.Active && WorldMap.Active.PortalArrivalHold;
+
         protected override void TickNormal(float dt)
         {
             Vector3 v = Vector3.zero;
-            if (!MovementLocked && GM.State == GameState.Playing)
+            if (!WalkHeld && GM.State == GameState.Playing)
                 v = new Vector3(moveInput.x, 0f, moveInput.y) * (moveSpeed * sprintMultiplier * (GM.runWeapons ? GM.runWeapons.MoveMultiplier : 1f)
                     * (ElementStatus.For(this)?.PlayerChillMultiplier ?? 1f) * (GM.skills ? GM.skills.PlayerMoveMultiplier : 1f));
             v *= Quicksand.SpeedFactor(Position);                                                                        

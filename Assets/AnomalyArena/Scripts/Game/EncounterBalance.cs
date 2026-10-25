@@ -27,7 +27,7 @@ namespace AnomalyArena
 
         [Range(0f, 1f),
          Tooltip(
-             "Tyrant shield at each phase change as a share of max HP; twice per fight, counted in the boss budget.")]
+             "Tyrant shield refill when it enters phase 2, as a share of max HP: once per fight (it has two phases, system doc 13.2), counted in the boss budget.")]
         public float tyrantPhaseShieldShare = .1f;
 
         [Tooltip(
@@ -59,7 +59,7 @@ namespace AnomalyArena
             enemy.canAffix && affix == ElementKind.Earth ? .5f : enemy.startShieldShare;
 
         public float ShieldBudgetShare(EnemyDefinition enemy, ElementKind affix) => InitialShieldShare(enemy, affix)
-            + (enemy.kind == EnemyKind.Tyrant ? 2f * tyrantPhaseShieldShare : 0f);
+            + (enemy.kind == EnemyKind.Tyrant ? (Enemy.TyrantPhaseCount - 1) * tyrantPhaseShieldShare : 0f);                               
 
         public float MiniShare(bool mini) => mini ? Mathf.Clamp01(splitterMiniHpShare) : 1f;
 

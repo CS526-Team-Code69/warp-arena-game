@@ -83,8 +83,9 @@ namespace AnomalyArena
                     target.Configure(data, game.waves.HpMultiplier, elite);
                     target.enabled = false;
                     float actualShield = ElementStatus.For(target).Shield;
+
                     float phases = data.kind == EnemyKind.Tyrant
-                        ? target.maxHp * balance.tyrantPhaseShieldShare * 2f
+                        ? target.maxHp * balance.tyrantPhaseShieldShare * (Enemy.TyrantPhaseCount - 1)
                         : 0f;
 
                     float dps = balance.DpsAt(balance.BudgetWave(data, wave));

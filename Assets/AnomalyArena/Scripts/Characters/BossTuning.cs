@@ -68,8 +68,82 @@ namespace AnomalyArena
         [Min(.1f), Tooltip("Phase 3: the Prophet's summon clock runs this many times faster.")] public float prophetPhase3SummonRate = 1.3f;
         [Range(0f, 1f), Tooltip("Share of its max HP the Prophet loses for each summon that falls off the platform or into a hole.")] public float summonFallHpShare = .04f;
 
+        [Header("Nash Prophet (2026-10-25): phases and move choice")]
+        [Range(0f, 1f), Tooltip("Below this share of its max HP it enters phase 2: void pillars and the predictive volley join and the rings come several at a time.")] public float nashPhase2HpShare = .6f;
+        [Range(0f, 1f), Tooltip("Below this share it enters phase 3: Shades instead of Wardens, bigger pillars, more rings and volley shots, a harder pulse and pull.")] public float nashPhase3HpShare = .3f;
+        [Min(0f), Tooltip("Seconds a new phase's platform edge shows as a dashed line before the platform starts shrinking to it.")] public float nashEdgeWarning = 2f;
+        [Min(0f), Tooltip("Damage factor (Y): every hit deals the Hollow asset's damage × this × the move's share, whatever the wave. 1.12 is the wave-8 enemy factor, the wave its fixed HP is budgeted on.")] public float nashDamageFactor = 1.12f;
+        [Min(0f), Tooltip("Player this close or closer (centre to centre): repulse pulse, void summon or void pillars. Farther: equilibrium ring, predictive volley or gravity pull.")] public float nashNearRange = 6.5f;
+        [Min(0f), Tooltip("Seconds it waits after a move before winding up the next; after rings, a volley, a pull or a summon it counts from the moment they are over.")] public float nashMoveRest = 1.1f;
+        [Min(0f), Tooltip("Close: chance weight of the repulse pulse.")] public float nashPulseWeight = 1f;
+        [Min(0f), Tooltip("Close: chance weight of the void summon. It is only chosen while none of its summons lives and the summon rest is over.")] public float nashSummonWeight = 1.5f;
+        [Min(0f), Tooltip("Close, from phase 2: chance weight of the void pillars.")] public float nashPillarWeight = 1f;
+        [Min(0f), Tooltip("Far: chance weight of the equilibrium ring.")] public float nashRingWeight = 1f;
+        [Min(0f), Tooltip("Far, from phase 2: chance weight of the predictive volley.")] public float nashVolleyWeight = 1f;
+        [Min(0f), Tooltip("Far: chance weight of the gravity pull.")] public float nashPullWeight = .8f;
+        [Min(1f), Tooltip("While void pillars stand, the gravity pull's weight is multiplied by this, so it drags the player into them.")] public float nashPullPillarBonus = 2.5f;
+
+        [Header("Nash Prophet (2026-10-25): repulse pulse and gravity pull")]
+        [Min(0f), Tooltip("Wind-up of the repulse pulse; a ground circle shows its reach.")] public float nashPulseWindup = .8f;
+        [Min(0f), Tooltip("Pulse reach from its centre (the player's body counts).")] public float nashPulseReach = 5.5f;
+        [Min(0f), Tooltip("Pulse damage, × its base damage (Hollow asset damage × nashDamageFactor).")] public float nashPulseDamage = 1.5f;
+        [Min(0f), Tooltip("Cells the pulse pushes the player in phases 1-2. The platform edge does not stop a boss push; 3.5 still never throws a player it hits off the phase-2 platform.")] public float nashPulsePush = 3.5f;
+        [Min(0f), Tooltip("Cells the pulse pushes the player in phase 3, harder than before: on the phase-3 platform it throws a player caught in the outer part of its circle into the void, so they must leave the circle during the wind-up.")] public float nashPhase3PulsePush = 4.5f;
+        [Min(0f), Tooltip("Wind-up of the gravity pull.")] public float nashPullWindup = .8f;
+        [Min(0f), Tooltip("Seconds the gravity pull draws the player toward the middle. It deals no damage itself; the pillars do the killing.")] public float nashPullSeconds = 2.5f;
+        [Min(0f), Tooltip("Cells per second the pull draws the player in, phases 1-2. Keep it under the player's walking speed (6) so walking out against it works.")] public float nashPullSpeed = 3.5f;
+        [Min(0f), Tooltip("Cells per second the pull draws the player in, phase 3.")] public float nashPhase3PullSpeed = 5f;
+
+        [Header("Nash Prophet (2026-10-25): void summon")]
+        [Min(0f), Tooltip("Wind-up before the red crosses of a void summon appear.")] public float nashSummonWindup = 1f;
+        [Min(0f), Tooltip("Seconds the red crosses show before the summons appear.")] public float nashSummonWarning = .8f;
+        [Min(0), Tooltip("Wardens per summon in phases 1-2. While any of its summons lives it takes no damage.")] public int nashSummonCount = 3;
+        [Min(0), Tooltip("Shades per summon in phase 3.")] public int nashPhase3SummonCount = 2;
+        [Min(0f), Tooltip("Summons appear on a circle of this radius round it, the first behind it as seen from the player.")] public float nashSummonRingRadius = 3.5f;
+        [Min(0f), Tooltip("Seconds after its last summon is gone before it may summon again.")] public float nashSummonCooldown = 10f;
+
+        [Header("Nash Prophet (2026-10-25): void pillars, phase 2 on")]
+        [Min(0f), Tooltip("Wind-up before the pillar circles appear.")] public float nashPillarWindup = .6f;
+        [Min(0f), Tooltip("Seconds each circle fills from its rim before its pillar stands.")] public float nashPillarWarning = 1.4f;
+        [Min(0f), Tooltip("Seconds a pillar stands. A player whose centre is inside a standing pillar dies at once.")] public float nashPillarLife = 5f;
+        [Min(0), Tooltip("Pillars per cast in phase 2: the first on the player, the others stepping back toward the Prophet on alternate sides.")] public int nashPillarCount = 3;
+        [Min(0), Tooltip("Pillars per cast in phase 3.")] public int nashPhase3PillarCount = 3;
+        [Min(.1f), Tooltip("Pillar radius in phase 2.")] public float nashPillarRadius = 1.5f;
+        [Min(.1f), Tooltip("Pillar radius in phase 3.")] public float nashPhase3PillarRadius = 2.2f;
+
+        [Header("Nash Prophet (2026-10-25): equilibrium ring and predictive volley")]
+        [Min(0f), Tooltip("Wind-up before the first ring.")] public float nashRingWindup = .8f;
+        [Min(1), Tooltip("Shots per ring in phases 1-2.")] public int nashRingShots = 12;
+        [Min(1), Tooltip("Shots per ring in phase 3 (more rings, so fewer shots each: the scene saves 32 enemy shots in all).")] public int nashPhase3RingShots = 10;
+        [Min(1), Tooltip("Rings in a row in phase 2 (phase 1 fires one). Each later ring turns from the first by the shot spacing over the ring count, closing its gaps.")] public int nashPhase2Rings = 2;
+        [Min(1), Tooltip("Rings in a row in phase 3.")] public int nashPhase3Rings = 3;
+        [Min(0f), Tooltip("Seconds between two rings.")] public float nashRingInterval = .55f;
+        [Min(.1f), Tooltip("Ring shot speed, cells per second.")] public float nashRingSpeed = 7f;
+        [Min(0f), Tooltip("Damage of each ring shot, × its base damage. Shots never push.")] public float nashRingDamage = .8f;
+        [Min(0f), Tooltip("Wind-up before a predictive volley.")] public float nashVolleyWindup = .6f;
+        [Min(0), Tooltip("Shots of a predictive volley in phase 2.")] public int nashVolleyShots = 6;
+        [Min(0), Tooltip("Shots of a predictive volley in phase 3.")] public int nashPhase3VolleyShots = 9;
+        [Min(0f), Tooltip("Seconds between two shots of a volley.")] public float nashVolleyInterval = .09f;
+        [Min(.1f), Tooltip("Volley shot speed, cells per second. Each is aimed where the player will be when it arrives.")] public float nashVolleySpeed = 13f;
+        [Min(0f), Tooltip("Damage of each volley shot, × its base damage. Shots never push.")] public float nashVolleyDamage = .6f;
+        [Min(0f), Tooltip("Degrees per second a volley shot turns toward where the player will be.")] public float nashVolleyTurnRate = 60f;
+        [Min(0f), Tooltip("Seconds a volley shot keeps turning; after that it flies straight.")] public float nashVolleyTrackSeconds = .6f;
+        [Min(0f), Tooltip("Its shots start this many cells outside its body.")] public float nashMuzzleGap = .3f;
+
+        [Header("Nash Prophet (2026-10-25): trial terrain")]
+        [Min(0), Tooltip("Broken fragments floating round the trial platform, with one black-hole portal on the platform for each.")] public int nashFragmentCount = 4;
+        [Min(.5f), Tooltip("Fragment radius: 1.75 is 3.5 cells across, about three player bodies.")] public float nashFragmentRadius = 1.75f;
+        [Min(0f), Tooltip("Cells from the platform's middle to each fragment's middle; the platform's phase-1 edge is at 12.")] public float nashFragmentDistance = 15.5f;
+        [Tooltip("Direction of the first fragment, degrees clockwise from north (+z); the others are evenly spaced.")] public float nashFragmentAngle = 0f;
+        [Min(0f), Tooltip("Cells from the platform's middle to each portal on it; inside the phase-3 edge, so no portal falls away as it shrinks.")] public float nashPortalRadius = 6.5f;
+        [Tooltip("Direction of the first platform portal, degrees clockwise from north. Each portal leads to the fragment on the far side, so the player comes out in another direction.")] public float nashPortalAngle = 45f;
+        [Min(.1f), Tooltip("A portal takes the player once the player's centre comes this close to its middle (its swirl is 0.65 in radius).")] public float nashPortalTrigger = .6f;
+        [Min(0f), Tooltip("The player arrives this far from a fragment's middle, on its outer side, clear of the way-back portal in its middle.")] public float nashFragmentArrival = 1f;
+        [Min(0f), Tooltip("Seconds after a jump before any portal takes the player again.")] public float nashPortalRearm = .4f;
+        [Min(0f), Tooltip("Seconds the player stands still after every portal jump: a move key still held from the way in does not walk them off the small fragment or the shrunk platform before they see where they are, and no pull draws them. Shooting and skills still work. Keep it at least nashPortalRearm.")] public float nashPortalArrivalHold = .5f;
+
         [Header("Nash Prophet: knockback guard")]
-        [Min(0f), Tooltip("A boss hit never pushes the player closer than this to the trial platform edge.")] public float edgeKnockMargin = 2.5f;
+        [Min(0f), Tooltip("No longer used (owner 2026-10-25): the trial platform edge does not stop a boss push any more, only an open hole does.")] public float edgeKnockMargin = 2.5f;
         [Min(0f), Tooltip("A boss hit never pushes the player closer than this to the edge of a void hole on the platform.")] public float holeKnockMargin = 1f;
 
         [Header("Tyrant: move choice")]
@@ -123,6 +197,97 @@ namespace AnomalyArena
         [Min(0), Tooltip("Tyrant summons per call in phases 1-2.")] public int tyrantSummonCount = 6;
         [Min(0), Tooltip("Tyrant summons per call in phase 3.")] public int tyrantPhase3SummonCount = 9;
         [Min(.1f), Tooltip("Phase 3: the Tyrant's summon clock runs this many times faster.")] public float tyrantPhase3SummonRate = 1.25f;
+
+        [Header("Tyrant (system doc 13.2, 2026-10-25): phases, enrage and move choice")]
+        [Range(0f, 1f), Tooltip("Below this share of its max HP it enters its second and last phase, once: its shield is refilled (EncounterBalance.tyrantPhaseShieldShare), the Ground Pound, Royal Scepter and Astral Guard open, the Tail Sweep, Rampage Charge and Star Throw grow, and it is enraged.")]
+        public float tyrantPhase2At = .5f;
+        [Min(0f), Tooltip("Phase 1: seconds it walks toward you after a move before it picks the next one by your distance alone (on screen or not). Close is within the Tail Sweep's reach, middle within the Rampage Charge's longest run plus its leap, far is beyond.")]
+        public float tyrantMoveGap = 1.8f;
+        [Range(.1f, 1f), Tooltip("Phase 2 (enraged): that walk between two moves is this share as long. Together with the shorter wind-ups below, with the defaults a Tail Sweep comes about 1.75 times as often as in phase 1, a Star Throw about 2 times and a Rampage Charge from 10 cells about 1.5 times.")]
+        public float tyrantEnragedGapShare = .4f;
+        [Range(.1f, 1f), Tooltip("Phase 2 (enraged): the wind-ups of the Tail Sweep, the Rampage Charge and the Star Throw, and its pause after a charge's landing, are this share as long (their warnings show for less time too). The moves only phase 2 has keep their own wind-ups.")]
+        public float tyrantEnragedWindupShare = .7f;
+        [Min(1f), Tooltip("Phase 2 (enraged): its hits deal this many times their phase-1 damage.")]
+        public float tyrantEnragedDamage = 1.25f;
+        [Min(0f), Tooltip("Between moves it walks toward you until it is this close (centre to centre).")]
+        public float tyrantWalkStop = 4.5f;
+        [Min(0f), Tooltip("Seconds it is stunned when its Rampage Charge runs into a wall, a bulwark or the edge of a hole with any part of its body (see rushGraze): no moves, no walking, no summons.")]
+        public float tyrantWallStun = 2.5f;
+        [Min(1f), Tooltip("While stunned it takes this many times the damage (1.5 = 50% more).")]
+        public float tyrantStunDamageTaken = 1.5f;
+        [Range(0f, 1f), Tooltip("Phase 2, close: share of Ground Pounds (the rest are Tail Sweeps).")]
+        public float poundShare = .4f;
+        [Range(0f, 1f), Tooltip("Phase 2, middle distance: share of Royal Scepters while the scepter is ready (the rest are Rampage Charges).")]
+        public float scepterShare = .4f;
+        [Range(0f, 1f), Tooltip("Phase 2, far: share of Astral Guards while enough minions stand near it (the rest are Star Throws).")]
+        public float astralShare = .5f;
+
+        [Header("Tyrant: Tail Sweep (close, fan warning, breaks walls)")]
+        [Min(0f), Tooltip("Wind-up; the fan shows on the ground. Shorter while enraged (tyrantEnragedWindupShare).")] public float sweepWindup = .9f;
+        [Min(0f), Tooltip("Seconds the tail takes to cross the fan from its left edge to its right; it hits you as it passes.")] public float sweepSeconds = .45f;
+        [Min(0f), Tooltip("Reach of the tail from its centre in phase 1 (your body counts); the close band ends here.")] public float sweepRange = 6.5f;
+        [Min(0f), Tooltip("Reach of the tail in phase 2.")] public float sweepRangePhase2 = 9.5f;
+        [Range(10f, 360f), Tooltip("Width of the fan in degrees (150 matches the saved sector art).")] public float sweepArc = 150f;
+        [Min(0f), Tooltip("Half the tail's thickness, cells: it hits you and breaks walls this far beside its line.")] public float sweepTailHalfWidth = .6f;
+        [Min(.5f), Tooltip("Map walls break in pieces at most this many cells across: the tail removes only the pieces it touches, for the rest of the fight. A bulwark cannot be broken and shields you from the tail.")] public float sweepWallPiece = 2f;
+        [Min(0f), Tooltip("Damage, × attack damage.")] public float sweepDamage = 1f;
+        [Tooltip("Knockback tier on you (document 5.3: heavy); you are thrown along the swing and away from it.")] public KnockTier sweepKnock = KnockTier.Heavy;
+
+        [Header("Tyrant: Ground Pound (close, phase 2, rectangle warning)")]
+        [Min(0f), Tooltip("Wind-up; the rectangle shows on the ground in front of it.")] public float poundWindup = 1f;
+        [Min(0f), Tooltip("Length of the rectangle from its front; the first wall ahead cuts it short.")] public float poundLength = 14f;
+        [Min(0f), Tooltip("Width of the rectangle.")] public float poundWidth = 4f;
+        [Min(1), Tooltip("The shockwave crosses the rectangle in this many steps, one band after another from its feet to the far end.")] public int poundSteps = 7;
+        [Min(.01f), Tooltip("Seconds between two steps of the shockwave.")] public float poundStepSeconds = .12f;
+        [Min(0f), Tooltip("Damage when the shockwave reaches you (once per pound), × attack damage.")] public float poundDamage = .9f;
+        [Tooltip("Knockback tier on you; you are pushed along the shockwave.")] public KnockTier poundKnock = KnockTier.Medium;
+
+        [Header("Tyrant: Rampage Charge (middle distance, line warning)")]
+        [Min(0f), Tooltip("Wind-up; the line, as wide as its body, shows the run and the leap up to the landing circle, or up to the wall, bulwark or hole it will run into. Shorter while enraged (tyrantEnragedWindupShare).")] public float rushWindup = 1f;
+        [Min(.1f), Tooltip("Run speed before the scene's global movement multiplier (WaveManager.movementSpeedMultiplier: 0.5 makes 18 run at 9 cells per second).")] public float rushSpeed = 18f;
+        [Min(0f), Tooltip("Shortest run before the leap.")] public float rushMinRun = 3f;
+        [Min(0f), Tooltip("Longest run before the leap in phase 1; it runs until it is one leap short of where you stood when it took aim.")] public float rushMaxRun = 9f;
+        [Min(0f), Tooltip("Longest run before the leap in phase 2.")] public float rushMaxRunPhase2 = 14f;
+        [Min(0f), Tooltip("A wall, bulwark or hole edge that reaches less than this many cells into the side of its body only grazes it and the run slides past; anything reaching further across the line stops the run and stuns it.")] public float rushGraze = .1f;
+        [Min(0f), Tooltip("Length of the leap at the end of the run: it lands this far on along the line (or on the last ground before you it can walk on, when you stand in a gravity ring).")] public float rushLeapDistance = 3f;
+        [Min(.05f), Tooltip("Seconds in the air.")] public float rushLeapFlight = .55f;
+        [Min(0f), Tooltip("Peak height of the leap, cells (visual only).")] public float rushLeapHeight = 2.5f;
+        [Min(0f), Tooltip("Radius of the landing slam in phase 1 (bodies count); it hits everything inside, its own minions included.")] public float rushSlamRadius = 4f;
+        [Min(0f), Tooltip("Radius of the landing slam in phase 2.")] public float rushSlamRadiusPhase2 = 6f;
+        [Min(0f), Tooltip("Landing slam damage, × attack damage.")] public float rushSlamDamage = 1.3f;
+        [Tooltip("Knockback tier of the landing slam (document 5.3: fly).")] public KnockTier rushSlamKnock = KnockTier.Fly;
+        [Min(0f), Tooltip("Damage when the run itself runs you down (once per charge), × attack damage.")] public float rushRunDamage = .6f;
+        [Tooltip("Knockback tier of the run: you are pushed aside out of its lane.")] public KnockTier rushRunKnock = KnockTier.Light;
+        [Min(0f), Tooltip("Seconds it stands still after the landing. Shorter while enraged (tyrantEnragedWindupShare).")] public float rushRecovery = 1f;
+
+        [Header("Tyrant: Royal Scepter (middle distance, phase 2)")]
+        [Min(0f), Tooltip("Seconds it raises the scepter before the red crosses show.")] public float scepterWindup = 1f;
+        [Range(0f, 1f), Tooltip("One scepter calls this share of wave 14's crowd (its population target), with wave 14's kinds and mix; its minions alive or on the way never exceed a full wave-14 crowd.")] public float scepterCrowdShare = .5f;
+        [Min(0f), Tooltip("The red crosses show on a ring of this radius around it (or on the usual spawn ring around you where that ground is taken).")] public float scepterRingRadius = 5f;
+        [Min(0f), Tooltip("Seconds after a scepter before it can raise the next one.")] public float scepterCooldown = 18f;
+
+        [Header("Tyrant: Star Throw (far, impact circle, leaves walls)")]
+        [Min(0f), Tooltip("Seconds it kneads the meteor before it throws. Shorter while enraged (tyrantEnragedWindupShare).")] public float meteorWindup = .8f;
+        [Min(.05f), Tooltip("Seconds the meteor flies; its impact circle shows where you stood at the throw and fills as the meteor nears.")] public float meteorFlight = 1.1f;
+        [Min(0f), Tooltip("Peak height of the meteor's arc, cells (visual only).")] public float meteorHeight = 6f;
+        [Min(0f), Tooltip("Impact radius in phase 1 (your body counts).")] public float meteorRadius = 3.5f;
+        [Min(0f), Tooltip("Impact radius in phase 2.")] public float meteorRadiusPhase2 = 5.5f;
+        [Min(0f), Tooltip("Impact damage, × attack damage.")] public float meteorDamage = 1.1f;
+        [Tooltip("Knockback tier of the impact.")] public KnockTier meteorKnock = KnockTier.Medium;
+        [Min(0), Tooltip("Fragments the meteor splits into in phase 1; each stands as a small wall.")] public int meteorFragments = 4;
+        [Min(0), Tooltip("Fragments in phase 2.")] public int meteorFragmentsPhase2 = 6;
+        [Range(0f, 1f), Tooltip("The fragments land evenly on a ring this share of the impact radius out from its centre (the ring turned at random).")] public float meteorFragmentSpread = .75f;
+        [Min(.5f), Tooltip("Side of each fragment wall, cells.")] public float meteorFragmentSize = 1.6f;
+        [Min(0f), Tooltip("Seconds a fragment wall stands (the Tail Sweep breaks it sooner). A fragment never lands on a body, a wall or a hole.")] public float meteorFragmentLife = 12f;
+
+        [Header("Tyrant: Astral Guard (far, phase 2)")]
+        [Min(0f), Tooltip("Seconds it channels; a ring shows how far it reaches.")] public float astralChannel = 1.6f;
+        [Min(0f), Tooltip("It devours minions within this distance of its centre (their body counts).")] public float astralRadius = 7f;
+        [Min(1), Tooltip("It only channels when at least this many minions stand within reach.")] public int astralMinMinions = 2;
+        [Min(1), Tooltip("Most minions one Astral Guard devours, the nearest first.")] public int astralMaxDevour = 4;
+        [Range(0f, 1f), Tooltip("HP it restores per minion devoured, as a share of its max HP.")] public float astralHealPerMinion = .02f;
+        [Range(0f, 1f), Tooltip("Shield it gains per minion devoured, as a share of its max HP.")] public float astralShieldPerMinion = .03f;
+        [Range(0f, 1f), Tooltip("This never raises its shield past this share of its max HP.")] public float astralShieldCap = .2f;
 
         public static readonly BossTuning Defaults = new();
     }

@@ -9,7 +9,7 @@ namespace AnomalyArena
                                                                                                                                                                                                      
                                                                                                                                                          
                   
-    public class Enemy : Combatant
+    public partial class Enemy : Combatant
     {
         [Header("Attack")] public float attackDamage = 5f;
 
@@ -94,10 +94,10 @@ namespace AnomalyArena
         bool specialWindup;
 
         public bool LineTelegraph => definition && (definition.kind == EnemyKind.Rammer ||
-                                                    definition.kind == EnemyKind.Tyrant && bossAttack == ChargeMove);
+                                                    definition.kind == EnemyKind.Tyrant && bossAttack is ChargeMove or RampageChargeMove);
 
         public bool CleaveTelegraph => definition && definition.kind == EnemyKind.Tyrant &&
-                                       bossAttack is CleaveMove or BackSlashMove;
+                                       bossAttack is CleaveMove or BackSlashMove or TailSweepMove;
 
                                                                                                                                                      
         public bool CircleTelegraph => IsBoss && (definition.kind == EnemyKind.Hollow && bossAttack == PulseMove ||
@@ -342,6 +342,8 @@ namespace AnomalyArena
                 }
             }
 
+            ConfigureTyrant(data);                                                                                                         
+
             if (bodyRenderer)
             {
                 if (savedBodyScale == Vector3.zero) savedBodyScale = bodyRenderer.transform.localScale;
@@ -365,12 +367,13 @@ namespace AnomalyArena
             if (IsBoss)
             {
                                                                                                                                                      
-                if (bossStun > 0f && info.source != DamageSource.Wall) info.amount *= 1.5f;
+                if (bossStun > 0f && info.source != DamageSource.Wall) info.amount *= StunDamageTaken;
                                                                                                                           
                 info.knockDistance = 0f;
             }
             else if (Immovable) info.knockDistance = 0f;
 
+            if (TurnedAwayByWard()) return false;                                                                            
             bool accepted = base.ReceiveDamage(info);
                                                                                                                                
                                                                  
@@ -550,6 +553,8 @@ namespace AnomalyArena
                 }
             }
 
+            if (definition.kind == EnemyKind.Tyrant) return TickTyrant(dt, player);                                                 
+
             if (IsBoss)
             {
                 if (leaping)
@@ -558,6 +563,7 @@ namespace AnomalyArena
                     return true;
                 }
 
+                if (definition.kind == EnemyKind.Hollow) return TickProphet(dt, player);                                      
                                                                                                                
                 TickLandingZones(dt);
                 TickSummonWarning(dt);
@@ -1079,6 +1085,7 @@ namespace AnomalyArena
             summonMarkers.Clear();
             summonPoints.Clear();
             landingZones.Clear();
+            ClearNashFight();
         }
 
         void TickPlatform(float dt)
@@ -1488,7 +1495,8 @@ namespace AnomalyArena
                       
         Vector3 KeepOffEdges(Vector3 v, float dt)
         {
-            if (!WorldMap.Active || WorldMap.Active.TrialActive) return v;
+            if (!WorldMap.Active) return v;
+            if (WorldMap.Active.TrialActive) return WorldMap.Active.KeepOnTrialGround(Position, v, dt, radius);                           
             if (!IsBoss) v *= Quicksand.SpeedFactor(Position);
             bool allowGravity = definition && definition.speed >= gravityFollowSpeed &&
                                 WorldMap.Active.GetPull(GM.player.Position).sqrMagnitude > 0.01f;
@@ -1618,7 +1626,7 @@ namespace AnomalyArena
 
         protected override void OnDied()
         {
-            if (definition && (IsBoss || !SuppressRewards))
+            if (definition && (IsBoss || !SuppressRewards || BossSummon))                                                                   
             {
                 if (definition.kind == EnemyKind.Bloater && !dyingExplosion)
                 {
