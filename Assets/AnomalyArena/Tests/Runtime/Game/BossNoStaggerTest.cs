@@ -12,7 +12,7 @@ namespace AnomalyArena
                                                                                                                                       
                                                                                                                                     
                                                                                                                                         
-                                                           
+                                                             
     [TestFixture]
     [Category("V3Smoke")]
     public class BossNoStaggerTest
@@ -42,7 +42,7 @@ namespace AnomalyArena
             Assert.That(typeof(ElementStatus).GetEvent("OnControlThreshold", members), Is.Null,
                 "a boss reaching a Frost or Lightning threshold feeds nothing toward a stun");
             Assert.That(typeof(BossTuning).GetField("prophetStunSeconds"), Is.Null, "the Prophet has no stun of its own any more");
-            Assert.That(typeof(BossTuning).GetField("wallHitStun"), Is.Not.Null, "the Tyrant's wall-hit stun stays");
+            Assert.That(typeof(BossTuning).GetField("tyrantWallStun"), Is.Not.Null, "the Tyrant's wall-hit stun stays");
         }
 
         [Test]

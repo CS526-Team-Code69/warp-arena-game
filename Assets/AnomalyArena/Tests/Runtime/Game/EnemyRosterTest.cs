@@ -276,7 +276,7 @@ namespace AnomalyArena
             Assert.That(target.attackInterval, Is.EqualTo(spitter.interval).Within(.0001f),
                 "other affixes keep the interval");
 
-            Assert.That(waves.TyrantImmunities, Is.EquivalentTo(new[] { ElementKind.Frost, ElementKind.Lightning }),
+            Assert.That(waves.TyrantImmunities, Is.EqualTo(new[] { ElementKind.Frost, ElementKind.Lightning }),
                 "the Tyrant ignores Frost and Lightning");
         }
 

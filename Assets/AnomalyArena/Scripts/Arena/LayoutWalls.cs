@@ -27,7 +27,7 @@ namespace AnomalyArena
             return added;
         }
 
-        static Transform ClosestInSize(Transform group, int count, Rect rect)
+        internal static Transform ClosestInSize(Transform group, int count, Rect rect)
         {
             Transform best = group.GetChild(0);
             float bestScore = float.MaxValue;

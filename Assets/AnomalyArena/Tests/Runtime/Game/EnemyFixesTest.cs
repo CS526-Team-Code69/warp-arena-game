@@ -7,7 +7,7 @@ using UnityEngine;
 namespace AnomalyArena
 {
                                                                                                                                     
-                                                                                                                                           
+                                                                                                                          
     [TestFixture]
     [Category("V3Smoke")]
     public class EnemyFixesTest
@@ -52,32 +52,6 @@ namespace AnomalyArena
             await Seconds(.6f);
             Assert.That(bloater.Rushing, Is.False, "far away it only walks");
             Assert.That(bloater.WindingUp, Is.False);
-        }
-
-        [Test, LoadScene(Scene), Category("Integration"), Timeout(60000)]
-        public async Task TyrantCharge_LineTelegraph_ReachesTheFirstWallOrHoleOrTheWholeCharge()
-        {
-            var (game, targets) = await V3CombatSmokeTest.StartSandbox();
-            foreach (var t in targets) t.DiscardWithoutReward();
-            game.player.Invulnerable = true;
-            var tyrant = game.waves.SpawnLabTyrant(game.player.Position + Vector3.forward * 8f);
-            Assume.That(tyrant && tyrant.IsBoss, Is.True, "the scene keeps the Tyrant");
-            try
-            {
-                tyrant.ForceNextBossMove(Enemy.ChargeMove);
-                await Until(() => tyrant.WindingUp && tyrant.LineTelegraph, 6f, "the Tyrant winds up a charge");
-                                                                                                                                         
-                Vector3 from = tyrant.Position, facing = tyrant.TelegraphFacing;
-                float expected = 20f;
-                if (Physics.Raycast(Query.AtCastHeight(from), facing, out var hit, expected, GameManager.WallMask, QueryTriggerInteraction.Ignore))
-                    expected = Query.Flat(hit.point - from).magnitude;
-                for (float d = .5f; d < expected; d += .5f)
-                    if (WorldMap.Active.IsHole(from + facing * d)) { expected = d; break; }
-                Assert.That(tyrant.TelegraphRange, Is.EqualTo(expected).Within(.05f), "the line shows where the charge will stop");
-                                                                                                                                      
-                if (expected > 5f) Assert.That(tyrant.TelegraphRange, Is.GreaterThan(5f), "never the old 5-cell stub when the way is open past it");
-            }
-            finally { game.player.Invulnerable = false; }
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]

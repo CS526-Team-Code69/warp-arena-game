@@ -313,13 +313,14 @@ namespace AnomalyArena
                 snapshot.waveTimeExpired=waves&&waves.Phase==WavePhase.WaveActive&&waves.TimeExpired;snapshot.waveBatch=waves?waves.BatchIndex:0;snapshot.waveLiving=waves?waves.LivingCount:0;snapshot.wavePending=waves?waves.PendingCount:0;
                 snapshot.draftCount=greaterDraft?1:buildDraftCount;snapshot.draftIndex=greaterDraft?1:Mathf.Clamp(buildDraftCount-snapshot.bankedDrafts+1,1,Mathf.Max(1,buildDraftCount));snapshot.buildSummary=buildSummary.Trim();
                 snapshot.bossImmunities="";
+                                                                                                                                                
                 for(int i=0;i<snapshot.bossImmunityIndices.Length;i++)
                 {
-                    bool known=snapshot.wave>=11&&i<waves.TyrantImmunities.Length;var immune=known?waves.TyrantImmunities[i]:ElementKind.None;
+                    bool known=waves.Phase==WavePhase.FinalBoss&&i<waves.TyrantImmunities.Length;var immune=known?waves.TyrantImmunities[i]:ElementKind.None;
                     snapshot.bossImmunityIndices[i]=known?ElementIndex(immune):-1;
                     if(known)snapshot.bossImmunities+=(i==0?ArenaText.Pair("Tyrant King immunities: ","Tyrant King immunities: "):" · ")+ArenaTerms.Element(immune);
                 }
-                snapshot.banner=RunPhase==ArenaUiState.WaveIntro?ArenaText.Pair("WAVE "+snapshot.wave,"WAVE "+snapshot.wave)+(snapshot.wave==11?"\n"+snapshot.bossImmunities:""):"";
+                snapshot.banner=RunPhase==ArenaUiState.WaveIntro?ArenaText.Pair("WAVE "+snapshot.wave,"WAVE "+snapshot.wave):"";
                 snapshot.resultTitle=State==GameState.Won?ArenaText.Pair("EARTH IS WITHIN REACH","EARTH IS WITHIN REACH"):ArenaText.Pair("EXPLORER LOST","EXPLORER LOST");snapshot.resultDetails=ArenaText.Pair($"Wave {snapshot.wave} · Level {snapshot.level} · {snapshot.kills} kills\n{Elapsed:0} seconds on the Interstellar Battlefield",$"Wave {snapshot.wave} · Level {snapshot.level} · {snapshot.kills} kills\n{Elapsed:0} seconds on the Interstellar Battlefield");
                 if(runWeapons){for(int i=0;i<2;i++)WriteSlot(snapshot.handSlots[i],runWeapons.Hand[i],i==runWeapons.ActiveIndex);for(int i=0;i<snapshot.autoSlots.Length;i++)WriteSlot(snapshot.autoSlots[i],i<runWeapons.Auto.Length?runWeapons.Auto[i]:null,false);for(int i=0;i<snapshot.armoryOffers.Length;i++){var w=i<runWeapons.Offers.Length?runWeapons.Offers[i]:null;WriteArmoryOffer(snapshot.armoryOffers[i],w);}}
                 for(int i=0;i<snapshot.armoryOffers.Length;i++)
