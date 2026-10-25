@@ -20,6 +20,8 @@ namespace AnomalyArena
         const float WallClockLimit = 1200f;
         const float HitInterval = .25f;
         const float StallSeconds = 60f;
+        const float StuckSeconds = 3f;
+        const float BenchSeconds = 10f;
         static string LogsDir => Path.GetFullPath(Path.Combine(Application.dataPath, "..", "Logs"));
         static string RequestPath => Path.Combine(LogsDir, "xp-pacing.request");
 
@@ -67,14 +69,23 @@ namespace AnomalyArena
                 return total;
             }
 
-            float potentialXp = 0f;
+            float potentialXp = 0f, fixedXp = 0f;
             int kills = 0;
             var kinds = new Dictionary<string, int>();
             var causes = new Dictionary<DeathCause, int>();
+            var stalledKinds = new Dictionary<string, int>();
+            int refused = 0, switched = 0;
+
+            var benched = new Dictionary<Enemy, float>();
+            Enemy current = null;
+            float currentSince = 0f, currentTotal = 0f;
             game.waves.EnemyEliminated += enemy =>
             {
                 if (!enemy || enemy.SuppressRewards || enemy.IsTrialSummon) return;
-                potentialXp += game.waves.ExperienceFor(enemy);
+                float reward = game.waves.ExperienceFor(enemy);
+                potentialXp += reward;
+
+                if (enemy.Mini || enemy.definition && !enemy.Elite && EnemyRoles.IsMelee(enemy.definition.kind)) fixedXp += reward;
                 kills++;
                 string kind = (enemy.definition ? enemy.definition.kind.ToString() : "?") + (enemy.Elite ? "*" : "") +
                               (enemy.Mini ? "m" : "");
@@ -84,7 +95,7 @@ namespace AnomalyArena
 
             var rows = new List<string>();
             int completedWaves = 0, killsAtWaveStart = 0, killsAtExpiry = 0, stalled = 0;
-            float waveStartedAt = -1f, expiredAt = -1f, potentialAtWaveStart = 0f, collectedAtWaveStart = 0f;
+            float waveStartedAt = -1f, expiredAt = -1f, potentialAtWaveStart = 0f, collectedAtWaveStart = 0f, fixedAtWaveStart = 0f;
             game.waves.WaveCompleted += wave =>
             {
                 completedWaves = wave;
@@ -104,17 +115,24 @@ namespace AnomalyArena
                     $"[XpPacing] eff={efficiency:0.00} wave={wave,2} secs={seconds,5:0.0}/{definition.duration,-3:0} (timer {timer:0} + cleanup {cleanup:0})"
                     + $" kills={kills - killsAtWaveStart,3} (pre-expiry {killsAtExpiry - killsAtWaveStart}) stall={stalled}"
                     + $" potXp={potentialXp - potentialAtWaveStart,6:0.0} gotXp={got - collectedAtWaveStart,6:0.0} modelXp={modelXp,6:0.0}"
+                    + $" fixXp={fixedXp - fixedAtWaveStart,6:0.0} scale={balance.DpsAt(wave) / balance.DpsAt(1) * definition.experienceScale:0.000}"
                     + $" level={progression.Level,2} xp={progression.Xp,5:0.0}/{progression.XpRequired,-3} drafts={progression.BankedDrafts}"
                     + $" guar={guaranteed,2} fast={fast,2} {(progression.Level >= guaranteed ? "ok" : "MISS")}"
-                    + $" | kinds {kindList} | causes {causeList}";
+                    + $" | kinds {kindList} | causes {causeList}"
+                    + $" | refused {refused} switched {switched} | stalled {string.Join(" ", stalledKinds.OrderByDescending(p => p.Value).Select(p => $"{p.Key}:{p.Value}"))}";
                 rows.Add(row);
                 Debug.Log(row);
                 waveStartedAt = -1f;
                 expiredAt = -1f;
                 stalled = 0;
+                refused = 0;
+                switched = 0;
+                benched.Clear();
+                stalledKinds.Clear();
                 kinds.Clear();
                 causes.Clear();
                 potentialAtWaveStart = potentialXp;
+                fixedAtWaveStart = fixedXp;
                 collectedAtWaveStart = got;
                 killsAtWaveStart = kills;
                 killsAtExpiry = kills;
@@ -145,12 +163,27 @@ namespace AnomalyArena
 
                     if (hitClock >= HitInterval && bank >= 1f)
                     {
-                        var target = PickTarget(game);
+                        var target = PickTarget(game, benched);
+                        float total = target ? target.Hp + (ElementStatus.For(target) ? ElementStatus.For(target).Shield : 0f) : 0f;
+                        if (target != current || total < currentTotal - .5f)
+                        {
+                            current = target;
+                            currentSince = Time.time;
+                            currentTotal = total;
+                        }
+                        else if (target && Time.time - currentSince > StuckSeconds)
+                        {
+                            benched[target] = Time.time + BenchSeconds;
+                            switched++;
+                            current = null;
+                            target = PickTarget(game, benched);
+                        }
                         if (target && target.ReceiveDamage(DamageInfo.Attack(bank, null)))
                         {
                             bank = 0f;
                             hitClock = 0f;
                         }
+                        else if (target) refused++;
                     }
 
                     if (expiredAt >= 0f && Time.time - expiredAt > StallSeconds)
@@ -158,6 +191,9 @@ namespace AnomalyArena
                         foreach (var enemy in game.waves.Alive.ToArray())
                         {
                             if (!enemy || !enemy.IsAlive) continue;
+                            string kind = (enemy.definition ? enemy.definition.kind.ToString() : "?") + (enemy.Elite ? "*" : "")
+                                          + (enemy.Mini ? "m" : "") + (enemy.Protected ? "(protected)" : "");
+                            stalledKinds[kind] = stalledKinds.TryGetValue(kind, out var n) ? n + 1 : 1;
                             enemy.DiscardWithoutReward();
                             stalled++;
                         }
@@ -208,7 +244,7 @@ namespace AnomalyArena
             Assert.That(stop, Is.Null, "the driver reaches the end of the ordinary waves");
         }
 
-        static Enemy PickTarget(GameManager game)
+        static Enemy PickTarget(GameManager game, Dictionary<Enemy, float> benched)
         {
             Enemy best = null;
             float bestScore = float.MaxValue;
@@ -219,6 +255,7 @@ namespace AnomalyArena
                 float score = Query.Flat(enemy.Position - origin).magnitude;
                 if (enemy.definition && enemy.definition.kind is EnemyKind.Warden or EnemyKind.Chanter) score -= 1000f;
                 if (enemy.Protected || enemy.State == CharacterState.Dashing) score += 500f;
+                if (benched.TryGetValue(enemy, out float until) && Time.time < until) score += 5000f;
                 if (score < bestScore)
                 {
                     bestScore = score;

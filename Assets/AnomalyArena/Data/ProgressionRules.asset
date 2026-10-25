@@ -50,19 +50,19 @@ MonoBehaviour:
     - 2
     - 1
   levelCosts:
-  - 15
-  - 17
-  - 23
-  - 23
-  - 30
-  - 41
-  - 56
-  - 76
-  - 189
-  - 191
-  - 253
+  - 16
+  - 20
+  - 28
+  - 34
+  - 62
+  - 63
+  - 112
+  - 176
+  - 458
+  - 576
+  - 894
   maxLevel: 12
-  xpPerStatDraft: 123
+  xpPerStatDraft: 434
   energyMax: 100
   maxHpPerLevel: 5
   maxEnergyPerLevel: 6

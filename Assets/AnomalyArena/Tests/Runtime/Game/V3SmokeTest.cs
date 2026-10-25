@@ -144,7 +144,7 @@ namespace AnomalyArena
             var progression = game.progression;
             game.player.ReceiveDamage(new DamageInfo { amount = 5f, source = DamageSource.Poison, ignoreShield = true });
 
-            progression.GainXp(15f);
+            progression.GainXp(progression.Rules.levelCosts[0]);
 
             Assert.That(progression.Level, Is.EqualTo(2), "level two");
             Assert.That(game.player.maxHp, Is.EqualTo(30f), "level-two max HP");
@@ -157,7 +157,7 @@ namespace AnomalyArena
             Assert.That(progression.TrySpendEnergy(40f), Is.True, "spend some Energy before levelling");
             game.player.ReceiveDamage(new DamageInfo { amount = 10f, source = DamageSource.Poison, ignoreShield = true });
 
-            progression.GainXp(899f);
+            progression.GainXp(progression.Rules.levelCosts.Skip(1).Sum());
             Assert.That(progression.Level, Is.EqualTo(12), "level cap");
             Assert.That(game.player.maxHp, Is.EqualTo(80f), "max-level HP without HP cards");
             Assert.That(game.player.Hp, Is.EqualTo(80f), "HP is full again after the level-ups");
@@ -165,7 +165,7 @@ namespace AnomalyArena
             Assert.That(progression.Energy, Is.EqualTo(316f), "unlocked mana refills on true level-up");
             int before = progression.BankedDrafts;
 
-            progression.GainXp(123f);
+            progression.GainXp(progression.Rules.xpPerStatDraft);
 
             Assert.That(progression.BankedDrafts, Is.EqualTo(before + 1), "post-cap XP grants one further card choice");
             Assert.That(game.player.maxHp, Is.EqualTo(80f), "post-cap draft grants no extra level HP");

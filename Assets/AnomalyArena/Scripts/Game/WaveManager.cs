@@ -135,8 +135,10 @@ namespace AnomalyArena
         }
                      
                                                                                                                                                        
-                                                                                                                                                                     
-                                                                                                                              
+                                                                                                                                                                    
+                                                                                                                                                  
+                                                                                                                                               
+                     
                       
         public float ExperienceFor(Enemy enemy)
         {
@@ -148,8 +150,14 @@ namespace AnomalyArena
                 : balance ? Mathf.Max(0f, xpPerReferenceSecond) * balance.TargetSeconds(enemy.definition, enemy.Elite)
                 : enemy.definition.xp * (enemy.Elite ? 5f : 1f);                                                   
             float affix = enemy.Affix != ElementKind.None ? Mathf.Max(0f, affixExperienceBonus) : 0f;
-            return (body + affix) * Mathf.Max(0f, experienceRateMultiplier);
+            return (body + affix) * Mathf.Max(0f, experienceRateMultiplier) * WaveExperienceScale;
         }
+
+                                                                                                                                        
+                                                                                                                                      
+                                                                                         
+        public float WaveExperienceScale => waveSet && waveSet.waves is { Length: > 0 } && WaveIndex >= 0
+            ? CombatScale * Mathf.Max(0f, waveSet.waves[Mathf.Min(WaveIndex, waveSet.waves.Length - 1)].experienceScale) : 1f;
         [Header("Player-near batch spawning")]
         [Tooltip("Inner radius of the regular spawn ring; does not change per-wave stat growth.")] public float nearbySpawnMin = 8f;
         [Tooltip("Spawn candidates stay within this player-relative distance; distant map anchors are excluded.")] public float nearbySpawnMax = 18f;
@@ -249,8 +257,9 @@ namespace AnomalyArena
 
         static float OrdinaryAffixShare(int index) => index < 4 ? 0f : index < 7 ? .1f : index < 10 ? .15f : .25f;
 
-                                                                                                                                            
-                                                                                                                                            
+                                                                                                                                               
+                                                                                                                                           
+                                                    
         readonly Dictionary<(EnemyKind kind, bool elite), float> experienceTable = new();
         void BuildExperienceTable()
         {
@@ -270,7 +279,7 @@ namespace AnomalyArena
                     rows.Add($"{data.kind}{(elite ? "*" : "")}={xp:0.00}");
                 }
             }
-            if (rows.Count > 0) Debug.Log($"[Waves] wave {WaveIndex + 1} experience table: {string.Join(" ", rows)}");
+            if (rows.Count > 0) Debug.Log($"[Waves] wave {WaveIndex + 1} experience table (x{WaveExperienceScale:0.00} this wave): {string.Join(" ", rows)}");
         }
 
         void BeginV2Wave(int index)

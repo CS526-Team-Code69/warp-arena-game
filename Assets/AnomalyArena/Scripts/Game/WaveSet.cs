@@ -14,6 +14,12 @@ namespace AnomalyArena
             public float hpMultiplier = 1f;
             public float buildTime = 20f;
 
+            [Min(0f), Tooltip(
+                "Design doc 9.2: extra multiplier on the XP of special minions (Spitter, Warden, ...) and elites in this wave, on top of " +
+                "the wave's difficulty curve (their XP already grows with enemy HP). 1 keeps the curve. Melee swarm, mini Splitters and " +
+                "bosses keep their fixed XP. Re-run the XP pacing driver (Anomaly Arena/V5/Run XP Pacing Driver) after changing it.")]
+            public float experienceScale = 1f;
+
             [Obsolete(
                 "No longer read: elites come from the batch elite share and maxConcurrentElites. Kept so saved assets still load.")]
             [HideInInspector]
