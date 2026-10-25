@@ -106,7 +106,8 @@ namespace AnomalyArena
                         Assert.That(xp, Is.EqualTo(game.waves.swarmExperienceReward), data.kind + " fixed swarm XP");
                     else
                         Assert.That(xp / balance.TargetSeconds(data, elite),
-                            Is.EqualTo(game.waves.xpPerReferenceSecond * game.waves.experienceRateMultiplier)
+                            Is.EqualTo(game.waves.xpPerReferenceSecond * game.waves.experienceRateMultiplier
+                                       * game.waves.WaveExperienceScale)
                                 .Within(.0001f), data.kind + " XP per budget second");
                     float hp = target.maxHp;
                     game.progression.Stats.damageBonus += 1f;
