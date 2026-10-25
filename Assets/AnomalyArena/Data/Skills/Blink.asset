@@ -61,8 +61,8 @@ MonoBehaviour:
   singularityBaseDamage: 10
   singularityDamagePerEnemy: 4
   descriptions:
-  - Teleport up to 6; cancel knockback.
-  - Teleport up to 8; cancel knockback.
+  - Teleport up to 6.
+  - Teleport up to 8.
   - Teleport up to 8; two charges, each with its own cooldown.
   icon: {fileID: 0}
   levelDamageGrowth: 1.35

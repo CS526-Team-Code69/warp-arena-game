@@ -43,7 +43,8 @@ namespace AnomalyArena
             if (!targetBoard || !targetBoard.Rules || element == ElementKind.None) return;
             if (element is ElementKind.Earth or ElementKind.Light or ElementKind.Void)
             {
-                sourceBoard?.PayWielder(element, actualDamage * targetBoard.ElementFactor(element, source));
+
+                sourceBoard?.PayWielder(element, actualDamage);
                 return;
             }
             if (!target.IsAlive) return;
@@ -76,8 +77,15 @@ namespace AnomalyArena
             }
         }
 
+        static bool Conducts(Combatant body)
+        {
+            var status = ElementStatus.For(body);
+            return !status || status.ElementFactor(ElementKind.Lightning) > 0f;
+        }
+
         static void JumpLightning(Combatant original, float stacks, Combatant source, StatusRules rules)
         {
+            if (!Conducts(original)) return;
             visited.Clear(); queue.Clear(); visited.Add(original); queue.Add(original);
             for (int cursor = 0; cursor < queue.Count && visited.Count < rules.lightningJumpMax + 1; cursor++)
             {
@@ -93,8 +101,11 @@ namespace AnomalyArena
                     if (!status) continue;
 
                     float keep = Mathf.Pow(Mathf.Clamp01(rules.lightningChainFalloff), visited.Count - 1);
-                    visited.Add(c); queue.Add(c);
-                    c.ReceiveDamage(DamageInfo.Attack(rules.lightningJumpDamage * WaveScale * keep, source, kind: HitKind.Bullet));
+                    visited.Add(c);
+                    if (Conducts(c)) queue.Add(c);
+
+                    float share = status.DamageFactor(ElementKind.Lightning, source);
+                    if (share > 0f) c.ReceiveDamage(DamageInfo.Attack(rules.lightningJumpDamage * WaveScale * keep * share, source, kind: HitKind.Bullet));
                     status.Add(ElementKind.Lightning, stacks * keep, source);
                 }
             }

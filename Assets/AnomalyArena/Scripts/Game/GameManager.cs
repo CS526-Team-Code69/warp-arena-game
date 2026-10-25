@@ -26,6 +26,9 @@ namespace AnomalyArena
 
             [Tooltip("Knockback damping: initial speed = distance × damping")]
             public float knockDamping = 6f;
+
+            [Tooltip("Document 5.3: how far each knockback tier pushes, and how an enemy's body size resists a push.")]
+            public KnockbackRules knockback = new();
         }
 
         [Serializable]

@@ -120,7 +120,9 @@ namespace AnomalyArena
                 Vector3 delta=Query.Flat(body.Position-from);float distance=delta.magnitude;
                 if(distance<.01f||distance>range+body.radius||Vector3.Angle(aim,delta)>half||WallBlocks(from,body.Position))continue;
                 float pull=Mathf.Max(0f,distance-body.radius-player.radius-upgrades.scatterVacuumGap);
-                if(pull>0f)body.Knockback(-delta/distance,pull,KnockKind.Hit);
+                                                                                                                                            
+                                                                            
+                if(pull>0f)body.Knockback(-delta/distance,pull/Mathf.Max(.01f,body.knockbackScale),KnockKind.Hit);
             }
             w.vacuumTimer=Mathf.Max(.0001f,upgrades.scatterVacuumDelay);w.vacuumDirection=aim;
             WeaponSound(w,WeaponAudioPhase.ChargeStart);
@@ -204,12 +206,15 @@ namespace AnomalyArena
             return true;
         }
 
-                                                                                                                                                   
+                                                                                                                               
+                                                                                     
         public string AnomalySlotDetail(RunWeapon w)
         {
             if(w==null)return "";
             if(w.form==WeaponForm.Knife&&w.variant==0&&w.knifeCaught)
                 return ArenaText.Pair($" · Caught +{upgrades.knifeCatchTargets}",$" · Caught +{upgrades.knifeCatchTargets}");
+            if(w.form==WeaponForm.Minigun&&w.variant==1&&MeltdownHasteLeft>0f)
+                return ArenaText.Pair($" · Attack speed +{upgrades.meltdownTameHaste*100f:0}% {MeltdownHasteLeft:0.0}s",$" · Attack speed +{upgrades.meltdownTameHaste*100f:0}% {MeltdownHasteLeft:0.0}s");
             return "";
         }
     }

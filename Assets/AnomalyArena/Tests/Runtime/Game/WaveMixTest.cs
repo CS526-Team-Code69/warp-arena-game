@@ -15,7 +15,7 @@ namespace AnomalyArena
     {
         const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
         const float Tolerance = 1e-4f;
-        static readonly string[] MapFamilies = { "DustFlats", "WreckField", "RiftZone" };
+        static readonly string[] MapFamilies = { "DustFlats", "WreckField" };                                                                
         UnityEngine.Random.State savedRandom;
 
         [SetUp]
@@ -177,7 +177,7 @@ namespace AnomalyArena
             Assert.That(failures, Is.Empty, "doc 7.6: each wave brings exactly two affix kinds");
         }
 
-        [TestCase(1, "RiftZone"), TestCase(3, "RiftZone"), TestCase(13, "WreckField"), LoadScene(Scene), Category("Integration"), Timeout(60000)]
+        [TestCase(1, "WreckField"), TestCase(6, "DustFlats"), TestCase(13, "WreckField"), LoadScene(Scene), Category("Integration"), Timeout(60000)]
         public async Task WaveSpawns_MapTiltsAKindDown_EveryKindTheWaveListsStillAppears(int wave, string family)
         {
             var game = await ReadyScene();
@@ -232,10 +232,10 @@ namespace AnomalyArena
         static bool InGroup(WaveManager waves, EnemyDefinition data, int wave, int group)
         {
             if (EnemyRoles.IsBoss(data.kind)) return false;
-            if (group == 0) return EnemyRoles.IsMelee(data.kind);
+            if (group == 1) return EnemyRoles.IsSpecial(data.kind);
             if (group == 2) return EnemyRoles.IsSpecial(data.kind) && data.canElite && wave >= waves.firstEliteWave;
-            return !EnemyRoles.IsMelee(data.kind) && (data.kind != EnemyKind.Spitter || wave >= waves.rangedFirstWave)
-                && (data.kind != EnemyKind.Warden || wave >= waves.supportFirstWave);
+            return (EnemyRoles.IsMelee(data.kind) || data.kind is EnemyKind.Spitter or EnemyKind.Warden)
+                && (data.kind != EnemyKind.Spitter || wave >= waves.rangedFirstWave) && (data.kind != EnemyKind.Warden || wave >= waves.supportFirstWave);
         }
 
         static int Tilted(WaveSet set, Biome biome, int wave, EnemyKind kind)

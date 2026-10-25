@@ -106,6 +106,7 @@ namespace AnomalyArena
             if (!MovementLocked && GM.State == GameState.Playing)
                 v = new Vector3(moveInput.x, 0f, moveInput.y) * (moveSpeed * sprintMultiplier * (GM.runWeapons ? GM.runWeapons.MoveMultiplier : 1f)
                     * (ElementStatus.For(this)?.PlayerChillMultiplier ?? 1f) * (GM.skills ? GM.skills.PlayerMoveMultiplier : 1f));
+            v *= Quicksand.SpeedFactor(Position);                                                                        
             rb.linearVelocity = new Vector3(v.x, rb.linearVelocity.y, v.z);
         }
 

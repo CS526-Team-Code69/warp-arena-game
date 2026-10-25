@@ -235,7 +235,11 @@ namespace AnomalyArena
                 var start = new Vector3(x, 0f, z);
                 bool clear = true;
                 for (int step = 0; step <= 34; step++)
-                    if (!map.IsWalkable(start + Vector3.forward * (step * .5f), 1.2f)) { clear = false; break; }
+                {
+
+                    var point = start + Vector3.forward * (step * .5f);
+                    if (!map.IsWalkable(point, 1.2f) || Quicksand.IsQuicksand(point)) { clear = false; break; }
+                }
                 if (clear && !Physics.SphereCast(Query.AtCastHeight(start), 1f, Vector3.forward,
                     out _, 17f, GameManager.WallMask, QueryTriggerInteraction.Ignore)) return start;
             }

@@ -48,8 +48,11 @@ namespace AnomalyArena
         public float windup = 0.5f;
         public float interval = 1f;
         public float reach = 0.8f;
+
+        [Tooltip("Bosses only: push of a plain hit (their moves push by Boss Tuning). Every other enemy pushes by its attack's knockback tier (GameManager > Rules > Knockback).")]
         public float knockback = 5f;
-        public float knockbackScale = 1f;
+
+        [HideInInspector] public float knockbackScale = 1f;
 
         [Tooltip(
             "Legacy reward weight. Rewards now come from WaveManager.ExperienceFor (fixed swarm XP, or XP per reference second of the TTK budget).")]

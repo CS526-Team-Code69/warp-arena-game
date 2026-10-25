@@ -37,9 +37,9 @@ namespace AnomalyArena
             new[] { EnemyKind.Spitter },
             new[] { EnemyKind.Spitter, EnemyKind.Warden },
             new[] { EnemyKind.Spitter, EnemyKind.Warden, EnemyKind.Chanter },
-            new[] { EnemyKind.Spitter, EnemyKind.Warden, EnemyKind.Bloater, EnemyKind.Rammer },
-            new[] { EnemyKind.Spitter, EnemyKind.Warden, EnemyKind.Spire, EnemyKind.Chanter },
             new[] { EnemyKind.Spitter, EnemyKind.Warden, EnemyKind.Stomper },
+            new[] { EnemyKind.Spitter, EnemyKind.Warden, EnemyKind.Spire, EnemyKind.Chanter },
+            new[] { EnemyKind.Spitter, EnemyKind.Warden, EnemyKind.Bloater, EnemyKind.Rammer },
             new[] { EnemyKind.Spitter, EnemyKind.Warden, EnemyKind.Rammer, EnemyKind.Stomper },
             new[] { EnemyKind.Spitter, EnemyKind.Warden, EnemyKind.Bloater, EnemyKind.Spire, EnemyKind.Chanter },
             new[] { EnemyKind.Spitter, EnemyKind.Warden, EnemyKind.Rammer, EnemyKind.Stomper, EnemyKind.Bloater },
@@ -77,7 +77,8 @@ namespace AnomalyArena
                 if (!listed.SequenceEqual(expected))
                     failures.Add(
                         $"wave {wave}: saved [{string.Join(",", listed)}] expected [{string.Join(",", expected)}]");
-                if (!waves.AllowsKind(wave, EnemyKind.Grunt)) failures.Add($"wave {wave}: no melee swarm");
+                foreach (var melee in new[] { EnemyKind.Grunt, EnemyKind.Brute, EnemyKind.Skitter, EnemyKind.Splitter })
+                    if (!waves.AllowsKind(wave, melee)) failures.Add($"wave {wave}: no {melee}");
                 if (waves.waves[wave - 1].weights.Length != Enum.GetValues(typeof(EnemyKind)).Length)
                     failures.Add($"wave {wave}: weights length {waves.waves[wave - 1].weights.Length}");
             }
@@ -242,8 +243,10 @@ namespace AnomalyArena
                 target.enabled = false;
                 Assert.That(EnemyRoles.KnocksBackPlayer(data.kind),
                     Is.EqualTo(EnemyRoles.IsBoss(data.kind) || data.kind is EnemyKind.Stomper or EnemyKind.Rammer), data.kind + " push rule");
+
+                float push = EnemyRoles.IsBoss(data.kind) ? data.knockback : KnockbackRules.Active.Distance(KnockbackRules.AttackTier(data.kind));
                 if (EnemyRoles.KnocksBackPlayer(data.kind))
-                    Assert.That(target.attackKnockback, Is.EqualTo(data.knockback), data.kind + " keeps its knockback");
+                    Assert.That(target.attackKnockback, Is.EqualTo(push), data.kind + " pushes by its tier");
                 else Assert.That(target.attackKnockback, Is.Zero, data.kind + " never pushes the player");
             }
         }
@@ -273,10 +276,8 @@ namespace AnomalyArena
             Assert.That(target.attackInterval, Is.EqualTo(spitter.interval).Within(.0001f),
                 "other affixes keep the interval");
 
-            var pool = new[] { ElementKind.Fire, ElementKind.Poison, ElementKind.Frost, ElementKind.Lightning };
-            Assert.That(waves.TyrantImmunities, Has.Length.EqualTo(2), "the Tyrant ignores two statuses");
-            Assert.That(waves.TyrantImmunities, Is.Unique.And.All.Matches<ElementKind>(e => pool.Contains(e)),
-                "drawn from Fire, Poison, Frost and Lightning");
+            Assert.That(waves.TyrantImmunities, Is.EquivalentTo(new[] { ElementKind.Frost, ElementKind.Lightning }),
+                "the Tyrant ignores Frost and Lightning");
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]

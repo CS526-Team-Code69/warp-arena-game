@@ -34,13 +34,16 @@ namespace AnomalyArena
         int ScaledOrdinaryCount(int count) => Mathf.CeilToInt(Mathf.Max(0, count) * Mathf.Max(0f, spawnCountMultiplier));
         [Header("Batch composition")]
         [Range(0f,1f), Tooltip("Melee swarm share of a full batch.")] public float swarmShare = .6f;
-        [Range(0f,1f), Tooltip("Spitter, Warden and ordinary specials share of a full batch (ramps in over waves 1-5).")] public float functionShare = .2f;
-        [Range(0f,1f), Tooltip("Elite share of a full batch from firstEliteWave; capped by maxConcurrentElites, the rest becomes swarm.")] public float eliteShare = .2f;
-        [Range(0f,.5f), Tooltip("Smallest share of its group's spawn weight (melee, functional or elite, after the map tilt) that every kind the wave lists keeps " +
+        [Range(0f,1f), Tooltip("Share of a full batch taken by ordinary specials (Rammer, Bloater, Spire, Stomper, Shade, Chanter) once they have ramped in: " +
+            "0.12 = 12%. Basics (melee kinds, Spitter, Warden) fill whatever specials and elites leave.")] public float specialShare = .12f;
+        [Min(1), Tooltip("Waves the special share takes to reach specialShare, counted from the first wave whose table lists a special (wave 4 lists the Chanter): " +
+            "5 = a fifth of it in that wave, all of it four waves later (system doc 11.2: specials join gradually).")] public int specialRampWaves = 5;
+        [Range(0f,1f), Tooltip("Elite share of a full batch from firstEliteWave; capped by maxConcurrentElites, the rest becomes basics.")] public float eliteShare = .2f;
+        [Range(0f,.5f), Tooltip("Smallest share of its group's spawn weight (basic, special or elite, after the map tilt) that every kind the wave lists keeps " +
             "while it can spawn: 0.1 = 10%. A map may shift the mix but never removes a listed kind; a group with too many kinds for this share splits evenly.")]
         public float minKindShare = .1f;
         [SerializeField] int crowdBalanceRevision;
-        int swarmRemaining, functionRemaining, eliteRemaining;
+        int basicRemaining, specialRemaining, eliteRemaining;
         [Header("Experience (system doc §9.2)")]
         [Min(0f), Tooltip("Fixed XP of every non-elite melee swarm enemy (§9.2: 0.5). Not scaled by experienceRateMultiplier.")]
         public float swarmExperienceReward = .5f;
@@ -80,7 +83,8 @@ namespace AnomalyArena
         [Header("Bosses (system doc §13)")]
         [Tooltip("Move numbers of the Nash Prophet (void trial) and the Tyrant (final boss).")] public BossTuning bosses = new();
         static readonly ElementKind[] EliteElements = { ElementKind.Fire, ElementKind.Poison, ElementKind.Frost, ElementKind.Lightning, ElementKind.Earth, ElementKind.Light, ElementKind.Void };
-        static readonly ElementKind[] TyrantImmunityPool = { ElementKind.Fire, ElementKind.Poison, ElementKind.Frost, ElementKind.Lightning };
+                                                                                                                                   
+        static readonly ElementKind[] TyrantImmunityPool = new List<ElementKind>(ElementImmunity.Boss).ToArray();
                                                                                        
         public int ActiveEliteCount { get { int count = 0; foreach (var enemy in alive) if (enemy && enemy.IsAlive && enemy.Elite) count++; if (preparedMarkers != null) foreach (var marker in preparedMarkers) if (marker && marker.gameObject.activeSelf && marker.elite) count++; return count; } }
                                                                                                                      
@@ -96,15 +100,31 @@ namespace AnomalyArena
         [Tooltip("First five waves as a fraction of full density; later waves use full density.")] public float[] earlyPopulationScale = { .3f,.4f,.5f,.65f,.8f };
         [SerializeField] int quickFeedbackRevision;
         int spawnSectorCursor;
+                     
+                                                                                                                                                 
+                                                                                                                                                    
+                                                                                                                              
+                      
         public Vector3 ActiveRoleShares
         {
             get
             {
-                int wave = WaveIndex + 1;
-                float functional = functionShare * Mathf.Clamp01((wave - 1) / 4f);
+                int wave = WaveIndex + 1, first = FirstSpecialWave();
+                float special = first > 0 && wave >= first ? specialShare * Mathf.Clamp01((wave - first + 1f) / Mathf.Max(1, specialRampWaves)) : 0f;
                 float elite = wave < firstEliteWave ? 0f : eliteShare * (wave < 8 ? .25f : wave < 10 ? .5f : 1f);
-                return new Vector3(Mathf.Max(0f,1f-functional-elite),functional,elite);
+                return new Vector3(Mathf.Max(0f,1f-special-elite),special,elite);
             }
+        }
+                                                                                                                       
+        int FirstSpecialWave()
+        {
+            if (!waveSet || waveSet.waves == null) return 0;
+            for (int i = 0; i < waveSet.waves.Length; i++)
+            {
+                var weights = waveSet.waves[i].weights;
+                if (weights != null) for (int kind = 0; kind < weights.Length; kind++) if (weights[kind] > 0 && EnemyRoles.IsSpecial((EnemyKind)kind)) return i + 1;
+            }
+            return 0;
         }
         int PopulationTarget => PopulationTargetForWave(WaveIndex);
         public int PopulationTargetForWave(int index)
@@ -140,7 +160,8 @@ namespace AnomalyArena
         public bool TimeExpired { get; private set; }
         public int LivingCount { get { int count = 0; foreach (var enemy in alive) if (enemy && enemy.IsAlive && enemy.gameObject.activeInHierarchy) count++; return count; } }
         public int PendingCount { get { int count = batchSpawnsRemaining + pendingSplits.Count * Mathf.Max(0, splitterMiniCount); if (preparedMarkers != null) foreach (var marker in preparedMarkers) if (marker && marker.gameObject.activeSelf) count++; return count; } }
-                                                                                                                                                           
+                                                                                                                                           
+                                                                                                                                                   
         public ElementKind[] TyrantImmunities { get; private set; } = new ElementKind[2];
         public WavePhase Phase { get; private set; }
         public float TimeLeft { get; private set; }
@@ -335,7 +356,7 @@ namespace AnomalyArena
             if (LivingCount == 0 && PendingCount == 0) BeginBatch();
             else if (batchSpawnsRemaining == 0) RefillPopulation();
             if (batchSpawnsRemaining > 0 && spawnTimer <= 0f) IssueBatchMarkers();
-                                                                                                                               
+                                                                                                                              
             TickPreparedMarkers(dt);
         }
 
@@ -360,42 +381,67 @@ namespace AnomalyArena
             BatchIndex++;
             batchSpawnsRemaining = PopulationTarget;
             var shares = ActiveRoleShares;
-            swarmRemaining = Mathf.Clamp(Mathf.RoundToInt(batchSpawnsRemaining * shares.x), 0, batchSpawnsRemaining);
-            int eliteWanted = Mathf.Clamp(Mathf.RoundToInt(batchSpawnsRemaining * shares.z), 0, batchSpawnsRemaining - swarmRemaining);
-            functionRemaining = batchSpawnsRemaining - swarmRemaining - eliteWanted;
-                                                                                                                              
-            if (functionRemaining == 0 && shares.y > 0f && swarmRemaining > 1) { swarmRemaining--; functionRemaining++; }
+            basicRemaining = Mathf.Clamp(Mathf.RoundToInt(batchSpawnsRemaining * shares.x), 0, batchSpawnsRemaining);
+            int eliteWanted = Mathf.Clamp(Mathf.RoundToInt(batchSpawnsRemaining * shares.z), 0, batchSpawnsRemaining - basicRemaining);
+            specialRemaining = batchSpawnsRemaining - basicRemaining - eliteWanted;
+                                                                                                                                 
+            if (specialRemaining == 0 && shares.y > 0f && basicRemaining > 1) { basicRemaining--; specialRemaining++; }
+            ReserveFirstAppearances(ref basicRemaining, ref specialRemaining);
             eliteRemaining = Mathf.Min(eliteWanted, Mathf.Max(0, maxConcurrentElites - ActiveEliteCount));
-            swarmRemaining += eliteWanted - eliteRemaining;
+            basicRemaining += eliteWanted - eliteRemaining;
             spawnTimer = 0f;
         }
 
         void RefillPopulation()
         {
             if (TimeExpired || TimeLeft <= 0f) return;
-            int small = 0, functional = 0, elite = 0;
+            int basic = 0, special = 0, elite = 0;
             foreach (var enemy in alive)
             {
                 if (!enemy || !enemy.IsAlive || !enemy.definition || enemy.IsBoss) continue;
-                if (enemy.Elite) elite++; else if (IsSwarm(enemy.definition)) small++; else functional++;
+                if (enemy.Elite) elite++; else if (IsBasic(enemy.definition.kind)) basic++; else special++;
             }
             foreach (var marker in preparedMarkers)
             {
                 if (!marker || !marker.gameObject.activeSelf || !marker.definition) continue;
-                if (marker.elite) elite++; else if (IsSwarm(marker.definition)) small++; else functional++;
+                if (marker.elite) elite++; else if (IsBasic(marker.definition.kind)) basic++; else special++;
             }
             int target = PopulationTarget;
             var shares = ActiveRoleShares;
             int eliteShareCount = Mathf.RoundToInt(target * shares.z), eliteTarget = Mathf.Min(eliteShareCount, Mathf.Max(0, maxConcurrentElites));
-            int smallTarget = Mathf.RoundToInt(target * shares.x) + eliteShareCount - eliteTarget;
-            if (shares.y > 0f && target - smallTarget - eliteTarget <= 0 && smallTarget > 1) smallTarget--;                                      
-            int missingSmall = Mathf.Max(0,smallTarget-small), missingElite = Mathf.Max(0,eliteTarget-elite);
-            int missingFunctional = Mathf.Max(0,target-smallTarget-eliteTarget-functional);
-            int missing = missingSmall+missingFunctional+missingElite;
+            int basicTarget = Mathf.RoundToInt(target * shares.x) + eliteShareCount - eliteTarget;
+            if (shares.y > 0f && target - basicTarget - eliteTarget <= 0 && basicTarget > 1) basicTarget--;                                      
+            int specialTarget = Mathf.Max(0, target - basicTarget - eliteTarget);
+            int missingBasic = Mathf.Max(0,basicTarget-basic), missingElite = Mathf.Max(0,eliteTarget-elite);
+            int missingSpecial = Mathf.Max(0,specialTarget-special);
+                                                                                                                                           
+                                                                                                  
+            int excess = missingBasic + missingSpecial + missingElite - Mathf.Max(0, target - basic - special - elite);
+            if (excess > 0) { int cut = Mathf.Min(excess, missingBasic); missingBasic -= cut; excess -= cut; }
+            if (excess > 0) { int cut = Mathf.Min(excess, missingSpecial); missingSpecial -= cut; excess -= cut; }
+            if (excess > 0) missingElite -= Mathf.Min(excess, missingElite);
+            int missing = missingBasic+missingSpecial+missingElite;
             if (missing < Mathf.Max(1,Mathf.CeilToInt(target*refillMissingShare))) return;
+            ReserveFirstAppearances(ref missingBasic, ref missingSpecial, Mathf.Max(0, special - specialTarget));
                                                                                                        
-            swarmRemaining = missingSmall; functionRemaining = missingFunctional; eliteRemaining = missingElite;
+            basicRemaining = missingBasic; specialRemaining = missingSpecial; eliteRemaining = missingElite;
             batchSpawnsRemaining = missing; BatchIndex++; spawnTimer = 0f;
+        }
+
+                     
+                                                                                                                                                   
+                                                                                                                                                    
+                                                                                                                                                     
+                                                                                                           
+                      
+        void ReserveFirstAppearances(ref int basics, ref int specials, int surplus = 0)
+        {
+            int unseen = 0;
+            if (roster != null)
+                for (int i = 0; i < roster.Length; i++)
+                    if (roster[i] && !seenThisWave.Contains(roster[i].kind) && ListedWeight(WaveIndex + 1, i, 1, false, out _)) unseen++;
+            int moved = Mathf.Clamp(unseen - specials - Mathf.Max(0, surplus), 0, basics);
+            basics -= moved; specials += moved;
         }
 
         void IssueBatchMarkers()
@@ -405,10 +451,10 @@ namespace AnomalyArena
             while (batchSpawnsRemaining > 0 && !TimeExpired && TimeLeft > 0f)
             {
                 int roll = Random.Range(0, batchSpawnsRemaining);
-                int quota = roll < swarmRemaining ? 0 : roll < swarmRemaining + functionRemaining ? 1 : 2;
+                int quota = roll < basicRemaining ? 0 : roll < basicRemaining + specialRemaining ? 1 : 2;
                 int group = quota == 2 && ActiveEliteCount >= maxConcurrentElites ? 0 : quota;                                                
                 var data = RollBatchEnemy(group);
-                if (!data && group > 0) data = RollBatchEnemy(group = 0);                                                                            
+                if (!data && group > 0) data = RollBatchEnemy(group = 0);                                                                       
                 if (!data) data = DefinitionOf(EnemyKind.Grunt);
                 if (!data) break;
                 bool elite = group == 2;
@@ -425,13 +471,16 @@ namespace AnomalyArena
                     if (group < 2 && !seenThisWave.Contains(data.kind) && unplaceable.Add(data.kind)) continue;
                     break;
                 }
-                if (quota == 0) swarmRemaining--; else if (quota == 1) functionRemaining--; else eliteRemaining--;
+                if (quota == 0) basicRemaining--; else if (quota == 1) specialRemaining--; else eliteRemaining--;
                 batchSpawnsRemaining--;
             }
             spawnTimer = Mathf.Max(.02f, batchSpawnRetry);
         }
 
         bool IsSwarm(EnemyDefinition data) => EnemyRoles.IsMelee(data.kind);
+                                                                                                                                                    
+                                                                                                         
+        public static bool IsBasic(EnemyKind kind) => EnemyRoles.IsMelee(kind) || kind is EnemyKind.Spitter or EnemyKind.Warden;
         int ShadeCap => WaveIndex + 1 >= shadePairWave ? 2 : 1;
         int ShadeCount()
         {
@@ -441,16 +490,16 @@ namespace AnomalyArena
             return count;
         }
                      
-                                                                                                                                       
+                                                                                                                                             
                                                                                                                                                   
-                                                                                                                                                          
+                                                                                                                                                   
                       
         bool ListedWeight(int wave1, int index, int group, bool constrainActive, out int weight)
         {
             weight = 0;
             if (roster == null || index >= roster.Length || !roster[index] || EnemyRoles.IsBoss(roster[index].kind)) return false;
             var data = roster[index];
-            bool allowed = group == 0 ? IsSwarm(data) : group == 1 ? !IsSwarm(data) : EnemyRoles.IsSpecial(data.kind) && data.canElite;
+            bool allowed = group == 0 ? IsBasic(data.kind) : EnemyRoles.IsSpecial(data.kind) && (group == 1 || data.canElite);
             if (!allowed) return false;
             if (data.kind == EnemyKind.Spitter && wave1 < rangedFirstWave || data.kind == EnemyKind.Warden && wave1 < supportFirstWave
                 || group == 2 && wave1 < firstEliteWave) return false;
@@ -476,7 +525,7 @@ namespace AnomalyArena
             }
             ApplyShareFloor(weights, listed, minKindShare);
         }
-                                                                                                                                                     
+                                                                                                                                                  
                                                                                                                                                                     
         public float[] GroupWeights(int wave, int group)
         {
@@ -535,7 +584,7 @@ namespace AnomalyArena
             if (roster == null) return null;
             if (rollWeights == null || rollWeights.Length != roster.Length) { rollWeights = new float[roster.Length]; rollListed = new bool[roster.Length]; }
             FillGroupWeights(WaveIndex + 1, group, true, rollWeights, rollListed);
-                                                                                                                                                 
+                                                                                                                                              
                                                                                                                                            
             if (group < 2)
             {

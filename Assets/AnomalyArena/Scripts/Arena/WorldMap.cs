@@ -113,10 +113,11 @@ namespace AnomalyArena
             Active = this;
             if (biomes != null && biomes.Length > 0)
             {
-                int chosen = UnityEngine.Random.Range(0, biomes.Length);
+                int chosen = Biome.PickForRun(biomes);                                                                   
                 biome = biomes[chosen];
                 layout = biome.layout;
                 for (int i = 0; i < biomeWallGroups.Length; i++) biomeWallGroups[i].gameObject.SetActive(i == chosen);
+                if (chosen < biomeWallGroups.Length) LayoutWalls.Fill(biomeWallGroups[chosen], layout);                                                     
                 RenderSettings.ambientLight = biome.ambient;
                 if (floorRenderer && biome.floor)
                 {
@@ -150,6 +151,7 @@ namespace AnomalyArena
                 holes[1].transform.position = new Vector3(layout.holeAnchors[second].x, 0, layout.holeAnchors[second].y);
             }
             Grid.Rebuild(this);
+            Quicksand.Build(this);
                                                                                                                                            
                                                                                                                                            
                                                                                                                   
@@ -323,7 +325,8 @@ namespace AnomalyArena
 
         static Vector3 Orbit(float angle) => new(Mathf.Sin(angle), 0f, Mathf.Cos(angle));
 
-                                                                                                                                  
+                                                                                                                                       
+                                                           
         public void SkipHoleIntro()
         {
             if (!HoleIntroPlaying) return;
@@ -517,23 +520,27 @@ namespace AnomalyArena
             if(!hole.Temporary&&CanFeed){hole.Feed(1,GM.waves.WaveIndex+1);HoleFed?.Invoke(hole);}
         }
 
-                                                                                                                                                                         
-        public bool TryEnterPortal(PlayerController player, bool fromBuild = false)
+                                                                                                                                             
+                                                                                                                            
+        public bool TryEnterPortal(PlayerController player)
         {
-            if (!player || TrialActive || TrialWon) return false;
-            bool build = fromBuild && GM.RunPhase is ArenaUiState.Armory or ArenaUiState.Draft or ArenaUiState.Ready;
-                                                                                                               
-            bool walking = !fromBuild && GM.BuildWalking && player.State == CharacterState.Normal;
-            if (!build && !walking && (!GM.IsCombatActive || GM.waves.Phase != WavePhase.WaveActive || player.State != CharacterState.Normal)) return false;
             foreach (var hole in holes)
             {
-                if (hole.Phase != HolePhase.Portal) continue;
-                if (!build && (Mathf.Abs(player.Position.x - hole.Centre.x) > 0.5f || Mathf.Abs(player.Position.z - hole.Centre.z) > 0.5f)) continue;
+                if (!CanEnterPortal(player, hole)) continue;
                 enteredHole = hole;
                 BeginTrial(player, hole.Centre, false);
                 return true;
             }
             return false;
+        }
+                                                                                                                                       
+                                                                                                                                                     
+        public bool CanEnterPortal(PlayerController player, BlackHole hole)
+        {
+            if (!player || !hole || hole.Phase != HolePhase.Portal || TrialActive || TrialWon) return false;
+            if (player.State != CharacterState.Normal || player.ActionsBlocked) return false;
+            if (!GM.BuildWalking && (!GM.IsCombatActive || GM.waves.Phase != WavePhase.WaveActive)) return false;
+            return Mathf.Abs(player.Position.x - hole.Centre.x) <= 0.5f && Mathf.Abs(player.Position.z - hole.Centre.z) <= 0.5f;
         }
                                                                                                                                           
                                                                                                                                                  
@@ -562,7 +569,9 @@ namespace AnomalyArena
             trialPlatform.gameObject.SetActive(true);
             trialPlatform.localScale = new Vector3(trialRadius * 2f, trialPlatform.localScale.y, trialRadius * 2f);
             MovePlayer(player, trialPlatform.position + Vector3.back * trialEntryDistance);
-            ElementStatus.For(player)?.ClearStatuses();
+                                                                                  
+            var status = ElementStatus.For(player);
+            if (status) { status.ClearStatuses(); status.SetShield(0f); }
             hollow.gameObject.SetActive(true);
             hollow.transform.position = trialPlatform.position;
             hollow.Configure(hollow.definition, GM.waves.HpMultiplier, false);
@@ -640,8 +649,8 @@ namespace AnomalyArena
             GM.waves.ResumeAfterTrial();
             MovePlayer(GM.player, returnPoint);
             GM.player.Heal(GM.player.maxHp);
-                                                                                                                         
-            if (!labTrial) foreach (var hole in holes) if (hole && hole.Phase != HolePhase.Gone) hole.Close();
+                                                                                                                                         
+                                                                                                                      
             hollow.gameObject.SetActive(false);
             trialPlatform.gameObject.SetActive(false);
             VoidTrialWon?.Invoke();
@@ -659,6 +668,12 @@ namespace AnomalyArena
             if (decoy) decoy.gameObject.SetActive(false);
             if (trialDecoy) trialDecoy.gameObject.SetActive(false);
             HoleChanged();
+        }
+                                                                                                                                         
+        public void RemoveHolesAfterTrial()
+        {
+            if (!TrialWon) return;
+            foreach (var hole in holes) if (hole && hole.Phase != HolePhase.Gone) hole.Close();
         }
         public void ClosePortals() { foreach (var hole in holes) if (hole.Phase == HolePhase.Portal || hole.Phase == HolePhase.Collapsing) hole.Close(); }
         public void ClearTemporaryObjects()

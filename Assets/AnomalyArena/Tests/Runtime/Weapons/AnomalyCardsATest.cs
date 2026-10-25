@@ -358,8 +358,9 @@ namespace AnomalyArena
 
                                                         
 
+                                                                                                                                      
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
-        public async Task LaunchYourselfTwist_EnemiesHit_AreKnockedBackByTheFlightLeftPlusExtraCapped()
+        public async Task LaunchYourselfTwist_EnemiesHit_AreKnockedBackFartherTheFasterTheMissileStillFlies()
         {
             var (game, targets) = await V3CombatSmokeTest.StartSandbox();
             Vector3 origin = game.player.Position;
@@ -368,17 +369,23 @@ namespace AnomalyArena
             Place(targets[1], origin + Vector3.forward * 15f);
             var knocks = new Dictionary<Combatant, float>();
             foreach (var t in targets.Take(2)) { var body = t; body.AttackReceived += info => knocks[body] = info.knockDistance; }
-            Equip(game, WeaponForm.RocketLauncher, 1, UpgradeAxis.Twist);
+            var rocket = Equip(game, WeaponForm.RocketLauncher, 1, UpgradeAxis.Twist);
+            float range = game.runWeapons.roster.Get(WeaponForm.RocketLauncher).rangeB * rocket.Reach;
+                                                                                                                                                
+            float Expected(Enemy target)
+            {
+                float flown = Vector3.Dot(target.Position - origin, Vector3.forward) - (target.radius + game.player.radius + .3f);
+                return tuning.rocketCueMax * Mathf.Lerp(1f, tuning.rocketEndSpeedShare, flown / range) * game.runWeapons.UpgradePushScale;
+            }
+            float near = Expected(targets[0]), far = Expected(targets[1]);
 
             game.runWeapons.HandleInput(true, true, false);
             await Until(() => game.player.State != CharacterState.Dashing, 3f, "the flight ends");
 
-            float scale = game.runWeapons.UpgradePushScale;
             Assert.That(knocks.ContainsKey(targets[0]) && knocks.ContainsKey(targets[1]), Is.True, "both enemies were hit");
-            Assert.That(knocks[targets[0]], Is.EqualTo(tuning.rocketCueMax * scale).Within(.01f), "early in the flight the knockback is capped");
-                                                                                                                              
-            float left = targets[1].radius + game.player.radius + .3f;
-            Assert.That(knocks[targets[1]], Is.EqualTo((left + tuning.rocketCueExtra) * scale).Within(.05f), "late in the flight: the flight left plus the extra");
+            Assert.That(knocks[targets[0]], Is.EqualTo(near).Within(.05f), "early in the flight the missile is fast and pushes far");
+            Assert.That(knocks[targets[1]], Is.EqualTo(far).Within(.05f), "late in the flight the slower missile pushes less");
+            Assert.That(knocks[targets[0]], Is.GreaterThan(knocks[targets[1]]), "the faster the missile still flies, the farther the push");
             Assert.That(targets[0].State, Is.EqualTo(CharacterState.Knocked), "a real knockback");
         }
 

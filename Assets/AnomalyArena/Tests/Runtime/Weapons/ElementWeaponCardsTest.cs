@@ -116,30 +116,35 @@ namespace AnomalyArena
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
-        public async Task WildfireTwist_TwoPatchesInRange_FenceBurnsABodyOnTheLineOncePerSecond()
+        public async Task WildfireTwist_TwoPatchesInRange_FenceKeepsAddingBurningToABodyOnTheLineWithoutAHit()
         {
             var (game, targets) = await V3CombatSmokeTest.StartSandbox();
             var tuning = game.runWeapons.upgrades;
             targets[0].DiscardWithoutReward(); targets[2].DiscardWithoutReward();
             var victim = targets[1];
+            var status = ElementStatus.For(victim);
+            status.ClearStatuses();
             Vector3 origin = game.player.Position;
             var wildfire = Equip(game, WeaponForm.Flamethrower, 1, UpgradeAxis.Twist);
             const float tick = 2f;
 
+            AttackActor older = null;
             foreach (float z in new[] { 2f, 10f })
             {
                 var patch = AttackPool.Instance.Acquire();
                 patch.Configure(AttackMode.Field, game.player, wildfire, origin + Vector3.forward * z, Vector3.forward, tick, 0f, 0f, 0f, 1f, 4f);
+                older ??= patch;
             }
+            float dose = tuning.wildfireFenceFirePerSecond * older.tickInterval;
 
-            await Until(() => victim.Hp < victim.maxHp, 1f, "the fence burns the enemy on the line");
-            Assert.That(victim.maxHp - victim.Hp, Is.EqualTo(tick * tuning.wildfireFenceDamage).Within(.01f), "three patch ticks");
+            await Until(() => status.Fire > 0f, 1f, "the fence sets the enemy on the line burning");
+            Assert.That(status.Fire, Is.EqualTo(dose).Within(.01f), "one dose of Burning per patch tick");
+            Assert.That(victim.Hp, Is.EqualTo(victim.maxHp), "no direct hit: only the Burning hurts");
             Assert.That(game.runWeapons.Tracers.Count, Is.GreaterThan(0), "the fence is drawn");
-            float first = victim.Hp;
-            await Seconds(tuning.wildfireFenceCooldown * .6f);
-            Assert.That(victim.Hp, Is.EqualTo(first), "no second burn within the cooldown");
-            await Until(() => victim.Hp < first, 1f, "the next burn after the cooldown");
-            Assert.That(first - victim.Hp, Is.EqualTo(tick * tuning.wildfireFenceDamage).Within(.01f));
+            Assume.That(tuning.wildfireFenceFirePerSecond, Is.GreaterThan(1f / status.Rules.fireInterval), "the tuned fence adds stacks faster than one burns off per tick");
+            await Seconds(1.1f);
+            Assert.That(victim.Hp, Is.LessThan(victim.maxHp), "the Burning ticks");
+            Assert.That(status.Fire, Is.GreaterThan(dose), "touching the fence keeps adding Burning faster than it burns off");
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]

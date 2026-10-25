@@ -20,6 +20,7 @@ namespace AnomalyArena
         public float protection = 0.5f;
         public float maxEnergy = 100f;
         public float energySiphon;
+        [Tooltip("Damage Penetration (document 9.5): the share of an element's damage that still hits a target immune to it. It never lets the element's statuses through.")]
         public float elementPenetration;
         [Tooltip("Chance for a player hit on an enemy to deal CritMultiplier damage; Damage and Crit cards add to it, up to critCap.")]
         public float critChance;

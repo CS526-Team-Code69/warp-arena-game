@@ -12,9 +12,28 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6b8ffaeb0bc0faa4ca25744bec02268e, type: 3}
   m_Name: DustFlats_2
   m_EditorClassIdentifier: AnomalyArena::AnomalyArena.Biome
-  displayName: "Dust Flats \xB7 2"
+  displayName: "Dunes \xB7 2"
   layout: {fileID: 11400000, guid: 0bd9ceaecdd750e43b547f1b0705ed55, type: 2}
   ambient: {r: 0.3, g: 0.24, b: 0.18, a: 1}
   floor: {fileID: 2100000, guid: c87d047ae54a8a945978df8671da0906, type: 2}
   wall: {fileID: 2100000, guid: c98c52fef679b9342a3f722e3a2b4335, type: 2}
-  mixTilt: 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000i
+  mixTilt: 00000000000000000000000000000000000000000a00000000000000000000000a0000000000000000000000i
+  inRotation: 1
+  quicksandMaterial: {fileID: 2100000, guid: 9e253224fae1e424aa83967d8127f9c1, type: 2}
+  quicksandLayers:
+  - texture: {fileID: 2800000, guid: 8742d15ae99cd484882fbca2cae40beb, type: 3}
+    tint: {r: 0.18, g: 0.12, b: 0.05, a: 1}
+    size: 1.1
+    spin: 0
+  - texture: {fileID: 2800000, guid: 8742d15ae99cd484882fbca2cae40beb, type: 3}
+    tint: {r: 0.15, g: 0.1, b: 0.04, a: 0.8}
+    size: 0.75
+    spin: 0
+  - texture: {fileID: 2800000, guid: bc9e1e35002b8904ebefc95be5c297a4, type: 3}
+    tint: {r: 1, g: 0.92, b: 0.75, a: 1}
+    size: 0.85
+    spin: 6
+  - texture: {fileID: 2800000, guid: a341db19501ba374aab2d1d4abb209ab, type: 3}
+    tint: {r: 0.95, g: 0.8, b: 0.52, a: 0.75}
+    size: 1.2
+    spin: 0

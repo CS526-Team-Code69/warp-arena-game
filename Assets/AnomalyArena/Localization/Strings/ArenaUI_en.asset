@@ -71,11 +71,11 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 818548747
-    m_Localized: 'START NEXT WAVE [SPACE]'
+    m_Localized: "START NEXT WAVE"
     m_Metadata:
       m_Items: []
   - m_Id: 818548748
-    m_Localized: 'RETURN / DECLINE SKILL [SPACE]'
+    m_Localized: "RETURN / DECLINE SKILL"
     m_Metadata:
       m_Items: []
   - m_Id: 818548749
@@ -175,7 +175,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 818548773
-    m_Localized: "E \xB7 ENTER\nFAILURE ENDS RUN"
+    m_Localized: "E \xB7 ENTER\nFAILURE ENDS RUN\nCLEARS STATUS & SHIELD"
     m_Metadata:
       m_Items: []
   - m_Id: 818548774
@@ -235,7 +235,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 818548788
-    m_Localized: Build choices complete. Space starts the next wave.
+    m_Localized: "Build choices complete. Click START NEXT WAVE to go on."
     m_Metadata:
       m_Items: []
   - m_Id: 818548789
@@ -827,7 +827,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 818548936
-    m_Localized: "WASD MOVE \xB7 MOUSE AIM \xB7 LMB USE WEAPON \xB7 RMB SWITCH SLOTS \xB7 LEFT SHIFT SPRINT \xB7 1/2/3 SKILLS \xB7 E ENTER TRIAL"
+    m_Localized: "WASD MOVE \xB7 MOUSE AIM \xB7 LMB USE WEAPON \xB7 RMB SWITCH SLOTS \xB7 SHIFT SPRINT \xB7 1/2/3 SKILLS \xB7 E ON A PORTAL ENTERS THE TRIAL \xB7 ESC PAUSE"
     m_Metadata:
       m_Items: []
   - m_Id: 818548937
@@ -1107,7 +1107,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 818549006
-    m_Localized: "Portal open: press E to enter the Void Trial"
+    m_Localized: "Portal open: stand on it and press E to enter the Void Trial"
     m_Metadata:
       m_Items: []
   - m_Id: 818549007

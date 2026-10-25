@@ -153,3 +153,25 @@ MonoBehaviour:
   - {x: 72, y: 44}
   - {x: -16, y: -44}
   - {x: 16, y: 44}
+  quicksand:
+  - centre: {x: 24, y: 14}
+    radius: 7
+  - centre: {x: -66, y: -28}
+    radius: 6
+  - centre: {x: -44, y: 40}
+    radius: 7
+  - centre: {x: 56, y: -40}
+    radius: 6
+  - centre: {x: -10, y: -30}
+    radius: 5
+  - centre: {x: 66, y: 10}
+    radius: 6
+  - centre: {x: -18, y: 8}
+    radius: 5
+  - centre: {x: -66, y: 10}
+    radius: 6
+  - centre: {x: -4, y: 40}
+    radius: 5
+  - centre: {x: 24, y: -24}
+    radius: 5
+  quicksandSpeed: 0.6

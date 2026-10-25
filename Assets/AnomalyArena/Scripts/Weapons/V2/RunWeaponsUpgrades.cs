@@ -18,10 +18,12 @@ namespace AnomalyArena
         public float wildfireFenceRange = 9f;
         [Min(0f), Tooltip("Wildfire Twist: half the fence width; a body whose edge comes this close to the line between the two centres is touched.")]
         public float wildfireFenceHalfWidth = .5f;
-        [Min(0f), Tooltip("Wildfire Twist: fence damage as a multiple of one patch tick (you take it on the base tick you would take from a patch).")]
-        public float wildfireFenceDamage = 3f;
-        [Min(0f), Tooltip("Wildfire Twist: seconds before the same body can be burned by a fence again.")]
-        public float wildfireFenceCooldown = 1f;
+        [Min(0f), Tooltip("Wildfire Twist: Burning stacks per second an enemy keeps getting while it touches a fire fence (several fences count once). "
+                          + "The fence deals no direct hit; Burning on an enemy burns one stack every half second, so above 2 the stacks build up.")]
+        public float wildfireFenceFirePerSecond = 4f;
+        [Min(0f), Tooltip("Wildfire Twist backfire: Burning stacks per second you get while you touch your own fence (none once tamed). "
+                          + "Above 2 your Burning keeps growing while you stay on it.")]
+        public float wildfireFenceSelfFirePerSecond = 2f;
         [Min(1f), Tooltip("Wildfire Tame: your movement multiplier while your centre is inside one of your fire patches (overlaps do not stack).")]
         public float wildfireTameSpeed = 1.25f;
         [Tooltip("Shatter fires three shards; the side shards leave the aim line by this many degrees.")]
@@ -84,10 +86,12 @@ namespace AnomalyArena
         public int strikeChainMax = 6;
         [Min(0f), Tooltip("Strike Tame: your own blast pushes you this many cells instead of hurting and knocking you back.")]
         public float strikeJumpDistance = 6f;
-        [Min(0f), Tooltip("Launch Yourself Twist: knockback of an enemy you hit is the flight left plus this many cells (bosses are not knocked back).")]
-        public float rocketCueExtra = 3f;
-        [Min(0f), Tooltip("Launch Yourself Twist: most cells that knockback can reach.")]
+        [Min(0f), Tooltip("Launch Yourself Twist: knockback (cells) of an enemy you hit at the missile's launch speed. A slower missile pushes less "
+                          + "in proportion, down to rocketEndSpeedShare of this at the end of the flight. Bosses are not knocked back.")]
         public float rocketCueMax = 10f;
+        [Range(.1f, 1f), Tooltip("Launch Yourself: the missile slows evenly over its flight to this share of its launch speed (1 = constant speed). "
+                                 + "The launch speed rises to match, so a full flight takes as long as at the old constant speed.")]
+        public float rocketEndSpeedShare = .5f;
         [Range(0f, 1f), Tooltip("Scatter Blast: damage share at the far edge of the cone. Point-blank deals 100%, falling off linearly with distance.")]
         public float scatterFalloffMin = .4f;
         [Min(0f), Tooltip("Scatter Blast: reload seconds once the two-round clip is empty (scaled like other reloads).")]
@@ -228,8 +232,10 @@ namespace AnomalyArena
         public float meltdownWarnShare = .75f;
         [Min(0f), Tooltip("Meltdown Twist: heat removed for every enemy a bullet kills (full heat is 4, 0.1 per shot). Killing an elite clears all heat.")]
         public float meltdownKillVent = .2f;
-        [Min(0f), Tooltip("Meltdown Tame: Shield you gain from the meltdown instead of its self-damage (player Shield cap applies).")]
-        public float meltdownTameShield = 20f;
+        [Range(0f, 3f), Tooltip("Meltdown Tame: attack speed bonus the meltdown gives you instead of hurting you (0.5 = +50% attack rate on every weapon, like an Attack Speed card).")]
+        public float meltdownTameHaste = .5f;
+        [Min(0f), Tooltip("Meltdown Tame: seconds that attack speed bonus lasts; the next meltdown starts it again. The 3 s lockout still applies.")]
+        public float meltdownTameHasteSeconds = 5f;
         [Min(0f), Tooltip("Whirl: seconds before the drone looks again when no movable, visible enemy is in range.")]
         public float whirlRetry = .5f;
         [Min(1f), Tooltip("Capacitor: highest charge; the HUD bar shows charge / this.")]
@@ -544,7 +550,8 @@ namespace AnomalyArena
 
             if(w.Has(UpgradeAxis.Twist)&&frozen&&first is not Enemy{Immovable:true}&&first.State!=CharacterState.Hooked&&!IsIceStone(first))
             {
-                first.Throw(dir,upgrades.shatterThrowDistance,new ThrowImpact{dealer=player,damage=0f,sizeExponent=0f,radius=0f,knockback=0f});
+
+                first.Throw(dir,upgrades.shatterThrowDistance,new ThrowImpact{dealer=player,damage=0f,sizeExponent=0f,radius=0f,knockback=0f,element=w.element});
                 if(first.State==CharacterState.Thrown)
                 {
                     iceStones.Add(new IceStone{body=first,version=first.SpawnVersion,hit=hit,direction=Query.Flat(dir).normalized,weapon=w});
@@ -884,6 +891,7 @@ namespace AnomalyArena
         public void WildfireFence(AttackActor field)
         {
             var w=field.weapon;if(w==null||!player||!AttackPool.Instance)return;
+            float interval=Mathf.Max(.01f,field.tickInterval);
             foreach(var other in AttackPool.Instance.actors)
             {
                 if(!other||other==field||!other.gameObject.activeSelf||other.weapon!=w||other.mode!=AttackMode.Field||other.Sequence<=field.Sequence||BattlefieldFrozen(other.gameObject))continue;
@@ -895,15 +903,15 @@ namespace AnomalyArena
                 {
                     if(!body.IsAlive||body==player&&(w.Has(UpgradeAxis.Tame)||!field.hurtOwner))continue;
                     if(Query.Flat(body.Position-ClosestOnSegment(body.Position,a,b)).magnitude>upgrades.wildfireFenceHalfWidth+body.radius)continue;
+
                     if(wildfireFenceHitAt.TryGetValue(body,out float ready)&&ready>autoClock)continue;
                     elementTargets.Add(body);
                 }
                 foreach(var body in elementTargets)
                 {
-                    wildfireFenceHitAt[body]=autoClock+upgrades.wildfireFenceCooldown;
-                    float tick=body==player&&field.ownerDamage>=0f?field.ownerDamage:field.damage;
-                    Vector3 away=Query.Flat(body.Position-ClosestOnSegment(body.Position,a,b));
-                    field.Hit(body,tick*upgrades.wildfireFenceDamage,0f,away.sqrMagnitude>.0001f?away.normalized:Vector3.zero);
+                    wildfireFenceHitAt[body]=autoClock+interval*.9f;
+                    float perSecond=body==player?upgrades.wildfireFenceSelfFirePerSecond:upgrades.wildfireFenceFirePerSecond;
+                    ElementCombat.ApplyStacks(body,ElementKind.Fire,perSecond*interval,player);
                 }
             }
         }
@@ -984,7 +992,7 @@ namespace AnomalyArena
 
         void ClearElementWeapons()
         {
-            iceStones.Clear();wildfireFenceHitAt.Clear();needleHits.Clear();
+            iceStones.Clear();wildfireFenceHitAt.Clear();needleHits.Clear();meltdownHasteLeft=0f;
             FreezeElementWeaponsForTrial();
             foreach(var w in Hand)if(w!=null)w.chainStoredJumps=0;
         }
@@ -1013,13 +1021,22 @@ namespace AnomalyArena
             WeaponSound(w,WeaponAudioPhase.Explosion);
             float blast=upgrades.meltdownDamage*DamageScale(w),self=upgrades.meltdownDamage;
             Area(w,player.Position,4,blast,0,!w.Has(UpgradeAxis.Tame),self);
-            if(w.Has(UpgradeAxis.Tame))
+            if(w.Has(UpgradeAxis.Tame)&&upgrades.meltdownTameHasteSeconds>0f)
             {
-                ElementStatus.For(player)?.GainShield(upgrades.meltdownTameShield,true);
-                V3WorldAudio.Instance?.Play(ArenaWorldCue.NpcShield,player.Position);
+                meltdownHasteLeft=upgrades.meltdownTameHasteSeconds;
+                V3WorldAudio.Instance?.Play(ArenaWorldCue.WeaponRepair,player.Position);
+                Fx.Ring(player.Position,1.2f,new Color(1f,.8f,.35f,.9f));
             }
             w.heat=0;w.reload=3;
         }
+
+        float meltdownHasteLeft;
+
+        public float MeltdownHasteLeft=>meltdownHasteLeft;
+
+        public float MeltdownHaste=>meltdownHasteLeft>0f?1f+Mathf.Max(0f,upgrades.meltdownTameHaste):1f;
+
+        void TickMeltdownHaste(float dt)=>meltdownHasteLeft=Mathf.Max(0f,meltdownHasteLeft-dt);
 
         void MeltdownWarning(RunWeapon w,float before)
         {

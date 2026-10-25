@@ -32,7 +32,9 @@ namespace AnomalyArena
         void Update()
         {
             var gm = GameManager.Instance;
-            if (!ArenaText.Ready || !gm || !gm.IsCombatActive || !waves || !cameraSource || !canvasRect) { HideAll(); return; }
+                                                                                                                                   
+            bool battlefield = gm && (gm.IsCombatActive || gm.RunPhase == ArenaUiState.TrialReturn);
+            if (!ArenaText.Ready || !battlefield || !waves || !cameraSource || !canvasRect) { HideAll(); return; }
             refresh -= Time.unscaledDeltaTime;
             if (refresh > 0f) return;
             refresh = Mathf.Max(.02f, refreshInterval);

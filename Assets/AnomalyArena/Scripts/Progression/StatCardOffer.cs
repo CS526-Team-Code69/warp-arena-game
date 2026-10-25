@@ -18,7 +18,7 @@ namespace AnomalyArena
             StatId.AttackSpeed => ArenaText.Pair($"Weapon cooldowns shorten: attack rate +{Value * 100f:0}% (cooldown ÷{1f + Value:0.##})",$"Weapon cooldowns shorten: attack rate +{Value * 100f:0}% (cooldown ÷{1f + Value:0.##})"),
             StatId.Protection => ArenaText.Pair($"Armor +{Value:0}; damage taken drops in proportion (×100/(100+armor))",$"Armor +{Value:0}; damage taken drops in proportion (×100/(100+armor))"),
             StatId.CritChance => ArenaText.Pair($"Crit chance +{Value * 100f:0}%",$"Crit chance +{Value * 100f:0}%"),
-            StatId.ElementPenetration => ArenaText.Pair($"Your elements also work on element-immune targets, at {Value * 100f:0}% of the full effect",$"Your elements also work on element-immune targets, at {Value * 100f:0}% of the full effect"),
+            StatId.ElementPenetration => ArenaText.Pair($"Element damage partly gets through to targets immune to it: Damage Penetration +{Value * 100f:0}% (statuses still never land)",$"Element damage partly gets through to targets immune to it: Damage Penetration +{Value * 100f:0}% (statuses still never land)"),
             StatId.MaxHp => ArenaText.Pair($"Max HP +{Value:0.##}, and heal the same amount when you take the card",$"Max HP +{Value:0.##}, and heal the same amount when you take the card"),
             StatId.MoveSpeed => ArenaText.Pair($"Move faster: Move Speed +{Value * 100f:0}%",$"Move faster: Move Speed +{Value * 100f:0}%"),
             StatId.MaxEnergy => ArenaText.Pair($"Max Energy +{Value:0.##}",$"Max Energy +{Value:0.##}"),

@@ -252,7 +252,7 @@ namespace AnomalyArena
             if (screen.reroll) screen.reroll.gameObject.SetActive(!s.isGreaterReward);
             if (screen.startNext)
                 SetText(screen.startNext.GetComponentInChildren<UnityEngine.UI.Text>(), s.isGreaterReward
-                    ? ArenaText.Text("ui.return.reward") : s.state == ArenaUiState.LevelUp ? ArenaText.Pair("PICK LATER","PICK LATER") : ArenaText.Text("ui.nextwave"));
+                    ? ArenaText.Text("ui.return.reward") : s.state == ArenaUiState.LevelUp ? ArenaText.Pair("PICK LATER [ESC]","PICK LATER [ESC]") : ArenaText.Text("ui.nextwave"));
             ArenaUiCard[] cards = null;
             switch (s.state)
             {
@@ -273,14 +273,14 @@ namespace AnomalyArena
                     cards = s.draftCards;
                     SetText(screen.heading, s.isGreaterReward ? ArenaText.Text("ui.greater.heading") : ArenaText.Text("ui.draft.counter", s.draftIndex, Mathf.Max(1, s.draftCount)));
                     SetText(screen.body, s.isGreaterReward ? ArenaText.Pair("Pick one of three Greater Void skills (or none); they have no further levels. 1 / 2 / 3 select.","Pick one of three Greater Void skills (or none); they have no further levels. 1 / 2 / 3 select.")
-                        : ArenaText.Pair("Three cards, one of each: a stat card, a weapon card (an upgrade direction a revealed weapon has not taken yet) and a skill card (a new skill, or one level for a skill you own). 1 / 2 / 3 select; R rerolls all three (once per wave).","Three cards, one of each: a stat card, a weapon card (an upgrade direction a revealed weapon has not taken yet) and a skill card (a new skill, or one level for a skill you own). 1 / 2 / 3 select; R rerolls all three (once per wave).") + WalkHint());
+                        : ArenaText.Pair("Three cards, one of each: a stat card, a weapon card (an upgrade direction a revealed weapon has not taken yet) and a skill card (a new skill, or a higher level for one you own; its colour shows the level it gives). 1 / 2 / 3 select; R rerolls all three (once per wave).","Three cards, one of each: a stat card, a weapon card (an upgrade direction a revealed weapon has not taken yet) and a skill card (a new skill, or a higher level for one you own; its colour shows the level it gives). 1 / 2 / 3 select; R rerolls all three (once per wave).") + WalkHint());
                     if (screen.reroll) screen.reroll.interactable = s.rerolls > 0;
                     SetText(screen.rerollLabel, ArenaText.Text("ui.reroll.counter", s.rerolls));
                     break;
                 case ArenaUiState.LevelUp:
                     cards = s.draftCards;
                     SetText(screen.heading, ArenaText.Pair($"LEVEL UP · PICK ONE ({s.bankedDrafts} LEFT)",$"LEVEL UP · PICK ONE ({s.bankedDrafts} LEFT)"));
-                    SetText(screen.body, ArenaText.Pair("1 / 2 / 3 select; R rerolls (once per wave); Esc or Space picks later, T opens this again in combat.","1 / 2 / 3 select; R rerolls (once per wave); Esc or Space picks later, T opens this again in combat."));
+                    SetText(screen.body, ArenaText.Pair("1 / 2 / 3 select; R rerolls (once per wave); Esc picks later, T opens this again in combat.","1 / 2 / 3 select; R rerolls (once per wave); Esc picks later, T opens this again in combat."));
                     if (screen.reroll) screen.reroll.interactable = s.rerolls > 0;
                     SetText(screen.rerollLabel, ArenaText.Text("ui.reroll.counter", s.rerolls));
                     break;
@@ -290,10 +290,10 @@ namespace AnomalyArena
                     break;
                 case ArenaUiState.ReplaceSkill:
                     RenderReplacement(screen, s.skillSlots, 3);
-                    SetText(screen.body, ArenaText.Pair("With 3 skills already, taking a new one means replacing an old one; the new skill starts at level 1.","With 3 skills already, taking a new one means replacing an old one; the new skill starts at level 1."));
+                    SetText(screen.body, ArenaText.Pair("With 3 skills already, taking a new one means replacing an old one; the new skill starts at the level this card gives.","With 3 skills already, taking a new one means replacing an old one; the new skill starts at the level this card gives."));
                     break;
                 case ArenaUiState.Ready:
-                    SetText(screen.body, ArenaText.Pair("Build choices complete. Space starts the next wave.","Build choices complete. Space starts the next wave.") + PortalHint() + WalkHint());
+                    SetText(screen.body, ArenaText.Pair("Build choices complete. Click START NEXT WAVE to go on.","Build choices complete. Click START NEXT WAVE to go on.") + PortalHint() + WalkHint());
                     break;
                 case ArenaUiState.WeaponIntro:
                     SetText(screen.heading, s.weaponIntroTitle);
@@ -316,11 +316,12 @@ namespace AnomalyArena
         }
 
                                                                                                                                           
-        static string WalkHint() => ArenaText.Pair("\nTab puts this panel away so you can walk the empty arena; standing on a portal and pressing E also enters the trial.","\nTab puts this panel away so you can walk the empty arena; standing on a portal and pressing E also enters the trial.");
+        static string WalkHint() => ArenaText.Pair("\nTab puts this panel away so you can walk the empty arena; Tab again brings it back.","\nTab puts this panel away so you can walk the empty arena; Tab again brings it back.");
 
-                                                                                                                     
+                                                                                                                                         
+                                              
         static string PortalHint() => WorldMap.Active && WorldMap.Active.HasOpenPortal && !WorldMap.Active.TrialWon
-            ? ArenaText.Pair("\nA portal is open: press E to enter the Void Trial (failure ends the run).","\nA portal is open: press E to enter the Void Trial (failure ends the run).") : "";
+            ? ArenaText.Pair(                "\nPortal open: stand on it and press E for the Void Trial (losing ends the run; entering clears statuses and shield).",                "\nPortal open: stand on it and press E for the Void Trial (losing ends the run; entering clears statuses and shield).") : "";
 
         void RenderReplacement(V2UiScreen screen, ArenaUiSlot[] slots, int count)
         {

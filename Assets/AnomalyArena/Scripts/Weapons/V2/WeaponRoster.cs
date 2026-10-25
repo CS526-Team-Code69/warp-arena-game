@@ -23,7 +23,14 @@ namespace AnomalyArena
         public float[] mkDamage = { 1f, 1.4f, 1.65f, 1.9f, 2.1f, 2.3f };
         [Min(1), Tooltip("Every this many waves, the standard Mk of new weapons rises by one.")]
         public int mkWaveSpacing = 3;
+        [Tooltip("Armory (owner 2026-10-25): chance 0-1 that an offer comes one Mk above its usual tier, one row per band of mkWaveSpacing waves "
+            + "(row 0 = waves 1-3, row 1 = waves 4-6, ...; the last row holds for every later wave). It applies to new weapons (never above the "
+            + "second-highest Mk) and to stronger versions of held weapons.")]
+        public float[] mkBonusChance = { 0f, .15f, .25f, .35f, .45f };
         public int MaxMk => mkDamage != null && mkDamage.Length > 0 ? mkDamage.Length : 1;
+
+        public float MkBonusChance(int wave) => mkBonusChance == null || mkBonusChance.Length == 0 ? 0f
+            : Mathf.Clamp01(mkBonusChance[Mathf.Clamp((Mathf.Max(1, wave) - 1) / Mathf.Max(1, mkWaveSpacing), 0, mkBonusChance.Length - 1)]);
         public float MkDamage(int mk) => mkDamage == null || mkDamage.Length == 0 ? 1f : mkDamage[Mathf.Clamp(mk - 1, 0, mkDamage.Length - 1)];
 
         public int ParMk(int wave) => Mathf.Clamp(1 + (Mathf.Max(1, wave) - 1) / Mathf.Max(1, mkWaveSpacing), 1, Mathf.Max(1, MaxMk - 1));
@@ -39,8 +46,8 @@ namespace AnomalyArena
         };
 
         public static bool IsRetired(WeaponForm form) => form is WeaponForm.GravGun or WeaponForm.PhaseDagger or WeaponForm.PlasmaLauncher;
-        public static string FormName(WeaponForm f) => f switch { WeaponForm.RocketLauncher=>"Rocket Launcher",WeaponForm.GravGun=>"Grav Gun",WeaponForm.ScatterCannon=>"Scatter Cannon",WeaponForm.PhaseDagger=>"Phase Dagger",WeaponForm.PlasmaLauncher=>"Plasma Launcher",WeaponForm.CryoCannon=>"Cryo Cannon",WeaponForm.ArcCoil=>"Arc Coil",WeaponForm.SporeLauncher=>"Venom Launcher",WeaponForm.SwarmLauncher=>"Swarm Launcher",WeaponForm.OrbitBlades=>"Orbit Blades",WeaponForm.SentryDrone=>"Sentry Drone",WeaponForm.ShieldRing=>"Shield Ring",_=>f.ToString()};
-        static readonly string[] Names={"Charged Shot","Reverse Shot","Throwing Knife","Hook","Strike","Launch Yourself","Attract","Repel","Blast","Focus","Swap","Recall","Sticky","Bouncy","Stream","Wildfire","Shatter","Blizzard","Chain","Capacitor","Cloud","Needler","Lance","Execute","Spin-up","Meltdown","Barrage","Bombard","Closed Blade","Open Blade","Gunner","Whirl","Repulsor","Leech"};
+        public static string FormName(WeaponForm f) => f switch { WeaponForm.RocketLauncher=>"Rocket Launcher",WeaponForm.GravGun=>"Grav Gun",WeaponForm.ScatterCannon=>"Scatter Cannon",WeaponForm.PhaseDagger=>"Phase Dagger",WeaponForm.PlasmaLauncher=>"Plasma Launcher",WeaponForm.CryoCannon=>"Cryo Cannon",WeaponForm.ArcCoil=>"Arc Cannon",WeaponForm.SporeLauncher=>"Venom Launcher",WeaponForm.Minigun=>"Gatling",WeaponForm.SwarmLauncher=>"Swarm Launcher",WeaponForm.OrbitBlades=>"Orbit Blades",WeaponForm.SentryDrone=>"Sentry Drone",WeaponForm.ShieldRing=>"Shield Ring",_=>f.ToString()};
+        static readonly string[] Names={"Charged Shot","Reverse Shot","Throwing Knife","Fling Hook","Strike","Launch Yourself","Attract","Repel","Blast","Focus","Swap","Recall","Sticky","Bouncy","Stream","Wildfire","Shatter","Blizzard","Arc Jump","Capacitor","Cloud","Needler","Lance","Execute","Spin-up","Meltdown","Barrage","Bombard","Closed Blade","Open Blade","Gunner","Whirl","Repulsor","Leech"};
         public static string AnomalyName(WeaponForm f,int variant)=>Names[(int)f*2+Mathf.Clamp(variant,0,1)];
         public void SetDefaults()
         {

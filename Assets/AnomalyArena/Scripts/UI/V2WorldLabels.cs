@@ -128,9 +128,8 @@ namespace AnomalyArena
                     var hole = world.holes[i]; var label = holeLabels[i];
                     bool show = hole && hole.Phase != HolePhase.Gone && !world.TrialActive;
                     if (!show) { label.gameObject.SetActive(false); continue; }
-                    bool canEnter = hole.Phase == HolePhase.Portal && gm.player && gm.player.State == CharacterState.Normal
-                        && (gm.waves.Phase == WavePhase.WaveActive || gm.BuildWalking) && Mathf.Abs(gm.player.Position.x - hole.Centre.x) <= .5f
-                        && Mathf.Abs(gm.player.Position.z - hole.Centre.z) <= .5f;
+                                                                                                                                
+                    bool canEnter = world.CanEnterPortal(gm.player, hole);
                     string text = hole.Phase == HolePhase.Portal ? ArenaText.Text(canEnter ? "ui.hole.enter" : "ui.hole.portal") + "\n" + ArenaText.Text("ui.hole.remaining", hole.WavesLeft)
                         : world.CanFeed && hole.Phase == HolePhase.Active ? $"{hole.Feeds} / {hole.feedsToOpen}" : "";
                     if (label.text != text) label.text = text;

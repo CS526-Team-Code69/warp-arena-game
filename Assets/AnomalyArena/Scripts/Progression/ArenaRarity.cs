@@ -51,6 +51,16 @@ namespace AnomalyArena
                 : upgrades >= 1 ? CardRarity.Rare : CardRarity.Common;
         }
 
+        public static CardRarity ForWeaponCard(UpgradeAxis axis) => axis switch
+        {
+            UpgradeAxis.Tame => CardRarity.Rare,
+            UpgradeAxis.Twist => CardRarity.Exceptional,
+            UpgradeAxis.Infusion => CardRarity.Epic,
+            _ => CardRarity.Common
+        };
+
+        public static int SkillLevel(CardRarity rarity) => rarity == CardRarity.Void ? 1 : Mathf.Clamp(Rank(rarity), 0, 2) + 1;
+
         public static CardRarity ForSkill(SkillDefinition definition, int level)
         {
             if (definition && (definition.greaterVoid || definition.element == ElementKind.Void))
