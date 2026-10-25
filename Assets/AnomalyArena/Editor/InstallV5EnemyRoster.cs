@@ -30,9 +30,9 @@ namespace AnomalyArena.EditorTools
             new[] { EnemyKind.Spitter },
             new[] { EnemyKind.Spitter, EnemyKind.Warden },
             new[] { EnemyKind.Spitter, EnemyKind.Warden, EnemyKind.Chanter },
-            new[] { EnemyKind.Spitter, EnemyKind.Warden, EnemyKind.Bloater, EnemyKind.Rammer },
-            new[] { EnemyKind.Spitter, EnemyKind.Warden, EnemyKind.Spire, EnemyKind.Chanter },
             new[] { EnemyKind.Spitter, EnemyKind.Warden, EnemyKind.Stomper },
+            new[] { EnemyKind.Spitter, EnemyKind.Warden, EnemyKind.Spire, EnemyKind.Chanter },
+            new[] { EnemyKind.Spitter, EnemyKind.Warden, EnemyKind.Bloater, EnemyKind.Rammer },
             new[] { EnemyKind.Spitter, EnemyKind.Warden, EnemyKind.Rammer, EnemyKind.Stomper },
             new[] { EnemyKind.Spitter, EnemyKind.Warden, EnemyKind.Bloater, EnemyKind.Spire, EnemyKind.Chanter },
             new[] { EnemyKind.Spitter, EnemyKind.Warden, EnemyKind.Rammer, EnemyKind.Stomper, EnemyKind.Bloater },
@@ -47,7 +47,7 @@ namespace AnomalyArena.EditorTools
             var weights = new int[Enum.GetValues(typeof(EnemyKind)).Length];
             (int grunt, int brute, int skitter, int splitter) = wave switch
             {
-                <= 2 => (70, 10, 20, 0),
+                <= 2 => (60, 10, 20, 10),
                 <= 4 => (50, 10, 20, 10),
                 5 => (45, 12, 20, 15),
                 <= 9 => (40, 15, 20, 20),

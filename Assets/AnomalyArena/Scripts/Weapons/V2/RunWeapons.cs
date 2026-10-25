@@ -49,7 +49,7 @@ namespace AnomalyArena
         public const int AutoSlotCount=2;
         public RunWeapon[] Auto={null,null};
         public const int ArmoryOfferCount=3;
-        [Range(0f,1f), Tooltip("Chance that each of armory slots 2 and 3 shows the next Mk of a held weapon instead of a new form. Slot 1 is always a new form.")]
+        [Range(0f,1f), Tooltip("Chance that each of armory slots 2 and 3 shows a stronger version of a held weapon (a new weapon of that form at a higher Mk, which replaces the held one) instead of a new form. Slot 1 is always a new form.")]
         public float armoryUpgradeChance=.5f;
         public RunWeapon[] Offers={null,null,null};
         public int ActiveIndex { get; private set; }
@@ -97,7 +97,7 @@ namespace AnomalyArena
         Vector3 lastPosition;
         bool inputHeld;
         bool lastDamageAccepted;
-        float dashLeft;
+        float dashLeft,dashRange;
         Vector3 dashDirection;
         RunWeapon dashWeapon;
         float dashContactDamage;
@@ -122,8 +122,14 @@ namespace AnomalyArena
         RunWeapon Roll(WeaponForm form,int wave)
         {
             int v=UnityEngine.Random.Range(0,2);if(Owned(form,v))v=1-v;
-            return CreateWeapon(form,v,wave);
+            var w=CreateWeapon(form,v,wave);
+                                                                                                                                                         
+            if(roster)w.mk=Mathf.Max(w.mk,Mathf.Min(roster.MaxMk-1,w.mk+MkBonus(wave)));
+            return w;
         }
+                                                                                                                                           
+                                                                                                    
+        int MkBonus(int wave)=>roster&&UnityEngine.Random.Range(0,10000)<roster.MkBonusChance(wave)*10000f?1:0;
         RunWeapon CreateWeapon(WeaponForm form,int v,int wave)
         {
             var w=new RunWeapon{form=form,variant=v,rounds=ClipSize(form,v)};
@@ -179,11 +185,17 @@ namespace AnomalyArena
         }
                                                                                                                                                                    
         public int UpgradeTargetMk(RunWeapon owned,int wave)=>roster?Mathf.Min(roster.MaxMk,Mathf.Max(owned.mk+1,roster.ParMk(wave)+1)):owned.mk+1;
+                                                                                                                                                
+                                                                                                                                         
+                                                                                                                                              
         RunWeapon TakeUpgradeOffer(System.Collections.Generic.List<RunWeapon> upgradable,int wave)
         {
             int pick=UnityEngine.Random.Range(0,upgradable.Count);var owned=upgradable[pick];upgradable.RemoveAt(pick);
-            return new RunWeapon{form=owned.form,variant=owned.variant,revealed=owned.revealed,axes=owned.axes,element=owned.element,builtInElement=owned.builtInElement,
-                mk=UpgradeTargetMk(owned,wave),rounds=ClipSize(owned.form,owned.variant),upgradeOf=owned};
+                                                                                                                           
+            var version=CreateWeapon(owned.form,UnityEngine.Random.Range(0,2),wave);
+            version.mk=roster?Mathf.Min(roster.MaxMk,UpgradeTargetMk(owned,wave)+MkBonus(wave)):owned.mk+1;
+            version.upgradeOf=owned;
+            return version;
         }
         public float MkDamage(RunWeapon w)=>w==null||!roster?1f:roster.MkDamage(w.mk);
         System.Collections.Generic.List<WeaponForm> ArmoryForms(int wave,bool? autoKind)
@@ -202,8 +214,11 @@ namespace AnomalyArena
             if(index<0||index>=Offers.Length||Offers[index]==null)return false;var w=Offers[index];
             if(w.upgradeOf!=null)
             {
-                if(Array.IndexOf(Hand,w.upgradeOf)<0&&Array.IndexOf(Auto,w.upgradeOf)<0)return false;
-                w.upgradeOf.mk=Mathf.Max(w.upgradeOf.mk,w.mk);Offers=new RunWeapon[ArmoryOfferCount];return true;
+                                                                                                                                       
+                                                                                                                                 
+                var held=Array.IndexOf(Hand,w.upgradeOf)>=0?Hand:Array.IndexOf(Auto,w.upgradeOf)>=0?Auto:null;
+                if(held==null)return false;
+                held[Array.IndexOf(held,w.upgradeOf)]=w;w.upgradeOf=null;Offers=new RunWeapon[ArmoryOfferCount];return true;
             }
             if(OwnsForm(w.form))return false;var slots=w.IsAuto?Auto:Hand;
             int free=Array.FindIndex(slots,x=>x==null);int at=free>=0?free:replace;if(at<0||at>=slots.Length)return false;slots[at]=w;Offers=new RunWeapon[ArmoryOfferCount];return true;
@@ -293,13 +308,13 @@ namespace AnomalyArena
             TickAutoWeapons(GameManager.Instance.WorldDeltaTime);
             TickSporeClouds();
             TickHazards(GameManager.Instance.WorldDeltaTime);
-            TickExecuteMarks(GameManager.Instance.WorldDeltaTime);TickAnchor(dt);
+            TickExecuteMarks(GameManager.Instance.WorldDeltaTime);TickAnchor(dt);TickMeltdownHaste(dt);
         }
         void FixedUpdate()
         {
             if(dashLeft<=0||dashWeapon==null||!GameManager.Instance.IsCombatActive)return;
             var weapon=dashWeapon;Vector3 from=player.Position;
-            float step=Mathf.Min(dashLeft,25/StartingFormCycleFactor(WeaponForm.RocketLauncher)*Time.fixedDeltaTime);
+            float step=Mathf.Min(dashLeft,RocketSpeed(dashLeft)*Time.fixedDeltaTime);
                                                                                                                                       
                                                                                 
             const float castBack=.1f;
@@ -351,11 +366,23 @@ namespace AnomalyArena
             {
                 var contact=dashContacts[i];dashContacts[i]=default;var body=contact.body;
                 if(!body||!body.IsAlive||body.SpawnVersion!=contact.spawnVersion||!dashHits.Add(contact))continue;
-                                                                                                                         
-                float push=!weapon.Has(UpgradeAxis.Twist)||body is Enemy{IsBoss:true}?0f:Mathf.Min(upgrades.rocketCueMax,Mathf.Max(0f,dashLeft-dashContactDistances[i])+upgrades.rocketCueExtra);
+                                                                                                                                                     
+                float push=!weapon.Has(UpgradeAxis.Twist)||body is Enemy{IsBoss:true}?0f:upgrades.rocketCueMax*RocketSpeedShare(Mathf.Max(0f,dashLeft-dashContactDistances[i]));
                 Damage(weapon,body,contactDamage,push,dashDirection);
             }
         }
+                                                                                                                                              
+                                                                                                                                                          
+        public float RocketSpeed(float left)
+        {
+            float cruise=25f/StartingFormCycleFactor(WeaponForm.RocketLauncher),end=Mathf.Clamp(upgrades.rocketEndSpeedShare,.1f,1f);
+                                                                                                                                     
+            float launch=end>.999f?cruise:cruise*Mathf.Log(1f/end)/(1f-end);
+            return launch*RocketSpeedShare(left);
+        }
+                                                                                                                                         
+                                                                    
+        public float RocketSpeedShare(float left)=>Mathf.Lerp(1f,Mathf.Clamp(upgrades.rocketEndSpeedShare,.1f,1f),dashRange>0f?Mathf.Clamp01(1f-left/dashRange):0f);
         public float StartingFormDamageFactor(WeaponForm form)=>form is WeaponForm.Rifle or WeaponForm.Knife or WeaponForm.RocketLauncher?Mathf.Max(.01f,startingDamageFactor):1f;
         public float StartingFormCycleFactor(WeaponForm form)=>form is WeaponForm.Rifle or WeaponForm.Knife or WeaponForm.RocketLauncher?Mathf.Max(.01f,startingCycleFactor):1f;
         float DamageScale(RunWeapon w)=>StartingFormDamageFactor(w.form)*w.Power*MkDamage(w)*(progression?progression.Stats.DamageMultiplier:1)*Mathf.Max(.01f,crowdDamageMultiplier)*SkillDamageMultiplier;
@@ -365,9 +392,9 @@ namespace AnomalyArena
                                                                                                        
         static float WeaponCooldownRate=>Skills?Skills.WeaponCooldownRate:1f;
         float ChargeSeconds(RunWeapon w)=>w.form==WeaponForm.Railgun?.5f:w.form==WeaponForm.ScatterCannon?Mathf.Max(.01f,upgrades.focusChargeTime):1f;
-        float CooldownScale(RunWeapon w)=>StartingFormCycleFactor(w.form)*w.Tempo*(progression?progression.Stats.CooldownMultiplier:1)/(GameManager.Instance.skills?GameManager.Instance.skills.AttackSpeedMultiplier:1);
+        float CooldownScale(RunWeapon w)=>StartingFormCycleFactor(w.form)*w.Tempo*(progression?progression.Stats.CooldownMultiplier:1)/(GameManager.Instance.skills?GameManager.Instance.skills.AttackSpeedMultiplier:1)/MeltdownHaste;
                                                                                                                                                                                  
-        public float HookCooldown(RunWeapon w)=>hookCooldown*w.Tempo*(progression?progression.Stats.CooldownMultiplier:1)/(GameManager.Instance.skills?GameManager.Instance.skills.AttackSpeedMultiplier:1);
+        public float HookCooldown(RunWeapon w)=>hookCooldown*w.Tempo*(progression?progression.Stats.CooldownMultiplier:1)/(GameManager.Instance.skills?GameManager.Instance.skills.AttackSpeedMultiplier:1)/MeltdownHaste;
         public float GetCooldownDuration(RunWeapon w)
         {
             if(w==null||!roster)return 0f;
@@ -432,7 +459,7 @@ namespace AnomalyArena
             }
             else if(w.form==WeaponForm.Knife){var a=AttackPool.Instance.Acquire();if(a){a.Configure(AttackMode.Hook,player,w,SpawnPoint(aim,player.radius+.2f),aim,Mathf.Max(1f,DamageScale(w)),0,range,hookExtendSpeed/StartingFormCycleFactor(w.form),0,float.PositiveInfinity);w.hookBusy=true;w.hookChainUsed=false;WeaponSound(w,WeaponAudioPhase.Launch);}}
             else if(w.form==WeaponForm.RocketLauncher&&w.variant==0){float cycle=StartingFormCycleFactor(w.form);var strike=Field(w,AttackMode.Blast,point,damage,5,3*w.Reach,1.1f*cycle,cycle,!w.Has(UpgradeAxis.Tame));if(strike)strike.ownerDamage=d.damageA;}
-            else if(w.form==WeaponForm.RocketLauncher){dashLeft=range;dashDirection=aim;dashWeapon=w;dashContactDamage=Mathf.Max(1f,d.damageB*DamageScale(w));dashHits.Clear();player.SetState(CharacterState.Dashing);WeaponSound(w,WeaponAudioPhase.Launch);}
+            else if(w.form==WeaponForm.RocketLauncher){dashLeft=dashRange=range;dashDirection=aim;dashWeapon=w;dashContactDamage=Mathf.Max(1f,d.damageB*DamageScale(w));dashHits.Clear();player.SetState(CharacterState.Dashing);WeaponSound(w,WeaponAudioPhase.Launch);}
             else if(w.form==WeaponForm.ScatterCannon&&w.variant==0)ScatterBlast(w,range,damage);
             else if(w.form==WeaponForm.ScatterCannon)Focus(w,aim,damage);
             else if(w.form==WeaponForm.PhaseDagger&&w.variant==0)
@@ -664,19 +691,20 @@ namespace AnomalyArena
             return best;
         }
                                                                                                                                    
-                                                                                           
-        public DraftCard RollUpgradeCard(WeaponUpgradeOffer avoid=null)
+                                                                                                                                      
+                                                     
+        public DraftCard RollUpgradeCard(WeaponUpgradeOffer avoid=null,int wave=0)
         {
             var choices=new System.Collections.Generic.List<RunWeapon>();
             foreach(var slots in new[]{Hand,Auto})foreach(var w in slots)
                 if(w!=null&&w.revealed&&AvailableAxes(w).Count>0&&!OnlyOffers(w,avoid))choices.Add(w);
-            if(choices.Count==0)return avoid!=null?RollUpgradeCard():null;
+            if(choices.Count==0)return avoid!=null?RollUpgradeCard(null,wave):null;
             var weapon=choices[UnityEngine.Random.Range(0,choices.Count)];var axes=AvailableAxes(weapon);
             bool canReinfuse=CanReinfuse(weapon);
             if(avoid!=null&&avoid.Weapon==weapon){axes.Remove(avoid.Axis);if(avoid.Axis==UpgradeAxis.Infusion)canReinfuse=false;}
                                                                                                                               
             bool reinfuse=canReinfuse&&(axes.Count==0||UnityEngine.Random.value<upgrades.reinfuseChance);
-            var upgrade=reinfuse?UpgradeAxis.Infusion:axes[UnityEngine.Random.Range(0,axes.Count)];
+            var upgrade=reinfuse?UpgradeAxis.Infusion:PickDirection(axes,wave>0?wave:CurrentWave);
             ElementKind element=upgrade==UpgradeAxis.Infusion?RollElement(weapon.element):weapon.element;
             string desc=upgrade==UpgradeAxis.Infusion?ArenaText.Pair("Infuse ","Infuse ")+ArenaTerms.Element(element)+(weapon.element!=ElementKind.None?ArenaText.Pair(", replaces ",", replaces ")+ArenaTerms.Element(weapon.element):""):upgrade switch{UpgradeAxis.Power=>ArenaText.Pair("Damage +40%","Damage +40%"),UpgradeAxis.Tempo=>ArenaText.Pair("Cooldown, charge and reload -30%","Cooldown, charge and reload -30%"),UpgradeAxis.Reach=>ArenaText.Pair("Range, area or targets +40%","Range, area or targets +40%"),UpgradeAxis.Twist=>ArenaText.Pair("Adds a new variant to this anomaly","Adds a new variant to this anomaly"),_=>ArenaText.Pair("Removes or softens this anomaly's backfire","Removes or softens this anomaly's backfire")};
             if(upgrade is UpgradeAxis.Twist or UpgradeAxis.Tame)desc=(int)weapon.form<3?CoreAnomalyUpgradeDescription(weapon,upgrade):ArenaTerms.ExpandedUpgradeDescription(weapon.form,weapon.variant,upgrade);
@@ -684,6 +712,24 @@ namespace AnomalyArena
             var axesBefore=weapon.axes;var elementBefore=weapon.element;
             return new DraftCard(DraftCardKind.Weapon,weapon.Label+" / "+ArenaTerms.Upgrade(upgrade),desc,_=>{weapon.axes|=upgrade;if(upgrade==UpgradeAxis.Infusion)weapon.element=element;return true;},payload:new WeaponUpgradeOffer(weapon,upgrade,element),
                 stillFits:()=>(Array.IndexOf(Hand,weapon)>=0||Array.IndexOf(Auto,weapon)>=0)&&weapon.axes==axesBefore&&weapon.element==elementBefore);
+        }
+        static int CurrentWave=>GameManager.Instance&&GameManager.Instance.waves?Mathf.Max(1,GameManager.Instance.waves.WaveIndex+1):1;
+                                                                                                                                            
+                                                                                                                                         
+                                                                           
+        UpgradeAxis PickDirection(System.Collections.Generic.List<UpgradeAxis> axes,int wave)
+        {
+            var rules=progression?progression.Rules:null;
+            float total=0f;if(rules)foreach(var axis in axes)total+=rules.DirectionWeight(wave,axis);
+            if(total<=0f)return axes[UnityEngine.Random.Range(0,axes.Count)];
+            float roll=UnityEngine.Random.value*total;
+            var picked=axes[0];
+            foreach(var axis in axes)
+            {
+                float weight=rules.DirectionWeight(wave,axis);if(weight<=0f)continue;
+                picked=axis;if(roll<weight)break;roll-=weight;
+            }
+            return picked;
         }
                                                                                                 
         static bool OnlyOffers(RunWeapon w,WeaponUpgradeOffer avoid)
@@ -709,7 +755,7 @@ namespace AnomalyArena
                 (WeaponForm.Knife,1,false)=>ArenaText.Pair("You can move while the hook is out; an empty hook that hits a wall pulls you to it.","You can move while the hook is out; an empty hook that hits a wall pulls you to it."),
                 (WeaponForm.RocketLauncher,0,true)=>ArenaText.Pair($"Enemies the strike kills explode where they fall: radius {u.strikeChainRadius:0.#}, {P(u.strikeChainShare)}% damage, no further chain.",$"Enemies the strike kills explode where they fall: radius {u.strikeChainRadius:0.#}, {P(u.strikeChainShare)}% damage, no further chain."),
                 (WeaponForm.RocketLauncher,0,false)=>ArenaText.Pair($"Your own blast no longer hurts you; it pushes you {u.strikeJumpDistance:0.#} cells instead, with no wall damage.",$"Your own blast no longer hurts you; it pushes you {u.strikeJumpDistance:0.#} cells instead, with no wall damage."),
-                (WeaponForm.RocketLauncher,1,true)=>ArenaText.Pair($"Enemies you hit are knocked along your flight: the flight left plus {u.rocketCueExtra:0.#} cells, up to {u.rocketCueMax:0.#}.",$"Enemies you hit are knocked along your flight: the flight left plus {u.rocketCueExtra:0.#} cells, up to {u.rocketCueMax:0.#}."),
+                (WeaponForm.RocketLauncher,1,true)=>ArenaText.Pair($"Enemies you hit are knocked along your flight, farther the faster you still fly: {u.rocketCueMax:0.#} cells at launch, {u.rocketCueMax*Mathf.Clamp(u.rocketEndSpeedShare,.1f,1f):0.#} at the end.",$"Enemies you hit are knocked along your flight, farther the faster you still fly: {u.rocketCueMax:0.#} cells at launch, {u.rocketCueMax*Mathf.Clamp(u.rocketEndSpeedShare,.1f,1f):0.#} at the end."),
                 (WeaponForm.RocketLauncher,1,false)=>ArenaText.Pair("Hitting a wall no longer costs you HP and resets this flight's cooldown.","Hitting a wall no longer costs you HP and resets this flight's cooldown."),
                 _=>ArenaText.Pair("Adds a new variant to this anomaly","Adds a new variant to this anomaly")
             };

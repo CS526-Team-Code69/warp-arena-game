@@ -211,6 +211,86 @@ MonoBehaviour:
     y: 29
     width: 2
     height: 5
+  - serializedVersion: 2
+    x: -52
+    y: -26
+    width: 2
+    height: 12
+  - serializedVersion: 2
+    x: -58
+    y: -16
+    width: 6
+    height: 2
+  - serializedVersion: 2
+    x: -58
+    y: -26
+    width: 6
+    height: 2
+  - serializedVersion: 2
+    x: 50
+    y: -26
+    width: 2
+    height: 12
+  - serializedVersion: 2
+    x: 52
+    y: -16
+    width: 6
+    height: 2
+  - serializedVersion: 2
+    x: 52
+    y: -26
+    width: 6
+    height: 2
+  - serializedVersion: 2
+    x: -40
+    y: 8
+    width: 10
+    height: 2
+  - serializedVersion: 2
+    x: -40
+    y: 10
+    width: 2
+    height: 6
+  - serializedVersion: 2
+    x: 30
+    y: 8
+    width: 10
+    height: 2
+  - serializedVersion: 2
+    x: 38
+    y: 10
+    width: 2
+    height: 6
+  - serializedVersion: 2
+    x: -44
+    y: 40
+    width: 12
+    height: 2
+  - serializedVersion: 2
+    x: -44
+    y: 42
+    width: 2
+    height: 6
+  - serializedVersion: 2
+    x: -34
+    y: 42
+    width: 2
+    height: 6
+  - serializedVersion: 2
+    x: 48
+    y: -48
+    width: 12
+    height: 2
+  - serializedVersion: 2
+    x: 48
+    y: -54
+    width: 2
+    height: 6
+  - serializedVersion: 2
+    x: 58
+    y: -54
+    width: 2
+    height: 6
   holeAnchors:
   - {x: -72, y: -44}
   - {x: -72, y: 44}

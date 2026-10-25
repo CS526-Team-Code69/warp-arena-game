@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6b8ffaeb0bc0faa4ca25744bec02268e, type: 3}
   m_Name: WreckField_2
   m_EditorClassIdentifier: AnomalyArena::AnomalyArena.Biome
-  displayName: "Wreck Field \xB7 2"
+  displayName: "Ruins \xB7 2"
   layout: {fileID: 11400000, guid: 44ac808ff656c8244b15ab3e75b00ed2, type: 2}
   ambient: {r: 0.19, g: 0.24, b: 0.35, a: 1}
   floor: {fileID: 2100000, guid: 74f2515ed671239498bfb2c7c20ff000, type: 2}

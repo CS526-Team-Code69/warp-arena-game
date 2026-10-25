@@ -12,8 +12,8 @@ ui.resume,RESUME,RESUME,Arena v2 player-visible text; format arguments come from
 ui.restart,RESTART RUN,RESTART RUN,Arena v2 player-visible text; format arguments come from current data.
 ui.quit,QUIT TO TITLE,QUIT TO TITLE,Arena v2 player-visible text; format arguments come from current data.
 ui.newrun,NEW RUN [R],NEW RUN [R],Arena v2 player-visible text; format arguments come from current data.
-ui.nextwave,START NEXT WAVE [SPACE],START NEXT WAVE [SPACE],Arena v2 player-visible text; format arguments come from current data.
-ui.return.reward,RETURN / DECLINE SKILL [SPACE],RETURN / DECLINE SKILL [SPACE],Arena v2 player-visible text; format arguments come from current data.
+ui.nextwave,START NEXT WAVE,START NEXT WAVE,Arena v2 player-visible text; format arguments come from current data.
+ui.return.reward,RETURN / DECLINE SKILL,RETURN / DECLINE SKILL,Arena v2 player-visible text; format arguments come from current data.
 ui.skip,SKIP OFFER,SKIP OFFER,Arena v2 player-visible text; format arguments come from current data.
 ui.reroll,REROLL [{0}],REROLL [{0}],Arena v2 player-visible text; format arguments come from current data.
 ui.back,BACK,BACK,Arena v2 player-visible text; format arguments come from current data.
@@ -26,7 +26,7 @@ ui.stamina,STAMINA,STAMINA,Arena v2 player-visible text; format arguments come f
 ui.energy,ENERGY {0} / {1},ENERGY {0} / {1},Arena v2 player-visible text; format arguments come from current data.
 ui.energy.void,VOID ENERGY {0} / {1},VOID ENERGY {0} / {1},Arena v2 player-visible text; format arguments come from current data.
 ui.xp,LV {0} · XP {1} / {2} · DRAFTS {3},LV {0} · XP {1} / {2} · DRAFTS {3},Arena v2 player-visible text; format arguments come from current data.
-ui.level.max,10 · MAX,10 · MAX,Arena v2 player-visible text; format arguments come from current data.
+ui.level.max,12 · MAX,12 · MAX,Arena v2 player-visible text; format arguments come from current data.
 ui.wave,WAVE {0} / {1} · {2}s,WAVE {0} / {1} · {2}s,Arena v2 player-visible text; format arguments come from current data.
 ui.boss.hp,{0} · {1} / {2} · SHIELD {3},{0} · {1} / {2} · SHIELD {3},Arena v2 player-visible text; format arguments come from current data.
 ui.build.clock,BUILD TIME {0}s,BUILD TIME {0}s,Arena v2 player-visible text; format arguments come from current data.
@@ -39,25 +39,27 @@ ui.freeze.short,ICE,ICE,Arena v2 player-visible text; format arguments come from
 ui.paralysis.short,STUN,STUN,Arena v2 player-visible text; format arguments come from current data.
 ui.hole.portal,VOID PORTAL,VOID PORTAL,Arena v2 player-visible text; format arguments come from current data.
 ui.hole.enter,"E · ENTER
-FAILURE ENDS RUN","E · ENTER
-FAILURE ENDS RUN",Arena v2 player-visible text; format arguments come from current data.
+FAILURE ENDS RUN
+CLEARS STATUS & SHIELD","E · ENTER
+FAILURE ENDS RUN
+CLEARS STATUS & SHIELD",Arena v2 player-visible text; format arguments come from current data.
 ui.hole.remaining,{0} WAVES LEFT,{0} WAVES LEFT,Arena v2 player-visible text; format arguments come from current data.
 ui.hole.offscreen,VOID · {0} WAVES,VOID · {0} WAVES,Arena v2 player-visible text; format arguments come from current data.
 ui.hole.black,BLACK HOLE,BLACK HOLE,Arena v2 player-visible text; format arguments come from current data.
 ui.elite,ELITE,ELITE,Arena v2 player-visible text; format arguments come from current data.
-ui.shade.incoming,SHADE,SHADE,Arena v2 player-visible text; format arguments come from current data.
+ui.shade.incoming,SHADE INCOMING,SHADE INCOMING,Arena v2 player-visible text; format arguments come from current data.
 ui.reward.heading,GREATER VOID REWARD,GREATER VOID REWARD,Arena v2 player-visible text; format arguments come from current data.
-ui.reward.body,"Pick one Greater Void skill, or return without changing your skills. 1 / 2 / 3 select.","Pick one Greater Void skill, or return without changing your skills. 1 / 2 / 3 select.",Arena v2 player-visible text; format arguments come from current data.
+ui.reward.body,Pick one of three Greater Void skills (or none); they have no further levels. 1 / 2 / 3 select.,Pick one of three Greater Void skills (or none); they have no further levels. 1 / 2 / 3 select.,Arena v2 player-visible text; format arguments come from current data.
 ui.draft.number,DRAFT {0} / {1},DRAFT {0} / {1},Arena v2 player-visible text; format arguments come from current data.
 ui.title.body,Survive the warp. Master every anomaly.,Survive the warp. Master every anomaly.,Arena v2 player-visible text; format arguments come from current data.
-ui.loadout.body,"Pick one familiar form. Its anomaly stays unknown until you use it.
-Every anomaly has a backfire. Aim manually; use the terrain.","Pick one familiar form. Its anomaly stays unknown until you use it.
-Every anomaly has a backfire. Aim manually; use the terrain.",Arena v2 player-visible text; format arguments come from current data.
-ui.armory.body,"Take one unrevealed weapon, or skip. Replaced weapons lose their upgrades.","Take one unrevealed weapon, or skip. Replaced weapons lose their upgrades.",Arena v2 player-visible text; format arguments come from current data.
-ui.draft.body,"Pick a stat, a weapon change, or a skill. 1 / 2 / 3 select; R rerolls.","Pick a stat, a weapon change, or a skill. 1 / 2 / 3 select; R rerolls.",Arena v2 player-visible text; format arguments come from current data.
-ui.replace.weapon.body,Choose the weapon to replace. Its upgrades will be lost.,Choose the weapon to replace. Its upgrades will be lost.,Arena v2 player-visible text; format arguments come from current data.
-ui.replace.skill.body,Choose the skill to replace. The new skill starts at level 1.,Choose the skill to replace. The new skill starts at level 1.,Arena v2 player-visible text; format arguments come from current data.
-ui.ready.body,Build choices complete. Space starts the next wave.,Build choices complete. Space starts the next wave.,Arena v2 player-visible text; format arguments come from current data.
+ui.loadout.body,"Pick one familiar form. Which backfire it has is unknown until you take it; the moment you choose, the game pauses and the weapon card appears.
+Aim manually; use the terrain.","Pick one familiar form. Which backfire it has is unknown until you take it; the moment you choose, the game pauses and the weapon card appears.
+Aim manually; use the terrain.",Arena v2 player-visible text; format arguments come from current data.
+ui.armory.body,"Pick one of three: a new weapon, or a higher Mk of one you hold (weapons grow stronger through higher Mks from the armory). You may skip. Upgrades stay with the weapon: replace it and they are gone with it.","Pick one of three: a new weapon, or a higher Mk of one you hold (weapons grow stronger through higher Mks from the armory). You may skip. Upgrades stay with the weapon: replace it and they are gone with it.",Arena v2 player-visible text; format arguments come from current data.
+ui.draft.body,"Three cards, one of each: a stat card, a weapon card (an upgrade direction a revealed weapon has not taken yet) and a skill card (a new skill, or one level for a skill you own). 1 / 2 / 3 select; R rerolls (once per build phase).","Three cards, one of each: a stat card, a weapon card (an upgrade direction a revealed weapon has not taken yet) and a skill card (a new skill, or one level for a skill you own). 1 / 2 / 3 select; R rerolls (once per build phase).",Arena v2 player-visible text; format arguments come from current data.
+ui.replace.weapon.body,Choose the weapon to replace. Upgrades stay with the weapon: replace it and they are gone with it.,Choose the weapon to replace. Upgrades stay with the weapon: replace it and they are gone with it.,Arena v2 player-visible text; format arguments come from current data.
+ui.replace.skill.body,"With 3 skills already, taking a new one means replacing an old one; the new skill starts at level 1.","With 3 skills already, taking a new one means replacing an old one; the new skill starts at level 1.",Arena v2 player-visible text; format arguments come from current data.
+ui.ready.body,Build choices complete. Click START NEXT WAVE to go on.,Build choices complete. Click START NEXT WAVE to go on.,Arena v2 player-visible text; format arguments come from current data.
 ui.pause.body,The battlefield and the build clock are paused.,The battlefield and the build clock are paused.,Arena v2 player-visible text; format arguments come from current data.
 ui.result.heading,RUN ENDED,RUN ENDED,Arena v2 player-visible text; format arguments come from current data.
 ui.result.win,EARTH IS WITHIN REACH,EARTH IS WITHIN REACH,Arena v2 player-visible text; format arguments come from current data.
@@ -69,7 +71,7 @@ notice.level,LEVEL {0},LEVEL {0},Arena v2 player-visible text; format arguments 
 notice.energy.refilled,Energy refilled. Pick the card after the wave.,Energy refilled. Pick the card after the wave.,Arena v2 player-visible text; format arguments come from current data.
 notice.drafts.auto,{0} pending drafts resolved automatically,{0} pending drafts resolved automatically,Arena v2 player-visible text; format arguments come from current data.
 notice.armory,Armory: {0},Armory: {0},Arena v2 player-visible text; format arguments come from current data.
-notice.tyrant.immunities,Tyrant immunities: {0},Tyrant immunities: {0},Arena v2 player-visible text; format arguments come from current data.
+notice.tyrant.immunities,Tyrant King immunities: {0},Tyrant King immunities: {0},Arena v2 player-visible text; format arguments come from current data.
 notice.recall.blocked,Recall point is blocked,Recall point is blocked,Arena v2 player-visible text; format arguments come from current data.
 notice.menu.blocked,Not during a menu,Not during a menu,Arena v2 player-visible text; format arguments come from current data.
 notice.not.ready,Not ready,Not ready,Arena v2 player-visible text; format arguments come from current data.
@@ -82,8 +84,8 @@ weapon.fists,Fists,Fists,Arena v2 player-visible text; format arguments come fro
 weapon.empty,Empty,Empty,Arena v2 player-visible text; format arguments come from current data.
 weapon.kind.hand,HAND,HAND,Arena v2 player-visible text; format arguments come from current data.
 weapon.kind.auto,AUTO,AUTO,Arena v2 player-visible text; format arguments come from current data.
-weapon.unknown,Unknown anomaly,Unknown anomaly,Arena v2 player-visible text; format arguments come from current data.
-weapon.unknown.warning,Unknown anomaly. First use may backfire.,Unknown anomaly. First use may backfire.,Arena v2 player-visible text; format arguments come from current data.
+weapon.unknown,Backfire unrevealed,Backfire unrevealed,Arena v2 player-visible text; format arguments come from current data.
+weapon.unknown.warning,Which backfire it has is unknown until you take it; it is revealed the moment you choose.,Which backfire it has is unknown until you take it; it is revealed the moment you choose.,Arena v2 player-visible text; format arguments come from current data.
 weapon.offer.none,No eligible weapon,No eligible weapon,Arena v2 player-visible text; format arguments come from current data.
 card.kind.Stat,Stat,Stat,Arena v2 player-visible text; format arguments come from current data.
 card.kind.Weapon,Weapon,Weapon,Arena v2 player-visible text; format arguments come from current data.
@@ -96,28 +98,28 @@ card.infusion.replace,"Infuse {0}, replaces {1}","Infuse {0}, replaces {1}",Aren
 card.power,Damage +40%,Damage +40%,Arena v2 player-visible text; format arguments come from current data.
 card.tempo,"Cooldown, charge and reload -30%","Cooldown, charge and reload -30%",Arena v2 player-visible text; format arguments come from current data.
 card.reach,"Range, area or targets +40%","Range, area or targets +40%",Arena v2 player-visible text; format arguments come from current data.
-card.twist,Add the anomaly's extra behaviour,Add the anomaly's extra behaviour,Arena v2 player-visible text; format arguments come from current data.
-card.tame,Soften this weapon's backfire,Soften this weapon's backfire,Arena v2 player-visible text; format arguments come from current data.
-stat.MaxHp,Max HP,Max HP,Raises the cap; the matching stat card also heals the same amount.
-stat.Regeneration,Regeneration,Regeneration,HP restored every 5 seconds.
-stat.MoveSpeed,Move Speed,Move Speed,Units per second; cards raise it by a percentage.
-stat.Stamina,Stamina,Stamina,Stat cards lengthen sprint time; the HUD bar is still called Stamina.
-stat.Damage,Damage,Damage,Weapon damage percentage; stat cards add up in the same bonus bracket.
-stat.AttackSpeed,Attack Speed,Attack Speed,"Shortens hand and auto weapon cooldowns and reloads, not skill cooldowns."
-stat.Knockback,Knockback,Knockback,"How much further your own attacks push targets, in percent."
-stat.Impact,Impact,Impact,Extra damage enemies take when they slam into a wall; not direct hit damage.
-stat.PickupRange,Pickup Range,Pickup Range,Distance in units at which XP and HP orbs start flying to you.
-stat.Protection,Protection,Protection,Seconds after being hit during which attacks are ignored.
-stat.Luck,Luck,Luck,Affects the rarity odds of stat cards.
-stat.MaxEnergy,Max Energy,Max Energy,Energy capacity; raising the cap does not refill it.
-stat.EnergySiphon,Energy Siphon,Energy Siphon,"Energy gained per enemy death, not only from your own kills."
-stat.ElementPenetration,Element Penetration,Element Penetration,Share of an element that still works on an immune target; not wall or shield piercing.
-axis.Infusion,Infusion,Infusion,"`Infuse {element}`; with an element already present: `Infuse {new element}, replacing {old element}`."
-axis.Power,Power,Power,`Damage +40%`.
-axis.Tempo,Tempo,Tempo,"`Cooldown, charge and reload time -30%`."
-axis.Reach,Reach,Reach,"`Range, radius or target count +40%`; the weapon decides which values change."
-axis.Twist,Twist,Twist,`Changes one behaviour rule of the anomaly`; the card must state the specific rule.
-axis.Tame,Tame,Tame,`Softens this weapon's backfire`; the card must state which cost is reduced.
+card.twist,Adds a new variant to this anomaly,Adds a new variant to this anomaly,Arena v2 player-visible text; format arguments come from current data.
+card.tame,Removes or softens this anomaly's backfire,Removes or softens this anomaly's backfire,Arena v2 player-visible text; format arguments come from current data.
+stat.MaxHp,Max HP,Max HP,上限增加；对应属性卡也治疗相同点数。
+stat.Regeneration,Regeneration,Regeneration,每 5 秒回复的生命点数。
+stat.MoveSpeed,Move Speed,Move Speed,单位／秒；卡牌以百分比增长。
+stat.Stamina,Stamina,Stamina,属性卡延长冲刺秒数；HUD 资源条仍叫体力。
+stat.Damage,Damage,Damage,武器伤害百分比，多个属性卡在相同加成区累加。
+stat.AttackSpeed,Attack Speed,Attack Speed,缩短手持／自动武器冷却和换弹，不缩短技能冷却。
+stat.Knockback,Knockback,Knockback,自己攻击将目标推远的百分比。
+stat.Impact,Impact,Impact,增加敌人被撞墙时受到的伤害；不是直接命中伤害。
+stat.PickupRange,Pickup Range,Pickup Range,经验／生命球开始飞向你的距离，单位。
+stat.Protection,Protection,Protection,挨打后暂时忽略攻击的秒数。
+stat.Luck,Luck,Luck,影响属性卡稀有度概率。
+stat.MaxEnergy,Max Energy,Max Energy,能量容量；提高上限不等于立即回满。
+stat.EnergySiphon,Energy Siphon,Energy Siphon,每个敌人死亡回复的能量；不只包括自己直接击杀。
+stat.ElementPenetration,Element Penetration,Element Penetration,让元素对免疫目标部分生效的比例；不是穿墙或穿透护盾。
+axis.Infusion,Infusion,Infusion,`灌注{元素}`；已有元素时：`灌注{新元素}，替换{旧元素}`。
+axis.Power,Power,Power,`伤害 +40%`。
+axis.Tempo,Tempo,Tempo,`冷却、蓄力与换弹时间 -30%`。
+axis.Reach,Reach,Reach,`射程、范围或目标数量 +40%`；实际改变哪些值由这把武器确定。
+axis.Twist,Twist,Twist,`改变反常效果的一条行为规则`；卡牌要写具体规则，不能只写这句总称。
+axis.Tame,Tame,Tame,`减轻这把武器的反噬`；卡牌要写具体减轻哪项代价。
 weapon.form.Rifle,Rifle,Rifle,Weapon form; does not reveal anomaly.
 weapon.anomaly.Rifle.0,Charged Shot,Charged Shot,Display only after anomaly reveal.
 weapon.anomaly.Rifle.1,Reverse Shot,Reverse Shot,Display only after anomaly reveal.
@@ -132,7 +134,7 @@ weapon.anomaly.GravGun.0,Attract,Attract,Display only after anomaly reveal.
 weapon.anomaly.GravGun.1,Repel,Repel,Display only after anomaly reveal.
 weapon.form.ScatterCannon,Scatter Cannon,Scatter Cannon,Weapon form; does not reveal anomaly.
 weapon.anomaly.ScatterCannon.0,Blast,Blast,Display only after anomaly reveal.
-weapon.anomaly.ScatterCannon.1,Suction,Suction,Display only after anomaly reveal.
+weapon.anomaly.ScatterCannon.1,Focus,Focus,Display only after anomaly reveal.
 weapon.form.PhaseDagger,Phase Dagger,Phase Dagger,Weapon form; does not reveal anomaly.
 weapon.anomaly.PhaseDagger.0,Swap,Swap,Display only after anomaly reveal.
 weapon.anomaly.PhaseDagger.1,Recall,Recall,Display only after anomaly reveal.
@@ -148,7 +150,7 @@ weapon.anomaly.CryoCannon.1,Blizzard,Blizzard,Display only after anomaly reveal.
 weapon.form.ArcCoil,Arc Coil,Arc Coil,Weapon form; does not reveal anomaly.
 weapon.anomaly.ArcCoil.0,Chain,Chain,Display only after anomaly reveal.
 weapon.anomaly.ArcCoil.1,Capacitor,Capacitor,Display only after anomaly reveal.
-weapon.form.SporeLauncher,Spore Launcher,Spore Launcher,Weapon form; does not reveal anomaly.
+weapon.form.SporeLauncher,Venom Launcher,Venom Launcher,Weapon form; does not reveal anomaly.
 weapon.anomaly.SporeLauncher.0,Cloud,Cloud,Display only after anomaly reveal.
 weapon.anomaly.SporeLauncher.1,Needler,Needler,Display only after anomaly reveal.
 weapon.form.Railgun,Railgun,Railgun,Weapon form; does not reveal anomaly.
@@ -159,10 +161,10 @@ weapon.anomaly.Minigun.0,Spin-up,Spin-up,Display only after anomaly reveal.
 weapon.anomaly.Minigun.1,Meltdown,Meltdown,Display only after anomaly reveal.
 weapon.form.SwarmLauncher,Swarm Launcher,Swarm Launcher,Weapon form; does not reveal anomaly.
 weapon.anomaly.SwarmLauncher.0,Barrage,Barrage,Display only after anomaly reveal.
-weapon.anomaly.SwarmLauncher.1,Carpet,Carpet,Display only after anomaly reveal.
+weapon.anomaly.SwarmLauncher.1,Bombard,Bombard,Display only after anomaly reveal.
 weapon.form.OrbitBlades,Orbit Blades,Orbit Blades,Weapon form; does not reveal anomaly.
-weapon.anomaly.OrbitBlades.0,Saw,Saw,Display only after anomaly reveal.
-weapon.anomaly.OrbitBlades.1,Magnet,Magnet,Display only after anomaly reveal.
+weapon.anomaly.OrbitBlades.0,Closed Blade,Closed Blade,Display only after anomaly reveal.
+weapon.anomaly.OrbitBlades.1,Open Blade,Open Blade,Display only after anomaly reveal.
 weapon.form.SentryDrone,Sentry Drone,Sentry Drone,Weapon form; does not reveal anomaly.
 weapon.anomaly.SentryDrone.0,Gunner,Gunner,Display only after anomaly reveal.
 weapon.anomaly.SentryDrone.1,Whirl,Whirl,Display only after anomaly reveal.
@@ -179,25 +181,25 @@ skill.Devour,Devour,Devour,Current skill name; excludes unapproved new candidate
 skill.Blink,Blink,Blink,Current skill name; excludes unapproved new candidate mechanics.
 skill.Shockwave,Shockwave,Shockwave,Current skill name; excludes unapproved new candidate mechanics.
 skill.GravityWell,Gravity Well,Gravity Well,Current skill name; excludes unapproved new candidate mechanics.
-skill.TimeSlip,Time Slip,Time Slip,Current skill name; excludes unapproved new candidate mechanics.
-skill.Decoy,Decoy,Decoy,Current skill name; excludes unapproved new candidate mechanics.
+skill.TimeSlip,Time Stop,Time Stop,Current skill name; excludes unapproved new candidate mechanics.
+skill.Decoy,Mirror Image,Mirror Image,Current skill name; excludes unapproved new candidate mechanics.
 skill.Overcharge,Overcharge,Overcharge,Current skill name; excludes unapproved new candidate mechanics.
 skill.PocketVoid,Pocket Void,Pocket Void,Current skill name; excludes unapproved new candidate mechanics.
 skill.VoidWalk,Void Walk,Void Walk,Current skill name; excludes unapproved new candidate mechanics.
 skill.Singularity,Singularity,Singularity,Current skill name; excludes unapproved new candidate mechanics.
-enemy.Grunt,Grunt,Grunt,Melee chaser that punches.
-enemy.Brute,Brute,Brute,"Large body, hard to push."
-enemy.Skitter,Skitter,Skitter,"Fast, comes in packs."
-enemy.Spitter,Spitter,Spitter,Ranged spitter.
-enemy.Rammer,Rammer,Rammer,Telegraphed straight charge.
-enemy.Bloater,Bloater,Bloater,Explodes when close or on death.
-enemy.Warden,Warden,Warden,Shields its allies.
-enemy.Splitter,Splitter,Splitter,Splits into small enemies when killed by damage.
-enemy.Spire,Spire,Spire,"Immovable, area ground attack."
-enemy.Stomper,Stomper,Stomper,Pounds the ground and pushes nearby targets away.
-enemy.Shade,Shade,Shade,"Low HP, high damage, approaches cloaked."
-enemy.Hollow,THE HOLLOW,THE HOLLOW,Void trial boss.
-enemy.Tyrant,THE TYRANT,THE TYRANT,Final boss.
+enemy.Grunt,Grunt,Grunt,基础近战怪：走近出拳，不击退玩家。
+enemy.Brute,Brute,Brute,近战基础怪的外观变体，行为同杂兵（略慢）。
+enemy.Skitter,Skitter,Skitter,近战基础怪的外观变体，行为同杂兵（略快）。
+enemy.Spitter,Spitter,Spitter,基础远程怪：发射毒刺，命中叠中毒，不击退。
+enemy.Rammer,Rammer,Rammer,只以精英出现：预告直线冲锋。
+enemy.Bloater,Bloater,Bloater,只以精英出现：接近或死亡后爆炸。
+enemy.Warden,Warden,Warden,给同伴护盾。
+enemy.Splitter,Splitter,Splitter,近战基础怪的外观变体，行为同杂兵，不再分裂。
+enemy.Spire,Spire,Spire,只以精英出现：不可移动、范围地面攻击。
+enemy.Stomper,Stomper,Stomper,只以精英出现：重击地面，打到玩家造成硬直。
+enemy.Shade,Shade,Shade,只以精英出现：隐身接近、高伤害。
+enemy.Hollow,THE NASH PROPHET,THE NASH PROPHET,虚空试炼首领。
+enemy.Tyrant,THE TYRANT KING,THE TYRANT KING,最终首领。
 element.None,None,None,Element name; Frost and Frozen are distinct.
 element.Fire,Fire,Fire,Element name; Frost and Frozen are distinct.
 element.Poison,Poison,Poison,Element name; Frost and Frozen are distinct.
@@ -207,7 +209,7 @@ element.Earth,Earth,Earth,Element name; Frost and Frozen are distinct.
 element.Light,Light,Light,Element name; Frost and Frozen are distinct.
 element.Void,Void,Void,Element name; Frost and Frozen are distinct.
 ui.subtitle,EVERY WEAPON HAS A TWIST.,EVERY WEAPON HAS A TWIST.,Static header/button or numbered HUD format.
-ui.controls,WASD MOVE · MOUSE AIM · LMB USE · RMB SWITCH · SHIFT SPRINT · 1/2/3 SKILLS · E ENTER,WASD MOVE · MOUSE AIM · LMB USE · RMB SWITCH · SHIFT SPRINT · 1/2/3 SKILLS · E ENTER,Static header/button or numbered HUD format.
+ui.controls,WASD MOVE · MOUSE AIM · LMB USE WEAPON · RMB SWITCH SLOTS · SHIFT SPRINT · 1/2/3 SKILLS · E ON A PORTAL ENTERS THE TRIAL · ESC PAUSE,WASD MOVE · MOUSE AIM · LMB USE WEAPON · RMB SWITCH SLOTS · SHIFT SPRINT · 1/2/3 SKILLS · E ON A PORTAL ENTERS THE TRIAL · ESC PAUSE,Static header/button or numbered HUD format.
 ui.hand1,HAND 1 [LMB],HAND 1 [LMB],Static header/button or numbered HUD format.
 ui.hand2,HAND 2 [RMB SWITCH],HAND 2 [RMB SWITCH],Static header/button or numbered HUD format.
 ui.auto1,AUTO 1,AUTO 1,Static header/button or numbered HUD format.
@@ -222,11 +224,11 @@ ui.greater.heading,GREATER VOID REWARD,GREATER VOID REWARD,Static header/button 
 ui.draft.counter,DRAFT {0} / {1},DRAFT {0} / {1},Static header/button or numbered HUD format.
 ui.reroll.counter,REROLL [{0}],REROLL [{0}],Static header/button or numbered HUD format.
 upgrade.core.Rifle.0.twist,Fully charged shots can bounce off walls up to 2 times.,Fully charged shots can bounce off walls up to 2 times.,Original six anomalies: exact saved card branch; new 44 upgrades are separate.
-upgrade.core.Rifle.0.tame,Charging no longer slows your movement.,Charging no longer slows your movement.,Original six anomalies: exact saved card branch; new 44 upgrades are separate.
+upgrade.core.Rifle.0.tame,Charging no longer slows you.,Charging no longer slows you.,Original six anomalies: exact saved card branch; new 44 upgrades are separate.
 upgrade.core.Rifle.1.twist,Reverse shots can bounce off walls 3 times instead of 1.,Reverse shots can bounce off walls 3 times instead of 1.,Original six anomalies: exact saved card branch; new 44 upgrades are separate.
-upgrade.core.Rifle.1.tame,Firing no longer pushes you forward.,Firing no longer pushes you forward.,Original six anomalies: exact saved card branch; new 44 upgrades are separate.
+upgrade.core.Rifle.1.tame,Reverse rounds turn toward your aim 0.3 s after leaving.,Reverse rounds turn toward your aim 0.3 s after leaving.,Original six anomalies: exact saved card branch; new 44 upgrades are separate.
 upgrade.core.Knife.0.twist,The throwing knife can bounce off walls up to 2 times.,The throwing knife can bounce off walls up to 2 times.,Original six anomalies: exact saved card branch; new 44 upgrades are separate.
-upgrade.core.Knife.0.tame,The returning corpse no longer damages or knocks you back; it still hits others.,The returning corpse no longer damages or knocks you back; it still hits others.,Original six anomalies: exact saved card branch; new 44 upgrades are separate.
+upgrade.core.Knife.0.tame,The straight return after a kill no longer hurts you; it still cuts enemies on the way.,The straight return after a kill no longer hurts you; it still cuts enemies on the way.,Original six anomalies: exact saved card branch; new 44 upgrades are separate.
 upgrade.core.Knife.1.twist,A hook that hits a wall moves you to the wall.,A hook that hits a wall moves you to the wall.,Original six anomalies: exact saved card branch; new 44 upgrades are separate.
 upgrade.core.Knife.1.tame,The flung enemy is stunned for 1.5 seconds when it lands.,The flung enemy is stunned for 1.5 seconds when it lands.,Original six anomalies: exact saved card branch; new 44 upgrades are separate.
 upgrade.core.RocketLauncher.0.twist,The explosion pulls characters toward its centre instead of knocking them outward.,The explosion pulls characters toward its centre instead of knocking them outward.,Original six anomalies: exact saved card branch; new 44 upgrades are separate.
@@ -238,9 +240,9 @@ upgrade.expanded.GravGun.0.tame,Your attraction field no longer pulls you.,Your 
 upgrade.expanded.GravGun.1.twist,Repel only in the aimed 180-degree half circle.,Repel only in the aimed 180-degree half circle.,Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending.
 upgrade.expanded.GravGun.1.tame,Remove your 2-unit recoil; orbs are still repelled.,Remove your 2-unit recoil; orbs are still repelled.,Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending.
 upgrade.expanded.ScatterCannon.0.twist,Push side targets toward the aim line; push centred targets forward.,Push side targets toward the aim line; push centred targets forward.,Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending.
-upgrade.expanded.ScatterCannon.0.tame,"Still move back by 3, using a push without wall-impact damage.","Still move back by 3, using a push without wall-impact damage.",Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending.
-upgrade.expanded.ScatterCannon.1.twist,"On release, push gathered enemies forward by 5 once.","On release, push gathered enemies forward by 5 once.",Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending.
-upgrade.expanded.ScatterCannon.1.tame,Stop suction at a 2-unit body gap; enemies can still walk closer.,Stop suction at a 2-unit body gap; enemies can still walk closer.,Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending.
+upgrade.expanded.ScatterCannon.0.tame,Reloading never jams.,Reloading never jams.,Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending.
+upgrade.expanded.ScatterCannon.1.twist,Focused pellets pierce the first target; later targets take 60%.,Focused pellets pierce the first target; later targets take 60%.,Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending.
+upgrade.expanded.ScatterCannon.1.tame,The release recoil becomes a push that never causes wall damage.,The release recoil becomes a push that never causes wall damage.,Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending.
 upgrade.expanded.PhaseDagger.0.twist,Pierce the first body and swap with the second valid target; hit each once.,Pierce the first body and swap with the second valid target; hit each once.,Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending.
 upgrade.expanded.PhaseDagger.0.tame,Gain 0.5 s hit protection after a swap; no status clear or hole immunity.,Gain 0.5 s hit protection after a swap; no status clear or hole immunity.,Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending.
 upgrade.expanded.PhaseDagger.1.twist,Blast at departure too; overlapping blasts hit each enemy once.,Blast at departure too; overlapping blasts hit each enemy once.,Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending.
@@ -252,11 +254,11 @@ upgrade.expanded.PlasmaLauncher.1.tame,The blast spares your HP but still displa
 upgrade.expanded.Flamethrower.0.twist,Reflect the flame once at the first wall; hit each body once per shot.,Reflect the flame once at the first wall; hit each body once per shot.,Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending.
 upgrade.expanded.Flamethrower.0.tame,Overheat adds no Fire to you; the 1.5 s lockout stays.,Overheat adds no Fire to you; the 1.5 s lockout stays.,Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending.
 upgrade.expanded.Flamethrower.1.twist,Push out by 3 when a fire patch ends; no extra damage.,Push out by 3 when a fire patch ends; no extra damage.,Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending.
-upgrade.expanded.Flamethrower.1.tame,Your patches do not hurt or burn you; other fire still can.,Your patches do not hurt or burn you; other fire still can.,Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending.
+upgrade.expanded.Flamethrower.1.tame,Your own fire patches no longer burn you; other fire still can.,Your own fire patches no longer burn you; other fire still can.,Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending.
 upgrade.expanded.CryoCannon.0.twist,"Frozen bodies can chain-shatter: at most 3 bursts, each body once.","Frozen bodies can chain-shatter: at most 3 bursts, each body once.",Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending.
 upgrade.expanded.CryoCannon.0.tame,Wall shards no longer apply Frost to you.,Wall shards no longer apply Frost to you.,Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending.
 upgrade.expanded.CryoCannon.1.twist,Cloud stays for 2 s after release; only one cloud at a time.,Cloud stays for 2 s after release; only one cloud at a time.,Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending.
-upgrade.expanded.CryoCannon.1.tame,Your cloud spares your HP and Frost; holding still slows you to 70%.,Your cloud spares your HP and Frost; holding still slows you to 70%.,Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending.
+upgrade.expanded.CryoCannon.1.tame,Spraying no longer slows you.,Spraying no longer slows you.,Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending.
 upgrade.expanded.ArcCoil.0.twist,"Later jumps prefer the most Lightning stacks, then the nearest target.","Later jumps prefer the most Lightning stacks, then the nearest target.",Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending.
 upgrade.expanded.ArcCoil.0.tame,Empty jumps end without damaging you.,Empty jumps end without damaging you.,Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending.
 upgrade.expanded.ArcCoil.1.twist,"Knockback and thrown travel also charge: 1 per unit, cap 30.","Knockback and thrown travel also charge: 1 per unit, cap 30.",Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending.
@@ -264,16 +266,23 @@ upgrade.expanded.ArcCoil.1.tame,"After 4 s full, drain 1 charge/s instead of sel
 upgrade.expanded.SporeLauncher.0.twist,"Cloud drifts 1 unit/s along its launch direction, blocked by walls and bounds.","Cloud drifts 1 unit/s along its launch direction, blocked by walls and bounds.",Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending.
 upgrade.expanded.SporeLauncher.0.tame,Your clouds do not hurt or poison you; other poison still can.,Your clouds do not hurt or poison you; other poison still can.,Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending.
 upgrade.expanded.SporeLauncher.1.twist,Needles bounce once off a wall; no body piercing.,Needles bounce once off a wall; no body piercing.,Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending.
-upgrade.expanded.SporeLauncher.1.tame,Reloading no longer slows movement; clip and reload duration stay.,Reloading no longer slows movement; clip and reload duration stay.,Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending.
+upgrade.expanded.SporeLauncher.1.tame,Firing no longer costs you HP.,Firing no longer costs you HP.,Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending.
 upgrade.expanded.Railgun.0.twist,"Pierce one interior wall, never bounds; body damage still decays.","Pierce one interior wall, never bounds; body damage still decays.",Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending.
 upgrade.expanded.Railgun.0.tame,"Still move back by 4, using a push without wall-impact damage.","Still move back by 4, using a push without wall-impact damage.",Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending.
 upgrade.expanded.Railgun.1.twist,"On a kill, fire one half-damage follow-up within 4; no execute, kill bonus or repeat follow-up.","On a kill, fire one half-damage follow-up within 4; no execute, kill bonus or repeat follow-up.",Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending.
-upgrade.expanded.Railgun.1.tame,A failed kill adds no 1.5 s jam; normal cooldown remains.,A failed kill adds no 1.5 s jam; normal cooldown remains.,Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending.
+upgrade.expanded.Railgun.1.tame,Executions no longer lower your max HP.,Executions no longer lower your max HP.,Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending.
 upgrade.expanded.Minigun.0.twist,Keep spin-up for 1 s after release; release still restores movement.,Keep spin-up for 1 s after release; release still restores movement.,Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending.
 upgrade.expanded.Minigun.0.tame,Keep 70% movement at full heat; firing speed is unchanged.,Keep 70% movement at full heat; firing speed is unchanged.,Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending.
 upgrade.expanded.Minigun.1.twist,Enemy blast becomes a forward 90-degree cone; self-damage and lockout remain.,Enemy blast becomes a forward 90-degree cone; self-damage and lockout remain.,Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending.
 upgrade.expanded.Minigun.1.tame,Overheat spares your HP; the 3 s lockout remains.,Overheat spares your HP; the 3 s lockout remains.,Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending.
 upgrade.expanded.SwarmLauncher.0.twist,"Wall hit leaves a 1 s mine; blast if an enemy enters 1.5, without making new mines.","Wall hit leaves a 1 s mine; blast if an enemy enters 1.5, without making new mines.",Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending.
-upgrade.expanded.SwarmLauncher.0.tame,Missed rockets disappear instead of returning.,Missed rockets disappear instead of returning.,Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending.
+upgrade.expanded.SwarmLauncher.0.tame,Rockets never hurt you.,Rockets never hurt you.,Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending.
 upgrade.expanded.SwarmLauncher.1.twist,Reverse the six blasts from far to near; other values stay the same.,Reverse the six blasts from far to near; other values stay the same.,Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending.
-upgrade.expanded.SwarmLauncher.1.tame,Carpet blasts spare your HP but still displace you.,Carpet blasts spare your HP but still displace you.,Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending.
+upgrade.expanded.SwarmLauncher.1.tame,Bombard blasts spare your HP but still displace you.,Bombard blasts spare your HP but still displace you.,Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending.
+ui.hole.enter.build,Portal open: stand on it and press E to enter the Void Trial,Portal open: stand on it and press E to enter the Void Trial,Arena v2 player-visible text; format arguments come from current data.
+ui.trial.return,TIME HELD,TIME HELD,Arena v2 player-visible text; format arguments come from current data.
+stat.CritChance,Crit,Crit,Arena v2 player-visible text; format arguments come from current data.
+enemy.Chanter,Chanter,Chanter,Arena v2 player-visible text; format arguments come from current data.
+card.rarity.Exceptional,Exceptional,Exceptional,Arena v2 player-visible text; format arguments come from current data.
+card.rarity.Legendary,Legendary,Legendary,Arena v2 player-visible text; format arguments come from current data.
+card.rarity.Void,Void,Void,Arena v2 player-visible text; format arguments come from current data.

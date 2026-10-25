@@ -2,6 +2,7 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
+
     [DisallowMultipleComponent]
     public sealed class V3SupplyDropPresentation : MonoBehaviour
     {
@@ -95,11 +96,8 @@ namespace AnomalyArena
             {
                 landed = true;
                 game.MarkSupplyLanded();
-                if (openButton)
-                {
-                    openButton.interactable = true;
-                    UnityEngine.EventSystems.EventSystem.current?.SetSelectedGameObject(openButton.gameObject);
-                }
+
+                if (openButton) openButton.interactable = true;
                 if (landingSound) V2Audio.Instance?.PlayWorld(ArenaSoundCue.Impact, anchor);
             }
             SetCrateAlpha(alpha);
@@ -111,7 +109,7 @@ namespace AnomalyArena
             if (openHint)
             {
                 if (ArenaText.Font) openHint.font = ArenaText.Font;
-                openHint.text = landed ? ArenaText.Pair("OPEN CRATE · ENTER / SPACE","OPEN CRATE · ENTER / SPACE") : ArenaText.Pair("SUPPLY INCOMING…","SUPPLY INCOMING…");
+                openHint.text = landed ? ArenaText.Pair("CLICK THE CRATE TO OPEN","CLICK THE CRATE TO OPEN") : ArenaText.Pair("SUPPLY INCOMING…","SUPPLY INCOMING…");
             }
             if (!overlayRoot || !showUiProjection || !worldCamera || !overlayCanvas) return;
             Vector3 cratePoint = worldCamera.WorldToScreenPoint(crateRoot.position + Vector3.up * .55f);

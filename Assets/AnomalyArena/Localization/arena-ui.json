@@ -82,14 +82,14 @@
     },
     {
       "key": "ui.nextwave",
-      "zh": "START NEXT WAVE [SPACE]",
-      "en": "START NEXT WAVE [SPACE]",
+      "zh": "START NEXT WAVE",
+      "en": "START NEXT WAVE",
       "context": "Arena v2 player-visible text; format arguments come from current data."
     },
     {
       "key": "ui.return.reward",
-      "zh": "RETURN / DECLINE SKILL [SPACE]",
-      "en": "RETURN / DECLINE SKILL [SPACE]",
+      "zh": "RETURN / DECLINE SKILL",
+      "en": "RETURN / DECLINE SKILL",
       "context": "Arena v2 player-visible text; format arguments come from current data."
     },
     {
@@ -166,8 +166,8 @@
     },
     {
       "key": "ui.level.max",
-      "zh": "10 · MAX",
-      "en": "10 · MAX",
+      "zh": "12 · MAX",
+      "en": "12 · MAX",
       "context": "Arena v2 player-visible text; format arguments come from current data."
     },
     {
@@ -238,8 +238,8 @@
     },
     {
       "key": "ui.hole.enter",
-      "zh": "E · ENTER\nFAILURE ENDS RUN",
-      "en": "E · ENTER\nFAILURE ENDS RUN",
+      "zh": "E · ENTER\nFAILURE ENDS RUN\nCLEARS STATUS & SHIELD",
+      "en": "E · ENTER\nFAILURE ENDS RUN\nCLEARS STATUS & SHIELD",
       "context": "Arena v2 player-visible text; format arguments come from current data."
     },
     {
@@ -268,8 +268,8 @@
     },
     {
       "key": "ui.shade.incoming",
-      "zh": "SHADE",
-      "en": "SHADE",
+      "zh": "SHADE INCOMING",
+      "en": "SHADE INCOMING",
       "context": "Arena v2 player-visible text; format arguments come from current data."
     },
     {
@@ -280,8 +280,8 @@
     },
     {
       "key": "ui.reward.body",
-      "zh": "Pick one Greater Void skill, or return without changing your skills. 1 / 2 / 3 select.",
-      "en": "Pick one Greater Void skill, or return without changing your skills. 1 / 2 / 3 select.",
+      "zh": "Pick one of three Greater Void skills (or none); they have no further levels. 1 / 2 / 3 select.",
+      "en": "Pick one of three Greater Void skills (or none); they have no further levels. 1 / 2 / 3 select.",
       "context": "Arena v2 player-visible text; format arguments come from current data."
     },
     {
@@ -298,38 +298,38 @@
     },
     {
       "key": "ui.loadout.body",
-      "zh": "Pick one familiar form. Its anomaly stays unknown until you use it.\nEvery anomaly has a backfire. Aim manually; use the terrain.",
-      "en": "Pick one familiar form. Its anomaly stays unknown until you use it.\nEvery anomaly has a backfire. Aim manually; use the terrain.",
+      "zh": "Pick one familiar form. Which backfire it has is unknown until you take it; the moment you choose, the game pauses and the weapon card appears.\nAim manually; use the terrain.",
+      "en": "Pick one familiar form. Which backfire it has is unknown until you take it; the moment you choose, the game pauses and the weapon card appears.\nAim manually; use the terrain.",
       "context": "Arena v2 player-visible text; format arguments come from current data."
     },
     {
       "key": "ui.armory.body",
-      "zh": "Take one unrevealed weapon, or skip. Replaced weapons lose their upgrades.",
-      "en": "Take one unrevealed weapon, or skip. Replaced weapons lose their upgrades.",
+      "zh": "Pick one of three: a new weapon, or a higher Mk of one you hold (weapons grow stronger through higher Mks from the armory). You may skip. Upgrades stay with the weapon: replace it and they are gone with it.",
+      "en": "Pick one of three: a new weapon, or a higher Mk of one you hold (weapons grow stronger through higher Mks from the armory). You may skip. Upgrades stay with the weapon: replace it and they are gone with it.",
       "context": "Arena v2 player-visible text; format arguments come from current data."
     },
     {
       "key": "ui.draft.body",
-      "zh": "Pick a stat, a weapon change, or a skill. 1 / 2 / 3 select; R rerolls.",
-      "en": "Pick a stat, a weapon change, or a skill. 1 / 2 / 3 select; R rerolls.",
+      "zh": "Three cards, one of each: a stat card, a weapon card (an upgrade direction a revealed weapon has not taken yet) and a skill card (a new skill, or one level for a skill you own). 1 / 2 / 3 select; R rerolls (once per build phase).",
+      "en": "Three cards, one of each: a stat card, a weapon card (an upgrade direction a revealed weapon has not taken yet) and a skill card (a new skill, or one level for a skill you own). 1 / 2 / 3 select; R rerolls (once per build phase).",
       "context": "Arena v2 player-visible text; format arguments come from current data."
     },
     {
       "key": "ui.replace.weapon.body",
-      "zh": "Choose the weapon to replace. Its upgrades will be lost.",
-      "en": "Choose the weapon to replace. Its upgrades will be lost.",
+      "zh": "Choose the weapon to replace. Upgrades stay with the weapon: replace it and they are gone with it.",
+      "en": "Choose the weapon to replace. Upgrades stay with the weapon: replace it and they are gone with it.",
       "context": "Arena v2 player-visible text; format arguments come from current data."
     },
     {
       "key": "ui.replace.skill.body",
-      "zh": "Choose the skill to replace. The new skill starts at level 1.",
-      "en": "Choose the skill to replace. The new skill starts at level 1.",
+      "zh": "With 3 skills already, taking a new one means replacing an old one; the new skill starts at level 1.",
+      "en": "With 3 skills already, taking a new one means replacing an old one; the new skill starts at level 1.",
       "context": "Arena v2 player-visible text; format arguments come from current data."
     },
     {
       "key": "ui.ready.body",
-      "zh": "Build choices complete. Space starts the next wave.",
-      "en": "Build choices complete. Space starts the next wave.",
+      "zh": "Build choices complete. Click START NEXT WAVE to go on.",
+      "en": "Build choices complete. Click START NEXT WAVE to go on.",
       "context": "Arena v2 player-visible text; format arguments come from current data."
     },
     {
@@ -388,8 +388,8 @@
     },
     {
       "key": "notice.tyrant.immunities",
-      "zh": "Tyrant immunities: {0}",
-      "en": "Tyrant immunities: {0}",
+      "zh": "Tyrant King immunities: {0}",
+      "en": "Tyrant King immunities: {0}",
       "context": "Arena v2 player-visible text; format arguments come from current data."
     },
     {
@@ -466,14 +466,14 @@
     },
     {
       "key": "weapon.unknown",
-      "zh": "Unknown anomaly",
-      "en": "Unknown anomaly",
+      "zh": "Backfire unrevealed",
+      "en": "Backfire unrevealed",
       "context": "Arena v2 player-visible text; format arguments come from current data."
     },
     {
       "key": "weapon.unknown.warning",
-      "zh": "Unknown anomaly. First use may backfire.",
-      "en": "Unknown anomaly. First use may backfire.",
+      "zh": "Which backfire it has is unknown until you take it; it is revealed the moment you choose.",
+      "en": "Which backfire it has is unknown until you take it; it is revealed the moment you choose.",
       "context": "Arena v2 player-visible text; format arguments come from current data."
     },
     {
@@ -550,135 +550,135 @@
     },
     {
       "key": "card.twist",
-      "zh": "Add the anomaly's extra behaviour",
-      "en": "Add the anomaly's extra behaviour",
+      "zh": "Adds a new variant to this anomaly",
+      "en": "Adds a new variant to this anomaly",
       "context": "Arena v2 player-visible text; format arguments come from current data."
     },
     {
       "key": "card.tame",
-      "zh": "Soften this weapon's backfire",
-      "en": "Soften this weapon's backfire",
+      "zh": "Removes or softens this anomaly's backfire",
+      "en": "Removes or softens this anomaly's backfire",
       "context": "Arena v2 player-visible text; format arguments come from current data."
     },
     {
       "key": "stat.MaxHp",
       "zh": "Max HP",
       "en": "Max HP",
-      "context": "UI term: Max HP"
+      "context": "上限增加；对应属性卡也治疗相同点数。"
     },
     {
       "key": "stat.Regeneration",
       "zh": "Regeneration",
       "en": "Regeneration",
-      "context": "UI term: Regeneration"
+      "context": "每 5 秒回复的生命点数。"
     },
     {
       "key": "stat.MoveSpeed",
       "zh": "Move Speed",
       "en": "Move Speed",
-      "context": "UI term: Move Speed"
+      "context": "单位／秒；卡牌以百分比增长。"
     },
     {
       "key": "stat.Stamina",
       "zh": "Stamina",
       "en": "Stamina",
-      "context": "UI term: Stamina"
+      "context": "属性卡延长冲刺秒数；HUD 资源条仍叫体力。"
     },
     {
       "key": "stat.Damage",
       "zh": "Damage",
       "en": "Damage",
-      "context": "UI term: Damage"
+      "context": "武器伤害百分比，多个属性卡在相同加成区累加。"
     },
     {
       "key": "stat.AttackSpeed",
       "zh": "Attack Speed",
       "en": "Attack Speed",
-      "context": "UI term: Attack Speed"
+      "context": "缩短手持／自动武器冷却和换弹，不缩短技能冷却。"
     },
     {
       "key": "stat.Knockback",
       "zh": "Knockback",
       "en": "Knockback",
-      "context": "UI term: Knockback"
+      "context": "自己攻击将目标推远的百分比。"
     },
     {
       "key": "stat.Impact",
       "zh": "Impact",
       "en": "Impact",
-      "context": "UI term: Impact"
+      "context": "增加敌人被撞墙时受到的伤害；不是直接命中伤害。"
     },
     {
       "key": "stat.PickupRange",
       "zh": "Pickup Range",
       "en": "Pickup Range",
-      "context": "UI term: Pickup Range"
+      "context": "经验／生命球开始飞向你的距离，单位。"
     },
     {
       "key": "stat.Protection",
       "zh": "Protection",
       "en": "Protection",
-      "context": "UI term: Protection"
+      "context": "挨打后暂时忽略攻击的秒数。"
     },
     {
       "key": "stat.Luck",
       "zh": "Luck",
       "en": "Luck",
-      "context": "UI term: Luck"
+      "context": "影响属性卡稀有度概率。"
     },
     {
       "key": "stat.MaxEnergy",
       "zh": "Max Energy",
       "en": "Max Energy",
-      "context": "UI term: Max Energy"
+      "context": "能量容量；提高上限不等于立即回满。"
     },
     {
       "key": "stat.EnergySiphon",
       "zh": "Energy Siphon",
       "en": "Energy Siphon",
-      "context": "UI term: Energy Siphon"
+      "context": "每个敌人死亡回复的能量；不只包括自己直接击杀。"
     },
     {
       "key": "stat.ElementPenetration",
       "zh": "Element Penetration",
       "en": "Element Penetration",
-      "context": "UI term: Element Penetration"
+      "context": "让元素对免疫目标部分生效的比例；不是穿墙或穿透护盾。"
     },
     {
       "key": "axis.Infusion",
       "zh": "Infusion",
       "en": "Infusion",
-      "context": "UI term: Infusion"
+      "context": "`灌注{元素}`；已有元素时：`灌注{新元素}，替换{旧元素}`。"
     },
     {
       "key": "axis.Power",
       "zh": "Power",
       "en": "Power",
-      "context": "UI term: Power"
+      "context": "`伤害 +40%`。"
     },
     {
       "key": "axis.Tempo",
       "zh": "Tempo",
       "en": "Tempo",
-      "context": "UI term: Tempo"
+      "context": "`冷却、蓄力与换弹时间 -30%`。"
     },
     {
       "key": "axis.Reach",
       "zh": "Reach",
       "en": "Reach",
-      "context": "UI term: Reach"
+      "context": "`射程、范围或目标数量 +40%`；实际改变哪些值由这把武器确定。"
     },
     {
       "key": "axis.Twist",
       "zh": "Twist",
       "en": "Twist",
-      "context": "UI term: Twist"
+      "context": "`改变反常效果的一条行为规则`；卡牌要写具体规则，不能只写这句总称。"
     },
     {
       "key": "axis.Tame",
       "zh": "Tame",
       "en": "Tame",
-      "context": "UI term: Tame"
+      "context": "`减轻这把武器的反噬`；卡牌要写具体减轻哪项代价。"
     },
     {
       "key": "weapon.form.Rifle",
@@ -766,8 +766,8 @@
     },
     {
       "key": "weapon.anomaly.ScatterCannon.1",
-      "zh": "Suction",
-      "en": "Suction",
+      "zh": "Focus",
+      "en": "Focus",
       "context": "Display only after anomaly reveal."
     },
     {
@@ -862,8 +862,8 @@
     },
     {
       "key": "weapon.form.SporeLauncher",
-      "zh": "Spore Launcher",
-      "en": "Spore Launcher",
+      "zh": "Venom Launcher",
+      "en": "Venom Launcher",
       "context": "Weapon form; does not reveal anomaly."
     },
     {
@@ -928,8 +928,8 @@
     },
     {
       "key": "weapon.anomaly.SwarmLauncher.1",
-      "zh": "Carpet",
-      "en": "Carpet",
+      "zh": "Bombard",
+      "en": "Bombard",
       "context": "Display only after anomaly reveal."
     },
     {
@@ -940,14 +940,14 @@
     },
     {
       "key": "weapon.anomaly.OrbitBlades.0",
-      "zh": "Saw",
-      "en": "Saw",
+      "zh": "Closed Blade",
+      "en": "Closed Blade",
       "context": "Display only after anomaly reveal."
     },
     {
       "key": "weapon.anomaly.OrbitBlades.1",
-      "zh": "Magnet",
-      "en": "Magnet",
+      "zh": "Open Blade",
+      "en": "Open Blade",
       "context": "Display only after anomaly reveal."
     },
     {
@@ -1048,14 +1048,14 @@
     },
     {
       "key": "skill.TimeSlip",
-      "zh": "Time Slip",
-      "en": "Time Slip",
+      "zh": "Time Stop",
+      "en": "Time Stop",
       "context": "Current skill name; excludes unapproved new candidate mechanics."
     },
     {
       "key": "skill.Decoy",
-      "zh": "Decoy",
-      "en": "Decoy",
+      "zh": "Mirror Image",
+      "en": "Mirror Image",
       "context": "Current skill name; excludes unapproved new candidate mechanics."
     },
     {
@@ -1086,79 +1086,79 @@
       "key": "enemy.Grunt",
       "zh": "Grunt",
       "en": "Grunt",
-      "context": "UI term: Grunt"
+      "context": "基础近战怪：走近出拳，不击退玩家。"
     },
     {
       "key": "enemy.Brute",
       "zh": "Brute",
       "en": "Brute",
-      "context": "UI term: Brute"
+      "context": "近战基础怪的外观变体，行为同杂兵（略慢）。"
     },
     {
       "key": "enemy.Skitter",
       "zh": "Skitter",
       "en": "Skitter",
-      "context": "UI term: Skitter"
+      "context": "近战基础怪的外观变体，行为同杂兵（略快）。"
     },
     {
       "key": "enemy.Spitter",
       "zh": "Spitter",
       "en": "Spitter",
-      "context": "UI term: Spitter"
+      "context": "基础远程怪：发射毒刺，命中叠中毒，不击退。"
     },
     {
       "key": "enemy.Rammer",
       "zh": "Rammer",
       "en": "Rammer",
-      "context": "UI term: Rammer"
+      "context": "只以精英出现：预告直线冲锋。"
     },
     {
       "key": "enemy.Bloater",
       "zh": "Bloater",
       "en": "Bloater",
-      "context": "UI term: Bloater"
+      "context": "只以精英出现：接近或死亡后爆炸。"
     },
     {
       "key": "enemy.Warden",
       "zh": "Warden",
       "en": "Warden",
-      "context": "UI term: Warden"
+      "context": "给同伴护盾。"
     },
     {
       "key": "enemy.Splitter",
       "zh": "Splitter",
       "en": "Splitter",
-      "context": "UI term: Splitter"
+      "context": "近战基础怪的外观变体，行为同杂兵，不再分裂。"
     },
     {
       "key": "enemy.Spire",
       "zh": "Spire",
       "en": "Spire",
-      "context": "UI term: Spire"
+      "context": "只以精英出现：不可移动、范围地面攻击。"
     },
     {
       "key": "enemy.Stomper",
       "zh": "Stomper",
       "en": "Stomper",
-      "context": "UI term: Stomper"
+      "context": "只以精英出现：重击地面，打到玩家造成硬直。"
     },
     {
       "key": "enemy.Shade",
       "zh": "Shade",
       "en": "Shade",
-      "context": "UI term: Shade"
+      "context": "只以精英出现：隐身接近、高伤害。"
     },
     {
       "key": "enemy.Hollow",
-      "zh": "THE HOLLOW",
-      "en": "THE HOLLOW",
-      "context": "UI term: THE HOLLOW"
+      "zh": "THE NASH PROPHET",
+      "en": "THE NASH PROPHET",
+      "context": "虚空试炼首领。"
     },
     {
       "key": "enemy.Tyrant",
-      "zh": "THE TYRANT",
-      "en": "THE TYRANT",
-      "context": "UI term: THE TYRANT"
+      "zh": "THE TYRANT KING",
+      "en": "THE TYRANT KING",
+      "context": "最终首领。"
     },
     {
       "key": "element.None",
@@ -1216,8 +1216,8 @@
     },
     {
       "key": "ui.controls",
-      "zh": "WASD MOVE · MOUSE AIM · LMB USE · RMB SWITCH · SHIFT SPRINT · 1/2/3 SKILLS · E ENTER",
-      "en": "WASD MOVE · MOUSE AIM · LMB USE · RMB SWITCH · SHIFT SPRINT · 1/2/3 SKILLS · E ENTER",
+      "zh": "WASD MOVE · MOUSE AIM · LMB USE WEAPON · RMB SWITCH SLOTS · SHIFT SPRINT · 1/2/3 SKILLS · E ON A PORTAL ENTERS THE TRIAL · ESC PAUSE",
+      "en": "WASD MOVE · MOUSE AIM · LMB USE WEAPON · RMB SWITCH SLOTS · SHIFT SPRINT · 1/2/3 SKILLS · E ON A PORTAL ENTERS THE TRIAL · ESC PAUSE",
       "context": "Static header/button or numbered HUD format."
     },
     {
@@ -1306,8 +1306,8 @@
     },
     {
       "key": "upgrade.core.Rifle.0.tame",
-      "zh": "Charging no longer slows your movement.",
-      "en": "Charging no longer slows your movement.",
+      "zh": "Charging no longer slows you.",
+      "en": "Charging no longer slows you.",
       "context": "Original six anomalies: exact saved card branch; new 44 upgrades are separate."
     },
     {
@@ -1318,8 +1318,8 @@
     },
     {
       "key": "upgrade.core.Rifle.1.tame",
-      "zh": "Firing no longer pushes you forward.",
-      "en": "Firing no longer pushes you forward.",
+      "zh": "Reverse rounds turn toward your aim 0.3 s after leaving.",
+      "en": "Reverse rounds turn toward your aim 0.3 s after leaving.",
       "context": "Original six anomalies: exact saved card branch; new 44 upgrades are separate."
     },
     {
@@ -1330,8 +1330,8 @@
     },
     {
       "key": "upgrade.core.Knife.0.tame",
-      "zh": "The returning corpse no longer damages or knocks you back; it still hits others.",
-      "en": "The returning corpse no longer damages or knocks you back; it still hits others.",
+      "zh": "The straight return after a kill no longer hurts you; it still cuts enemies on the way.",
+      "en": "The straight return after a kill no longer hurts you; it still cuts enemies on the way.",
       "context": "Original six anomalies: exact saved card branch; new 44 upgrades are separate."
     },
     {
@@ -1402,20 +1402,20 @@
     },
     {
       "key": "upgrade.expanded.ScatterCannon.0.tame",
-      "zh": "Still move back by 3, using a push without wall-impact damage.",
-      "en": "Still move back by 3, using a push without wall-impact damage.",
+      "zh": "Reloading never jams.",
+      "en": "Reloading never jams.",
       "context": "Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending."
     },
     {
       "key": "upgrade.expanded.ScatterCannon.1.twist",
-      "zh": "On release, push gathered enemies forward by 5 once.",
-      "en": "On release, push gathered enemies forward by 5 once.",
+      "zh": "Focused pellets pierce the first target; later targets take 60%.",
+      "en": "Focused pellets pierce the first target; later targets take 60%.",
       "context": "Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending."
     },
     {
       "key": "upgrade.expanded.ScatterCannon.1.tame",
-      "zh": "Stop suction at a 2-unit body gap; enemies can still walk closer.",
-      "en": "Stop suction at a 2-unit body gap; enemies can still walk closer.",
+      "zh": "The release recoil becomes a push that never causes wall damage.",
+      "en": "The release recoil becomes a push that never causes wall damage.",
       "context": "Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending."
     },
     {
@@ -1486,8 +1486,8 @@
     },
     {
       "key": "upgrade.expanded.Flamethrower.1.tame",
-      "zh": "Your patches do not hurt or burn you; other fire still can.",
-      "en": "Your patches do not hurt or burn you; other fire still can.",
+      "zh": "Your own fire patches no longer burn you; other fire still can.",
+      "en": "Your own fire patches no longer burn you; other fire still can.",
       "context": "Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending."
     },
     {
@@ -1510,8 +1510,8 @@
     },
     {
       "key": "upgrade.expanded.CryoCannon.1.tame",
-      "zh": "Your cloud spares your HP and Frost; holding still slows you to 70%.",
-      "en": "Your cloud spares your HP and Frost; holding still slows you to 70%.",
+      "zh": "Spraying no longer slows you.",
+      "en": "Spraying no longer slows you.",
       "context": "Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending."
     },
     {
@@ -1558,8 +1558,8 @@
     },
     {
       "key": "upgrade.expanded.SporeLauncher.1.tame",
-      "zh": "Reloading no longer slows movement; clip and reload duration stay.",
-      "en": "Reloading no longer slows movement; clip and reload duration stay.",
+      "zh": "Firing no longer costs you HP.",
+      "en": "Firing no longer costs you HP.",
       "context": "Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending."
     },
     {
@@ -1582,8 +1582,8 @@
     },
     {
       "key": "upgrade.expanded.Railgun.1.tame",
-      "zh": "A failed kill adds no 1.5 s jam; normal cooldown remains.",
-      "en": "A failed kill adds no 1.5 s jam; normal cooldown remains.",
+      "zh": "Executions no longer lower your max HP.",
+      "en": "Executions no longer lower your max HP.",
       "context": "Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending."
     },
     {
@@ -1618,8 +1618,8 @@
     },
     {
       "key": "upgrade.expanded.SwarmLauncher.0.tame",
-      "zh": "Missed rockets disappear instead of returning.",
-      "en": "Missed rockets disappear instead of returning.",
+      "zh": "Rockets never hurt you.",
+      "en": "Rockets never hurt you.",
       "context": "Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending."
     },
     {
@@ -1630,9 +1630,51 @@
     },
     {
       "key": "upgrade.expanded.SwarmLauncher.1.tame",
-      "zh": "Carpet blasts spare your HP but still displace you.",
-      "en": "Carpet blasts spare your HP but still displace you.",
+      "zh": "Bombard blasts spare your HP but still displace you.",
+      "en": "Bombard blasts spare your HP but still displace you.",
       "context": "Approved new hand-weapon upgrade; exact ArenaTerms card wording; gameplay verification pending."
+    },
+    {
+      "key": "ui.hole.enter.build",
+      "zh": "Portal open: stand on it and press E to enter the Void Trial",
+      "en": "Portal open: stand on it and press E to enter the Void Trial",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "ui.trial.return",
+      "zh": "TIME HELD",
+      "en": "TIME HELD",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "stat.CritChance",
+      "zh": "Crit",
+      "en": "Crit",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "enemy.Chanter",
+      "zh": "Chanter",
+      "en": "Chanter",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "card.rarity.Exceptional",
+      "zh": "Exceptional",
+      "en": "Exceptional",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "card.rarity.Legendary",
+      "zh": "Legendary",
+      "en": "Legendary",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
+    },
+    {
+      "key": "card.rarity.Void",
+      "zh": "Void",
+      "en": "Void",
+      "context": "Arena v2 player-visible text; format arguments come from current data."
     }
   ]
 }

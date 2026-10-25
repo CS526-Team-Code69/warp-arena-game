@@ -1,4 +1,9 @@
+using System;
+using System.Linq;
+using System.Threading.Tasks;
 using NUnit.Framework;
+using TestHelper.Attributes;
+using UnityEngine;
 
 namespace AnomalyArena
 {
@@ -6,20 +11,85 @@ namespace AnomalyArena
     [TestFixture]
     public class CutsceneSkipTest
     {
-        const float Delay = 1f;
+        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
 
-        [TestCase(false, false, false, true, 5f, false, TestName = "LeftClick_LongAfterStart_DoesNotSkip")]
-        [TestCase(true, false, false, false, .5f, false, TestName = "Space_InsideTheDelay_DoesNotSkip")]
-        [TestCase(false, false, true, true, .2f, false, TestName = "EscapeAndClick_InsideTheDelay_DoNotSkip")]
-        [TestCase(true, false, false, false, 1f, true, TestName = "Space_AtTheDelay_Skips")]
-        [TestCase(false, true, false, false, 2f, true, TestName = "Enter_AfterTheDelay_Skips")]
-        [TestCase(false, false, true, false, 2f, true, TestName = "Escape_AfterTheDelay_Skips")]
-        [TestCase(false, false, false, false, 9f, false, TestName = "NoInput_NeverSkips")]
-        public void SkipsCutscene_InputAndTime_FollowTheRule(bool space, bool enter, bool escape, bool leftClick, float secondsIn, bool expected)
+        static readonly KeyCode[] EveryKey =
         {
-            var actual = GameManager.SkipsCutscene(space, enter, escape, leftClick, secondsIn, Delay);
+            KeyCode.Space, KeyCode.Return, KeyCode.KeypadEnter, KeyCode.Escape, KeyCode.T, KeyCode.Tab, KeyCode.R,
+            KeyCode.E, KeyCode.Alpha1, KeyCode.Alpha2, KeyCode.Alpha3,
+        };
 
-            Assert.That(actual, Is.EqualTo(expected));
+        TestKeyboard keyboard;
+
+        [TearDown]
+        public void TearDown()
+        {
+            keyboard?.Dispose();
+            keyboard = null;
+            Time.timeScale = 1f;
+        }
+
+        [Test, LoadScene(Scene), Category("Integration"), Timeout(60000)]
+        public async Task HoleCutscene_EveryKeyPressedThroughIt_PlaysToItsEndAndResumes()
+        {
+            await Awaitable.NextFrameAsync();
+            await Until(() => GameManager.Instance && ArenaText.Ready && WorldMap.Active, 12f, "scene, localization and map initialize");
+            var game = GameManager.Instance;
+            keyboard = new TestKeyboard();
+            await CommandUntil(game, ArenaUiCommand.Start, () => game.RunPhase == ArenaUiState.SupplyDrop);
+            await Until(() => game.SupplyDropReady, 4f, "supply crate lands");
+            await CommandUntil(game, ArenaUiCommand.OpenSupply, () => game.RunPhase == ArenaUiState.Loadout);
+            await CommandUntil(game, ArenaUiCommand.ChooseLoadout, () => game.RunPhase == ArenaUiState.WeaponIntro, 1);
+            await CommandUntil(game, ArenaUiCommand.DismissWeaponIntro, () => game.RunPhase != ArenaUiState.WeaponIntro);
+            game.player.ProtectFor(60f);
+            await Until(() => game.RunPhase == ArenaUiState.WaveActive || game.RunPhase == ArenaUiState.Cutscene, 10f, "the first wave starts");
+            var map = WorldMap.Active;
+            var hole = map.holes.FirstOrDefault(h => h && h.Phase == HolePhase.Active);
+            Assume.That(hole, Is.Not.Null, "the arena has an active fixed hole");
+            if (game.RunPhase != ArenaUiState.Cutscene)
+            {
+
+                Vector3 away = Query.Flat(game.player.Position - hole.Centre);
+                away = away.sqrMagnitude > .01f ? away.normalized : Vector3.forward;
+                V3CombatSmokeTest.Teleport(game.player, hole.Centre + away * (hole.GravityRadius + 3f));
+                Physics.SyncTransforms();
+            }
+            await Until(() => game.RunPhase == ArenaUiState.Cutscene, 6f, "the cutscene starts on first sight of the hole");
+
+            float until = Time.realtimeSinceStartup + 1.6f;
+            while (Time.realtimeSinceStartup < until)
+            {
+                await keyboard.Tap(EveryKey);
+                Assert.That(game.RunPhase, Is.EqualTo(ArenaUiState.Cutscene), "no key ends the cutscene");
+                Assert.That(map.HoleIntroPlaying, Is.True, "the cutscene is still playing");
+            }
+
+            await Until(() => game.RunPhase == ArenaUiState.WaveActive, 12f, "the cutscene ends by itself and play resumes");
+            Assert.That(map.holes.Any(h => h && h.Feeds >= 3), Is.True, "the cutscene played to its end: its three fodder fed the hole");
+
+            await keyboard.TapUntil(KeyCode.Escape, () => game.RunPhase == ArenaUiState.Paused, "Esc pauses the resumed wave");
+            await keyboard.TapUntil(KeyCode.Escape, () => game.RunPhase == ArenaUiState.WaveActive, "Esc resumes it");
+        }
+
+        static async Task CommandUntil(GameManager game, ArenaUiCommand command, Func<bool> completed, int index = -1)
+        {
+            float deadline = Time.realtimeSinceStartup + 4f;
+            while (!completed())
+            {
+                if (Time.realtimeSinceStartup > deadline) Assert.Fail($"Command {command} timed out in {game.RunPhase}.");
+                game.ExecuteUiCommand(command, index);
+                await Awaitable.NextFrameAsync();
+            }
+        }
+
+        static async Task Until(Func<bool> completed, float timeout, string operation)
+        {
+            float deadline = Time.realtimeSinceStartup + timeout;
+            while (!completed())
+            {
+                if (Time.realtimeSinceStartup > deadline) Assert.Fail("Timed out waiting for: " + operation);
+                await Awaitable.NextFrameAsync();
+            }
         }
     }
 }

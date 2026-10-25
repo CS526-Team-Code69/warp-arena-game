@@ -20,8 +20,8 @@ namespace AnomalyArena
         {
             Kind = kind; Title = title; Description = description; this.apply = apply; this.stillFits = stillFits;
             NeedsReplacement = needsReplacement; Payload = payload;
-            Rarity = payload is WeaponUpgradeOffer upgrade
-                ? ArenaRarity.ForWeapon(upgrade.Weapon, upgrade.Axis, upgrade.Element) : rarity;
+
+            Rarity = payload is WeaponUpgradeOffer upgrade ? ArenaRarity.ForWeaponCard(upgrade.Axis) : rarity;
         }
         public bool Apply(int replacementIndex = -1) => apply?.Invoke(replacementIndex) ?? false;
         public bool StillFits => stillFits?.Invoke() ?? true;

@@ -330,21 +330,24 @@ namespace AnomalyArena
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
-        public async Task MeltdownTame_Overheat_GivesShieldInsteadOfSelfDamageAndStillLocksOut()
+        public async Task MeltdownTame_Overheat_SpeedsUpEveryWeaponInsteadOfHurtingYouAndStillLocksOut()
         {
             var (game, targets) = await V3CombatSmokeTest.StartSandbox();
-            var tuning = game.runWeapons.upgrades;
+            var weapons = game.runWeapons; var tuning = weapons.upgrades;
             var gun = Equip(game, WeaponForm.Minigun, 1, UpgradeAxis.Tame);
+            var other = new RunWeapon { form = WeaponForm.Railgun, variant = 1, revealed = true, rounds = weapons.ClipSize(WeaponForm.Railgun, 1) };
+            weapons.Hand[1 - weapons.ActiveIndex] = other;
             var status = ElementStatus.For(game.player);
             status.ClearStatuses(); status.SetShield(0f);
-            float hp = game.player.Hp;
+            float hp = game.player.Hp, cycle = weapons.CycleSeconds(other);
             gun.heat = 3.95f;
 
-            game.runWeapons.HandleInput(true, true, false);
+            weapons.HandleInput(true, true, false);
 
             Assert.That(game.player.Hp, Is.EqualTo(hp), "the meltdown spares you");
-            float cap = game.player.maxHp * status.Rules.playerShieldCapShare;
-            Assert.That(status.Shield, Is.EqualTo(Mathf.Min(cap, tuning.meltdownTameShield)).Within(.01f), "20 Shield, capped like any player Shield");
+            Assert.That(status.Shield, Is.Zero, "no Shield any more");
+            Assert.That(weapons.CycleSeconds(other), Is.EqualTo(cycle / (1f + tuning.meltdownTameHaste)).Within(.001f), "the other weapon attacks faster too");
+            Assert.That(weapons.MeltdownHasteLeft, Is.EqualTo(tuning.meltdownTameHasteSeconds).Within(.1f), "for the tuned time");
             Assert.That(targets[0].Hp, Is.LessThan(targets[0].maxHp), "the blast still hits enemies");
             Assert.That(gun.reload, Is.EqualTo(3f).Within(.001f), "the lockout remains");
         }

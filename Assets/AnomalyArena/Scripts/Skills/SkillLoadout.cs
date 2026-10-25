@@ -143,7 +143,7 @@ namespace AnomalyArena
             ClearWaveEffects(); OnChanged();
         }
 
-        public bool Learn(SkillId id, int replaceIndex = -1)
+        public bool Learn(SkillId id, int replaceIndex = -1, int level = 1)
         {
             var definition = Catalog ? Catalog.Find(id) : null;
             if (!definition) return false;
@@ -151,7 +151,7 @@ namespace AnomalyArena
             {
                 if (Slots[i].Empty || Slots[i].Id != id) continue;
                 if (Slots[i].Level >= 3 || definition.greaterVoid) return false;
-                Slots[i].Level++;
+                Slots[i].Level = Mathf.Min(3, Mathf.Max(Slots[i].Level + 1, level));
 
                 if (id == SkillId.Blink && Slots[i].Level >= 3) { blinkRecharge[1] = 0f; SyncBlinkCooldown(); }
                 OnChanged(); return true;
@@ -159,7 +159,7 @@ namespace AnomalyArena
             int place = replaceIndex;
             if (place < 0) for (int i = 0; i < Slots.Length; i++) if (Slots[i].Empty) { place = i; break; }
             if (place < 0 || place >= Slots.Length) return false;
-            Slots[place].Definition = definition; Slots[place].Level = 1; Slots[place].CooldownLeft = 0f;
+            Slots[place].Definition = definition; Slots[place].Level = definition.greaterVoid ? 1 : Mathf.Clamp(level, 1, 3); Slots[place].CooldownLeft = 0f;
             if (id == SkillId.Blink) Array.Clear(blinkRecharge, 0, blinkRecharge.Length);
             progression?.UnlockEnergy(); OnChanged(); return true;
         }
@@ -183,16 +183,23 @@ namespace AnomalyArena
             if (upgradeable.Count > 0 && (candidates.Count == 0 || UnityEngine.Random.value < upgradeChance))
             {
                 var slot = Slots[upgradeable[UnityEngine.Random.Range(0, upgradeable.Count)]];
-                SkillId id = slot.Id; int level = slot.Level, next = level + 1;
+
+                SkillId id = slot.Id; int level = slot.Level, next = Mathf.Min(3, Mathf.Max(level + 1, RollSkillLevel(wave)));
 
                 return new DraftCard(DraftCardKind.Skill, ArenaText.Pair($"{slot.Name} · Level {next}",$"{slot.Name} · Level {next}"),
                     $"{slot.Definition.Description(slot.Level)} → {slot.Definition.Description(next)}",
-                    _ => Learn(id), payload: id, rarity: ArenaRarity.ForSkill(slot.Definition, next),
+                    _ => Learn(id, -1, next), payload: id, rarity: ArenaRarity.ForSkill(slot.Definition, next),
                     stillFits: () => SlotOf(id) >= 0 && Slots[SlotOf(id)].Level == level);
             }
             if (candidates.Count == 0) return null;
             var picked = candidates[UnityEngine.Random.Range(0, candidates.Count)];
-            return MakeLearnCard(picked);
+            return MakeLearnCard(picked, RollSkillLevel(wave));
+        }
+
+        int RollSkillLevel(int wave)
+        {
+            var rules = progression ? progression.Rules : null;
+            return rules ? ArenaRarity.SkillLevel(rules.SkillRarity(wave, UnityEngine.Random.Range(0, 10000) / 100f)) : 1;
         }
 
         public DraftCard[] GreaterVoidCards()
@@ -206,14 +213,16 @@ namespace AnomalyArena
             return result;
         }
 
-        DraftCard MakeLearnCard(SkillDefinition definition)
+        DraftCard MakeLearnCard(SkillDefinition definition, int level = 1)
         {
 
             bool full = OwnedCount >= 3;
-            return new(DraftCardKind.Skill, ArenaTerms.Skill(definition.id),
-                definition.Description(1) + ArenaText.Pair($"\n{definition.cost:0} Energy",$"\n{definition.cost:0} Energy"),
-                replacement => Learn(definition.id, replacement), full, definition.id,
-                ArenaRarity.ForSkill(definition, 1), () => SlotOf(definition.id) < 0 && (OwnedCount >= 3) == full);
+            level = definition.greaterVoid ? 1 : Mathf.Clamp(level, 1, 3);
+            string title = ArenaTerms.Skill(definition.id) + (level > 1 ? ArenaText.Pair($" · Level {level}",$" · Level {level}") : "");
+            return new(DraftCardKind.Skill, title,
+                definition.Description(level) + ArenaText.Pair($"\n{definition.cost:0} Energy",$"\n{definition.cost:0} Energy"),
+                replacement => Learn(definition.id, replacement, level), full, definition.id,
+                ArenaRarity.ForSkill(definition, level), () => SlotOf(definition.id) < 0 && (OwnedCount >= 3) == full);
         }
 
         public bool TryCast(int index)
@@ -225,7 +234,9 @@ namespace AnomalyArena
             var board = ElementStatus.For(body);
 
             bool coolingDown = def.id == SkillId.Blink ? BlinkCharges == 0 : slot.CooldownLeft > 0f;
-            if (ActionLocked || body.Stunned || body.State == CharacterState.Dashing || (board && board.BlocksActions) || coolingDown)
+
+            bool sliding = (body.State is CharacterState.Knocked or CharacterState.Thrown) && !BreaksDisplacement(def.id);
+            if (ActionLocked || body.Stunned || body.State == CharacterState.Dashing || sliding || (board && board.BlocksActions) || coolingDown)
                 return Refuse(index, ArenaText.Pair("Not ready","Not ready"));
             if (!HasWorldHook(def.id)) return Refuse(index, ArenaText.Pair("World action unavailable","World action unavailable"));
             Vector3 desired = body.AimPoint;
@@ -257,6 +268,7 @@ namespace AnomalyArena
             OnChanged(); return true;
         }
 
+        public static bool BreaksDisplacement(SkillId id) => id is SkillId.Blink or SkillId.VoidWalk;
         static bool IsPointSkill(SkillId id) => id is SkillId.Blink or SkillId.Bulwark or SkillId.Decoy or SkillId.GravityWell
             or SkillId.PocketVoid or SkillId.StormCall;
 
@@ -313,7 +325,7 @@ namespace AnomalyArena
                     SkillWorldAPI.FeedNearestHole?.Invoke(where, def.feedRange, 1);
                     progression.GainEnergy(def.energyReward); break;
                 case SkillId.Blink:
-                    body.SetState(CharacterState.Normal);
+                    body.CancelDisplacement();
                     if (SkillWorldAPI.Teleport != null) SkillWorldAPI.Teleport(body, point);
                     else
                     {
@@ -340,6 +352,7 @@ namespace AnomalyArena
                     SkillWorldAPI.CreateVoidHole?.Invoke(point, def.Radius(level), def.voidGravityWidth, def.Duration(level), body, false); break;
                 case SkillId.VoidWalk:
 
+                    body.CancelDisplacement();
                     VoidWalkStart = VoidWalkEnd = body.Position;
                     voidWalkTimer = voidWalkDuration = def.Duration(level);
                     voidWalkMove = Mathf.Max(1f, def.voidWalkMoveMultiplier);
@@ -460,7 +473,12 @@ namespace AnomalyArena
                             QueryInto(effect.center, def.Radius(level), nearby);
                             if (nearby.Count == 0) continue;
                             var c = nearby[UnityEngine.Random.Range(0, nearby.Count)];
-                            if (c.ReceiveDamage(DamageInfo.Attack(def.ScaledDamage(def.hitDamage, level, DamageMultiplier), body, kind: HitKind.Bullet)))
+
+                            float share = ElementImmunity.DamageShare(c, def.element, body);
+                            bool struck = share > 0f
+                                ? c.ReceiveDamage(DamageInfo.Attack(def.ScaledDamage(def.hitDamage, level, DamageMultiplier) * share, body, kind: HitKind.Bullet))
+                                : c.IsAlive && !c.Protected;
+                            if (struck)
                             {
 
                                 if (level >= 3) ElementCombat.ApplyStacks(c, ElementKind.Lightning, def.hitStacks, body);
@@ -494,7 +512,7 @@ namespace AnomalyArena
                         if (effect.remaining <= 0f)
                         {
                             float damage = def.ScaledDamage(def.singularityBaseDamage + effect.absorbed.Count * def.singularityDamagePerEnemy, level, DamageMultiplier);
-                            AreaHit(effect.center, def.Radius(level), damage, 0f);
+                            AreaHit(effect.center, def.Radius(level), damage, 0f, def.element);
                             var fx = FxPool.Active;
                             if (fx) fx.Emit(effect.center, ElementCombat.ColorFor(ElementKind.Void), def.Radius(level) * 2f, 2f,
                                 texture: fx.ring, flat: true);
@@ -630,15 +648,16 @@ namespace AnomalyArena
             Slots[index].CooldownLeft = wait;
         }
 
-        void AreaHit(Vector3 point, float radius, float damage, float knock)
+        void AreaHit(Vector3 point, float radius, float damage, float knock, ElementKind element = ElementKind.None)
         {
             QueryInto(point, radius, nearby);
             foreach (var c in nearby)
             {
                 Vector3 direction = c.Position - point;
-                if (damage > 0f) c.ReceiveDamage(DamageInfo.Attack(Mathf.Round(damage * (progression ? progression.Stats.DamageMultiplier : 1f)),
+                float share = ElementImmunity.DamageShare(c, element, body);
+                if (damage <= 0f) c.Knockback(direction, knock, KnockKind.Hit);
+                else if (share > 0f) c.ReceiveDamage(DamageInfo.Attack(Mathf.Round(damage * share * (progression ? progression.Stats.DamageMultiplier : 1f)),
                     body, direction, knock, HitKind.Blast));
-                else c.Knockback(direction, knock, KnockKind.Hit);
             }
         }
 

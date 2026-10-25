@@ -55,7 +55,7 @@ namespace AnomalyArena
                                                                                                                                                           
         public bool IsSpecial => Elite || definition && EnemyRoles.IsSpecial(definition.kind);
 
-        public bool Immovable => IsBoss || definition && definition.kind == EnemyKind.Spire;
+        public override bool Immovable => IsBoss || definition && definition.kind == EnemyKind.Spire;
         public bool IsTrialSummon { get; set; }
         public bool SuppressRewards { get; set; }
         public bool Cloaked => definition && definition.kind == EnemyKind.Shade && revealTimer <= 0f;
@@ -293,9 +293,12 @@ namespace AnomalyArena
             attackInterval =
                 data.interval * (Affix == ElementKind.Void ? VoidIntervalFactor : 1f);                           
             attackRange = data.reach;
-            attackKnockback =
-                EnemyRoles.KnocksBackPlayer(data.kind) ? data.knockback : 0f;                                      
-            knockbackScale = data.knockbackScale * (elite ? 0.5f : 1f);
+                                                                                                                                               
+            var knock = KnockbackRules.Active;
+            attackKnockback = !EnemyRoles.KnocksBackPlayer(data.kind) ? 0f
+                : IsBoss ? data.knockback : knock.Distance(KnockbackRules.AttackTier(data.kind));
+                                                                                                                                                
+            knockbackScale = Immovable ? 0f : knock.ScaleFor(radius, elite);
             large = data.kind == EnemyKind.Stomper || IsBoss;                                                        
             ResetForSpawn();
             AttackSequence = 0;
@@ -334,9 +337,8 @@ namespace AnomalyArena
                 statusBoard.ControlThresholdFactor = (large ? 2f : 1f) * (elite ? 2f : 1f);
                 if (data.kind == EnemyKind.Hollow)
                 {
-                                                                                                          
-                    statusBoard.SetImmunity(ElementKind.Frost, 1f);
-                    statusBoard.SetImmunity(ElementKind.Lightning, 1f);
+                                                                                                                                           
+                    foreach (var element in ElementImmunity.Boss) statusBoard.SetImmunity(element, 1f);
                 }
             }
 
@@ -657,9 +659,9 @@ namespace AnomalyArena
                 chargeLeft -= step;
                 if (InFist(player))
                 {
-                                                                                                                                      
+                                                                                                                                             
                     bool landed = DealHit(player, IsBoss ? attackDamage * Boss.chargeDamage : attackDamage, facing,
-                        IsBoss ? Boss.chargePush : definition.knockback);
+                        IsBoss ? Boss.chargePush : attackKnockback);
                     if (landed && !IsBoss && player.IsAlive)
                     {
                         player.Stun(definition.chargeStun);
@@ -1320,12 +1322,12 @@ namespace AnomalyArena
                     return true;
                 case EnemyKind.Spire:
                     V3WorldAudio.Instance?.Play(ArenaWorldCue.NpcPulse, Position);
-                    PlayerPulse(definition.pulseRadius, attackDamage, 5f);
+                    PlayerPulse(definition.pulseRadius, attackDamage, 0f);                                  
                     TryLockLaser(definition.pulseRadius);
                     return true;
                 case EnemyKind.Stomper:
                     V3WorldAudio.Instance?.Play(ArenaWorldCue.NpcPulse, Position);
-                    ConeSlam(definition.pulseRadius, definition.coneAngle, attackDamage, definition.knockback);
+                    ConeSlam(definition.pulseRadius, definition.coneAngle, attackDamage, attackKnockback);
                     return true;
                 case EnemyKind.Hollow:
                     var prophet = Boss;
@@ -1451,7 +1453,7 @@ namespace AnomalyArena
         }
 
                                                                                                                            
-                                                                                                    
+                                                                                                           
         void ConeSlam(float reach, float arcDeg, float damage, float push)
         {
             Fx.Sector(Position, facing, reach, arcDeg, definition.colour);
@@ -1463,7 +1465,8 @@ namespace AnomalyArena
         void Explode()
         {
             V3WorldAudio.Instance?.Play(ArenaWorldCue.NpcBloaterBlast, Position);
-            AreaAttack(definition ? definition.pulseRadius : 3f, attackDamage, 5f);
+                                                                      
+            AreaAttack(definition ? definition.pulseRadius : 3f, attackDamage, KnockbackRules.Active.Distance(KnockbackRules.AttackTier(EnemyKind.Bloater)));
             var waves = GM ? GM.waves : null;
             AddRadiationZone(Position, waves ? waves.radiationRadius : 3f, waves ? waves.radiationLife : 4f);
             V3WorldAudio.Instance?.Play(ArenaWorldCue.NpcRadiation, Position);
@@ -1481,10 +1484,12 @@ namespace AnomalyArena
                      
                                                                                                              
                                                                                                                                                                                           
+                                                                                                                            
                       
         Vector3 KeepOffEdges(Vector3 v, float dt)
         {
             if (!WorldMap.Active || WorldMap.Active.TrialActive) return v;
+            if (!IsBoss) v *= Quicksand.SpeedFactor(Position);
             bool allowGravity = definition && definition.speed >= gravityFollowSpeed &&
                                 WorldMap.Active.GetPull(GM.player.Position).sqrMagnitude > 0.01f;
             return WorldMap.Active.IsWalkable(Position + v * dt, radius, allowGravity) ? v : Vector3.zero;

@@ -69,12 +69,7 @@ namespace AnomalyArena
             Assert.That(game.waves.PendingCount, Is.Zero, "births stop after expiry");
             Assert.That(game.RunPhase, Is.EqualTo(ArenaUiState.WaveActive), "survivors keep combat open");
             Assert.That(game.waves.LivingCount, Is.GreaterThan(0), "survivors exist at timer expiry");
-            foreach (var enemy in game.waves.Alive.ToArray())
-            {
-                if (!enemy || !enemy.IsAlive) continue;
-                enemy.SuppressRewards = true;
-                enemy.ReceiveDamage(new DamageInfo { amount = 99999f, source = DamageSource.Poison, ignoreShield = true });
-            }
+            await ClearSurvivors(game);
             await Until(() => game.RunPhase == ArenaUiState.SupplyDrop && game.SupplyDropReady, 5f, "next weapon crate");
             await ClickUntil(game, ArenaUiCommand.OpenSupply, () => game.RunPhase == ArenaUiState.Armory);
             Assert.That(game.runWeapons.Offers.Where(w => w != null).Select(w => w.form), Is.Unique, "armory form uniqueness");
@@ -236,27 +231,32 @@ namespace AnomalyArena
         }
 
         [Test, LoadScene(SceneCn), Timeout(20000)]
-        public async Task TakeOffer_HeldWeaponUpgrade_RaisesMkInPlaceAndKeepsChanges()
+        public async Task TakeOffer_HeldWeaponVersion_ReplacesTheHeldWeaponInItsSlotWithAFreshOne()
         {
             var game = await ReadyScene();
-            var rifle = new RunWeapon { form = WeaponForm.Rifle, variant = 0, axes = UpgradeAxis.Twist, revealed = true };
+            var rifle = new RunWeapon { form = WeaponForm.Rifle, variant = 0, axes = UpgradeAxis.Twist | UpgradeAxis.Infusion, element = ElementKind.Fire, revealed = true };
             game.runWeapons.Hand[0] = rifle;
             game.runWeapons.Hand[1] = null;
-            RunWeapon upgrade = null;
-            for (int draw = 0; draw < 200 && upgrade == null; draw++)
+            RunWeapon version = null;
+            for (int draw = 0; draw < 200 && version == null; draw++)
             {
                 game.runWeapons.RollArmory(5);
-                upgrade = game.runWeapons.Offers.FirstOrDefault(w => w != null && w.upgradeOf == rifle);
+                version = game.runWeapons.Offers.FirstOrDefault(w => w != null && w.upgradeOf == rifle);
             }
-            Assert.That(upgrade, Is.Not.Null, "held rifle offered as an upgrade");
-            int index = System.Array.IndexOf(game.runWeapons.Offers, upgrade);
+            Assert.That(version, Is.Not.Null, "held rifle offered as a stronger version");
+            int index = System.Array.IndexOf(game.runWeapons.Offers, version);
+            int target = game.runWeapons.UpgradeTargetMk(new RunWeapon { mk = 1 }, 5);
 
             Assert.That(game.runWeapons.TakeOffer(index), Is.True);
 
-            Assert.That(game.runWeapons.Hand[0], Is.SameAs(rifle), "same weapon object, no slot change");
-            Assert.That(rifle.mk, Is.EqualTo(game.runWeapons.UpgradeTargetMk(new RunWeapon { mk = 1 }, 5)), "catches up to one tier above the wave standard");
-            Assert.That(rifle.Has(UpgradeAxis.Twist), Is.True, "mechanic change kept");
-            Assert.That(game.runWeapons.Hand[1], Is.Null, "upgrade does not fill a slot");
+            Assert.That(game.runWeapons.Hand[0], Is.SameAs(version), "the version takes the rifle's slot");
+            Assert.That(version.form, Is.EqualTo(WeaponForm.Rifle), "same form");
+            Assert.That(version.mk, Is.InRange(target, target + 1), "one tier above the wave standard, or one more with the wave's bonus chance");
+            Assert.That(version.axes, Is.EqualTo(UpgradeAxis.None), "the old upgrades are gone");
+            Assert.That(version.element, Is.EqualTo(ElementKind.None), "and so is the infusion");
+            Assert.That(version.revealed, Is.False, "its anomaly waits for the weapon card");
+            Assert.That(version.upgradeOf, Is.Null, "once held it is no longer an offer");
+            Assert.That(game.runWeapons.Hand[1], Is.Null, "no other slot is filled");
         }
 
         [Test, LoadScene(SceneCn), Timeout(20000)]
@@ -487,6 +487,23 @@ namespace AnomalyArena
             runtimeWaves = Object.Instantiate(originalWaves);
             foreach (var wave in runtimeWaves.waves) wave.duration = duration;
             game.waves.waveSet = runtimeWaves;
+        }
+
+        internal static async Task ClearSurvivors(GameManager game, float timeout = 15f)
+        {
+            float deadline = Time.realtimeSinceStartup + timeout;
+            while (game.waves.Phase == WavePhase.WaveActive && (game.waves.LivingCount > 0 || game.waves.PendingCount > 0))
+            {
+                if (Time.realtimeSinceStartup > deadline)
+                    Assert.Fail($"Timed out clearing the survivors: {game.waves.LivingCount} alive, {game.waves.PendingCount} queued; phase={game.RunPhase}");
+                foreach (var enemy in game.waves.Alive.ToArray())
+                {
+                    if (!enemy || !enemy.IsAlive) continue;
+                    enemy.SuppressRewards = true;
+                    enemy.ReceiveDamage(new DamageInfo { amount = 99999f, source = DamageSource.Poison, ignoreShield = true });
+                }
+                await Awaitable.NextFrameAsync();
+            }
         }
 
         static async Task OpenLoadout(GameManager game)

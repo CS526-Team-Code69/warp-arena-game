@@ -8,13 +8,13 @@ namespace AnomalyArena
     public class ArenaRarityTest
     {
         [Test]
-        public void ForWeapon_InfusionPreview_UsesSelectedVoidWithoutMutatingWeapon()
+        public void DraftCard_VoidInfusion_IsPurpleWithoutMutatingWeapon()
         {
             var weapon = new RunWeapon { element = ElementKind.Fire, axes = UpgradeAxis.Power };
             var card = new DraftCard(DraftCardKind.Weapon, "Infusion", "Void", _ => true,
                 payload: new WeaponUpgradeOffer(weapon, UpgradeAxis.Infusion, ElementKind.Void));
 
-            Assert.That(card.Rarity, Is.EqualTo(CardRarity.Void), "preview rarity");
+            Assert.That(card.Rarity, Is.EqualTo(CardRarity.Epic), "card colour");
             Assert.That(weapon.element, Is.EqualTo(ElementKind.Fire), "current weapon element");
         }
 
@@ -62,7 +62,8 @@ namespace AnomalyArena
                 payload: new WeaponUpgradeOffer(weapon, UpgradeAxis.Tame, ElementKind.None));
 
             Assert.That(ArenaRarity.ForWeapon(weapon), Is.EqualTo(expected), "slot colour");
-            Assert.That(card.Rarity, Is.EqualTo(expected), "card colour");
+
+            Assert.That(card.Rarity, Is.EqualTo(CardRarity.Rare), "card colour");
         }
 
         [TestCase(4, UpgradeAxis.None, CardRarity.Common)]
@@ -75,7 +76,8 @@ namespace AnomalyArena
                 payload: new WeaponUpgradeOffer(weapon, UpgradeAxis.Twist, ElementKind.None));
 
             Assert.That(ArenaRarity.ForWeapon(weapon), Is.EqualTo(expected), "slot colour");
-            Assert.That(card.Rarity, Is.EqualTo(expected), "card colour");
+
+            Assert.That(card.Rarity, Is.EqualTo(CardRarity.Exceptional), "card colour");
         }
 
         [TestCase(1, CardRarity.Common)]

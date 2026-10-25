@@ -93,12 +93,7 @@ namespace AnomalyArena
 
             await Until(() => game.RunPhase == ArenaUiState.WaveActive, 15f, "play resumes");
             await Until(() => game.waves.TimeExpired, 40f, "the wave timer runs out");
-            foreach (var enemy in game.waves.Alive.ToArray())
-            {
-                if (!enemy || !enemy.IsAlive) continue;
-                enemy.SuppressRewards = true;
-                enemy.ReceiveDamage(new DamageInfo { amount = 99999f, source = DamageSource.Poison, ignoreShield = true });
-            }
+            await V3SmokeTest.ClearSurvivors(game);                                                                        
             await Until(() => game.RunPhase == ArenaUiState.SupplyDrop && game.SupplyDropReady, 8f, "the post-wave crate lands");
             await CommandUntil(game, ArenaUiCommand.OpenSupply, () => game.RunPhase == ArenaUiState.Armory);
             await Frames(10);

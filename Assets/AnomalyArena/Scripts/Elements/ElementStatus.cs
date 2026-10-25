@@ -90,17 +90,22 @@ namespace AnomalyArena
         }
 
         public void SetImmunity(ElementKind element, float factor) => immunities[(int)element] = Mathf.Clamp01(factor);
-        public float ElementFactor(ElementKind element, Combatant source = null)
+
+        public float ElementFactor(ElementKind element) => 1f - immunities[(int)element];
+
+        public float DamageFactor(ElementKind element, Combatant source = null)
         {
+            float immunity = immunities[(int)element];
+            if (immunity <= 0f) return 1f;
             var progression = source ? source.GetComponent<RunProgression>() : null;
-            float penetration = progression ? progression.Stats.elementPenetration : 0f;
-            return 1f - immunities[(int)element] * (1f - penetration);
+            float penetration = progression ? Mathf.Clamp01(progression.Stats.elementPenetration) : 0f;
+            return 1f - immunity * (1f - penetration);
         }
 
         public void Add(ElementKind element, float amount, Combatant source = null)
         {
             if (!Rules || !body || !body.IsAlive || amount <= 0f) return;
-            amount *= ElementFactor(element, source);
+            amount *= ElementFactor(element);
 
             if (IsPlayer && source != body)
             {

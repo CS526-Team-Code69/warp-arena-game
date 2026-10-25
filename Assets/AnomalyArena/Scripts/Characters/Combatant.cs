@@ -28,7 +28,7 @@ namespace AnomalyArena
         public float moveSpeed = 6f;
         public float radius = 0.5f;
 
-        [Tooltip("Multiplier on knockback distance (0.5 for large enemies)")]
+        [Tooltip("Multiplier on knockback distance. The player keeps this value; an enemy's is set from its body size when it spawns (GameManager > Rules > Knockback).")]
         public float knockbackScale = 1f;
 
         [Tooltip("Protection time after being hit; attack damage is ignored during it (wall damage is not)")]
@@ -108,7 +108,8 @@ namespace AnomalyArena
         }
 
         void OnDestroy(){All.Remove(this);if(elementStatus)elementStatus.DamageTicked-=OnElementTick;}
-        void OnElementTick(float amount,DamageSource source,Combatant dealer) => ReceiveDamage(new DamageInfo{amount=amount,source=source,dealer=dealer});
+                                                                                                          
+        void OnElementTick(float amount,DamageSource source,Combatant dealer) => ReceiveDamage(new DamageInfo{amount=amount,source=source,dealer=dealer,element=source==DamageSource.Burn?ElementKind.Fire:ElementKind.Poison});
         public void ResetForSpawn()
         {
             SpawnVersion++;DeathVelocity=Vector3.zero;
@@ -432,27 +433,32 @@ namespace AnomalyArena
 
                                               
 
+                                                                                                                                      
+        public virtual bool Immovable => false;
+
                          
         public void Push(Vector3 dir, float distance)
         {
-            if (!IsAlive) return;
+            if (!IsAlive || Immovable) return;
             dir = Query.Flat(dir);
             if (dir.sqrMagnitude < 1e-6f || distance <= 0f) return;
                                                                                                                                                
             pushVel += dir.normalized * (distance * GM.rules.knockDamping);
         }
 
-                                                                                                                                                        
+                                                                                                                                              
+                                                                                                                                    
         public void Knockback(Vector3 dir, float distance, KnockKind kind)
         {
-            if (!IsAlive || State == CharacterState.Hooked || State == CharacterState.Dashing) return;
+            if (!IsAlive || Immovable || State == CharacterState.Hooked || State == CharacterState.Dashing) return;
             dir = Query.Flat(dir);
             if (dir.sqrMagnitude < 1e-6f || distance <= 0f) return;
             dir.Normalize();
-            wallSlams=0;
             if (kind == KnockKind.Hit) distance *= knockbackScale;
                                                                                                             
             if (GM && GM.runWeapons && this == (Combatant)GM.player && GM.runWeapons.Anchored) distance *= GM.runWeapons.upgrades.spinAnchorKnockFactor;
+            if (distance <= 0f) return;
+            wallSlams=0;
             knockVel = dir * (distance * GM.rules.knockDamping);
             Vector3 cur = Query.Flat(rb.linearVelocity);
             rb.AddForce(knockVel - cur, ForceMode.VelocityChange);
@@ -570,11 +576,14 @@ namespace AnomalyArena
                &&runStats.critChance>0f&&UnityEngine.Random.value<runStats.critChance)
             {crit=true;info.amount*=runStats.CritMultiplier;}
             LastHitCritical=crit;
-            float raw=info.amount*ElementCombat.DirectDamageFactor(this,info.element);
+                                                                                                                                         
+            float share=elementStatus?elementStatus.DamageFactor(info.element,info.dealer?.Owner):1f;
+            float raw=info.amount*ElementCombat.DirectDamageFactor(this,info.element)*share;
             if(info.isAttack)raw*=ControlVulnerability(info);
             if(runStats!=null&&Team==Team.Player)raw*=runStats.DamageTakenMultiplier;
-                                                                                                                               
-            if(info.isAttack||raw>0f)raw=Mathf.Max(1f,raw);
+                                                                                                                                          
+                                           
+            if(share>0f&&(info.isAttack||raw>0f))raw=Mathf.Max(1f,raw);
             float dealt=elementStatus?elementStatus.ResolveDamage(raw,info.source,info.ignoreShield):raw;
             if(dealt>0f)dealt=Mathf.Max(1f,dealt);                                                                 
             Hp -= dealt;

@@ -96,7 +96,7 @@ namespace AnomalyArena
             SkillId.Overcharge => $"Every weapon attacks twice as often (hand and auto, cooldowns x{overchargeRate:0.#}, {Duration(level):0.#} s)."
                 + (level >= 2 ? " Lasts longer" + (level >= 3 ? $"; at max level weapons also deal +{(overchargeDamageMultiplier - 1f) * 100f:0}% damage" : "") + "." : ""),
             SkillId.PocketVoid => $"A small black hole at the cursor swallows everything but bosses, and you gain the XP of monsters it swallows ({Radius(level):0.#}×{Radius(level):0.#} footprint, {voidGravityWidth:0.#}-wide gravity ring, {Duration(level):0.#} s; it can swallow you too).",
-            SkillId.VoidWalk => $"Enter the void: faster, untargetable and undamageable ({Duration(level):0.#} s, move speed x{voidWalkMoveMultiplier:0.#}).",
+            SkillId.VoidWalk => $"Enter the void: faster, untargetable and undamageable, breaking any knockback ({Duration(level):0.#} s, move speed x{voidWalkMoveMultiplier:0.#}).",
             SkillId.Singularity => $"Drag every enemy on screen to you and slow them; you hold still like a black hole, then explode, harder the more enemies you drew in (pull {Strength(level):0.#}, slow to {singularitySlowMultiplier * 100:0}%, held {Duration(level):0.#} s, blast radius {Radius(level):0.#}, {ScaledDamage(singularityBaseDamage, level):0.#} + {ScaledDamage(singularityDamagePerEnemy, level):0.#} per distinct enemy; grows with waves and Damage cards).",
             _ => descriptions[Mathf.Clamp(level - 1, 0, 2)]
         };
@@ -138,7 +138,7 @@ namespace AnomalyArena
                 case SkillId.Blink:
                     displayName = "Blink"; element = ElementKind.None; category = SkillCategory.BasicMechanic; cost = 20f;
                     range = new[] { 6f, 8f, 8f };
-                    descriptions = new[] { "Teleport up to 6; cancel knockback.", "Teleport up to 8; cancel knockback.", "Teleport up to 8; two charges, each with its own cooldown." }; break;
+                    descriptions = new[] { "Teleport up to 6.", "Teleport up to 8.", "Teleport up to 8; two charges, each with its own cooldown." }; break;
                 case SkillId.Shockwave:
                     displayName = "Shockwave"; element = ElementKind.None; category = SkillCategory.AdvancedMechanic; cost = 30f;
                     radius = new[] { 4f, 5f, 5f }; strength = new[] { 8f, 8f, 8f };
