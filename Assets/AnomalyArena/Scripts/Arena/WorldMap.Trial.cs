@@ -6,19 +6,19 @@ namespace AnomalyArena
                  
                                                                                                                                            
                                                                                                                                              
-                                                                                                                                         
-                                                                                                                                         
-                                                                                                                                             
-                                                                                                   
+                                                                                                                                           
+                                                                                                                                           
+                                                                                                                                          
+                                                                                                                                           
+                                                                                                                  
                   
     public sealed partial class WorldMap
     {
         readonly List<Transform> trialFragments = new();
         readonly List<BlackHole> trialPortals = new(), fragmentPortals = new();
         int trialTerrainCount;
-                                                                                                                                         
-                                                                           
-        int heldPortal = -1;
+                                                                                                                                  
+                                                                                                               
         float portalRearm, arrivalHold;
 
                                                                                                                                               
@@ -82,7 +82,6 @@ namespace AnomalyArena
         {
             var numbers = BossNumbers;
             trialTerrainCount = Mathf.Max(0, numbers.nashFragmentCount);
-            heldPortal = -1;
             portalRearm = arrivalHold = 0f;
             var look = trialPlatform.GetComponent<Renderer>();
             while (trialFragments.Count < trialTerrainCount) trialFragments.Add(MakeTrialFragment(trialFragments.Count + 1, look));
@@ -164,13 +163,13 @@ namespace AnomalyArena
             foreach (var portal in trialPortals) if (portal) portal.gameObject.SetActive(false);
             foreach (var portal in fragmentPortals) if (portal) portal.gameObject.SetActive(false);
             trialTerrainCount = 0;
-            heldPortal = -1;
             arrivalHold = 0f;
         }
 
                                                                                                                                               
                                                                                                                                             
-                                                                                                                              
+                                                                                                                                          
+                                                                   
         void TickTrialBody(Combatant combatant)
         {
             if (!OnTrialGround(combatant.Position))
@@ -193,43 +192,61 @@ namespace AnomalyArena
                                                                                                                                          
             if (hollow && hollow.GravityPulling && !PortalArrivalHold && !(GM.runWeapons && GM.runWeapons.Anchored))
                 ApplyPull(combatant, Query.Flat(hollow.Position - combatant.Position).normalized * (hollow.GravityPullSpeed * GM.WorldTimeScale));
-            TickTrialPortals(GM.player);
-        }
-
-                                                                                                                                              
-                                                                                                                                             
-                                                                                                 
-        void TickTrialPortals(PlayerController player)
-        {
-            var numbers = BossNumbers;
+                                                                         
             portalRearm = Mathf.Max(0f, portalRearm - Time.fixedDeltaTime);
             arrivalHold = Mathf.Max(0f, arrivalHold - Time.fixedDeltaTime);
+        }
+
+                                                                                                                                      
+                                      
+        public bool CanTakeTrialPortal(PlayerController player, out BlackHole portal)
+        {
+            int index = TakeableTrialPortal(player), count = TrialPortalCount;
+            portal = index < 0 ? null : index < count ? trialPortals[index] : fragmentPortals[index - count];
+            return index >= 0;
+        }
+
+                                                                                                                                           
+                                                                                                                                            
+                                                                                                                                              
+                                                                                 
+        int TakeableTrialPortal(PlayerController player)
+        {
+            if (!TrialActive || !trialPlatform || !player || !player.IsAlive || portalRearm > 0f || !GM.IsCombatActive) return -1;
+            if (player.State != CharacterState.Normal || player.ActionsBlocked) return -1;
             Vector3 at = Query.Flat(player.Position);
-            float trigger = numbers.nashPortalTrigger;
-            if (heldPortal >= 0 && (heldPortal >= trialPortals.Count || Query.Flat(at - trialPortals[heldPortal].Centre).magnitude > trigger))
-                heldPortal = -1;
-            if (portalRearm > 0f || player.State is not (CharacterState.Normal or CharacterState.Knocked)) return;
+            float trigger = BossNumbers.nashPortalTrigger;
             int count = TrialPortalCount;
             for (int i = 0; i < count; i++)
+                if (Query.Flat(at - trialPortals[i].Centre).magnitude <= trigger) return i;
+            for (int f = 0; f < count; f++)
+                if (Query.Flat(at - fragmentPortals[f].Centre).magnitude <= trigger) return count + f;
+            return -1;
+        }
+
+                                                                                                                                          
+                                                                                                                                            
+                                                                                                                       
+        bool TryTakeTrialPortal(PlayerController player)
+        {
+            int index = TakeableTrialPortal(player), count = TrialPortalCount;
+            if (index < 0) return false;
+            Vector3 at = Query.Flat(player.Position);
+            if (index < count)
             {
-                if (i == heldPortal || Query.Flat(at - trialPortals[i].Centre).magnitude > trigger) continue;
-                int target = TrialPortalFragment(i);
-                Vector3 centre = TrialFragmentCentre(target), outward = Query.Flat(centre - trialPlatform.position).normalized;
-                TakeTrialPortal(player, at, centre + outward * numbers.nashFragmentArrival);
-                return;
+                Vector3 centre = TrialFragmentCentre(TrialPortalFragment(index)), outward = Query.Flat(centre - trialPlatform.position).normalized;
+                TakeTrialPortal(player, at, centre + outward * BossNumbers.nashFragmentArrival);
+                return true;
             }
 
-            for (int f = 0; f < count; f++)
+            for (int i = 0; i < count; i++)
             {
-                if (Query.Flat(at - fragmentPortals[f].Centre).magnitude > trigger) continue;
-                for (int i = 0; i < count; i++)
-                {
-                    if (TrialPortalFragment(i) != f) continue;
-                    heldPortal = i;
-                    TakeTrialPortal(player, at, Query.Flat(trialPortals[i].Centre));
-                    return;
-                }
+                if (TrialPortalFragment(i) != index - count) continue;
+                TakeTrialPortal(player, at, Query.Flat(trialPortals[i].Centre));
+                return true;
             }
+
+            return false;
         }
 
         void TakeTrialPortal(PlayerController player, Vector3 from, Vector3 to)

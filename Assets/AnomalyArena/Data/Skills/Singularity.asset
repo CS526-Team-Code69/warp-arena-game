@@ -24,7 +24,11 @@ MonoBehaviour:
   - 2
   - 2
   - 2
+  - 2
+  - 2
   radius:
+  - 6
+  - 6
   - 6
   - 6
   - 6
@@ -32,7 +36,11 @@ MonoBehaviour:
   - 12
   - 12
   - 12
+  - 12
+  - 12
   strength:
+  - 6
+  - 6
   - 6
   - 6
   - 6
@@ -45,7 +53,11 @@ MonoBehaviour:
   - 0
   - 0
   - 0
+  - 0
+  - 0
   statusResistance:
+  - 0
+  - 0
   - 0
   - 0
   - 0
@@ -60,10 +72,13 @@ MonoBehaviour:
   singularitySlowMultiplier: 0.5
   singularityBaseDamage: 10
   singularityDamagePerEnemy: 4
+  singularityPlayerMoveMultiplier: 0.35
   descriptions:
-  - Draw on-screen enemies 6 toward you and slow them; lock yourself for 2 s, then blast based on distinct absorbed enemies.
+  - Draw on-screen enemies 6 toward you and slow them; you slow to 35% but can still fire and cast, and after 2 s it blasts based on distinct absorbed enemies.
+  - Singularity.
+  - Singularity.
   - Singularity.
   - Singularity.
   icon: {fileID: 0}
-  levelDamageGrowth: 1.35
+  levelDamageGrowth: 1.161895
   shieldScalesWithMaxHp: 1

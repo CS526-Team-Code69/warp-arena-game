@@ -24,7 +24,11 @@ MonoBehaviour:
   - 0
   - 0
   - 0
+  - 0
+  - 0
   radius:
+  - 0
+  - 0
   - 0
   - 0
   - 0
@@ -32,9 +36,13 @@ MonoBehaviour:
   - 6
   - 6
   - 6
+  - 6
+  - 6
   strength:
   - 0.3
+  - 0.35
   - 0.4
+  - 0.45
   - 0.5
   hitDamage: 6
   hitStacks: 3
@@ -45,7 +53,11 @@ MonoBehaviour:
   - 0
   - 0
   - 0
+  - 0
+  - 0
   statusResistance:
+  - 0
+  - 0
   - 0
   - 0
   - 0
@@ -60,10 +72,13 @@ MonoBehaviour:
   singularitySlowMultiplier: 0.5
   singularityBaseDamage: 10
   singularityDamagePerEnemy: 4
+  singularityPlayerMoveMultiplier: 0.35
   descriptions:
   - Swallow an enemy (elites too, not bosses) below 30% HP within 6; gain 20 Energy.
+  - Target below 35% HP; gain 20 Energy.
   - Target below 40% HP; gain 20 Energy.
+  - Target below 45% HP; gain 20 Energy.
   - Target below 50% HP; cooldown 4 s; gain 20 Energy.
   icon: {fileID: 0}
-  levelDamageGrowth: 1.35
+  levelDamageGrowth: 1.161895
   shieldScalesWithMaxHp: 1

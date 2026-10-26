@@ -9,6 +9,22 @@ namespace AnomalyArena
         static readonly HashSet<Combatant> visited = new();
         static readonly List<Combatant> queue = new();
 
+        static readonly Dictionary<(object source, Combatant target), (float next, int spawn)> continuousNext = new();
+        static readonly List<(object source, Combatant target)> expired = new();
+
+        const float ContinuousEarlyShare = .1f;
+
+        const int ContinuousPruneAt = 512;
+
+        public static float Clock { get; private set; }
+
+        public static void AdvanceClock(float worldDeltaTime) { if (worldDeltaTime > 0f) Clock += worldDeltaTime; }
+
+        public static void ClearContinuousHits() => continuousNext.Clear();
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetRuntime() { Clock = 0f; continuousNext.Clear(); }
+
         public static float WaveScale
         {
             get { var gm = GameManager.Instance; return gm && gm.waves ? Mathf.Max(1f, gm.waves.CombatScale) : 1f; }
@@ -34,8 +50,8 @@ namespace AnomalyArena
             if (element == ElementKind.Lightning) JumpLightning(target, amount, source, status.Rules);
         }
 
-        public static void ApplyHit(Combatant target, ElementKind element, float baseDamage, float actualDamage,
-            Combatant source, bool builtInElement = false, bool noLightningJump = false)
+        public static void ApplyHit(Combatant target, ElementKind element, float actualDamage, Combatant source,
+            bool builtInElement = false, bool noLightningJump = false, object continuousSource = null)
         {
             if (source && actualDamage > 0f) source.GetComponent<SkillLoadout>()?.HealFromDamage(actualDamage);
             var targetBoard = ElementStatus.For(target);
@@ -48,11 +64,43 @@ namespace AnomalyArena
                 return;
             }
             if (!target.IsAlive) return;
+            var rules = targetBoard.Rules;
 
-            float stacks = baseDamage / (targetBoard.Rules.damagePerStack * (targetBoard.IsPlayer ? 1f : WaveScale))
-                * (builtInElement ? targetBoard.Rules.builtInElementStackFactor : 1f);
+            if (continuousSource != null && !CountsContinuousHit(continuousSource, target, rules.continuousStackInterval)) return;
+
+            float stacks = rules.stacksPerHit * (builtInElement ? rules.builtInElementStackFactor : 1f);
             targetBoard.Add(element, stacks, source);
-            if (element == ElementKind.Lightning && !noLightningJump) JumpLightning(target, stacks, source, targetBoard.Rules);
+            if (element == ElementKind.Lightning && !noLightningJump) JumpLightning(target, stacks, source, rules);
+        }
+
+        public static void ApplyContinuousStacks(object continuousSource, Combatant target, ElementKind element, float amount, Combatant source)
+        {
+            var status = ElementStatus.For(target);
+            if (!status || !status.Rules || !target.IsAlive || amount <= 0f) return;
+            if (!CountsContinuousHit(continuousSource, target, status.Rules.continuousStackInterval)) return;
+            status.Add(element, amount, source);
+        }
+
+        static bool CountsContinuousHit(object continuousSource, Combatant target, float interval)
+        {
+            if (interval <= 0f) return true;
+            var key = (continuousSource, target);
+            float early = interval * ContinuousEarlyShare;
+            bool known = continuousNext.TryGetValue(key, out var gate) && gate.spawn == target.SpawnVersion;
+            if (known && Clock < gate.next - early) return false;
+            if (continuousNext.Count >= ContinuousPruneAt) PruneContinuousHits();
+            float next = known ? Mathf.Max(gate.next + interval, Clock + interval - early) : Clock + interval;
+            continuousNext[key] = (next, target.SpawnVersion);
+            return true;
+        }
+
+        static void PruneContinuousHits()
+        {
+            expired.Clear();
+            foreach (var pair in continuousNext)
+                if (Clock >= pair.Value.next || !pair.Key.target || pair.Key.target.SpawnVersion != pair.Value.spawn) expired.Add(pair.Key);
+            foreach (var key in expired) continuousNext.Remove(key);
+            expired.Clear();
         }
 
         public static float DirectDamageFactor(Combatant target, ElementKind element)

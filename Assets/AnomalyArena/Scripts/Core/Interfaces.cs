@@ -59,11 +59,15 @@ namespace AnomalyArena
         public HitKind kind;
         public DamageSource source;
         public ElementKind element;
-        public float baseDamage;
         public bool ignoreShield;
+                                                                                                                                          
+        public bool ignoreShieldReduction;
         public bool builtInElement;
                                                                                                                                        
         public bool noLightningJump;
+                                                                                                                                     
+                                                                                                                                        
+        public object continuousSource;
                                                                                   
         public HitFeel feel;
 

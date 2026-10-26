@@ -24,6 +24,11 @@ namespace AnomalyArena
         public bool CanPlayerMove => State==GameState.Playing&&(RunPhase is ArenaUiState.WaveIntro or ArenaUiState.WaveActive or ArenaUiState.VoidTrial or ArenaUiState.FinalBoss||BuildWalking);
                                                                                                                                             
         public bool BuildWalking => buildWalking&&RunPhase is ArenaUiState.Armory or ArenaUiState.Draft or ArenaUiState.Ready;
+                                                                                                                                            
+                                                                                                                                        
+                                                                                                                                     
+                                                                            
+        public bool BuildTimeFlows => State==GameState.Playing&&!greaterDraft&&(RunPhase is ArenaUiState.Armory or ArenaUiState.Draft or ArenaUiState.Ready or ArenaUiState.ReplaceWeapon||RunPhase==ArenaUiState.ReplaceSkill&&replaceReturn==ArenaUiState.Draft);
         public float WorldTimeScale => RunPhase==ArenaUiState.TrialReturn ? 0f : IsCombatActive && slipLeft > 0 ? slipScale : 1f;
         public float WorldDeltaTime => Time.deltaTime * WorldTimeScale;
         public float WorldFixedDeltaTime => Time.fixedDeltaTime * WorldTimeScale;
@@ -77,8 +82,8 @@ namespace AnomalyArena
             bool needsSupply=!supplyChoiceOpened&&(phase is ArenaUiState.Loadout or ArenaUiState.Armory || phase==ArenaUiState.Draft&&!greaterDraft&&HasWeaponChoice());
             if(needsSupply){pendingSupplyChoice=phase;SupplyDropReady=false;phase=ArenaUiState.SupplyDrop;}
             if(phase is not (ArenaUiState.Armory or ArenaUiState.Draft or ArenaUiState.Ready))buildWalking=false;
-            RunPhase=phase;LockMenuInput();Time.timeScale=CanPlayerMove?1:0;
-            if(phase==ArenaUiState.Paused)V2Audio.Instance?.PauseAll();else if(phase==ArenaUiState.Result)V2Audio.Instance?.StopAll();else if(CanPlayerMove)V2Audio.Instance?.ResumeAll();
+            RunPhase=phase;LockMenuInput();Time.timeScale=CanPlayerMove||BuildTimeFlows?1:0;
+            if(phase==ArenaUiState.Paused)V2Audio.Instance?.PauseAll();else if(phase==ArenaUiState.Result)V2Audio.Instance?.StopAll();else if(CanPlayerMove||BuildTimeFlows)V2Audio.Instance?.ResumeAll();
             hud?.v2Hud?.RefreshView();
             if(needsSupply)WeaponSelectionOpened?.Invoke();
         }
@@ -104,9 +109,13 @@ namespace AnomalyArena
             else if(RunPhase==ArenaUiState.TrialReturn)TickTrialReturn();
             else if(RunPhase==ArenaUiState.WaveEnd&&Time.unscaledTime>=waveEndAt)OpenBuild();
             else if(RunPhase is ArenaUiState.Armory or ArenaUiState.Draft or ArenaUiState.Ready or ArenaUiState.ReplaceWeapon or ArenaUiState.ReplaceSkill)
-            {if(!greaterDraft&&selectionTimeLimit>0f){buildTimeLeft=Mathf.Max(0,buildTimeLeft-Time.unscaledDeltaTime);if(buildTimeLeft<=0)BeginNextV2Wave(true);}}
+            {if(BuildTimeFlows)TickBuildPhase();if(!greaterDraft&&selectionTimeLimit>0f){buildTimeLeft=Mathf.Max(0,buildTimeLeft-Time.unscaledDeltaTime);if(buildTimeLeft<=0)BeginNextV2Wave(true);}}
             Cursor.visible=true;
         }
+                                                                                                                                                
+                                                                                                                                         
+                                                                                                                                           
+        void TickBuildPhase(){progression.Tick(PlayerDeltaTime);ElementStatus.TickAll(WorldDeltaTime,PlayerDeltaTime);SkillLoadout.TickAll(PlayerDeltaTime);runWeapons.TickTimers(PlayerDeltaTime);}
         void V2LateUpdate()
         {
             if(State!=GameState.Playing)return;
@@ -273,7 +282,7 @@ namespace AnomalyArena
                                                                                                                                                     
                                                                                                                                                
                     if(!CanToggleBuildWalk)return;
-                    buildWalking=!buildWalking;snapshot.earlyStartConfirmation=false;pendingDraft=pendingOffer=-1;Time.timeScale=CanPlayerMove?1:0;if(buildWalking)V2Audio.Instance?.ResumeAll();
+                    buildWalking=!buildWalking;snapshot.earlyStartConfirmation=false;pendingDraft=pendingOffer=-1;Time.timeScale=CanPlayerMove||BuildTimeFlows?1:0;if(buildWalking)V2Audio.Instance?.ResumeAll();
                     hud?.v2Hud?.RefreshView();break;
                                                                                                                             
                 case ArenaUiCommand.EnterPortal:WorldMap.Active?.TryEnterPortal(player);break;

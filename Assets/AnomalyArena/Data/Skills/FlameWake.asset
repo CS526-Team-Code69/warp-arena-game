@@ -22,9 +22,13 @@ MonoBehaviour:
   advancedCooldown: 4
   duration:
   - 4
-  - 6
+  - 4.5
+  - 5
+  - 5.5
   - 6
   radius:
+  - 0.75
+  - 0.75
   - 0.75
   - 0.75
   - 1.5
@@ -32,7 +36,11 @@ MonoBehaviour:
   - 12
   - 12
   - 12
+  - 12
+  - 12
   strength:
+  - 3
+  - 3
   - 3
   - 3
   - 3
@@ -45,7 +53,11 @@ MonoBehaviour:
   - 0
   - 0
   - 0
+  - 0
+  - 0
   statusResistance:
+  - 0
+  - 0
   - 0
   - 0
   - 0
@@ -60,10 +72,13 @@ MonoBehaviour:
   singularitySlowMultiplier: 0.5
   singularityBaseDamage: 10
   singularityDamagePerEnemy: 4
+  singularityPlayerMoveMultiplier: 0.35
   descriptions:
   - 'Leave a burning trail for 4 s: 3 Fire/s.'
-  - 'Leave a burning trail for 6 s: 3 Fire/s.'
+  - Trail for 4.5 s.
+  - Trail for 5 s.
+  - Trail for 5.5 s.
   - 'A 6 s trail, twice as wide: 3 Fire/s.'
   icon: {fileID: 0}
-  levelDamageGrowth: 1.35
+  levelDamageGrowth: 1.161895
   shieldScalesWithMaxHp: 1

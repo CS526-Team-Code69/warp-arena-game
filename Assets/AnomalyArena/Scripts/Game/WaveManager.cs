@@ -317,7 +317,7 @@ namespace AnomalyArena
             tyrant.HoldAttacks(bosses.tyrantOpeningGrace);                                  
             Track(tyrant);
             finalBossPending = false;
-            if (GM.hud) GM.hud.Banner(ArenaText.Pair("THE TYRANT KING","THE TYRANT KING"), ArenaText.Pair("Break its Shield. Make it charge into a wall.","Break its Shield. Make it charge into a wall."));
+            if (GM.hud) GM.hud.Banner(ArenaText.Pair("THE TYRANT KING","THE TYRANT KING"), ArenaText.Pair("Break its Shield. Its charge smashes through walls and Bulwarks.","Break its Shield. Its charge smashes through walls and Bulwarks."));
         }
 
         void TickV2(float dt)

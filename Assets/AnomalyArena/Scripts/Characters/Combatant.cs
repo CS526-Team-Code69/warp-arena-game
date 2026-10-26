@@ -518,7 +518,7 @@ namespace AnomalyArena
                 if (!self && Query.WallBetween(Query.AtCastHeight(center), Query.AtCastHeight(victim.Position), out _)) continue;
                 Vector3 away = self ? Vector3.zero : Query.Flat(victim.Position - center);
                 var info=DamageInfo.Attack(damage,impact.dealer,away,self?0:push,HitKind.Slam);
-                info.element=impact.element;info.baseDamage=damage;
+                info.element=impact.element;
                 victim.ReceiveDamage(info);
             }
                                                                                                                    
@@ -584,7 +584,7 @@ namespace AnomalyArena
                                                                                                                                           
                                            
             if(share>0f&&(info.isAttack||raw>0f))raw=Mathf.Max(1f,raw);
-            float dealt=elementStatus?elementStatus.ResolveDamage(raw,info.source,info.ignoreShield):raw;
+            float dealt=elementStatus?elementStatus.ResolveDamage(raw,info.source,info.ignoreShield,info.ignoreShieldReduction):raw;
             if(dealt>0f)dealt=Mathf.Max(1f,dealt);                                                                 
             Hp -= dealt;
             if (info.isAttack && raw>0f && protectionTime > 0f && !selfHit) protectTimer = protectionTime;
@@ -612,15 +612,15 @@ namespace AnomalyArena
             else if (info.knockDistance > 0f && !(Team == Team.Player && info.dealer?.Owner is Enemy { PushesPlayer: false }))
             {
                 float distance = info.knockDistance;
-                                                                                                                                 
-                                                                 
+                                                                                                                                  
+                                                                                   
                 if (Team == Team.Player && info.dealer?.Owner is Enemy { IsBoss: true } && WorldMap.Active && WorldMap.Active.TrialActive)
                     distance = WorldMap.Active.LimitBossKnockback(Position, info.knockDir, distance * knockbackScale) / Mathf.Max(.0001f, knockbackScale);
                 if (distance > 0f) Knockback(info.knockDir, distance, KnockKind.Hit);
             }
                                                                                     
             if(!tick&&!selfHit&&info.source==DamageSource.Hit&&info.dealer?.Owner is Combatant { Team: Team.Player } source)
-                ElementCombat.ApplyHit(this,info.element,info.baseDamage>0?info.baseDamage:info.amount,actualDamage,source,info.builtInElement,info.noLightningJump);
+                ElementCombat.ApplyHit(this,info.element,actualDamage,source,info.builtInElement,info.noLightningJump,info.continuousSource);
             return true;
         }
 

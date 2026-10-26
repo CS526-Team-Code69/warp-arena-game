@@ -24,7 +24,11 @@ MonoBehaviour:
   - 4
   - 4
   - 4
+  - 4
+  - 4
   radius:
+  - 3
+  - 3
   - 3
   - 3
   - 3
@@ -32,7 +36,11 @@ MonoBehaviour:
   - 12
   - 12
   - 12
+  - 12
+  - 12
   strength:
+  - 0
+  - 0
   - 0
   - 0
   - 0
@@ -45,7 +53,11 @@ MonoBehaviour:
   - 0
   - 0
   - 0
+  - 0
+  - 0
   statusResistance:
+  - 0
+  - 0
   - 0
   - 0
   - 0
@@ -60,10 +72,13 @@ MonoBehaviour:
   singularitySlowMultiplier: 0.5
   singularityBaseDamage: 10
   singularityDamagePerEnemy: 4
+  singularityPlayerMoveMultiplier: 0.35
   descriptions:
   - 3x3 hole for 4 s, 1-wide gravity. Swallowed enemies give XP; bosses are immune; it can swallow you too.
   - 3x3 hole for 4 s.
   - 3x3 hole for 4 s.
+  - 3x3 hole for 4 s.
+  - 3x3 hole for 4 s.
   icon: {fileID: 0}
-  levelDamageGrowth: 1.35
+  levelDamageGrowth: 1.161895
   shieldScalesWithMaxHp: 1

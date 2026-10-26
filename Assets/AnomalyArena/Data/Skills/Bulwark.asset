@@ -24,17 +24,25 @@ MonoBehaviour:
   - 8
   - 8
   - 8
+  - 8
+  - 8
   radius:
   - 4
+  - 4.5
   - 5
+  - 5.5
   - 6
   range:
   - 12
   - 12
   - 12
+  - 12
+  - 12
   strength:
   - 0.15
-  - 0.25
+  - 0.2125
+  - 0.275
+  - 0.3375
   - 0.4
   hitDamage: 6
   hitStacks: 3
@@ -43,9 +51,13 @@ MonoBehaviour:
   freezeHold: 3
   contactKnockback:
   - 4
+  - 5
   - 6
+  - 7
   - 8
   statusResistance:
+  - 0
+  - 0
   - 0
   - 0
   - 0
@@ -60,10 +72,13 @@ MonoBehaviour:
   singularitySlowMultiplier: 0.5
   singularityBaseDamage: 10
   singularityDamagePerEnemy: 4
+  singularityPlayerMoveMultiplier: 0.35
   descriptions:
-  - Unbreakable wall 4 wide for 8 s, contact push 4; Shield 15% max HP.
-  - Wall 5 wide, contact push 6; Shield 25% max HP.
+  - Wall 4 wide for 8 s, broken only by the Tyrant King charge, contact push 4; Shield 15% max HP.
+  - Wall 4.5 wide, contact push 5; Shield 21.25% max HP.
+  - Wall 5 wide, contact push 6; Shield 27.5% max HP.
+  - Wall 5.5 wide, contact push 7; Shield 33.75% max HP.
   - Wall 6 wide, contact push 8; Shield 40% max HP.
   icon: {fileID: 0}
-  levelDamageGrowth: 1.35
+  levelDamageGrowth: 1.161895
   shieldScalesWithMaxHp: 1

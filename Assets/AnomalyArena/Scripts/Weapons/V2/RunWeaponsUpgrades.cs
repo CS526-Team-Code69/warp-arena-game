@@ -124,10 +124,12 @@ namespace AnomalyArena
         public float focusMinChargeDamage = .4f;
         [Min(1f), Tooltip("Scatter Focus: bolt speed in units per second.")]
         public float focusPelletSpeed = 60f;
-        [Min(0f), Tooltip("Scatter Focus backfire: recoil knockback in units on an uncharged release.")]
+        [Min(0f), Tooltip("Scatter Focus backfire: cells the recoil pushes you back on an uncharged release.")]
         public float focusRecoilMin = 2f;
-        [Min(0f), Tooltip("Scatter Focus backfire: recoil knockback in units on a full charge. It is a real knockback (a wall behind you hurts); Tame makes it a harmless push.")]
+        [Min(0f), Tooltip("Scatter Focus backfire: cells the recoil pushes you back on a full charge. Owner 2026-10-26: a push you keep control through, never a knockback, so a wall behind you does not hurt.")]
         public float focusRecoilMax = 6f;
+        [Range(0f, 1f), Tooltip("Scatter Focus Tame: share of the recoil push left after taming (owner 2026-10-26: half); the short guard against attacks stays.")]
+        public float focusTameRecoilShare = .5f;
         [Range(0f, 1f), Tooltip("Scatter Focus Twist: damage share a bolt keeps after piercing its first target.")]
         public float focusPierceRetention = .6f;
         [Min(0f), Tooltip("Scatter Focus Tame: seconds you are immune to enemy attacks after an uncharged release (burn and poison ticks still land).")]
@@ -172,8 +174,12 @@ namespace AnomalyArena
         public float lanceTrailSeconds = 3f;
         [Range(0f, 2f), Tooltip("Lance Twist: crossing blast damage as a share of one slug's base hit (Mk and cards included, the Tame brace not).")]
         public float lanceCrossShare = .6f;
-        [Min(0f), Tooltip("Lance Twist: crossing blast radius, cells. It ignores Shield and spares you.")]
+        [Min(0f), Tooltip("Lance Twist: crossing blast radius, cells. Like the slug it skips the Shield's damage cut (the Shield still takes it first) and spares you.")]
         public float lanceCrossRadius = 2.5f;
+        [Min(0f), Tooltip("Lance backfire: cells the recoil pushes you back on open ground. Owner 2026-10-26: a push you keep control through, never a knockback, so a wall behind you does not hurt.")]
+        public float lanceRecoil = 4f;
+        [Range(0f, 1f), Tooltip("Lance Tame: share of the recoil push left on open ground after taming (owner 2026-10-26: half). A wall close behind still braces the shot instead.")]
+        public float lanceTameRecoilShare = .5f;
         [Min(0f), Tooltip("Lance Tame: a wall this close behind you (cells) braces the shot: no recoil and more damage.")]
         public float lanceBraceDistance = 4f;
         [Min(1f), Tooltip("Lance Tame: damage multiplier of a braced shot.")]
@@ -318,6 +324,8 @@ namespace AnomalyArena
         readonly Dictionary<Combatant, float> wildfireFenceHitAt = new();
         readonly Dictionary<Combatant, float> blizzardFrozenSince = new();
         readonly HashSet<Combatant> blizzardAura = new();
+
+        readonly object blizzardDose = new();
         readonly Dictionary<(Combatant body, int version), (int count, float last)> needleHits = new();
         readonly List<Combatant> elementTargets = new();
         readonly List<Combatant> elementPruned = new();
@@ -378,10 +386,9 @@ namespace AnomalyArena
             w.burstLeft=pellets;w.burstTimer=0f;w.burstDirection=aim;
             V3WorldAudio.Instance?.Play(ArenaWorldCue.WeaponFocusRelease,player.Position);
             w.burstDamage=damage/pellets*Mathf.Lerp(upgrades.focusMinChargeDamage,1f,charge);
-            float recoil=Mathf.Lerp(upgrades.focusRecoilMin,upgrades.focusRecoilMax,charge);
 
-            if(w.Has(UpgradeAxis.Tame)){player.Push(-aim,recoil);GuardFor(Mathf.Lerp(upgrades.focusGuardMin,upgrades.focusGuardMax,charge));}
-            else player.Knockback(-aim,recoil,KnockKind.Hit);
+            player.Push(-aim,FocusRecoil(w,charge));
+            if(w.Has(UpgradeAxis.Tame))GuardFor(Mathf.Lerp(upgrades.focusGuardMin,upgrades.focusGuardMax,charge));
             TickBurst(w,0f);
         }
 
@@ -538,7 +545,7 @@ namespace AnomalyArena
                 if(body==player||!body.IsAlive||upgradeHits.Contains(body))continue;
                 Vector3 delta=Query.Flat(body.Position-origin);
                 if(delta.magnitude>range+body.radius||Vector3.Angle(dir,delta)>20||Physics.Linecast(Query.AtCastHeight(origin),Query.AtCastHeight(body.Position),GameManager.WallMask))continue;
-                upgradeHits.Add(body);Damage(w,body,hit,0,delta.normalized);
+                upgradeHits.Add(body);Damage(w,body,hit,0,delta.normalized,continuous:true);
             }
         }
 
@@ -747,8 +754,8 @@ namespace AnomalyArena
                 if(Physics.Linecast(Query.AtCastHeight(player.Position),Query.AtCastHeight(body.Position),GameManager.WallMask))continue;
                 var status=ElementStatus.For(body);
 
-                Damage(w,body,hit,0,player.AimDirection);
-                if(status){status.Add(ElementKind.Frost,upgrades.blizzardFrostPerTick,player);status.ExtendFreeze(upgrades.blizzardFrozenHold);}
+                Damage(w,body,hit,0,player.AimDirection,continuous:true);
+                if(status){ElementCombat.ApplyContinuousStacks(blizzardDose,body,ElementKind.Frost,upgrades.blizzardFrostPerTick,player);status.ExtendFreeze(upgrades.blizzardFrozenHold);}
 
                 if(w.Has(UpgradeAxis.Twist)&&status&&status.Frozen&&!blizzardFrozenSince.ContainsKey(body))blizzardFrozenSince[body]=autoClock;
                 any=true;
@@ -1057,6 +1064,11 @@ namespace AnomalyArena
             else w.heat=Mathf.Max(0f,w.heat-upgrades.meltdownKillVent);
         }
 
+        public float LanceRecoil(RunWeapon w)=>Mathf.Max(0f,upgrades.lanceRecoil)*(w!=null&&w.Has(UpgradeAxis.Tame)?Mathf.Clamp01(upgrades.lanceTameRecoilShare):1f);
+
+        public float FocusRecoil(RunWeapon w,float charge)=>Mathf.Lerp(upgrades.focusRecoilMin,upgrades.focusRecoilMax,Mathf.Clamp01(charge))
+            *(w!=null&&w.Has(UpgradeAxis.Tame)?Mathf.Clamp01(upgrades.focusTameRecoilShare):1f);
+
         bool LanceBraced(Vector3 aim,out Vector3 wallPoint)
         {
             aim=Query.Flat(aim).normalized;wallPoint=player.Position;
@@ -1103,7 +1115,7 @@ namespace AnomalyArena
             var w=slug?slug.weapon:null;if(w==null||!AttackPool.Instance||!player)return;
             var a=AttackPool.Instance.Acquire();if(!a)return;
             a.Configure(AttackMode.Blast,player,w,Query.Flat(at),slug.direction,HitDamage(w)*upgrades.lanceCrossShare,0,0,0,upgrades.lanceCrossRadius*w.Reach,.3f);
-            a.ignoreShield=true;a.hurtOwner=false;
+            a.ignoreShieldReduction=true;a.hurtOwner=false;
         }
 
         public void BombardSelfTouch(RunWeapon w)

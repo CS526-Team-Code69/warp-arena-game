@@ -6,8 +6,12 @@ namespace AnomalyArena
     public sealed class StatusRules : ScriptableObject
     {
         [Header("GDD §4.6 candidate parameters")]
-        public float damagePerStack = 5f;
+        [Tooltip("Element stacks one player weapon hit adds, however much damage it deals (owner 2026-10-26: stacks count hits, so fast weapons stack faster).")]
+        [Min(0f)] public float stacksPerHit = 1f;
+        [Tooltip("A weapon's own built-in element adds this many times stacksPerHit; an infused element adds stacksPerHit.")]
         public float builtInElementStackFactor = 2f;
+        [Tooltip("Continuous weapon sources (Flame Stream, Blizzard spray, fire patches, poison clouds and mists, the Leech ring) count as a hit for stacks at most once per this many seconds on each target; so does the Blizzard spray's own Frost dose. Their damage is not limited.")]
+        [Min(0f)] public float continuousStackInterval = .5f;
         public float fireInterval = 0.5f, fireCap = 20f, fireShieldFactor = 0.5f;
         public float poisonInterval = 1f, poisonCap = 30f, poisonDamagePerStack = 0.5f;
         public float frostThreshold = 6f, frostDuration = 1.5f, frostDecay = 1f, frostImmunity = 3f;
@@ -39,8 +43,6 @@ namespace AnomalyArena
         [Range(0.05f, 1f)] public float lightningSlow = 0.55f;
         [Tooltip("Lightning jump: the first jump is full, every further jump multiplies damage and stacks by this again.")]
         [Range(0f, 1f)] public float lightningChainFalloff = 0.7f;
-        [Tooltip("Light lifesteal × (1 + this × missing HP fraction): heals more at low HP.")]
-        [Min(0f)] public float lightMissingHpBonus = 2f;
 
         [Header("Control vulnerability (both teams)")]
         [Tooltip("Damage multiplier on attacks against a frozen target (1.3 = +30%). Damage over time is not affected.")]

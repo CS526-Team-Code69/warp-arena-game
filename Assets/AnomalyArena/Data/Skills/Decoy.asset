@@ -22,9 +22,13 @@ MonoBehaviour:
   advancedCooldown: 4
   duration:
   - 3
-  - 5
+  - 3.5
+  - 4
+  - 4.5
   - 5
   radius:
+  - 0
+  - 0
   - 0
   - 0
   - 0
@@ -32,7 +36,11 @@ MonoBehaviour:
   - 12
   - 12
   - 12
+  - 12
+  - 12
   strength:
+  - 0
+  - 0
   - 0
   - 0
   - 0
@@ -45,7 +53,11 @@ MonoBehaviour:
   - 0
   - 0
   - 0
+  - 0
+  - 0
   statusResistance:
+  - 0
+  - 0
   - 0
   - 0
   - 0
@@ -60,10 +72,13 @@ MonoBehaviour:
   singularitySlowMultiplier: 0.5
   singularityBaseDamage: 10
   singularityDamagePerEnemy: 4
+  singularityPlayerMoveMultiplier: 0.35
   descriptions:
   - Enemies chase a mirror image for 3 s.
-  - Enemies chase it for 5 s.
+  - Enemies chase it for 3.5 s.
+  - Enemies chase it for 4 s.
+  - Enemies chase it for 4.5 s.
   - 5 s mirror; when it ends, another random skill of yours is cast there for free.
   icon: {fileID: 0}
-  levelDamageGrowth: 1.35
+  levelDamageGrowth: 1.161895
   shieldScalesWithMaxHp: 1

@@ -13,7 +13,6 @@ namespace AnomalyArena
         public const int TyrantPhaseCount = 2;
 
         const float RushProbeStep = .5f;
-        const int RushEdgeProbes = 2;
 
         static readonly Color MeteorColour = new(1f, .6f, .25f), AstralColour = new(.6f, .75f, 1f);
 
@@ -32,7 +31,7 @@ namespace AnomalyArena
 
         Vector3 rushFrom, rushLanding;
         float rushRun, rushRunLeft, rushLeapClock, rushSlamReach;
-        bool rushLeapPlanned, rushContact;
+        bool rushContact;
 
         Vector3 meteorFrom, meteorTarget;
         float meteorClock, meteorReach, meteorDamage;
@@ -64,7 +63,7 @@ namespace AnomalyArena
         public float PoundLength => poundLength;
         public float PoundWidth => Mathf.Max(0f, Boss.poundWidth);
 
-        public bool RushLandingShown => IsTyrant && rushLeapPlanned && bossAttack == RampageChargeMove &&
+        public bool RushLandingShown => IsTyrant && bossAttack == RampageChargeMove &&
                                         (windup || tyrantStage is TyrantStage.Run or TyrantStage.Leap);
 
         public Vector3 RushLanding => rushLanding;
@@ -106,8 +105,6 @@ namespace AnomalyArena
         public static float TyrantMiddleReach(int phase, BossTuning b) =>
             (phase >= TyrantPhaseCount ? b.rushMaxRunPhase2 : b.rushMaxRun) + b.rushLeapDistance;
 
-        float StunDamageTaken => IsTyrant ? Mathf.Max(1f, Boss.tyrantStunDamageTaken) : 1.5f;
-
         float TyrantHit(float share) =>
             attackDamage * share * (bossPhase >= TyrantPhaseCount ? Mathf.Max(1f, Boss.tyrantEnragedDamage) : 1f);
 
@@ -130,7 +127,8 @@ namespace AnomalyArena
             poundClock = poundLength = 0f;
             poundLanded = false;
             rushRun = rushRunLeft = rushLeapClock = rushSlamReach = 0f;
-            rushLeapPlanned = rushContact = false;
+            rushContact = false;
+            RunThroughBodies(false);
             meteorFlying = false;
             meteorClock = meteorReach = meteorDamage = 0f;
             meteorPieces = 0;
@@ -156,13 +154,6 @@ namespace AnomalyArena
             if (tyrantStage == TyrantStage.Leap)
             {
                 TickRushLeap(dt);
-                return true;
-            }
-
-            if (bossStun > 0f)
-            {
-                bossStun -= dt;
-                Stop();
                 return true;
             }
 
@@ -298,6 +289,7 @@ namespace AnomalyArena
                     rushContact = false;
                     rushRunLeft = rushRun;
                     tyrantStage = TyrantStage.Run;
+                    RunThroughBodies(true);
                     break;
                 case RoyalScepterMove:
                     RaiseScepter();
@@ -318,6 +310,7 @@ namespace AnomalyArena
         {
             tyrantStage = TyrantStage.Idle;
             charging = false;
+            RunThroughBodies(false);                            
             cooldown = Mathf.Max(cooldown, TyrantGap);
         }
 
@@ -431,66 +424,33 @@ namespace AnomalyArena
             float longest = Mathf.Max(0f, bossPhase >= TyrantPhaseCount ? b.rushMaxRunPhase2 : b.rushMaxRun);
             rushRun = Mathf.Clamp(toPlayer - b.rushLeapDistance, Mathf.Min(b.rushMinRun, longest), longest);
             rushSlamReach = Mathf.Max(0f, bossPhase >= TyrantPhaseCount ? b.rushSlamRadiusPhase2 : b.rushSlamRadius);
-            float clear = ClearRun(rushRun);
-            rushLeapPlanned = clear >= rushRun;
-            if (!rushLeapPlanned) return clear + radius;
             Vector3 start = Query.Flat(Position), end = start + facing * rushRun;
-            rushLanding = RushLandingFrom(end, end + facing * b.rushLeapDistance);
+            rushLanding = RushLandingFrom(end, end + facing * b.rushLeapDistance, end);
             var world = WorldMap.Active;
-            if (world && !world.IsWalkable(rushLanding, radius))
-            {
-                Vector3 back = RushLandingFrom(start, end);
-                if (world.IsWalkable(back, radius))
+            if (world && !RushStandable(world, rushLanding, end))
+
+                for (float d = rushRun;; d = Mathf.Max(0f, d - RushProbeStep))
                 {
-                    rushLanding = back;
-                    rushRun = Mathf.Max(0f, Query.Flat(back - start).magnitude - b.rushLeapDistance);
+                    Vector3 at = start + facing * d, shorter = start + facing * Mathf.Max(0f, d - b.rushLeapDistance);
+                    if (RushStandable(world, at, shorter) && !world.IsHole(at + facing * radius))
+                    {
+                        rushLanding = at;
+                        rushRun = Mathf.Max(0f, d - b.rushLeapDistance);
+                        break;
+                    }
+
+                    if (d <= 0f) break;
                 }
-            }
 
             return Mathf.Max(radius, Query.Flat(rushLanding - Position).magnitude);
         }
 
-        float ClearRun(float wanted)
-        {
-            float clear = WallClearance(wanted);
-            var world = WorldMap.Active;
-            if (!world) return clear;
-            for (float last = 0f, d = RushProbeStep;; last = d, d += RushProbeStep)
-            {
-                float at = Mathf.Min(d, clear);
-                if (at > last && ReachesHole(world, Position + facing * last, Position + facing * at)) return last;
-                if (at >= clear) return clear;
-            }
-        }
+        bool RushStandable(WorldMap world, Vector3 at, Vector3? runEnd) =>
+            runEnd.HasValue
+                ? TyrantTerrain.For(world).WalkableAfterRun(at, radius, Position, runEnd.Value, radius, Boss.rushWallPiece)
+                : world.IsWalkable(at, radius);
 
-        float RushProbeRadius => Mathf.Max(0f, radius - Mathf.Max(0f, Boss.rushGraze));
-
-        float WallClearance(float distance)
-        {
-            float probe = RushProbeRadius, skin = radius - probe;
-            if (probe <= 0f)                                                            
-                return Query.WallBetween(Query.AtCastHeight(Position), Query.AtCastHeight(Position + facing * (distance + radius)), out var ray)
-                    ? Mathf.Max(0f, Query.Flat(ray.point - Position).magnitude - radius)
-                    : distance;
-            return Physics.SphereCast(Query.AtCastHeight(Position), probe, facing, out var hit, distance + skin, GameManager.WallMask,
-                QueryTriggerInteraction.Ignore)
-                ? Mathf.Max(0f, hit.distance - skin)
-                : distance;
-        }
-
-        bool ReachesHole(WorldMap world, Vector3 from, Vector3 to)
-        {
-            float probe = RushProbeRadius;
-            for (int i = -RushEdgeProbes; i <= RushEdgeProbes; i++)
-            {
-                Vector3 edge = Quaternion.Euler(0f, 90f * i / RushEdgeProbes, 0f) * facing * probe;
-                if (world.IsHole(to + edge) && !world.IsHole(from + edge)) return true;
-            }
-
-            return false;
-        }
-
-        Vector3 RushLandingFrom(Vector3 from, Vector3 aim)
+        Vector3 RushLandingFrom(Vector3 from, Vector3 aim, Vector3? runEnd)
         {
             from = Query.Flat(from);
             aim = Query.Flat(aim);
@@ -501,7 +461,7 @@ namespace AnomalyArena
             for (float d = delta.magnitude; d >= 0f; d -= RushProbeStep)
             {
                 Vector3 at = from + dir * d;
-                if (world.IsWalkable(at, radius) && !world.IsHole(at + dir * radius)) return at;
+                if (RushStandable(world, at, runEnd) && !world.IsHole(at + dir * radius)) return at;
             }
 
             return from;
@@ -517,24 +477,34 @@ namespace AnomalyArena
                 return;
             }
 
-            float speed = b.rushSpeed * (GM && GM.waves ? GM.waves.MovementSpeedScale : 1f), step = speed * dt;
-
-            var world = WorldMap.Active;
-            bool wall = WallClearance(step) < step;
-            bool hole = world && ReachesHole(world, Position, Position + facing * step);
-            if (wall || hole)
+            if (rushRunLeft <= 0f)
             {
 
+                charging = false;
                 Stop();
-                bossStun = Mathf.Max(0f, b.tyrantWallStun);
-                V3WorldAudio.Instance?.Play(ArenaWorldCue.BossSlam, Position);
-                Fx.Ring(Position + facing * radius, radius, definition.colour);
-                EndTyrantMove();
+                BeginRushLeap();
                 return;
             }
 
-            rb.linearVelocity = facing * speed + Vector3.up * rb.linearVelocity.y;
-            rushRunLeft -= step;
+            float speed = b.rushSpeed * (GM && GM.waves ? GM.waves.MovementSpeedScale : 1f);
+            float pace = speed * dt * Mathf.Max(0f, ExternalMoveMultiplier), move = Mathf.Min(pace, rushRunLeft);
+            if (move <= 0f)
+            {
+                Stop();                           
+                return;
+            }
+
+            rushRunLeft -= move;
+
+            var world = WorldMap.Active;
+            if (world)
+            {
+                Vector3 at = Query.Flat(Position);
+                int broken = TyrantTerrain.For(world).BreakAlong(at, at + facing * move, radius, b.rushWallPiece);
+                if (broken > 0) V2Audio.Instance?.PlayWorld(ArenaSoundCue.Impact, Position + facing * radius);
+            }
+
+            rb.linearVelocity = facing * (speed * move / pace) + Vector3.up * rb.linearVelocity.y;
             if (!rushContact && player && player.IsAlive && InFist(player))
             {
 
@@ -542,21 +512,23 @@ namespace AnomalyArena
                 if (Vector3.Dot(Query.Flat(player.Position - Position), side) < 0f) side = -side;
                 rushContact = DealHit(player, TyrantHit(b.rushRunDamage), side, TierPush(b.rushRunKnock));
             }
+        }
 
-            if (rushRunLeft > 0f) return;
-            charging = false;
-            Stop();
-            BeginRushLeap();
+        void RunThroughBodies(bool on)
+        {
+            if (!TryGetComponent(out CapsuleCollider capsule)) return;
+            int bodies = GameManager.CharacterMask;
+            capsule.excludeLayers = on ? capsule.excludeLayers | bodies : capsule.excludeLayers & ~bodies;
         }
 
         void BeginRushLeap()
         {
             rushFrom = Query.Flat(Position);
+            RunThroughBodies(false);
 
             var world = WorldMap.Active;
-            if (!rushLeapPlanned || world && (!world.IsWalkable(rushLanding, radius) || world.IsHole(rushLanding + facing * radius)))
-                rushLanding = RushLandingFrom(rushFrom, rushFrom + facing * Boss.rushLeapDistance);
-            rushLeapPlanned = true;
+            if (world && (!world.IsWalkable(rushLanding, radius) || world.IsHole(rushLanding + facing * radius)))
+                rushLanding = RushLandingFrom(rushFrom, rushFrom + facing * Boss.rushLeapDistance, null);
             rushLeapClock = 0f;
             tyrantStage = TyrantStage.Leap;
             if (!rb.isKinematic) rb.linearVelocity = Vector3.zero;
@@ -591,7 +563,6 @@ namespace AnomalyArena
                 DealHit(target, damage, away.sqrMagnitude > 1e-4f ? away : facing, push);
             }
 
-            rushLeapPlanned = false;
             tyrantStage = TyrantStage.Recover;
             tyrantRecover = EnragedTime(b.rushRecovery);
         }

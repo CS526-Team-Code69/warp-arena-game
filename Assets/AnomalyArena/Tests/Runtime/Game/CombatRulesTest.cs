@@ -380,7 +380,7 @@ namespace AnomalyArena
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
-        public async Task StormCallLevel3_BoltsOnALightningImmuneTarget_DoNotJumpToTheEnemyBesideIt()
+        public async Task StormCallMaxLevel_BoltsOnALightningImmuneTarget_DoNotJumpToTheEnemyBesideIt()
         {
             var (game, targets) = await V3CombatSmokeTest.StartSandbox();
             targets[2].DiscardWithoutReward();
@@ -388,7 +388,7 @@ namespace AnomalyArena
             var beside = targets[1];
 
             var def = game.skills.Catalog.Find(SkillId.StormCall);
-            float radius = def.Radius(3);
+            float radius = def.Radius(SkillDefinition.MaxLevel);
             Vector3 cursor = game.player.Position + Vector3.forward * 3f;
             Place(immune, cursor + Vector3.forward * (radius - 1f));
             Place(beside, immune.Position + Vector3.forward * (ElementStatus.For(immune).Rules.lightningJumpRadius - 1f));
@@ -398,11 +398,11 @@ namespace AnomalyArena
             Bare(beside);
             Assume.That(game.progression.Stats.elementPenetration, Is.Zero, "no Damage Penetration");
             game.skills.ResetRun();
-            for (int i = 0; i < 3; i++) Assume.That(game.skills.Learn(SkillId.StormCall), Is.True, "Storm Call is learned and raised");
+            for (int i = 0; i < SkillDefinition.MaxLevel; i++) Assume.That(game.skills.Learn(SkillId.StormCall), Is.True, "Storm Call is learned and raised");
             int slot = Array.FindIndex(game.skills.Slots, s => !s.Empty && s.Id == SkillId.StormCall);
-            Assume.That(game.skills.Slots[slot].Level, Is.EqualTo(3), "level 3: its bolts chain");
+            Assume.That(game.skills.Slots[slot].Level, Is.EqualTo(SkillDefinition.MaxLevel), "max level: its bolts chain");
             game.player.DebugSetAimPoint(cursor);
-            int expected = Mathf.RoundToInt(def.Strength(3));
+            int expected = Mathf.RoundToInt(def.Strength(SkillDefinition.MaxLevel));
             int bolts = 0;
             game.skills.VisualRequested += (id, _, _, _) => bolts += id == SkillId.StormCall ? 1 : 0;
             float immuneHp = immune.Hp, besideHp = beside.Hp;
@@ -525,7 +525,6 @@ namespace AnomalyArena
         {
             var info = DamageInfo.Attack(amount, game.player);
             info.element = element;
-            info.baseDamage = amount;
             return info;
         }
 

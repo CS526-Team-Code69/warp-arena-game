@@ -65,6 +65,29 @@ namespace AnomalyArena
             damageColor = new Color[n];
             for (int i = 0; i < n; i++) { damageAge[i] = 1f; damageLabels[i].gameObject.SetActive(false); }
             if (themeBackground) themeBackground.texture = art ? art.themeBackground : null;
+            SimplifyChineseTitle();
+        }
+
+                                                                                                                                         
+                                                                                                                                           
+                                    
+        const string ChineseEditionScene = "ArenaV2_CN";
+        static readonly string[] ChineseTitleHidden = { "InterstellarSubtitle", "ToggleArt", "ChineseTeam", "EnglishShowcase" };
+
+        void SimplifyChineseTitle()
+        {
+            if (screens == null || UnityEngine.SceneManagement.SceneManager.GetActiveScene().name != ChineseEditionScene) return;
+            foreach (var screen in screens)
+            {
+                if (!screen || screen.state != ArenaUiState.Title) continue;
+                var content = screen.transform.Find("Content");
+                if (!content) continue;
+                foreach (var name in ChineseTitleHidden)
+                {
+                    var element = content.Find(name);
+                    if (element) element.gameObject.SetActive(false);
+                }
+            }
         }
 
         void Update()

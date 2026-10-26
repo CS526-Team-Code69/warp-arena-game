@@ -162,7 +162,7 @@ namespace AnomalyArena.EditorTools
 
             var bulwark = Load<SkillDefinition>(bulwarkPath);
             Undo.RecordObject(bulwark, "V4 Bulwark shield share");
-            bulwark.strength = new[] { .2f, .3f, .3f };
+
             bulwark.shieldScalesWithMaxHp = true;
             EditorUtility.SetDirty(bulwark);
             receipt.bulwarkShieldShare = bulwark.strength;

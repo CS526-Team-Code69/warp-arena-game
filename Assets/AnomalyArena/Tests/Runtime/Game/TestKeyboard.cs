@@ -17,7 +17,7 @@ namespace AnomalyArena
             {
                 if (key != KeyCode.E) { game?.PressKey(key); continue; }
                 var world = WorldMap.Active;
-                if (world && game && game.player && (game.IsCombatActive || game.CanPlayerMove)) world.TryEnterPortal(game.player);
+                if (world && game && game.player && (game.IsCombatActive || game.CanPlayerMove || game.BuildTimeFlows)) world.TryEnterPortal(game.player);
             }
             await Awaitable.NextFrameAsync();
             await Awaitable.NextFrameAsync();

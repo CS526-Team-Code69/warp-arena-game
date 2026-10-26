@@ -20,16 +20,13 @@ namespace AnomalyArena
         [Min(0f), Tooltip("Max Energy gained on every real level-up; the energy card budget is kept on top. Candidate 8.")] public float maxEnergyPerLevel = 8f;
         public float voidEnergyRegeneration = 4f;
         public float regenerationInterval = 5f;
-        [Header("Stat card rarity (wave bands)")]
-        [Range(0f, 100f), Tooltip("Percent chance that a stat card rolls its wave band's high tier instead of the low tier. Candidate 25.")]
+        [Header("Stat and skill card rarity (wave bands)")]
+        [Range(0f, 100f), Tooltip("Percent chance that a stat card or a skill card rolls its wave band's high tier instead of the low tier. "
+            + "A skill card's colour is the level it gives (white 1 to orange 5). Candidate 25.")]
         public float highTierPercent = 25f;
-        [Min(1), Tooltip("After this many consecutive stat cards without the band's high tier, the next one is high tier. Candidate 4.")]
+        [Min(1), Tooltip("After this many consecutive cards of one kind without the band's high tier, the next card of that kind is high tier. "
+            + "Stat cards and skill cards are counted apart. Candidate 4.")]
         public int highTierPity = 4;
-        [Header("Skill card rarity (wave bands)")]
-        [Tooltip("Owner 2026-10-25 (document 9.6): a skill card rolls a colour by the wave, and the colour is the level it gives. White learns "
-            + "the skill at level 1 or adds one level, green puts it straight at level 2, blue straight at level 3 (an upgrade still adds at "
-            + "least one level; never above 3). Each row holds from its wave until a later row starts; the percent left over is white.")]
-        public SkillRarityBand[] skillRarityBands = { new(1, 20f, 0f), new(3, 30f, 10f), new(9, 40f, 25f), new(12, 40f, 40f) };
         [Header("Weapon card direction (wave bands)")]
         [Tooltip("Owner 2026-10-25 (document 9.6): a weapon card is coloured by its direction: Tame green, Twist blue, Infusion purple. When "
             + "the weapon on the card has more than one direction open, these weights pick one, so later rows favour blue and purple. Each "
@@ -64,15 +61,7 @@ namespace AnomalyArena
             return pity || percentRoll < Mathf.Clamp(highTierPercent, 0f, 100f) ? high : low;
         }
 
-        public CardRarity SkillRarity(int wave, float percentRoll)
-        {
-            SkillRarityBand band = default; int from = int.MinValue;
-            if (skillRarityBands != null)
-                foreach (var row in skillRarityBands)
-                    if (row.fromWave <= Mathf.Max(1, wave) && row.fromWave > from) { band = row; from = row.fromWave; }
-            float blue = Mathf.Clamp(band.bluePercent, 0f, 100f), green = Mathf.Clamp(band.greenPercent, 0f, 100f - blue);
-            return percentRoll < blue ? CardRarity.Exceptional : percentRoll < blue + green ? CardRarity.Rare : CardRarity.Common;
-        }
+        public CardRarity SkillRarity(int wave, float percentRoll, bool pity) => StatRarity(wave, percentRoll, pity);
 
         public float DirectionWeight(int wave, UpgradeAxis axis)
         {
@@ -82,16 +71,6 @@ namespace AnomalyArena
                     if (row.fromWave <= Mathf.Max(1, wave) && row.fromWave > from) { band = row; from = row.fromWave; }
             return Mathf.Max(0f, band.Weight(axis));
         }
-    }
-
-    [System.Serializable]
-    public struct SkillRarityBand
-    {
-        [Min(1), Tooltip("First wave (1-based) of this row; it holds until a later row starts.")] public int fromWave;
-        [Range(0f, 100f), Tooltip("Percent of green skill cards: a new skill starts at level 2, an owned one rises to at least level 2.")] public float greenPercent;
-        [Range(0f, 100f), Tooltip("Percent of blue skill cards: a new skill starts at level 3, an owned one rises to level 3.")] public float bluePercent;
-        public SkillRarityBand(int fromWave, float greenPercent, float bluePercent)
-        { this.fromWave = fromWave; this.greenPercent = greenPercent; this.bluePercent = bluePercent; }
     }
 
     [System.Serializable]

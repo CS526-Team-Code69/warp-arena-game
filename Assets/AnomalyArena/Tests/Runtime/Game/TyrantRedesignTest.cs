@@ -74,6 +74,27 @@ namespace AnomalyArena
         }
 
         [Test]
+        public void NeverStunned_NoStunTimerStateDamageBonusOrTuningIsLeft_NothingStopsItsRun()
+        {
+            const BindingFlags members = BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
+
+            Assert.That(typeof(Enemy).GetField("bossStun", members), Is.Null, "no stun timer");
+            Assert.That(typeof(Enemy).GetProperty("BossStunned", members), Is.Null, "no stun state");
+            Assert.That(typeof(Enemy).GetProperty("StunDamageTaken", members), Is.Null, "no damage bonus while stunned");
+            foreach (var name in new[] { "tyrantWallStun", "tyrantStunDamageTaken", "wallHitStun", "rushGraze" })
+                Assert.That(typeof(BossTuning).GetField(name), Is.Null, $"and no {name}: nothing stops its run any more");
+        }
+
+        [Test]
+        public void AstralGuardTuning_EachDevouredMinion_FivePercentHpAndTwoAndAHalfPercentShield_AtMostFour()
+        {
+            var b = new BossTuning();
+            Assert.That(b.astralHealPerMinion, Is.EqualTo(.05f), "owner 2026-10-25: each minion it devours restores 5% of its max HP");
+            Assert.That(b.astralShieldPerMinion, Is.EqualTo(.025f), "and adds 2.5% of it as shield");
+            Assert.That(b.astralMaxDevour, Is.EqualTo(4), "at most four minions a guard");
+        }
+
+        [Test]
         public void EncounterBalance_TyrantBudget_CountsOneShieldRefill_ItsShieldsAndHpStillLastNinetySeconds()
         {
             var balance = ScriptableObject.CreateInstance<EncounterBalance>();
@@ -317,69 +338,187 @@ namespace AnomalyArena
         }
 
         [Test, LoadScene(ArenaScene), Category("Integration"), Timeout(60000)]
-        public async Task RampageCharge_IntoABulwark_StunsIt_StunnedItTakesMoreDamageNeitherWalksNorActs_ThenActsAgain()
+        public async Task RampageCharge_IntoABulwark_BreaksIt_RunsItsWholeLineAndLeaps_NeverStunned_ThenActsAgain()
         {
             var (game, targets, tyrant) = await TyrantSandbox(10f);
             foreach (var target in targets) target.DiscardWithoutReward();
             var b = game.waves.bosses;
             Assume.That(await OnChargeLane(game, tyrant, 10f, 0f), Is.True, "a lane as wide as its body");
-            Vector3 toPlayer = Flat(game.player.Position - tyrant.Position).normalized;
+            Vector3 ahead = Flat(game.player.Position - tyrant.Position).normalized, wall = Flat(tyrant.Position) + ahead * 5f;
 
-            WorldMap.Active.CreateWall(tyrant.Position + toPlayer * 5f, 3f, 30f, 0f, tyrant);
-            Physics.SyncTransforms();
+            var bulwark = Bulwark(wall, 3f, tyrant);
+            Assume.That(bulwark, Is.Not.Null, "a bulwark stands across the lane");
 
             Force(tyrant, Enemy.RampageChargeMove);
             await Until(() => tyrant.WindingUp && tyrant.LineTelegraph, 3f, "the charge wind-up");
-            Assert.That(tyrant.TelegraphRange, Is.EqualTo(4.5f).Within(.4f), "the line ends at the bulwark's face");
-            Assert.That(tyrant.RushLandingShown, Is.False, "no landing circle: it will crash, not leap");
-            await Until(() => tyrant.BossStunned, 5f, "the run hits the bulwark");
-            Assert.That(tyrant.RushLeaping, Is.False, "it does not leap");
+            Vector3 from = Flat(tyrant.Position), landing = tyrant.RushLanding;
+            Assert.That(tyrant.RushLandingShown, Is.True, "a landing circle: the bulwark will not stop it");
+            Assert.That(Vector3.Dot(landing - from, ahead), Is.GreaterThan(Vector3.Dot(wall - from, ahead) + .5f + tyrant.Radius), "past the bulwark");
+            Assert.That(tyrant.TelegraphRange, Is.EqualTo(Flat(landing - from).magnitude).Within(.1f), "the line runs on through it to the landing");
+            float brokenAt = -1f;
+            Vector3 ranTo = await RunAndLand(tyrant, () =>
+            {
+                if (brokenAt < 0f && !bulwark.gameObject.activeSelf) brokenAt = Vector3.Dot(Flat(tyrant.Position) - from, ahead);
+            });
+
+            float run = Flat(landing - from).magnitude - b.rushLeapDistance;
+            Assert.That(brokenAt, Is.InRange(0f, run - 1f), "its body broke the bulwark on the way");
+            Assert.That(Vector3.Dot(ranTo - from, ahead), Is.GreaterThan(run - .6f), "and ran on, its whole planned run");
+            Assert.That(Flat(tyrant.Position - landing).magnitude, Is.LessThan(.5f), "then leapt and landed on its circle");
+            Assert.That(WorldMap.Active.IsWall(wall), Is.False, "the bulwark is gone for paths too");
 
             var board = ElementStatus.For(tyrant);
             board.SetShield(0f);
             float hp = tyrant.Hp;
             tyrant.ReceiveDamage(new DamageInfo { amount = 10f, isAttack = true, ignoreShield = true, kind = HitKind.Blunt });
-            Assert.That(hp - tyrant.Hp, Is.EqualTo(10f * b.tyrantStunDamageTaken).Within(.01f), "stunned, it takes more damage");
-
-            int crosses = game.waves.preparedMarkers.Count(m => m && m.gameObject.activeSelf);
-            Vector3 at = Flat(tyrant.Position);
-            Force(tyrant, Enemy.RoyalScepterMove);
-            float until = Time.time + Mathf.Min(1f, b.tyrantWallStun * .5f);
-            while (Time.time < until)
-            {
-                Assert.That(tyrant.WindingUp, Is.False, "no move starts while stunned, not even a summon");
-                Assert.That(Flat(tyrant.Position - at).magnitude, Is.LessThan(.05f), "and it does not walk");
-                await Awaitable.FixedUpdateAsync();
-            }
-
-            Assert.That(game.waves.preparedMarkers.Count(m => m && m.gameObject.activeSelf), Is.EqualTo(crosses), "no summons either");
-            await Until(() => !tyrant.BossStunned, b.tyrantWallStun + 1f, "the stun wears off");
-            await Until(() => tyrant.WindingUp, 3f, "it acts again");
-            Assert.That(tyrant.BossAttackIndex, Is.EqualTo(Enemy.RoyalScepterMove), "the move it was told to make waited for the stun");
+            Assert.That(hp - tyrant.Hp, Is.EqualTo(10f).Within(.01f), "never stunned, so it takes no extra damage either");
+            tyrant.ForceNextBossMove(Enemy.StarThrowMove);
+            await Until(() => tyrant.WindingUp, b.rushRecovery + b.tyrantMoveGap + 2f, "its next move, straight after its pause at the landing");
+            Assert.That(tyrant.BossAttackIndex, Is.EqualTo(Enemy.StarThrowMove));
         }
 
         [Test, LoadScene(ArenaScene), Category("Integration"), Timeout(60000)]
-        public async Task RampageCharge_ABulwarkBesideTheCentreLineInItsBodysWay_StunsItAsWell()
+        public async Task RampageCharge_ABulwarkBesideTheCentreLineInItsBodysWay_BreaksItAsWell_AndRunsOn()
         {
             var (game, targets, tyrant) = await TyrantSandbox(10f);
             foreach (var target in targets) target.DiscardWithoutReward();
             var b = game.waves.bosses;
             Assume.That(await OnChargeLane(game, tyrant, 10f, 0f), Is.True, "a lane as wide as its body");
-            Vector3 toPlayer = Flat(game.player.Position - tyrant.Position).normalized, side = Vector3.Cross(Vector3.up, toPlayer);
+            Vector3 ahead = Flat(game.player.Position - tyrant.Position).normalized, side = Vector3.Cross(Vector3.up, ahead);
 
             const float Beside = 1.5f;
-            Assume.That(tyrant.Radius - b.rushGraze, Is.GreaterThan(Beside + .3f), "its body reaches well past the bulwark's end");
-            WorldMap.Active.CreateWall(tyrant.Position + toPlayer * 5f + side * (Beside + 1.5f), 3f, 30f, 0f, tyrant);
-            Physics.SyncTransforms();
+            Assume.That(tyrant.Radius, Is.GreaterThan(Beside + .3f), "its body reaches well past the bulwark's end");
+            var bulwark = Bulwark(Flat(tyrant.Position) + ahead * 5f + side * (Beside + 1.5f), 3f, tyrant);
+            Assume.That(bulwark, Is.Not.Null, "a bulwark stands beside the lane's middle");
             Assume.That(Query.WallBetween(Query.AtCastHeight(tyrant.Position), Query.AtCastHeight(game.player.Position), out _), Is.False,
                 "the centre line itself is clear");
 
             Force(tyrant, Enemy.RampageChargeMove);
             await Until(() => tyrant.WindingUp && tyrant.LineTelegraph, 3f, "the charge wind-up");
-            Assert.That(tyrant.RushLandingShown, Is.False, "the line is as wide as its body and ends at the bulwark: no landing circle");
-            Assert.That(tyrant.TelegraphRange, Is.LessThan(5.5f), "it stops before the bulwark's far side");
-            await Until(() => tyrant.BossStunned, 5f, "the run hits the bulwark with its side");
-            Assert.That(tyrant.RushLeaping, Is.False, "it does not leap over it");
+            Vector3 from = Flat(tyrant.Position), landing = tyrant.RushLanding;
+            Assert.That(tyrant.RushLandingShown, Is.True, "a landing circle: grazing the bulwark will not stop it");
+            Assert.That(tyrant.TelegraphRange, Is.EqualTo(Flat(landing - from).magnitude).Within(.1f), "the line is not cut at the bulwark");
+            float brokenAt = -1f;
+            Vector3 ranTo = await RunAndLand(tyrant, () =>
+            {
+                if (brokenAt < 0f && !bulwark.gameObject.activeSelf) brokenAt = Vector3.Dot(Flat(tyrant.Position) - from, ahead);
+            });
+
+            float run = Flat(landing - from).magnitude - b.rushLeapDistance;
+            Assert.That(brokenAt, Is.InRange(0f, run - 1f), "the side of its body broke the bulwark on the way");
+            Assert.That(Vector3.Dot(ranTo - from, ahead), Is.GreaterThan(run - .6f), "and ran on, its whole planned run");
+            Assert.That(Flat(tyrant.Position - landing).magnitude, Is.LessThan(.5f), "then leapt and landed on its circle");
+        }
+
+        [Test, LoadScene(ArenaScene), Category("Integration"), Timeout(60000)]
+        public async Task RampageCharge_BreaksNothingItsBodyNeverReaches_ABulwarkJustPastTheRunsEndOrBesideItsWayStands()
+        {
+            var (game, targets, tyrant) = await TyrantSandbox(10f);
+            foreach (var target in targets) target.DiscardWithoutReward();
+            var b = game.waves.bosses;
+            float leap = b.rushLeapDistance;
+            try
+            {
+
+                b.rushLeapDistance = 8f;
+                float run = b.rushMinRun, reach = tyrant.Radius, gap = .1f;
+                Assume.That(await OnChargeLane(game, tyrant, run + b.rushLeapDistance, 0f), Is.True, "a lane as wide as its body, long enough");
+                Vector3 from = Flat(tyrant.Position), ahead = Flat(game.player.Position - tyrant.Position).normalized;
+                Vector3 side = Vector3.Cross(Vector3.up, ahead);
+
+                var pastEnd = Bulwark(from + ahead * (run + reach + gap + .5f), 3f, tyrant);
+                var beside = Bulwark(from + ahead * (run * .5f) + side * (reach + gap + 1.5f), 3f, tyrant);
+                Assume.That(pastEnd && beside, Is.True, "both bulwarks stand");
+
+                Force(tyrant, Enemy.RampageChargeMove);
+                await Until(() => tyrant.WindingUp && tyrant.LineTelegraph, 3f, "the charge wind-up");
+                Vector3 landing = tyrant.RushLanding;
+                Assume.That(Flat(landing - from).magnitude, Is.EqualTo(run + b.rushLeapDistance).Within(.1f), "its shortest run, then the long leap");
+                await RunAndLand(tyrant);
+
+                Assert.That(pastEnd.gameObject.activeSelf, Is.True, "a bulwark just past the end of the run stands: its body never reached it");
+                Assert.That(beside.gameObject.activeSelf, Is.True, "and so does one just beside its way");
+                Assert.That(Flat(tyrant.Position - landing).magnitude, Is.LessThan(.5f), "it leapt over and landed on its circle");
+            }
+            finally { b.rushLeapDistance = leap; }
+        }
+
+        [Test, LoadScene(ArenaScene), Category("Integration"), Timeout(60000)]
+        public async Task RampageCharge_ASpireAndAHeldMinionInItsWay_HoldNothingBack_ItRunsThroughToItsPlannedEndAndLeaps()
+        {
+            var (game, targets, tyrant) = await TyrantSandbox(10f);
+            targets[2].DiscardWithoutReward();
+            var b = game.waves.bosses;
+            Assume.That(await OnChargeLane(game, tyrant, 10f, 0f), Is.True, "a lane as wide as its body");
+            Vector3 from = Flat(tyrant.Position), ahead = Flat(game.player.Position - tyrant.Position).normalized;
+
+            var spire = targets[0];
+            spire.Configure(game.waves.DefinitionOf(EnemyKind.Spire), 1f, false);
+            spire.enabled = false;
+            Place(spire, from + ahead * 4f);
+            Place(targets[1], from + ahead * 6.5f);
+            Assume.That(spire.GetComponent<Rigidbody>().isKinematic && targets[1].GetComponent<Rigidbody>().constraints == RigidbodyConstraints.FreezeAll,
+                Is.True, "neither of them can be pushed aside");
+
+            Force(tyrant, Enemy.RampageChargeMove);
+            await Until(() => tyrant.WindingUp && tyrant.LineTelegraph, 3f, "the charge wind-up");
+            Vector3 landing = tyrant.RushLanding;
+            float run = Flat(landing - from).magnitude - b.rushLeapDistance;
+            Assume.That(run, Is.GreaterThan(6.5f), "its run carries its centre past both of them");
+            Vector3 side = Vector3.Cross(Vector3.up, ahead);
+            float drift = 0f;
+            Vector3 ranTo = await RunAndLand(tyrant, () =>
+            {
+                if (tyrant.Charging) drift = Mathf.Max(drift, Mathf.Abs(Vector3.Dot(Flat(tyrant.Position) - from, side)));
+            });
+
+            Assert.That(Vector3.Dot(ranTo - from, ahead), Is.GreaterThan(run - .3f), "nothing held it back: it ran its whole planned run");
+            Assert.That(drift, Is.LessThan(.1f), "straight through them, not sliding round them");
+            Assert.That(Flat(tyrant.Position - landing).magnitude, Is.LessThan(.5f), "then leapt its planned leap and landed on its circle");
+            Assert.That(tyrant.GetComponent<CapsuleCollider>().excludeLayers.value & GameManager.CharacterMask, Is.Zero,
+                "and bodies block it again once it is down");
+        }
+
+        [Test, LoadScene(ArenaScene), Category("Integration"), Timeout(60000)]
+        public async Task RampageCharge_HeadOnIntoAMapWall_YouHuggingItsFarSide_BreaksThePiecesItsBodyTouches_RunsItsWholeLine_PathsFollow()
+        {
+            await ChargeAcrossAMapWall(0f);
+        }
+
+        [Test, LoadScene(ArenaScene), Category("Integration"), Timeout(60000)]
+        public async Task RampageCharge_GrazingTheEndOfAMapWall_BreaksOnlyTheEndPiecesItsBodyTouches_RunsItsWholeLine()
+        {
+            await ChargeAcrossAMapWall(.8f);
+        }
+
+        [Test, LoadScene(ArenaScene), Category("Integration"), Timeout(60000)]
+        public async Task TailSweep_NeverBreaksABulwark_WhichShieldsYouFromTheTail()
+        {
+            var (game, targets, tyrant) = await TyrantSandbox(5f);
+            foreach (var target in targets) target.DiscardWithoutReward();
+            var player = game.player;
+            var b = game.waves.bosses;
+            Assume.That(await OnChargeLane(game, tyrant, 5f, 1.5f), Is.True, "open ground round a short lane");
+            Vector3 from = Flat(tyrant.Position), ahead = Flat(player.Position - tyrant.Position).normalized, wall = from + ahead * 3.8f;
+
+            var bulwark = Bulwark(wall, 3f, tyrant);
+            Assume.That(bulwark, Is.Not.Null, "a bulwark stands");
+            Place(player, from + ahead * 5.5f);
+            Assume.That(Flat(player.Position - tyrant.Position).magnitude - player.Radius, Is.LessThan(b.sweepRange), "you stand in the tail's reach");
+            var hits = new List<DamageInfo>();
+            void Count(DamageInfo hit) { if (hit.dealer?.Owner == tyrant) hits.Add(hit); }
+            player.AttackReceived += Count;
+            try
+            {
+                Force(tyrant, Enemy.TailSweepMove);
+                await Until(() => tyrant.TailSweeping, 4f, "the sweep");
+                await Until(() => !tyrant.TailSweeping, 3f, "the tail crosses the fan");
+                await Awaitable.FixedUpdateAsync();
+                Assert.That(bulwark.gameObject.activeSelf, Is.True, "the tail cannot break a bulwark (document 8.4)");
+                Assert.That(WorldMap.Active.IsWall(wall), Is.True, "it still stands as a wall");
+                Assert.That(hits, Is.Empty, "and it shielded you from the tail");
+            }
+            finally { player.AttackReceived -= Count; }
         }
 
         [Test, LoadScene(ArenaScene), Category("Integration"), Timeout(60000)]
@@ -402,7 +541,7 @@ namespace AnomalyArena
                 await Awaitable.FixedUpdateAsync();
                 Force(tyrant, Enemy.RampageChargeMove);
                 await Until(() => tyrant.WindingUp && tyrant.LineTelegraph, 3f, "the charge wind-up");
-                Assert.That(tyrant.RushLandingShown, Is.True, "it plans a leap, not a crash");
+                Assert.That(tyrant.RushLandingShown, Is.True, "its landing circle shows");
                 Assert.That(world.IsWalkable(tyrant.RushLanding, tyrant.Radius), Is.True,
                     "onto ground it can walk on: not the gravity ring it is never pulled out of, no hole, no wall");
                 await Until(() => tyrant.RushLeaping, 4f, "the leap");
@@ -414,27 +553,35 @@ namespace AnomalyArena
         }
 
         [Test, LoadScene(ArenaScene), Category("Integration"), Timeout(60000)]
-        public async Task RampageCharge_IntoAHole_TheLineEndsAtItsEdge_ItCrashesThereAndNeverLeaps()
+        public async Task RampageCharge_AcrossABlackHole_TheLineRunsOverIt_ItNeverStopsNorIsSwallowed_ThenLeaps()
         {
             var (game, targets, tyrant) = await TyrantSandbox(14f);
             foreach (var target in targets) target.DiscardWithoutReward();
             var world = WorldMap.Active;
-            Assume.That(FindHoleAcross(world, tyrant.Radius, out var hole, out var from, out var spot), Is.True,
-                "a black hole with open ground on two sides");
+            var b = game.waves.bosses;
+            Assume.That(FindHoleCrossing(world, tyrant.Radius, b, out var hole, out var start, out var spot), Is.True,
+                "a black hole with open ground on two sides, near enough to charge across it");
             Place(game.player, spot);
-            Place(tyrant, from);
+            Place(tyrant, start);
             await Awaitable.FixedUpdateAsync();
-            float edge = Flat(hole.Centre - tyrant.Position).magnitude - hole.KillRadius;
+            int feeds = hole.Feeds;
+            Vector3 centre = Flat(hole.Centre);
 
             Force(tyrant, Enemy.RampageChargeMove);
             await Until(() => tyrant.WindingUp && tyrant.LineTelegraph, 3f, "the charge wind-up");
-            Assert.That(tyrant.RushLandingShown, Is.False, "no landing circle: it will crash at the hole");
-            Assert.That(tyrant.TelegraphRange, Is.EqualTo(edge).Within(.6f), "the line ends at the hole's edge");
-            await Until(() => tyrant.BossStunned, 5f, "the run stops at the edge");
-            Assert.That(tyrant.RushLeaping, Is.False, "it never leaps over the hole");
-            Assert.That(tyrant.IsAlive, Is.True, "nor falls in");
-            Assert.That(Flat(tyrant.Position - hole.Centre).magnitude - tyrant.Radius, Is.GreaterThan(hole.KillRadius - .3f),
-                "its body stopped at the edge");
+            Vector3 from = Flat(tyrant.Position), landing = tyrant.RushLanding, ahead = Flat(spot - from).normalized;
+            Assert.That(tyrant.RushLandingShown, Is.True, "a landing circle: the hole does not stop it (document 13.2: its moves ignore black holes)");
+            Assert.That(Vector3.Dot(landing - centre, ahead), Is.GreaterThan(hole.GravityRadius), "past the hole, out of its gravity ring");
+            Assert.That(tyrant.TelegraphRange, Is.EqualTo(Flat(landing - from).magnitude).Within(.1f), "the line runs over the hole to the landing");
+            float nearest = float.MaxValue;
+            Vector3 ranTo = await RunAndLand(tyrant, () => nearest = Mathf.Min(nearest, Flat(tyrant.Position - centre).magnitude));
+
+            float run = Flat(landing - from).magnitude - b.rushLeapDistance;
+            Assert.That(nearest, Is.LessThan(hole.KillRadius), "its run took its centre over the hole's core");
+            Assert.That(Vector3.Dot(ranTo - from, ahead), Is.GreaterThan(run - .6f), "and on, its whole planned run");
+            Assert.That(tyrant.IsAlive && tyrant.State != CharacterState.Falling, Is.True, "never swallowed: a boss is never pulled or swallowed");
+            Assert.That(hole.Feeds, Is.EqualTo(feeds), "nor does it feed the hole");
+            Assert.That(Flat(tyrant.Position - landing).magnitude, Is.LessThan(.5f), "then it leapt and landed on its circle");
         }
 
         [Test, LoadScene(ArenaScene), Category("Integration"), Timeout(60000)]
@@ -676,9 +823,53 @@ namespace AnomalyArena
             Assert.That(targets[0].CorpseActive || targets[1].CorpseActive, Is.False, "without leaving a corpse");
             Assert.That(targets[2].IsAlive, Is.True, "the one out of reach is not");
             Assert.That(game.waves.Kills, Is.EqualTo(kills), "a devoured minion is no kill");
-            Assert.That(tyrant.Hp, Is.EqualTo(Mathf.Min(tyrant.maxHp, hp + tyrant.maxHp * b.astralHealPerMinion * 2f)).Within(.5f), "HP back for each");
+            Assert.That(b.astralHealPerMinion, Is.EqualTo(.05f).Within(1e-4f), "the scene keeps the owner's 5% HP per minion (2026-10-25)");
+            Assert.That(b.astralShieldPerMinion, Is.EqualTo(.025f).Within(1e-4f), "and 2.5% shield per minion");
+            Assert.That(tyrant.Hp, Is.EqualTo(Mathf.Min(tyrant.maxHp, hp + tyrant.maxHp * b.astralHealPerMinion * 2f)).Within(.5f),
+                "5% of its max HP back for each");
             Assert.That(board.Shield, Is.EqualTo(Mathf.Min(tyrant.maxHp * b.astralShieldCap, tyrant.maxHp * b.astralShieldPerMinion * 2f)).Within(.5f),
-                "and shield, never past its cap");
+                "and 2.5% as shield for each, never past its cap");
+        }
+
+        [Test, LoadScene(ArenaScene), Category("Integration"), Timeout(60000)]
+        public async Task AstralGuard_FiveMinionsInReach_DevoursOnlyTheNearestFour_FivePercentHpAndTwoAndAHalfPercentShieldForEach()
+        {
+            var (game, targets, tyrant) = await TyrantSandbox(14f);
+            var waves = game.waves;
+            var b = waves.bosses;
+            Assume.That(b.astralMaxDevour, Is.EqualTo(4), "the owner's limit: four minions a guard (2026-10-25)");
+            var minions = targets.ToList();
+            while (minions.Count < b.astralMaxDevour + 1)
+            {
+                var extra = waves.SpawnLab(targets[0].definition.kind, tyrant.Position + Vector3.back * 20f, false, ElementKind.None);
+                Assume.That(extra, Is.Not.Null, "the pool has another minion");
+                extra.enabled = false;                               
+                extra.GetComponent<Rigidbody>().constraints = RigidbodyConstraints.FreezeAll;
+                minions.Add(extra);
+            }
+
+            for (int i = 0; i < minions.Count; i++)
+                V3CombatSmokeTest.Teleport(minions[i],
+                    tyrant.Position + Quaternion.Euler(0f, 360f * i / minions.Count, 0f) * Vector3.forward * (tyrant.Radius + 1f + i));
+            Physics.SyncTransforms();
+            foreach (var minion in minions)
+                Assume.That(Flat(minion.Position - tyrant.Position).magnitude - minion.Radius, Is.LessThanOrEqualTo(b.astralRadius), "each in reach");
+            var board = ElementStatus.For(tyrant);
+            tyrant.ReceiveDamage(new DamageInfo { amount = tyrant.maxHp * .3f, source = DamageSource.Wall, ignoreShield = true });
+            board.SetShield(0f);
+            await Awaitable.FixedUpdateAsync();
+            Assume.That(tyrant.BossPhase, Is.EqualTo(1), "still phase 1, so no refill muddles the numbers");
+            float hp = tyrant.Hp;
+
+            Force(tyrant, Enemy.AstralGuardMove);
+            await Until(() => tyrant.AstralChanneling, 3f, "the channel");
+            await Until(() => !tyrant.WindingUp, b.astralChannel + 2f, "the channel ends");
+
+            var farthest = minions[minions.Count - 1];
+            Assert.That(minions.Take(4).All(m => !m.gameObject.activeSelf), Is.True, "it devours the nearest four");
+            Assert.That(farthest.IsAlive && farthest.gameObject.activeSelf, Is.True, "and leaves the fifth, the farthest, though it stands in reach");
+            Assert.That(tyrant.Hp, Is.EqualTo(hp + tyrant.maxHp * .05f * 4f).Within(.5f), "5% of its max HP back for each of the four");
+            Assert.That(board.Shield, Is.EqualTo(tyrant.maxHp * .025f * 4f).Within(.5f), "and 2.5% of it as shield for each");
         }
 
         [Test, LoadScene(ArenaScene), Category("Integration"), Timeout(60000)]
@@ -834,7 +1025,7 @@ namespace AnomalyArena
             return false;
         }
 
-        static bool FindHoleAcross(WorldMap world, float body, out BlackHole hole, out Vector3 from, out Vector3 spot)
+        static bool FindHoleCrossing(WorldMap world, float body, BossTuning b, out BlackHole hole, out Vector3 from, out Vector3 spot)
         {
             hole = null;
             from = spot = Vector3.zero;
@@ -842,12 +1033,14 @@ namespace AnomalyArena
             {
                 if (!candidate || candidate.Phase != HolePhase.Active) continue;
                 Vector3 centre = Flat(candidate.Centre);
+                float near = candidate.KillRadius + .5f, far = candidate.GravityRadius + 1f, run = near + far - b.rushLeapDistance;
+                if (run < b.rushMinRun || run > b.rushMaxRun) continue;
                 for (int a = 0; a < 360; a += 15)
                 {
                     Vector3 outward = Quaternion.Euler(0f, a, 0f) * Vector3.forward;
-                    Vector3 it = centre + outward * (candidate.GravityRadius + body + 1f), you = centre - outward * (candidate.GravityRadius + 1.5f);
-                    if (!world.IsWalkable(it, body) || !world.IsWalkable(you, 1f)) continue;
-                    if (!PathClear(world, it, centre + outward * candidate.KillRadius, body, candidate)) continue;
+                    Vector3 it = centre + outward * near, you = centre - outward * far;
+                    if (!world.Contains(it, body) || world.IsWall(it, body) || !world.IsWalkable(you, body)) continue;
+                    if (!PathClear(world, it, you, body, candidate)) continue;
                     hole = candidate;
                     from = it;
                     spot = you;
@@ -936,6 +1129,132 @@ namespace AnomalyArena
             }
 
             return best < float.MaxValue;
+        }
+
+        struct WallCrossing
+        {
+            public Vector3 from, you, inPath;
+            public Vector3? standing;
+        }
+
+        static bool FindWallCrossing(WorldMap world, float body, BossTuning b, float graze, out WallCrossing crossing)
+        {
+            crossing = default;
+            bool found = false;
+            var walls = world.layout.walls;
+            var normals = new[] { Vector3.right, Vector3.left, Vector3.forward, Vector3.back };
+            foreach (var rect in walls)
+            foreach (var n in normals)
+            foreach (float end in new[] { 1f, -1f })
+            {
+                Vector3 centre = new(rect.center.x, 0f, rect.center.y), across = new(Mathf.Abs(n.z), 0f, Mathf.Abs(n.x));
+                float depth = Mathf.Abs(n.x) > 0f ? rect.width : rect.height, length = Mathf.Abs(n.x) > 0f ? rect.height : rect.width;
+                float run = depth + body + 2.1f - b.rushLeapDistance;
+                if (run < b.rushMinRun || run > b.rushMaxRun) continue;
+
+                float line = end * (graze > 0f ? length * .5f + body - graze : length * .5f - Mathf.Min(1f, length * .5f));
+                Vector3 from = centre + across * line + n * (depth * .5f + body + 1f), you = centre + across * line - n * (depth * .5f + 1.1f);
+                if (!world.IsWalkable(from, body) || !ClearOfAllBut(world, rect, from, you, body + .5f)) continue;
+                Vector3 inPath = graze > 0f ? centre + across * (end * (length * .5f - graze * .5f)) : centre + across * line;
+                Vector3 farEnd = centre - across * (end * (length * .5f - .3f));
+                bool standing = Mathf.Abs(Vector3.Dot(farEnd - centre, across) - line) > body + b.rushWallPiece + .1f;
+                if (found && !standing) continue;
+                found = true;
+                crossing = new WallCrossing { from = from, you = you, inPath = inPath, standing = standing ? farEnd : (Vector3?)null };
+                if (standing) return true;
+            }
+
+            return found;
+        }
+
+        static bool ClearOfAllBut(WorldMap world, Rect except, Vector3 from, Vector3 to, float clearance)
+        {
+            Vector3 delta = Flat(to - from);
+            float length = delta.magnitude;
+            for (float s = 0f; s < length + .25f; s += .25f)
+            {
+                Vector3 point = from + (length > 0f ? delta * (Mathf.Min(s, length) / length) : Vector3.zero);
+                if (!world.Contains(point, clearance)) return false;
+                foreach (var rect in world.layout.walls)
+                    if (rect != except && point.x >= rect.xMin - clearance && point.x <= rect.xMax + clearance &&
+                        point.z >= rect.yMin - clearance && point.z <= rect.yMax + clearance)
+                        return false;
+            }
+
+            foreach (var hole in world.holes)
+                if (hole && (hole.Phase is HolePhase.Active or HolePhase.Collapsing) && SegmentDistance(from, to, hole.Centre) < hole.GravityRadius + clearance)
+                    return false;
+            return true;
+        }
+
+        static async Task ChargeAcrossAMapWall(float graze)
+        {
+            var (game, targets, tyrant) = await TyrantSandbox(10f);
+            foreach (var target in targets) target.DiscardWithoutReward();
+            var world = WorldMap.Active;
+            var b = game.waves.bosses;
+            Assume.That(FindWallCrossing(world, tyrant.Radius, b, graze, out var crossing), Is.True,
+                "a map wall with open ground on both sides, near enough for one charge across it");
+            Place(game.player, crossing.you);
+            Place(tyrant, crossing.from);
+            await Awaitable.FixedUpdateAsync();                   
+            Assume.That(world.IsWall(crossing.inPath), Is.True, "the wall stands in its body's way");
+            Assume.That(Physics.CheckSphere(Query.AtCastHeight(crossing.inPath), .2f, GameManager.WallMask, QueryTriggerInteraction.Ignore), Is.True,
+                "with its collider");
+            if (graze > 0f)
+                Assume.That(Query.WallBetween(Query.AtCastHeight(crossing.from), Query.AtCastHeight(crossing.you), out _), Is.False,
+                    "its centre line itself misses the wall");
+            var blocked = (bool[])typeof(MapGrid).GetField("blocked", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(world.Grid);
+            var blockedBefore = (bool[])blocked.Clone();
+
+            Force(tyrant, Enemy.RampageChargeMove);
+            await Until(() => tyrant.WindingUp && tyrant.LineTelegraph, 3f, "the charge wind-up");
+            Vector3 from = Flat(tyrant.Position), landing = tyrant.RushLanding, ahead = Flat(crossing.you - from).normalized;
+            Assert.That(tyrant.RushLandingShown, Is.True, "a landing circle: the wall will not stop it");
+            Assert.That(Flat(landing - crossing.you).magnitude, Is.LessThan(.6f), "on you behind the wall: what the run breaks gives no cover");
+            Assert.That(tyrant.TelegraphRange, Is.EqualTo(Flat(landing - from).magnitude).Within(.1f), "the line is not cut at the wall");
+            Vector3 ranTo = await RunAndLand(tyrant);
+
+            float run = Flat(landing - from).magnitude - b.rushLeapDistance;
+            Assert.That(Vector3.Dot(ranTo - from, ahead), Is.GreaterThan(run - .6f), "it ran its whole planned run");
+            Assert.That(Flat(tyrant.Position - landing).magnitude, Is.LessThan(.5f), "then leapt and landed on its circle");
+            Assert.That(world.IsWall(crossing.inPath), Is.False, "the wall piece its body touched is gone");
+            Assert.That(Physics.CheckSphere(Query.AtCastHeight(crossing.inPath), .2f, GameManager.WallMask, QueryTriggerInteraction.Ignore), Is.False,
+                "and so is its collider: bodies and shots pass");
+            int opened = Enumerable.Range(0, blocked.Length).Count(i => blockedBefore[i] && !blocked[i]);
+            Assert.That(opened, Is.GreaterThan(0), "enemy paths were rebuilt through the broken wall");
+            if (!crossing.standing.HasValue) return;
+            Assert.That(world.IsWall(crossing.standing.Value), Is.True, "the part of the same wall its body never touched still stands");
+            Assert.That(Physics.CheckSphere(Query.AtCastHeight(crossing.standing.Value), .2f, GameManager.WallMask, QueryTriggerInteraction.Ignore),
+                Is.True, "with a collider");
+        }
+
+        static TemporaryWall Bulwark(Vector3 at, float width, Combatant user)
+        {
+            var world = WorldMap.Active;
+            world.CreateWall(at, width, 30f, 0f, user);
+            Physics.SyncTransforms();
+            return world.temporaryWalls.FirstOrDefault(w => w && w.gameObject.activeSelf && Flat(w.transform.position - at).magnitude < .1f);
+        }
+
+        static async Task<Vector3> RunAndLand(Enemy tyrant, Action watch = null)
+        {
+            Vector3 ranTo = Flat(tyrant.Position);
+            bool leapt = false;
+            float deadline = Time.realtimeSinceStartup + 10f;
+            while (!leapt || tyrant.RushLeaping)
+            {
+                if (Time.realtimeSinceStartup > deadline) Assert.Fail("Timed out waiting for: the run, the leap and the landing");
+                Assert.That(tyrant.Stunned, Is.False, "never stunned on the way");
+                Assert.That(tyrant.IsAlive && tyrant.State != CharacterState.Falling, Is.True, "never falls or is swallowed");
+                watch?.Invoke();
+                if (tyrant.RushLeaping) leapt = true;
+                else if (tyrant.Charging) ranTo = Flat(tyrant.Position);
+                await Awaitable.FixedUpdateAsync();
+            }
+
+            await Awaitable.FixedUpdateAsync();
+            return ranTo;
         }
 
         static async Task<(GameManager game, Enemy[] targets, Enemy tyrant)> TyrantSandbox(float ahead)

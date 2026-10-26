@@ -72,6 +72,7 @@ namespace AnomalyArena
 
         public static void TickAll(float worldDeltaTime, float playerDeltaTime)
         {
+            ElementCombat.AdvanceClock(worldDeltaTime);
             for (int i = active.Count - 1; i >= 0; i--)
             {
                 if (i >= active.Count) continue;
@@ -239,12 +240,13 @@ namespace AnomalyArena
             }
         }
 
-        public float ResolveDamage(float amount, DamageSource source = DamageSource.Hit, bool ignoreShield = false)
+        public float ResolveDamage(float amount, DamageSource source = DamageSource.Hit, bool ignoreShield = false, bool ignoreShieldReduction = false)
         {
             amount = Mathf.Max(0f, amount);
             if (ignoreShield || source == DamageSource.Poison || Shield <= 0f) return amount;
-            amount = source == DamageSource.Burn ? Mathf.Ceil(amount * Rules.fireShieldFactor)
-                : Mathf.Round(amount * Rules.shieldDirectFactor);
+            if (!ignoreShieldReduction)
+                amount = source == DamageSource.Burn ? Mathf.Ceil(amount * Rules.fireShieldFactor)
+                    : Mathf.Round(amount * Rules.shieldDirectFactor);
             float absorbed = Mathf.Min(Shield, amount);
             Shield -= absorbed;
             if (Shield <= 0f && absorbed > 0f) OnShieldBroken();
@@ -276,8 +278,8 @@ namespace AnomalyArena
                     earthFraction += damage * Rules.earthShare;
                     int shield = Mathf.FloorToInt(earthFraction); earthFraction -= shield; GainShield(shield); break;
                 case ElementKind.Light:
-                    float missing = body.maxHp > 0f ? Mathf.Clamp01(1f - body.Hp / body.maxHp) : 0f;
-                    lightFraction += damage * Rules.lightShare * (1f + Rules.lightMissingHpBonus * missing);
+
+                    lightFraction += damage * Rules.lightShare;
                     int hp = Mathf.FloorToInt(lightFraction); lightFraction -= hp; if (hp > 0) body.Heal(hp); break;
                 case ElementKind.Void:
                     voidFraction += damage * Rules.voidShare;

@@ -11,8 +11,8 @@ namespace AnomalyArena
 {
                                                                                                                                       
                                                                                                                                     
-                                                                                                                                        
-                                                             
+                                                                                                                                           
+                                                                                                                   
     [TestFixture]
     [Category("V3Smoke")]
     public class BossNoStaggerTest
@@ -42,7 +42,9 @@ namespace AnomalyArena
             Assert.That(typeof(ElementStatus).GetEvent("OnControlThreshold", members), Is.Null,
                 "a boss reaching a Frost or Lightning threshold feeds nothing toward a stun");
             Assert.That(typeof(BossTuning).GetField("prophetStunSeconds"), Is.Null, "the Prophet has no stun of its own any more");
-            Assert.That(typeof(BossTuning).GetField("tyrantWallStun"), Is.Not.Null, "the Tyrant's wall-hit stun stays");
+            Assert.That(typeof(BossTuning).GetFields().Select(f => f.Name).Where(n => n.IndexOf("stun", StringComparison.OrdinalIgnoreCase) >= 0),
+                Is.Empty, "no boss stun tuning is left, the Tyrant's wall-crash stun included (owner 2026-10-25: a boss is never stunned)");
+            Assert.That(typeof(Enemy).GetProperty("BossStunned", members), Is.Null, "and no boss stun state");
         }
 
         [Test]
@@ -125,7 +127,7 @@ namespace AnomalyArena
             for (int i = 0; i < Hits; i++)
             {
                 boss.ReceiveDamage(DamageInfo.Attack(1f, game.player, away, HeavyKnock, HitKind.Slam));
-                Assert.That(boss.BossStunned, Is.False, $"hit {i + 1}: knockback never stuns a boss");
+                Assert.That(boss.Stunned, Is.False, $"hit {i + 1}: knockback never stuns a boss");
                 await Awaitable.FixedUpdateAsync();
                 knocked |= boss.State is CharacterState.Knocked or CharacterState.Thrown;
             }
@@ -138,7 +140,7 @@ namespace AnomalyArena
 
             Assert.That(knocked, Is.False, "never knocked back");
             Assert.That(Query.Flat(boss.Position - settled).magnitude, Is.LessThan(.05f), "not moved by any of the hits");
-            Assert.That(boss.BossStunned, Is.False, "and not stunned after all of them");
+            Assert.That(boss.Stunned, Is.False, "and not stunned after all of them");
 
             float hp = boss.Hp;
             boss.ReceiveDamage(new DamageInfo { amount = 10f, isAttack = true, ignoreShield = true, kind = HitKind.Blunt });

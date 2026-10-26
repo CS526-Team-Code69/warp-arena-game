@@ -22,9 +22,13 @@ MonoBehaviour:
   advancedCooldown: 4
   duration:
   - 8
-  - 12
+  - 9
+  - 10
+  - 11
   - 12
   radius:
+  - 5
+  - 5
   - 5
   - 5
   - 5
@@ -32,7 +36,11 @@ MonoBehaviour:
   - 12
   - 12
   - 12
+  - 12
+  - 12
   strength:
+  - 6
+  - 6
   - 6
   - 6
   - 6
@@ -45,7 +53,11 @@ MonoBehaviour:
   - 0
   - 0
   - 0
+  - 0
+  - 0
   statusResistance:
+  - 0
+  - 0
   - 0
   - 0
   - 0
@@ -60,10 +72,13 @@ MonoBehaviour:
   singularitySlowMultiplier: 0.5
   singularityBaseDamage: 10
   singularityDamagePerEnemy: 4
+  singularityPlayerMoveMultiplier: 0.35
   descriptions:
   - 6 Poison to all within 5. For 8 s, Poison jumps on death within 5.
-  - 6 Poison to all within 5. For 12 s, Poison jumps on death within 5.
+  - Poison jumps for 9 s.
+  - Poison jumps for 10 s.
+  - Poison jumps for 11 s.
   - 6 Poison to all within 5. For 12 s, Poison jumps to the two nearest on death.
   icon: {fileID: 0}
-  levelDamageGrowth: 1.35
+  levelDamageGrowth: 1.161895
   shieldScalesWithMaxHp: 1

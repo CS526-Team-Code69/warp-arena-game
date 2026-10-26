@@ -59,13 +59,14 @@ namespace AnomalyArena
             _ => CardRarity.Common
         };
 
-        public static int SkillLevel(CardRarity rarity) => rarity == CardRarity.Void ? 1 : Mathf.Clamp(Rank(rarity), 0, 2) + 1;
+        public static int SkillLevel(CardRarity rarity) => rarity == CardRarity.Void ? 1 : Mathf.Clamp(Rank(rarity), 0, SkillDefinition.MaxLevel - 1) + 1;
 
         public static CardRarity ForSkill(SkillDefinition definition, int level)
         {
             if (definition && (definition.greaterVoid || definition.element == ElementKind.Void))
                 return CardRarity.Void;
-            return level >= 3 ? CardRarity.Exceptional : level >= 2 ? CardRarity.Rare : CardRarity.Common;
+            return level >= 5 ? CardRarity.Legendary : level >= 4 ? CardRarity.Epic : level >= 3 ? CardRarity.Exceptional
+                : level >= 2 ? CardRarity.Rare : CardRarity.Common;
         }
     }
 }

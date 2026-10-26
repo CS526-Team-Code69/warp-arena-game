@@ -44,8 +44,8 @@ namespace AnomalyArena
                     else if (RunPhase == ArenaUiState.LevelUp) ExecuteUiCommand(ArenaUiCommand.Cancel);              
                     break;
                 case KeyCode.T:
-                    if (RunPhase == ArenaUiState.Title) ToggleArt();
-                    else if (RunPhase == ArenaUiState.WaveActive && MenuInputReady && progression.BankedDrafts > 0) OpenLevelUp();
+
+                    if (RunPhase == ArenaUiState.WaveActive && MenuInputReady && progression.BankedDrafts > 0) OpenLevelUp();
                     break;
                 case KeyCode.Tab:
 

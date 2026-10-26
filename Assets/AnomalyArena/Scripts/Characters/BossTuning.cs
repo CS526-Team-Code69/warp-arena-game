@@ -80,15 +80,16 @@ namespace AnomalyArena
         [Min(0f), Tooltip("Close, from phase 2: chance weight of the void pillars.")] public float nashPillarWeight = 1f;
         [Min(0f), Tooltip("Far: chance weight of the equilibrium ring.")] public float nashRingWeight = 1f;
         [Min(0f), Tooltip("Far, from phase 2: chance weight of the predictive volley.")] public float nashVolleyWeight = 1f;
-        [Min(0f), Tooltip("Far: chance weight of the gravity pull.")] public float nashPullWeight = .8f;
+        [Min(0f), Tooltip("Far, from phase 2: chance weight of the gravity pull.")] public float nashPullWeight = .8f;
         [Min(1f), Tooltip("While void pillars stand, the gravity pull's weight is multiplied by this, so it drags the player into them.")] public float nashPullPillarBonus = 2.5f;
 
         [Header("Nash Prophet (2026-10-25): repulse pulse and gravity pull")]
         [Min(0f), Tooltip("Wind-up of the repulse pulse; a ground circle shows its reach.")] public float nashPulseWindup = .8f;
-        [Min(0f), Tooltip("Pulse reach from its centre (the player's body counts).")] public float nashPulseReach = 5.5f;
+        [Min(0f), Tooltip("Pulse reach from its centre in every phase (the player's body counts); the ground circle shows it. 7.5 reaches a cell past the close range (nashNearRange) and, in phase 3, the whole 8-cell platform.")] public float nashPulseReach = 7.5f;
         [Min(0f), Tooltip("Pulse damage, × its base damage (Hollow asset damage × nashDamageFactor).")] public float nashPulseDamage = 1.5f;
-        [Min(0f), Tooltip("Cells the pulse pushes the player in phases 1-2. The platform edge does not stop a boss push; 3.5 still never throws a player it hits off the phase-2 platform.")] public float nashPulsePush = 3.5f;
-        [Min(0f), Tooltip("Cells the pulse pushes the player in phase 3, harder than before: on the phase-3 platform it throws a player caught in the outer part of its circle into the void, so they must leave the circle during the wind-up.")] public float nashPhase3PulsePush = 4.5f;
+        [Min(0f), Tooltip("Phase 1: cells the pulse pushes the player away from it (the slide runs about 5% longer). It throws off a player hit farther out than the platform radius less the slide: 4.8 on the 12-cell platform spares the whole close range and throws off only from about 7 cells out to the rim of its circle.")] public float nashPulsePush = 4.8f;
+        [Min(0f), Tooltip("Phase 2: cells the pulse pushes the player. 3 on the 10-cell platform keeps the bands of phase 1: the close range is safe, the rim of its circle throws off.")] public float nashPhase2PulsePush = 3f;
+        [Min(0f), Tooltip("Phase 3: cells the pulse pushes the player. 3.2 on the 8-cell platform spares only a band a little over two player bodies wide (about 2.3 cells) outside its body; hit farther out, anywhere in its circle, the player goes off.")] public float nashPhase3PulsePush = 3.2f;
         [Min(0f), Tooltip("Wind-up of the gravity pull.")] public float nashPullWindup = .8f;
         [Min(0f), Tooltip("Seconds the gravity pull draws the player toward the middle. It deals no damage itself; the pillars do the killing.")] public float nashPullSeconds = 2.5f;
         [Min(0f), Tooltip("Cells per second the pull draws the player in, phases 1-2. Keep it under the player's walking speed (6) so walking out against it works.")] public float nashPullSpeed = 3.5f;
@@ -137,9 +138,9 @@ namespace AnomalyArena
         [Tooltip("Direction of the first fragment, degrees clockwise from north (+z); the others are evenly spaced.")] public float nashFragmentAngle = 0f;
         [Min(0f), Tooltip("Cells from the platform's middle to each portal on it; inside the phase-3 edge, so no portal falls away as it shrinks.")] public float nashPortalRadius = 6.5f;
         [Tooltip("Direction of the first platform portal, degrees clockwise from north. Each portal leads to the fragment on the far side, so the player comes out in another direction.")] public float nashPortalAngle = 45f;
-        [Min(.1f), Tooltip("A portal takes the player once the player's centre comes this close to its middle (its swirl is 0.65 in radius).")] public float nashPortalTrigger = .6f;
+        [Min(.1f), Tooltip("The player stands on a portal while their centre is this close to its middle (its swirl is 0.65 in radius); only then, free to act, does E take it. Walking over a portal does nothing.")] public float nashPortalTrigger = .6f;
         [Min(0f), Tooltip("The player arrives this far from a fragment's middle, on its outer side, clear of the way-back portal in its middle.")] public float nashFragmentArrival = 1f;
-        [Min(0f), Tooltip("Seconds after a jump before any portal takes the player again.")] public float nashPortalRearm = .4f;
+        [Min(0f), Tooltip("Seconds after a jump before E takes the player through any portal again.")] public float nashPortalRearm = .4f;
         [Min(0f), Tooltip("Seconds the player stands still after every portal jump: a move key still held from the way in does not walk them off the small fragment or the shrunk platform before they see where they are, and no pull draws them. Shooting and skills still work. Keep it at least nashPortalRearm.")] public float nashPortalArrivalHold = .5f;
 
         [Header("Nash Prophet: knockback guard")]
@@ -178,8 +179,7 @@ namespace AnomalyArena
         [Min(1), Tooltip("Charges in a row in phase 2 (a wall or the player ends the run early).")] public int phase2Charges = 2;
         [Min(1), Tooltip("Charges in a row in phase 3.")] public int phase3Charges = 3;
         [Min(0f), Tooltip("Seconds it re-aims and redraws the line between two charges in a row.")] public float chargeReaim = .6f;
-        [Range(0f, 1f), Tooltip("Share of its max HP it loses when a charge hits a wall, a bulwark or a hole (after its shield is cleared, before the stun).")] public float wallHitHpShare = .03f;
-        [Min(0f), Tooltip("Seconds it is stunned after a charge hits a wall.")] public float wallHitStun = 2.5f;
+        [Range(0f, 1f), Tooltip("Share of its max HP it loses when a charge hits a wall, a bulwark or a hole (after its shield is cleared).")] public float wallHitHpShare = .03f;
 
         [Header("Tyrant: leap")]
         [Min(0f), Tooltip("Leap wind-up; the landing circle is drawn where the player stood when it took aim.")] public float leapWindup = .8f;
@@ -211,10 +211,6 @@ namespace AnomalyArena
         public float tyrantEnragedDamage = 1.25f;
         [Min(0f), Tooltip("Between moves it walks toward you until it is this close (centre to centre).")]
         public float tyrantWalkStop = 4.5f;
-        [Min(0f), Tooltip("Seconds it is stunned when its Rampage Charge runs into a wall, a bulwark or the edge of a hole with any part of its body (see rushGraze): no moves, no walking, no summons.")]
-        public float tyrantWallStun = 2.5f;
-        [Min(1f), Tooltip("While stunned it takes this many times the damage (1.5 = 50% more).")]
-        public float tyrantStunDamageTaken = 1.5f;
         [Range(0f, 1f), Tooltip("Phase 2, close: share of Ground Pounds (the rest are Tail Sweeps).")]
         public float poundShare = .4f;
         [Range(0f, 1f), Tooltip("Phase 2, middle distance: share of Royal Scepters while the scepter is ready (the rest are Rampage Charges).")]
@@ -229,7 +225,7 @@ namespace AnomalyArena
         [Min(0f), Tooltip("Reach of the tail in phase 2.")] public float sweepRangePhase2 = 9.5f;
         [Range(10f, 360f), Tooltip("Width of the fan in degrees (150 matches the saved sector art).")] public float sweepArc = 150f;
         [Min(0f), Tooltip("Half the tail's thickness, cells: it hits you and breaks walls this far beside its line.")] public float sweepTailHalfWidth = .6f;
-        [Min(.5f), Tooltip("Map walls break in pieces at most this many cells across: the tail removes only the pieces it touches, for the rest of the fight. A bulwark cannot be broken and shields you from the tail.")] public float sweepWallPiece = 2f;
+        [Min(.5f), Tooltip("Map walls break in pieces at most this many cells across: the tail removes only the pieces it touches, for the rest of the fight. A bulwark cannot be broken by the tail (only the Rampage Charge breaks one) and shields you from it.")] public float sweepWallPiece = 2f;
         [Min(0f), Tooltip("Damage, × attack damage.")] public float sweepDamage = 1f;
         [Tooltip("Knockback tier on you (document 5.3: heavy); you are thrown along the swing and away from it.")] public KnockTier sweepKnock = KnockTier.Heavy;
 
@@ -242,13 +238,13 @@ namespace AnomalyArena
         [Min(0f), Tooltip("Damage when the shockwave reaches you (once per pound), × attack damage.")] public float poundDamage = .9f;
         [Tooltip("Knockback tier on you; you are pushed along the shockwave.")] public KnockTier poundKnock = KnockTier.Medium;
 
-        [Header("Tyrant: Rampage Charge (middle distance, line warning)")]
-        [Min(0f), Tooltip("Wind-up; the line, as wide as its body, shows the run and the leap up to the landing circle, or up to the wall, bulwark or hole it will run into. Shorter while enraged (tyrantEnragedWindupShare).")] public float rushWindup = 1f;
+        [Header("Tyrant: Rampage Charge (middle distance, line warning, breaks walls and bulwarks)")]
+        [Min(0f), Tooltip("Wind-up; the line, as wide as its body, shows the whole run and the leap up to the landing circle: nothing on the way stops it. Shorter while enraged (tyrantEnragedWindupShare).")] public float rushWindup = 1f;
         [Min(.1f), Tooltip("Run speed before the scene's global movement multiplier (WaveManager.movementSpeedMultiplier: 0.5 makes 18 run at 9 cells per second).")] public float rushSpeed = 18f;
         [Min(0f), Tooltip("Shortest run before the leap.")] public float rushMinRun = 3f;
         [Min(0f), Tooltip("Longest run before the leap in phase 1; it runs until it is one leap short of where you stood when it took aim.")] public float rushMaxRun = 9f;
         [Min(0f), Tooltip("Longest run before the leap in phase 2.")] public float rushMaxRunPhase2 = 14f;
-        [Min(0f), Tooltip("A wall, bulwark or hole edge that reaches less than this many cells into the side of its body only grazes it and the run slides past; anything reaching further across the line stops the run and stuns it.")] public float rushGraze = .1f;
+        [Min(.5f), Tooltip("Nothing stops the run and it is never stunned: every wall its body runs into breaks, map walls in pieces at most this many cells across (only the pieces it touches go, for the rest of the fight), meteor fragments and bulwarks whole. It runs on over black holes, which never pull or swallow it.")] public float rushWallPiece = 2f;
         [Min(0f), Tooltip("Length of the leap at the end of the run: it lands this far on along the line (or on the last ground before you it can walk on, when you stand in a gravity ring).")] public float rushLeapDistance = 3f;
         [Min(.05f), Tooltip("Seconds in the air.")] public float rushLeapFlight = .55f;
         [Min(0f), Tooltip("Peak height of the leap, cells (visual only).")] public float rushLeapHeight = 2.5f;
@@ -278,15 +274,15 @@ namespace AnomalyArena
         [Min(0), Tooltip("Fragments in phase 2.")] public int meteorFragmentsPhase2 = 6;
         [Range(0f, 1f), Tooltip("The fragments land evenly on a ring this share of the impact radius out from its centre (the ring turned at random).")] public float meteorFragmentSpread = .75f;
         [Min(.5f), Tooltip("Side of each fragment wall, cells.")] public float meteorFragmentSize = 1.6f;
-        [Min(0f), Tooltip("Seconds a fragment wall stands (the Tail Sweep breaks it sooner). A fragment never lands on a body, a wall or a hole.")] public float meteorFragmentLife = 12f;
+        [Min(0f), Tooltip("Seconds a fragment wall stands (the Tail Sweep or the Rampage Charge breaks it sooner). A fragment never lands on a body, a wall or a hole.")] public float meteorFragmentLife = 12f;
 
         [Header("Tyrant: Astral Guard (far, phase 2)")]
         [Min(0f), Tooltip("Seconds it channels; a ring shows how far it reaches.")] public float astralChannel = 1.6f;
         [Min(0f), Tooltip("It devours minions within this distance of its centre (their body counts).")] public float astralRadius = 7f;
         [Min(1), Tooltip("It only channels when at least this many minions stand within reach.")] public int astralMinMinions = 2;
         [Min(1), Tooltip("Most minions one Astral Guard devours, the nearest first.")] public int astralMaxDevour = 4;
-        [Range(0f, 1f), Tooltip("HP it restores per minion devoured, as a share of its max HP.")] public float astralHealPerMinion = .02f;
-        [Range(0f, 1f), Tooltip("Shield it gains per minion devoured, as a share of its max HP.")] public float astralShieldPerMinion = .03f;
+        [Range(0f, 1f), Tooltip("HP it restores per minion devoured, as a share of its max HP (0.05 = 5%).")] public float astralHealPerMinion = .05f;
+        [Range(0f, 1f), Tooltip("Shield it gains per minion devoured, as a share of its max HP (0.025 = 2.5%).")] public float astralShieldPerMinion = .025f;
         [Range(0f, 1f), Tooltip("This never raises its shield past this share of its max HP.")] public float astralShieldCap = .2f;
 
         public static readonly BossTuning Defaults = new();

@@ -10,6 +10,8 @@ namespace AnomalyArena
     {
 
         const int BlinkChargeCap = 2;
+
+        const int MaxLevel = SkillDefinition.MaxLevel;
         [field: SerializeField, Tooltip("The 13 normal skills and 3 Greater Void skills as editable assets.")]
         public SkillCatalog Catalog { get; set; }
         [field: SerializeField] public SkillSlot[] Slots { get; private set; } = { new(), new(), new() };
@@ -22,12 +24,15 @@ namespace AnomalyArena
 
         public bool Untargetable => VoidWalkActive;
 
-        public float PlayerMoveMultiplier => VoidWalkActive ? voidWalkMove : 1f;
+        public float PlayerMoveMultiplier => (VoidWalkActive ? voidWalkMove : 1f)
+            * (CurrentSingularity is { } singularity ? Mathf.Clamp01(singularity.definition.singularityPlayerMoveMultiplier) : 1f);
 
         public float StatusResistance => radianceTimer > 0f ? radianceResistance : 0f;
         public bool SingularityActive => CurrentSingularity != null;
-        public bool ActionLocked => SingularityActive;
-        public bool MovementLocked => SingularityActive;
+
+        public bool ActionLocked => false;
+
+        public bool MovementLocked => false;
         public float SingularityProgress01 => CurrentSingularity is { } effect
             ? 1f - Mathf.Clamp01(effect.remaining / Mathf.Max(0.01f, effect.definition.Duration(effect.level))) : 0f;
         public float SingularityRadius => CurrentSingularity is { } effect ? effect.definition.Radius(effect.level) : 0f;
@@ -41,14 +46,14 @@ namespace AnomalyArena
 
         public float WeaponCooldownRate => overchargeTimer > 0f ? overchargeCooldownRate : 1f;
 
-        public float SkillDamageMultiplier => overchargeTimer > 0f && overchargeLevel >= 3 ? overchargeDamageMultiplier : 1f;
-        public float AttackSpeedMultiplier => timeSlipTimer > 0f && timeSlipLevel >= 3 ? 1.5f : 1f;
+        public float SkillDamageMultiplier => overchargeTimer > 0f && overchargeLevel >= MaxLevel ? overchargeDamageMultiplier : 1f;
+        public float AttackSpeedMultiplier => timeSlipTimer > 0f && timeSlipLevel >= MaxLevel ? 1.5f : 1f;
 
         public float KnockbackMultiplier => 1f;
 
         public int BlinkCharges { get { int max = BlinkChargesMax, ready = 0; for (int c = 0; c < max; c++) if (blinkRecharge[c] <= 0f) ready++; return ready; } }
 
-        public int BlinkChargesMax { get { int index = SlotOf(SkillId.Blink); return index < 0 ? 0 : Slots[index].Level >= 3 ? BlinkChargeCap : 1; } }
+        public int BlinkChargesMax { get { int index = SlotOf(SkillId.Blink); return index < 0 ? 0 : Slots[index].Level >= MaxLevel ? BlinkChargeCap : 1; } }
         public event Action Changed;
         public event Action<int, string> CastRefused;
 
@@ -64,6 +69,8 @@ namespace AnomalyArena
         bool mirrorEcho, suspendedMirrorEcho;
 
         readonly float[] blinkRecharge = new float[BlinkChargeCap];
+
+        int skillCardsWithoutHighTier;
         readonly List<TimedSkill> effects = new();
         readonly List<TimedSkill> suspendedBattlefieldEffects = new();
         bool battlefieldSuspended;
@@ -140,6 +147,7 @@ namespace AnomalyArena
         {
             foreach (var slot in Slots) { slot.Definition = null; slot.Level = 1; slot.CooldownLeft = 0f; }
             Array.Clear(blinkRecharge, 0, blinkRecharge.Length);
+            skillCardsWithoutHighTier = 0;
             ClearWaveEffects(); OnChanged();
         }
 
@@ -150,16 +158,16 @@ namespace AnomalyArena
             for (int i = 0; i < Slots.Length; i++)
             {
                 if (Slots[i].Empty || Slots[i].Id != id) continue;
-                if (Slots[i].Level >= 3 || definition.greaterVoid) return false;
-                Slots[i].Level = Mathf.Min(3, Mathf.Max(Slots[i].Level + 1, level));
+                if (Slots[i].Level >= MaxLevel || definition.greaterVoid) return false;
+                Slots[i].Level = Mathf.Min(MaxLevel, Mathf.Max(Slots[i].Level + 1, level));
 
-                if (id == SkillId.Blink && Slots[i].Level >= 3) { blinkRecharge[1] = 0f; SyncBlinkCooldown(); }
+                if (id == SkillId.Blink && Slots[i].Level >= MaxLevel) { blinkRecharge[1] = 0f; SyncBlinkCooldown(); }
                 OnChanged(); return true;
             }
             int place = replaceIndex;
             if (place < 0) for (int i = 0; i < Slots.Length; i++) if (Slots[i].Empty) { place = i; break; }
             if (place < 0 || place >= Slots.Length) return false;
-            Slots[place].Definition = definition; Slots[place].Level = definition.greaterVoid ? 1 : Mathf.Clamp(level, 1, 3); Slots[place].CooldownLeft = 0f;
+            Slots[place].Definition = definition; Slots[place].Level = definition.greaterVoid ? 1 : Mathf.Clamp(level, 1, MaxLevel); Slots[place].CooldownLeft = 0f;
             if (id == SkillId.Blink) Array.Clear(blinkRecharge, 0, blinkRecharge.Length);
             progression?.UnlockEnergy(); OnChanged(); return true;
         }
@@ -177,14 +185,14 @@ namespace AnomalyArena
                 if (definition && !definition.greaterVoid && OffersNewSkill(definition.category, wave) && SlotOf(definition.id) < 0 && definition.id != avoid)
                     candidates.Add(definition);
             for (int i = 0; i < Slots.Length; i++)
-                if (!Slots[i].Empty && Slots[i].Level < 3 && !Slots[i].Definition.greaterVoid && Slots[i].Id != avoid) upgradeable.Add(i);
+                if (!Slots[i].Empty && Slots[i].Level < MaxLevel && !Slots[i].Definition.greaterVoid && Slots[i].Id != avoid) upgradeable.Add(i);
             if (avoid.HasValue && candidates.Count == 0 && upgradeable.Count == 0) return RollCard(wave);
             float upgradeChance = OwnedCount == 0 ? 0f : OwnedCount < 3 ? 0.3f : 0.6f;
             if (upgradeable.Count > 0 && (candidates.Count == 0 || UnityEngine.Random.value < upgradeChance))
             {
                 var slot = Slots[upgradeable[UnityEngine.Random.Range(0, upgradeable.Count)]];
 
-                SkillId id = slot.Id; int level = slot.Level, next = Mathf.Min(3, Mathf.Max(level + 1, RollSkillLevel(wave)));
+                SkillId id = slot.Id; int level = slot.Level, next = RollSkillLevel(wave, level + 1);
 
                 return new DraftCard(DraftCardKind.Skill, ArenaText.Pair($"{slot.Name} · Level {next}",$"{slot.Name} · Level {next}"),
                     $"{slot.Definition.Description(slot.Level)} → {slot.Definition.Description(next)}",
@@ -196,10 +204,17 @@ namespace AnomalyArena
             return MakeLearnCard(picked, RollSkillLevel(wave));
         }
 
-        int RollSkillLevel(int wave)
+        int RollSkillLevel(int wave, int floor = 1)
         {
+            floor = Mathf.Clamp(floor, 1, MaxLevel);
             var rules = progression ? progression.Rules : null;
-            return rules ? ArenaRarity.SkillLevel(rules.SkillRarity(wave, UnityEngine.Random.Range(0, 10000) / 100f)) : 1;
+            if (!rules) return floor;
+            bool pity = skillCardsWithoutHighTier >= Mathf.Max(1, rules.highTierPity);
+            var rolled = rules.SkillRarity(wave, UnityEngine.Random.Range(0, 10000) / 100f, pity);
+            int level = Mathf.Max(floor, ArenaRarity.SkillLevel(rolled));
+            ProgressionRules.RarityBand(wave, out _, out var high);
+            skillCardsWithoutHighTier = level >= ArenaRarity.SkillLevel(high) ? 0 : skillCardsWithoutHighTier + 1;
+            return level;
         }
 
         public DraftCard[] GreaterVoidCards()
@@ -217,7 +232,7 @@ namespace AnomalyArena
         {
 
             bool full = OwnedCount >= 3;
-            level = definition.greaterVoid ? 1 : Mathf.Clamp(level, 1, 3);
+            level = definition.greaterVoid ? 1 : Mathf.Clamp(level, 1, MaxLevel);
             string title = ArenaTerms.Skill(definition.id) + (level > 1 ? ArenaText.Pair($" · Level {level}",$" · Level {level}") : "");
             return new(DraftCardKind.Skill, title,
                 definition.Description(level) + ArenaText.Pair($"\n{definition.cost:0} Energy",$"\n{definition.cost:0} Energy"),
@@ -236,7 +251,7 @@ namespace AnomalyArena
             bool coolingDown = def.id == SkillId.Blink ? BlinkCharges == 0 : slot.CooldownLeft > 0f;
 
             bool sliding = (body.State is CharacterState.Knocked or CharacterState.Thrown) && !BreaksDisplacement(def.id);
-            if (ActionLocked || body.Stunned || body.State == CharacterState.Dashing || sliding || (board && board.BlocksActions) || coolingDown)
+            if (body.Stunned || body.State == CharacterState.Dashing || sliding || (board && board.BlocksActions) || coolingDown)
                 return Refuse(index, ArenaText.Pair("Not ready","Not ready"));
             if (!HasWorldHook(def.id)) return Refuse(index, ArenaText.Pair("World action unavailable","World action unavailable"));
             Vector3 desired = body.AimPoint;
@@ -304,7 +319,7 @@ namespace AnomalyArena
                         if (!board) continue;
                         board.Add(ElementKind.Frost, def.Strength(level), body);
 
-                        if (level >= 3 && board.Frozen) board.ExtendFreeze(def.freezeHold);
+                        if (level >= MaxLevel && board.Frozen) board.ExtendFreeze(def.freezeHold);
                     }
                     break;
                 case SkillId.StormCall: AddTimed(def, level, point); break;
@@ -314,7 +329,7 @@ namespace AnomalyArena
                 case SkillId.Radiance:
                     ElementStatus.For(body)?.ClearStatuses(); radianceTimer = def.Duration(level); radianceShare = def.Strength(level);
                     radianceResistance = def.StatusResistance(level);
-                    if (level >= 3) body.Heal(def.healOnCast); break;
+                    if (level >= MaxLevel) body.Heal(def.healOnCast); break;
                 case SkillId.Devour:
                     Vector3 where = target.Position;
                     NotifyDevoured(target);
@@ -335,7 +350,7 @@ namespace AnomalyArena
                     break;
                 case SkillId.Shockwave:
                     AreaHit(center, def.Radius(level), 0f, def.Strength(level));
-                    if (level >= 3) SkillWorldAPI.ReflectProjectiles?.Invoke(center, def.Radius(level), body); break;
+                    if (level >= MaxLevel) SkillWorldAPI.ReflectProjectiles?.Invoke(center, def.Radius(level), body); break;
                 case SkillId.GravityWell: AddTimed(def, level, point); break;
                 case SkillId.TimeSlip:
                     timeSlipTimer = def.Duration(level); timeSlipLevel = level;
@@ -343,7 +358,7 @@ namespace AnomalyArena
                 case SkillId.Decoy:
 
                     SkillWorldAPI.CreateDecoy?.Invoke(point, def.Duration(level), false, body);
-                    mirrorEcho = level >= 3; break;
+                    mirrorEcho = level >= MaxLevel; break;
                 case SkillId.Overcharge:
                     overchargeTimer = def.Duration(level); overchargeLevel = level;
                     overchargeCooldownRate = Mathf.Max(1f, def.overchargeRate);
@@ -358,6 +373,7 @@ namespace AnomalyArena
                     voidWalkMove = Mathf.Max(1f, def.voidWalkMoveMultiplier);
                     V3WorldAudio.Instance?.Play(ArenaWorldCue.SkillVoidWalk, body.Position); break;
                 case SkillId.Singularity:
+
                     body.CancelDisplacement();
                     AddTimed(def, level, body.Position);
                     break;
@@ -401,7 +417,7 @@ namespace AnomalyArena
                 target = FindDevourTarget(def, level, at, at);
                 if (!target) return false;
             }
-            if (def.id == SkillId.Blink && (ActionLocked || body.State == CharacterState.Dashing)) return false;
+            if (def.id == SkillId.Blink && body.State == CharacterState.Dashing) return false;
             Vector3 visualPoint = target ? target.Position : point;
             Execute(def, level, point, target, at, true);
             CastSucceeded?.Invoke(def.id, visualPoint, def.Radius(level), def.Duration(level));
@@ -481,7 +497,7 @@ namespace AnomalyArena
                             if (struck)
                             {
 
-                                if (level >= 3) ElementCombat.ApplyStacks(c, ElementKind.Lightning, def.hitStacks, body);
+                                if (level >= MaxLevel) ElementCombat.ApplyStacks(c, ElementKind.Lightning, def.hitStacks, body);
                                 else if (c.IsAlive) ElementStatus.For(c)?.Add(ElementKind.Lightning, def.hitStacks, body);
                             }
                             OnVisualRequested(effect.id, c.Position, 0.5f, 0.2f);
@@ -495,7 +511,7 @@ namespace AnomalyArena
                             if (SkillWorldAPI.Pull != null) SkillWorldAPI.Pull(c, effect.center, def.Strength(level) * activeDt);
                             else c.SetMovePosition(c.Position + direction.normalized * (def.Strength(level) * activeDt));
                         }
-                        if (effect.remaining <= 0f && level >= 3) AreaHit(effect.center, def.Radius(level), def.ScaledDamage(def.endDamage, level, DamageMultiplier), def.endKnockback);
+                        if (effect.remaining <= 0f && level >= MaxLevel) AreaHit(effect.center, def.Radius(level), def.ScaledDamage(def.endDamage, level, DamageMultiplier), def.endKnockback);
                         break;
                     case SkillId.Singularity:
                         effect.center = body.Position;
@@ -566,7 +582,7 @@ namespace AnomalyArena
             QueryInto(victim.Position, radius, deathNearby);
             deathNearby.Remove(victim);
             deathNearby.Sort((a, b) => (a.Position - victim.Position).sqrMagnitude.CompareTo((b.Position - victim.Position).sqrMagnitude));
-            int count = Mathf.Min(level >= 3 ? 2 : 1, deathNearby.Count);
+            int count = Mathf.Min(level >= MaxLevel ? 2 : 1, deathNearby.Count);
             for (int i = 0; i < count; i++) ElementStatus.For(deathNearby[i])?.Add(ElementKind.Poison, stacks, body);
         }
 
@@ -656,8 +672,7 @@ namespace AnomalyArena
                 Vector3 direction = c.Position - point;
                 float share = ElementImmunity.DamageShare(c, element, body);
                 if (damage <= 0f) c.Knockback(direction, knock, KnockKind.Hit);
-                else if (share > 0f) c.ReceiveDamage(DamageInfo.Attack(Mathf.Round(damage * share * (progression ? progression.Stats.DamageMultiplier : 1f)),
-                    body, direction, knock, HitKind.Blast));
+                else if (share > 0f) c.ReceiveDamage(DamageInfo.Attack(Mathf.Round(damage * share), body, direction, knock, HitKind.Blast));
             }
         }
 

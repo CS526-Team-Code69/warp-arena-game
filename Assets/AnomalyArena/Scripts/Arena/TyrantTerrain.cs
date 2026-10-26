@@ -57,39 +57,52 @@ namespace AnomalyArena
             float turn = Vector3.SignedAngle(from, to, Vector3.up);
             int probes = Mathf.Max(1, Mathf.CeilToInt(Mathf.Abs(turn) / ProbeDegrees));
             var start = new Vector2(origin.x, origin.z);
+            return BreakTouched(rect => Touched(rect, start, from, turn, probes, reach, halfWidth), pieceSize);
+        }
 
-            if (!runtime && !TouchesSavedWall(start, from, turn, probes, reach, halfWidth)) return 0;
-            if (!Begin()) return 0;
+        public int BreakAlong(Vector3 from, Vector3 to, float radius, float pieceSize)
+        {
+            if (radius <= 0f) return 0;
+            Vector2 a = new(from.x, from.z), b = new(to.x, to.z);
+            return BreakTouched(rect => RunTouches(rect, a, b, radius), pieceSize) + BreakBulwarks(a, b, radius);
+        }
+
+        public bool WalkableAfterRun(Vector3 point, float radius, Vector3 from, Vector3 to, float runRadius, float pieceSize)
+        {
+            var map = GetComponent<WorldMap>();
+            if (!map) return true;
+            if (!map.Contains(point, radius) || map.IsHole(point) || map.GetPull(point).sqrMagnitude >= .01f) return false;
+            Vector2 a = new(from.x, from.z), b = new(to.x, to.z);
             pieceSize = Mathf.Max(.5f, pieceSize);
-            int broken = 0;
-            for (int i = pieces.Count - 1; i >= 0; i--)
+
+            if (runtime && map.layout == runtime)
             {
-                var piece = pieces[i];
-                if (!Touched(piece.rect, start, from, turn, probes, reach, halfWidth)) continue;
-                pieces.RemoveAt(i);
-                bool cut = !piece.fragment && (piece.rect.width > pieceSize + CutTolerance || piece.rect.height > pieceSize + CutTolerance);
-                if (cut)
-
-                    foreach (var rect in Cut(piece.rect, pieceSize))
-                    {
-                        if (Touched(rect, start, from, turn, probes, reach, halfWidth))
-                        {
-                            Rubble(rect);
-                            broken++;
-                        }
-                        else pieces.Add(new Piece { rect = rect, body = Copy(piece.body, rect) });
-                    }
-                else
-                {
-                    Rubble(piece.rect);
-                    broken++;
-                }
-
-                Hide(piece);
+                foreach (var piece in pieces)
+                    if (Blocks(piece.rect, piece.fragment))
+                        return false;
             }
+            else if (map.layout && map.layout.walls != null)
+                foreach (var rect in map.layout.walls)
+                    if (Blocks(rect, false))
+                        return false;
 
-            if (broken > 0) Apply();
-            return broken;
+            if (map.temporaryWalls != null)
+                foreach (var wall in map.temporaryWalls)
+                    if (wall && wall.gameObject.activeInHierarchy && wall.TryGetComponent(out Collider body) &&
+                        body.bounds.Contains(new Vector3(point.x, wall.transform.position.y, point.z)) && !RunTouches(wall, a, b, runRadius))
+                        return false;
+            return true;
+
+            bool Blocks(Rect rect, bool whole)
+            {
+                if (!Near(rect, point, radius)) return false;
+                if (!RunTouches(rect, a, b, runRadius)) return true;
+                if (whole || !Cuts(rect, pieceSize)) return false;
+                foreach (var part in Cut(rect, pieceSize))
+                    if (Near(part, point, radius) && !RunTouches(part, a, b, runRadius))
+                        return true;
+                return false;
+            }
         }
 
         public int AddFragments(IReadOnlyList<Vector3> points, float size, float life)
@@ -148,7 +161,7 @@ namespace AnomalyArena
                 piece.life -= dt;
                 if (piece.life > 0f) continue;
                 pieces.RemoveAt(i);
-                Rubble(piece.rect);
+                Rubble(piece.rect.center);
                 Hide(piece);
                 changed = true;
             }
@@ -174,13 +187,69 @@ namespace AnomalyArena
             return true;
         }
 
-        bool TouchesSavedWall(Vector2 origin, Vector3 from, float turn, int probes, float reach, float halfWidth)
+        int BreakTouched(Func<Rect, bool> touched, float pieceSize)
+        {
+
+            if (!runtime && !TouchesSavedWall(touched)) return 0;
+            if (!Begin()) return 0;
+            pieceSize = Mathf.Max(.5f, pieceSize);
+            int broken = 0;
+            bool changed = false;
+            for (int i = pieces.Count - 1; i >= 0; i--)
+            {
+                var piece = pieces[i];
+                if (!touched(piece.rect)) continue;
+                pieces.RemoveAt(i);
+                changed = true;
+                if (!piece.fragment && Cuts(piece.rect, pieceSize))
+
+                    foreach (var rect in Cut(piece.rect, pieceSize))
+                    {
+                        if (touched(rect))
+                        {
+                            Rubble(rect.center);
+                            broken++;
+                        }
+                        else pieces.Add(new Piece { rect = rect, body = Copy(piece.body, rect) });
+                    }
+                else
+                {
+                    Rubble(piece.rect.center);
+                    broken++;
+                }
+
+                Hide(piece);
+            }
+
+            if (changed) Apply();
+            return broken;
+        }
+
+        int BreakBulwarks(Vector2 a, Vector2 b, float radius)
+        {
+            var map = GetComponent<WorldMap>();
+            if (!map || map.temporaryWalls == null) return 0;
+            int broken = 0;
+            foreach (var wall in map.temporaryWalls)
+            {
+                if (!wall || !wall.gameObject.activeInHierarchy || !RunTouches(wall, a, b, radius)) continue;
+                Vector3 at = wall.transform.position;
+                Rubble(new Vector2(at.x, at.z));
+                wall.gameObject.SetActive(false);
+                broken++;
+            }
+
+            if (broken > 0) map.HoleChanged();
+            return broken;
+        }
+
+        bool TouchesSavedWall(Func<Rect, bool> touched)
         {
             var map = GetComponent<WorldMap>();
             var walls = map && map.layout ? map.layout.walls : null;
             if (walls != null)
                 foreach (var rect in walls)
-                    if (Touched(rect, origin, from, turn, probes, reach, halfWidth))
+                    if (touched(rect))
                         return true;
             return false;
         }
@@ -227,8 +296,8 @@ namespace AnomalyArena
             }
         }
 
-        static void Rubble(Rect rect) =>
-            Fx.Burst(Query.AtCastHeight(new Vector3(rect.center.x, 0f, rect.center.y)), Vector3.zero, RubbleColour, 6, 7f, 360f, .3f);
+        static void Rubble(Vector2 at) =>
+            Fx.Burst(Query.AtCastHeight(new Vector3(at.x, 0f, at.y)), Vector3.zero, RubbleColour, 6, 7f, 360f, .3f);
 
         static bool Occupied(Rect rect)
         {
@@ -265,6 +334,63 @@ namespace AnomalyArena
             float dz = Mathf.Max(Mathf.Max(rect.yMin - point.y, 0f), point.y - rect.yMax);
             return Mathf.Sqrt(dx * dx + dz * dz);
         }
+
+        static float SegmentDistance(Rect rect, Vector2 a, Vector2 b)
+        {
+            if (SegmentHits(a, b, rect)) return 0f;
+
+            float near = Mathf.Min(Distance(rect, a), Distance(rect, b));
+            near = Mathf.Min(near, PointToSegment(new Vector2(rect.xMin, rect.yMin), a, b));
+            near = Mathf.Min(near, PointToSegment(new Vector2(rect.xMax, rect.yMin), a, b));
+            near = Mathf.Min(near, PointToSegment(new Vector2(rect.xMin, rect.yMax), a, b));
+            return Mathf.Min(near, PointToSegment(new Vector2(rect.xMax, rect.yMax), a, b));
+        }
+
+        static float PointToSegment(Vector2 point, Vector2 a, Vector2 b)
+        {
+            Vector2 ab = b - a;
+            float t = ab.sqrMagnitude > 1e-8f ? Mathf.Clamp01(Vector2.Dot(point - a, ab) / ab.sqrMagnitude) : 0f;
+            return Vector2.Distance(point, a + ab * t);
+        }
+
+        static bool RunTouches(Rect rect, Vector2 a, Vector2 b, float radius)
+        {
+            Vector2 run = b - a;
+            if (run.sqrMagnitude < 1e-8f) return false;
+
+            float ahead = Mathf.Max(run.x * (rect.xMin - a.x), run.x * (rect.xMax - a.x)) +
+                          Mathf.Max(run.y * (rect.yMin - a.y), run.y * (rect.yMax - a.y));
+            return ahead > 0f && SegmentDistance(rect, a, b) <= radius;
+        }
+
+        static bool RunTouches(TemporaryWall wall, Vector2 a, Vector2 b, float radius)
+        {
+            if (!wall.TryGetComponent(out BoxCollider box))
+            {
+                if (!wall.TryGetComponent(out Collider body)) return false;
+                var bounds = body.bounds;
+                return RunTouches(new Rect(bounds.min.x, bounds.min.z, bounds.size.x, bounds.size.z), a, b, radius);
+            }
+
+            var t = box.transform;
+            Vector3 centre = t.TransformPoint(box.center), size = Vector3.Scale(box.size, t.lossyScale);
+            Vector3 across = Query.Flat(t.right).normalized, ahead = Query.Flat(t.forward).normalized;
+            float width = Mathf.Abs(size.x), depth = Mathf.Abs(size.z);
+            var face = new Rect(-width * .5f, -depth * .5f, width, depth);
+
+            Vector2 Local(Vector2 p)
+            {
+                var offset = new Vector3(p.x - centre.x, 0f, p.y - centre.z);
+                return new Vector2(Vector3.Dot(offset, across), Vector3.Dot(offset, ahead));
+            }
+
+            return RunTouches(face, Local(a), Local(b), radius);
+        }
+
+        static bool Near(Rect rect, Vector3 point, float margin) =>
+            point.x >= rect.xMin - margin && point.x <= rect.xMax + margin && point.z >= rect.yMin - margin && point.z <= rect.yMax + margin;
+
+        static bool Cuts(Rect rect, float size) => rect.width > size + CutTolerance || rect.height > size + CutTolerance;
 
         static bool SegmentHits(Vector2 a, Vector2 b, Rect r)
         {

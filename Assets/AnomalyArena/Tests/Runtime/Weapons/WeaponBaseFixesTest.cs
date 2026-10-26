@@ -91,7 +91,7 @@ namespace AnomalyArena
             var player = game.player; var status = ElementStatus.For(player);
             status.ClearStatuses();
             float hp = player.Hp;
-            var self = DamageInfo.Attack(2f, player); self.element = ElementKind.Fire; self.baseDamage = 2f;
+            var self = DamageInfo.Attack(2f, player); self.element = ElementKind.Fire;
 
             Assert.That(player.ReceiveDamage(self), Is.True);
             Assert.That(player.Hp, Is.EqualTo(hp - 2f * TakenFactor(game)).Within(.01f), "a self-hit still hurts");
@@ -237,6 +237,8 @@ namespace AnomalyArena
             var status = ElementStatus.For(game.player);
             status.ClearStatuses();
             targets[2].DiscardWithoutReward();
+
+            V3CombatSmokeTest.Teleport(game.player, game.player.Position + Vector3.forward * 4f);
             Place(targets[0], game.player.Position + Vector3.forward * 5f);
             Place(targets[1], game.player.Position + Vector3.back * 2f);
 
@@ -253,7 +255,7 @@ namespace AnomalyArena
         {
             var (game, targets) = await V3CombatSmokeTest.StartSandbox();
             Place(targets[1], targets[0].Position + Vector3.right * 1.5f);
-            var info = DamageInfo.Attack(5f, game.player); info.element = ElementKind.Lightning; info.baseDamage = 5f; info.noLightningJump = true;
+            var info = DamageInfo.Attack(5f, game.player); info.element = ElementKind.Lightning; info.noLightningJump = true;
 
             targets[0].ReceiveDamage(info);
             Assert.That(ElementStatus.For(targets[0]).Lightning, Is.GreaterThan(0f), "the hit still adds Lightning");
@@ -627,6 +629,8 @@ namespace AnomalyArena
         {
             var (game, _) = await V3CombatSmokeTest.StartSandbox();
             game.runWeapons.Hand[0] = game.runWeapons.Hand[1] = null;
+
+            game.progression.UnlockEnergy();
             WallAhead(game, 1.5f, 6f);
             var gunner = EquipAuto(game, WeaponForm.SentryDrone, 0);
 
@@ -635,7 +639,7 @@ namespace AnomalyArena
             Assert.That(gunner.cooldown, Is.Zero, "it did not fire");
 
             ClearWalls();
-            float energy = game.progression.EnergyUnlocked ? game.progression.Energy : game.progression.Stats.maxEnergy;
+            float energy = game.progression.Energy;
             await Until(() => ActiveActors(gunner, AttackMode.Bolt), 2f, "the drone fires once it can see");
             Assert.That(game.progression.Energy, Is.EqualTo(energy - game.runWeapons.upgrades.gunnerEnergyCost).Within(.01f), "each shot costs 2 Energy");
             Assert.That(game.runWeapons.upgrades.gunnerEnergyCost, Is.EqualTo(2f));

@@ -22,9 +22,13 @@ MonoBehaviour:
   advancedCooldown: 4
   duration:
   - 2.5
-  - 3.5
+  - 2.75
+  - 3
+  - 3.25
   - 3.5
   radius:
+  - 0
+  - 0
   - 0
   - 0
   - 0
@@ -32,7 +36,11 @@ MonoBehaviour:
   - 12
   - 12
   - 12
+  - 12
+  - 12
   strength:
+  - 0.3
+  - 0.3
   - 0.3
   - 0.3
   - 0.3
@@ -45,7 +53,11 @@ MonoBehaviour:
   - 0
   - 0
   - 0
+  - 0
+  - 0
   statusResistance:
+  - 0
+  - 0
   - 0
   - 0
   - 0
@@ -60,10 +72,13 @@ MonoBehaviour:
   singularitySlowMultiplier: 0.5
   singularityBaseDamage: 10
   singularityDamagePerEnemy: 4
+  singularityPlayerMoveMultiplier: 0.35
   descriptions:
   - Everything except you runs at 30% for 2.5 s.
-  - 30% speed for 3.5 s.
+  - 30% speed for 2.75 s.
+  - 30% speed for 3 s.
+  - 30% speed for 3.25 s.
   - 30% speed for 3.5 s; your Attack Speed +50%.
   icon: {fileID: 0}
-  levelDamageGrowth: 1.35
+  levelDamageGrowth: 1.161895
   shieldScalesWithMaxHp: 1
