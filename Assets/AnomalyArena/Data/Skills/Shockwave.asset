@@ -24,15 +24,23 @@ MonoBehaviour:
   - 0
   - 0
   - 0
+  - 0
+  - 0
   radius:
   - 4
-  - 5
+  - 4.25
+  - 4.5
+  - 4.75
   - 5
   range:
   - 12
   - 12
   - 12
+  - 12
+  - 12
   strength:
+  - 8
+  - 8
   - 8
   - 8
   - 8
@@ -45,7 +53,11 @@ MonoBehaviour:
   - 0
   - 0
   - 0
+  - 0
+  - 0
   statusResistance:
+  - 0
+  - 0
   - 0
   - 0
   - 0
@@ -60,10 +72,13 @@ MonoBehaviour:
   singularitySlowMultiplier: 0.5
   singularityBaseDamage: 10
   singularityDamagePerEnemy: 4
+  singularityPlayerMoveMultiplier: 0.35
   descriptions:
   - Heavy push within 4.
-  - Heavy push within 5.
+  - Heavy push within 4.25.
+  - Heavy push within 4.5.
+  - Heavy push within 4.75.
   - Heavy push within 5; reflect enemy projectiles.
   icon: {fileID: 0}
-  levelDamageGrowth: 1.35
+  levelDamageGrowth: 1.161895
   shieldScalesWithMaxHp: 1

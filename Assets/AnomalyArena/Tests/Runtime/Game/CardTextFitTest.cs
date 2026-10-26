@@ -69,7 +69,7 @@ namespace AnomalyArena
         {
             var catalog = GameManager.Instance.skills.Catalog;
             foreach (var skill in catalog.skills.Where(s => s))
-            for (int level = 1; level <= 3; level++)
+            for (int level = 1; level <= SkillDefinition.MaxLevel; level++)
                 yield return ($"{skill.id} L{level}",
                     skill.Description(level) + ArenaText.Pair($"\n{skill.cost:0} Energy",$"\n{skill.cost:0} Energy"));
             for (int form = (int)WeaponForm.GravGun; form <= (int)WeaponForm.SwarmLauncher; form++)

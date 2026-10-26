@@ -64,7 +64,6 @@ namespace AnomalyArena
             revealTimer,
             supportTimer,
             summonTimer,
-            bossStun,
             chargeLeft,
             inhaleLeft,
             bossRecovery,
@@ -133,9 +132,6 @@ namespace AnomalyArena
         readonly List<Vector3> summonPoints = new();
         EnemyKind summonKind;
         float summonWarning;
-
-                                                                                                                                                   
-        public bool BossStunned => bossStun > 0f;
 
                                                                                                                               
         public void ForceNextBossMove(int move) => forcedMove = move;
@@ -311,7 +307,6 @@ namespace AnomalyArena
             revealTimer = spawnVisible;
             supportTimer = 0f;
             summonTimer = data.kind == EnemyKind.Hollow ? Boss.prophetSummonInterval : Boss.tyrantSummonInterval;
-            bossStun = 0f;
             bossPhase = 1;
             inhaleLeft = bossRecovery = 0f;
             ClearBossMarks();
@@ -366,8 +361,6 @@ namespace AnomalyArena
         {
             if (IsBoss)
             {
-                                                                                                                                                     
-                if (bossStun > 0f && info.source != DamageSource.Wall) info.amount *= StunDamageTaken;
                                                                                                                           
                 info.knockDistance = 0f;
             }
@@ -487,7 +480,7 @@ namespace AnomalyArena
             }
 
             Vector3 direction = WorldMap.Active
-                ? WorldMap.Active.GetChaseDirection(Position, WorldMap.Active.EnemyTarget, moveSpeed)
+                ? WorldMap.Active.GetChaseDirection(Position, WorldMap.Active.EnemyTarget, FollowingIntoGravity)
                 : facing;
             Vector3 v = edge > triggerRange ? direction * moveSpeed : Vector3.zero;
             v = KeepOffEdges(v, dt);
@@ -564,17 +557,8 @@ namespace AnomalyArena
                 }
 
                 if (definition.kind == EnemyKind.Hollow) return TickProphet(dt, player);                                      
-                                                                                                               
                 TickLandingZones(dt);
                 TickSummonWarning(dt);
-                                                                                                                                
-                if (bossStun > 0f)
-                {
-                    bossStun -= dt;
-                    Stop();
-                    return true;
-                }
-
                 TickSummonClock(dt);
                 TickBossPhase();
                 if (definition.kind == EnemyKind.Hollow)
@@ -642,13 +626,11 @@ namespace AnomalyArena
                     Stop();
                     if (IsBoss)
                     {
-                                                                                                                        
-                                                                    
+                                                                                                          
                         chargesLeft = 0;
                         statusBoard?.SetShield(0f);
                         ReceiveDamage(new DamageInfo
                             { amount = maxHp * Boss.wallHitHpShare, source = DamageSource.Wall, kind = HitKind.Slam });
-                        bossStun = Boss.wallHitStun;
                     }
                     else
                     {
@@ -785,6 +767,7 @@ namespace AnomalyArena
                         rushing = true;
                         chargeLeft = definition.chargeDistance;
                         V2Audio.Instance?.PlayWorld(ArenaSoundCue.BloaterWarning, Position);
+                        RefreshBodyTint();                                                                                                 
                     }
 
                     if (rushing)
@@ -796,6 +779,7 @@ namespace AnomalyArena
                         {
                             rushing = false;
                             cooldown = attackInterval;
+                            RefreshBodyTint();                                                                 
                         }
 
                         return true;
@@ -1261,7 +1245,7 @@ namespace AnomalyArena
         void MoveAt(Vector3 point, float speed, float dt)
         {
             Vector3 direction = WorldMap.Active
-                ? WorldMap.Active.GetChaseDirection(Position, point, Mathf.Abs(speed))
+                ? WorldMap.Active.GetChaseDirection(Position, point, FollowingIntoGravity)
                 : Query.Flat(point - Position).normalized;
             Vector3 v = KeepOffEdges(direction * speed, dt);
             rb.linearVelocity = new Vector3(v.x, rb.linearVelocity.y, v.z);
@@ -1488,6 +1472,16 @@ namespace AnomalyArena
             return d <= radius + c.Radius * 0.5f || Vector3.Angle(facing, to) <= attackArc * 0.5f;
         }
 
+                                                                                                                                             
+                                                                                                                                         
+                                                                                                                           
+        public bool FollowsIntoGravity => definition && definition.speed >= gravityFollowSpeed;
+
+                                                                                                                                           
+                                                                                                                                   
+        bool FollowingIntoGravity => FollowsIntoGravity && WorldMap.Active &&
+                                     WorldMap.Active.GetPull(WorldMap.Active.EnemyTarget).sqrMagnitude > 0.01f;
+
                      
                                                                                                              
                                                                                                                                                                                           
@@ -1498,9 +1492,7 @@ namespace AnomalyArena
             if (!WorldMap.Active) return v;
             if (WorldMap.Active.TrialActive) return WorldMap.Active.KeepOnTrialGround(Position, v, dt, radius);                           
             if (!IsBoss) v *= Quicksand.SpeedFactor(Position);
-            bool allowGravity = definition && definition.speed >= gravityFollowSpeed &&
-                                WorldMap.Active.GetPull(GM.player.Position).sqrMagnitude > 0.01f;
-            return WorldMap.Active.IsWalkable(Position + v * dt, radius, allowGravity) ? v : Vector3.zero;
+            return WorldMap.Active.IsWalkable(Position + v * dt, radius, FollowingIntoGravity) ? v : Vector3.zero;
         }
 
         void Stop()
@@ -1524,12 +1516,13 @@ namespace AnomalyArena
             RefreshBodyTint();
         }
 
-                                                                                                                                                   
+                                                                                                                                         
+                                                                                                            
         public static readonly Color WindupBodyColour = new Color(1f, .85f, .25f);
         static readonly Color ShadeCloakColour = new Color(0.38f, 0.45f, 0.7f, 0.22f);
 
         protected override Color? BodyTint => !definition ? null
-            : windup ? WindupBodyColour
+            : windup || rushing ? WindupBodyColour
             : definition.kind == EnemyKind.Shade && Cloaked ? ShadeCloakColour
             : definition.colour;
 

@@ -24,15 +24,23 @@ MonoBehaviour:
   - 0
   - 0
   - 0
+  - 0
+  - 0
   radius:
   - 4
-  - 5.5
+  - 4.375
+  - 4.75
+  - 5.125
   - 5.5
   range:
   - 12
   - 12
   - 12
+  - 12
+  - 12
   strength:
+  - 6
+  - 6
   - 6
   - 6
   - 6
@@ -45,7 +53,11 @@ MonoBehaviour:
   - 0
   - 0
   - 0
+  - 0
+  - 0
   statusResistance:
+  - 0
+  - 0
   - 0
   - 0
   - 0
@@ -60,10 +72,13 @@ MonoBehaviour:
   singularitySlowMultiplier: 0.5
   singularityBaseDamage: 10
   singularityDamagePerEnemy: 4
+  singularityPlayerMoveMultiplier: 0.35
   descriptions:
   - '6 Frost within 4: small enemies freeze.'
-  - 6 Frost within 5.5.
+  - 6 Frost within 4.375.
+  - 6 Frost within 4.75.
+  - 6 Frost within 5.125.
   - 6 Frost within 5.5; enemies it freezes stay frozen at least 3 s.
   icon: {fileID: 0}
-  levelDamageGrowth: 1.35
+  levelDamageGrowth: 1.161895
   shieldScalesWithMaxHp: 1

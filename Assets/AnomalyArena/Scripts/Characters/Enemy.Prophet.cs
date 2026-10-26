@@ -5,11 +5,12 @@ namespace AnomalyArena
 {
                  
                                                                                                                                                 
-                                                                                                                                              
-                                                                                                                                             
-                                                                                                                                               
                                                                                                                                             
-                                                                                                                           
+                                                                                                                                           
+                                                                                                                                               
+                                                                                                                                         
+                                                                                                                                           
+                                                                                                                                              
                   
     public partial class Enemy
     {
@@ -222,14 +223,15 @@ namespace AnomalyArena
         }
 
                                                                                                                                              
-                                                                                                                                             
-                                                                                                                                             
+                                                                                                                                                 
+                                                                                                                                           
+                                        
         public static int NashMoveFor(int phase, bool near, bool canSummon, bool pillarsStanding, float roll, BossTuning b)
         {
             float first = Mathf.Max(0f, near ? b.nashPulseWeight : b.nashRingWeight);
             float second = Mathf.Max(0f, near ? canSummon ? b.nashSummonWeight : 0f : phase >= 2 ? b.nashVolleyWeight : 0f);
             float third = Mathf.Max(0f, near ? phase >= 2 ? b.nashPillarWeight : 0f
-                : b.nashPullWeight * (pillarsStanding ? Mathf.Max(1f, b.nashPullPillarBonus) : 1f));
+                : phase >= 2 ? b.nashPullWeight * (pillarsStanding ? Mathf.Max(1f, b.nashPullPillarBonus) : 1f) : 0f);
             float pick = Mathf.Clamp01(roll) * (first + second + third);
             int slot = pick < first || second + third <= 0f ? 0 : pick < first + second || third <= 0f ? 1 : 2;
             if (near) return slot == 0 ? PulseMove : slot == 1 ? VoidSummonMove : VoidPillarMove;
@@ -264,8 +266,7 @@ namespace AnomalyArena
                 case PulseMove:
                     V3WorldAudio.Instance?.Play(ArenaWorldCue.BossSlam, Position);
                     Fx.Ring(Position, b.nashPulseReach, definition.colour);
-                    PlayerBlast(Position, b.nashPulseReach, NashDamage(b.nashPulseDamage),
-                        bossPhase >= 3 ? b.nashPhase3PulsePush : b.nashPulsePush);
+                    PlayerBlast(Position, b.nashPulseReach, NashDamage(b.nashPulseDamage), NashPulsePush(bossPhase, b));
                     break;
                 case VoidSummonMove:
                     BeginVoidSummon(player, b);
@@ -288,6 +289,11 @@ namespace AnomalyArena
                     break;
             }
         }
+
+                                                                                                                                                     
+                                                                                                                                                     
+        public static float NashPulsePush(int phase, BossTuning b) =>
+            phase >= 3 ? b.nashPhase3PulsePush : phase == 2 ? b.nashPhase2PulsePush : b.nashPulsePush;
 
                                                                                                                                             
                                                                                                                                     

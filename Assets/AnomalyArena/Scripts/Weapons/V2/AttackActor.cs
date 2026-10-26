@@ -13,7 +13,9 @@ namespace AnomalyArena
         public Vector3 direction, point;
         public float speed, range, damage, knock, radius, remaining, delay, tickInterval = .25f;
         public float pierceDamageRetention = 1f;
-        public bool pierce, hurtOwner, ignoreShield, followCursor;
+        public bool pierce, hurtOwner, followCursor;
+        [Tooltip("Lance (document 6.4): the hit still goes into the Shield first, but the Shield does not soften it.")]
+        public bool ignoreShieldReduction;
         public int ricochets, targetsLeft;
         [Tooltip("Bodies a piercing bolt may still pass through before it stops; Configure resets it to no limit.")]
         public int piercesLeft = int.MaxValue;
@@ -95,7 +97,7 @@ namespace AnomalyArena
             attachedLeft = 0; carrier = null;
             crossed = false; hiveHost = null;
             PlantedRecall = false; arcElapsed = arcDuration = arcHeight = landedDuration = 0f;
-            hurtOwner = ignoreShield = followCursor = pierce = false;
+            hurtOwner = ignoreShieldReduction = followCursor = pierce = false;
             ownerDamage = -1f; ownerCarry = 0f; sharedStruck = null;
             ricochets = 0; targetsLeft = 4; element = w?.element ?? ElementKind.None;
             Sequence = ++nextSequence;
@@ -313,7 +315,7 @@ namespace AnomalyArena
             {
                 Vector3 other = Quaternion.Euler(0f, angle, 0f) * bounce;
                 twin.Configure(AttackMode.Bolt, owner, weapon, hitPoint + other * .3f, other, damage, knock, Mathf.Max(0f, range - flown), speed, 0, remaining);
-                twin.pierce = pierce; twin.ignoreShield = ignoreShield; twin.element = element; twin.splitChild = true;
+                twin.pierce = pierce; twin.ignoreShieldReduction = ignoreShieldReduction; twin.element = element; twin.splitChild = true;
             }
             direction = Quaternion.Euler(0f, -angle, 0f) * bounce;
             transform.position = hitPoint + direction * .3f;
@@ -574,7 +576,7 @@ namespace AnomalyArena
         {
             var info = DamageInfo.Attack(amount, owner, direction, push, kind);
             info.feel = WeaponFeel.Of(weapon);
-            info.element = element; info.baseDamage = amount;
+            info.element = element;
             info.builtInElement = weapon != null && weapon.builtInElement;
             if(target.ReceiveDamage(info))PlaySound(WeaponAudioPhase.Impact);
         }
@@ -737,8 +739,10 @@ namespace AnomalyArena
         {
             var info = DamageInfo.Attack(amount, owner, push < 0 ? -dir : dir, Mathf.Abs(push),
                 mode is AttackMode.Field or AttackMode.Blast or AttackMode.Sticky or AttackMode.Bouncy or AttackMode.Swarm ? HitKind.Blast : pierce ? HitKind.Pierce : HitKind.Bullet);
-            info.element = element; info.baseDamage = amount;
-            info.builtInElement = weapon != null && weapon.builtInElement; info.ignoreShield = ignoreShield; info.feel = WeaponFeel.Of(weapon);
+            info.element = element;
+            info.builtInElement = weapon != null && weapon.builtInElement; info.ignoreShieldReduction = ignoreShieldReduction; info.feel = WeaponFeel.Of(weapon);
+
+            if (mode is AttackMode.Field or AttackMode.Pull) info.continuousSource = (object)weapon ?? this;
             if(target.ReceiveDamage(info))PlaySound(WeaponAudioPhase.Impact);
         }
         void PlaySound(WeaponAudioPhase phase)

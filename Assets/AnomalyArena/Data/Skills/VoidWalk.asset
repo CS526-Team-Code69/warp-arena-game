@@ -24,7 +24,11 @@ MonoBehaviour:
   - 3
   - 3
   - 3
+  - 3
+  - 3
   radius:
+  - 0
+  - 0
   - 0
   - 0
   - 0
@@ -32,7 +36,11 @@ MonoBehaviour:
   - 8
   - 8
   - 8
+  - 8
+  - 8
   strength:
+  - 0
+  - 0
   - 0
   - 0
   - 0
@@ -45,7 +53,11 @@ MonoBehaviour:
   - 0
   - 0
   - 0
+  - 0
+  - 0
   statusResistance:
+  - 0
+  - 0
   - 0
   - 0
   - 0
@@ -60,10 +72,13 @@ MonoBehaviour:
   singularitySlowMultiplier: 0.5
   singularityBaseDamage: 10
   singularityDamagePerEnemy: 4
+  singularityPlayerMoveMultiplier: 0.35
   descriptions:
   - 'Enter the void for 3 s: move x1.6, cannot be targeted or damaged.'
   - Void state for 3 s.
   - Void state for 3 s.
+  - Void state for 3 s.
+  - Void state for 3 s.
   icon: {fileID: 0}
-  levelDamageGrowth: 1.35
+  levelDamageGrowth: 1.161895
   shieldScalesWithMaxHp: 1

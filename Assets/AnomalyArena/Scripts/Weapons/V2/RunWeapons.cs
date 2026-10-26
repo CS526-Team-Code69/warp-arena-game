@@ -130,8 +130,12 @@ namespace AnomalyArena
                                                                                                                                            
                                                                                                     
         int MkBonus(int wave)=>roster&&UnityEngine.Random.Range(0,10000)<roster.MkBonusChance(wave)*10000f?1:0;
+                                                                                                                                         
+                                                                                                                                        
+        public bool GunnerOfferable=>!progression||progression.EnergyUnlocked;
         RunWeapon CreateWeapon(WeaponForm form,int v,int wave)
         {
+            if(form==WeaponForm.SentryDrone&&!GunnerOfferable)v=1;
             var w=new RunWeapon{form=form,variant=v,rounds=ClipSize(form,v)};
             w.element=form switch{WeaponForm.Flamethrower=>ElementKind.Fire,WeaponForm.CryoCannon=>ElementKind.Frost,WeaponForm.ArcCoil=>ElementKind.Lightning,WeaponForm.SporeLauncher=>ElementKind.Poison,_=>ElementKind.None};
             w.builtInElement=w.element!=ElementKind.None;if(w.builtInElement)w.axes=UpgradeAxis.Infusion;
@@ -498,10 +502,12 @@ namespace AnomalyArena
             else if(w.form==WeaponForm.SporeLauncher){Bolt(w,aim,damage,0,range,35);SpendRound(w,2);NeedlerCost(w);}
             else if(w.form==WeaponForm.Railgun&&w.variant==0)
             {
-                                                                                                                                     
+                                                                                                                            
                 Vector3 brace=default;bool braced=w.Has(UpgradeAxis.Tame)&&LanceBraced(aim,out brace);
-                var a=Bolt(w,aim,braced?damage*upgrades.lanceBraceDamage:damage,0,range,120,true);if(a){a.ignoreShield=true;a.pierceDamageRetention=.75f;}
-                if(braced)Fx.Ring(brace,.6f,new Color(1f,.85f,.5f,.9f));else if(w.Has(UpgradeAxis.Tame))player.Push(-aim,4);else player.Knockback(-aim,4,KnockKind.Hit);
+                                                                                                                                      
+                var a=Bolt(w,aim,braced?damage*upgrades.lanceBraceDamage:damage,0,range,120,true);if(a){a.ignoreShieldReduction=true;a.pierceDamageRetention=.75f;}
+                                                                                                                                                         
+                if(braced)Fx.Ring(brace,.6f,new Color(1f,.85f,.5f,.9f));else player.Push(-aim,LanceRecoil(w));
             }
             else if(w.form==WeaponForm.Railgun)Execute(w,range,damage);
             else if(w.form==WeaponForm.Minigun){Bolt(w,aim,damage,0,range,40);if(w.variant==0)w.cooldown=1/SpinUpRate(w)*CooldownScale(w);else{float before=w.heat;w.heat+=.1f;MeltdownWarning(w,before);if(w.heat>=4)Meltdown(w);}}
@@ -628,7 +634,8 @@ namespace AnomalyArena
         void Cone(RunWeapon w,float range,float angle,float hit,float push){Fx.Cone(player.Position,player.AimDirection,range,angle,w.element);foreach(var c in Combatant.All)if(c!=player&&c.IsAlive&&InCone(c,range,angle)&&!WallBlocks(player.Position,c.Position))Damage(w,c,hit,push,Query.Flat(c.Position-player.Position).normalized);}
                                                                                                                                                                             
         void Area(RunWeapon w,Vector3 at,float radius,float hit,float push,bool self,float selfHit=-1f){foreach(var c in Combatant.All)if(c.IsAlive&&(self||c!=player)&&(Query.Flat(c.Position-at)).magnitude<=radius+c.radius&&!WallBlocks(at,c.Position))Damage(w,c,c==player&&selfHit>=0f?selfHit:hit,push,Query.Flat(c.Position-at).normalized);Fx.Ring(at,radius,ElementCombat.ColorFor(w.element));}
-        void Damage(RunWeapon w,Combatant c,float hit,float push,Vector3 dir,bool noLightningJump=false){var info=DamageInfo.Attack(hit,player,push<0?-dir:dir,Mathf.Abs(push)*KnockScale,HitKind.Blast);info.feel=WeaponFeel.Of(w);info.baseDamage=hit;info.element=w.element;info.builtInElement=w.builtInElement;info.noLightningJump=noLightningJump;lastDamageAccepted=c.ReceiveDamage(info);if(lastDamageAccepted)WeaponSound(w,WeaponAudioPhase.Impact);}
+                                                                                                                                                                                 
+        void Damage(RunWeapon w,Combatant c,float hit,float push,Vector3 dir,bool noLightningJump=false,bool continuous=false){var info=DamageInfo.Attack(hit,player,push<0?-dir:dir,Mathf.Abs(push)*KnockScale,HitKind.Blast);info.feel=WeaponFeel.Of(w);info.element=w.element;info.builtInElement=w.builtInElement;info.noLightningJump=noLightningJump;info.continuousSource=continuous?w:null;lastDamageAccepted=c.ReceiveDamage(info);if(lastDamageAccepted)WeaponSound(w,WeaponAudioPhase.Impact);}
         AttackActor Bolt(RunWeapon w,Vector3 dir,float hit,float push,float reach,float velocity,bool pierce=false,int ricochet=0){var a=AttackPool.Instance.Acquire();if(!a)return null;a.Configure(AttackMode.Bolt,player,w,SpawnPoint(dir,.7f),dir,hit,push*KnockScale,reach,velocity,0,reach/velocity+3);a.pierce=pierce;a.ricochets=ricochet;WeaponSound(w,w.form is WeaponForm.Knife or WeaponForm.PhaseDagger?WeaponAudioPhase.Launch:WeaponAudioPhase.Fire);return a;}
         AttackActor Field(RunWeapon w,AttackMode mode,Vector3 at,float hit,float push,float radius,float life,float delay,bool self){var a=AttackPool.Instance.Acquire();if(!a)return null;a.Configure(mode,player,w,at,player.AimDirection,hit,push*KnockScale,0,0,radius,life+delay+.1f);a.delay=delay;a.hurtOwner=self;WeaponSound(w,mode==AttackMode.Blast?WeaponAudioPhase.Launch:WeaponAudioPhase.Fire);return a;}
                                                                                                                              
@@ -864,6 +871,7 @@ namespace AnomalyArena
             }
             ClearChargeLine();
             ClearElementWeapons();
+            ElementCombat.ClearContinuousHits();
             executeMarks.Clear();frozenExecuteMarks.Clear();
             hazards.Clear();sporeClouds.Clear();tracers.Clear();
             dashLeft=0;dashWeapon=null;dashContactDamage=0;dashHits.Clear();inputHeld=false;if(player&&player.State==CharacterState.Dashing)player.SetState(CharacterState.Normal);

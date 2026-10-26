@@ -33,8 +33,8 @@ namespace AnomalyArena
         public Enemy hollow;
         [Tooltip("Seconds after entering the void trial before the Nash Prophet (Hollow) may start its first move.")]
         public float trialOpeningGrace = 3f;
-        [Tooltip("Cells from the platform centre where the player is set down on entering the trial; outside the Nash Prophet's pulse " +
-                 "range, so its first move is a shot.")]
+        [Tooltip("Cells from the platform centre where the player is set down on entering the trial; outside the Nash Prophet's close " +
+                 "range (BossTuning.nashNearRange), so its first move is a far one.")]
         public float trialEntryDistance = 8f;
         [Min(0), Tooltip("Hole slots kept for the Nash Prophet's prophecy landings (copies of the trial temporary hole made at start), " +
                          "so its holes never take the player's own Pocket Void or blink slots.")]
@@ -205,13 +205,15 @@ namespace AnomalyArena
             return pull;
         }
         public bool IsWalkable(Vector3 point, float radius = 0.5f, bool allowGravity = false) => Contains(point, radius) && !IsWall(point, radius) && !IsHole(point) && (allowGravity || GetPull(point).sqrMagnitude < 0.01f);
-        public Vector3 GetChaseDirection(Vector3 position, Vector3 target, float speed)
+                                                                                                                                           
+                                                                                                                                           
+        public Vector3 GetChaseDirection(Vector3 position, Vector3 target, bool followIntoGravity)
         {
             if (TrialActive) return Query.Flat(target - position).normalized;
             Vector3 pull = GetPull(position);
             if (pull.sqrMagnitude > 0.01f && GetPull(target).sqrMagnitude < 0.01f)
                 return -pull.normalized;                                                                
-            bool allow = GetPull(target).sqrMagnitude > 0.01f && speed >= 4.5f;
+            bool allow = followIntoGravity && GetPull(target).sqrMagnitude > 0.01f;
             return Grid.Direction(position, target, allow);
         }
         public void HoleChanged()
@@ -224,7 +226,8 @@ namespace AnomalyArena
         {
             if (!GM || !GM.player) return;
             TickHoleIntro();
-            if (GM.IsCombatActive || GM.CanPlayerMove)
+                                                                                                                                      
+            if (GM.IsCombatActive || GM.CanPlayerMove || GM.BuildTimeFlows)
             {
                 float dt = GM.WorldDeltaTime;
                                                                                                   
@@ -375,7 +378,8 @@ namespace AnomalyArena
 
         void FixedUpdate()
         {
-            if (!GM || (!GM.IsCombatActive && !GM.CanPlayerMove) || !GM.player) return;
+                                                                                                                                     
+            if (!GM || (!GM.IsCombatActive && !GM.CanPlayerMove && !GM.BuildTimeFlows) || !GM.player) return;
             characters.Clear();
             characters.Add(GM.player);
             foreach (var enemy in GM.waves.Alive) if (enemy && enemy.gameObject.activeInHierarchy) characters.Add(enemy);
@@ -400,7 +404,7 @@ namespace AnomalyArena
                 }
                                                                                 
                 if (!swallowed && IsTemporaryHole(combatant.Position,combatant) && !(combatant is Enemy { IsBoss: true })) { SwallowIntoVoid(combatant); swallowed = true; }
-                                                                                                                 
+                                                                                                                                
                 if (!swallowed && !(combatant is Enemy { IsBoss: true })) ApplyHolePull(combatant);
             }
             TickCorpses(GM.WorldFixedDeltaTime);
@@ -420,9 +424,9 @@ namespace AnomalyArena
 
         static BossTuning BossNumbers => GM && GM.waves && GM.waves.bosses != null ? GM.waves.bosses : BossTuning.Defaults;
 
-                                                                                                                                              
+                                                                                                                                            
                                                                                                                                              
-                                                              
+                                                                                                                                                    
         public float LimitBossKnockback(Vector3 from, Vector3 dir, float distance)
         {
             if (!TrialActive || !trialPlatform || distance <= 0f) return distance;
@@ -499,9 +503,11 @@ namespace AnomalyArena
         }
 
                                                                                                                                              
-                                                                                                                            
+                                                                                                                                            
+                                                                                                 
         public bool TryEnterPortal(PlayerController player)
         {
+            if (TrialActive) return TryTakeTrialPortal(player);
             foreach (var hole in holes)
             {
                 if (!CanEnterPortal(player, hole)) continue;
@@ -561,7 +567,7 @@ namespace AnomalyArena
             BuildTrialTerrain();                                                                                
             GM.waves.TrackBoss(hollow);
             if (GM.hud) GM.hud.Banner(ArenaText.Pair("THE NASH PROPHET","THE NASH PROPHET"),
-                ArenaText.Pair("Black-hole portals lead to the fragments. While its summons live it takes no damage.","Black-hole portals lead to the fragments. While its summons live it takes no damage."));
+                ArenaText.Pair(                    "Stand on a black-hole portal and press E to reach a fragment. While its summons live it takes no damage.",                    "Stand on a black-hole portal and press E to reach a fragment. While its summons live it takes no damage."));
             VoidTrialEntered?.Invoke();
         }
                                                                                                                                       

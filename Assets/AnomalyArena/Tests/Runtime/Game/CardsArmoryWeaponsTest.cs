@@ -46,32 +46,38 @@ namespace AnomalyArena
             Assert.That(actual, Is.EqualTo(CardRarity.Rare));
         }
 
+                                                                                   
         [TestCase(CardRarity.Common, 1)]
         [TestCase(CardRarity.Rare, 2)]
         [TestCase(CardRarity.Exceptional, 3)]
-        [TestCase(CardRarity.Legendary, 3)]
+        [TestCase(CardRarity.Epic, 4)]
+        [TestCase(CardRarity.Legendary, 5)]
         [TestCase(CardRarity.Void, 1)]
-        public void SkillLevel_CardColour_GivesLevelOneToThree(CardRarity rarity, int expected)
+        public void SkillLevel_CardColour_GivesLevelOneToFive(CardRarity rarity, int expected)
         {
             var actual = ArenaRarity.SkillLevel(rarity);
 
             Assert.That(actual, Is.EqualTo(expected));
         }
 
-        [TestCase(1, 10f, CardRarity.Rare)]
-        [TestCase(2, 30f, CardRarity.Common)]
-        [TestCase(3, 5f, CardRarity.Exceptional)]
-        [TestCase(8, 25f, CardRarity.Rare)]
-        [TestCase(8, 50f, CardRarity.Common)]
-        [TestCase(0, 10f, CardRarity.Rare)]
-        public void SkillRarity_WaveBandRows_RollWhiteGreenOrBlue(int wave, float roll, CardRarity expected)
+                                                                                                                                    
+        [TestCase(1, 10f, false, CardRarity.Rare)]
+        [TestCase(2, 30f, false, CardRarity.Common)]
+        [TestCase(3, 5f, false, CardRarity.Exceptional)]
+        [TestCase(8, 50f, false, CardRarity.Rare)]
+        [TestCase(9, 50f, false, CardRarity.Exceptional)]
+        [TestCase(12, 50f, false, CardRarity.Epic)]
+        [TestCase(15, 10f, false, CardRarity.Legendary)]
+        [TestCase(12, 90f, true, CardRarity.Legendary)]
+        [TestCase(0, 10f, false, CardRarity.Rare)]
+        public void SkillRarity_WaveBand_RollsTheStatCardTiers(int wave, float roll, bool pity, CardRarity expected)
         {
             var rules = ScriptableObject.CreateInstance<ProgressionRules>();
             try
             {
-                rules.skillRarityBands = new[] { new SkillRarityBand(1, 20f, 0f), new SkillRarityBand(3, 30f, 10f) };
+                rules.highTierPercent = 25f;
 
-                var actual = rules.SkillRarity(wave, roll);
+                var actual = rules.SkillRarity(wave, roll, pity);
 
                 Assert.That(actual, Is.EqualTo(expected));
             }
@@ -129,13 +135,16 @@ namespace AnomalyArena
             skills.Learn(SkillId.Blink, -1, 2);
             int afterGreen = Level(skills, SkillId.Blink);
             skills.Learn(SkillId.Blink, -1, 2);
-            bool aboveThree = skills.Learn(SkillId.Blink, -1, 3);
+            int afterSecondGreen = Level(skills, SkillId.Blink);
+            skills.Learn(SkillId.Blink, -1, 5);
+            bool aboveFive = skills.Learn(SkillId.Blink, -1, 5);
             skills.Learn(SkillId.PocketVoid, -1, 3);
 
             Assert.That(learned && Level(skills, SkillId.FrostNova) == 3, Is.True, "a blue card puts a new skill straight at level 3");
             Assert.That(afterGreen, Is.EqualTo(2), "a green card raises a level-1 skill to 2");
-            Assert.That(Level(skills, SkillId.Blink), Is.EqualTo(3), "a green card on a level-2 skill still adds one level");
-            Assert.That(aboveThree, Is.False, "nothing goes above level 3");
+            Assert.That(afterSecondGreen, Is.EqualTo(3), "a green card on a level-2 skill still adds one level");
+            Assert.That(Level(skills, SkillId.Blink), Is.EqualTo(5), "an orange card raises it straight to level 5");
+            Assert.That(aboveFive, Is.False, "nothing goes above level 5");
             Assert.That(Level(skills, SkillId.PocketVoid), Is.EqualTo(1), "greater void skills have no levels");
         }
 
@@ -149,9 +158,10 @@ namespace AnomalyArena
             var rules = Object.Instantiate(original);
             try
             {
-                rules.skillRarityBands = new[] { new SkillRarityBand(1, 0f, 100f) };
+                                                                                 
+                rules.highTierPercent = 100f;
                 game.progression.Rules = rules;
-                var card = skills.RollCard(1);
+                var card = skills.RollCard(3);
                 var definition = skills.Catalog.Find((SkillId)card.Payload);
 
                 bool applied = card.Apply();
@@ -175,12 +185,13 @@ namespace AnomalyArena
             var rules = Object.Instantiate(original);
             try
             {
-                rules.skillRarityBands = new[] { new SkillRarityBand(1, 0f, 100f) };
+                                                                                 
+                rules.highTierPercent = 100f;
                 game.progression.Rules = rules;
                 DraftCard upgrade = null;
                 for (int i = 0; i < 100 && upgrade == null; i++)
                 {
-                    var card = skills.RollCard(1);
+                    var card = skills.RollCard(3);
                     if (card.Payload is SkillId id && id == SkillId.FlameWake) upgrade = card;
                 }
                 Assume.That(upgrade, Is.Not.Null, "an upgrade card of the owned skill comes up");

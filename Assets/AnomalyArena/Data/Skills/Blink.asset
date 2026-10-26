@@ -24,15 +24,23 @@ MonoBehaviour:
   - 0
   - 0
   - 0
+  - 0
+  - 0
   radius:
+  - 0
+  - 0
   - 0
   - 0
   - 0
   range:
   - 6
-  - 8
+  - 6.5
+  - 7
+  - 7.5
   - 8
   strength:
+  - 0
+  - 0
   - 0
   - 0
   - 0
@@ -45,7 +53,11 @@ MonoBehaviour:
   - 0
   - 0
   - 0
+  - 0
+  - 0
   statusResistance:
+  - 0
+  - 0
   - 0
   - 0
   - 0
@@ -60,10 +72,13 @@ MonoBehaviour:
   singularitySlowMultiplier: 0.5
   singularityBaseDamage: 10
   singularityDamagePerEnemy: 4
+  singularityPlayerMoveMultiplier: 0.35
   descriptions:
   - Teleport up to 6.
-  - Teleport up to 8.
+  - Teleport up to 6.5.
+  - Teleport up to 7.
+  - Teleport up to 7.5.
   - Teleport up to 8; two charges, each with its own cooldown.
   icon: {fileID: 0}
-  levelDamageGrowth: 1.35
+  levelDamageGrowth: 1.161895
   shieldScalesWithMaxHp: 1

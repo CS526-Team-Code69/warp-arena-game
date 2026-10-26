@@ -58,8 +58,35 @@ namespace AnomalyArena
                 "the menus read only the keys the game shows");
 
             artWas = Art.Enabled;
-            await keyboard.TapUntil(KeyCode.T, () => Art.Enabled != artWas.Value, "T switches the art style");
-            await keyboard.TapUntil(KeyCode.T, () => Art.Enabled == artWas.Value, "T switches it back");
+
+            for (int press = 0; press < 3; press++)
+            {
+                await keyboard.Tap(KeyCode.T);
+                Assert.That(Art.Enabled, Is.EqualTo(artWas.Value), $"T does nothing on the title (press {press + 1})");
+            }
+            Assert.That(game.RunPhase, Is.EqualTo(ArenaUiState.Title));
+
+            await CommandUntil(game, ArenaUiCommand.Start, () => game.RunPhase == ArenaUiState.SupplyDrop);
+        }
+
+        [Test, LoadScene(SceneCn), Category("Integration"), Timeout(30000)]
+        public async Task ChineseTitle_ShowsOnlyStartAndTheKeyHints()
+        {
+            var game = await ReadyScene();
+            Assume.That(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name, Is.EqualTo("ArenaV2_CN"), "the Chinese edition's title");
+            Assume.That(game.RunPhase, Is.EqualTo(ArenaUiState.Title));
+            await Awaitable.NextFrameAsync();
+            var content = GameObject.Find("V2Canvas/TitleScreen/Content");
+            Assume.That(content, Is.Not.Null, "the saved title screen");
+
+            foreach (var hidden in new[] { "InterstellarSubtitle", "ToggleArt", "ChineseTeam", "EnglishShowcase" })
+            {
+                var element = content.transform.Find(hidden);
+                Assert.That(element == null || !element.gameObject.activeInHierarchy, Is.True, hidden + " is not shown");
+            }
+            foreach (var shown in new[] { "StartRun", "Controls" })
+                Assert.That(content.transform.Find(shown).gameObject.activeInHierarchy, Is.True, shown + " is shown");
+            Assert.That(ArenaText.IsChinese, Is.True, "the Chinese edition starts in Chinese");
         }
 
         [Test, LoadScene(SceneCn), Category("Integration"), Timeout(60000)]

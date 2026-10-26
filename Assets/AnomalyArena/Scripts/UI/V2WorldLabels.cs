@@ -121,7 +121,8 @@ namespace AnomalyArena
             int edges = 0;
             placedEdges.Clear();
             var world = WorldMap.Active;
-            if (world && world.holes != null)
+            if (world && world.TrialActive) PlaceTrialPortalLabel(world, gm);
+            else if (world && world.holes != null)
             {
                 for (int i = 0; i < Mathf.Min(holeLabels.Length, world.holes.Length); i++)
                 {
@@ -196,6 +197,27 @@ namespace AnomalyArena
             for (int i = edges; i < edgeLabels.Length; i++) edgeLabels[i].gameObject.SetActive(false);
         }
 
+                                                                                                                                              
+                                                                                                                                                     
+        void PlaceTrialPortalLabel(WorldMap world, GameManager gm)
+        {
+            bool on = world.CanTakeTrialPortal(gm.player, out var portal);
+            for (int i = 0; i < holeLabels.Length; i++)
+            {
+                var label = holeLabels[i];
+                if (!label) continue;
+                bool show = i == 0 && on;
+                if (show)
+                {
+                    string text = ArenaText.Pair("E · TRAVEL","E · TRAVEL");
+                    if (label.text != text) label.text = text;
+                    show = PlaceWorld(label.rectTransform, portal.Centre + gm.cam.transform.up * (portal.size * .5f + 1f), gm.cam);
+                }
+
+                if (label.gameObject.activeSelf != show) label.gameObject.SetActive(show);
+            }
+        }
+
         static bool Offscreen(Vector3 world, Camera camera)
         {
             Vector3 viewport = camera.WorldToViewportPoint(world);
@@ -216,10 +238,10 @@ namespace AnomalyArena
                 view.hp.fillAmount = enemy.maxHp > 0f ? Mathf.Clamp01(enemy.Hp / enemy.maxHp) : 0f;
                 view.shield.fillAmount = status && enemy.maxHp > 0f ? Mathf.Clamp01(status.Shield / enemy.maxHp) : 0f;
                 view.shield.gameObject.SetActive(status && status.Shield > 0f);
-                                                                                                                      
+                                                                                                                                               
                 string name = enemy.IsBoss ? enemy.definition.kind == EnemyKind.Hollow ? ArenaText.Pair("THE NASH PROPHET","THE NASH PROPHET") : ArenaText.Pair("THE TYRANT KING","THE TYRANT KING")
-                    : enemy.Elite ? ArenaText.Text("ui.elite") + (enemy.Affix != ElementKind.None ? " · " + ArenaTerms.Element(enemy.Affix) : "")
-                    : enemy.Chanted ? ArenaText.Pair("CHANTED","CHANTED") : "";
+                    : enemy.Elite ? ArenaText.Text("ui.elite") + (enemy.Affix != ElementKind.None ? " · " + ArenaTerms.Element(enemy.Affix) : "") : "";
+                if (enemy.Chanted) name = (name.Length > 0 ? name + " · " : "") + ArenaText.Pair("CHANTED","CHANTED");
                                                                        
                 if (weapons && weapons.IsExecuteMarked(enemy)) name = (name.Length > 0 ? name + " · " : "") + ArenaText.Pair("MARKED","MARKED");
                                                                                                      

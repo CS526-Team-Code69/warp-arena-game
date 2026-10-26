@@ -173,7 +173,7 @@ namespace AnomalyArena
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
-        public async Task ScatterFocus_FullChargeReleased_FiresWholeBurstAndKnocksShooterBack()
+        public async Task ScatterFocus_FullChargeReleased_FiresWholeBurstAndPushesShooterBack()
         {
             var (game, targets) = await V3CombatSmokeTest.StartSandbox();
             var focus = Equip(game, WeaponForm.ScatterCannon, 1);
@@ -185,7 +185,7 @@ namespace AnomalyArena
             focus.charge = 1f;
             game.runWeapons.HandleInput(false, false, true);
 
-            Assert.That(game.player.State, Is.EqualTo(CharacterState.Knocked), "the recoil is a real knockback");
+            Assert.That(game.player.State, Is.EqualTo(CharacterState.Normal), "the recoil is a push, not a knockback");
             Assert.That(focus.burstLeft, Is.EqualTo(game.runWeapons.upgrades.focusPellets - 1), "the first bolt leaves at once");
             await Until(() => focus.burstLeft == 0 && !AttackPool.Instance.actors.Any(a => a && a.gameObject.activeSelf && a.weapon == focus), 3f, "the burst lands");
             Assert.That(target.Hp, Is.EqualTo(target.maxHp - burst).Within(.01f), "a full charge delivers the whole burst");
@@ -195,7 +195,7 @@ namespace AnomalyArena
             game.runWeapons.HandleInput(true, true, false);
             tamed.charge = 1f;
             game.runWeapons.HandleInput(false, false, true);
-            Assert.That(game.player.State, Is.EqualTo(CharacterState.Normal), "Tame recoil is a push, not a knockback");
+            Assert.That(game.player.State, Is.EqualTo(CharacterState.Normal), "the tamed recoil is a push too");
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]

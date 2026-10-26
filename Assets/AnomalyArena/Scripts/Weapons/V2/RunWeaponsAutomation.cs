@@ -89,11 +89,7 @@ namespace AnomalyArena
                     var target=w.variant==0?NearestVisible(range):NearestVisible(range,WhirlCandidate);
                     if(!target){if(w.variant==1)w.cooldown=upgrades.whirlRetry;continue;}
 
-                    if(w.variant==0&&progression)
-                    {
-                        if(!progression.EnergyUnlocked)progression.UnlockEnergy();
-                        if(!progression.TrySpendEnergy(upgrades.gunnerEnergyCost))continue;
-                    }
+                    if(w.variant==0&&progression&&!progression.TrySpendEnergy(upgrades.gunnerEnergyCost))continue;
                     Reveal(w);
                     w.cooldown=(w.variant==0?definition.cooldownA:definition.cooldownB)*CooldownScale(w);
                     if(w.variant==0)
@@ -127,7 +123,8 @@ namespace AnomalyArena
                         {
                             if(body==player||!body.IsAlive||Query.Flat(body.Position-player.Position).magnitude>range+body.radius||WallBlocks(player.Position,body.Position))continue;
                             float before=body.Hp;
-                            Damage(w,body,hit,0,Vector3.zero);
+
+                            Damage(w,body,hit,0,Vector3.zero,continuous:true);
                             if(lastDamageAccepted)WeaponSound(w);
                             float taken=Mathf.Max(0,before-body.Hp);
                             w.leechDamage+=taken;drained+=taken;
