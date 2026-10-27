@@ -189,10 +189,11 @@ namespace AnomalyArena
                     return true;
             }
 
-            Vector3 to = Query.Flat(player.Position - Position);
+            bool hidden = WorldMap.Active && WorldMap.Active.PlayerHidden;
+            Vector3 to = Query.Flat((hidden ? WorldMap.Active.EnemyTarget : player.Position) - Position);
             float distance = to.magnitude;
             if (distance > 0.01f) facing = to / distance;
-            if (cooldown <= 0f)
+            if (cooldown <= 0f && !hidden)
             {
                 StartTyrantMove(ChooseTyrantMove(distance), player);
                 return true;

@@ -47,6 +47,9 @@ namespace AnomalyArena
         [Min(0f)] public float voidGravityWidth = 1f;
         [Tooltip("Void Walk: player move speed multiplier during the void state.")]
         [Min(1f)] public float voidWalkMoveMultiplier = 1.6f;
+        [Min(0f), Tooltip("Void Walk (owner 2026-10-26): when the void state runs out, both hand weapons carry the Void element for this many "
+            + "seconds (their hits restore Energy, the slots show black), then get their own element back.")]
+        public float voidWalkEnchantSeconds = 5f;
         [Tooltip("Candidate movement multiplier for enemies drawn by Singularity.")]
         [Range(0f, 1f)] public float singularitySlowMultiplier = 0.5f;
         [Tooltip("Candidate Singularity base blast damage, before the run Damage stat.")]
@@ -112,7 +115,7 @@ namespace AnomalyArena
             SkillId.Overcharge => $"Every weapon attacks twice as often (hand and auto, cooldowns x{overchargeRate:0.#}, {Duration(level):0.#} s)."
                 + (level >= 2 ? " Lasts longer" + (level >= MaxLevel ? $"; at max level weapons also deal +{(overchargeDamageMultiplier - 1f) * 100f:0}% damage" : "") + "." : ""),
             SkillId.PocketVoid => $"A small black hole at the cursor swallows everything but bosses, and you gain the XP of monsters it swallows ({Radius(level):0.#}×{Radius(level):0.#} footprint, {voidGravityWidth:0.#}-wide gravity ring, {Duration(level):0.#} s; it can swallow you too).",
-            SkillId.VoidWalk => $"Enter the void: faster, untargetable and undamageable, breaking any knockback ({Duration(level):0.#} s, move speed x{voidWalkMoveMultiplier:0.#}).",
+            SkillId.VoidWalk => $"Enter the void: faster, untargetable and undamageable, breaking any knockback ({Duration(level):0.#} s, move speed x{voidWalkMoveMultiplier:0.#}); then both hand weapons carry Void for {voidWalkEnchantSeconds:0.#} s.",
             SkillId.Singularity => $"Become a singularity for {Duration(level):0.#} s: fully invincible (no damage, knockback or control), heavily slowed, free to fire and cast. Enemies on screen are dragged in and slowed; then it blasts, harder the more it drew in (pull {Strength(level):0.#}, enemies {singularitySlowMultiplier * 100:0}%, you {singularityPlayerMoveMultiplier * 100:0}%, radius {Radius(level):0.#}, {ScaledDamage(singularityBaseDamage, level):0.#} + {ScaledDamage(singularityDamagePerEnemy, level):0.#} per enemy).",
             _ => descriptions is { Length: > 0 } ? descriptions[Mathf.Clamp(level - 1, 0, descriptions.Length - 1)] : ""
         };
@@ -182,8 +185,8 @@ namespace AnomalyArena
                     descriptions = new[] { "3x3 hole for 4 s, 1-wide gravity. Swallowed enemies give XP; bosses are immune; it can swallow you too.", "3x3 hole for 4 s.", "3x3 hole for 4 s.", "3x3 hole for 4 s.", "3x3 hole for 4 s." }; break;
                 case SkillId.VoidWalk:
                     displayName = "Void Walk"; element = ElementKind.Void; cost = 40f;
-                    duration = new[] { 3f, 3f, 3f, 3f, 3f }; voidWalkMoveMultiplier = 1.6f;
-                    descriptions = new[] { "Enter the void for 3 s: move x1.6, cannot be targeted or damaged.", "Void state for 3 s.", "Void state for 3 s.", "Void state for 3 s.", "Void state for 3 s." }; break;
+                    duration = new[] { 5f, 5f, 5f, 5f, 5f }; voidWalkMoveMultiplier = 1.6f; voidWalkEnchantSeconds = 5f;
+                    descriptions = new[] { "Enter the void for 5 s: move x1.6, cannot be targeted or damaged; then both hand weapons carry Void for 5 s.", "Void state for 5 s.", "Void state for 5 s.", "Void state for 5 s.", "Void state for 5 s." }; break;
                 case SkillId.Singularity:
                     displayName = "Singularity"; element = ElementKind.Void; cost = 60f;
                     strength = new[] { 6f, 6f, 6f, 6f, 6f }; duration = new[] { 3f, 3f, 3f, 3f, 3f }; radius = new[] { 6f, 6f, 6f, 6f, 6f };

@@ -445,6 +445,14 @@ namespace AnomalyArena
                 return;
             }
 
+                                                                                                                                        
+                                                                                                                                       
+            if (!IsBoss && WorldMap.Active && WorldMap.Active.PlayerHidden)
+            {
+                SearchForHiddenPlayer(dt);
+                return;
+            }
+
             if (definition && TickSpecial(dt, p)) return;
 
             if (windup)
@@ -485,6 +493,27 @@ namespace AnomalyArena
             Vector3 v = edge > triggerRange ? direction * moveSpeed : Vector3.zero;
             v = KeepOffEdges(v, dt);
             rb.linearVelocity = new Vector3(v.x, rb.linearVelocity.y, v.z);
+        }
+
+        const float SearchTurnDegrees = 90f;
+
+                                                                                                                     
+        void SearchForHiddenPlayer(float dt)
+        {
+            if (windup) CancelWindup();
+            charging = false;
+            Vector3 spot = WorldMap.Active.EnemyTarget;
+            if (Query.Flat(spot - Position).magnitude > radius + 1f)
+            {
+                Vector3 direction = WorldMap.Active.GetChaseDirection(Position, spot, FollowingIntoGravity);
+                if (direction.sqrMagnitude > 0.0001f) facing = Query.Flat(direction).normalized;
+                Vector3 v = KeepOffEdges(direction * moveSpeed, dt);
+                rb.linearVelocity = new Vector3(v.x, rb.linearVelocity.y, v.z);
+                return;
+            }
+
+            Stop();
+            facing = Quaternion.Euler(0f, SearchTurnDegrees * dt, 0f) * facing;
         }
 
         void PerformAttack()

@@ -43,7 +43,7 @@ namespace AnomalyArena
 
                 Assert.That(offered.Select(card => card.stat), Is.EquivalentTo(new[] { StatId.MaxHp, StatId.MoveSpeed, StatId.Damage,
                     StatId.AttackSpeed, StatId.CritChance, StatId.Protection, StatId.MaxEnergy, StatId.ElementPenetration }), "offered cards");
-                Assert.That(offered.Single(card => card.stat == StatId.Damage).bonus, Is.EqualTo(StatBonus.CritChance), "damage bonus");
+                Assert.That(offered.Single(card => card.stat == StatId.Damage).bonus, Is.EqualTo(StatBonus.None), "the Damage card adds no crit chance (owner 2026-10-26)");
                 Assert.That(offered.Single(card => card.stat == StatId.CritChance).bonus, Is.EqualTo(StatBonus.CritMultiplier), "crit bonus");
                 Assert.That(rules.statCards.Where(card => card.retired).Select(card => card.stat), Is.EquivalentTo(new[] { StatId.Regeneration,
                     StatId.Stamina, StatId.Knockback, StatId.Impact, StatId.PickupRange, StatId.Luck, StatId.EnergySiphon }), "retired rows");

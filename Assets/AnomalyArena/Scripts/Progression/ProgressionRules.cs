@@ -39,7 +39,7 @@ namespace AnomalyArena
         {
             new(StatId.MaxHp, 15f, StatBonus.Regeneration, 1f), new(StatId.Regeneration, 1f, retired: true),
             new(StatId.MoveSpeed, .08f, StatBonus.Stamina, .2f), new(StatId.Stamina, .15f, retired: true),
-            new(StatId.Damage, .12f, StatBonus.CritChance, .08f), new(StatId.AttackSpeed, .15f),
+            new(StatId.Damage, .12f), new(StatId.AttackSpeed, .15f),
             new(StatId.Knockback, .2f, StatBonus.Impact, 3f, retired: true), new(StatId.Impact, 3f, retired: true),
             new(StatId.PickupRange, 1.5f, retired: true), new(StatId.Protection, 25f),
             new(StatId.Luck, 4f, retired: true), new(StatId.MaxEnergy, 25f, StatBonus.EnergySiphon, .4f),

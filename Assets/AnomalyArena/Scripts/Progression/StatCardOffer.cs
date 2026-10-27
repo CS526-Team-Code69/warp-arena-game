@@ -14,7 +14,7 @@ namespace AnomalyArena
         public string Description => Main + (Bonus == StatBonus.None || BonusValue <= 0f ? "" : " · " + BonusText);
         string Main => Stat switch
         {
-            StatId.Damage => ArenaText.Pair($"All damage scaled up: ×{1f + Value:0.##} (multiplies)",$"All damage scaled up: ×{1f + Value:0.##} (multiplies)"),
+            StatId.Damage => ArenaText.Pair($"Direct damage, skills included, scaled up: ×{1f + Value:0.##} (multiplies)",$"Direct damage, skills included, scaled up: ×{1f + Value:0.##} (multiplies)"),
             StatId.AttackSpeed => ArenaText.Pair($"Weapon cooldowns shorten: attack rate +{Value * 100f:0}% (cooldown ÷{1f + Value:0.##})",$"Weapon cooldowns shorten: attack rate +{Value * 100f:0}% (cooldown ÷{1f + Value:0.##})"),
             StatId.Protection => ArenaText.Pair($"Armor +{Value:0}; damage taken drops in proportion (×100/(100+armor))",$"Armor +{Value:0}; damage taken drops in proportion (×100/(100+armor))"),
             StatId.CritChance => ArenaText.Pair($"Crit chance +{Value * 100f:0}%",$"Crit chance +{Value * 100f:0}%"),

@@ -19,7 +19,7 @@ namespace AnomalyArena
             }
             float rate=Mathf.Max(.01f,WeaponCooldownRate);
             foreach(var w in Auto)if(w!=null)w.cooldown=Mathf.Max(0,w.cooldown-dt*rate);
-            TickMeltdownHaste(dt);
+            TickMeltdownHaste(dt);TickVoidEnchant(dt);
         }
     }
 }
