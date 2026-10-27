@@ -31,7 +31,7 @@ namespace AnomalyArena
         {
             var b = new BossTuning();
             Assert.That(Enemy.NashPulsePush(1, b), Is.EqualTo(4.8f), "owner 2026-10-26: phase 1 pushes 4.8 cells");
-            Assert.That(Enemy.NashPulsePush(2, b), Is.EqualTo(6f), "phase 2 pushes 6");
+            Assert.That(Enemy.NashPulsePush(2, b), Is.EqualTo(5.2f), "phase 2 pushes 5.2 (owner 2026-10-27)");
             Assert.That(Enemy.NashPulsePush(3, b), Is.EqualTo(7f), "phase 3 pushes 7");
             const BindingFlags members = BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
             Assert.That(typeof(BossTuning).GetField("nashEdgeWarning", members), Is.Null, "no new-edge warning is left to tune");

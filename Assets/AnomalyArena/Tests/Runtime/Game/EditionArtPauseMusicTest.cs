@@ -258,6 +258,33 @@ namespace AnomalyArena
             Assert.That(music.time, Is.GreaterThanOrEqualTo(heldAt - .01f), "from there, not from the start");
         }
 
+        [Test, LoadScene(SceneCn), Category("Integration"), Timeout(60000)]
+        public async Task MidWavePick_TheMusicFadesOutAndHolds_ThenPlaysOnFromThere()
+        {
+            var game = await ReadyScene();
+            var audio = V3WorldAudio.Instance;
+            Assume.That(audio && audio.musicSource, Is.True, "the scene has its music channel");
+            var music = audio.musicSource;
+            await StartRun(game);
+            float full = audio.musicGain * audio.masterGain;
+            await Until(() => music.isPlaying && music.volume >= full * .99f, 5f, "the combat music plays in the wave");
+
+            game.progression.GainXp(game.progression.XpRequired);
+            await Until(() => game.RunPhase == ArenaUiState.LevelUp, 3f, "a level gained mid-wave opens its pick");
+            await RealSeconds(audio.backgroundFadeSeconds + .4f);
+            float heldVolume = music.volume, heldAt = music.time;
+            bool heldPlaying = music.isPlaying;
+            await RealSeconds(.4f);
+            float heldLater = music.time;
+            await CommandUntil(game, ArenaUiCommand.Cancel, () => game.RunPhase != ArenaUiState.LevelUp);
+            await Until(() => music.isPlaying && music.volume >= full * .99f, 3f, "the music comes back in the wave");
+
+            Assert.That(heldVolume, Is.EqualTo(0f).Within(.001f), "the pick fades the music out");
+            Assert.That(heldPlaying, Is.False, "and holds it");
+            Assert.That(heldLater, Is.EqualTo(heldAt).Within(.1f), "where it was");
+            Assert.That(music.time, Is.GreaterThanOrEqualTo(heldAt - .01f), "back in the wave it plays on from there, not from the start");
+        }
+
         [Test, LoadScene(SceneCn), Category("Integration"), Timeout(40000)]
         public async Task SpitterSpit_FliesTenCellsASecond()
         {

@@ -26,7 +26,7 @@ namespace AnomalyArena
         float[] nextCue, worldLeft, lifeLeft;
         ArenaWorldCue[] worldAssignments, lifeAssignments;
         int deadPlayerVersion=-1;
-        bool paused;
+        bool paused, heldForPhase;
         float backgroundBlend;
         Biome selectedBiome;
         bool selectedTrial;
@@ -100,7 +100,9 @@ namespace AnomalyArena
             TickVoices(lifecycleVoices,lifeLeft);
             if(!paused)TickVoices(worldVoices,worldLeft);
 
-            bool running=gm&&gm.State==GameState.Playing;
+            bool hold=gm&&gm.State==GameState.Playing&&(gm.RunPhase is ArenaUiState.LevelUp or ArenaUiState.Cutscene or ArenaUiState.TrialReturn
+                ||gm.RunPhase==ArenaUiState.ReplaceSkill&&gm.waves&&gm.waves.Phase==WavePhase.WaveActive);
+            bool running=gm&&gm.State==GameState.Playing&&!hold;
             if(!paused)backgroundBlend=Mathf.MoveTowards(backgroundBlend,running?1f:0f,Time.unscaledDeltaTime/Mathf.Max(.01f,backgroundFadeSeconds));
             var world=WorldMap.Active;
             if(world&&(selectedBiome!=world.biome || selectedTrial!=world.TrialActive))
@@ -112,13 +114,15 @@ namespace AnomalyArena
             }
             if(running&&!paused)
             {
+                if(heldForPhase){heldForPhase=false;if(musicSource)musicSource.UnPause();if(ambienceSource)ambienceSource.UnPause();}
                 if(musicSource&&!musicSource.clip)musicSource.clip=byCue[(int)ArenaWorldCue.CombatMusic]?.clip;
                 if(musicSource&&musicSource.clip&&!musicSource.isPlaying)musicSource.Play();
                 if(ambienceSource&&ambienceSource.clip&&!ambienceSource.isPlaying)ambienceSource.Play();
             }
             if(musicSource)musicSource.volume=musicGain*backgroundBlend*masterGain;
             if(ambienceSource)ambienceSource.volume=ambienceGain*backgroundBlend*masterGain;
-            if(!running&&!paused&&backgroundBlend<=0f){if(musicSource)musicSource.Stop();if(ambienceSource)ambienceSource.Stop();}
+            if(hold&&!paused&&backgroundBlend<=0f){heldForPhase=true;if(musicSource&&musicSource.isPlaying)musicSource.Pause();if(ambienceSource&&ambienceSource.isPlaying)ambienceSource.Pause();}
+            if(!running&&!hold&&!paused&&backgroundBlend<=0f){heldForPhase=false;if(musicSource)musicSource.Stop();if(ambienceSource)ambienceSource.Stop();}
         }
         static void TickVoices(AudioSource[] voices,float[] left)
         {

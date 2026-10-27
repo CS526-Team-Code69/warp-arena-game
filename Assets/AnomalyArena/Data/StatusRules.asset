@@ -57,8 +57,10 @@ MonoBehaviour:
   elementDrainSeconds: 1
   controlImmunity: 2
   fireBurnShare: 0.25
+  builtInFireBurnFactor: 1.6
   fireStackDamage: 1.5
-  poisonOnEnemyDamagePerStack: 0.15
+  poisonOnEnemyDamagePerStack: 0.3
+  poisonOnEnemyInterval: 0.5
   poisonOnEnemyCap: 10
   frostSlowPerStack: 0.1
   frostSlowMax: 0.5

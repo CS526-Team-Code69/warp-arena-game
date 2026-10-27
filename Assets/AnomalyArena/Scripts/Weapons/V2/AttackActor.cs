@@ -578,6 +578,7 @@ namespace AnomalyArena
             info.feel = WeaponFeel.Of(weapon);
             info.element = element;
             info.builtInElement = weapon != null && weapon.builtInElement;
+            info.weapon = weapon;
             if(target.ReceiveDamage(info))PlaySound(WeaponAudioPhase.Impact);
         }
         void TickField(float dt)
@@ -740,7 +741,7 @@ namespace AnomalyArena
             var info = DamageInfo.Attack(amount, owner, push < 0 ? -dir : dir, Mathf.Abs(push),
                 mode is AttackMode.Field or AttackMode.Blast or AttackMode.Sticky or AttackMode.Bouncy or AttackMode.Swarm ? HitKind.Blast : pierce ? HitKind.Pierce : HitKind.Bullet);
             info.element = element;
-            info.builtInElement = weapon != null && weapon.builtInElement; info.ignoreShieldReduction = ignoreShieldReduction; info.feel = WeaponFeel.Of(weapon);
+            info.builtInElement = weapon != null && weapon.builtInElement; info.ignoreShieldReduction = ignoreShieldReduction; info.feel = WeaponFeel.Of(weapon); info.weapon = weapon;
 
             if (mode is AttackMode.Field or AttackMode.Pull) info.continuousSource = (object)weapon ?? this;
             if(target.ReceiveDamage(info))PlaySound(WeaponAudioPhase.Impact);

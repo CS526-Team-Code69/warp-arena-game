@@ -89,9 +89,9 @@ namespace AnomalyArena
 
             board.Add(ElementKind.Poison, rules.poisonOnEnemyCap + 2f, game.player);
             float capped = board.Poison;
-            board.Tick(rules.poisonInterval);
-            board.Tick(rules.poisonInterval);
-            float expected = 2f * rules.poisonInterval * rules.poisonOnEnemyCap * rules.poisonOnEnemyDamagePerStack * ElementCombat.WaveScale;
+            board.Tick(rules.poisonOnEnemyInterval);
+            board.Tick(rules.poisonOnEnemyInterval);
+            float expected = 2f * rules.poisonOnEnemyInterval * rules.poisonOnEnemyCap * rules.poisonOnEnemyDamagePerStack * ElementCombat.WaveScale;
 
             Assert.That(rules.poisonOnEnemyCap, Is.EqualTo(10f), "the owner's cap: ten stacks");
             Assert.That(capped, Is.EqualTo(rules.poisonOnEnemyCap), "more Poison stops at the cap");
@@ -672,8 +672,8 @@ namespace AnomalyArena
             string N(float value) => value.ToString("0.##");
             Assert.That(cardRule, Is.Not.Null.And.Not.Empty, "an Infusion card came up");
             Assert.That(cardBody, Does.Contain(cardRule), "the Infusion card carries its element's rule");
-            Assert.That(zh[0], Does.Contain(P(r.fireBurnShare)).And.Contain($"{N(r.elementWindow)} s").And.Contain("heaviest"), "Fire: a share of the hit a second, the heaviest hit");
-            Assert.That(en[0], Does.Contain(P(r.fireBurnShare)).And.Contain($"{N(r.elementWindow)} s").And.Contain("heaviest"));
+            Assert.That(zh[0], Does.Contain(P(r.fireBurnShare)).And.Contain($"{N(r.elementWindow)} s").And.Contain("DPS"), "Fire: a share of the weapon's DPS a second");
+            Assert.That(en[0], Does.Contain(P(r.fireBurnShare)).And.Contain($"{N(r.elementWindow)} s").And.Contain("DPS"));
             Assert.That(zh[1], Does.Contain($"up to {N(r.poisonOnEnemyCap)}").And.Contain("through Shields"), "Poison: ten stacks through the Shield");
             Assert.That(en[1], Does.Contain($"up to {N(r.poisonOnEnemyCap)}").And.Contain("through Shields"));
             Assert.That(zh[2], Does.Contain(P(r.frostSlowPerStack)).And.Contain($"{N(r.frostThreshold)}").And.Contain($"{N(r.controlImmunity)} s"),

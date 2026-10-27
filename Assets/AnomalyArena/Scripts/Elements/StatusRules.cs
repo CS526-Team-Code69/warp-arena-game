@@ -46,10 +46,16 @@ namespace AnomalyArena
         [Min(0f)] public float controlImmunity = 2f;
         [Tooltip("Fire on an enemy: a Fire weapon hit sets it burning for elementWindow seconds at this share of the hit's damage per second (0.25 = 25% a second, 75% over 3 s). The heaviest hit while it burns sets the burn; each Fire hit starts the window again.")]
         [Min(0f)] public float fireBurnShare = .25f;
+        [Min(0f), Tooltip("Owner 2026-10-27: a weapon's built-in Fire (the Flamethrower) burns fireBurnShare of the weapon's DPS times "
+            + "this. 1.6 brings the Flamethrower Stream at Mk1 with no cards to about 3 a second (25% of its 7.5 DPS is 1.875).")]
+        public float builtInFireBurnFactor = 1.6f;
         [Tooltip("Fire stacks given to an enemy by a source with no burn rate of its own (ElementStatus.Add; Flame Wake, fire fences and Fire affixes set their own rates): each stack is worth this much burn damage over the burn's window (wave-1 value, × R(w)); 1.5 is what one Burning stack dealt before 2026-10-26.")]
         [Min(0f)] public float fireStackDamage = 1.5f;
         [Tooltip("Poison on an enemy: each stack deals this much per second (wave-1 value, × R(w)). Stacks stay while hits keep coming and drain once the window runs out.")]
-        [Min(0f)] public float poisonOnEnemyDamagePerStack = 0.12f;
+        [Min(0f)] public float poisonOnEnemyDamagePerStack = 0.3f;
+        [Min(.01f), Tooltip("Enemy (owner 2026-10-27): seconds between Poison ticks on an enemy. Each tick deals the stacks × "
+            + "poisonOnEnemyDamagePerStack × this × R(w). The player's Poison keeps poisonInterval.")]
+        public float poisonOnEnemyInterval = .5f;
         [Tooltip("Most Poison stacks an enemy can carry.")]
         [Min(1f)] public float poisonOnEnemyCap = 10f;
         [Tooltip("Frost on an enemy: each stack slows its movement and its attack timers by this share (0.1 = 10%), the same on any body; a large body or an elite only needs more stacks to freeze.")]

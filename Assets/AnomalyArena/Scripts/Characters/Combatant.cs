@@ -625,7 +625,7 @@ namespace AnomalyArena
             }
                                                                                     
             if(!tick&&!selfHit&&info.source==DamageSource.Hit&&info.dealer?.Owner is Combatant { Team: Team.Player } source)
-                ElementCombat.ApplyHit(this,info.element,actualDamage,source,info.builtInElement,info.noLightningJump,info.continuousSource,baseDamage);
+                ElementCombat.ApplyHit(this,info.element,actualDamage,source,info.builtInElement,info.noLightningJump,info.continuousSource,baseDamage,info.weapon);
             return true;
         }
 

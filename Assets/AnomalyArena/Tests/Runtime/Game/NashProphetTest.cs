@@ -18,7 +18,7 @@ namespace AnomalyArena
                                                                                                                                              
                                                                                                                                            
                                                                                                                                             
-                                                                                                                                             
+                                                                                                                                              
                                                                                          
     [TestFixture]
     [Category("V3Smoke")]
@@ -468,8 +468,8 @@ namespace AnomalyArena
             float touching = hollow.Radius + player.Radius, twoBodies = 4f * player.Radius;
             var (safeEnd, rim) = await PulseBands(2, touching + twoBodies, game, world, hollow);
             Assert.That(safeEnd - touching, Is.GreaterThan(twoBodies), "phase 2: a band more than two player bodies wide by its body is safe");
-            Assert.That(safeEnd, Is.LessThan(b.nashNearRange), "but its harder push no longer spares the whole close range");
-            Assert.That(rim - safeEnd, Is.GreaterThan(2f), "the outer part of its circle, over two cells wide, throws the player off");
+            Assert.That(safeEnd, Is.GreaterThan(b.nashNearRange - .3f), "it still spares about the whole close range (owner 2026-10-27)");
+            Assert.That(rim - safeEnd, Is.InRange(1f, 2.2f), "only the outer part of its circle throws the player off");
         }
 
         [Test, LoadScene(LabScene), Category("Integration"), Timeout(60000)]

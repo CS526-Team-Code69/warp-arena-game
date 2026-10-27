@@ -51,7 +51,8 @@ namespace AnomalyArena
         }
 
         public static void ApplyHit(Combatant target, ElementKind element, float actualDamage, Combatant source,
-            bool builtInElement = false, bool noLightningJump = false, object continuousSource = null, float baseDamage = -1f)
+            bool builtInElement = false, bool noLightningJump = false, object continuousSource = null, float baseDamage = -1f,
+            RunWeapon weapon = null)
         {
             if (source && actualDamage > 0f) source.GetComponent<SkillLoadout>()?.HealFromDamage(actualDamage);
             var targetBoard = ElementStatus.For(target);
@@ -70,7 +71,11 @@ namespace AnomalyArena
             if (element == ElementKind.Fire && !targetBoard.IsPlayer)
             {
 
-                targetBoard.Ignite(rules.fireBurnShare * Mathf.Max(0f, baseDamage >= 0f ? baseDamage : actualDamage), source);
+                var weapons = weapon != null && GameManager.Instance ? GameManager.Instance.runWeapons : null;
+                float burn = weapons
+                    ? rules.fireBurnShare * weapons.TheoreticalDps(weapon) * (builtInElement ? rules.builtInFireBurnFactor : 1f)
+                    : rules.fireBurnShare * Mathf.Max(0f, baseDamage >= 0f ? baseDamage : actualDamage);
+                targetBoard.Ignite(burn, source);
                 return;
             }
 

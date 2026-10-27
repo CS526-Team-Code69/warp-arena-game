@@ -69,7 +69,7 @@ MonoBehaviour:
   overchargeDamageMultiplier: 1.25
   voidGravityWidth: 1
   voidWalkMoveMultiplier: 1.6
-  singularitySlowMultiplier: 0.5
+  singularitySlowMultiplier: 0.3
   singularityBaseDamage: 10
   singularityDamagePerEnemy: 4
   singularityPlayerMoveMultiplier: 0.35

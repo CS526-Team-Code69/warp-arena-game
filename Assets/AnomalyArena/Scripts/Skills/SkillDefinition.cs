@@ -50,8 +50,9 @@ namespace AnomalyArena
         [Min(0f), Tooltip("Void Walk (owner 2026-10-26): when the void state runs out, both hand weapons carry the Void element for this many "
             + "seconds (their hits restore Energy, the slots show black), then get their own element back.")]
         public float voidWalkEnchantSeconds = 5f;
-        [Tooltip("Candidate movement multiplier for enemies drawn by Singularity.")]
-        [Range(0f, 1f)] public float singularitySlowMultiplier = 0.5f;
+        [Tooltip("Singularity: move speed of the enemies it draws in (owner 2026-10-27: slowed by 70%, so 0.3).")]
+        [Range(0f, 1f)]
+        public float singularitySlowMultiplier = 0.3f;
         [Tooltip("Candidate Singularity base blast damage, before the run Damage stat.")]
         [Min(0f)] public float singularityBaseDamage = 10f;
         [Tooltip("Candidate extra blast damage per distinct enemy absorbed into the blast radius.")]
@@ -190,7 +191,7 @@ namespace AnomalyArena
                 case SkillId.Singularity:
                     displayName = "Singularity"; element = ElementKind.Void; cost = 60f;
                     strength = new[] { 6f, 6f, 6f, 6f, 6f }; duration = new[] { 3f, 3f, 3f, 3f, 3f }; radius = new[] { 6f, 6f, 6f, 6f, 6f };
-                    singularitySlowMultiplier = 0.5f; singularityBaseDamage = 10f; singularityDamagePerEnemy = 4f; singularityPlayerMoveMultiplier = 0.35f;
+                    singularitySlowMultiplier = 0.3f; singularityBaseDamage = 10f; singularityDamagePerEnemy = 4f; singularityPlayerMoveMultiplier = 0.35f;
                     descriptions = new[] { "For 3 s you are fully invincible (no damage, knockback or control) and slowed to 35% but can still fire and cast; on-screen enemies are drawn 6 toward you and slowed, then it blasts based on distinct absorbed enemies.", "Singularity.", "Singularity.", "Singularity.", "Singularity." }; break;
             }
         }
