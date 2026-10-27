@@ -28,13 +28,21 @@ namespace AnomalyArena
                 form = WeaponForm.Flamethrower, variant = 0, revealed = true, element = ElementKind.Fire, builtInElement = true,
                 axes = UpgradeAxis.Infusion,
             };
+            var wildfire = new RunWeapon
+            {
+                form = WeaponForm.Flamethrower, variant = 1, revealed = true, element = ElementKind.Fire, builtInElement = true,
+                axes = UpgradeAxis.Infusion,
+            };
             weapons.Hand = new[] { rifle, stream };
             var rifleBoard = Bare(targets[0]);
             var streamBoard = Bare(targets[1]);
+            var wildfireBoard = Bare(targets[2]);
             var rules = rifleBoard.Rules;
 
             targets[0].ReceiveDamage(WeaponHit(game, rifle, 2f));
             targets[1].ReceiveDamage(WeaponHit(game, stream, 1f));
+            targets[2].ReceiveDamage(WeaponHit(game, wildfire, 1f));
+            float wildfireDps = weapons.HitDamage(wildfire) / weapons.CycleSeconds(wildfire);
             float rifleDps = weapons.HitDamage(rifle) / weapons.CycleSeconds(rifle);
             float streamDps = weapons.HitDamage(stream) / weapons.CycleSeconds(stream);
 
@@ -43,6 +51,9 @@ namespace AnomalyArena
             Assert.That(streamBoard.Fire, Is.EqualTo(rules.fireBurnShare * streamDps * rules.builtInFireBurnFactor).Within(.001f),
                 "a built-in Fire times its own factor");
             Assert.That(streamBoard.Fire, Is.EqualTo(3f).Within(.2f), "the Stream at Mk1 burns about 3 a second");
+            Assert.That(wildfireBoard.Fire, Is.EqualTo(rules.fireBurnShare * wildfireDps * rules.wildfireFireBurnFactor).Within(.001f),
+                "Wildfire has its own factor");
+            Assert.That(wildfireBoard.Fire, Is.EqualTo(3f).Within(.3f), "the Wildfire at Mk1 burns about 3 a second too (owner 2026-10-27)");
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]

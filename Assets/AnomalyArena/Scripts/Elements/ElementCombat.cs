@@ -73,7 +73,8 @@ namespace AnomalyArena
 
                 var weapons = weapon != null && GameManager.Instance ? GameManager.Instance.runWeapons : null;
                 float burn = weapons
-                    ? rules.fireBurnShare * weapons.TheoreticalDps(weapon) * (builtInElement ? rules.builtInFireBurnFactor : 1f)
+                    ? rules.fireBurnShare * weapons.TheoreticalDps(weapon) * (!builtInElement ? 1f
+                        : weapon.form == WeaponForm.Flamethrower && weapon.variant == 1 ? rules.wildfireFireBurnFactor : rules.builtInFireBurnFactor)
                     : rules.fireBurnShare * Mathf.Max(0f, baseDamage >= 0f ? baseDamage : actualDamage);
                 targetBoard.Ignite(burn, source);
                 return;

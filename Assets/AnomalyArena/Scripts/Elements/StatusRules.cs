@@ -49,6 +49,9 @@ namespace AnomalyArena
         [Min(0f), Tooltip("Owner 2026-10-27: a weapon's built-in Fire (the Flamethrower) burns fireBurnShare of the weapon's DPS times "
             + "this. 1.6 brings the Flamethrower Stream at Mk1 with no cards to about 3 a second (25% of its 7.5 DPS is 1.875).")]
         public float builtInFireBurnFactor = 1.6f;
+        [Min(0f), Tooltip("Owner 2026-10-27: the Flamethrower Wildfire's built-in Fire uses this factor instead of builtInFireBurnFactor. "
+            + "12 brings it at Mk1 with no cards to about 3 a second too (25% of its 1.0 DPS is 0.25), like the Stream.")]
+        public float wildfireFireBurnFactor = 12f;
         [Tooltip("Fire stacks given to an enemy by a source with no burn rate of its own (ElementStatus.Add; Flame Wake, fire fences and Fire affixes set their own rates): each stack is worth this much burn damage over the burn's window (wave-1 value, × R(w)); 1.5 is what one Burning stack dealt before 2026-10-26.")]
         [Min(0f)] public float fireStackDamage = 1.5f;
         [Tooltip("Poison on an enemy: each stack deals this much per second (wave-1 value, × R(w)). Stacks stay while hits keep coming and drain once the window runs out.")]
