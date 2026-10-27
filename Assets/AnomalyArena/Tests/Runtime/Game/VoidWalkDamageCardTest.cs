@@ -11,7 +11,7 @@ namespace AnomalyArena
                                                                                                                                    
                                                                                                                                       
                                                                                                                                          
-                                                                                                        
+                                                                                                                                                                                       
     [TestFixture]
     public class VoidWalkDamageCardTest
     {
@@ -104,6 +104,49 @@ namespace AnomalyArena
             Assert.That(during, Is.EqualTo((ElementKind.Void, ElementKind.Void)), "enchanted");
             Assert.That((rifle.element, flamer.element), Is.EqualTo((ElementKind.None, ElementKind.Fire)), "own elements back");
             Assert.That(game.runWeapons.VoidEnchantLeft, Is.Zero, "nothing left running");
+        }
+
+        [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
+        public async Task VoidEnchant_WeaponCardMeanwhile_ReadsTheOwnElement_AndItsInfusionLandsWhenTheEnchantEnds()
+        {
+            var (game, targets) = await V3CombatSmokeTest.StartSandbox();
+            foreach (var target in targets) target.DiscardWithoutReward();
+            var weapons = game.runWeapons;
+            weapons.ClearWaveEffects();
+            var rifle = new RunWeapon
+            {
+                form = WeaponForm.Rifle, variant = 0, revealed = true, element = ElementKind.Fire, axes = UpgradeAxis.Infusion,
+                rounds = weapons.ClipSize(WeaponForm.Rifle, 0),
+            };
+            weapons.Hand = new[] { rifle, null };
+            weapons.Auto = new RunWeapon[RunWeapons.AutoSlotCount];
+            float chance = weapons.upgrades.reinfuseChance;
+            DraftCard card;
+            bool applied;
+            ElementKind during;
+            try
+            {
+                                                                            
+                weapons.upgrades.reinfuseChance = 2f;
+                weapons.VoidEnchantHands(5f);
+                card = weapons.RollUpgradeCard();
+                Assume.That(card?.Payload, Is.InstanceOf<WeaponUpgradeOffer>(), "a weapon card comes up");
+                applied = card.Apply();
+                during = rifle.element;
+                weapons.ClearWaveEffects();
+            }
+            finally
+            {
+                weapons.upgrades.reinfuseChance = chance;
+            }
+
+            var offer = (WeaponUpgradeOffer)card.Payload;
+            Assert.That(offer.Axis, Is.EqualTo(UpgradeAxis.Infusion), "a change-element card");
+            Assert.That(offer.Element, Is.Not.EqualTo(ElementKind.Fire), "it never rolls the element the rifle already has");
+            Assert.That(card.Description, Does.Contain("替换 火焰"), "it replaces Fire, not the borrowed Void");
+            Assert.That(applied, Is.True, "the card applies");
+            Assert.That(during, Is.EqualTo(ElementKind.Void), "the enchant still shows Void");
+            Assert.That(rifle.element, Is.EqualTo(offer.Element), "the new element takes over when the enchant ends");
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(30000)]

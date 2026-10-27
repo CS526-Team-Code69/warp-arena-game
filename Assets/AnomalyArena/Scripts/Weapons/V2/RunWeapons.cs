@@ -712,15 +712,16 @@ namespace AnomalyArena
                                                                                                                               
             bool reinfuse=canReinfuse&&(axes.Count==0||UnityEngine.Random.value<upgrades.reinfuseChance);
             var upgrade=reinfuse?UpgradeAxis.Infusion:PickDirection(axes,wave>0?wave:CurrentWave);
-            ElementKind element=upgrade==UpgradeAxis.Infusion?RollElement(weapon.element):weapon.element;
-            string desc=upgrade==UpgradeAxis.Infusion?ArenaText.Pair("Infuse ","Infuse ")+ArenaTerms.Element(element)+(weapon.element!=ElementKind.None?ArenaText.Pair(", replaces ",", replaces ")+ArenaTerms.Element(weapon.element):""):upgrade switch{UpgradeAxis.Power=>ArenaText.Pair("Damage +40%","Damage +40%"),UpgradeAxis.Tempo=>ArenaText.Pair("Cooldown, charge and reload -30%","Cooldown, charge and reload -30%"),UpgradeAxis.Reach=>ArenaText.Pair("Range, area or targets +40%","Range, area or targets +40%"),UpgradeAxis.Twist=>ArenaText.Pair("Adds a new variant to this anomaly","Adds a new variant to this anomaly"),_=>ArenaText.Pair("Removes or softens this anomaly's backfire","Removes or softens this anomaly's backfire")};
+                                                                                                                
+            ElementKind own=OwnElement(weapon),element=upgrade==UpgradeAxis.Infusion?RollElement(own):own;
+            string desc=upgrade==UpgradeAxis.Infusion?ArenaText.Pair("Infuse ","Infuse ")+ArenaTerms.Element(element)+(own!=ElementKind.None?ArenaText.Pair(", replaces ",", replaces ")+ArenaTerms.Element(own):""):upgrade switch{UpgradeAxis.Power=>ArenaText.Pair("Damage +40%","Damage +40%"),UpgradeAxis.Tempo=>ArenaText.Pair("Cooldown, charge and reload -30%","Cooldown, charge and reload -30%"),UpgradeAxis.Reach=>ArenaText.Pair("Range, area or targets +40%","Range, area or targets +40%"),UpgradeAxis.Twist=>ArenaText.Pair("Adds a new variant to this anomaly","Adds a new variant to this anomaly"),_=>ArenaText.Pair("Removes or softens this anomaly's backfire","Removes or softens this anomaly's backfire")};
             if(upgrade is UpgradeAxis.Twist or UpgradeAxis.Tame)desc=(int)weapon.form<3?CoreAnomalyUpgradeDescription(weapon,upgrade):ArenaTerms.ExpandedUpgradeDescription(weapon.form,weapon.variant,upgrade);
                                                                                                                 
             if(upgrade==UpgradeAxis.Infusion){string rule=ArenaTerms.ElementRule(element);if(rule.Length>0)desc+="\n"+rule;}
                                                                                                           
-            var axesBefore=weapon.axes;var elementBefore=weapon.element;
-            return new DraftCard(DraftCardKind.Weapon,weapon.Label+" / "+ArenaTerms.Upgrade(upgrade),desc,_=>{weapon.axes|=upgrade;if(upgrade==UpgradeAxis.Infusion)weapon.element=element;return true;},payload:new WeaponUpgradeOffer(weapon,upgrade,element),
-                stillFits:()=>(Array.IndexOf(Hand,weapon)>=0||Array.IndexOf(Auto,weapon)>=0)&&weapon.axes==axesBefore&&weapon.element==elementBefore);
+            var axesBefore=weapon.axes;var elementBefore=own;
+            return new DraftCard(DraftCardKind.Weapon,weapon.Label+" / "+ArenaTerms.Upgrade(upgrade),desc,_=>{weapon.axes|=upgrade;if(upgrade==UpgradeAxis.Infusion)SetOwnElement(weapon,element);return true;},payload:new WeaponUpgradeOffer(weapon,upgrade,element),
+                stillFits:()=>(Array.IndexOf(Hand,weapon)>=0||Array.IndexOf(Auto,weapon)>=0)&&weapon.axes==axesBefore&&OwnElement(weapon)==elementBefore);
         }
         static int CurrentWave=>GameManager.Instance&&GameManager.Instance.waves?Mathf.Max(1,GameManager.Instance.waves.WaveIndex+1):1;
                                                                                                                                             
@@ -741,7 +742,7 @@ namespace AnomalyArena
             return picked;
         }
                                                                                                 
-        static bool OnlyOffers(RunWeapon w,WeaponUpgradeOffer avoid)
+        bool OnlyOffers(RunWeapon w,WeaponUpgradeOffer avoid)
         {
             if(avoid==null||avoid.Weapon!=w)return false;
             var axes=AvailableAxes(w);axes.Remove(avoid.Axis);
@@ -769,7 +770,7 @@ namespace AnomalyArena
                 _=>ArenaText.Pair("Adds a new variant to this anomaly","Adds a new variant to this anomaly")
             };
         }
-        static bool CanReinfuse(RunWeapon w)=>!w.builtInElement&&w.element!=ElementKind.None;
+        bool CanReinfuse(RunWeapon w)=>!w.builtInElement&&OwnElement(w)!=ElementKind.None;
                                                                                                                      
         static readonly UpgradeAxis[] HandDraftAxes={UpgradeAxis.Infusion,UpgradeAxis.Twist,UpgradeAxis.Tame};
         static readonly UpgradeAxis[] AutoDraftAxes={UpgradeAxis.Infusion};
@@ -873,6 +874,10 @@ namespace AnomalyArena
             voidEnchantLeft=0f;
             for(int i=0;i<voidEnchanted.Length;i++){var w=voidEnchanted[i];if(w!=null&&w.element==ElementKind.Void)w.element=voidEnchantFrom[i];voidEnchanted[i]=null;}
         }
+                                                                                                          
+        ElementKind OwnElement(RunWeapon w){for(int i=0;i<voidEnchanted.Length;i++)if(voidEnchantLeft>0f&&voidEnchanted[i]==w)return voidEnchantFrom[i];return w.element;}
+                                                                                                                              
+        void SetOwnElement(RunWeapon w,ElementKind element){for(int i=0;i<voidEnchanted.Length;i++)if(voidEnchantLeft>0f&&voidEnchanted[i]==w){voidEnchantFrom[i]=element;return;}w.element=element;}
         public void ClearWaveEffects()
         {
             EndVoidEnchant();
