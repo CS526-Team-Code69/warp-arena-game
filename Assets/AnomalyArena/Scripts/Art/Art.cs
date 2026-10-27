@@ -8,6 +8,9 @@ namespace AnomalyArena
 
         public const string IllustratedOnlyScene = "ArenaV2_CN";
 
+        public const string EnemyLabScene = "EnemyLab";
+        public static bool IsIllustratedOnlyScene(string sceneName) => sceneName is IllustratedOnlyScene or EnemyLabScene;
+
         public static bool Enabled;
 
         public static bool IllustratedOnly { get; private set; }
