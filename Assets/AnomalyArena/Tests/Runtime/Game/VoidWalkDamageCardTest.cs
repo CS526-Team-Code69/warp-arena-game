@@ -143,7 +143,7 @@ namespace AnomalyArena
             var offer = (WeaponUpgradeOffer)card.Payload;
             Assert.That(offer.Axis, Is.EqualTo(UpgradeAxis.Infusion), "a change-element card");
             Assert.That(offer.Element, Is.Not.EqualTo(ElementKind.Fire), "it never rolls the element the rifle already has");
-            Assert.That(card.Description, Does.Contain("替换 火焰"), "it replaces Fire, not the borrowed Void");
+            Assert.That(card.Description, Does.Contain("replaces Fire"), "it replaces Fire, not the borrowed Void");
             Assert.That(applied, Is.True, "the card applies");
             Assert.That(during, Is.EqualTo(ElementKind.Void), "the enchant still shows Void");
             Assert.That(rifle.element, Is.EqualTo(offer.Element), "the new element takes over when the enchant ends");
