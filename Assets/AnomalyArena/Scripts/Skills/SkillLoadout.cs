@@ -18,6 +18,11 @@ namespace AnomalyArena
         public int OwnedCount { get { int count = 0; foreach (var slot in Slots) if (!slot.Empty) count++; return count; } }
         public bool VoidWalkActive => voidWalkTimer > 0f;
 
+        public bool PlayerUntargetable => VoidWalkActive;
+
+        public event System.Action<float> VoidWalkEnded;
+        float voidWalkEnchant;
+
         public Vector3 VoidWalkStart { get; private set; }
         public Vector3 VoidWalkEnd { get; private set; }
         public float VoidWalkFlash01 => voidWalkDuration > 0f ? Mathf.Clamp01(voidWalkTimer / voidWalkDuration) : 0f;
@@ -391,6 +396,7 @@ namespace AnomalyArena
                     VoidWalkStart = VoidWalkEnd = body.Position;
                     voidWalkTimer = voidWalkDuration = def.Duration(level);
                     voidWalkMove = Mathf.Max(1f, def.voidWalkMoveMultiplier);
+                    voidWalkEnchant = Mathf.Max(0f, def.voidWalkEnchantSeconds);
                     V3WorldAudio.Instance?.Play(ArenaWorldCue.SkillVoidWalk, body.Position); break;
                 case SkillId.Singularity:
 
@@ -474,7 +480,11 @@ namespace AnomalyArena
             for (int c = 0; c < blinkRecharge.Length; c++) blinkRecharge[c] = Mathf.Max(0f, blinkRecharge[c] - dt);
             SyncBlinkCooldown();
             radianceTimer = Mathf.Max(0f, radianceTimer - dt);
-            voidWalkTimer = Mathf.Max(0f, voidWalkTimer - dt);
+            if (voidWalkTimer > 0f)
+            {
+                voidWalkTimer = Mathf.Max(0f, voidWalkTimer - dt);
+                if (voidWalkTimer <= 0f) VoidWalkEnded?.Invoke(voidWalkEnchant);
+            }
             timeSlipTimer = Mathf.Max(0f, timeSlipTimer - dt);
             overchargeTimer = Mathf.Max(0f, overchargeTimer - dt);
             for (int i = effects.Count - 1; i >= 0; i--)

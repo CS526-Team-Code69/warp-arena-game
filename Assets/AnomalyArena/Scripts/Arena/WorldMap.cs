@@ -59,7 +59,10 @@ namespace AnomalyArena
         }
         Transform ActiveDecoy => TrialActive ? trialDecoy : decoy;
         public bool DecoyActive => ActiveDecoy && ActiveDecoy.gameObject.activeSelf;
-        public Vector3 EnemyTarget => DecoyActive ? ActiveDecoy.position : GM.player.Position;
+                                                                                                                                        
+                                                                    
+        public Vector3 EnemyTarget => PlayerHidden ? GM.skills.VoidWalkStart : DecoyActive ? ActiveDecoy.position : GM.player.Position;
+        public bool PlayerHidden => GM && GM.skills && GM.skills.PlayerUntargetable;
         public float trialRadius = 12f;
         public bool TrialActive { get; private set; }
         public bool TrialWon { get; private set; }

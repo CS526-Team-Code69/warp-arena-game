@@ -120,6 +120,8 @@ namespace AnomalyArena
             foreach (var character in Query.CharactersAlong(from, to, HitRadius))
             {
                 if (character.Team != targetTeam || !character.IsAlive) continue;
+                                                                                                  
+                if (targetTeam == Team.Player && world && world.PlayerHidden) continue;
                 float beforeHp = character.Hp;
                 var board = ElementStatus.For(character);
                 float beforeShield = board ? board.Shield : 0f;

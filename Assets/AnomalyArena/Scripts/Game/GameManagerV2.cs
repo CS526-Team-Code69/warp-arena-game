@@ -64,6 +64,7 @@ namespace AnomalyArena
             progression.LevelGained+=level=>hud?.Banner(ArenaText.Pair("LEVEL "+level,"LEVEL "+level),ArenaText.Pair($"Max HP +{progression.LastLevelHpGain:0.#}, Max Energy +{progression.LastLevelEnergyGain:0.#}.",$"Max HP +{progression.LastLevelHpGain:0.#}, Max Energy +{progression.LastLevelEnergyGain:0.#}."));
             runWeapons.Revealed+=w=>{runNotice=w.Label;hud?.Toast(w.Label,ElementCombat.ColorFor(w.element));};
             skills.CastRefused+=(_,reason)=>hud?.Toast(reason,Color.yellow);
+            skills.VoidWalkEnded+=runWeapons.VoidEnchantHands;
             waves.WaveCompleted+=OnV2WaveEnded;
             waves.EnemyEliminated+=enemy=>{progression.GainDeathEnergy();if(enemy.SuppressRewards||enemy.IsTrialSummon||enemy.DeathCause==DeathCause.FellIntoGap)return;orbs?.Drop(enemy.Position,waves.ExperienceFor(enemy),enemy.Elite&&Random.value<orbs.eliteHpDropChance,enemy.Elite&&progression.EnergyUnlocked&&Random.value<orbs.eliteEnergyDropChance);};
             if(WorldMap.Active){WorldMap.Active.VoidTrialEntered+=EnterVoidTrial;WorldMap.Active.VoidTrialWon+=CompleteVoidTrial;WorldMap.Active.HoleFed+=_=>V2Audio.Instance?.PlayVoidFeed();}

@@ -312,7 +312,7 @@ namespace AnomalyArena
             TickAutoWeapons(GameManager.Instance.WorldDeltaTime);
             TickSporeClouds();
             TickHazards(GameManager.Instance.WorldDeltaTime);
-            TickExecuteMarks(GameManager.Instance.WorldDeltaTime);TickAnchor(dt);TickMeltdownHaste(dt);
+            TickExecuteMarks(GameManager.Instance.WorldDeltaTime);TickAnchor(dt);TickMeltdownHaste(dt);TickVoidEnchant(dt);
         }
         void FixedUpdate()
         {
@@ -856,8 +856,26 @@ namespace AnomalyArena
             ActiveIndex=trialActiveIndex;inputHeld=trialInputHeld;autoClock=frozenAutoClock;lastPosition=player.Position;
             trialWeaponStates.Clear();frozenBattlefieldAttacks.Clear();frozenHeldBodies.Clear();
         }
+                                                                                                                                     
+        readonly RunWeapon[] voidEnchanted=new RunWeapon[2];readonly ElementKind[] voidEnchantFrom=new ElementKind[2];float voidEnchantLeft;
+        public float VoidEnchantLeft=>voidEnchantLeft;
+        public void VoidEnchantHands(float seconds)
+        {
+            EndVoidEnchant();
+            if(seconds<=0f)return;
+            voidEnchantLeft=seconds;
+            for(int i=0;i<Hand.Length&&i<voidEnchanted.Length;i++){var w=Hand[i];if(w==null)continue;voidEnchanted[i]=w;voidEnchantFrom[i]=w.element;w.element=ElementKind.Void;}
+        }
+        void TickVoidEnchant(float dt){if(voidEnchantLeft<=0f)return;voidEnchantLeft=Mathf.Max(0f,voidEnchantLeft-dt);if(voidEnchantLeft<=0f)EndVoidEnchant();}
+                                                                                                                                              
+        void EndVoidEnchant()
+        {
+            voidEnchantLeft=0f;
+            for(int i=0;i<voidEnchanted.Length;i++){var w=voidEnchanted[i];if(w!=null&&w.element==ElementKind.Void)w.element=voidEnchantFrom[i];voidEnchanted[i]=null;}
+        }
         public void ClearWaveEffects()
         {
+            EndVoidEnchant();
             trialWeaponStates.Clear();frozenBattlefieldAttacks.Clear();frozenHeldBodies.Clear();
             foreach(var times in frozenAutoHitTimes)times.Clear();
             if(AttackPool.Instance)AttackPool.Instance.Clear();

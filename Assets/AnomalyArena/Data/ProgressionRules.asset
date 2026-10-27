@@ -129,12 +129,12 @@ MonoBehaviour:
     exceptional: 0.18
     epic: 0.23
     legendary: 0.3
-    bonus: 1
-    bonusCommon: 0.05
-    bonusRare: 0.07
-    bonusExceptional: 0.09
-    bonusEpic: 0.12
-    bonusLegendary: 0.15
+    bonus: 0
+    bonusCommon: 0
+    bonusRare: 0
+    bonusExceptional: 0
+    bonusEpic: 0
+    bonusLegendary: 0
     retired: 0
   - stat: 5
     common: 0.1

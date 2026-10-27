@@ -21,11 +21,11 @@ MonoBehaviour:
   cooldown: 2
   advancedCooldown: 4
   duration:
-  - 3
-  - 3
-  - 3
-  - 3
-  - 3
+  - 5
+  - 5
+  - 5
+  - 5
+  - 5
   radius:
   - 0
   - 0
@@ -69,16 +69,17 @@ MonoBehaviour:
   overchargeDamageMultiplier: 1.25
   voidGravityWidth: 1
   voidWalkMoveMultiplier: 1.6
+  voidWalkEnchantSeconds: 5
   singularitySlowMultiplier: 0.5
   singularityBaseDamage: 10
   singularityDamagePerEnemy: 4
   singularityPlayerMoveMultiplier: 0.35
   descriptions:
-  - 'Enter the void for 3 s: move x1.6, cannot be targeted or damaged.'
-  - Void state for 3 s.
-  - Void state for 3 s.
-  - Void state for 3 s.
-  - Void state for 3 s.
+  - 'Enter the void for 5 s: move x1.6, cannot be targeted or damaged; then both hand weapons carry Void for 5 s.'
+  - Void state for 5 s.
+  - Void state for 5 s.
+  - Void state for 5 s.
+  - Void state for 5 s.
   icon: {fileID: 0}
   levelDamageGrowth: 1.161895
   shieldScalesWithMaxHp: 1
