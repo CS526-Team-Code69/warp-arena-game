@@ -9,7 +9,7 @@ namespace AnomalyArena
         [Header("Sprint")] public Stamina stamina = new Stamina();
         // Dash feature. - H.
         [Header("Dash")]
-        [SerializeField, Min(0f)] float dashSpeed = 26f;
+        [SerializeField, Min(0f)] float dashSpeed = 27f;
         [SerializeField, Min(0.01f)] float dashDuration = 0.15f;
         [SerializeField, Min(0f)] float dashCooldown = 0.4f;
 
