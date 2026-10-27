@@ -55,7 +55,7 @@ namespace AnomalyArena
         void V2Start()
         {
                                                                                                                           
-            Art.EnsureV2Default(gameObject.scene.name==Art.IllustratedOnlyScene);
+            Art.EnsureV2Default(Art.IsIllustratedOnlyScene(gameObject.scene.name));
             runWeapons??=player.GetComponent<RunWeapons>();progression??=player.GetComponent<RunProgression>();skills??=player.GetComponent<SkillLoadout>();
             State=GameState.Title;RunPhase=ArenaUiState.Title;supplyChoiceOpened=false;SupplyDropReady=false;pendingSupplyChoice=ArenaUiState.Title;LockMenuInput();
             progression.ResetRun();skills.ResetRun();runWeapons.ResetRun();

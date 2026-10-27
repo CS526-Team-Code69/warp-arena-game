@@ -16,6 +16,7 @@ namespace AnomalyArena
     {
         const string SceneCn = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
         const string SceneEn = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        const string SceneLab = "Assets/AnomalyArena/Scenes/EnemyLab.unity";
         static readonly FieldInfo ChoiceInitialized = typeof(Art).GetField("v2ChoiceInitialized", BindingFlags.NonPublic | BindingFlags.Static);
         static readonly FieldInfo ToggleChoice = typeof(Art).GetField("toggleChoice", BindingFlags.NonPublic | BindingFlags.Static);
         static readonly PropertyInfo IllustratedOnly = typeof(Art).GetProperty(nameof(Art.IllustratedOnly), BindingFlags.Public | BindingFlags.Static);
@@ -114,6 +115,21 @@ namespace AnomalyArena
             Assert.That(shown, Is.True, "and tells the view so");
             Assert.That(everWhitebox, Is.False, "the art command never switches it to whitebox");
             Assert.That(Art.Enabled, Is.True, "the run is illustrated");
+        }
+
+        [Test, BuildScene(SceneLab), Category("Integration"), Timeout(60000)]
+        public async Task EnemyLab_WhiteboxLeftByAnEarlierRun_StartsIllustrated()
+        {
+            ChoiceInitialized.SetValue(null, true);
+            Art.Enabled = false;                                       
+
+            await SceneManagerHelper.LoadSceneAsync(SceneLab);
+            await Until(() => GameManager.Instance && ArenaText.Ready, 12f, "the lab and localization initialize");
+
+            await Until(() => Art.IllustratedOnly, 5f, "the lab starts in the illustrated-only mode");
+
+            Assert.That(Art.Enabled, Is.True, "the enemy lab shows the illustrated art (owner 2026-10-27)");
+            Assert.That(Art.IllustratedOnly, Is.True, "and keeps it");
         }
 
         [Test, BuildScene(SceneEn), Category("Integration"), Timeout(60000)]
