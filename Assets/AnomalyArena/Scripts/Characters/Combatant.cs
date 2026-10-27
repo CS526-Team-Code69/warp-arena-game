@@ -451,6 +451,8 @@ namespace AnomalyArena
         public void Knockback(Vector3 dir, float distance, KnockKind kind)
         {
             if (!IsAlive || Immovable || State == CharacterState.Hooked || State == CharacterState.Dashing) return;
+                                                                                                                                      
+            if (Team == Team.Player && GM && GM.skills && GM.skills.SingularityActive) return;
             dir = Query.Flat(dir);
             if (dir.sqrMagnitude < 1e-6f || distance <= 0f) return;
             dir.Normalize();
@@ -558,12 +560,13 @@ namespace AnomalyArena
 
                                        
 
-                                                                                                               
-        bool InVoidWalk => Team == Team.Player && GM && GM.skills && GM.skills.Untargetable;
+                                                                                                                                           
+                                                                                                                                
+        bool SkillInvincible => Team == Team.Player && GM && GM.skills && GM.skills.Invincible;
 
         public virtual bool ReceiveDamage(DamageInfo info)
         {
-            if (!IsAlive || InVoidWalk) return false;
+            if (!IsAlive || SkillInvincible) return false;
                                                                                                                                 
                                                                                     
             bool selfHit = info.dealer != null && info.dealer.Owner == this;
@@ -571,6 +574,8 @@ namespace AnomalyArena
             if (info.isAttack && Protected && !selfHit) return false;
             float beforeHp=Hp,beforeShield=elementStatus?elementStatus.Shield:0;
             bool crit=false;
+                                                                                                                          
+            float baseDamage=info.amount;
             var runStats=GM&&GM.progression?GM.progression.Stats:null;
             if(runStats!=null&&info.isAttack&&Team==Team.Enemy&&info.source==DamageSource.Hit&&info.dealer?.Owner is Combatant{Team:Team.Player}
                &&runStats.critChance>0f&&UnityEngine.Random.value<runStats.critChance)
@@ -620,31 +625,19 @@ namespace AnomalyArena
             }
                                                                                     
             if(!tick&&!selfHit&&info.source==DamageSource.Hit&&info.dealer?.Owner is Combatant { Team: Team.Player } source)
-                ElementCombat.ApplyHit(this,info.element,actualDamage,source,info.builtInElement,info.noLightningJump,info.continuousSource);
+                ElementCombat.ApplyHit(this,info.element,actualDamage,source,info.builtInElement,info.noLightningJump,info.continuousSource,baseDamage);
             return true;
         }
 
                      
-                                                                                                                  
-                                                                                                                                          
+                                                                                                                                      
+                                                                                                                                                      
                       
         float ControlVulnerability(DamageInfo info)
         {
             if (!elementStatus || !elementStatus.Rules) return 1f;
-            var rules = elementStatus.Rules;
-            float multiplier = elementStatus.Frozen ? Mathf.Max(1f, rules.frozenDamageTaken) : 1f;
-            if (Team == Team.Enemy && elementStatus.Paralysed && info.dealer?.Owner is Combatant { Team: Team.Player })
-            {
-                int cap = Mathf.Max(1, rules.paralysedBonusMax), count = 1;
-                foreach (var other in Query.Characters(Query.AtCastHeight(Position), rules.paralysedBonusRadius))
-                {
-                    if (count >= cap) break;
-                    if (other == this || !other.IsAlive || other.Team != Team.Enemy) continue;
-                    var status = ElementStatus.For(other);
-                    if (status && status.Paralysed) count++;
-                }
-                multiplier *= 1f + rules.paralysedBonusPerNeighbour * count;
-            }
+            float multiplier = elementStatus.Frozen ? Mathf.Max(1f, elementStatus.Rules.frozenDamageTaken) : 1f;
+            if (Team == Team.Enemy && info.dealer?.Owner is Combatant { Team: Team.Player }) multiplier *= elementStatus.LightningDamageTaken;
             return multiplier;
         }
 
@@ -654,7 +647,7 @@ namespace AnomalyArena
                                                                                                                         
         public void Kill(Combatant by = null)
         {
-            if (!IsAlive || InVoidWalk || Invulnerable) return;
+            if (!IsAlive || SkillInvincible || Invulnerable) return;
             LastDamagedBy = by; LastDamageSource = DamageSource.Hit;
             PlayHitFeedback(Mathf.Max(Hp, GM.feedback.heavyDamage), Vector3.zero, HitKind.Pierce);
             Hp = 0f;

@@ -504,6 +504,7 @@ namespace AnomalyArena
                 if (broken > 0) V2Audio.Instance?.PlayWorld(ArenaSoundCue.Impact, Position + facing * radius);
             }
 
+            ShoveAside(Query.Flat(Position), facing * move);                                                                           
             rb.linearVelocity = facing * (speed * move / pace) + Vector3.up * rb.linearVelocity.y;
             if (!rushContact && player && player.IsAlive && InFist(player))
             {
@@ -519,6 +520,28 @@ namespace AnomalyArena
             if (!TryGetComponent(out CapsuleCollider capsule)) return;
             int bodies = GameManager.CharacterMask;
             capsule.excludeLayers = on ? capsule.excludeLayers | bodies : capsule.excludeLayers & ~bodies;
+        }
+
+        void ShoveAside(Vector3 from, Vector3 step)
+        {
+            var waves = GM ? GM.waves : null;
+            if (!waves) return;
+            Vector3 side = Vector3.Cross(Vector3.up, facing);
+            float clearance = Mathf.Max(0f, Boss.rushShoveClearance), length = step.sqrMagnitude;
+            var alive = waves.Alive;
+            for (int i = 0; i < alive.Count; i++)
+            {
+                var enemy = alive[i];
+
+                if (!enemy || enemy == this || !enemy.IsAlive || enemy.Immovable || enemy.State != CharacterState.Normal) continue;
+
+                Vector3 offset = Query.Flat(enemy.Position) - from;
+                if (Vector3.Dot(offset, facing) < 0f) continue;
+                float t = length > 1e-6f ? Mathf.Clamp01(Vector3.Dot(offset, step) / length) : 0f, reach = radius + enemy.Radius;
+                if ((offset - step * t).sqrMagnitude > reach * reach) continue;
+                float across = Vector3.Dot(offset, side);
+                enemy.Knockback(across >= 0f ? side : -side, reach - Mathf.Abs(across) + clearance, KnockKind.Push);
+            }
         }
 
         void BeginRushLeap()

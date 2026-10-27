@@ -6,11 +6,12 @@ namespace AnomalyArena
                  
                                                                                                                                                 
                                                                                                                                             
-                                                                                                                                           
-                                                                                                                                               
-                                                                                                                                         
-                                                                                                                                           
                                                                                                                                               
+                                                                                                                                             
+                                                                                                                                               
+                                                                                                                                             
+                                                                                                                                             
+                      
                   
     public partial class Enemy
     {
@@ -30,9 +31,9 @@ namespace AnomalyArena
         readonly List<VoidPillar> voidPillars = new();
         public IReadOnlyList<VoidPillar> VoidPillars => voidPillars;
 
-                                                                                                                                          
-                                                                                                            
-        float nashRest, nashEdgeHold, nashSummonRest, nashPullLeft, nashRingClock, nashVolleyClock, nashRingAim;
+                                                                                                                                       
+                                                       
+        float nashRest, nashSummonRest, nashPullLeft, nashRingClock, nashVolleyClock, nashRingAim;
         int nashRingsLeft, nashRingIndex, nashVolleyLeft;
 
         bool IsProphet => definition && definition.kind == EnemyKind.Hollow;
@@ -42,9 +43,6 @@ namespace AnomalyArena
 
                                                                                                           
         public float GravityPullSpeed => bossPhase >= 3 ? Boss.nashPhase3PullSpeed : Boss.nashPullSpeed;
-
-                                                                                                                                                     
-        public float EdgeHoldLeft => nashEdgeHold;
 
                                                                                                                          
         public bool ProphetWarded => IsProphet && IsAlive && WorldMap.Active && WorldMap.Active.TrialActive && LivingProphetSummons() > 0;
@@ -93,7 +91,7 @@ namespace AnomalyArena
         void ClearNashFight()
         {
             voidPillars.Clear();
-            nashRest = nashEdgeHold = nashSummonRest = nashPullLeft = nashRingClock = nashVolleyClock = nashRingAim = 0f;
+            nashRest = nashSummonRest = nashPullLeft = nashRingClock = nashVolleyClock = nashRingAim = 0f;
             nashRingsLeft = nashRingIndex = nashVolleyLeft = 0;
         }
 
@@ -110,7 +108,6 @@ namespace AnomalyArena
             var b = Boss;
             TickSummonWarning(dt);                                                     
             TickNashPhase(b);
-            TickNashPlatform(dt, world, b);
             TickVoidPillars(dt, player);
             TickNashSequences(dt, player, b);
             if (LivingProphetSummons() > 0 || summonPoints.Count > 0) nashSummonRest = b.nashSummonCooldown;
@@ -138,29 +135,13 @@ namespace AnomalyArena
 
         bool NashSequenceRunning => nashRingsLeft > 0 || nashVolleyLeft > 0 || nashPullLeft > 0f || summonPoints.Count > 0;
 
+                                                                                                                                              
+                                                                                    
         void TickNashPhase(BossTuning b)
         {
             float share = maxHp > 0f ? Hp / maxHp : 1f;
             int next = share < b.nashPhase3HpShare ? 3 : share < b.nashPhase2HpShare ? 2 : 1;
-            if (next <= bossPhase) return;
-            bossPhase = next;
-            nashEdgeHold = b.nashEdgeWarning;                                                                                               
-        }
-
-        void TickNashPlatform(float dt, WorldMap world, BossTuning b)
-        {
-            if (!world.trialPlatform) return;
-            if (nashEdgeHold > 0f)
-            {
-                nashEdgeHold -= dt;
-                return;
-            }
-
-            float goal = PlatformGoal;
-            if (world.trialRadius <= goal) return;
-            world.trialRadius = Mathf.MoveTowards(world.trialRadius, goal, dt * b.platformShrinkSpeed);
-            var scale = world.trialPlatform.localScale;
-            world.trialPlatform.localScale = new Vector3(world.trialRadius * 2f, scale.y, world.trialRadius * 2f);
+            if (next > bossPhase) bossPhase = next;
         }
 
                                                                                                                                              
@@ -290,8 +271,9 @@ namespace AnomalyArena
             }
         }
 
-                                                                                                                                                     
-                                                                                                                                                     
+                                                                                                                                             
+                                                                                                                                                
+                                                                                              
         public static float NashPulsePush(int phase, BossTuning b) =>
             phase >= 3 ? b.nashPhase3PulsePush : phase == 2 ? b.nashPhase2PulsePush : b.nashPulsePush;
 
@@ -322,7 +304,7 @@ namespace AnomalyArena
 
                                                                                                                                                
                                                                                                                                              
-                                                                             
+                                                   
         void PlaceVoidPillars(PlayerController player, BossTuning b)
         {
             var world = WorldMap.Active;
@@ -357,7 +339,7 @@ namespace AnomalyArena
             }
 
             Vector3 centre = Query.Flat(world.trialPlatform.position);
-            return centre + Vector3.ClampMagnitude(at - centre, Mathf.Min(world.trialRadius, PlatformGoal));
+            return centre + Vector3.ClampMagnitude(at - centre, world.trialRadius);
         }
 
         int NashRingCount(BossTuning b) => Mathf.Max(1, bossPhase >= 3 ? b.nashPhase3Rings : bossPhase == 2 ? b.nashPhase2Rings : 1);

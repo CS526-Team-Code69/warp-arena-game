@@ -32,4 +32,4 @@ MonoBehaviour:
   colour: {r: 0.64953, g: 0.9, b: 0.40499997, a: 1}
   rangedNear: 8
   rangedFar: 10
-  projectileSpeed: 14
+  projectileSpeed: 10

@@ -72,6 +72,10 @@ namespace AnomalyArena
         public float levelDamageGrowth = 1.161895f;
         [Tooltip("Bulwark: Strength is a fraction of max HP given as Shield (0.2 = 20% max HP); off = flat points.")]
         public bool shieldScalesWithMaxHp = true;
+        [Tooltip("Bulwark level 5 (owner 2026-10-26): while any of the Shield it gave is left, a direct hit on the Shield counts this share of "
+            + "its damage, instead of the 0.7 a normal Shield lets count (Status Rules > shieldDirectFactor). 0.5 = half. The level-5 Shield "
+            + "may also stand above the usual Shield cap, up to its own size.")]
+        [Range(0f, 1f)] public float bulwarkShieldDirectFactor = 0.5f;
 
         public float ScaledDamage(float baseDamage, int level, float damageMultiplier = 1f) =>
             baseDamage * ElementCombat.WaveScale * Mathf.Pow(Mathf.Max(1f, levelDamageGrowth), Mathf.Clamp(level, 1, MaxLevel) - 1) * Mathf.Max(0f, damageMultiplier);
@@ -80,7 +84,7 @@ namespace AnomalyArena
         string ChineseDescription(int level) =>EnglishDescription(level);
         string EnglishDescription(int level) => id switch
         {
-            SkillId.FlameWake => $"Leave a burning trail that sets touching enemies alight ({Duration(level):0.#} s, {Strength(level):0.#} Fire/s)."
+            SkillId.FlameWake => $"Leave a burning trail that sets touching enemies alight ({Duration(level):0.#} s, burns {Strength(level):0.#} per second, more in later waves)."
                 + (level >= 2 ? " Lasts longer" + (level >= MaxLevel ? "; at max level the trail is wider" : "") + "." : ""),
             SkillId.Contagion => $"Poison nearby enemies; meanwhile a poisoned enemy's death passes the poison to a neighbour ({Strength(level):0.#} Poison within {Radius(level):0.#}, {Duration(level):0.#} s)."
                 + (level >= 2 ? " Lasts longer" + (level >= MaxLevel ? "; at max level it jumps to two enemies, spreading outward" : "") + "." : ""),
@@ -88,9 +92,9 @@ namespace AnomalyArena
                 + (level >= 2 ? " Larger area" + (level >= MaxLevel ? $"; at max level frozen enemies stay frozen at least {freezeHold:0.#} s" : "") + "." : ""),
             SkillId.StormCall => $"Random lightning near the cursor: damage plus Lightning ({Strength(level):0} bolts within {Radius(level):0.#} over {Duration(level):0.#} s; {ScaledDamage(hitDamage, level):0.#} damage and {hitStacks:0.#} Lightning each, damage grows with waves and Damage cards)."
                 + (level >= 2 ? " More bolts, wider area" + (level >= MaxLevel ? "; at max level a hit also chains to nearby enemies" : "") + "." : ""),
-            SkillId.Bulwark => $"A wall at the cursor knocks back enemies that run into it; only the Tyrant King's charge can break it. You also gain a Shield (wall {Radius(level):0.#} wide, {Duration(level):0.#} s, knockback {ContactKnockback(level):0.#}, "
+            SkillId.Bulwark => $"A wall at the cursor knocks back enemies touching it; only the Tyrant King's charge can break it. Plus a Shield (wall {Radius(level):0.#} long, {Duration(level):0.#} s, knockback {ContactKnockback(level):0.#}, "
                 + (shieldScalesWithMaxHp ? $"Shield {Strength(level) * 100f:0}% of max HP)." : $"Shield {Strength(level):0.#}).")
-                + (level >= 2 ? " Thicker Shield, farther knockback, longer wall" + (level >= MaxLevel ? "; at max level a very thick Shield" : "") + "." : ""),
+                + (level >= 2 ? " Thicker Shield, farther knockback, longer wall" + (level >= MaxLevel ? $"; at max level a very thick Shield, hits on it count {bulwarkShieldDirectFactor * 100f:0}%" : "") + "." : ""),
             SkillId.Radiance => $"Clear your statuses; then your attacks heal you and status resistance rises ({Duration(level):0.#} s, {Strength(level) * 100f:0}% lifesteal, {StatusResistance(level) * 100f:0}% resistance)."
                 + (level >= 2 ? " Lasts longer, more resistance" + (level >= MaxLevel ? $"; at max level also heals {healOnCast:0.#} HP at once" : "") + "." : ""),
             SkillId.Devour => $"Swallow a nearby low-HP enemy and restore Energy (below {Strength(level) * 100f:0}% HP within {Range(level):0.#}, elites too, never bosses; {energyReward:0.#} Energy, cooldown {Cooldown(level):0.#} s)."
@@ -109,7 +113,7 @@ namespace AnomalyArena
                 + (level >= 2 ? " Lasts longer" + (level >= MaxLevel ? $"; at max level weapons also deal +{(overchargeDamageMultiplier - 1f) * 100f:0}% damage" : "") + "." : ""),
             SkillId.PocketVoid => $"A small black hole at the cursor swallows everything but bosses, and you gain the XP of monsters it swallows ({Radius(level):0.#}×{Radius(level):0.#} footprint, {voidGravityWidth:0.#}-wide gravity ring, {Duration(level):0.#} s; it can swallow you too).",
             SkillId.VoidWalk => $"Enter the void: faster, untargetable and undamageable, breaking any knockback ({Duration(level):0.#} s, move speed x{voidWalkMoveMultiplier:0.#}).",
-            SkillId.Singularity => $"Drag every enemy on screen to you and slow them; after {Duration(level):0.#} s it explodes, harder the more enemies it drew in. You are heavily slowed meanwhile but can fire and cast (pull {Strength(level):0.#}, enemies at {singularitySlowMultiplier * 100:0}%, you at {singularityPlayerMoveMultiplier * 100:0}%, blast radius {Radius(level):0.#}, {ScaledDamage(singularityBaseDamage, level):0.#} + {ScaledDamage(singularityDamagePerEnemy, level):0.#} per enemy; grows with waves and Damage cards).",
+            SkillId.Singularity => $"Become a singularity for {Duration(level):0.#} s: fully invincible (no damage, knockback or control), heavily slowed, free to fire and cast. Enemies on screen are dragged in and slowed; then it blasts, harder the more it drew in (pull {Strength(level):0.#}, enemies {singularitySlowMultiplier * 100:0}%, you {singularityPlayerMoveMultiplier * 100:0}%, radius {Radius(level):0.#}, {ScaledDamage(singularityBaseDamage, level):0.#} + {ScaledDamage(singularityDamagePerEnemy, level):0.#} per enemy).",
             _ => descriptions is { Length: > 0 } ? descriptions[Mathf.Clamp(level - 1, 0, descriptions.Length - 1)] : ""
         };
 
@@ -121,7 +125,7 @@ namespace AnomalyArena
                 case SkillId.FlameWake:
                     displayName = "Flame Wake"; element = ElementKind.Fire; category = SkillCategory.BasicElement; cost = 25f;
                     duration = new[] { 4f, 4.5f, 5f, 5.5f, 6f }; radius = new[] { 0.75f, 0.75f, 0.75f, 0.75f, 1.5f }; strength = new[] { 3f, 3f, 3f, 3f, 3f };
-                    descriptions = new[] { "Leave a burning trail for 4 s: 3 Fire/s.", "Trail for 4.5 s.", "Trail for 5 s.", "Trail for 5.5 s.", "A 6 s trail, twice as wide: 3 Fire/s." }; break;
+                    descriptions = new[] { "Leave a burning trail for 4 s: burns 3 per second.", "Trail for 4.5 s.", "Trail for 5 s.", "Trail for 5.5 s.", "A 6 s trail, twice as wide: burns 3 per second." }; break;
                 case SkillId.Contagion:
                     displayName = "Contagion"; element = ElementKind.Poison; category = SkillCategory.BasicElement; cost = 20f;
                     duration = new[] { 8f, 9f, 10f, 11f, 12f }; radius = new[] { 5f, 5f, 5f, 5f, 5f }; strength = new[] { 6f, 6f, 6f, 6f, 6f };
@@ -137,9 +141,9 @@ namespace AnomalyArena
                     descriptions = new[] { "3 bolts within 5 over 1.5 s: 6 damage and 3 Lightning each.", "4 bolts within 5.25 over 1.5 s.", "5 bolts within 5.5 over 1.5 s.", "5 bolts within 5.75 over 1.5 s.", "6 bolts within 6 over 1.5 s; bolts chain to nearby enemies." }; break;
                 case SkillId.Bulwark:
                     displayName = "Bulwark"; element = ElementKind.Earth; category = SkillCategory.BasicElement; cost = 30f;
-                    duration = new[] { 8f, 8f, 8f, 8f, 8f }; radius = new[] { 4f, 4.5f, 5f, 5.5f, 6f }; strength = new[] { 0.15f, 0.2125f, 0.275f, 0.3375f, 0.4f };
-                    contactKnockback = new[] { 4f, 5f, 6f, 7f, 8f }; shieldScalesWithMaxHp = true;
-                    descriptions = new[] { "Wall 4 wide for 8 s, broken only by the Tyrant King charge, contact push 4; Shield 15% max HP.", "Wall 4.5 wide, contact push 5; Shield 21.25% max HP.", "Wall 5 wide, contact push 6; Shield 27.5% max HP.", "Wall 5.5 wide, contact push 7; Shield 33.75% max HP.", "Wall 6 wide, contact push 8; Shield 40% max HP." }; break;
+                    duration = new[] { 8f, 8f, 8f, 8f, 8f }; radius = new[] { 5f, 5.5f, 6f, 6.5f, 8f }; strength = new[] { 0.2f, 0.25f, 0.3f, 0.35f, 0.6f };
+                    contactKnockback = new[] { 4f, 5f, 6f, 7f, 8f }; shieldScalesWithMaxHp = true; bulwarkShieldDirectFactor = 0.5f;
+                    descriptions = new[] { "Wall 5 long for 8 s, broken only by the Tyrant King charge, contact push 4; Shield 20% max HP.", "Wall 5.5 long, contact push 5; Shield 25% max HP.", "Wall 6 long, contact push 6; Shield 30% max HP.", "Wall 6.5 long, contact push 7; Shield 35% max HP.", "Wall 8 long, contact push 8; Shield 60% max HP, above the usual cap; direct hits on it count 50%." }; break;
                 case SkillId.Radiance:
                     displayName = "Radiance"; element = ElementKind.Light; category = SkillCategory.AdvancedElement; cost = 30f;
                     duration = new[] { 5f, 5.5f, 6f, 6.5f, 7f }; strength = new[] { 0.25f, 0.25f, 0.25f, 0.25f, 0.25f }; statusResistance = new[] { 0.3f, 0.4f, 0.5f, 0.6f, 0.7f };
@@ -182,9 +186,9 @@ namespace AnomalyArena
                     descriptions = new[] { "Enter the void for 3 s: move x1.6, cannot be targeted or damaged.", "Void state for 3 s.", "Void state for 3 s.", "Void state for 3 s.", "Void state for 3 s." }; break;
                 case SkillId.Singularity:
                     displayName = "Singularity"; element = ElementKind.Void; cost = 60f;
-                    strength = new[] { 6f, 6f, 6f, 6f, 6f }; duration = new[] { 2f, 2f, 2f, 2f, 2f }; radius = new[] { 6f, 6f, 6f, 6f, 6f };
+                    strength = new[] { 6f, 6f, 6f, 6f, 6f }; duration = new[] { 3f, 3f, 3f, 3f, 3f }; radius = new[] { 6f, 6f, 6f, 6f, 6f };
                     singularitySlowMultiplier = 0.5f; singularityBaseDamage = 10f; singularityDamagePerEnemy = 4f; singularityPlayerMoveMultiplier = 0.35f;
-                    descriptions = new[] { "Draw on-screen enemies 6 toward you and slow them; you slow to 35% but can still fire and cast, and after 2 s it blasts based on distinct absorbed enemies.", "Singularity.", "Singularity.", "Singularity.", "Singularity." }; break;
+                    descriptions = new[] { "For 3 s you are fully invincible (no damage, knockback or control) and slowed to 35% but can still fire and cast; on-screen enemies are drawn 6 toward you and slowed, then it blasts based on distinct absorbed enemies.", "Singularity.", "Singularity.", "Singularity.", "Singularity." }; break;
             }
         }
     }

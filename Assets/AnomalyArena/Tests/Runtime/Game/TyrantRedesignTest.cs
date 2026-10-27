@@ -927,13 +927,13 @@ namespace AnomalyArena
         static void SetPrivate(Enemy enemy, string field, float value) =>
             typeof(Enemy).GetField(field, BindingFlags.Instance | BindingFlags.NonPublic).SetValue(enemy, value);
 
-        static void Force(Enemy tyrant, int move)
+        internal static void Force(Enemy tyrant, int move)
         {
             tyrant.ForceNextBossMove(move);
             SetPrivate(tyrant, "cooldown", 0f);
         }
 
-        static void Place(Combatant body, Vector3 at)
+        internal static void Place(Combatant body, Vector3 at)
         {
             body.ClearWaveState();
             V3CombatSmokeTest.Teleport(body, new Vector3(at.x, 0f, at.z));
@@ -951,7 +951,7 @@ namespace AnomalyArena
             return waves.Alive.FirstOrDefault(e => e && e.IsAlive && e.definition == data && !before.Contains(e));
         }
 
-        static async Task<bool> OnChargeLane(GameManager game, Enemy tyrant, float length, float margin)
+        internal static async Task<bool> OnChargeLane(GameManager game, Enemy tyrant, float length, float margin)
         {
             if (!OpenLane(WorldMap.Active, tyrant.Position, tyrant.Radius + margin, length + 1f, out var start, out var ahead)) return false;
             Place(tyrant, start);
@@ -1237,7 +1237,7 @@ namespace AnomalyArena
             return world.temporaryWalls.FirstOrDefault(w => w && w.gameObject.activeSelf && Flat(w.transform.position - at).magnitude < .1f);
         }
 
-        static async Task<Vector3> RunAndLand(Enemy tyrant, Action watch = null)
+        internal static async Task<Vector3> RunAndLand(Enemy tyrant, Action watch = null)
         {
             Vector3 ranTo = Flat(tyrant.Position);
             bool leapt = false;
@@ -1257,7 +1257,7 @@ namespace AnomalyArena
             return ranTo;
         }
 
-        static async Task<(GameManager game, Enemy[] targets, Enemy tyrant)> TyrantSandbox(float ahead)
+        internal static async Task<(GameManager game, Enemy[] targets, Enemy tyrant)> TyrantSandbox(float ahead)
         {
             var (game, targets) = await V3CombatSmokeTest.StartSandbox();
             FeedEachHoleOnce(game);

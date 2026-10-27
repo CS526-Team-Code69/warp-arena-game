@@ -20,8 +20,6 @@ namespace AnomalyArena
         static readonly Dictionary<(SkillId, string), (float first, float last)> OldLevelOneAndThree = new()
         {
             [(SkillId.Blink, "range")] = (6f, 8f),
-            [(SkillId.Bulwark, "radius")] = (4f, 6f),
-            [(SkillId.Bulwark, "strength")] = (.15f, .4f),
             [(SkillId.Bulwark, "contactKnockback")] = (4f, 8f),
             [(SkillId.Contagion, "duration")] = (8f, 12f),
             [(SkillId.Decoy, "duration")] = (3f, 5f),
@@ -37,6 +35,13 @@ namespace AnomalyArena
             [(SkillId.StormCall, "radius")] = (5f, 6f),
             [(SkillId.StormCall, "strength")] = (3f, 6f),
             [(SkillId.TimeSlip, "duration")] = (2.5f, 3.5f),
+        };
+
+        static readonly Dictionary<(SkillId, string), float[]> OwnerSetValues = new()
+        {
+            [(SkillId.Bulwark, "radius")] = new[] { 5f, 5.5f, 6f, 6.5f, 8f },
+            [(SkillId.Bulwark, "strength")] = new[] { .2f, .25f, .3f, .35f, .6f },
+            [(SkillId.Singularity, "duration")] = new[] { 3f, 3f, 3f, 3f, 3f },
         };
 
         [SetUp]
@@ -103,6 +108,11 @@ namespace AnomalyArena
                 {
                     string at = $"{definition.id}.{name}";
                     if (values == null || values.Length != SkillDefinition.MaxLevel) { problems.Add($"{at}: {values?.Length ?? 0} entries"); continue; }
+                    if (OwnerSetValues.TryGetValue((definition.id, name), out var set))
+                    {
+                        if (!values.Zip(set, Near).All(fits => fits)) problems.Add($"{at}: {string.Join(", ", values)}, expected {string.Join(", ", set)}");
+                        continue;
+                    }
                     if (!OldLevelOneAndThree.TryGetValue((definition.id, name), out var old)) old = (values[0], values[0]);
                     if (!Near(values[0], old.first) || !Near(values[^1], old.last))
                         problems.Add($"{at}: {values[0]} to {values[^1]}, expected {old.first} to {old.last}");

@@ -173,6 +173,7 @@ namespace AnomalyArena
             SkillWorldAPI.IsElite = target => target is Enemy enemy && (enemy.Elite || enemy.IsBoss);
             SkillWorldAPI.Swallow = (victim, owner) => victim.OnEnterFallZone(Vector3.zero);
             SkillWorldAPI.CreateDecoy = CreateDecoy;
+            SkillWorldAPI.SkillObjectStanding = SkillObjectStanding;
         }
 
         void OnDestroy()
@@ -702,6 +703,28 @@ namespace AnomalyArena
             if (TrialActive) { trialDecoyLife = life; trialDecoyBlast = explodeAtEnd; trialDecoyOwner = owner; }
             else { decoyLife = life; decoyBlast = explodeAtEnd; decoyOwner = owner; }
             ActiveDecoy.gameObject.SetActive(true);
+        }
+                                                                                                                                             
+                                                                                                                                     
+                                                                                                                                  
+        public bool SkillObjectStanding(SkillId skill, Combatant owner) => owner && skill switch
+        {
+            SkillId.Bulwark => WallStanding(owner),
+            SkillId.Decoy => DecoyActive && (TrialActive ? trialDecoyOwner : decoyOwner) == owner,
+            SkillId.PocketVoid => VoidHoleOpen(owner),
+            _ => false
+        };
+        bool WallStanding(Combatant owner)
+        {
+            if (temporaryWalls != null)
+                foreach (var wall in temporaryWalls)
+                    if (wall && wall.gameObject.activeSelf && !wall.BattlefieldFrozen && wall.Owner == owner) return true;
+            return false;
+        }
+        bool VoidHoleOpen(Combatant owner)
+        {
+            for (int i = 0; i < PlayerHoleCount; i++) { var hole = TemporaryHoleAt(i); if (hole && hole.gameObject.activeSelf && hole.Owner == owner) return true; }
+            return false;
         }
         public void CreateTemporaryHole(Vector3 at, float width, float life, Combatant owner) => CreateVoidHole(at,width,1f,life,owner,false);
         public void CreateVoidHole(Vector3 at,float diameter,float gravityWidth,float life,Combatant owner,bool protectOwner)

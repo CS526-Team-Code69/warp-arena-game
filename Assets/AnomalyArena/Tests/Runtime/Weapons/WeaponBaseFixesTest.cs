@@ -223,7 +223,10 @@ namespace AnomalyArena
 
             Assert.That(targets[1].Hp, Is.EqualTo(targets[1].maxHp - hit).Within(.01f), "no element jump adds damage on top of the chain");
             Assert.That(targets[2].Hp, Is.EqualTo(targets[2].maxHp - hit).Within(.01f));
-            Assert.That(targets[0].Hp, Is.EqualTo(targets[0].maxHp - hit - tuning.chainReturnDamagePerJump * 2f * scale).Within(.01f), "1 per unused jump");
+
+            var rules = ElementStatus.For(targets[0]).Rules;
+            float shocked = 1f + rules.lightningVulnerabilityPerStack * rules.stacksPerHit * rules.builtInElementStackFactor;
+            Assert.That(targets[0].Hp, Is.EqualTo(targets[0].maxHp - hit - tuning.chainReturnDamagePerJump * 2f * scale * shocked).Within(.01f), "1 per unused jump");
             Assert.That(status.Lightning + (status.Paralysed ? 99f : 0f), Is.EqualTo(2f).Within(.01f), "one Lightning per unused jump on you");
             Assert.That(game.runWeapons.Tracers.Count, Is.EqualTo(3), "an arc to each target");
         }
@@ -431,8 +434,10 @@ namespace AnomalyArena
 
             capacitor.cooldown = 0f; capacitor.charge = tuning.capacitorMax;
             before = targets[0].Hp;
+
+            float lightning = ElementStatus.For(targets[0]).LightningDamageTaken;
             weapons.HandleInput(true, true, false);
-            Assert.That(before - targets[0].Hp, Is.EqualTo(hit * tuning.capacitorFullBonus).Within(.01f), "a full discharge hits harder");
+            Assert.That(before - targets[0].Hp, Is.EqualTo(hit * tuning.capacitorFullBonus * lightning).Within(.01f), "a full discharge hits harder");
 
             var status = ElementStatus.For(game.player);
             status.ClearStatuses();

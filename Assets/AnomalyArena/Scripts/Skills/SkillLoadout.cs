@@ -22,13 +22,13 @@ namespace AnomalyArena
         public Vector3 VoidWalkEnd { get; private set; }
         public float VoidWalkFlash01 => voidWalkDuration > 0f ? Mathf.Clamp01(voidWalkTimer / voidWalkDuration) : 0f;
 
-        public bool Untargetable => VoidWalkActive;
-
         public float PlayerMoveMultiplier => (VoidWalkActive ? voidWalkMove : 1f)
             * (CurrentSingularity is { } singularity ? Mathf.Clamp01(singularity.definition.singularityPlayerMoveMultiplier) : 1f);
 
         public float StatusResistance => radianceTimer > 0f ? radianceResistance : 0f;
         public bool SingularityActive => CurrentSingularity != null;
+
+        public bool Invincible => VoidWalkActive || SingularityActive;
 
         public bool ActionLocked => false;
 
@@ -253,6 +253,8 @@ namespace AnomalyArena
             bool sliding = (body.State is CharacterState.Knocked or CharacterState.Thrown) && !BreaksDisplacement(def.id);
             if (body.Stunned || body.State == CharacterState.Dashing || sliding || (board && board.BlocksActions) || coolingDown)
                 return Refuse(index, ArenaText.Pair("Not ready","Not ready"));
+
+            if (EffectActive(def.id)) return Refuse(index, ArenaText.Pair("Still active","Still active"));
             if (!HasWorldHook(def.id)) return Refuse(index, ArenaText.Pair("World action unavailable","World action unavailable"));
             Vector3 desired = body.AimPoint;
             Vector3 origin = body.Position;
@@ -284,6 +286,22 @@ namespace AnomalyArena
         }
 
         public static bool BreaksDisplacement(SkillId id) => id is SkillId.Blink or SkillId.VoidWalk;
+
+        public bool EffectActive(SkillId id) => id switch
+        {
+            SkillId.Radiance => radianceTimer > 0f,
+            SkillId.TimeSlip => timeSlipTimer > 0f,
+            SkillId.Overcharge => overchargeTimer > 0f,
+            SkillId.VoidWalk => voidWalkTimer > 0f,
+            SkillId.Bulwark or SkillId.Decoy or SkillId.PocketVoid => body && (SkillWorldAPI.SkillObjectStanding?.Invoke(id, body) ?? false),
+            _ => HasTimedEffect(id)
+        };
+
+        bool HasTimedEffect(SkillId id)
+        {
+            foreach (var effect in effects) if (effect.id == id && effect.remaining > 0f) return true;
+            return false;
+        }
         static bool IsPointSkill(SkillId id) => id is SkillId.Blink or SkillId.Bulwark or SkillId.Decoy or SkillId.GravityWell
             or SkillId.PocketVoid or SkillId.StormCall;
 
@@ -325,7 +343,9 @@ namespace AnomalyArena
                 case SkillId.StormCall: AddTimed(def, level, point); break;
                 case SkillId.Bulwark:
                     SkillWorldAPI.CreateWall?.Invoke(point, def.Radius(level), def.Duration(level), def.ContactKnockback(level), body);
-                    ElementStatus.For(body)?.GainShield(def.shieldScalesWithMaxHp ? body.maxHp * def.Strength(level) : def.Strength(level)); break;
+
+                    ElementStatus.For(body)?.GainBulwarkShield(def.shieldScalesWithMaxHp ? body.maxHp * def.Strength(level) : def.Strength(level),
+                        level >= MaxLevel ? def.bulwarkShieldDirectFactor : (float?)null); break;
                 case SkillId.Radiance:
                     ElementStatus.For(body)?.ClearStatuses(); radianceTimer = def.Duration(level); radianceShare = def.Strength(level);
                     radianceResistance = def.StatusResistance(level);
@@ -375,6 +395,7 @@ namespace AnomalyArena
                 case SkillId.Singularity:
 
                     body.CancelDisplacement();
+                    ElementStatus.For(body)?.ClearControl();
                     AddTimed(def, level, body.Position);
                     break;
             }
@@ -389,7 +410,8 @@ namespace AnomalyArena
             if (game && !game.IsCombatActive) return;
             echoSlots.Clear();
             for (int i = 0; i < Slots.Length; i++)
-                if (!Slots[i].Empty && Slots[i].Id != SkillId.Decoy && !Slots[i].Definition.greaterVoid && HasWorldHook(Slots[i].Id))
+                if (!Slots[i].Empty && Slots[i].Id != SkillId.Decoy && !Slots[i].Definition.greaterVoid && HasWorldHook(Slots[i].Id)
+                    && !EffectActive(Slots[i].Id))
                     echoSlots.Add(i);
 
             while (echoSlots.Count > 0)
@@ -470,14 +492,15 @@ namespace AnomalyArena
                         }
                         if (effect.clock >= 0.25f)
                         {
-                            float elapsed = effect.clock; effect.clock = 0f;
+                            effect.clock = 0f;
                             QueryInto(effect.anchored ? effect.center : body.Position, 100f, nearby);
                             foreach (var c in nearby)
                             {
                                 foreach (var position in effect.trail)
                                 {
                                     if (Query.Flat(c.Position - position).sqrMagnitude > def.Radius(level) * def.Radius(level)) continue;
-                                    ElementStatus.For(c)?.Add(ElementKind.Fire, def.Strength(level) * elapsed, body); break;
+
+                                    ElementStatus.For(c)?.Ignite(def.Strength(level) * ElementCombat.WaveScale, body); break;
                                 }
                             }
                         }

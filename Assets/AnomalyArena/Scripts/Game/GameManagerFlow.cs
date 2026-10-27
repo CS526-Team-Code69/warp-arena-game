@@ -40,7 +40,7 @@ namespace AnomalyArena
             {
                 case KeyCode.Escape:
                     if (RunPhase == ArenaUiState.Paused) ExecuteUiCommand(ArenaUiCommand.Resume);
-                    else if (CanPlayerMove) ExecuteUiCommand(ArenaUiCommand.Pause);
+                    else if (CanPause) ExecuteUiCommand(ArenaUiCommand.Pause);
                     else if (RunPhase == ArenaUiState.LevelUp) ExecuteUiCommand(ArenaUiCommand.Cancel);              
                     break;
                 case KeyCode.T:
@@ -64,6 +64,10 @@ namespace AnomalyArena
         }
 
         bool CanToggleBuildWalk => RunPhase is (ArenaUiState.Armory or ArenaUiState.Draft or ArenaUiState.Ready) && !greaterDraft;
+
+        bool CanPause => CanPlayerMove || BuildTimeFlows;
+
+        bool resumeWalking;
 
         void ChooseByNumber(int choice)
         {

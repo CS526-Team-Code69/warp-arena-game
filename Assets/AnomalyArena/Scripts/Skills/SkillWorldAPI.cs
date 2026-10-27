@@ -22,6 +22,8 @@ namespace AnomalyArena
         public static Action<Vector3, float, bool, Combatant> CreateDecoy;
 
         public static Action<Vector3> DecoyEnded;
+
+        public static Func<SkillId, Combatant, bool> SkillObjectStanding;
         public static Action<float, float> TimeSlip;
         public static Action<Vector3, float, Combatant> ReflectProjectiles;
         public static Action<Combatant, Vector3> Teleport;

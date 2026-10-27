@@ -13,8 +13,11 @@ namespace AnomalyArena
         readonly Dictionary<Combatant, float> nextPush = new();
         public bool BattlefieldFrozen { get; set; }
 
+        public Combatant Owner { get; private set; }
+
         public void Deploy(Vector3 at, float width, float duration, float contactKnockback, Combatant user)
         {
+            Owner = user;
             push = contactKnockback;
             life = duration;
             age = 0f;

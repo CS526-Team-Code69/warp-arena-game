@@ -6,22 +6,17 @@ namespace AnomalyArena
 
     public sealed class V2BossGroundMarks : MonoBehaviour
     {
-        [Tooltip("Push-out band along the platform edge (the outer two cells that slide you off).")]
-        public Color edgeBandColor = new(0f, 0f, .02f, .45f);
-        [Tooltip("Dashed line showing where the platform edge is shrinking to.")]
-        public Color goalLineColor = new(.85f, .6f, 1f, .85f);
         [Tooltip("Rim of a prophecy landing circle, at full size from the start.")]
         public Color landingRimColor = new(.75f, .45f, 1f, .95f);
         [Tooltip("Fill of a prophecy landing circle; it closes from the rim to the centre as the hole nears.")]
         public Color landingFillColor = new(.06f, .02f, .12f, .85f);
-        [Min(.01f), Tooltip("Width of the dashed edge and landing rims, cells.")] public float lineWidth = .14f;
-        const int Segments = 72, Dashes = 40;
+        [Min(.01f), Tooltip("Width of the landing rims, cells.")] public float lineWidth = .14f;
+        const int Segments = 72;
 
         Enemy enemy;
         Material material;
         int sortingLayer, sortingOrder;
-        LineRenderer edgeBand;
-        readonly List<LineRenderer> dashes = new(), rims = new(), fills = new();
+        readonly List<LineRenderer> rims = new(), fills = new();
 
         void LateUpdate()
         {
@@ -31,14 +26,11 @@ namespace AnomalyArena
                          world.TrialActive && world.trialPlatform;
             if (trial && !material) FindMaterial();
             if (!material) trial = false;
-            DrawPlatform(trial, world);
             DrawLandingZones(trial);
         }
 
         void OnDisable()
         {
-            if (edgeBand) edgeBand.enabled = false;
-            foreach (var line in dashes) if (line) line.enabled = false;
             foreach (var line in rims) if (line) line.enabled = false;
             foreach (var line in fills) if (line) line.enabled = false;
         }
@@ -51,36 +43,6 @@ namespace AnomalyArena
             material = source.sharedMaterial;
             sortingLayer = source.sortingLayerID;
             sortingOrder = source.sortingOrder - 1;                             
-        }
-
-        void DrawPlatform(bool show, WorldMap world)
-        {
-            if (!show)
-            {
-                if (edgeBand) edgeBand.enabled = false;
-                foreach (var line in dashes) if (line) line.enabled = false;
-                return;
-            }
-
-            Vector3 centre = Query.Flat(world.trialPlatform.position);
-            float radius = world.trialRadius;
-
-            float goal = enemy.PlatformGoal;
-            bool shrinking = radius - goal > .05f;
-            while (dashes.Count < Dashes) dashes.Add(Make("TrialEdgeDash", 2, false));
-            for (int i = 0; i < Dashes; i++)
-            {
-                var dash = dashes[i];
-                dash.enabled = shrinking;
-                if (!shrinking) continue;
-
-                float a0 = i * Mathf.PI * 2f / Dashes, a1 = a0 + Mathf.PI / Dashes;
-                dash.SetPosition(0, centre + new Vector3(Mathf.Cos(a0), 0f, Mathf.Sin(a0)) * goal + Vector3.up * .06f);
-                dash.SetPosition(1, centre + new Vector3(Mathf.Cos(a1), 0f, Mathf.Sin(a1)) * goal + Vector3.up * .06f);
-                dash.widthMultiplier = lineWidth;
-                dash.startColor = dash.endColor = goalLineColor;
-                Flatten(dash);
-            }
         }
 
         void DrawLandingZones(bool show)

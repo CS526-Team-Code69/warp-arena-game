@@ -8,11 +8,18 @@ namespace AnomalyArena
     [DisallowMultipleComponent]
     public sealed class ElementStatus : MonoBehaviour
     {
+
+        const float Tolerance = 1e-4f;
+
         [field: SerializeField, Tooltip("GDD §4.6–4.8, shared candidate values.")]
         public StatusRules Rules { get; set; }
         [field: SerializeField, Tooltip("2 for a large body; elites multiply this by another 2.")]
         public float ControlThresholdFactor { get; set; } = 1f;
         public float Shield { get; private set; }
+
+        public float BulwarkShield { get; private set; }
+        float bulwarkDirectFactor = 1f;
+
         public float Fire { get; private set; }
         public float Poison { get; private set; }
         public float Frost { get; private set; }
@@ -27,24 +34,51 @@ namespace AnomalyArena
         public bool CanAct => !BlocksActions;
         public bool CarriesFrost => Frost >= 1f || Frozen;
         public bool Twitching => twitchTimer > 0f;
+        public bool Burning => Fire > 0f;
+
+        public bool ControlImmune => controlImmune > 0f;
         public float FrostThreshold => Rules ? Mathf.Max(.01f, Rules.frostThreshold * ControlThresholdFactor) : 6f;
+        public float LightningThreshold => Rules ? Mathf.Max(.01f, Rules.lightningThreshold * ControlThresholdFactor) : 6f;
         public float Chill01 => Frozen ? 1f : Mathf.Clamp01(Frost / FrostThreshold);
 
         public float PlayerChillMultiplier => !IsPlayer || !Rules || Frozen ? 1f : 1f / (1f + Rules.frostChill * Frost / FrostThreshold);
 
         public void ExtendFreeze(float seconds) { if (Frozen && !ImmuneToControl) freezeTimer = Mathf.Max(freezeTimer, seconds); }
 
-        public void BreakFreeze() { if (!Frozen) return; freezeTimer = 0f; if (Rules) frostImmune = Rules.frostImmunity; }
+        public void BreakFreeze()
+        {
+            if (!Frozen) return;
+            freezeTimer = 0f;
+            if (!Rules) return;
+            if (IsPlayer) frostImmune = Rules.frostImmunity;
+            else controlImmune = Rules.controlImmunity;
+        }
+
+        public float FrostSlow => IsPlayer || !Rules || Frozen ? 0f
+            : Mathf.Clamp(Rules.frostSlowPerStack * Frost, 0f, Mathf.Clamp01(Rules.frostSlowMax));
 
         public float SpeedMultiplier
         {
             get
             {
                 if (IsPlayer || !Rules) return 1f;
-                float chill = Frozen ? 1f : 1f / (1f + Rules.frostChill * (ImmuneToControl ? .5f : 1f) * Frost / FrostThreshold);
+                float chill = 1f - FrostSlow * (ImmuneToControl ? .5f : 1f);
                 return chill * (Paralysed ? Mathf.Clamp01(Rules.lightningSlow) : 1f);
             }
         }
+
+        public float LightningDamageTaken
+        {
+            get
+            {
+                if (IsPlayer || !Rules) return 1f;
+                if (Paralysed) return 1f + Mathf.Max(0f, Rules.lightningParalysedVulnerability);
+                return 1f + Mathf.Min(Mathf.Max(0f, Rules.lightningVulnerabilityMax), Rules.lightningVulnerabilityPerStack * Lightning);
+            }
+        }
+
+        public float TwitchChance => IsPlayer || !Rules ? 0f
+            : Mathf.Clamp(Rules.lightningTwitchChancePerStack * Lightning, 0f, Mathf.Clamp01(Rules.lightningTwitchChanceMax));
         public event Action<ElementKind> StatusApplied;
         public event Action<float, DamageSource, Combatant> DamageTicked;
         public event Action ShieldBroken;
@@ -52,6 +86,8 @@ namespace AnomalyArena
         float fireClock, poisonClock, freezeTimer, paralysisTimer, frostImmune, lightningImmune;
         float twitchClock, twitchTimer, shieldAge, shieldDecayClock;
         float earthFraction, lightFraction, voidFraction, fireCarry, poisonCarry;
+
+        float fireWindow, poisonWindow, frostWindow, lightningWindow, poisonDrain, frostDrain, lightningDrain, controlImmune, stackTwitchClock;
         readonly float[] immunities = new float[8];
         static readonly List<ElementStatus> active = new();
         static readonly Dictionary<Combatant, ElementStatus> byBody = new();
@@ -84,7 +120,7 @@ namespace AnomalyArena
 
         public void ResetForSpawn()
         {
-            ClearStatuses(); Shield = 0f; shieldAge = 0f; shieldDecayClock = 0f;
+            ClearStatuses(); Shield = BulwarkShield = 0f; shieldAge = 0f; shieldDecayClock = 0f;
             CarriesVoid = false; ImmuneToControl = false; ControlThresholdFactor = 1f;
             earthFraction = lightFraction = voidFraction = 0f;
             Array.Clear(immunities, 0, immunities.Length);
@@ -106,6 +142,14 @@ namespace AnomalyArena
         public void Add(ElementKind element, float amount, Combatant source = null)
         {
             if (!Rules || !body || !body.IsAlive || amount <= 0f) return;
+
+            if (IsPlayer && GameManager.Instance && GameManager.Instance.skills && GameManager.Instance.skills.SingularityActive) return;
+
+            if (!IsPlayer && element == ElementKind.Fire)
+            {
+                Ignite(amount * Rules.fireStackDamage * ElementCombat.WaveScale / Mathf.Max(.01f, Rules.elementWindow), source);
+                return;
+            }
             amount *= ElementFactor(element);
 
             if (IsPlayer && source != body)
@@ -115,30 +159,44 @@ namespace AnomalyArena
                 if (skills) amount *= 1f - Mathf.Clamp01(skills.StatusResistance);
             }
             if (amount <= 0f) return;
+            if (IsPlayer ? AddToPlayer(element, amount, source) : AddToEnemy(element, amount, source)) OnStatusApplied(element);
+        }
+
+        public void Ignite(float burnPerSecond, Combatant source = null)
+        {
+            if (!Rules || !body || !body.IsAlive || IsPlayer || burnPerSecond <= 0f || ElementFactor(ElementKind.Fire) <= 0f) return;
+            if (fireWindow <= 0f) { Fire = 0f; fireClock = 0f; }
+            Fire = Mathf.Max(Fire, burnPerSecond);
+            fireWindow = Rules.elementWindow;
+            fireSource = source;
+            OnStatusApplied(ElementKind.Fire);
+        }
+
+        bool AddToPlayer(ElementKind element, float amount, Combatant source)
+        {
             switch (element)
             {
                 case ElementKind.Fire:
                     if (Fire <= 0f) fireClock = 0f;
-                    Fire = Mathf.Min(Rules.fireCap, Fire + amount); fireSource = source; break;
+                    Fire = Mathf.Min(Rules.fireCap, Fire + amount); fireSource = source; return true;
                 case ElementKind.Poison:
                     if (Poison <= 0f) poisonClock = 0f;
-                    Poison = Mathf.Min(IsPlayer ? Rules.poisonCap : Rules.poisonOnEnemyCap, Poison + amount); poisonSource = source; break;
+                    Poison = Mathf.Min(Rules.poisonCap, Poison + amount); poisonSource = source; return true;
                 case ElementKind.Frost:
-                    if (frostImmune > 0f || Frozen) return;
+                    if (frostImmune > 0f || Frozen) return false;
                     Frost += amount;
-                    if (Frost >= Rules.frostThreshold * ControlThresholdFactor)
+                    if (Frost >= FrostThreshold)
                     {
                         Frost = 0f;
-
                         if (ImmuneToControl) frostImmune = Rules.frostImmunity;
 
                         else freezeTimer = Rules.frostDuration;
                     }
-                    break;
+                    return true;
                 case ElementKind.Lightning:
-                    if (lightningImmune > 0f || Paralysed) return;
+                    if (lightningImmune > 0f || Paralysed) return false;
                     Lightning += amount * (CarriesFrost ? Mathf.Max(1f, Rules.frostLightningStackMultiplier) : 1f);
-                    if (Lightning >= Rules.lightningThreshold * ControlThresholdFactor)
+                    if (Lightning >= LightningThreshold)
                     {
                         Lightning = 0f;
                         if (ImmuneToControl) lightningImmune = Rules.lightningImmunity;
@@ -148,82 +206,63 @@ namespace AnomalyArena
                             twitchClock = Rules.twitchInterval;
                         }
                     }
-                    break;
-                default: break;
+                    return true;
+                default: return true;
             }
-            OnStatusApplied(element);
+        }
+
+        bool AddToEnemy(ElementKind element, float amount, Combatant source)
+        {
+            switch (element)
+            {
+                case ElementKind.Poison:
+                    if (Poison <= 0f) poisonClock = 0f;
+                    Poison = Mathf.Min(Rules.poisonOnEnemyCap, Poison + amount); poisonSource = source;
+                    poisonWindow = Rules.elementWindow; poisonDrain = 0f;
+                    return true;
+                case ElementKind.Frost:
+                    if (Frozen) return false;
+                    Frost = Mathf.Min(FrostThreshold, Frost + amount);
+                    frostWindow = Rules.elementWindow; frostDrain = 0f;
+                    TryFreeze();
+                    return true;
+                case ElementKind.Lightning:
+                    if (Paralysed) return false;
+                    if (Lightning <= 0f) stackTwitchClock = Rules.twitchInterval;
+                    Lightning = Mathf.Min(LightningThreshold, Lightning + amount * (CarriesFrost ? Mathf.Max(1f, Rules.frostLightningStackMultiplier) : 1f));
+                    lightningWindow = Rules.elementWindow; lightningDrain = 0f;
+                    TryParalyse();
+                    return true;
+                default: return true;
+            }
+        }
+
+        void TryFreeze()
+        {
+            if (Frozen || controlImmune > 0f || Frost < FrostThreshold - Tolerance) return;
+            Frost = 0f; frostWindow = frostDrain = 0f;
+
+            if (ImmuneToControl) controlImmune = Rules.controlImmunity;
+            else freezeTimer = Rules.frostDuration;
+        }
+
+        void TryParalyse()
+        {
+            if (Paralysed || controlImmune > 0f || Lightning < LightningThreshold - Tolerance) return;
+            Lightning = 0f; lightningWindow = lightningDrain = 0f;
+            if (ImmuneToControl) controlImmune = Rules.controlImmunity;
+            else
+            {
+                paralysisTimer = Rules.lightningDuration;
+                twitchClock = Rules.twitchInterval;
+            }
         }
 
         public void Tick(float dt)
         {
             if (dt <= 0f || !Rules || !body || !body.IsAlive) return;
-            frostImmune = Mathf.Max(0f, frostImmune - dt);
-            lightningImmune = Mathf.Max(0f, lightningImmune - dt);
-            if (Frozen)
-            {
-                freezeTimer -= dt;
-                if (!Frozen) frostImmune = Rules.frostImmunity;
-            }
-            else Frost = Mathf.Max(0f, Frost - Rules.frostDecay * dt);
-            if (Paralysed)
-            {
-                paralysisTimer -= dt;
-                twitchTimer = Mathf.Max(0f, twitchTimer - dt);
-                twitchClock -= dt;
-
-                if (twitchClock <= 0f) { twitchTimer = Rules.twitchLength; twitchClock += Rules.twitchInterval; }
-                if (!Paralysed)
-                {
-                    twitchTimer = 0f;
-                    lightningImmune = Rules.lightningImmunity;
-                }
-            }
-            else Lightning = Mathf.Max(0f, Lightning - Rules.lightningDecay * dt);
-
-            if (Fire > 0f)
-            {
-                fireClock += dt;
-                while (fireClock >= Rules.fireInterval && Fire > 0f && body.IsAlive)
-                {
-                    fireClock -= Rules.fireInterval;
-                    float damage;
-                    if (IsPlayer)
-                    {
-                        damage = Mathf.Floor(Fire);
-                        Fire = Mathf.Max(0f, Fire - 1f);
-                    }
-                    else
-                    {
-
-                        float burned = Mathf.Min(1f, Fire);
-                        Fire = Mathf.Max(0f, Fire - burned);
-                        fireCarry += burned * Rules.fireDamagePerStack * ElementCombat.WaveScale;
-                        damage = Mathf.Floor(fireCarry);
-                        fireCarry -= damage;
-                    }
-                    if (damage > 0f) OnDamageTicked(damage, DamageSource.Burn, fireSource);
-                }
-            }
-            if (Poison > 0f)
-            {
-                poisonClock += dt;
-                while (poisonClock >= Rules.poisonInterval && Poison > 0f && body.IsAlive)
-                {
-                    poisonClock -= Rules.poisonInterval;
-                    float damage;
-                    if (IsPlayer) damage = Mathf.Ceil(Mathf.Floor(Poison) * Rules.poisonDamagePerStack);
-                    else
-                    {
-
-                        poisonCarry += Poison * Rules.poisonOnEnemyDamagePerStack * ElementCombat.WaveScale;
-                        damage = Mathf.Floor(poisonCarry);
-                        poisonCarry -= damage;
-                    }
-
-                    Poison = Mathf.Max(0f, Poison - 1f);
-                    if (damage > 0f) OnDamageTicked(damage, DamageSource.Poison, poisonSource);
-                }
-            }
+            if (IsPlayer) TickPlayer(dt);
+            else TickEnemy(dt);
             if (IsPlayer && Shield > 0f)
             {
                 shieldAge += dt;
@@ -235,10 +274,164 @@ namespace AnomalyArena
                         float decay = Mathf.Floor(shieldDecayClock);
                         shieldDecayClock -= decay;
                         Shield = Mathf.Max(0f, Shield - decay * Rules.shieldDecayPerSecond);
+                        BulwarkShield = Mathf.Min(BulwarkShield, Shield);
                     }
                 }
             }
         }
+
+        void TickPlayer(float dt)
+        {
+            frostImmune = Mathf.Max(0f, frostImmune - dt);
+            lightningImmune = Mathf.Max(0f, lightningImmune - dt);
+            if (Frozen)
+            {
+                freezeTimer -= dt;
+                if (!Frozen) frostImmune = Rules.frostImmunity;
+            }
+            else Frost = Mathf.Max(0f, Frost - Rules.frostDecay * dt);
+            if (Paralysed)
+            {
+                TickParalysis(dt);
+                if (!Paralysed) lightningImmune = Rules.lightningImmunity;
+            }
+            else Lightning = Mathf.Max(0f, Lightning - Rules.lightningDecay * dt);
+
+            if (Fire > 0f)
+            {
+                fireClock += dt;
+                while (fireClock >= Rules.fireInterval && Fire > 0f && body.IsAlive)
+                {
+                    fireClock -= Rules.fireInterval;
+                    float damage = Mathf.Floor(Fire);
+                    Fire = Mathf.Max(0f, Fire - 1f);
+                    if (damage > 0f) OnDamageTicked(damage, DamageSource.Burn, fireSource);
+                }
+            }
+            if (Poison > 0f)
+            {
+                poisonClock += dt;
+                while (poisonClock >= Rules.poisonInterval && Poison > 0f && body.IsAlive)
+                {
+                    poisonClock -= Rules.poisonInterval;
+                    float damage = Mathf.Ceil(Mathf.Floor(Poison) * Rules.poisonDamagePerStack);
+
+                    Poison = Mathf.Max(0f, Poison - 1f);
+                    if (damage > 0f) OnDamageTicked(damage, DamageSource.Poison, poisonSource);
+                }
+            }
+        }
+
+        void TickEnemy(float dt)
+        {
+            controlImmune = Mathf.Max(0f, controlImmune - dt);
+            if (Frozen)
+            {
+                freezeTimer -= dt;
+                if (!Frozen) controlImmune = Rules.controlImmunity;
+            }
+            if (Paralysed)
+            {
+                TickParalysis(dt);
+                if (!Paralysed) controlImmune = Rules.controlImmunity;
+            }
+            else TickStackTwitches(dt);
+            Poison = Drain(Poison, ref poisonWindow, ref poisonDrain, dt);
+            Frost = Drain(Frost, ref frostWindow, ref frostDrain, dt);
+            Lightning = Drain(Lightning, ref lightningWindow, ref lightningDrain, dt);
+
+            TryFreeze();
+            TryParalyse();
+
+            if (Fire > 0f)
+            {
+
+                float burning = Mathf.Clamp(fireWindow, 0f, dt);
+                fireWindow -= dt;
+                float interval = Mathf.Max(.01f, Rules.fireInterval);
+                while (body.IsAlive)
+                {
+                    float step = Mathf.Min(burning, Mathf.Max(0f, interval - fireClock));
+                    fireCarry += Fire * step;
+                    fireClock += step;
+                    burning -= step;
+                    if (fireClock < interval - Tolerance) break;
+                    fireClock -= interval;
+                    PayBurn();
+                }
+                if (fireWindow <= 0f)
+                {
+                    if (body.IsAlive) PayBurn();
+                    Fire = 0f; fireWindow = 0f; fireClock = 0f;
+                }
+            }
+            if (Poison > 0f)
+            {
+                poisonClock += dt;
+                float interval = Mathf.Max(.01f, Rules.poisonInterval);
+                while (poisonClock >= interval && Poison > 0f && body.IsAlive)
+                {
+                    poisonClock -= interval;
+
+                    poisonCarry += Poison * Rules.poisonOnEnemyDamagePerStack * interval * ElementCombat.WaveScale;
+                    float damage = Mathf.Floor(poisonCarry);
+                    poisonCarry -= damage;
+                    if (damage > 0f) OnDamageTicked(damage, DamageSource.Poison, poisonSource);
+                }
+            }
+        }
+
+        void PayBurn()
+        {
+            float damage = Mathf.Floor(fireCarry + Tolerance * 10f);
+            if (damage <= 0f) return;
+            fireCarry -= damage;
+            OnDamageTicked(damage, DamageSource.Burn, fireSource);
+        }
+
+        void TickParalysis(float dt)
+        {
+            paralysisTimer -= dt;
+            twitchTimer = Mathf.Max(0f, twitchTimer - dt);
+            twitchClock -= dt;
+            if (twitchClock <= 0f) { twitchTimer = Rules.twitchLength; twitchClock += Rules.twitchInterval; }
+            if (!Paralysed) twitchTimer = 0f;
+        }
+
+        void TickStackTwitches(float dt)
+        {
+            twitchTimer = Mathf.Max(0f, twitchTimer - dt);
+            if (Lightning <= 0f || Frozen || ImmuneToControl || controlImmune > 0f) return;
+            float interval = Mathf.Max(.05f, Rules.twitchInterval);
+            stackTwitchClock -= dt;
+            while (stackTwitchClock <= 0f)
+            {
+                stackTwitchClock += interval;
+
+                float chance = TwitchChance;
+                if (chance >= 1f || UnityEngine.Random.value < chance) twitchTimer = Mathf.Max(twitchTimer, Rules.twitchLength);
+            }
+        }
+
+        float Drain(float stacks, ref float window, ref float drain, float dt)
+        {
+            if (stacks <= 0f) { window = drain = 0f; return 0f; }
+            if (window > 0f)
+            {
+                window -= dt;
+                if (window > 0f) return stacks;
+                dt = -window;
+                window = 0f;
+            }
+            if (Rules.elementDrainSeconds <= 0f) { drain = 0f; return 0f; }
+            if (drain <= 0f) drain = stacks / Rules.elementDrainSeconds;
+            stacks -= drain * dt;
+            if (stacks > 0f) return stacks;
+            drain = 0f;
+            return 0f;
+        }
+
+        float ShieldDirectFactor => BulwarkShield > 0f ? bulwarkDirectFactor : Rules.shieldDirectFactor;
 
         public float ResolveDamage(float amount, DamageSource source = DamageSource.Hit, bool ignoreShield = false, bool ignoreShieldReduction = false)
         {
@@ -246,9 +439,10 @@ namespace AnomalyArena
             if (ignoreShield || source == DamageSource.Poison || Shield <= 0f) return amount;
             if (!ignoreShieldReduction)
                 amount = source == DamageSource.Burn ? Mathf.Ceil(amount * Rules.fireShieldFactor)
-                    : Mathf.Round(amount * Rules.shieldDirectFactor);
+                    : Mathf.Round(amount * ShieldDirectFactor);
             float absorbed = Mathf.Min(Shield, amount);
             Shield -= absorbed;
+            BulwarkShield = Mathf.Clamp(BulwarkShield - absorbed, 0f, Shield);
             if (Shield <= 0f && absorbed > 0f) OnShieldBroken();
             return amount - absorbed;
         }
@@ -257,16 +451,34 @@ namespace AnomalyArena
         {
             if (points <= 0f || !Rules) return;
             float cap = IsPlayer || capToPlayer ? (body ? body.maxHp : 50f) * Rules.playerShieldCapShare : float.MaxValue;
-            Shield = Mathf.Min(cap, Shield + points); shieldAge = 0f; shieldDecayClock = 0f;
+
+            Shield = Mathf.Max(Shield, Mathf.Min(cap, Shield + points)); shieldAge = 0f; shieldDecayClock = 0f;
         }
-        public void SetShield(float points) { Shield = Mathf.Max(0f, points); shieldAge = 0f; shieldDecayClock = 0f; }
+
+        public void GainBulwarkShield(float points, float? directFactor = null)
+        {
+            if (points <= 0f || !Rules) return;
+            float cap = IsPlayer ? Mathf.Max(points, (body ? body.maxHp : 50f) * Rules.playerShieldCapShare) : float.MaxValue;
+            Shield = Mathf.Max(Shield, Mathf.Min(cap, Shield + points)); shieldAge = 0f; shieldDecayClock = 0f;
+            if (!directFactor.HasValue) return;
+            BulwarkShield = Mathf.Min(Shield, BulwarkShield + points);
+            bulwarkDirectFactor = Mathf.Clamp01(directFactor.Value);
+        }
+        public void SetShield(float points) { Shield = Mathf.Max(0f, points); BulwarkShield = Mathf.Min(BulwarkShield, Shield); shieldAge = 0f; shieldDecayClock = 0f; }
         public void OnHeal() { if (IsPlayer) Poison = Mathf.Max(0f, Poison - 1f); }
         public void ClearStatuses()
         {
             Fire = Poison = Frost = Lightning = 0f;
             fireClock = poisonClock = freezeTimer = paralysisTimer = frostImmune = lightningImmune = twitchClock = twitchTimer = 0f;
+            fireWindow = poisonWindow = frostWindow = lightningWindow = poisonDrain = frostDrain = lightningDrain = controlImmune = stackTwitchClock = 0f;
             fireCarry = poisonCarry = 0f;
             fireSource = poisonSource = null;
+        }
+
+        public void ClearControl()
+        {
+            Frost = Lightning = 0f;
+            freezeTimer = paralysisTimer = twitchClock = twitchTimer = 0f;
         }
 
         public void PayWielder(ElementKind element, float damage)

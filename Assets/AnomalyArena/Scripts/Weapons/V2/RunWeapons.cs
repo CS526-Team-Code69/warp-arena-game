@@ -715,6 +715,8 @@ namespace AnomalyArena
             ElementKind element=upgrade==UpgradeAxis.Infusion?RollElement(weapon.element):weapon.element;
             string desc=upgrade==UpgradeAxis.Infusion?ArenaText.Pair("Infuse ","Infuse ")+ArenaTerms.Element(element)+(weapon.element!=ElementKind.None?ArenaText.Pair(", replaces ",", replaces ")+ArenaTerms.Element(weapon.element):""):upgrade switch{UpgradeAxis.Power=>ArenaText.Pair("Damage +40%","Damage +40%"),UpgradeAxis.Tempo=>ArenaText.Pair("Cooldown, charge and reload -30%","Cooldown, charge and reload -30%"),UpgradeAxis.Reach=>ArenaText.Pair("Range, area or targets +40%","Range, area or targets +40%"),UpgradeAxis.Twist=>ArenaText.Pair("Adds a new variant to this anomaly","Adds a new variant to this anomaly"),_=>ArenaText.Pair("Removes or softens this anomaly's backfire","Removes or softens this anomaly's backfire")};
             if(upgrade is UpgradeAxis.Twist or UpgradeAxis.Tame)desc=(int)weapon.form<3?CoreAnomalyUpgradeDescription(weapon,upgrade):ArenaTerms.ExpandedUpgradeDescription(weapon.form,weapon.variant,upgrade);
+                                                                                                                
+            if(upgrade==UpgradeAxis.Infusion){string rule=ArenaTerms.ElementRule(element);if(rule.Length>0)desc+="\n"+rule;}
                                                                                                           
             var axesBefore=weapon.axes;var elementBefore=weapon.element;
             return new DraftCard(DraftCardKind.Weapon,weapon.Label+" / "+ArenaTerms.Upgrade(upgrade),desc,_=>{weapon.axes|=upgrade;if(upgrade==UpgradeAxis.Infusion)weapon.element=element;return true;},payload:new WeaponUpgradeOffer(weapon,upgrade,element),
