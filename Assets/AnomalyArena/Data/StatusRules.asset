@@ -58,6 +58,7 @@ MonoBehaviour:
   controlImmunity: 2
   fireBurnShare: 0.25
   builtInFireBurnFactor: 1.6
+  wildfireFireBurnFactor: 12
   fireStackDamage: 1.5
   poisonOnEnemyDamagePerStack: 0.3
   poisonOnEnemyInterval: 0.5
