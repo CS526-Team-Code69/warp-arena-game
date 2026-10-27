@@ -26,7 +26,7 @@ namespace AnomalyArena
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
-        public async Task Knife_TwoLiveTargets_HitsEachOnceAndReturnsToSavedPool()
+        public async Task Knife_TwoLiveTargets_HitsEachGoingOutAndTheReturnCutsWhatItPasses()
         {
             var sandbox = await StartSandbox();
             var game = sandbox.game;
@@ -41,13 +41,14 @@ namespace AnomalyArena
             var actor = AttackPool.Instance.actors.FirstOrDefault(a => a.gameObject.activeSelf && a.weapon == knife);
             Assert.That(actor, Is.Not.Null, "saved attack pool supplies the thrown knife");
             Assert.That(knife.inFlight, Is.True, "throw owns the hand slot while outbound");
+            float cut = actor.ownerDamage * game.runWeapons.StartingFormDamageFactor(WeaponForm.Knife);                                                                                       
             await Until(() => second.Hp < TargetHp && actor.IsReturning, 4f, "knife hits two targets and starts returning");
             await Until(() => !knife.inFlight, 4f, "knife return completes");
 
-            Assert.That(first.Hp, Is.EqualTo(TargetHp - expected).Within(.001f), "first target receives exactly one hit");
-            Assert.That(second.Hp, Is.EqualTo(TargetHp - expected).Within(.001f), "second target receives exactly one hit");
+            Assert.That(first.Hp, Is.EqualTo(TargetHp - 2f * expected).Within(.001f), "the first target is hit going out and cut once by the return");
+            Assert.That(second.Hp, Is.EqualTo(TargetHp - expected).Within(.001f), "the second target, where the return starts, is hit once");
             Assert.That(actor.gameObject.activeSelf, Is.False, "return releases the saved actor");
-            Assert.That(game.player.Hp, Is.EqualTo(25f), "empty return does not damage owner");
+            Assert.That(game.player.Hp, Is.EqualTo(25f - cut).Within(.001f), "the return cuts its owner once, for the base value");
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]

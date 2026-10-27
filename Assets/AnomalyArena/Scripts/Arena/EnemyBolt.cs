@@ -14,6 +14,8 @@ namespace AnomalyArena
                                                                                                                        
         float trackTurn, trackLeft;
         public Vector3 Direction => direction;
+                                                                                                                                        
+        public int Launches { get; private set; }
                                                                                                                                   
         float Speed => shotSpeed > 0f ? shotSpeed : owner && owner.definition ? Mathf.Max(.1f, owner.definition.projectileSpeed) : 7f;
                                                                                                                          
@@ -59,6 +61,7 @@ namespace AnomalyArena
             owner = enemy;
             dealer = enemy;
             targetTeam = Team.Player;
+            Launches++;
             damageFactor =
                 enemy
                     ? enemy.OutgoingDamageFactor
@@ -86,6 +89,9 @@ namespace AnomalyArena
         void FixedUpdate()
         {
             if (!GameManager.Instance.IsCombatActive) return;
+                                                                                                                                      
+            var weapons = GameManager.Instance.runWeapons;
+            if (Hostile && weapons && weapons.DeflectsShot(this)) return;
             float dt = GameManager.Instance.WorldFixedDeltaTime;
             Vector3 from = transform.position;
                                                                                                                                 
@@ -117,8 +123,25 @@ namespace AnomalyArena
                 return;
             }
 
+                                                                                                                                              
+                                                                         
+            var player = GameManager.Instance.player;
+            var shield = targetTeam == Team.Player && player && !(world && world.PlayerHidden) ? player.HeldShield : null;
             foreach (var character in Query.CharactersAlong(from, to, HitRadius))
             {
+                if (shield && character == shield && character.IsAlive)
+                {
+                    var block = DamageInfo.Attack((shotDamage >= 0f ? shotDamage : owner ? owner.attackDamage : 6f) * damageFactor, dealer, direction, 0f, HitKind.Bullet);
+                    if (owner) block.element = owner.Affix;
+                    float hpBefore = character.Hp;
+                    var shieldBoard = ElementStatus.For(character);
+                    float shieldBefore = shieldBoard ? shieldBoard.Shield : 0f;
+                    if (character.ReceiveDamage(block) && owner && owner.Affix != ElementKind.None)
+                        ElementCombat.ApplyAffix(owner, character, owner.Affix,
+                            Mathf.Max(0f, hpBefore - character.Hp) + Mathf.Max(0f, shieldBefore - (shieldBoard ? shieldBoard.Shield : 0f)));
+                    gameObject.SetActive(false);
+                    return;
+                }
                 if (character.Team != targetTeam || !character.IsAlive) continue;
                                                                                                   
                 if (targetTeam == Team.Player && world && world.PlayerHidden) continue;

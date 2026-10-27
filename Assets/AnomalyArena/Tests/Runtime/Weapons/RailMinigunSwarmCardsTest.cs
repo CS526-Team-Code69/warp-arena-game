@@ -146,11 +146,14 @@ namespace AnomalyArena
             Assert.That(marked.IsAlive, Is.True, "one shot leaves it well above the line");
             Assert.That(weapons.IsExecuteMarked(marked), Is.True, "the survivor is marked");
 
-            float maxHp = game.progression.Stats.maxHp;
+            float maxHp = game.progression.Stats.maxHp, cooldown = rail.cooldown;
             LeaveHp(marked, marked.maxHp * .3f);
             Assert.That(marked.IsAlive, Is.False, "a poison tick that drops a marked enemy under 40% executes it");
-            Assert.That(weapons.ExecuteThreshold(rail), Is.EqualTo(tuning.executeThreshold + tuning.executeThresholdPerKill).Within(.0001f), "it counts as this gun's kill");
-            Assert.That(game.progression.Stats.maxHp, Is.EqualTo(maxHp - tuning.executeMaxHpLoss).Within(.001f), "and costs max HP like any execution");
+
+            Assert.That(weapons.ExecuteThreshold(rail), Is.EqualTo(tuning.executeThreshold).Within(.0001f), "the line stays where it was");
+            Assert.That(game.progression.Stats.maxHp, Is.EqualTo(maxHp).Within(.001f), "and max HP does not change");
+            Assert.That(rail.executeNextShot, Is.Zero, "it arms no next shot");
+            Assert.That(rail.cooldown, Is.EqualTo(cooldown).Within(.05f), "and gives no cooldown back");
 
             LeaveHp(targets[1], targets[1].maxHp * .3f);
             Assert.That(targets[1].IsAlive, Is.True, "an unmarked enemy is not executed by other damage");
@@ -176,32 +179,46 @@ namespace AnomalyArena
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
-        public async Task ExecuteTame_Executions_AddMaxHpAndHealUpToTheCap()
+        public async Task ExecuteTame_ShotThatKillsNothing_SparesYouAndCirclesYouWithAnArcShield()
         {
             var (game, targets) = await V3CombatSmokeTest.StartSandbox();
             var weapons = game.runWeapons; var tuning = weapons.upgrades;
+            var player = game.player;
             var rail = Equip(game, WeaponForm.Railgun, 1, UpgradeAxis.Tame);
+            float shot = weapons.HitDamage(rail), zap = shot * tuning.executeAuraShare;
 
-            rail.executeHpGained = tuning.executeTameHpCap - .5f;
-            LeaveHp(game.player, game.player.maxHp - 10f);
-            float maxHp = game.progression.Stats.maxHp, hp = game.player.Hp;
-            LeaveHp(targets[0], weapons.HitDamage(rail) + targets[0].maxHp * .2f);
+            var near = targets[1];
+            Vector3 beside = player.Position + Vector3.forward * 1.2f + Vector3.right * (near.radius + .35f);
+            Assume.That(RunWeapons.ValidTeleportPoint(beside, near.radius), Is.True, "room beside the lane");
+            Place(near, beside);
+            Assume.That(Query.Flat(beside - player.Position).magnitude, Is.LessThanOrEqualTo(tuning.executeAuraRadius + near.radius));
+            ElementStatus.For(player).SetShield(0f);
+            float hp = player.Hp;
 
             weapons.HandleInput(true, true, false);
-            await Awaitable.NextFrameAsync();
+            Assume.That(targets[0].IsAlive, Is.True);
+            Assert.That(player.Hp, Is.EqualTo(hp), "Tame: the backflow no longer shocks you");
+            Assert.That(rail.cooldown, Is.EqualTo(weapons.CycleSeconds(rail)).Within(.05f), "nor forces the long cooldown");
+            Assert.That(rail.executeAuraLeft, Is.EqualTo(tuning.executeAuraSeconds).Within(.05f), "it becomes the arc shield");
+            Assert.That(game.UiSnapshot.handSlots[weapons.ActiveIndex].detail, Does.Contain(ArenaText.Pair("Arc shield","Arc shield")), "the slot shows it");
 
-            Assert.That(targets[0].IsAlive, Is.False, "executed");
-            Assert.That(game.progression.Stats.maxHp, Is.EqualTo(maxHp + .5f).Within(.001f), "max HP rises, but only up to the cap");
-            Assert.That(game.player.Hp, Is.GreaterThanOrEqualTo(hp + .5f - .01f), "the gain is healed");
-            Assert.That(rail.executeHpGained, Is.EqualTo(tuning.executeTameHpCap).Within(.001f));
+            await Seconds(tuning.executeAuraInterval * 2f + .2f);
+            float zapped = near.maxHp - near.Hp;
+            Assert.That(zapped, Is.GreaterThanOrEqualTo(zap * 2f - .01f), "it shocks an enemy beside you every interval");
+            Assert.That(Mathf.Abs(zapped / zap - Mathf.Round(zapped / zap)), Is.LessThan(.01f), "for its share of the shot each time");
+            Assert.That(targets[2].Hp, Is.EqualTo(targets[2].maxHp), "only within its radius");
 
-            maxHp = game.progression.Stats.maxHp;
-            LeaveHp(targets[1], weapons.HitDamage(rail) + targets[1].maxHp * .2f);
+            await Seconds(.5f);
+            targets[0].Heal(targets[0].maxHp);                                        
             rail.cooldown = 0f;
             weapons.HandleInput(true, true, false);
-            await Awaitable.NextFrameAsync();
-            Assert.That(targets[1].IsAlive, Is.False);
-            Assert.That(game.progression.Stats.maxHp, Is.EqualTo(maxHp).Within(.001f), "nothing more past the cap, and no loss");
+            Assume.That(targets[0].IsAlive, Is.True);
+            Assert.That(rail.executeAuraLeft, Is.EqualTo(tuning.executeAuraSeconds).Within(.05f), "restarted, not stacked");
+            await Until(() => rail.executeAuraLeft <= 0f, tuning.executeAuraSeconds + 1f, "the shield runs out");
+            float after = near.Hp;
+            await Seconds(tuning.executeAuraInterval * 2f);
+            Assert.That(near.Hp, Is.EqualTo(after), "then it stops");
+            Assert.That(player.Hp, Is.EqualTo(hp), "it never hurts you");
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
@@ -253,47 +270,135 @@ namespace AnomalyArena
             Assert.That(gun.turretLeft, Is.Zero, "switching back recalls it");
         }
 
+        [Test, LoadScene(Scene), Category("Integration"), Timeout(60000)]
+        public async Task SpinUp_HoldingFire_PushesYouSlowlyBackFasterWithTheSpin_AWallStopsItHarmlessly()
+        {
+            var (game, targets) = await V3CombatSmokeTest.StartSandbox();
+            foreach (var target in targets) target.DiscardWithoutReward();
+            var tuning = game.runWeapons.upgrades;
+            var player = game.player;
+            Vector3 origin = player.Position;
+            player.DebugSetAim(Vector3.back);                                                   
+            player.enabled = true;                                                        
+            var gun = Equip(game, WeaponForm.Minigun, 0);
+            float hp = player.Hp;
+
+            var (early, earlyKnocked) = await HoldFire(game, gun, 0f, .6f);
+            await SetBack(player, origin);
+            var (full, fullKnocked) = await HoldFire(game, gun, 3f, 2f);
+
+            Assert.That(early, Is.LessThan(.2f * tuning.spinUpRetreatSpeed), "a fresh spin hardly moves you");
+            Assert.That(full, Is.EqualTo(2f * tuning.spinUpRetreatSpeed).Within(.45f), "about spinUpRetreatSpeed cells a second at full spin");
+            Assert.That(earlyKnocked || fullKnocked, Is.False, "the retreat is a push, never a knockback");
+            Assert.That(player.Hp, Is.EqualTo(hp));
+
+            Vector3 stopped = player.Position;
+            await Seconds(.5f);
+            Assert.That(Query.Flat(player.Position - stopped).magnitude, Is.LessThan(.05f), "only while you hold fire");
+
+            await SetBack(player, origin);
+            float gap = .2f;
+            WorldMap.Active.CreateWall(origin + Vector3.forward * (BodyRadius(player) + .5f + gap), 4f, 60f, 0f, player);
+            Physics.SyncTransforms();
+            await SetBack(player, origin);                                
+            var (blocked, blockedKnocked) = await HoldFire(game, gun, 3f, 2f);
+            Assert.That(blocked, Is.LessThan(Mathf.Min(.5f * full, gap + .25f)), "the wall stops the retreat");
+            Assert.That(blockedKnocked, Is.False, "never a knockback");
+            Assert.That(player.Hp, Is.EqualTo(hp), "and running into the wall costs no HP");
+        }
+
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
-        public async Task SpinUpTame_FiringAtFullSpin_FreesTurningKeepsTheSlowHalvesKnockbackAndIgnoresHolePull()
+        public async Task SpinUpTame_WallAtYourBackAtFullSpin_BracesYou_OpenGroundOnlyFreesTurning()
         {
             var (game, targets) = await V3CombatSmokeTest.StartSandbox();
             var weapons = game.runWeapons; var tuning = weapons.upgrades;
             var gun = Equip(game, WeaponForm.Minigun, 0, UpgradeAxis.Tame);
             ClearLane(game, targets);
-            var body = game.player.GetComponent<Rigidbody>();
-            Vector3 origin = game.player.Position;
 
-            weapons.HandleInput(false, true, false);
-            gun.heldTime = tuning.spinAnchorSpinSeconds;
-            Assert.That(weapons.Anchored, Is.True);
+            Vector3 origin = game.player.Position + Vector3.forward * 8f;
+            Place(game.player, origin);
+            void Spin() { weapons.HandleInput(false, true, false); gun.heldTime = tuning.spinAnchorSpinSeconds; }
+
+            Spin();
             Assert.That(weapons.AimTurnRateLimit, Is.Zero, "turning is free");
             Assert.That(weapons.MoveMultiplier, Is.EqualTo(tuning.spinUpMoveFloor).Within(.01f), "the spin still slows your feet");
+            Assert.That(weapons.Anchored, Is.False, "open ground: nothing braces you");
+            float openCycle = weapons.GetCooldownDuration(gun);
+            Assert.That(openCycle, Is.EqualTo(1f / tuning.spinUpTopRate).Within(.0005f), "the plain top rate");
+            float free = await KnockSpeed(game, origin);
 
-            game.player.Knockback(Vector3.forward, 4f, KnockKind.Hit);
-            await Awaitable.FixedUpdateAsync(); await Awaitable.FixedUpdateAsync();
-            float anchored = Query.Flat(body.linearVelocity).magnitude;
+            WorldMap.Active.CreateWall(origin + Vector3.back * (BodyRadius(game.player) + .5f + .1f), 4f, 60f, 0f, game.player);
+            Physics.SyncTransforms();
             game.player.CancelDisplacement(); Place(game.player, origin);
-
-            weapons.HandleInput(false, false, true);
-            Assert.That(weapons.Anchored, Is.False, "letting go ends it at once");
-            game.player.Knockback(Vector3.forward, 4f, KnockKind.Hit);
-            await Awaitable.FixedUpdateAsync(); await Awaitable.FixedUpdateAsync();
-            float free = Query.Flat(body.linearVelocity).magnitude;
-            game.player.CancelDisplacement(); Place(game.player, origin);
+            Spin();
+            Assert.That(weapons.Anchored, Is.True, "a wall at your back at full spin braces you");
+            Assert.That(weapons.GetCooldownDuration(gun), Is.EqualTo(openCycle / (1f + tuning.spinBraceRateBonus)).Within(.0005f), "braced, it fires 30% faster");
+            float braced = await KnockSpeed(game, origin);
             Assume.That(free, Is.GreaterThan(1f), "a knockback moves the disabled test body");
-            Assert.That(anchored / free, Is.EqualTo(tuning.spinAnchorKnockFactor).Within(.05f), "knockback is halved at full spin");
+            Assert.That(braced / free, Is.EqualTo(tuning.spinAnchorKnockFactor).Within(.05f), "braced, knockback is halved");
+
+            Spin();
+            gun.heldTime = tuning.spinAnchorSpinSeconds * .5f;
+            Assert.That(weapons.Anchored, Is.False, "below full spin the wall does not brace you");
+            weapons.HandleInput(false, false, true);
+            gun.heldTime = tuning.spinAnchorSpinSeconds;
+            Assert.That(weapons.Anchored, Is.False, "letting go ends it at once");
+            gun.axes = UpgradeAxis.None;
+            Spin();
+            Assert.That(weapons.Anchored, Is.False, "untamed, a wall never braces you");
+            gun.axes = UpgradeAxis.Tame;
 
             WorldMap.Active.CreateVoidHole(origin + Vector3.forward * 4f, 1f, 5f, 3f, null, false);
-            weapons.HandleInput(false, true, false);
-            gun.heldTime = tuning.spinAnchorSpinSeconds;
+            Spin();
             for (int i = 0; i < 5; i++) await Awaitable.FixedUpdateAsync();
-            Assert.That(Query.Flat(game.player.Position - origin).magnitude, Is.LessThan(.02f), "anchored, the hole does not drag you");
-
+            Assert.That(Query.Flat(game.player.Position - origin).magnitude, Is.LessThan(.02f), "braced, the hole does not drag you");
             weapons.HandleInput(false, false, true);
             for (int i = 0; i < 3; i++) await Awaitable.FixedUpdateAsync();
             float dragged = Vector3.Dot(Query.Flat(game.player.Position - origin), Vector3.forward);
             game.player.CancelDisplacement(); Place(game.player, origin);
             Assert.That(dragged, Is.GreaterThan(.02f), "let go and the pull takes you again");
+        }
+
+        static async Task<(float distance, bool knocked)> HoldFire(GameManager game, RunWeapon gun, float spin, float seconds)
+        {
+            var player = game.player;
+            Vector3 from = player.Position, back = -Query.Flat(player.AimDirection).normalized;
+            bool knocked = false;
+            game.runWeapons.HandleInput(false, true, false);
+            gun.heldTime = spin;
+            float until = Time.time + seconds;
+            while (Time.time < until)
+            {
+                await Awaitable.NextFrameAsync();
+                game.runWeapons.HandleInput(false, true, false);
+                knocked |= player.State == CharacterState.Knocked;
+            }
+            game.runWeapons.HandleInput(false, false, true);
+            float settle = Time.time + .4f;
+            while (Time.time < settle) { knocked |= player.State == CharacterState.Knocked; await Awaitable.NextFrameAsync(); }
+            return (Vector3.Dot(Query.Flat(player.Position - from), back), knocked);
+        }
+
+        static async Task<float> KnockSpeed(GameManager game, Vector3 origin)
+        {
+            game.player.Knockback(Vector3.forward, 4f, KnockKind.Hit);
+            await Awaitable.FixedUpdateAsync(); await Awaitable.FixedUpdateAsync();
+            float speed = Query.Flat(game.player.GetComponent<Rigidbody>().linearVelocity).magnitude;
+            game.player.CancelDisplacement(); Place(game.player, origin);
+            return speed;
+        }
+
+        static float BodyRadius(Combatant body)
+        {
+            var capsule = body.GetComponent<CapsuleCollider>();
+            return Mathf.Max(body.radius, capsule ? capsule.radius : 0f);
+        }
+
+        static async Task SetBack(Combatant body, Vector3 at)
+        {
+            body.CancelDisplacement();
+            Place(body, at);
+            await Awaitable.FixedUpdateAsync();
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
@@ -353,6 +458,55 @@ namespace AnomalyArena
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
+        public async Task MeltdownTame_Overheat_KnocksNearbyEnemiesBackAndSpeedsUpYourFeetOnEveryWeapon()
+        {
+            var (game, targets) = await V3CombatSmokeTest.StartSandbox();
+            var weapons = game.runWeapons; var tuning = weapons.upgrades;
+            float seconds = tuning.meltdownTameHasteSeconds;
+            try
+            {
+                tuning.meltdownTameHasteSeconds = .6f;
+                var near = targets[0];
+                ClearLane(game, targets[1], targets[2]);
+                Place(near, game.player.Position + Vector3.forward * 2.5f);
+
+                near.GetComponent<Rigidbody>().constraints = RigidbodyConstraints.FreezeRotation | RigidbodyConstraints.FreezePositionY;
+
+                var plain = Equip(game, WeaponForm.Minigun, 1);
+                plain.heat = 3.95f;
+                weapons.HandleInput(true, true, false);
+                Assert.That(near.Hp, Is.LessThan(near.maxHp), "the untamed blast hits it");
+                Assert.That(near.State, Is.Not.EqualTo(CharacterState.Knocked), "but pushes nobody");
+                Assert.That(game.player.ExternalMoveMultiplier, Is.EqualTo(1f).Within(.001f), "and gives you no speed");
+
+                near.ResetForSpawn(); near.enabled = false;
+                Place(near, game.player.Position + Vector3.forward * 2.5f);
+                game.player.Heal(game.player.maxHp);
+                var gun = Equip(game, WeaponForm.Minigun, 1, UpgradeAxis.Tame);
+                weapons.Hand[1 - weapons.ActiveIndex] = new RunWeapon { form = WeaponForm.Railgun, variant = 1, revealed = true, rounds = weapons.ClipSize(WeaponForm.Railgun, 1) };
+                float before = Query.Flat(near.Position - game.player.Position).magnitude, hp = game.player.Hp;
+                gun.heat = 3.95f;
+                weapons.HandleInput(true, true, false);
+
+                Assert.That(game.player.Hp, Is.EqualTo(hp), "the tamed blast spares you");
+                Assert.That(near.State, Is.EqualTo(CharacterState.Knocked), "and knocks the enemy next to you back");
+                Assert.That(game.player.ExternalMoveMultiplier, Is.EqualTo(1f + tuning.meltdownTameMoveBonus).Within(.001f), "your feet speed up");
+                for (int i = 0; i < 3; i++) await Awaitable.FixedUpdateAsync();
+                Assert.That(Query.Flat(near.Position - game.player.Position).magnitude, Is.GreaterThan(before + .2f), "away from you");
+
+                weapons.Switch();
+                await Awaitable.NextFrameAsync();
+                Assert.That(weapons.Active.form, Is.EqualTo(WeaponForm.Railgun), "the other weapon is in hand");
+                Assert.That(game.player.ExternalMoveMultiplier, Is.EqualTo(1f + tuning.meltdownTameMoveBonus).Within(.001f), "the speed holds on it");
+                Assert.That(weapons.AnomalySlotDetail(gun), Does.Contain($"+{tuning.meltdownTameMoveBonus * 100f:0}%"), "the Meltdown slot shows the move bonus too");
+                await Until(() => weapons.MeltdownHaste == 1f, 2f, "the bonus runs out");
+                await Awaitable.NextFrameAsync();
+                Assert.That(game.player.ExternalMoveMultiplier, Is.EqualTo(1f).Within(.001f), "then your feet are back to their own pace");
+            }
+            finally { tuning.meltdownTameHasteSeconds = seconds; }
+        }
+
+        [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task BarrageTwist_RocketsOnOneEnemy_MergeIntoOneBiggerBlastAfterTheFuse()
         {
             var (game, targets) = await V3CombatSmokeTest.StartSandbox();
@@ -381,33 +535,176 @@ namespace AnomalyArena
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
-        public async Task BarrageTame_RocketsFlyingBackward_TurnToTheNearestEnemyBehindAndSpareYou()
+        public async Task Barrage_LockedEnemiesOffTheAim_MissilesHomeInAndOneWhoseTargetDiesTakesTheNearest()
         {
             var (game, targets) = await V3CombatSmokeTest.StartSandbox();
-            var tuning = game.runWeapons.upgrades;
-            float exponent = tuning.barrageAngleExponent;
+            var weapons = game.runWeapons; var tuning = weapons.upgrades;
+            float spread = tuning.barrageLaunchSpread;
             try
             {
 
-                tuning.barrageAngleExponent = .01f;
-
-                game.player.DebugSetAim(Quaternion.Euler(0f, 135f, 0f) * Vector3.forward);
-                Vector3 toTarget = Query.Flat(targets[0].Position - game.player.Position).normalized;
-
-                var plain = Equip(game, WeaponForm.SwarmLauncher, 0);
-                game.runWeapons.HandleInput(true, true, false);
-                var wild = Actors(plain, AttackMode.Swarm);
-                Assert.That(wild, Is.Not.Empty);
-                Assert.That(wild.All(a => Vector3.Angle(a.direction, toTarget) > 20f), Is.True, "untamed, backward rockets keep their random angle");
+                tuning.barrageLaunchSpread = 20f;
 
                 var swarm = Equip(game, WeaponForm.SwarmLauncher, 0, UpgradeAxis.Tame);
-                game.runWeapons.HandleInput(true, true, false);
-                var rockets = Actors(swarm, AttackMode.Swarm);
-                Assert.That(rockets, Has.Length.EqualTo(8));
-                Assert.That(rockets.All(a => Vector3.Angle(a.direction, toTarget) < 2f), Is.True, "each backward rocket heads for the nearest enemy behind you");
-                Assert.That(rockets.All(a => !a.hurtOwner), Is.True, "tamed rockets never hurt you");
+                Vector3 origin = game.player.Position;
+                float hit = weapons.HitDamage(swarm), range = weapons.roster.Get(WeaponForm.SwarmLauncher).rangeA;
+                ClearLane(game, targets[1], targets[2]);
+                var first = targets[0]; var second = targets[1];
+                Place(first, origin + Vector3.forward * 6f);
+
+                game.player.DebugSetAim(Vector3.right);
+
+                weapons.HandleInput(true, true, false);
+                var missiles = Actors(swarm, AttackMode.Swarm);
+                Assert.That(missiles, Has.Length.EqualTo(8));
+                Assert.That(missiles.All(a => a.HomeTarget == first && !a.hurtOwner), Is.True, "every missile locks the one enemy in range");
+                await Until(() => Actors(swarm, AttackMode.Swarm).Length == 0, 4f, "the volley lands");
+                Assert.That(first.maxHp - first.Hp, Is.EqualTo(8f * hit).Within(.01f), "all eight curve in and hit it, 90 degrees off the aim");
+
+                first.ResetForSpawn(); first.enabled = false;
+                second.ResetForSpawn(); second.enabled = false;
+                Place(first, origin + Vector3.forward * 4f);
+                Place(second, origin + Vector3.forward * 8f);
+                swarm.cooldown = 0f;
+                weapons.HandleInput(true, true, false);
+                missiles = Actors(swarm, AttackMode.Swarm);
+                Assert.That(missiles.Count(a => a.HomeTarget == first), Is.EqualTo(4), "the spares take turns on the locked enemies");
+                Assert.That(missiles.Count(a => a.HomeTarget == second), Is.EqualTo(4));
+                await Until(() => Actors(swarm, AttackMode.Swarm).Length == 0, 4f, "the volley lands");
+
+                first.ResetForSpawn(); first.enabled = false;
+                second.ResetForSpawn(); second.enabled = false;
+                Place(first, origin + Vector3.forward * 4f);
+                Place(second, origin + Vector3.forward * (range + 6f));
+                swarm.cooldown = 0f;
+                weapons.HandleInput(true, true, false);
+                Assert.That(Actors(swarm, AttackMode.Swarm).All(a => a.HomeTarget == first), Is.True, "only the enemy in range is locked");
+                LeaveHp(first, 0f);
+                Assume.That(first.IsAlive, Is.False);
+                await Awaitable.FixedUpdateAsync(); await Awaitable.FixedUpdateAsync();
+                Assert.That(Actors(swarm, AttackMode.Swarm).All(a => a.HomeTarget == second), Is.True, "the dead one's missiles take the enemy nearest them");
+                await Until(() => Actors(swarm, AttackMode.Swarm).Length == 0, 4f, "the volley lands");
+                Assert.That(second.maxHp - second.Hp, Is.EqualTo(8f * hit).Within(.01f), "so all eight hit the survivor");
             }
-            finally { tuning.barrageAngleExponent = exponent; }
+            finally { tuning.barrageLaunchSpread = spread; }
+        }
+
+        [Test, LoadScene(Scene), Category("Integration"), Timeout(60000)]
+        public async Task BarrageBackfire_TooFewEnemies_TwoSpareMissilesComeBackForYou_EnoughEnemiesNone()
+        {
+            var (game, targets) = await V3CombatSmokeTest.StartSandbox();
+            var weapons = game.runWeapons; var tuning = weapons.upgrades;
+
+            var swarm = Equip(game, WeaponForm.SwarmLauncher, 0, UpgradeAxis.Twist, mk: 3);
+            float baseDamage = weapons.roster.Get(WeaponForm.SwarmLauncher).damageA;
+
+            Vector3 mid = game.player.Position + Vector3.forward * 8f;
+            Place(game.player, mid);
+            game.player.DebugSetAim(Vector3.back);
+            Place(targets[0], mid + Vector3.forward * 1.6f);                     
+            Place(targets[1], mid + Vector3.forward * 3.5f);
+            Place(targets[2], mid + Vector3.forward * 5.5f);
+            float hp = game.player.Hp;
+
+            weapons.HandleInput(true, true, false);
+            var missiles = Actors(swarm, AttackMode.Swarm);
+            Assert.That(missiles, Has.Length.EqualTo(8));
+            foreach (var target in targets) Assert.That(missiles.Count(a => a.HomeTarget == target), Is.EqualTo(1), "one missile per enemy");
+            var backfire = missiles.Where(a => a.HomeTarget == game.player).ToArray();
+            Assert.That(backfire, Has.Length.EqualTo(tuning.barrageSelfLockMax), "two of the five spares lock onto you");
+            Assert.That(backfire.All(a => a.hurtOwner && Mathf.Approximately(a.ownerDamage, baseDamage)), Is.True, "they hurt you for the base damage");
+            Assert.That(missiles.Count(a => a.HomeTarget == null), Is.EqualTo(8 - targets.Length - tuning.barrageSelfLockMax), "the rest fly straight on");
+            Assert.That(missiles.Where(a => a.HomeTarget != game.player).All(a => !a.hurtOwner), Is.True, "no other missile can hurt you");
+
+            await Until(() => Actors(swarm, AttackMode.Swarm).Length == 0 && Actors(swarm, AttackMode.Sticky).Length == 0, 5f, "every missile is spent");
+            float taken = game.progression.Stats.DamageTakenMultiplier;
+            Assert.That(game.player.Hp, Is.EqualTo(hp - tuning.barrageSelfLockMax * baseDamage * taken).Within(.01f), "exactly the two that came back hurt you");
+            Assert.That(targets[0].Hp, Is.LessThan(targets[0].maxHp), "the merged blast beside you went off");
+
+            var extra = MoreTargets(game, targets, 5);
+            var all = targets.Concat(extra).ToArray();
+            float[] spots = { 1.6f, 2.8f, 4f, 5.2f, 6.4f, -2.2f, -3.4f, -4.6f };
+            for (int i = 0; i < all.Length; i++) { all[i].ResetForSpawn(); all[i].enabled = false; Place(all[i], mid + Vector3.forward * spots[i] + Vector3.right * (i % 2 == 0 ? .3f : -.3f)); }
+            Place(game.player, mid);
+            hp = game.player.Hp;
+            swarm.cooldown = 0f;
+            weapons.HandleInput(true, true, false);
+            missiles = Actors(swarm, AttackMode.Swarm);
+            Assert.That(missiles.Select(a => a.HomeTarget).Distinct().Count(), Is.EqualTo(8), "each missile locks an enemy of its own");
+            Assert.That(missiles.All(a => a.HomeTarget != game.player && a.HomeTarget != null && !a.hurtOwner), Is.True, "none locks onto you");
+            await Until(() => Actors(swarm, AttackMode.Swarm).Length == 0 && Actors(swarm, AttackMode.Sticky).Length == 0, 5f, "every missile is spent");
+            Assert.That(game.player.Hp, Is.EqualTo(hp), "so none hurts you");
+        }
+
+        [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
+        public async Task BarrageTame_NoEnemyInRange_GoesForTheNearestVisible_NoEnemyAtAll_EscortsYou()
+        {
+            var (game, targets) = await V3CombatSmokeTest.StartSandbox();
+            var weapons = game.runWeapons; var tuning = weapons.upgrades;
+            var swarm = Equip(game, WeaponForm.SwarmLauncher, 0, UpgradeAxis.Tame);
+            Vector3 origin = game.player.Position;
+            float range = weapons.roster.Get(WeaponForm.SwarmLauncher).rangeA;
+            targets[1].DiscardWithoutReward(); targets[2].DiscardWithoutReward();
+            var enemy = targets[0];
+            Place(enemy, origin + Vector3.forward * (range + 3f));                                                   
+            float hp = game.player.Hp;
+
+            weapons.HandleInput(true, true, false);
+            var missiles = Actors(swarm, AttackMode.Swarm);
+            Assert.That(missiles, Has.Length.EqualTo(8));
+            Assert.That(missiles.All(a => a.HomeTarget == enemy && !a.Escorting && !a.hurtOwner), Is.True, "all go for the nearest visible enemy, out of range as it is");
+            await Until(() => Actors(swarm, AttackMode.Swarm).Length == 0, 4f, "the volley lands");
+            Assert.That(enemy.Hp, Is.LessThan(enemy.maxHp), "and hits it");
+
+            enemy.DiscardWithoutReward();
+            swarm.cooldown = 0f;
+            weapons.HandleInput(true, true, false);
+            var escort = Actors(swarm, AttackMode.Swarm);
+            Assert.That(escort, Has.Length.EqualTo(8));
+            Assert.That(escort.All(a => a.Escorting && a.HomeTarget == null), Is.True, "nothing to lock: they escort you");
+            await Seconds(.3f);
+            Assert.That(escort.All(a => a.gameObject.activeSelf && Query.Flat(a.transform.position - game.player.Position).magnitude < tuning.barrageEscortRadius + .2f), Is.True, "close around you");
+
+            enemy.ResetForSpawn(); enemy.enabled = false;
+            Place(enemy, origin + Vector3.forward * 5f);
+            await Until(() => escort.All(a => !a.gameObject.activeSelf || a.HomeTarget == enemy && !a.Escorting), 1f, "the escort locks the newcomer");
+            await Until(() => Actors(swarm, AttackMode.Swarm).Length == 0, 4f, "the volley lands");
+            Assert.That(enemy.Hp, Is.LessThan(enemy.maxHp), "and strikes it");
+
+            enemy.DiscardWithoutReward();
+            WorldMap.Active.CreateWall(origin + Vector3.forward * (BodyRadius(game.player) + .5f + .1f), 4f, 60f, 0f, game.player);
+            Physics.SyncTransforms();
+            game.player.CancelDisplacement(); Place(game.player, origin);
+            float face = BodyRadius(game.player) + .1f;
+            swarm.cooldown = 0f;
+            weapons.HandleInput(true, true, false);
+            float riding = Time.time + tuning.barrageEscortSeconds - .4f;
+            while (Time.time < riding)
+            {
+                await Awaitable.FixedUpdateAsync();
+                Assert.That(Actors(swarm, AttackMode.Swarm).All(a => Vector3.Dot(Query.Flat(a.transform.position - origin), Vector3.forward) < face), Is.True, "no missile passes the wall");
+            }
+            Assert.That(Actors(swarm, AttackMode.Swarm), Has.Length.EqualTo(8), "still escorting, none lost on the wall");
+            await Until(() => Actors(swarm, AttackMode.Swarm).Length == 0, 1.5f, "the escort ends");
+            Assert.That(game.player.Hp, Is.EqualTo(hp), "tamed, no missile ever hurts you");
+        }
+
+        static Enemy[] MoreTargets(GameManager game, Enemy[] targets, int count)
+        {
+            var extra = game.waves.preparedEnemies
+                .Where(e => e && !e.gameObject.activeSelf && e.definition && !e.IsBoss && !targets.Contains(e))
+                .OrderBy(e => e.definition.kind == EnemyKind.Grunt ? 0 : 1).Take(count).ToArray();
+            Assume.That(extra, Has.Length.EqualTo(count), "the wave pool has spare bodies");
+            foreach (var e in extra)
+            {
+                e.Configure(e.definition, 1f, false);
+                e.maxHp = 100f;
+                e.ResetForSpawn();
+                e.enabled = false;
+                e.moveSpeed = 0f;
+                e.GetComponent<Rigidbody>().constraints = RigidbodyConstraints.FreezeAll;
+            }
+            return extra;
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
@@ -478,6 +775,19 @@ namespace AnomalyArena
             Assert.That(lance, Does.Contain("2.5").And.Contain("60%"), "Lance Twist names its blast");
             string spin = ArenaTerms.ExpandedUpgradeDescription(WeaponForm.Minigun, 0, UpgradeAxis.Twist);
             Assert.That(spin, Does.Contain("3").And.Not.Contain("12"), "Spin-up Twist: 3 s in place, no stale 12 shots/s");
+
+            var tuning = GameManager.Instance.runWeapons.upgrades;
+            string P(float share) => (share * 100f).ToString("0.#") + "%";
+            string spinTame = ArenaTerms.ExpandedUpgradeDescription(WeaponForm.Minigun, 0, UpgradeAxis.Tame);
+            Assert.That(spinTame, Does.Contain("backing into a wall").And.Contain("braces you").And.Contain("+" + P(tuning.spinBraceRateBonus)).And.Contain(P(tuning.spinAnchorKnockFactor)), "Spin-up Tame: the wall brace and what it gives");
+            string meltTame = ArenaTerms.ExpandedUpgradeDescription(WeaponForm.Minigun, 1, UpgradeAxis.Tame);
+            Assert.That(meltTame, Does.Contain($"knocks nearby enemies back {tuning.meltdownTamePush:0.##}").And.Contain("" + P(tuning.meltdownTameMoveBonus)).And.Contain("" + P(tuning.meltdownTameHaste)).And.Contain("3 s lockout"), "Meltdown Tame: push, both speeds, the lockout");
+            string barrageTame = ArenaTerms.ExpandedUpgradeDescription(WeaponForm.SwarmLauncher, 0, UpgradeAxis.Tame);
+            Assert.That(barrageTame, Does.Contain("circle you").And.Contain($"{tuning.barrageEscortSeconds:0.##} s").And.Contain("take turns on the locked enemies"), "Barrage Tame: focus fire and the escort");
+            foreach (var text in new[] { spinTame, meltTame, barrageTame }) Assert.That(text, Does.Not.Contain("{"), "every number is filled in");
+            Assert.That(WeaponGuide.How(WeaponForm.SwarmLauncher, 0), Does.Contain("micro-missiles").And.Contain("home in"), "Barrage card: homing micro-missiles");
+            Assert.That(WeaponGuide.Backfire(WeaponForm.SwarmLauncher, 0), Does.Contain($"up to {tuning.barrageSelfLockMax} spare").And.Contain("lock onto you"), "Barrage card: the missiles that come back for you");
+            Assert.That(WeaponGuide.Backfire(WeaponForm.Minigun, 0), Does.Contain("pushes you back").And.Contain(P(tuning.spinUpMoveFloor)), "Spin-up card: the slow retreat beside the slow walk");
         }
     }
 }

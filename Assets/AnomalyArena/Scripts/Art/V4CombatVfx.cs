@@ -246,18 +246,27 @@ namespace AnomalyArena
         void DrawHazards(GameManager gm, float time)
         {
             if (!gm.runWeapons) return;
-            if (gm.runWeapons.BlizzardAuraActive && gm.player && frostRing)
-                Flat(frostRing, new Vector3(gm.player.Position.x, .065f, gm.player.Position.z), gm.runWeapons.BlizzardAuraRadius * 2f,
-                    new Color(.6f, .85f, 1f, .45f), -time * 35f);
             var hazards = gm.runWeapons.Hazards;
             for (int i = 0; i < hazards.Count && used < items.Length; i++)
             {
                 var h = hazards[i];
                 float fade = Mathf.Clamp01(h.timeLeft / Mathf.Max(.01f, Mathf.Min(1f, h.life)));
+                bool tamed = h.weapon != null && h.weapon.Has(UpgradeAxis.Tame);
 
                 if (h.kind == GroundHazardKind.IcePatch)
                     Flat(frostRing, h.position + Vector3.up * .06f, h.radius * 2.4f,
-                        h.weapon != null && h.weapon.Has(UpgradeAxis.Tame) ? new Color(.35f, .55f, 1f, .8f * fade) : new Color(.7f, .95f, 1f, .75f * fade), i * 37f);
+                        tamed ? new Color(.35f, .55f, 1f, .8f * fade) : new Color(.7f, .95f, 1f, .75f * fade), i * 37f);
+                else if (h.kind == GroundHazardKind.ScatterShell)
+                {
+
+                    float heat = 1f - Mathf.Clamp01(h.timeLeft / Mathf.Max(.01f, h.life));
+                    Flat(slowRing, h.position + Vector3.up * .06f, h.radius * 2f, new Color(1f, .5f, .2f, .25f + .5f * heat), time * 90f);
+                    Billboard(Frame(fireFrames, time * 1.5f + i * .3f), h.position + Vector3.up * .3f, .45f + .35f * heat, Color.white);
+                }
+                else if (h.kind == GroundHazardKind.Snow)
+
+                    Flat(frostRing, h.position + Vector3.up * .055f, h.radius * 2.2f,
+                        tamed ? new Color(.6f, .8f, 1f, .5f * fade) : new Color(.95f, .98f, 1f, .5f * fade), i * 53f);
                 else
                 {
                     Flat(poisonMist, h.position + Vector3.up * .06f, h.radius * 2.6f,
@@ -345,6 +354,8 @@ namespace AnomalyArena
 
             if (player && player.IsAlive && weapons.FocusGuardActive)
                 Billboard(auraShield, Query.AtCastHeight(player.Position) + Vector3.up * .3f, 2.4f, new Color(.85f, .9f, 1f, .6f));
+            if (player && player.IsAlive && weapons.SnowGuardActive)
+                Billboard(auraShield, Query.AtCastHeight(player.Position) + Vector3.up * .3f, 2.2f, new Color(.6f, .85f, 1f, .45f));
         }
 
         void DrawBolts(GameManager gm)

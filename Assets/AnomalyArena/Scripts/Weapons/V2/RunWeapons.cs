@@ -65,9 +65,8 @@ namespace AnomalyArena
                 return false;
             }
         }
-                                                                                                                                    
-                                                                                                           
-        public float Charge01 => Active==null?0:Active.form==WeaponForm.ArcCoil&&Active.variant==1?Mathf.Clamp01(Active.charge/CapacitorMax):Active.form==WeaponForm.Minigun?MinigunBar(Active):ShowsReloadBar(Active)?ReloadProgress(Active):Mathf.Clamp01(Active.charge);
+                                                                                                                        
+        public float Charge01 => Active==null?0:Active.form==WeaponForm.ArcCoil&&Active.variant==1?Mathf.Clamp01(Active.charge/CapacitorMax):Active.form==WeaponForm.Minigun?MinigunBar(Active):Mathf.Clamp01(Active.charge);
                                                                                                                                                      
         static float MinigunBar(RunWeapon w)=>w.variant==0?Mathf.Clamp01(w.heldTime/3f):Mathf.Clamp01(w.heat/4f);
         public float MoveMultiplier
@@ -77,8 +76,10 @@ namespace AnomalyArena
                 var w=Active;if(w==null)return 1;
                                                                                                                                                   
                 if(w.charging&&w.form!=WeaponForm.ScatterCannon&&!(w.form==WeaponForm.Rifle&&w.Has(UpgradeAxis.Tame)))return .5f;
-                                                                                              
+                                                                                                                            
                 if(w.form==WeaponForm.Minigun&&w.variant==0&&w.heldTime>0)return Mathf.Lerp(1,upgrades.spinUpMoveFloor,Mathf.Clamp01(w.heldTime/3));
+                                                                                                                    
+                if(w.form==WeaponForm.ArcCoil&&w.variant==0&&w.Has(UpgradeAxis.Tame)&&w.chainStoredJumps>0)return Mathf.Max(.1f,upgrades.chainTameMoveSpeed);
                 return 1;
             }
         }
@@ -130,12 +131,13 @@ namespace AnomalyArena
                                                                                                                                            
                                                                                                     
         int MkBonus(int wave)=>roster&&UnityEngine.Random.Range(0,10000)<roster.MkBonusChance(wave)*10000f?1:0;
-                                                                                                                                         
-                                                                                                                                        
-        public bool GunnerOfferable=>!progression||progression.EnergyUnlocked;
+                                                                                                                                           
+                                                                                                                                           
+                                                                                               
+        public bool DrainOfferable=>!progression||progression.EnergyUnlocked;
         RunWeapon CreateWeapon(WeaponForm form,int v,int wave)
         {
-            if(form==WeaponForm.SentryDrone&&!GunnerOfferable)v=1;
+            if(form==WeaponForm.ShieldRing&&!DrainOfferable)v=0;
             var w=new RunWeapon{form=form,variant=v,rounds=ClipSize(form,v)};
             w.element=form switch{WeaponForm.Flamethrower=>ElementKind.Fire,WeaponForm.CryoCannon=>ElementKind.Frost,WeaponForm.ArcCoil=>ElementKind.Lightning,WeaponForm.SporeLauncher=>ElementKind.Poison,_=>ElementKind.None};
             w.builtInElement=w.element!=ElementKind.None;if(w.builtInElement)w.axes=UpgradeAxis.Infusion;
@@ -234,13 +236,15 @@ namespace AnomalyArena
             inputHeld=false;if(w==null)return;
             if(w.charging)WeaponSound(w,WeaponAudioPhase.Cancel);
             w.charging=false;StopTrigger(w);if(w.form!=WeaponForm.ArcCoil||w.variant!=1)w.charge=0;
+                                                                                                                                   
             if(cancelHook&&AttackPool.Instance)
                 foreach(var actor in AttackPool.Instance.actors)
-                    if(actor&&actor.gameObject.activeSelf&&actor.weapon==w&&actor.mode==AttackMode.Hook&&!BattlefieldFrozen(actor.gameObject))actor.Release();
+                    if(actor&&actor.gameObject.activeSelf&&actor.weapon==w&&actor.mode==AttackMode.Hook&&!BattlefieldFrozen(actor.gameObject)&&!(actor.HookReeling&&w.Has(UpgradeAxis.Tame)))actor.Release();
         }
         public void Switch()
         {
-            if(!CanUseHand||HandHookBusy)return;var w=Active;
+                                                                                                                                      
+            if(!CanUseHand||HandHookBusy||Hand[1-ActiveIndex]==null)return;var w=Active;
                                                                                                                          
             DeployTurret(w);
             if(w!=null){if(w.hooked&&!BattlefieldFrozen(w.hooked.gameObject))Fling(w);CancelInput(w);}
@@ -260,7 +264,6 @@ namespace AnomalyArena
                 if(w.form==WeaponForm.CryoCannon&&w.variant==1&&w.Has(UpgradeAxis.Twist)&&w.heldTime>0)BlizzardShatter(w);
                 StopTrigger(w);
             }
-            if(pressed&&w.reload>0&&TryQuickReload(w))return;
             if(!held&&!pressed||w.cooldown>0||w.reload>0||w.inFlight||w.charging)return;
             bool charge=(w.form==WeaponForm.Rifle&&w.variant==0)||(w.form==WeaponForm.Railgun&&w.variant==0)||(w.form==WeaponForm.ScatterCannon&&w.variant==1);
             if(charge){if(pressed){w.charging=true;w.charge=0;Reveal(w);WeaponSound(w,WeaponAudioPhase.ChargeStart);if(w.form==WeaponForm.ScatterCannon)V3WorldAudio.Instance?.Play(ArenaWorldCue.WeaponFocusCharge,player.Position);}return;}
@@ -288,14 +291,13 @@ namespace AnomalyArena
             {
                 if(w==null)continue;
                 w.cooldown=Mathf.Max(0,w.cooldown-dt*chill*WeaponCooldownRate);w.reload=Mathf.Max(0,w.reload-dt*chill);if(w.cooldown<=0)w.holeReturnSpan=0;
-                if(w.reload<=0&&w.jammed){w.jammed=false;V3WorldAudio.Instance?.Play(ArenaWorldCue.WeaponRepair,player.Position);}
                 if(w.charging)
                 {
                     w.charge=Mathf.Clamp01(w.charge+dt/(ChargeSeconds(w)*CooldownScale(w)));
                     if(w.form==WeaponForm.Railgun&&w.charge>=1&&CanUseHand&&w==Active){w.charging=false;Fire(w,true);w.charge=0;}
                 }
-                                                                                                       
-                if(w.form==WeaponForm.ArcCoil&&w.variant==1&&w==Active)TickCapacitor(w,distance,dt);
+                                                                                                                                                                     
+                if(w.form==WeaponForm.ArcCoil&&w.variant==1){if(w==Active)TickCapacitor(w,distance,dt);else DrainStowedCapacitor(w,dt);}
                 if(w.hooked&&!BattlefieldFrozen(w.hooked.gameObject))
                 {
                     if(!w.hooked.IsAlive)w.hooked=null;
@@ -304,7 +306,7 @@ namespace AnomalyArena
                 if(w==Active&&inputHeld&&CanUseHand)
                 {w.heldTime+=dt;}
                 else{w.heldTime=0;w.heat=Mathf.Max(0,w.heat-dt);}
-                if(w.form==WeaponForm.CryoCannon&&w.variant==1)BlizzardChill(w);
+                if(w.form==WeaponForm.CryoCannon&&w.variant==1)LaySnow(w,dt);
                 if(w.burstLeft>0)TickBurst(w,dt);
                 if(w.vacuumTimer>0)TickScatterVacuum(w,dt);
                                                                                                                   
@@ -312,9 +314,10 @@ namespace AnomalyArena
             }
             TickChargeLine();
             TickAutoWeapons(GameManager.Instance.WorldDeltaTime);
-            TickSporeClouds();
+            TickSporeClouds();TickNeedlerMists(dt);TickRailgunEffects(dt);
             TickHazards(GameManager.Instance.WorldDeltaTime);
             TickExecuteMarks(GameManager.Instance.WorldDeltaTime);TickAnchor(dt);TickMeltdownHaste(dt);TickVoidEnchant(dt);
+            TickGround(dt,GameManager.Instance.WorldDeltaTime);
         }
         void FixedUpdate()
         {
@@ -335,9 +338,14 @@ namespace AnomalyArena
                 if(weapon.Has(UpgradeAxis.Tame))weapon.cooldown=0;
                 WeaponSound(weapon,WeaponAudioPhase.Impact);dashLeft=0;dashWeapon=null;return;
             }
-                                                                                                                             
-            Vector3 drift=WorldMap.Active?Query.Flat(WorldMap.Active.GetPull(from,player))*Time.fixedDeltaTime:Vector3.zero;
-            player.SetMovePosition(from+dashDirection*travel+drift);dashLeft-=travel;
+                                                                                                                                         
+                                                                                                                                       
+            bool holeProof=weapon.Has(UpgradeAxis.Tame);
+            Vector3 drift=WorldMap.Active&&!holeProof?Query.Flat(WorldMap.Active.GetPull(from,player))*Time.fixedDeltaTime:Vector3.zero;
+            Vector3 next=from+dashDirection*travel+drift;
+            player.SetMovePosition(next);dashLeft-=travel;
+                                                                                                                                          
+            if(dashLeft<=0&&holeProof&&WorldMap.Active&&(WorldMap.Active.IsHole(from)||WorldMap.Active.IsHole(next)))dashLeft=RocketSpeed(0f)*Time.fixedDeltaTime;
             if(dashLeft<=0)
             {
                 player.SetState(CharacterState.Normal);
@@ -445,22 +453,26 @@ namespace AnomalyArena
             {
                 float hit=Mathf.Lerp(Mathf.Clamp(roster.RifleMinimumChargeDamage,0f,d.damageA),d.damageA,w.charge)*DamageScale(w),push=Mathf.Lerp(5,10,w.charge);
                                                                                                                                       
-                if(w.Has(UpgradeAxis.Twist)){hit*=upgrades.chargedTwinShare;TwinBolt(w,-aim,hit,push,range,80);}
-                Bolt(w,aim,hit,push,range,80,true);
+                                                                                                                                         
+                bool full=w.Has(UpgradeAxis.Twist)&&w.charge>=.999f;
+                var round=Bolt(w,aim,hit,push,range,80,true);
+                if(round){round.pierceGrowth=full?upgrades.chargedPierceGrowth:0f;round.pierceGrowthCap=upgrades.chargedPierceGrowthCap;}
+                if(full)ChargedMuzzleBlast(w,aim);
             }
             else if(w.form==WeaponForm.Rifle)
             {
-                                                                                                                                
+                                                                                                                                          
+                                                                                                                               
                 Vector3 dir=-aim;
-                if(w.Has(UpgradeAxis.Tame)){var rear=RearGuardTarget();dir=rear?Query.Flat(rear.Position-player.Position).normalized:aim;}
+                if(w.Has(UpgradeAxis.Tame)){var front=(ClipSize(w.form,w.variant)-w.rounds)%2==0?FrontGuardTarget():null;if(front)dir=Query.Flat(front.Position-player.Position).normalized;player.Push(aim,upgrades.reverseTameRecoil);}
                 Bolt(w,dir,damage,0,range,30,false,1);
                 SpendRound(w,.6f);
             }
             else if(w.form==WeaponForm.Knife&&w.variant==0)
             {
-                var a=Bolt(w,aim,damage,0,range,knifeOutboundSpeed/StartingFormCycleFactor(w.form));
-                                                                                     
-                                                                                                                        
+                var a=Bolt(w,aim,damage,0,range,knifeOutboundSpeed/StartingFormCycleFactor(w.form)*KnifeCatchSpeed(w));if(a)a.knifeSpeedFactor=KnifeCatchSpeed(w);
+                                                                                    
+                                                                                                                     
                 if(a){a.mode=AttackMode.Knife;a.targetsLeft=(w.Has(UpgradeAxis.Reach)?6:4)+(w.knifeCaught?Mathf.Max(0,upgrades.knifeCatchTargets):0);a.remaining=float.PositiveInfinity;a.ownerDamage=d.damageA;w.inFlight=true;w.knifeCaught=false;}
             }
             else if(w.form==WeaponForm.Knife){var a=AttackPool.Instance.Acquire();if(a){a.Configure(AttackMode.Hook,player,w,SpawnPoint(aim,player.radius+.2f),aim,Mathf.Max(1f,DamageScale(w)),0,range,hookExtendSpeed/StartingFormCycleFactor(w.form),0,float.PositiveInfinity);w.hookBusy=true;w.hookChainUsed=false;WeaponSound(w,WeaponAudioPhase.Launch);}}
@@ -500,28 +512,26 @@ namespace AnomalyArena
                                                                                                         
                 CapacitorDischarge(w,range,damage);
             }
-            else if(w.form==WeaponForm.SporeLauncher&&w.variant==0){var a=LaunchArc(w,AttackMode.Lob,point,damage,0,3.5f*w.Reach,5,LobSpeed,LobArcHeight,false);if(a){a.tickInterval=.5f;TrackSporeCloud(a,w);}else LandingBlocked(w);}
-            else if(w.form==WeaponForm.SporeLauncher){Bolt(w,aim,damage,0,range,35);SpendRound(w,2);NeedlerCost(w);}
+            else if(w.form==WeaponForm.SporeLauncher&&w.variant==0){var a=LaunchArc(w,AttackMode.Lob,point,damage,0,3.5f*w.Reach,Mathf.Max(0f,upgrades.cloudSeconds),LobSpeed,LobArcHeight,false);if(a){a.tickInterval=.5f;TrackSporeCloud(a,w);}else LandingBlocked(w);}
+                                                                                                                         
+            else if(w.form==WeaponForm.SporeLauncher){Bolt(w,aim,damage,0,range,35);if(SpendRound(w,2))NeedlerReloadMist(w);}
             else if(w.form==WeaponForm.Railgun&&w.variant==0)
             {
                                                                                                                             
                 Vector3 brace=default;bool braced=w.Has(UpgradeAxis.Tame)&&LanceBraced(aim,out brace);
                                                                                                                                       
-                var a=Bolt(w,aim,braced?damage*upgrades.lanceBraceDamage:damage,0,range,120,true);if(a){a.ignoreShieldReduction=true;a.pierceDamageRetention=.75f;}
+                var a=Bolt(w,aim,braced?damage*upgrades.lanceBraceDamage:damage,0,range,120,true);if(a){a.ignoreShieldReduction=true;a.pierceDamageRetention=.75f;StartLanceBeam(a);}
                                                                                                                                                          
                 if(braced)Fx.Ring(brace,.6f,new Color(1f,.85f,.5f,.9f));else player.Push(-aim,LanceRecoil(w));
             }
             else if(w.form==WeaponForm.Railgun)Execute(w,range,damage);
             else if(w.form==WeaponForm.Minigun){Bolt(w,aim,damage,0,range,40);if(w.variant==0)w.cooldown=1/SpinUpRate(w)*CooldownScale(w);else{float before=w.heat;w.heat+=.1f;MeltdownWarning(w,before);if(w.heat>=4)Meltdown(w);}}
-            else if(w.form==WeaponForm.SwarmLauncher&&w.variant==0)
-            {
-                                                                                                                                                 
-                int n=w.Has(UpgradeAxis.Reach)?11:8;
-                for(int i=0;i<n;i++){var a=Bolt(w,BarrageDirection(w,aim),damage,0,range,15);if(a){a.mode=AttackMode.Swarm;a.radius=1.5f;a.hurtOwner=!w.Has(UpgradeAxis.Tame);a.ownerDamage=d.damageA;}}
-            }
+                                                                                                                                              
+            else if(w.form==WeaponForm.SwarmLauncher&&w.variant==0)Barrage(w,aim,range,damage,d.damageA);
             else if(w.form==WeaponForm.SwarmLauncher)Bombard(w,aim,range,damage,d.damageB);
         }
-        float SpinUpRate(RunWeapon w)=>Mathf.Max(.1f,Mathf.Lerp(upgrades.spinUpStartRate,upgrades.spinUpTopRate,Mathf.Clamp01(w.heldTime/3f)));
+                                                                                                                   
+        float SpinUpRate(RunWeapon w)=>Mathf.Max(.1f,Mathf.Lerp(upgrades.spinUpStartRate,upgrades.spinUpTopRate,Mathf.Clamp01(w.heldTime/3f)))*(w==Active&&Anchored?1f+Mathf.Max(0f,upgrades.spinBraceRateBonus):1f);
                                                                                                                                  
                                                                                                                                  
         void Bombard(RunWeapon w,Vector3 aim,float range,float damage,float selfDamage)
@@ -716,7 +726,7 @@ namespace AnomalyArena
             var upgrade=reinfuse?UpgradeAxis.Infusion:PickDirection(axes,wave>0?wave:CurrentWave);
                                                                                                                 
             ElementKind own=OwnElement(weapon),element=upgrade==UpgradeAxis.Infusion?RollElement(own):own;
-            string desc=upgrade==UpgradeAxis.Infusion?ArenaText.Pair("Infuse ","Infuse ")+ArenaTerms.Element(element)+(own!=ElementKind.None?ArenaText.Pair(", replaces ",", replaces ")+ArenaTerms.Element(own):""):upgrade switch{UpgradeAxis.Power=>ArenaText.Pair("Damage +40%","Damage +40%"),UpgradeAxis.Tempo=>ArenaText.Pair("Cooldown, charge and reload -30%","Cooldown, charge and reload -30%"),UpgradeAxis.Reach=>ArenaText.Pair("Range, area or targets +40%","Range, area or targets +40%"),UpgradeAxis.Twist=>ArenaText.Pair("Adds a new variant to this anomaly","Adds a new variant to this anomaly"),_=>ArenaText.Pair("Removes or softens this anomaly's backfire","Removes or softens this anomaly's backfire")};
+            string desc=upgrade==UpgradeAxis.Infusion?ArenaText.Pair("Infuse ","Infuse ")+ArenaTerms.Element(element)+(own!=ElementKind.None?ArenaText.Pair(", replaces ",", replaces ")+ArenaTerms.Element(own):""):upgrade switch{UpgradeAxis.Power=>ArenaText.Pair("Damage +40%","Damage +40%"),UpgradeAxis.Tempo=>ArenaText.Pair("Cooldown, charge and reload -30%","Cooldown, charge and reload -30%"),UpgradeAxis.Reach=>ArenaText.Pair("Range, area or targets +40%","Range, area or targets +40%"),UpgradeAxis.Twist=>ArenaText.Pair("Adds a twist to this weapon's attack","Adds a twist to this weapon's attack"),_=>ArenaText.Pair("Improves this pairing's trait","Improves this pairing's trait")};
             if(upgrade is UpgradeAxis.Twist or UpgradeAxis.Tame)desc=(int)weapon.form<3?CoreAnomalyUpgradeDescription(weapon,upgrade):ArenaTerms.ExpandedUpgradeDescription(weapon.form,weapon.variant,upgrade);
                                                                                                                 
             if(upgrade==UpgradeAxis.Infusion){string rule=ArenaTerms.ElementRule(element);if(rule.Length>0)desc+="\n"+rule;}
@@ -757,19 +767,20 @@ namespace AnomalyArena
             string P(float share)=>$"{share*100f:0.#}";
             return (w.form,w.variant,twist) switch
             {
-                (WeaponForm.Rifle,0,true)=>ArenaText.Pair($"Each release fires one round forward and one backward, each at {P(u.chargedTwinShare)}% damage.",$"Each release fires one round forward and one backward, each at {P(u.chargedTwinShare)}% damage."),
-                (WeaponForm.Rifle,0,false)=>ArenaText.Pair($"Charging no longer slows you; non-boss enemies on your aim line move {P(1f-u.chargeLineSlow)}% slower instead.",$"Charging no longer slows you; non-boss enemies on your aim line move {P(1f-u.chargeLineSlow)}% slower instead."),
+                                                                                                                                                                     
+                (WeaponForm.Rifle,0,true)=>ArenaText.Pair(                    $"A full-charge release also blasts the cone ahead, knocking enemies within {u.chargedBlastRange:0.#} cells back {u.chargedBlastPush:0.#} cells; that round deals +{P(u.chargedPierceGrowth)}% damage for each enemy it has passed (up to +{P(u.chargedPierceGrowthCap)}%).",                    $"A full-charge release also blasts the cone ahead, knocking enemies within {u.chargedBlastRange:0.#} cells back {u.chargedBlastPush:0.#} cells; that round deals +{P(u.chargedPierceGrowth)}% damage for each enemy it has passed (up to +{P(u.chargedPierceGrowthCap)}%)."),
+                (WeaponForm.Rifle,0,false)=>ArenaText.Pair(                    $"Charging no longer slows you, and enemy attacks hit you for {P(1f-u.chargeTameDamageTaken)}% less instead of more; non-boss enemies on your aim line move {P(1f-u.chargeLineSlowFactor)}% slower.",                    $"Charging no longer slows you, and enemy attacks hit you for {P(1f-u.chargeTameDamageTaken)}% less instead of more; non-boss enemies on your aim line move {P(1f-u.chargeLineSlowFactor)}% slower."),
                 (WeaponForm.Rifle,1,true)=>ArenaText.Pair($"On its first wall bounce a round splits in two, each at {P(u.reverseSplitShare)}% damage.",$"On its first wall bounce a round splits in two, each at {P(u.reverseSplitShare)}% damage."),
-                (WeaponForm.Rifle,1,false)=>ArenaText.Pair($"Rounds fly forward from the muzzle; an enemy within {u.reverseGuardRange:0.#} cells behind you draws the round instead.",$"Rounds fly forward from the muzzle; an enemy within {u.reverseGuardRange:0.#} cells behind you draws the round instead."),
-                (WeaponForm.Knife,0,true)=>ArenaText.Pair($"When the knife comes home it spins: enemies within {u.knifeSpinRadius:0.#} cells take {P(u.knifeSpinShare)}% damage.",$"When the knife comes home it spins: enemies within {u.knifeSpinRadius:0.#} cells take {P(u.knifeSpinShare)}% damage."),
-                (WeaponForm.Knife,0,false)=>ArenaText.Pair($"The kill return no longer cuts you; if it passes through you, the next throw bounces to {u.knifeCatchTargets} more enemies.",$"The kill return no longer cuts you; if it passes through you, the next throw bounces to {u.knifeCatchTargets} more enemies."),
+                (WeaponForm.Rifle,1,false)=>ArenaText.Pair(                    $"Rounds still leave from your back, and each one's recoil pushes you {u.reverseTameRecoil:0.#} cells along your aim; while an enemy is within {u.reverseGuardRange:0.#} cells in front, every other round flies forward at it.",                    $"Rounds still leave from your back, and each one's recoil pushes you {u.reverseTameRecoil:0.#} cells along your aim; while an enemy is within {u.reverseGuardRange:0.#} cells in front, every other round flies forward at it."),
+                (WeaponForm.Knife,0,true)=>ArenaText.Pair($"When the blade comes home it spins: enemies within {u.knifeSpinRadius:0.#} cells that this return did not cut take {P(u.knifeSpinShare)}% damage.",$"When the blade comes home it spins: enemies within {u.knifeSpinRadius:0.#} cells that this return did not cut take {P(u.knifeSpinShare)}% damage."),
+                (WeaponForm.Knife,0,false)=>ArenaText.Pair(                    $"The returning blade no longer cuts you; sweeping through you is a catch: {P(1f-u.knifeCatchCooldownShare)}% shorter cooldown, and the next throw bounces to {u.knifeCatchTargets} more enemies and flies {P(u.knifeCatchSpeed-1f)}% faster.",                    $"The returning blade no longer cuts you; sweeping through you is a catch: {P(1f-u.knifeCatchCooldownShare)}% shorter cooldown, and the next throw bounces to {u.knifeCatchTargets} more enemies and flies {P(u.knifeCatchSpeed-1f)}% faster."),
                 (WeaponForm.Knife,1,true)=>ArenaText.Pair("A flung enemy that crashes into another hooks the one it hit; once per manual hook.","A flung enemy that crashes into another hooks the one it hit; once per manual hook."),
-                (WeaponForm.Knife,1,false)=>ArenaText.Pair("You can move while the hook is out; an empty hook that hits a wall pulls you to it.","You can move while the hook is out; an empty hook that hits a wall pulls you to it."),
+                (WeaponForm.Knife,1,false)=>ArenaText.Pair(                    $"During the two-way pull nothing interrupts you and attacks cannot hurt you; as you meet, other enemies within {u.hookShockRadius:0.#} cells are knocked back {u.hookShockPush:0.#} cells. An empty hook that hits a wall pulls you to it.",                    $"During the two-way pull nothing interrupts you and attacks cannot hurt you; as you meet, other enemies within {u.hookShockRadius:0.#} cells are knocked back {u.hookShockPush:0.#} cells. An empty hook that hits a wall pulls you to it."),
                 (WeaponForm.RocketLauncher,0,true)=>ArenaText.Pair($"Enemies the strike kills explode where they fall: radius {u.strikeChainRadius:0.#}, {P(u.strikeChainShare)}% damage, no further chain.",$"Enemies the strike kills explode where they fall: radius {u.strikeChainRadius:0.#}, {P(u.strikeChainShare)}% damage, no further chain."),
                 (WeaponForm.RocketLauncher,0,false)=>ArenaText.Pair($"Your own blast no longer hurts you; it pushes you {u.strikeJumpDistance:0.#} cells instead, with no wall damage.",$"Your own blast no longer hurts you; it pushes you {u.strikeJumpDistance:0.#} cells instead, with no wall damage."),
                 (WeaponForm.RocketLauncher,1,true)=>ArenaText.Pair($"Enemies you hit are knocked along your flight, farther the faster you still fly: {u.rocketCueMax:0.#} cells at launch, {u.rocketCueMax*Mathf.Clamp(u.rocketEndSpeedShare,.1f,1f):0.#} at the end.",$"Enemies you hit are knocked along your flight, farther the faster you still fly: {u.rocketCueMax:0.#} cells at launch, {u.rocketCueMax*Mathf.Clamp(u.rocketEndSpeedShare,.1f,1f):0.#} at the end."),
-                (WeaponForm.RocketLauncher,1,false)=>ArenaText.Pair("Hitting a wall no longer costs you HP and resets this flight's cooldown.","Hitting a wall no longer costs you HP and resets this flight's cooldown."),
-                _=>ArenaText.Pair("Adds a new variant to this anomaly","Adds a new variant to this anomaly")
+                (WeaponForm.RocketLauncher,1,false)=>ArenaText.Pair("In flight black holes neither drag nor swallow you; hitting a wall no longer costs you HP and resets this flight's cooldown.","In flight black holes neither drag nor swallow you; hitting a wall no longer costs you HP and resets this flight's cooldown."),
+                _=>ArenaText.Pair("Adds a twist to this weapon's attack","Adds a twist to this weapon's attack")
             };
         }
         bool CanReinfuse(RunWeapon w)=>!w.builtInElement&&OwnElement(w)!=ElementKind.None;
@@ -781,6 +792,8 @@ namespace AnomalyArena
             var axes=new System.Collections.Generic.List<UpgradeAxis>();
             foreach(var axis in w.IsAuto?AutoDraftAxes:HandDraftAxes)
                 if(!w.Has(axis)&&(axis!=UpgradeAxis.Infusion||!w.builtInElement))axes.Add(axis);
+                                                                                                         
+            if(w.form==WeaponForm.ShieldRing&&w.variant==1)axes.Remove(UpgradeAxis.Infusion);
             return axes;
         }
         static ElementKind RollElement(ElementKind previous)
@@ -796,7 +809,7 @@ namespace AnomalyArena
             {
                 if(trialWeaponStates.Count>0)return;
                 trialActiveIndex=ActiveIndex;trialInputHeld=inputHeld;frozenAutoClock=autoClock;
-                FreezeElementWeaponsForTrial();
+                FreezeElementWeaponsForTrial();FreezeAutoWeaponsForTrial(true);
                 frozenBattlefieldAttacks.Clear();frozenHeldBodies.Clear();
                 if(AttackPool.Instance)foreach(var actor in AttackPool.Instance.actors)
                     if(actor&&(actor.gameObject.activeSelf||BattlefieldFrozen(actor.gameObject)))frozenBattlefieldAttacks.Add(actor);
@@ -811,9 +824,9 @@ namespace AnomalyArena
                     var saved=new RunWeapon
                     {
                         cooldown=w.cooldown,reload=w.reload,heldTime=w.heldTime,heat=w.heat,charge=w.charge,chargeFullTime=w.chargeFullTime,
-                        executeBonus=w.executeBonus,rounds=w.rounds,jammed=w.jammed,charging=w.charging,inFlight=w.inFlight,recallPlanted=w.recallPlanted,
+                        executeNextShot=w.executeNextShot,chainStoredJumps=w.chainStoredJumps,holeReturnSpan=w.holeReturnSpan,rounds=w.rounds,charging=w.charging,inFlight=w.inFlight,recallPlanted=w.recallPlanted,
                         recallPoint=w.recallPoint,recallActor=w.recallActor,hooked=w.hooked,whirled=w.whirled,hookBusy=w.hookBusy,channelledField=w.channelledField,
-                        whirlLeft=w.whirlLeft,orbitAngle=w.orbitAngle,leechDamage=w.leechDamage
+                        whirlLeft=w.whirlLeft,orbitAngle=w.orbitAngle
                     };
                     saved.stickyActor=w.stickyActor;
                     saved.turretLeft=w.turretLeft;saved.turretClock=w.turretClock;saved.turretPoint=w.turretPoint;saved.turretDir=w.turretDir;
@@ -823,6 +836,8 @@ namespace AnomalyArena
                     w.hooked=w.whirled=null;w.channelledField=w.recallActor=w.stickyActor=null;w.recallPlanted=false;w.hookBusy=w.inFlight=w.charging=false;w.heldTime=0;w.burstLeft=0;
                     w.hookChainUsed=false;w.vacuumTimer=0;
                     if(w.form!=WeaponForm.ArcCoil||w.variant!=1)w.charge=0;
+                                                                                                                                               
+                    w.executeNextShot=0f;w.chainStoredJumps=0;
                     ResetPlacedShots(w);
                 }
                 FreezeExecuteMarks(true);
@@ -842,15 +857,15 @@ namespace AnomalyArena
                 if(w.hooked&&!frozenHeldBodies.Contains(w.hooked)&&w.hooked.IsAlive)w.hooked.SetState(CharacterState.Normal);
                 if(w.whirled&&!frozenHeldBodies.Contains(w.whirled)&&w.whirled.IsAlive)w.whirled.SetState(CharacterState.Normal);
                 w.cooldown=saved.cooldown;w.reload=saved.reload;w.heldTime=saved.heldTime;w.heat=saved.heat;
-                w.charge=saved.charge;w.chargeFullTime=saved.chargeFullTime;w.executeBonus=saved.executeBonus;w.rounds=saved.rounds;w.jammed=saved.jammed;
+                w.charge=saved.charge;w.chargeFullTime=saved.chargeFullTime;w.executeNextShot=saved.executeNextShot;w.chainStoredJumps=saved.chainStoredJumps;w.holeReturnSpan=saved.holeReturnSpan;w.rounds=saved.rounds;
                 w.charging=saved.charging;w.inFlight=saved.inFlight;w.recallPlanted=saved.recallPlanted;w.recallPoint=saved.recallPoint;w.recallActor=saved.recallActor;
                 w.hooked=saved.hooked;w.whirled=saved.whirled;w.hookBusy=saved.hookBusy;w.channelledField=saved.channelledField;
-                w.whirlLeft=saved.whirlLeft;w.orbitAngle=saved.orbitAngle;w.leechDamage=saved.leechDamage;
+                w.whirlLeft=saved.whirlLeft;w.orbitAngle=saved.orbitAngle;
                 w.stickyActor=saved.stickyActor;
                                                                                   
                 ResetPlacedShots(w);w.turretLeft=saved.turretLeft;w.turretClock=saved.turretClock;w.turretPoint=saved.turretPoint;w.turretDir=saved.turretDir;
             }
-            FreezeExecuteMarks(false);
+            FreezeExecuteMarks(false);FreezeAutoWeaponsForTrial(false);
             for(int i=0;i<autoHitTimes.Length;i++)
             {
                 autoHitTimes[i].Clear();foreach(var pair in frozenAutoHitTimes[i])autoHitTimes[i].Add(pair.Key,pair.Value);
@@ -899,14 +914,14 @@ namespace AnomalyArena
             ClearChargeLine();
             ClearElementWeapons();
             ElementCombat.ClearContinuousHits();
-            executeMarks.Clear();frozenExecuteMarks.Clear();
+            executeMarks.Clear();frozenExecuteMarks.Clear();lanceBeams.Clear();
             hazards.Clear();sporeClouds.Clear();tracers.Clear();
             dashLeft=0;dashWeapon=null;dashContactDamage=0;dashHits.Clear();inputHeld=false;if(player&&player.State==CharacterState.Dashing)player.SetState(CharacterState.Normal);
         }
                                                                                                                                             
         void ResetPlacedShots(RunWeapon w)
         {
-            RemoveLanceTrailTracer(w);w.lanceTrailLeft=0f;
+            RemoveLanceTrailTracer(w);w.lanceTrailLeft=0f;w.executeAuraLeft=0f;
             w.turretLeft=w.turretClock=0f;w.bombardLeft=0;w.bombardTimer=0f;
         }
                                                                                                                               

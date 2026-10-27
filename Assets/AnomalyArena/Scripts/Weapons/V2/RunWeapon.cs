@@ -21,16 +21,12 @@ namespace AnomalyArena
         public bool builtInElement;
         [NonSerialized] public float cooldown, reload, heldTime, heat, charge, chargeFullTime;
 
-        [NonSerialized] public float executeBonus;
+        [NonSerialized] public float executeNextShot;
         [NonSerialized] public int rounds;
-
-        [NonSerialized] public bool jammed;
 
         [NonSerialized] public int burstLeft;
         [NonSerialized] public float burstTimer, burstDamage;
         [NonSerialized] public Vector3 burstDirection;
-
-        [NonSerialized] public int needlesFired;
         [NonSerialized] public bool charging, inFlight, recallPlanted;
         [NonSerialized] public Vector3 recallPoint;
         [NonSerialized] public Combatant hooked;
@@ -43,7 +39,7 @@ namespace AnomalyArena
         [NonSerialized] public Vector3 lanceTrailFrom, lanceTrailTo;
         [NonSerialized] public float lanceTrailLeft;
 
-        [NonSerialized] public float executeHpGained;
+        [NonSerialized] public float executeAuraLeft, executeAuraClock, executeAuraDamage;
 
         [NonSerialized] public float turretLeft, turretClock;
         [NonSerialized] public Vector3 turretPoint, turretDir;
@@ -59,8 +55,18 @@ namespace AnomalyArena
         [NonSerialized] public int trailHead, trailCount;
 
         [NonSerialized] public int chainStoredJumps;
-        [NonSerialized] public float whirlLeft, orbitAngle, leechDamage;
+        [NonSerialized] public float whirlLeft, orbitAngle;
         [NonSerialized] public float tankReadyAt;
+
+        [NonSerialized] public int droneShots;
+        [NonSerialized] public Vector3 dronePoint;
+        [NonSerialized] public float droneDownLeft;
+
+        [NonSerialized] public Vector3 whirlFrom, whirlTo;
+        [NonSerialized] public float whirlTotal;
+
+        [NonSerialized] public bool drainShieldUp, drainOverloadPaid;
+        [NonSerialized] public float drainQuiet, drainOverloadLeft;
 
         [NonSerialized] public float holeReturnSpan;
 
@@ -70,9 +76,6 @@ namespace AnomalyArena
 
         [NonSerialized] public float vacuumTimer;
         [NonSerialized] public Vector3 vacuumDirection;
-
-        [NonSerialized] public float reloadTotal;
-        [NonSerialized] public bool quickReloadTried;
         public bool IsAuto => (int)form >= (int)WeaponForm.OrbitBlades;
         public bool Has(UpgradeAxis axis) => (axes & axis) != 0;
         public int Level { get { int n=1; for(int i=0;i<6;i++) if(Has((UpgradeAxis)(1<<i))) n++; return n; } }

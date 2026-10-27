@@ -396,6 +396,8 @@ namespace AnomalyArena
                     TickTrialBody(combatant);                                                                                     
                     continue;
                 }
+                                                                                                         
+                if (MissileHoleProof(combatant)) continue;
                 bool swallowed = false;
                 foreach (var hole in holes)
                 {
@@ -417,6 +419,21 @@ namespace AnomalyArena
                 foreach (var projectile in AttackPool.Instance.actors)
                     if (projectile && projectile.gameObject.activeSelf && projectile.AffectedByHoles && IsHole(projectile.transform.position)) projectile.SwallowedByHole();
         }
+
+                                                                                                                                                
+                                                                                                                          
+        static bool MissileHoleProof(Combatant combatant) => combatant == GM.player && GM.runWeapons && GM.runWeapons.MissileHoleProof;
+
+                                                                                                                                                
+                                                                                                                                                          
+        public bool DragIntoHole(Vector3 from, Vector3 at, Combatant actor)
+        {
+            foreach (var hole in holes) if (DragInto(hole, from, at, actor)) return true;
+            for (int i = 0; i < TemporaryHoleCount; i++) { var hole = TemporaryHoleAt(i); if (hole && hole.gameObject.activeSelf && DragInto(hole, from, at, actor)) return true; }
+            return false;
+        }
+        static bool DragInto(BlackHole hole, Vector3 from, Vector3 at, Combatant actor) => hole.Contains(at, actor) || hole.Pull(at, actor).sqrMagnitude > .01f
+            && (hole.Pull(from, actor).sqrMagnitude <= .01f || Query.Flat(at - hole.Centre).sqrMagnitude < Query.Flat(from - hole.Centre).sqrMagnitude);
 
                                                                                                                                                   
         void SwallowIntoVoid(Combatant combatant)
@@ -480,7 +497,7 @@ namespace AnomalyArena
                                                                                                        
         void ApplyHolePull(Combatant combatant)
         {
-                                                                                                                                        
+                                                                                                                                                       
             if (combatant == GM.player && GM.runWeapons && GM.runWeapons.Anchored) return;
             ApplyPull(combatant,GetPull(combatant.Position,combatant));
         }

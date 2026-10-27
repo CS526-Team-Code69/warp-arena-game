@@ -1524,6 +1524,19 @@ namespace AnomalyArena
             return WorldMap.Active.IsWalkable(Position + v * dt, radius, FollowingIntoGravity) ? v : Vector3.zero;
         }
 
+                                                                                                                                                 
+                                                                                                                                          
+        protected override Vector3 GuardSlide(Vector3 v, float dt)
+        {
+            if (!WorldMap.Active) return v;
+            if (WorldMap.Active.TrialActive) return WorldMap.Active.KeepOnTrialGround(Position, v, dt, radius);
+            return WorldMap.Active.IsWalkable(Position + v * dt, radius, FollowingIntoGravity) ? v : Vector3.zero;
+        }
+
+                                                                                                                                              
+                                                                                                                   
+        protected override bool SlipsOnIce => !charging && !rushing;
+
         void Stop()
         {
             if (!rb.isKinematic) rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
@@ -1606,6 +1619,16 @@ namespace AnomalyArena
             rb.position = transform.position;
             corpseVelocity = Vector3.zero;
             gameObject.SetActive(true);
+        }
+
+                                                                                                                                              
+        public void KnockCorpse(Vector3 dir, float distance)
+        {
+            if (!CorpseActive || CorpseCarried || CorpseFeedConsumed) return;
+            dir = Query.Flat(dir);
+            if (dir.sqrMagnitude < 1e-6f || distance <= 0f) return;
+                                                                                                           
+            corpseVelocity += dir.normalized * (distance * corpseDamping);
         }
 
         public bool TryConsumeCorpseFeed(int version)

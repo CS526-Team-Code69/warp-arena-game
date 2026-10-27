@@ -76,6 +76,31 @@ namespace AnomalyArena
             for (int variant = 0; variant < 2; variant++)
             foreach (var axis in new[] { UpgradeAxis.Twist, UpgradeAxis.Tame })
                 yield return ($"{(WeaponForm)form} {variant} {axis}", ArenaTerms.ExpandedUpgradeDescription((WeaponForm)form, variant, axis));
+            foreach (var card in StartingFormCards()) yield return card;
+        }
+
+        static List<(string, string)> StartingFormCards()
+        {
+            var weapons = GameManager.Instance.runWeapons;
+            var hand = weapons.Hand;
+            var auto = weapons.Auto;
+            var cards = new List<(string, string)>();
+            try
+            {
+                for (int form = (int)WeaponForm.Rifle; form <= (int)WeaponForm.RocketLauncher; form++)
+                for (int variant = 0; variant < 2; variant++)
+                foreach (var axis in new[] { UpgradeAxis.Twist, UpgradeAxis.Tame })
+                {
+                    var open = UpgradeAxis.Infusion | (axis == UpgradeAxis.Twist ? UpgradeAxis.Tame : UpgradeAxis.Twist);
+                    weapons.Hand = new[] { new RunWeapon { form = (WeaponForm)form, variant = variant, revealed = true, axes = open }, null };
+                    weapons.Auto = new RunWeapon[RunWeapons.AutoSlotCount];
+                    var card = weapons.RollUpgradeCard();
+                    Assert.That(card, Is.Not.Null, $"{(WeaponForm)form} {variant} {axis}: a card");
+                    cards.Add(($"{(WeaponForm)form} {variant} {axis}", card.Description));
+                }
+            }
+            finally { weapons.Hand = hand; weapons.Auto = auto; }
+            return cards;
         }
 
         static async Task Until(Func<bool> condition, float seconds, string what)

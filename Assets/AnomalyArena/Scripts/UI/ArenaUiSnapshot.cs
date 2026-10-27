@@ -27,8 +27,6 @@ namespace AnomalyArena
         public float hp = 50f, maxHp = 50f, shield, stamina = 1f;
         public float energy, maxEnergy = 100f, xp, xpNeeded = 10f;
         public float waveTime, buildTime, charge01;
-                                                                                                                                                    
-        public float chargeWindowStart, chargeWindowEnd;
         public bool waveTimeExpired;
         public int waveBatch, waveLiving, wavePending;
         public float bossHp, bossMaxHp, bossShield;

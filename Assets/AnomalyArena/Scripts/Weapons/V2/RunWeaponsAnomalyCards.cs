@@ -16,15 +16,98 @@ namespace AnomalyArena
         public bool IsChargeSlowed(Combatant body) => body && chargeSlowed.Contains(body);
                                                                                                                        
         public bool FocusGuardActive => player && player.Protected && Time.time < focusGuardUntil;
-                                                                                                                  
-        public bool HookLocksMovement => HandHookBusy && !(Active?.Has(UpgradeAxis.Tame) ?? false);
-
-                                                                                                                                        
-        AttackActor TwinBolt(RunWeapon w,Vector3 dir,float hit,float push,float reach,float velocity)
+                                                                                                                                           
+                                             
+        public bool HookLocksMovement => HandHookReeling;
+                                                                                                     
+        public bool HandHookReeling
         {
-            var a=AttackPool.Instance?AttackPool.Instance.Acquire():null;if(!a)return null;
-            a.Configure(AttackMode.Bolt,player,w,SpawnPoint(dir,.7f),dir,hit,push*KnockScale,reach,velocity,0,reach/velocity+3);a.pierce=true;
-            return a;
+            get
+            {
+                if (Active?.hookBusy != true || !AttackPool.Instance) return false;
+                foreach (var actor in AttackPool.Instance.actors)
+                    if (actor && actor.gameObject.activeSelf && actor.weapon == Active && actor.HookReeling && !BattlefieldFrozen(actor.gameObject)) return true;
+                return false;
+            }
+        }
+                                                                                                                                                 
+                                          
+        public bool ReelGuarded => Active != null && Active.form == WeaponForm.Knife && Active.variant == 1 && Active.Has(UpgradeAxis.Tame) && HandHookReeling;
+                                                                                                                                             
+                                                                                                                                                       
+        public float ChargeDamageTakenMultiplier{get{var w=Active;return w!=null&&w.charging&&w.form==WeaponForm.Rifle&&w.variant==0?Mathf.Max(0f,w.Has(UpgradeAxis.Tame)?upgrades.chargeTameDamageTaken:upgrades.chargeDamageTaken):1f;}}
+                                                                                                                                            
+                                                                                                                
+        public bool MissileHoleProof=>dashLeft>0f&&dashWeapon!=null&&dashWeapon.Has(UpgradeAxis.Tame)&&player&&player.State==CharacterState.Dashing;
+                                                                                                                           
+        float KnifeCatchSpeed(RunWeapon w)=>w.knifeCaught&&w.Has(UpgradeAxis.Tame)?Mathf.Max(1f,upgrades.knifeCatchSpeed):1f;
+
+                                                                                                                                               
+                                                                                                                            
+        void ChargedMuzzleBlast(RunWeapon w,Vector3 aim)
+        {
+            aim=Query.Flat(aim).normalized;float range=upgrades.chargedBlastRange,angle=upgrades.chargedBlastAngle;
+            Fx.Cone(player.Position,aim,range,angle,w.element);
+            foreach(var c in Combatant.All)
+            {
+                if(c==player||!c.IsAlive||c.Team==Team.Player)continue;
+                Vector3 delta=Query.Flat(c.Position-player.Position);
+                if(delta.magnitude>range+c.radius||delta.sqrMagnitude>.0001f&&Vector3.Angle(aim,delta)>angle*.5f||WallBlocks(player.Position,c.Position))continue;
+                c.Knockback(delta.sqrMagnitude>.0001f?delta:aim,upgrades.chargedBlastPush*KnockScale,KnockKind.Hit);
+            }
+        }
+
+                                                                                                                                             
+                                                                                                                                               
+                                                                                                                                                 
+                                                               
+        public Vector3 ReelPlayer(RunWeapon w,Combatant held,float step)
+        {
+            if(!player||!player.IsAlive||!held)return Vector3.zero;
+            GuardReel(w);
+                                                                                                               
+            if(player.State!=CharacterState.Normal)return Vector3.zero;
+            Vector3 from=Query.Flat(player.Position),gap=Query.Flat(held.Position)-from;
+                                                                                                                               
+            float move=Mathf.Min(step,Mathf.Max(0f,gap.magnitude-(player.radius+held.radius+.3f))*.5f);
+            if(move<=1e-4f)return Vector3.zero;
+            Vector3 dir=gap.normalized;
+            const float castBack=.1f;
+            if(Physics.SphereCast(Query.AtCastHeight(from)-dir*castBack,player.radius,dir,out var wall,move+castBack,GameManager.WallMask,QueryTriggerInteraction.Ignore))
+                move=Mathf.Min(move,Mathf.Max(0f,wall.distance-castBack));
+                                                                                                                                          
+                                                                                                                                           
+                                                                                                                      
+            var world=WorldMap.Active;
+            if(world)
+            {
+                float clear=0f;
+                for(int i=1,slices=Mathf.CeilToInt(move/.1f);i<=slices;i++){float along=move*i/slices;if(world.DragIntoHole(from,from+dir*along,player))break;clear=along;}
+                move=clear;
+                if(move<=1e-4f)return Vector3.zero;
+            }
+            player.SetMovePosition(new Vector3(from.x,player.Position.y,from.z)+dir*move);
+            return dir*move;
+        }
+
+                                                                                                                                            
+                                                                            
+        public void GuardReel(RunWeapon w){if(w!=null&&w.Has(UpgradeAxis.Tame)&&player&&player.IsAlive)player.ProtectFor(Time.fixedDeltaTime*2f);}
+
+                                                                                                                                             
+                                                                                                                                           
+        public void HookMet(RunWeapon w,Combatant held)
+        {
+            if(w==null||!w.Has(UpgradeAxis.Tame)||!player||!player.IsAlive)return;
+            Vector3 at=player.Position;float radius=upgrades.hookShockRadius;
+            foreach(var c in Combatant.All)
+            {
+                if(c==player||c==held||!c.IsAlive||c.Team==Team.Player)continue;
+                Vector3 away=Query.Flat(c.Position-at);
+                if(away.magnitude>radius+c.radius||WallBlocks(at,c.Position))continue;
+                c.Knockback(away.sqrMagnitude>.0001f?away:Query.Flat(player.AimDirection),upgrades.hookShockPush*KnockScale,KnockKind.Hit);
+            }
+            Fx.Ring(at,radius,new Color(.8f,.9f,1f,.8f));
         }
 
                                                                                                                                     
@@ -44,7 +127,7 @@ namespace AnomalyArena
                     if(c is not Enemy{IsBoss:false}||!c.IsAlive)continue;
                     Vector3 delta=Query.Flat(c.Position-from);float along=Vector3.Dot(delta,aim);
                     if(along<0f||along>length||(delta-aim*along).magnitude>upgrades.chargeLineHalfWidth+c.radius||WallBlocks(from,c.Position))continue;
-                    chargeLineNow.Add(c);c.AddMovementModifier(chargeLineKey,upgrades.chargeLineSlow);
+                    chargeLineNow.Add(c);c.AddMovementModifier(chargeLineKey,upgrades.chargeLineSlowFactor);
                 }
                                                                                                
                 AddTracer(Muzzle(aim),Query.AtCastHeight(from+aim*length),.08f,Time.unscaledDeltaTime+.02f,new Color(.55f,.85f,1f,.35f));
@@ -59,17 +142,17 @@ namespace AnomalyArena
             chargeSlowed.Clear();chargeLineNow.Clear();
         }
 
-                                                                                                                        
-        Combatant RearGuardTarget()
+                                                                                                                                                    
+        Combatant FrontGuardTarget()
         {
-            Vector3 back=-Query.Flat(player.AimDirection).normalized;
+            Vector3 front=Query.Flat(player.AimDirection).normalized;
             Combatant best=null;float nearest=float.PositiveInfinity;
             foreach(var c in Combatant.All)
             {
                 if(c==player||!c.IsAlive||c.Team==Team.Player)continue;
                 Vector3 delta=Query.Flat(c.Position-player.Position);float distance=delta.magnitude;
                 if(distance<.01f||distance>upgrades.reverseGuardRange+c.radius||distance>=nearest)continue;
-                if(Vector3.Angle(back,delta)>upgrades.reverseGuardAngle*.5f||WallBlocks(player.Position,c.Position))continue;
+                if(Vector3.Angle(front,delta)>upgrades.reverseGuardAngle*.5f||WallBlocks(player.Position,c.Position))continue;
                 best=c;nearest=distance;
             }
             return best;
@@ -178,43 +261,19 @@ namespace AnomalyArena
             player.ProtectFor(seconds);focusGuardUntil=Mathf.Max(focusGuardUntil,Time.time+seconds);
         }
 
-                                                                                                    
-        public float ReloadProgress(RunWeapon w)=>w==null||w.reload<=0f||w.reloadTotal<=0f?1f:Mathf.Clamp01(1f-w.reload/w.reloadTotal);
-                                                                                                     
-        public bool QuickReloadOpen(RunWeapon w)=>w!=null&&w.form==WeaponForm.ScatterCannon&&w.variant==0&&w.Has(UpgradeAxis.Tame)&&w.reload>0f&&!w.quickReloadTried;
-                                                                                                                                
-        static bool ShowsReloadBar(RunWeapon w)=>w!=null&&w.form==WeaponForm.ScatterCannon&&w.variant==0&&w.Has(UpgradeAxis.Tame)&&w.reload>0f&&w.reloadTotal>0f;
-                                                                                                                                                            
-        public bool ChargeWindow(out float start,out float end)
-        {
-            start=end=0f;var w=Active;
-            if(!ShowsReloadBar(w)||!QuickReloadOpen(w))return false;
-            start=Mathf.Clamp01(upgrades.scatterQuickStart);end=Mathf.Clamp01(Mathf.Max(upgrades.scatterQuickStart,upgrades.scatterQuickEnd));
-            return end>start;
-        }
-
-                                                                                                                                                
-        bool TryQuickReload(RunWeapon w)
-        {
-            if(!QuickReloadOpen(w))return false;
-            w.quickReloadTried=true;
-            float progress=ReloadProgress(w);
-            if(progress<upgrades.scatterQuickStart||progress>upgrades.scatterQuickEnd)return false;
-            w.reload=0f;w.cooldown=0f;w.jammed=false;w.rounds=ClipSize(w.form,w.variant);
-            V3WorldAudio.Instance?.Play(ArenaWorldCue.WeaponRepair,player.Position);
-            Fire(w,false);
-            return true;
-        }
-
-                                                                                                                               
-                                                                                     
+                                                                                                                                                  
         public string AnomalySlotDetail(RunWeapon w)
         {
             if(w==null)return "";
+            if(w.IsAuto)return AutoSlotDetail(w);
             if(w.form==WeaponForm.Knife&&w.variant==0&&w.knifeCaught)
                 return ArenaText.Pair($" · Caught +{upgrades.knifeCatchTargets}",$" · Caught +{upgrades.knifeCatchTargets}");
             if(w.form==WeaponForm.Minigun&&w.variant==1&&MeltdownHasteLeft>0f)
-                return ArenaText.Pair($" · Attack speed +{upgrades.meltdownTameHaste*100f:0}% {MeltdownHasteLeft:0.0}s",$" · Attack speed +{upgrades.meltdownTameHaste*100f:0}% {MeltdownHasteLeft:0.0}s");
+                return ArenaText.Pair($" · Attack speed +{upgrades.meltdownTameHaste*100f:0}% move +{upgrades.meltdownTameMoveBonus*100f:0}% {MeltdownHasteLeft:0.0}s",$" · Attack speed +{upgrades.meltdownTameHaste*100f:0}% move +{upgrades.meltdownTameMoveBonus*100f:0}% {MeltdownHasteLeft:0.0}s");
+                                                                                                         
+            if(w.form==WeaponForm.Railgun&&w.variant==1)
+                return (w.executeNextShot>0f?ArenaText.Pair($" · Next shot +{w.executeNextShot*100f:0}%",$" · Next shot +{w.executeNextShot*100f:0}%"):"")
+                    +(w.executeAuraLeft>0f?ArenaText.Pair($" · Arc shield {w.executeAuraLeft:0.0}s",$" · Arc shield {w.executeAuraLeft:0.0}s"):"");
             return "";
         }
     }
