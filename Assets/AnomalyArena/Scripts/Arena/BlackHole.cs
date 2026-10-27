@@ -21,6 +21,8 @@ namespace AnomalyArena
         float temporaryLife;
         public bool Temporary { get; private set; }
         Combatant protectedOwner;
+
+        public Combatant Owner { get; private set; }
         public float TemporarySecondsLeft => temporaryLife;
         public Vector3 Centre => transform.position;
         public float KillRadiusNominal=>size*.5f;
@@ -29,7 +31,7 @@ namespace AnomalyArena
 
         public void ResetHole()
         {
-            protectedOwner = null;
+            protectedOwner = Owner = null;
             Feeds = 0;
             Phase = HolePhase.Active;
             collapseTimer = 0f;
@@ -42,6 +44,7 @@ namespace AnomalyArena
             size = width;
             gravityCells = gravityWidth;
             protectedOwner = protectOwner ? owner : null;
+            Owner = owner;
             Temporary = true;
             temporaryLife = life;
             Phase = HolePhase.Active;
@@ -105,7 +108,7 @@ namespace AnomalyArena
         public void ShowAsTrialPortal(Vector3 at)
         {
             transform.position = at;
-            protectedOwner = null;
+            protectedOwner = Owner = null;
             Temporary = true;
             temporaryLife = float.PositiveInfinity;
             Phase = HolePhase.Portal;

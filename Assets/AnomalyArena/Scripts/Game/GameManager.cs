@@ -156,7 +156,7 @@ namespace AnomalyArena
 
         public void BeginPlaying() => ExecuteUiCommand(ArenaUiCommand.Start);
 
-        public void ToggleArt() => Art.Enabled = !Art.Enabled;
+        public void ToggleArt() => Art.Toggle();
 
         void Update() => V2Update();
 

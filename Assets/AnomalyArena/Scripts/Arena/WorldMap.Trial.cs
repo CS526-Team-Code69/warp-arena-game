@@ -22,7 +22,7 @@ namespace AnomalyArena
         float portalRearm, arrivalHold;
 
                                                                                                                                               
-                                                                                                                                       
+                                                                                                                                
                                                                                   
         public bool PortalArrivalHold => TrialActive && arrivalHold > 0f;
 
@@ -47,8 +47,8 @@ namespace AnomalyArena
         Vector3 TrialRing(float firstAngle, float distance, int i) => Query.Flat(trialPlatform.position) +
             Quaternion.Euler(0f, firstAngle + 360f * i / Mathf.Max(1, trialTerrainCount), 0f) * Vector3.forward * distance;
 
-                                                                                                                                         
-                                                              
+                                                                                                                                           
+                                                                     
         public bool OnTrialGround(Vector3 point, float margin = 0f)
         {
             if (!trialPlatform) return false;
@@ -66,7 +66,7 @@ namespace AnomalyArena
             : trialRadius;
 
                                                                                                                                                
-                                                                                                                                              
+                                                                                                                                          
                                                        
         public Vector3 KeepOnTrialGround(Vector3 position, Vector3 v, float dt, float bodyRadius)
         {
@@ -190,7 +190,8 @@ namespace AnomalyArena
             if (!boss && !(player && PortalArrivalHold)) ApplyHolePull(combatant);
             if (!player) return;
                                                                                                                                          
-            if (hollow && hollow.GravityPulling && !PortalArrivalHold && !(GM.runWeapons && GM.runWeapons.Anchored))
+                                                                                                                                       
+            if (hollow && hollow.GravityPulling && !PortalArrivalHold && !(GM.runWeapons && GM.runWeapons.Anchored) && !(GM.skills && GM.skills.SingularityActive))
                 ApplyPull(combatant, Query.Flat(hollow.Position - combatant.Position).normalized * (hollow.GravityPullSpeed * GM.WorldTimeScale));
                                                                          
             portalRearm = Mathf.Max(0f, portalRearm - Time.fixedDeltaTime);

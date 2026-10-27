@@ -82,3 +82,4 @@ MonoBehaviour:
   icon: {fileID: 0}
   levelDamageGrowth: 1.161895
   shieldScalesWithMaxHp: 1
+  bulwarkShieldDirectFactor: 0.5

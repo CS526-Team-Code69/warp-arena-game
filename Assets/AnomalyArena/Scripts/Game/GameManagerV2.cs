@@ -54,7 +54,8 @@ namespace AnomalyArena
 
         void V2Start()
         {
-            Art.EnsureV2Default();
+                                                                                                                          
+            Art.EnsureV2Default(gameObject.scene.name==Art.IllustratedOnlyScene);
             runWeapons??=player.GetComponent<RunWeapons>();progression??=player.GetComponent<RunProgression>();skills??=player.GetComponent<SkillLoadout>();
             State=GameState.Title;RunPhase=ArenaUiState.Title;supplyChoiceOpened=false;SupplyDropReady=false;pendingSupplyChoice=ArenaUiState.Title;LockMenuInput();
             progression.ResetRun();skills.ResetRun();runWeapons.ResetRun();
@@ -273,8 +274,10 @@ namespace AnomalyArena
                     if(RunPhase is not (ArenaUiState.Armory or ArenaUiState.Draft or ArenaUiState.Ready))return;if(progression.BankedDrafts>0||RunPhase==ArenaUiState.Armory)snapshot.earlyStartConfirmation=true;else BeginNextV2Wave(false);break;
                 case ArenaUiCommand.ConfirmEarlyStart:if(greaterDraft&&RunPhase==ArenaUiState.Draft)FinishGreaterReward();else if(snapshot.earlyStartConfirmation)BeginNextV2Wave(true);break;
                 case ArenaUiCommand.Cancel:snapshot.earlyStartConfirmation=false;if(RunPhase==ArenaUiState.ReplaceWeapon)SetPhase(ArenaUiState.Armory);else if(RunPhase==ArenaUiState.ReplaceSkill)SetPhase(replaceReturn);else if(RunPhase==ArenaUiState.LevelUp)CloseLevelUp();break;
-                case ArenaUiCommand.Pause:if(CanPlayerMove){resumePhase=RunPhase;SetPhase(ArenaUiState.Paused);}break;
-                case ArenaUiCommand.Resume:if(RunPhase==ArenaUiState.Paused)SetPhase(resumePhase);break;
+                                                                                                                                             
+                                                                                                                              
+                case ArenaUiCommand.Pause:if(CanPause){resumePhase=RunPhase;resumeWalking=BuildWalking;snapshot.earlyStartConfirmation=false;SetPhase(ArenaUiState.Paused);}break;
+                case ArenaUiCommand.Resume:if(RunPhase==ArenaUiState.Paused){buildWalking=resumeWalking;SetPhase(resumePhase);}break;
                 case ArenaUiCommand.Restart:ReportAbandoned("restart");V2Audio.Instance?.PlayUI(ArenaUiSound.Confirm);_=ReloadAfterUiFeedback();return;
                 case ArenaUiCommand.QuitToTitle:ReportAbandoned("quit_to_title");V2Audio.Instance?.PlayUI(ArenaUiSound.Cancel);_=ReloadAfterUiFeedback();return;
                 case ArenaUiCommand.DismissWeaponIntro:DismissWeaponIntro();break;
@@ -396,6 +399,8 @@ namespace AnomalyArena
             view.rarity=ArenaRarity.ForSkill(skill.Definition,skill.Level);if(!skill.Empty)view.detail=ArenaTerms.Rarity(view.rarity)+" · "+view.detail;
                                                                 
             if(!skill.Empty&&skill.Id==SkillId.Blink&&skills.BlinkChargesMax>1){view.detail+=ArenaText.Pair($" · Charges {skills.BlinkCharges}/{skills.BlinkChargesMax}",$" · Charges {skills.BlinkCharges}/{skills.BlinkChargesMax}");view.available=skills.BlinkCharges>0&&progression.Energy>=skill.Cost;}
+                                                                                                                                   
+            if(!skill.Empty&&skills.EffectActive(skill.Id))view.available=false;
         }
         static int UpgradeIndex(UpgradeAxis axis)=>axis switch{UpgradeAxis.Infusion=>0,UpgradeAxis.Power=>1,UpgradeAxis.Tempo=>2,UpgradeAxis.Reach=>3,UpgradeAxis.Twist=>4,UpgradeAxis.Tame=>5,_=>-1};
         static int ElementIndex(ElementKind e)=>e==ElementKind.None?-1:e==ElementKind.Light?5:e==ElementKind.Void?6:(int)e-1;

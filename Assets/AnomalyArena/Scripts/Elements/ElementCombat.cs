@@ -51,7 +51,7 @@ namespace AnomalyArena
         }
 
         public static void ApplyHit(Combatant target, ElementKind element, float actualDamage, Combatant source,
-            bool builtInElement = false, bool noLightningJump = false, object continuousSource = null)
+            bool builtInElement = false, bool noLightningJump = false, object continuousSource = null, float baseDamage = -1f)
         {
             if (source && actualDamage > 0f) source.GetComponent<SkillLoadout>()?.HealFromDamage(actualDamage);
             var targetBoard = ElementStatus.For(target);
@@ -67,6 +67,12 @@ namespace AnomalyArena
             var rules = targetBoard.Rules;
 
             if (continuousSource != null && !CountsContinuousHit(continuousSource, target, rules.continuousStackInterval)) return;
+            if (element == ElementKind.Fire && !targetBoard.IsPlayer)
+            {
+
+                targetBoard.Ignite(rules.fireBurnShare * Mathf.Max(0f, baseDamage >= 0f ? baseDamage : actualDamage), source);
+                return;
+            }
 
             float stacks = rules.stacksPerHit * (builtInElement ? rules.builtInElementStackFactor : 1f);
             targetBoard.Add(element, stacks, source);
@@ -116,6 +122,8 @@ namespace AnomalyArena
             var rules = receiver.Rules;
             switch (element)
             {
+
+                case ElementKind.Fire when !receiver.IsPlayer: receiver.Ignite(rules.fireBurnShare * Mathf.Max(0f, actualDamage), attacker); break;
                 case ElementKind.Fire: receiver.Add(element, rules.enemyFireStacks, attacker); break;
                 case ElementKind.Poison: receiver.Add(element, rules.enemyPoisonStacks, attacker); break;
                 case ElementKind.Frost: receiver.Add(element, rules.enemyFrostStacks, attacker); break;

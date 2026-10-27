@@ -18,8 +18,8 @@ namespace AnomalyArena
         public float wildfireFenceRange = 9f;
         [Min(0f), Tooltip("Wildfire Twist: half the fence width; a body whose edge comes this close to the line between the two centres is touched.")]
         public float wildfireFenceHalfWidth = .5f;
-        [Min(0f), Tooltip("Wildfire Twist: Burning stacks per second an enemy keeps getting while it touches a fire fence (several fences count once). "
-                          + "The fence deals no direct hit; Burning on an enemy burns one stack every half second, so above 2 the stacks build up.")]
+        [Min(0f), Tooltip("Wildfire Twist: an enemy touching a fire fence burns for this much per second (wave-1 value, × R(w); several fences count once). "
+                          + "The fence deals no direct hit; the burn goes on for StatusRules.elementWindow after the enemy leaves it.")]
         public float wildfireFenceFirePerSecond = 4f;
         [Min(0f), Tooltip("Wildfire Twist backfire: Burning stacks per second you get while you touch your own fence (none once tamed). "
                           + "Above 2 your Burning keeps growing while you stay on it.")]
@@ -917,8 +917,8 @@ namespace AnomalyArena
                 foreach(var body in elementTargets)
                 {
                     wildfireFenceHitAt[body]=autoClock+interval*.9f;
-                    float perSecond=body==player?upgrades.wildfireFenceSelfFirePerSecond:upgrades.wildfireFenceFirePerSecond;
-                    ElementCombat.ApplyStacks(body,ElementKind.Fire,perSecond*interval,player);
+                    if(body==player)ElementCombat.ApplyStacks(body,ElementKind.Fire,upgrades.wildfireFenceSelfFirePerSecond*interval,player);
+                    else ElementStatus.For(body)?.Ignite(upgrades.wildfireFenceFirePerSecond*ElementCombat.WaveScale,player);
                 }
             }
         }

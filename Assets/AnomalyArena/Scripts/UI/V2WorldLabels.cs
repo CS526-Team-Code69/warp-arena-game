@@ -251,10 +251,13 @@ namespace AnomalyArena
                 for (int j = 0; j < 4; j++)
                 {
                     float count = status ? j switch { 0 => status.Fire, 1 => status.Poison, 2 => status.Frost, _ => status.Lightning } : 0f;
-                    bool on = count >= 1f || (j == 2 && status && status.Frozen) || (j == 3 && status && status.Paralysed);
+                                                                                                                                  
+                    bool burning = j == 0 && status && status.Burning;
+                    bool on = count >= 1f || burning || (j == 2 && status && status.Frozen) || (j == 3 && status && status.Paralysed);
                     V2Hud.SetElementIcon(view.statusIcons[j], art, on ? j : -1);
                     view.statusCounts[j].gameObject.SetActive(on);
-                    string value = j == 2 && status && status.Frozen ? ArenaText.Text("ui.freeze.short") : j == 3 && status && status.Paralysed ? ArenaText.Text("ui.paralysis.short") : Mathf.FloorToInt(count).ToString();
+                    string value = j == 2 && status && status.Frozen ? ArenaText.Text("ui.freeze.short") : j == 3 && status && status.Paralysed ? ArenaText.Text("ui.paralysis.short")
+                        : burning ? Mathf.Max(1, Mathf.RoundToInt(count)).ToString() : Mathf.FloorToInt(count).ToString();
                     if (on && view.statusCounts[j].text != value) view.statusCounts[j].text = value;
                 }
             }

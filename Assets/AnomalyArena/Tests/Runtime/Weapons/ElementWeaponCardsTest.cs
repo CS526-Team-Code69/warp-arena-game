@@ -116,7 +116,7 @@ namespace AnomalyArena
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
-        public async Task WildfireTwist_TwoPatchesInRange_FenceKeepsAddingBurningToABodyOnTheLineWithoutAHit()
+        public async Task WildfireTwist_TwoPatchesInRange_FenceKeepsABodyOnTheLineBurningWithoutAHit()
         {
             var (game, targets) = await V3CombatSmokeTest.StartSandbox();
             var tuning = game.runWeapons.upgrades;
@@ -135,16 +135,15 @@ namespace AnomalyArena
                 patch.Configure(AttackMode.Field, game.player, wildfire, origin + Vector3.forward * z, Vector3.forward, tick, 0f, 0f, 0f, 1f, 4f);
                 older ??= patch;
             }
-            float dose = tuning.wildfireFenceFirePerSecond * older.tickInterval;
+            float burn = tuning.wildfireFenceFirePerSecond * ElementCombat.WaveScale;
 
             await Until(() => status.Fire > 0f, 1f, "the fence sets the enemy on the line burning");
-            Assert.That(status.Fire, Is.EqualTo(dose).Within(.01f), "one dose of Burning per patch tick");
-            Assert.That(victim.Hp, Is.EqualTo(victim.maxHp), "no direct hit: only the Burning hurts");
+            Assert.That(status.Fire, Is.EqualTo(burn).Within(.01f), "it burns at the fence's rate a second");
+            Assert.That(victim.Hp, Is.EqualTo(victim.maxHp), "no direct hit: only the burn hurts");
             Assert.That(game.runWeapons.Tracers.Count, Is.GreaterThan(0), "the fence is drawn");
-            Assume.That(tuning.wildfireFenceFirePerSecond, Is.GreaterThan(1f / status.Rules.fireInterval), "the tuned fence adds stacks faster than one burns off per tick");
             await Seconds(1.1f);
-            Assert.That(victim.Hp, Is.LessThan(victim.maxHp), "the Burning ticks");
-            Assert.That(status.Fire, Is.GreaterThan(dose), "touching the fence keeps adding Burning faster than it burns off");
+            Assert.That(victim.Hp, Is.LessThan(victim.maxHp), "the burn ticks");
+            Assert.That(status.Fire, Is.EqualTo(burn).Within(.01f), "touching the fence keeps it burning at that rate");
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]

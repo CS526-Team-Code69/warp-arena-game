@@ -74,11 +74,12 @@ MonoBehaviour:
   singularityDamagePerEnemy: 4
   singularityPlayerMoveMultiplier: 0.35
   descriptions:
-  - 'Leave a burning trail for 4 s: 3 Fire/s.'
+  - 'Leave a burning trail for 4 s: burns 3 per second.'
   - Trail for 4.5 s.
   - Trail for 5 s.
   - Trail for 5.5 s.
-  - 'A 6 s trail, twice as wide: 3 Fire/s.'
+  - 'A 6 s trail, twice as wide: burns 3 per second.'
   icon: {fileID: 0}
   levelDamageGrowth: 1.161895
   shieldScalesWithMaxHp: 1
+  bulwarkShieldDirectFactor: 0.5

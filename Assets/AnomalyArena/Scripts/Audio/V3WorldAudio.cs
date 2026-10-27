@@ -99,8 +99,9 @@ namespace AnomalyArena
             }
             TickVoices(lifecycleVoices,lifeLeft);
             if(!paused)TickVoices(worldVoices,worldLeft);
-            bool combat=gm&&gm.State==GameState.Playing&&gm.CanPlayerMove;
-            if(!paused)backgroundBlend=Mathf.MoveTowards(backgroundBlend,combat?1f:0f,Time.unscaledDeltaTime/Mathf.Max(.01f,backgroundFadeSeconds));
+
+            bool running=gm&&gm.State==GameState.Playing;
+            if(!paused)backgroundBlend=Mathf.MoveTowards(backgroundBlend,running?1f:0f,Time.unscaledDeltaTime/Mathf.Max(.01f,backgroundFadeSeconds));
             var world=WorldMap.Active;
             if(world&&(selectedBiome!=world.biome || selectedTrial!=world.TrialActive))
             {
@@ -109,7 +110,7 @@ namespace AnomalyArena
                 ArenaWorldCue cue=selectedTrial?ArenaWorldCue.AmbientRift:name.StartsWith("Dust",StringComparison.OrdinalIgnoreCase)?ArenaWorldCue.AmbientDust:name.StartsWith("Rift",StringComparison.OrdinalIgnoreCase)?ArenaWorldCue.AmbientRift:ArenaWorldCue.AmbientWreck;
                 if(ambienceSource){ambienceSource.Stop();ambienceSource.clip=byCue[(int)cue]?.clip;}
             }
-            if(combat&&!paused)
+            if(running&&!paused)
             {
                 if(musicSource&&!musicSource.clip)musicSource.clip=byCue[(int)ArenaWorldCue.CombatMusic]?.clip;
                 if(musicSource&&musicSource.clip&&!musicSource.isPlaying)musicSource.Play();
@@ -117,7 +118,7 @@ namespace AnomalyArena
             }
             if(musicSource)musicSource.volume=musicGain*backgroundBlend*masterGain;
             if(ambienceSource)ambienceSource.volume=ambienceGain*backgroundBlend*masterGain;
-            if(!combat&&!paused&&backgroundBlend<=0f){if(musicSource)musicSource.Stop();if(ambienceSource)ambienceSource.Stop();}
+            if(!running&&!paused&&backgroundBlend<=0f){if(musicSource)musicSource.Stop();if(ambienceSource)ambienceSource.Stop();}
         }
         static void TickVoices(AudioSource[] voices,float[] left)
         {
