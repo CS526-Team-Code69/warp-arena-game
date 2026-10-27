@@ -95,7 +95,7 @@ namespace AnomalyArena
             if (!knifeReturnMarker) return;
 
             bool spinHome = knife && actor.weapon != null && actor.weapon.Has(UpgradeAxis.Twist);
-            knifeReturnMarker.enabled = knife && (spinHome || actor.KnifeKillReturn && actor.KnifeReturning);
+            knifeReturnMarker.enabled = knife && (spinHome || actor.KnifeReturning);
             if (!knifeReturnMarker.enabled || !knifeReturnMarker.sprite) return;
             Vector3 home = actor.KnifeReturning ? actor.KnifeReturnPoint : actor.KnifeHomePoint;
             knifeReturnMarker.transform.position = new Vector3(home.x, groundOffset, home.z);
@@ -118,6 +118,7 @@ namespace AnomalyArena
             {
                 WeaponForm.PhaseDagger => art.phaseDagger,
                 WeaponForm.PlasmaLauncher => art.plasmaBlob,
+                WeaponForm.ScatterCannon => field ? art.flameField : null,                                                                    
                 WeaponForm.Flamethrower => field ? art.flameField : art.fireball,
                 WeaponForm.CryoCannon => field ? art.blizzardField : art.frostShard,
                 WeaponForm.SporeLauncher => field ? art.poisonField : art.sporePod,

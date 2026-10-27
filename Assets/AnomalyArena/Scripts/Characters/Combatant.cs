@@ -59,6 +59,10 @@ namespace AnomalyArena
                                                                                                                                     
         Vector3 pushVel;
 
+                                                                                                                                                 
+        Vector3 slideVel;
+        float slideFxClock;
+
         KnockKind knockKind;
 
                                                                                                                                   
@@ -116,16 +120,16 @@ namespace AnomalyArena
             if(!rb)rb=GetComponent<Rigidbody>();
             Hp=maxHp;State=CharacterState.Normal;DeathCause=DeathCause.None;eliminated=false;LastDamagedBy=null;LastDamageSource=DamageSource.Hit;
             stunTimer=0;wallSlams=0;movementModifiers.Clear();
-            protectTimer=fallTimer=0;knockVel=pushVel=Vector3.zero;throwImpact=null;
+            protectTimer=fallTimer=0;knockVel=pushVel=slideVel=Vector3.zero;throwImpact=null;
             SetFlash(false);flashTimer=squashTimer=0;LastHitDirection=Vector3.forward;
             if(squashTarget)squashTarget.localScale=squashBase;
             rb.isKinematic=false;rb.linearVelocity=Vector3.zero;rb.angularVelocity=Vector3.zero;
             if(elementStatus)elementStatus.ResetForSpawn();gameObject.SetActive(true);
         }
         public void DiscardWithoutReward(){eliminated=true;State=CharacterState.Dead;if(rb){rb.linearVelocity=Vector3.zero;rb.isKinematic=true;}gameObject.SetActive(false);}
-        public void ClearWaveState(){stunTimer=0;movementModifiers.Clear();knockVel=pushVel=Vector3.zero;protectTimer=0;throwImpact=null;if(IsAlive)SetState(CharacterState.Normal);if(rb&&!rb.isKinematic)rb.linearVelocity=Vector3.zero;if(elementStatus)elementStatus.ClearStatuses();}
+        public void ClearWaveState(){stunTimer=0;movementModifiers.Clear();knockVel=pushVel=slideVel=Vector3.zero;protectTimer=0;throwImpact=null;if(IsAlive)SetState(CharacterState.Normal);if(rb&&!rb.isKinematic)rb.linearVelocity=Vector3.zero;if(elementStatus)elementStatus.ClearStatuses();}
         public void ProtectFor(float seconds)=>protectTimer=Mathf.Max(protectTimer,seconds);
-        public void CancelDisplacement(){knockVel=pushVel=Vector3.zero;throwImpact=null;if(IsAlive)SetState(CharacterState.Normal);if(rb&&!rb.isKinematic)rb.linearVelocity=Vector3.zero;}
+        public void CancelDisplacement(){knockVel=pushVel=slideVel=Vector3.zero;throwImpact=null;if(IsAlive)SetState(CharacterState.Normal);if(rb&&!rb.isKinematic)rb.linearVelocity=Vector3.zero;}
         public void BounceFromWall(Vector3 at,Vector3 away,float bounceDistance,bool takeDamage)
         {rb.position=at;transform.position=at;if(State is CharacterState.Dashing or CharacterState.Hooked)SetState(CharacterState.Normal);if(takeDamage)TakeWallDamage(away);if(IsAlive)Knockback(away,bounceDistance,KnockKind.Push);}
 
@@ -345,6 +349,7 @@ namespace AnomalyArena
             }
 
             State = s;
+            slideVel = Vector3.zero;                                                             
 
                                   
             switch (s)
@@ -378,8 +383,8 @@ namespace AnomalyArena
         protected virtual void FixedUpdate()
         {
             float dt = GM && Team == Team.Enemy ? GM.WorldFixedDeltaTime : Time.fixedDeltaTime;
-            if(GM&&!GM.CanPlayerMove){if(!rb.isKinematic)rb.linearVelocity=Vector3.zero;return;}
-            if(GM&&Team==Team.Player&&GM.skills&&GM.skills.MovementLocked&&IsAlive){if(!rb.isKinematic)rb.linearVelocity=Vector3.zero;return;}
+            if(GM&&!GM.CanPlayerMove){if(!rb.isKinematic)rb.linearVelocity=Vector3.zero;slideVel=Vector3.zero;return;}
+            if(GM&&Team==Team.Player&&GM.skills&&GM.skills.MovementLocked&&IsAlive){if(!rb.isKinematic)rb.linearVelocity=Vector3.zero;slideVel=Vector3.zero;return;}
             stunTimer=Mathf.Max(0,stunTimer-dt);
             if (protectTimer > 0f) protectTimer -= dt;
 
@@ -401,14 +406,17 @@ namespace AnomalyArena
                     break;
                 case CharacterState.Normal:
                     if(hitPauseTimer>0f)hitPauseTimer-=dt;
-                    if(stunTimer>0||hitPauseTimer>0f||elementStatus&&elementStatus.BlocksMovement)rb.linearVelocity=new Vector3(0,rb.linearVelocity.y,0);
+                    if(stunTimer>0||hitPauseTimer>0f||elementStatus&&elementStatus.BlocksMovement){rb.linearVelocity=new Vector3(0,rb.linearVelocity.y,0);slideVel=Vector3.zero;}
                     else
                     {
                                                                                                            
                         float rate=Team==Team.Enemy&&elementStatus?elementStatus.SpeedMultiplier:1f;
+                        bool slips=SlipsOnIce;
                         TickNormal(dt*rate);
                         float move=ExternalMoveMultiplier*rate;
                         if(!rb.isKinematic) rb.linearVelocity=new Vector3(rb.linearVelocity.x*move,rb.linearVelocity.y,rb.linearVelocity.z*move);
+                                                                                                                                       
+                        if(!rb.isKinematic){if(slips&&SlipsOnIce)SlideOnIce(dt);else slideVel=Vector3.zero;}
                     }
                     if (pushVel.sqrMagnitude > 1e-4f)
                     {
@@ -430,6 +438,25 @@ namespace AnomalyArena
         }
 
         protected abstract void TickNormal(float dt);
+
+                                                                                                                                            
+                                                                                                                                                    
+        void SlideOnIce(float dt)
+        {
+            Vector3 want=new Vector3(rb.linearVelocity.x,0f,rb.linearVelocity.z);
+            float grip=GM&&GM.runWeapons?GM.runWeapons.IceGrip(this):0f;
+            if(grip<=0f){slideVel=want;return;}
+            slideVel=GuardSlide(Vector3.Lerp(slideVel,want,1f-Mathf.Exp(-grip*dt)),dt);
+            rb.linearVelocity=new Vector3(slideVel.x,rb.linearVelocity.y,slideVel.z);
+                                                                                                                   
+            if(slideVel.sqrMagnitude>1f&&(slideFxClock-=dt)<=0f){slideFxClock=.2f;Fx.Pop(new Vector3(Position.x,.15f,Position.z),new Color(.8f,.95f,1f,.8f),.7f);}
+        }
+
+                                                                                                                                                        
+        protected virtual Vector3 GuardSlide(Vector3 velocity,float dt)=>velocity;
+
+                                                                                                                                                       
+        protected virtual bool SlipsOnIce=>true;
 
                                               
 
@@ -453,11 +480,13 @@ namespace AnomalyArena
             if (!IsAlive || Immovable || State == CharacterState.Hooked || State == CharacterState.Dashing) return;
                                                                                                                                       
             if (Team == Team.Player && GM && GM.skills && GM.skills.SingularityActive) return;
+                                                                                                                                           
+            if (Team == Team.Player && GM && GM.runWeapons && GM.runWeapons.ReelGuarded) return;
             dir = Query.Flat(dir);
             if (dir.sqrMagnitude < 1e-6f || distance <= 0f) return;
             dir.Normalize();
             if (kind == KnockKind.Hit) distance *= knockbackScale;
-                                                                                                            
+                                                                                                           
             if (GM && GM.runWeapons && this == (Combatant)GM.player && GM.runWeapons.Anchored) distance *= GM.runWeapons.upgrades.spinAnchorKnockFactor;
             if (distance <= 0f) return;
             wallSlams=0;
@@ -570,8 +599,13 @@ namespace AnomalyArena
                                                                                                                                 
                                                                                     
             bool selfHit = info.dealer != null && info.dealer.Owner == this;
+                                                                                                                                                
+                                                                                                      
+            if (selfHit && info.weapon != null && Team == Team.Player && GM && GM.runWeapons) info.amount *= GM.runWeapons.StartingFormDamageFactor(info.weapon.form);
                                                                                                                                            
             if (info.isAttack && Protected && !selfHit) return false;
+                                                                                                                                 
+            if (info.isAttack && !selfHit && Team == Team.Player && GM && GM.runWeapons && GM.runWeapons.EnergyShieldBlocks()) return false;
             float beforeHp=Hp,beforeShield=elementStatus?elementStatus.Shield:0;
             bool crit=false;
                                                                                                                           
@@ -586,6 +620,10 @@ namespace AnomalyArena
             float raw=info.amount*ElementCombat.DirectDamageFactor(this,info.element)*share;
             if(info.isAttack)raw*=ControlVulnerability(info);
             if(runStats!=null&&Team==Team.Player)raw*=runStats.DamageTakenMultiplier;
+                                                                                                                                                 
+            if(info.isAttack&&!selfHit&&Team==Team.Player&&info.dealer?.Owner is Enemy&&GM&&GM.runWeapons)raw*=GM.runWeapons.ChargeDamageTakenMultiplier;
+                                                                                                    
+            if(Team==Team.Player&&GM&&GM.runWeapons)raw*=GM.runWeapons.PlayerDamageTakenFactor;
                                                                                                                                           
                                            
             if(share>0f&&(info.isAttack||raw>0f))raw=Mathf.Max(1f,raw);

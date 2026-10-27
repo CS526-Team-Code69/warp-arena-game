@@ -325,20 +325,22 @@ namespace AnomalyArena
             game.runWeapons.HandleInput(true, true, false);
             await Until(() => game.player.Hp < hp, 2f, "the strike lands on the player");
 
-            Assert.That(hp - game.player.Hp, Is.EqualTo(game.runWeapons.roster.Get(WeaponForm.RocketLauncher).damageA * TakenFactor(game)).Within(.01f),
-                "the wielder takes damageA, not the Mk-scaled hit");
+            float starting = game.runWeapons.StartingFormDamageFactor(WeaponForm.RocketLauncher);
+            Assume.That(starting, Is.LessThan(1f), "the Rocket Launcher is a starting form with a damage factor below 1");
+            Assert.That(hp - game.player.Hp, Is.EqualTo(game.runWeapons.roster.Get(WeaponForm.RocketLauncher).damageA * starting * TakenFactor(game)).Within(.01f),
+                "the wielder takes damageA times the starting factor, not the Mk-scaled hit");
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
-        public async Task Whirl_SpireIsNearest_GrabsTheMovableEnemyInstead()
+        public async Task Whirl_SpireIsTheNearestLoneOne_GrabsTheMovableEnemyInstead()
         {
             var (game, targets) = await V3CombatSmokeTest.StartSandbox();
             game.runWeapons.Hand[0] = game.runWeapons.Hand[1] = null;
             targets[2].DiscardWithoutReward();
             targets[0].Configure(game.waves.DefinitionOf(EnemyKind.Spire), 1f, false);
             targets[0].enabled = false;
-            Place(targets[0], game.player.Position + Vector3.forward * 2f);
-            Place(targets[1], game.player.Position + Vector3.forward * 4f, movable: true);
+            Place(targets[0], game.player.Position + Vector3.forward * 6f);
+            Place(targets[1], game.player.Position + Vector3.forward * 11f, movable: true);
             Assume.That(targets[0].Immovable, Is.True);
             var whirl = EquipAuto(game, WeaponForm.SentryDrone, 1);
 
@@ -348,39 +350,46 @@ namespace AnomalyArena
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
-        public async Task Whirl_NoMovableEnemyInRange_LooksAgainAfterTheRetry()
+        public async Task Whirl_NoLoneEnemyFiveToTwelveCellsAway_LooksAgainAfterTheRetry()
         {
             var (game, targets) = await V3CombatSmokeTest.StartSandbox();
             game.runWeapons.Hand[0] = game.runWeapons.Hand[1] = null;
-            targets[1].DiscardWithoutReward(); targets[2].DiscardWithoutReward();
-            targets[0].Configure(game.waves.DefinitionOf(EnemyKind.Spire), 1f, false);
-            targets[0].enabled = false;
-            Place(targets[0], game.player.Position + Vector3.forward * 2f);
+            var tuning = game.runWeapons.upgrades;
+            Place(targets[0], game.player.Position + Vector3.forward * 7f, movable: true);
+            Place(targets[1], game.player.Position + Vector3.forward * 8.5f, movable: true);
+            Place(targets[2], game.player.Position + Vector3.forward * 3f, movable: true);
+            Assume.That(1.5f, Is.LessThan(tuning.whirlLoneRadius), "the pair stands too close to count as alone");
+            Assume.That(3f, Is.LessThan(tuning.whirlMinRange), "the lone one is too close to count as far");
             var whirl = EquipAuto(game, WeaponForm.SentryDrone, 1);
 
             await Awaitable.NextFrameAsync(); await Awaitable.NextFrameAsync();
 
             Assert.That(whirl.whirled, Is.Null);
-            Assert.That(whirl.cooldown, Is.GreaterThan(0f).And.LessThanOrEqualTo(game.runWeapons.upgrades.whirlRetry), "it waits before looking again");
+            Assert.That(whirl.cooldown, Is.GreaterThan(0f).And.LessThanOrEqualTo(tuning.whirlRetry), "it waits before looking again");
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
-        public async Task Whirl_WallInTheOrbit_EndsEarlyAndLeavesTheBodyOnValidGround()
+        public async Task Whirl_WallInTheThrow_SlamsTheEnemyInFrontOfIt()
         {
             var (game, targets) = await V3CombatSmokeTest.StartSandbox();
             game.runWeapons.Hand[0] = game.runWeapons.Hand[1] = null;
             targets[1].DiscardWithoutReward(); targets[2].DiscardWithoutReward();
-            Place(targets[0], game.player.Position + Vector3.back * 2f, movable: true);
-            WallAhead(game, 2f, 8f);
+            Vector3 origin = game.player.Position;
+            Place(targets[0], origin + Vector3.forward * 10f, movable: true);
+            game.runWeapons.ClearWaveEffects();                                                             
             var whirl = EquipAuto(game, WeaponForm.SentryDrone, 1);
+            float hit = game.runWeapons.HitDamage(whirl);
 
-            await Until(() => whirl.whirled, 2f, "the drone grabs the enemy");
-            float grabbed = Time.time;
-            await Until(() => !whirl.whirled, 3f, "the whirl ends");
+            await Until(() => whirl.whirled, 2f, "the beam locks on");
+            WallAhead(game, 5f, 8f);
+            await Until(() => !whirl.whirled, 3f, "the throw ends");
             await Awaitable.FixedUpdateAsync();
 
-            Assert.That(Time.time - grabbed, Is.LessThan(game.runWeapons.whirlDuration - .05f), "the wall ends the whirl early");
-            Assert.That(RunWeapons.ValidTeleportPoint(targets[0].Position, targets[0].radius * .9f), Is.True, "the body is not left inside the wall");
+            float along = Vector3.Dot(Query.Flat(targets[0].Position - origin), Vector3.forward);
+            Assert.That(along, Is.GreaterThan(5f), "the enemy comes down on its side of the wall");
+            Assert.That(RunWeapons.ValidTeleportPoint(targets[0].Position, targets[0].radius * .9f), Is.True, "and not inside the wall");
+            Assert.That(targets[0].State, Is.EqualTo(CharacterState.Normal), "it is let go");
+            Assert.That(targets[0].maxHp - targets[0].Hp, Is.EqualTo(hit).Within(.01f), "the slam still hits it");
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
@@ -449,7 +458,7 @@ namespace AnomalyArena
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
-        public async Task Repulsor_EnemyInTheRing_TakesTheScaledHit()
+        public async Task Deflect_EnemyInTheField_TakesTheScaledLightHit()
         {
             var (game, targets) = await V3CombatSmokeTest.StartSandbox();
             Place(targets[0], game.player.Position + Vector3.forward * 2f);
@@ -457,7 +466,7 @@ namespace AnomalyArena
             float hit = game.runWeapons.HitDamage(ring);
             Assume.That(hit, Is.GreaterThan(1f));
 
-            await Until(() => targets[0].Hp < targets[0].maxHp, 2f, "the ring pulses");
+            await Until(() => targets[0].Hp < targets[0].maxHp, 2f, "the field hits");
 
             Assert.That(targets[0].maxHp - targets[0].Hp, Is.EqualTo(hit).Within(.01f), "damageA times the weapon's multiplier, not the floor of 1");
         }
@@ -533,26 +542,148 @@ namespace AnomalyArena
             Assert.That(targets[0].Hp, Is.LessThan(hp), "with the wall gone it hits");
         }
 
+        static void LandIce(GameManager game, RunWeapon shatter, Vector3 at, float radius)
+        {
+            var tuning = game.runWeapons.upgrades;
+            float saved = tuning.iceRadius, life = tuning.iceLife;
+            var shard = AttackPool.Instance.Acquire();
+            try
+            {
+                tuning.iceRadius = radius; tuning.iceLife = 30f;
+                shard.Configure(AttackMode.Shard, game.player, shatter, at, Vector3.forward, 0f, 0f, 0f, 1f, 0f, 1f);
+                game.runWeapons.ShardLanded(shard, at);
+            }
+            finally { shard.Release(); tuning.iceRadius = saved; tuning.iceLife = life; }
+        }
+
+        static float FlatSpeed(Combatant body) => Query.Flat(body.GetComponent<Rigidbody>().linearVelocity).magnitude;
+
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
-        public async Task IcePatch_StandingOnIt_ChillsButNeverFreezesYou()
+        public async Task IcePatch_YouSlipOnIt_StartingAndStoppingGraduallyButItNoLongerChillsYou()
         {
             var (game, targets) = await V3CombatSmokeTest.StartSandbox();
-            Equip(game, WeaponForm.CryoCannon, 0);
-            Place(targets[0], game.player.Position + Vector3.forward * 1.3f);
-            var status = ElementStatus.For(game.player);
-            status.ClearStatuses();
+            var tuning = game.runWeapons.upgrades;
+            var player = game.player;
+            var shatter = Equip(game, WeaponForm.CryoCannon, 0);
+            Vector3 origin = player.Position;
+            LandIce(game, shatter, origin + Vector3.forward * 3f, 8f);
 
-            game.runWeapons.HandleInput(true, true, false);
-            await Until(() => game.runWeapons.Hazards.Any(h => h.kind == GroundHazardKind.IcePatch
-                && Query.Flat(h.position - game.player.Position).magnitude <= h.radius + game.player.radius), 1f, "a patch under the player");
-            float most = 0f, until = Time.time + 2.5f;
-            while (Time.time < until)
+            targets[1].Configure(game.waves.DefinitionOf(EnemyKind.Spire), 1f, false);
+            Assert.That(game.runWeapons.IceGrip(targets[0]), Is.GreaterThan(0f), "an ordinary enemy on the ice slips");
+            Assert.That(game.runWeapons.IceGrip(targets[1]), Is.Zero, "the Spire keeps its footing");
+            foreach (var t in targets) t.DiscardWithoutReward();                  
+            var status = ElementStatus.For(player);
+            status.ClearStatuses();
+            float speed = player.moveSpeed;
+            player.enabled = true;
+
+            async Task<float> FirstStep()
             {
-                Assert.That(status.Frozen, Is.False, "the patch never freezes you");
-                most = Mathf.Max(most, status.Frost);
-                await Awaitable.NextFrameAsync();
+                float first = 0f;
+                for (int i = 0; i < 50 && first <= .01f; i++) { await Awaitable.FixedUpdateAsync(); first = FlatSpeed(player); }
+                return first;
             }
-            Assert.That(most, Is.GreaterThan(3f).And.LessThanOrEqualTo(game.runWeapons.upgrades.iceFrostCap + .001f), "it chills up to the cap");
+            try
+            {
+                player.CancelDisplacement();
+                player.debugMoveHeld = Vector2.up;
+                Assert.That(await FirstStep(), Is.GreaterThan(0f).And.LessThan(speed * .6f), "on ice you get going gradually");
+                await Seconds(1f);
+                Assert.That(FlatSpeed(player), Is.GreaterThan(speed * .85f), "and then walk at your speed");
+                Vector3 letGo = player.Position;
+                player.debugMoveHeld = Vector2.zero;
+                await Seconds(1.5f);
+                float slid = Query.Flat(player.Position - letGo).magnitude;
+                Assert.That(slid, Is.EqualTo(tuning.iceSlideDistance).Within(.5f), "letting go you slide on about this far");
+                Assert.That(status.Frost, Is.Zero, "the patch no longer chills you");
+
+                game.runWeapons.ClearWaveEffects();
+                player.CancelDisplacement();
+                player.debugMoveHeld = Vector2.up;
+                Assert.That(await FirstStep(), Is.GreaterThan(speed * .9f), "off the ice you are at full speed from the first step");
+                await Seconds(.4f);
+                letGo = player.Position;
+                player.debugMoveHeld = Vector2.zero;
+                await Seconds(.5f);
+                Assert.That(Query.Flat(player.Position - letGo).magnitude, Is.LessThan(.3f), "off the ice you stop where you let go");
+            }
+            finally { player.debugMoveHeld = null; player.enabled = false; }
+        }
+
+        [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
+        public async Task IcePatch_EnemySlidingTowardABlackHole_StopsShortOfItsRing()
+        {
+            var (game, targets) = await V3CombatSmokeTest.StartSandbox();
+            targets[1].DiscardWithoutReward(); targets[2].DiscardWithoutReward();
+            var enemy = targets[0];
+            var world = WorldMap.Active;
+            var hole = world.holes.FirstOrDefault(h => h && h.Phase == HolePhase.Active);
+            Assume.That(hole, Is.Not.Null, "the map has an active black hole");
+
+            Vector3 spot = default, inward = default;
+            bool found = false;
+            for (int angle = 0; angle < 360 && !found; angle += 15)
+            {
+                Vector3 dir = Quaternion.Euler(0f, angle, 0f) * Vector3.forward;
+                spot = Query.Flat(hole.Centre) + dir * (hole.GravityRadius + enemy.radius + 1.2f);
+                inward = -dir;
+                found = world.IsWalkable(spot, enemy.radius + .3f);
+                for (float along = 0f; found && along <= 1.2f + enemy.radius; along += .25f)
+                    found = world.Contains(spot + inward * along, enemy.radius) && !world.IsWall(spot + inward * along, enemy.radius);
+            }
+            Assume.That(found, Is.True, "open ground beside the black hole");
+            var shatter = Equip(game, WeaponForm.CryoCannon, 0);
+            LandIce(game, shatter, spot, 4f);
+            Place(enemy, spot, movable: true);
+            enemy.enabled = true;
+
+            typeof(Combatant).GetField("slideVel", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                .SetValue(enemy, inward * 8f);
+            for (int i = 0; i < 40; i++) await Awaitable.FixedUpdateAsync();
+
+            Assert.That(enemy.IsAlive, Is.True, "it is not swallowed");
+            Assert.That(hole.InGravity(enemy.Position), Is.False, "the slide stops at the edge of the gravity ring");
+            Assert.That(Query.Flat(enemy.Position - spot).magnitude, Is.GreaterThan(.3f), "after sliding toward it");
+        }
+
+        static void Arm(Enemy enemy, GameManager game, EnemyKind kind, Vector3 at)
+        {
+            enemy.Configure(game.waves.DefinitionOf(kind), 1f, false);
+            V3CombatSmokeTest.Teleport(enemy, at);
+            enemy.moveSpeed = 0f;
+            enemy.enabled = true;
+            Physics.SyncTransforms();
+        }
+
+        [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
+        public async Task IcePatch_RammerChargeAndBloaterRush_AreNoWalksAndKeepTheirFullReachOnIce()
+        {
+            var (game, targets) = await V3CombatSmokeTest.StartSandbox();
+            targets[1].DiscardWithoutReward(); targets[2].DiscardWithoutReward();
+            var player = game.player;
+            var enemy = targets[0];
+            var shatter = Equip(game, WeaponForm.CryoCannon, 0);
+
+            LandIce(game, shatter, player.Position + Vector3.forward * 4f, 9f);
+            Enemy hitBy = null;
+            player.AttackReceived += info => hitBy = info.dealer?.Owner as Enemy;
+
+            Arm(enemy, game, EnemyKind.Rammer, player.Position + Vector3.forward * 8f);
+            Assert.That(game.runWeapons.IceGrip(enemy), Is.GreaterThan(0f), "the Rammer stands on the ice");
+            await Until(() => enemy.Charging, 4f, "the Rammer charges");
+            await Until(() => !enemy.Charging, 2f, "the charge ends");
+            Assert.That(hitBy, Is.EqualTo(enemy), "the charge itself reaches you across the ice");
+            Assert.That(player.Stunned, Is.True, "and stuns you, as only the charge does");
+
+            player.ClearWaveState();
+            hitBy = null;
+            Arm(enemy, game, EnemyKind.Bloater, player.Position + Vector3.forward * 6.5f);
+            Assert.That(game.runWeapons.IceGrip(enemy), Is.GreaterThan(0f), "the Bloater stands on the ice");
+            await Until(() => enemy.Rushing, 4f, "the Bloater rushes");
+            await Until(() => !enemy.Rushing, 2f, "the rush ends");
+            float edge = Query.Flat(player.Position - enemy.Position).magnitude - enemy.Radius - player.Radius;
+            Assert.That(edge, Is.LessThanOrEqualTo(enemy.definition.reach + .05f), "the rush itself brings it up to you");
+            await Until(() => hitBy == enemy, 2f, "and it blows up on you");
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
@@ -630,12 +761,11 @@ namespace AnomalyArena
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
-        public async Task Gunner_EnemiesBehindAWall_HoldFireThenShotsCostTwoEnergy()
+        public async Task Gunner_EnemiesBehindAWall_HoldFireThenShotsCostNoEnergy()
         {
             var (game, _) = await V3CombatSmokeTest.StartSandbox();
             game.runWeapons.Hand[0] = game.runWeapons.Hand[1] = null;
-
-            game.progression.UnlockEnergy();
+            game.progression.UnlockEnergy();                                 
             WallAhead(game, 1.5f, 6f);
             var gunner = EquipAuto(game, WeaponForm.SentryDrone, 0);
 
@@ -646,8 +776,7 @@ namespace AnomalyArena
             ClearWalls();
             float energy = game.progression.Energy;
             await Until(() => ActiveActors(gunner, AttackMode.Bolt), 2f, "the drone fires once it can see");
-            Assert.That(game.progression.Energy, Is.EqualTo(energy - game.runWeapons.upgrades.gunnerEnergyCost).Within(.01f), "each shot costs 2 Energy");
-            Assert.That(game.runWeapons.upgrades.gunnerEnergyCost, Is.EqualTo(2f));
+            Assert.That(game.progression.Energy, Is.EqualTo(energy).Within(.01f), "owner 2026-10-27 (Q86): its shots cost no Energy");
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(30000)]
@@ -686,7 +815,12 @@ namespace AnomalyArena
             Assert.That(roster.Get(WeaponForm.Minigun).damageA, Is.EqualTo(2.5f), "Spin-up");
             Assert.That(roster.Get(WeaponForm.RocketLauncher).damageB, Is.EqualTo(7f), "Launch Yourself");
             Assert.That(roster.Get(WeaponForm.SwarmLauncher).rangeB, Is.EqualTo(12.75f), "Bombard range");
-            Assert.That(roster.Get(WeaponForm.ShieldRing).damageA, Is.EqualTo(3f), "Repulsor");
+            Assert.That(roster.Get(WeaponForm.ShieldRing).damageA, Is.EqualTo(1f), "Deflect: one light hit (owner 2026-10-27, Q99)");
+            Assert.That(roster.Get(WeaponForm.ShieldRing).cooldownA, Is.EqualTo(1f), "a second");
+            Assert.That(roster.Get(WeaponForm.SentryDrone).damageA, Is.EqualTo(1.5f), "Gunner (Q83)");
+            Assert.That(roster.Get(WeaponForm.SentryDrone).cooldownA, Is.EqualTo(.15f), "every 0.15 s");
+            Assert.That(weapons.upgrades.gunnerClip, Is.EqualTo(20), "20 rounds a magazine");
+            Assert.That(roster.Get(WeaponForm.SentryDrone).rangeB, Is.EqualTo(12f), "Whirl reaches 12 cells (Q87)");
             Assert.That(roster.Get(WeaponForm.ArcCoil).damageB, Is.EqualTo(15f), "Capacitor stays 15");
 
             var spin = Equip(game, WeaponForm.Minigun, 0);

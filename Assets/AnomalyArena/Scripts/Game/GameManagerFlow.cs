@@ -13,6 +13,8 @@ namespace AnomalyArena
         {
             (Key.Escape, KeyCode.Escape), (Key.T, KeyCode.T), (Key.Tab, KeyCode.Tab), (Key.R, KeyCode.R),
             (Key.Digit1, KeyCode.Alpha1), (Key.Digit2, KeyCode.Alpha2), (Key.Digit3, KeyCode.Alpha3),
+
+            (Key.Space, KeyCode.Space), (Key.Enter, KeyCode.Return), (Key.NumpadEnter, KeyCode.KeypadEnter),
         };
 
         public static IEnumerable<KeyCode> ShownKeyCodes
@@ -38,6 +40,12 @@ namespace AnomalyArena
         {
             switch (key)
             {
+                case KeyCode.Space:
+                case KeyCode.Return:
+                case KeyCode.KeypadEnter:
+
+                    if (RunPhase == ArenaUiState.WeaponIntro) ExecuteUiCommand(ArenaUiCommand.DismissWeaponIntro);
+                    break;
                 case KeyCode.Escape:
                     if (RunPhase == ArenaUiState.Paused) ExecuteUiCommand(ArenaUiCommand.Resume);
                     else if (CanPause) ExecuteUiCommand(ArenaUiCommand.Pause);

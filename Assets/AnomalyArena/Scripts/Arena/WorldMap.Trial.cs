@@ -179,7 +179,9 @@ namespace AnomalyArena
             }
 
             bool boss = combatant is Enemy { IsBoss: true };
-            if (!boss && IsTemporaryHole(combatant.Position, combatant))
+                                                                                                                                            
+            bool holeProof = MissileHoleProof(combatant);
+            if (!boss && !holeProof && IsTemporaryHole(combatant.Position, combatant))
             {
                 SwallowIntoVoid(combatant);
                 return;
@@ -187,7 +189,7 @@ namespace AnomalyArena
 
             bool player = combatant == GM.player;
                                                                                                                                   
-            if (!boss && !(player && PortalArrivalHold)) ApplyHolePull(combatant);
+            if (!boss && !holeProof && !(player && PortalArrivalHold)) ApplyHolePull(combatant);
             if (!player) return;
                                                                                                                                          
                                                                                                                                        

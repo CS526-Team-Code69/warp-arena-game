@@ -98,7 +98,7 @@ namespace AnomalyArena
         {
             var kb=Keyboard.current;
             if(Mouse.current==null||!Mouse.current.leftButton.isPressed)menuMouseReleased=true;
-                                                                                                                             
+                                                                                                                                                         
             if(kb!=null)ReadShownKeys(kb);
             if(RunPhase==ArenaUiState.WaveIntro&&waves.Phase==WavePhase.WaveActive)SetPhase(ArenaUiState.WaveActive);
                                                                                                                                                
@@ -201,10 +201,13 @@ namespace AnomalyArena
             string kind=w.IsAuto?ArenaText.Pair("Auto weapon","Auto weapon"):ArenaText.Pair("Hand weapon","Hand weapon");
             float damage=runWeapons.HitDamage(w),cycle=runWeapons.CycleSeconds(w);
             string damageLine=damage>0f?ArenaText.Pair($"{damage:0.#} per hit · {cycle:0.##} s between uses",$"{damage:0.#} per hit · {cycle:0.##} s between uses"):ArenaText.Pair("Deals no direct damage","Deals no direct damage");
-            string element=w.element!=ElementKind.None?ArenaText.Pair("   Element: ","   Element: ")+ArenaTerms.Element(w.element):"";
+                                                                                                                 
+            if(w.form==WeaponForm.ShieldRing&&w.variant==1){float wait=runWeapons.DrainShieldWait(w);damageLine=ArenaText.Pair($"Energy Shield after {wait:0.#} s without an enemy hit",$"Energy Shield after {wait:0.#} s without an enemy hit");}
+                                                                                                    
+            string element=ArenaText.Pair("   Element: ","   Element: ")+ArenaTerms.Element(w.element);
             snapshot.weaponIntroTitle=w.Label;
-            snapshot.weaponIntroBody=$"<color=#9ad8ff>{kind}</color>\n\n<b><color=#ffd36e>{ArenaText.Pair("How it fires","How it fires")}</color></b>\n{WeaponGuide.How(w.form,w.variant)}\n\n<b><color=#ffd36e>{ArenaText.Pair("Damage","Damage")}</color></b>\n{damageLine}{element}\n\n<b><color=#ff8a73>{ArenaText.Pair("Backfire","Backfire")}</color></b>\n{WeaponGuide.Backfire(w.form,w.variant)}";
-            snapshot.weaponIntroHint=ArenaText.Pair("Click anywhere to continue","Click anywhere to continue");
+            snapshot.weaponIntroBody=$"<color=#9ad8ff>{kind}</color>\n\n<b><color=#ffd36e>{ArenaText.Pair("How it attacks","How it attacks")}</color></b>\n{WeaponGuide.How(w.form,w.variant)}\n\n<b><color=#ffd36e>{ArenaText.Pair("Damage","Damage")}</color></b>\n{damageLine}{element}\n\n<b><color=#ff8a73>{ArenaText.Pair("Trait","Trait")}</color></b>\n{WeaponGuide.Backfire(w.form,w.variant)}";
+            snapshot.weaponIntroHint=ArenaText.Pair("Click anywhere or press Space or Enter to continue","Click anywhere or press Space or Enter to continue");
             snapshot.weaponIntroContinue=ArenaText.Pair("CONTINUE","CONTINUE");
             snapshot.weaponIntroForm=(int)w.form;
         }
@@ -322,7 +325,7 @@ namespace AnomalyArena
                 snapshot.state=RunPhase;snapshot.buildWalking=BuildWalking;snapshot.supplyLanded=SupplyDropReady;snapshot.isGreaterReward=greaterDraft;snapshot.illustrated=Art.Enabled;snapshot.hp=player?player.Hp:50;snapshot.maxHp=player?player.maxHp:50;snapshot.stamina=player?player.stamina.Value:1;snapshot.staminaExhausted=player&&player.stamina.Exhausted;
                 if(progression){snapshot.level=progression.Level;snapshot.xp=progression.Xp;snapshot.xpNeeded=progression.XpRequired;snapshot.energy=progression.Energy;snapshot.maxEnergy=progression.Stats.maxEnergy;snapshot.energyUnlocked=progression.EnergyUnlocked;snapshot.voidEnergy=progression.VoidEnergy;snapshot.voidLevel=progression.VoidBadge;snapshot.maxLevel=progression.Rules?progression.Rules.maxLevel:12;snapshot.bankedDrafts=progression.BankedDrafts;snapshot.rerolls=progression.RerollsRemaining;}
                 var status=player?ElementStatus.For(player):null;snapshot.shield=status?status.Shield:0;snapshot.playerStatuses=status?ArenaText.Pair($"Fire {status.Fire:0.#} · Poison {status.Poison:0.#} · Frost {status.Frost:0.#} · Lightning {status.Lightning:0.#}",$"Fire {status.Fire:0.#} · Poison {status.Poison:0.#} · Frost {status.Frost:0.#} · Lightning {status.Lightning:0.#}"):"";
-                snapshot.wave=waves?Mathf.Max(1,waves.WaveIndex+1):1;snapshot.maxWaves=waves?waves.WaveCount:14;snapshot.waveTime=waves?waves.TimeLeft:0;snapshot.buildTime=buildTimeLeft;snapshot.selectionUnlimited=selectionTimeLimit<=0f;snapshot.kills=waves?waves.Kills:0;snapshot.charge01=runWeapons?runWeapons.Charge01:0;if(!runWeapons||!runWeapons.ChargeWindow(out snapshot.chargeWindowStart,out snapshot.chargeWindowEnd))snapshot.chargeWindowStart=snapshot.chargeWindowEnd=0f;snapshot.hint=BuildWalking?(WorldMap.Active&&WorldMap.Active.HasOpenPortal&&!WorldMap.Active.TrialWon?ArenaText.Pair("WALKING · TAB BACK TO THE CARDS · STAND ON THE PORTAL AND PRESS E","WALKING · TAB BACK TO THE CARDS · STAND ON THE PORTAL AND PRESS E"):ArenaText.Pair("WALKING · TAB BACK TO THE CARDS","WALKING · TAB BACK TO THE CARDS")):RunPhase==ArenaUiState.WaveActive&&progression&&progression.BankedDrafts>0?ArenaText.Pair($"CARD PICKS ×{progression.BankedDrafts} · PRESS T",$"CARD PICKS ×{progression.BankedDrafts} · PRESS T"):runNotice;
+                snapshot.wave=waves?Mathf.Max(1,waves.WaveIndex+1):1;snapshot.maxWaves=waves?waves.WaveCount:14;snapshot.waveTime=waves?waves.TimeLeft:0;snapshot.buildTime=buildTimeLeft;snapshot.selectionUnlimited=selectionTimeLimit<=0f;snapshot.kills=waves?waves.Kills:0;snapshot.charge01=runWeapons?runWeapons.Charge01:0;snapshot.hint=BuildWalking?(WorldMap.Active&&WorldMap.Active.HasOpenPortal&&!WorldMap.Active.TrialWon?ArenaText.Pair("WALKING · TAB BACK TO THE CARDS · STAND ON THE PORTAL AND PRESS E","WALKING · TAB BACK TO THE CARDS · STAND ON THE PORTAL AND PRESS E"):ArenaText.Pair("WALKING · TAB BACK TO THE CARDS","WALKING · TAB BACK TO THE CARDS")):RunPhase==ArenaUiState.WaveActive&&progression&&progression.BankedDrafts>0?ArenaText.Pair($"CARD PICKS ×{progression.BankedDrafts} · PRESS T",$"CARD PICKS ×{progression.BankedDrafts} · PRESS T"):runNotice;
                 snapshot.waveTimeExpired=waves&&waves.Phase==WavePhase.WaveActive&&waves.TimeExpired;snapshot.waveBatch=waves?waves.BatchIndex:0;snapshot.waveLiving=waves?waves.LivingCount:0;snapshot.wavePending=waves?waves.PendingCount:0;
                 snapshot.draftCount=greaterDraft?1:buildDraftCount;snapshot.draftIndex=greaterDraft?1:Mathf.Clamp(buildDraftCount-snapshot.bankedDrafts+1,1,Mathf.Max(1,buildDraftCount));snapshot.buildSummary=buildSummary.Trim();
                 snapshot.bossImmunities="";
@@ -344,7 +347,7 @@ namespace AnomalyArena
                 }
                 for(int i=0;i<3;i++)
                 {
-                    var loadout=snapshot.loadoutChoices[i];loadout.title=ArenaTerms.WeaponForm(i==0?WeaponForm.RocketLauncher:i==1?WeaponForm.Rifle:WeaponForm.Knife);loadout.body=ArenaText.Pair("Which backfire it has is unknown until you take it; it is revealed the moment you choose.","Which backfire it has is unknown until you take it; it is revealed the moment you choose.");loadout.formIndex=i==0?2:i==1?0:1;loadout.elementIndex=-1;
+                    var loadout=snapshot.loadoutChoices[i];loadout.title=ArenaTerms.WeaponForm(i==0?WeaponForm.RocketLauncher:i==1?WeaponForm.Rifle:WeaponForm.Knife);loadout.body=ArenaText.Pair("Its attack and trait are unknown until you take it; they are revealed the moment you choose.","Its attack and trait are unknown until you take it; they are revealed the moment you choose.");loadout.formIndex=i==0?2:i==1?0:1;loadout.elementIndex=-1;
                     loadout.rarity=CardRarity.Common;loadout.badge=ArenaTerms.Rarity(loadout.rarity);loadout.kind=ArenaTerms.CardKind(DraftCardKind.Weapon);
                     if(skills)WriteSkillSlot(snapshot.skillSlots[i],skills.Slots[i]);
                 }
@@ -372,25 +375,27 @@ namespace AnomalyArena
                 float gain=runWeapons.MkDamage(w)/Mathf.Max(.01f,runWeapons.MkDamage(w.upgradeOf))-1f;
                                                                                                                                             
                 card.title=w.FormName+" "+w.upgradeOf.MkLabel+" → "+w.MkLabel;card.kind=ArenaText.Pair("STRONGER · ","STRONGER · ")+hand;
-                card.body=ArenaText.Pair($"Replaces your {w.upgradeOf.Label}: Mk damage +{gain*100f:0}%. Its backfire is revealed when taken; the old upgrades and infusion are lost.",$"Replaces your {w.upgradeOf.Label}: Mk damage +{gain*100f:0}%. Its backfire is revealed when taken; the old upgrades and infusion are lost.");
+                card.body=ArenaText.Pair($"Replaces your {w.upgradeOf.Label}: Mk damage +{gain*100f:0}%. Its pairing is revealed when taken; the old upgrades and infusion are lost.",$"Replaces your {w.upgradeOf.Label}: Mk damage +{gain*100f:0}%. Its pairing is revealed when taken; the old upgrades and infusion are lost.");
                 return;
             }
             card.title=w.FormName;card.kind=hand;
-            card.body=ArenaText.Pair($"New weapon · backfire unrevealed · {w.MkLabel} (damage ×{runWeapons.MkDamage(w):0.##})",$"New weapon · backfire unrevealed · {w.MkLabel} (damage ×{runWeapons.MkDamage(w):0.##})");
+            card.body=ArenaText.Pair($"New weapon · pairing unrevealed · {w.MkLabel} (damage ×{runWeapons.MkDamage(w):0.##})",$"New weapon · pairing unrevealed · {w.MkLabel} (damage ×{runWeapons.MkDamage(w):0.##})");
         }
         void WriteSlot(ArenaUiSlot slot,RunWeapon w,bool active)
         {
-            slot.title=w?.Label??ArenaText.Pair("Empty slot","Empty slot");slot.detail=w==null?ArenaText.Pair("No weapon","No weapon"):ArenaText.Pair($"Lv {w.Level} · ",$"Lv {w.Level} · ")+ArenaTerms.Element(w.element)+(w.reload>0?ArenaText.Pair($" · Reload {w.reload:0.0}s",$" · Reload {w.reload:0.0}s"):"")+(w.jammed?ArenaText.Pair(" · JAMMED"," · JAMMED"):"");slot.formIndex=w==null?-1:(int)w.form;slot.active=active;slot.elementIndex=w==null?-1:ElementIndex(w.element);slot.skillIndex=-1;slot.available=true;
+            slot.title=w?.Label??ArenaText.Pair("Empty slot","Empty slot");slot.detail=w==null?ArenaText.Pair("No weapon","No weapon"):ArenaText.Pair($"Lv {w.Level} · ",$"Lv {w.Level} · ")+ArenaTerms.Element(w.element)+(w.reload>0?ArenaText.Pair($" · Reload {w.reload:0.0}s",$" · Reload {w.reload:0.0}s"):"");slot.formIndex=w==null?-1:(int)w.form;slot.active=active;slot.elementIndex=w==null?-1:ElementIndex(w.element);slot.skillIndex=-1;slot.available=true;
             slot.rarity=ArenaRarity.ForWeapon(w);if(w!=null)slot.detail=ArenaTerms.Rarity(slot.rarity)+" · "+slot.detail;
                                                                           
             if(w!=null&&w.chainStoredJumps>0&&w.form==WeaponForm.ArcCoil&&w.variant==0)slot.detail+=ArenaText.Pair($" · +{w.chainStoredJumps} jumps",$" · +{w.chainStoredJumps} jumps");
-                                                                               
+                                                                                                                          
             if(w!=null&&w.revealed&&w.form==WeaponForm.Railgun&&w.variant==1){float line=runWeapons.ExecuteThreshold(w)*100f;slot.detail+=ArenaText.Pair($" · Execute {line:0}%",$" · Execute {line:0}%");}
                                                                                                                                      
             if(w!=null&&w.revealed)slot.detail+=runWeapons.AnomalySlotDetail(w);
                                                                                                           
             if(w!=null&&w.revealed&&w.form==WeaponForm.Minigun&&w.variant==1){float heat=Mathf.Clamp01(w.heat/4f)*100f;slot.detail+=ArenaText.Pair($" · Heat {heat:0}%",$" · Heat {heat:0}%");}
             if(w!=null&&w.turretLeft>0f)slot.detail+=ArenaText.Pair($" · Deployed {w.turretLeft:0.0}s",$" · Deployed {w.turretLeft:0.0}s");
+                                                                                                                                  
+            if(w!=null&&w.revealed&&w.form==WeaponForm.ArcCoil&&w.variant==1&&!active&&w.charge>0f){float stored=Mathf.Ceil(Mathf.Clamp01(w.charge/Mathf.Max(1f,runWeapons.upgrades.capacitorMax))*100f);slot.detail+=ArenaText.Pair($" · Charge {stored:0}%",$" · Charge {stored:0}%");}
             float cooldown=runWeapons.GetCooldownDuration(w);
             slot.cooldown01=w==null?0:Mathf.Clamp01(w.cooldown/Mathf.Max(.01f,cooldown));
         }

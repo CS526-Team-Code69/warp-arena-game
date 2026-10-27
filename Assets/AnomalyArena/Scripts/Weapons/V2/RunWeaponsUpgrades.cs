@@ -37,7 +37,7 @@ namespace AnomalyArena
         public float shatterBurstRadius = 2f;
         [Min(0f), Tooltip("Shatter Twist: burst damage to the other enemies, as a share of one shard.")]
         public float shatterSplashShare = .5f;
-        [Min(1), Tooltip("Shatter Tame: ice patches one weapon may keep at once; a new one removes the oldest.")]
+        [Min(1), Tooltip("Shatter Tame: ice patches one weapon may keep at once; a new one removes the oldest (owner 2026-10-27: kept, no longer on the card).")]
         public int icePatchTamedCap = 6;
         public float blizzardConeAngle = 50f, blizzardMaxRange = 7f, blizzardFrostPerTick = .8f, blizzardFrozenHold = .6f;
         [Min(0f), Tooltip("Blizzard Twist: on release, damage per second each frozen enemy in the cone has been frozen under this spray (scaled like the weapon).")]
@@ -46,33 +46,28 @@ namespace AnomalyArena
         public float blizzardShatterCap = 9f;
         [Min(0f), Tooltip("Blizzard Twist: seconds the trigger must be held for the release to shatter anything.")]
         public float blizzardShatterMinHold = .5f;
-        [Min(0f), Tooltip("Blizzard Tame: while you spray, enemies within this radius (plus their own) move at blizzardSelfSlow.")]
-        public float blizzardAuraRadius = 2.5f;
         public float chainReturnRadius = 3f;
         [Min(0), Tooltip("Chain Tame: unused jumps stored for the next discharge, at most.")]
         public int chainStoreMax = 3;
         [Min(0)] public int sporePods = 3;
-        [Min(0f), Tooltip("Cloud Twist: cells per second your landed cloud moves toward you while you stand inside it.")]
-        public float cloudFollowSpeed = 4f;
         [Min(0f), Tooltip("Cloud Tame: a spore pod you step on is kicked this far away from you and bursts where it lands.")]
         public float sporeKickDistance = 5f;
         public float sporePodRadius = .7f, sporePodLife = 12f, sporeBurstRadius = 1.8f, sporeBurstLife = 3f;
         public float spinUpMoveFloor = .8f, spinUpFreeTurn = 1080f, spinUpFullTurn = 90f;
-        [Range(0f, 1f)] public float leechHealShare = .5f;
         [Header("10-21 design alignment — candidate values")]
-        [Range(0f, 1f), Tooltip("Charged Shot Twist: damage share of each of the two rounds (forward and backward) a release fires.")]
-        public float chargedTwinShare = .7f;
-        [Range(.05f, 1f), Tooltip("Charged Shot Tame: movement multiplier of non-boss enemies on your aim line while you charge.")]
-        public float chargeLineSlow = .5f;
+        [Range(.05f, 1f), Tooltip("Charged Shot Tame: movement multiplier of non-boss enemies on your aim line while you charge "
+                                  + "(0.3 = they move 70% slower; owner 2026-10-27, renamed so this default replaces the scene's 0.5).")]
+        public float chargeLineSlowFactor = .3f;
         [Min(0f), Tooltip("Charged Shot Tame: half width of that aim line in cells; an enemy's own radius is added.")]
         public float chargeLineHalfWidth = .5f;
         [Range(0f, 90f), Tooltip("Reverse Shot Twist: on its first wall bounce a round splits in two, this many degrees either side of the bounce.")]
         public float reverseSplitAngle = 15f;
         [Range(0f, 1f), Tooltip("Reverse Shot Twist: damage share each split round keeps of the round's damage.")]
         public float reverseSplitShare = .6f;
-        [Min(0f), Tooltip("Reverse Shot Tame: an enemy behind you within this many cells (plus its radius) draws the round instead of the aim.")]
+        [Min(0f), Tooltip("Reverse Shot Tame: an enemy in front of you within this many cells (plus its radius), with no wall between, "
+                          + "draws every other round of a clip forward at it; the rest still leave from your back.")]
         public float reverseGuardRange = 3f;
-        [Range(0f, 360f), Tooltip("Reverse Shot Tame: full width in degrees of the cone behind you that is guarded.")]
+        [Range(0f, 360f), Tooltip("Reverse Shot Tame: full width in degrees of the cone in front of you (around the aim) that is guarded.")]
         public float reverseGuardAngle = 120f;
         [Range(0f, 1f), Tooltip("Strike Twist: damage share of the small blast at each enemy the strike killed.")]
         public float strikeChainShare = .5f;
@@ -96,10 +91,6 @@ namespace AnomalyArena
         public float scatterFalloffMin = .4f;
         [Min(0f), Tooltip("Scatter Blast: reload seconds once the two-round clip is empty (scaled like other reloads).")]
         public float scatterReload = 1.2f;
-        [Range(0f, 1f), Tooltip("Scatter Blast backfire: chance that a reload jams. Tame never jams.")]
-        public float scatterJamChance = .25f;
-        [Min(0f), Tooltip("Scatter Blast backfire: extra repair seconds added to a jammed reload (scaled like other reloads).")]
-        public float scatterJamRepair = 2f;
         [Min(0f), Tooltip("Scatter Blast Twist: the second round of each clip first pulls in enemies within this many cells inside its cone (scatterVacuumAngle).")]
         public float scatterVacuumRange = 8f;
         [Range(0f, 180f), Tooltip("Scatter Blast Twist: full width in degrees of the pull and of the blast that follows it.")]
@@ -110,10 +101,6 @@ namespace AnomalyArena
         public float scatterVacuumDelay = .25f;
         [Range(0f, 1f), Tooltip("Scatter Blast Twist: damage share of that blast; it has no distance falloff.")]
         public float scatterVacuumShare = .6f;
-        [Range(0f, 1f), Tooltip("Scatter Blast Tame: a press of fire after this share of the reload finishes it at once and fires.")]
-        public float scatterQuickStart = .6f;
-        [Range(0f, 1f), Tooltip("Scatter Blast Tame: the quick-reload window ends at this share of the reload.")]
-        public float scatterQuickEnd = .8f;
         [Min(.01f), Tooltip("Scatter Focus: seconds of holding for a full charge.")]
         public float focusChargeTime = 1f;
         [Min(1), Tooltip("Scatter Focus: bolts in the released burst; the weapon's damage is split evenly between them.")]
@@ -136,12 +123,6 @@ namespace AnomalyArena
         public float focusGuardMin = .1f;
         [Min(0f), Tooltip("Scatter Focus Tame: seconds of that immunity after a full charge.")]
         public float focusGuardMax = .3f;
-        [Range(.05f, 1f), Tooltip("Blizzard backfire: your movement multiplier while you spray. Tame puts it on the enemies around you instead.")]
-        public float blizzardSelfSlow = .6f;
-        [Min(1), Tooltip("Needler backfire: needles fired per HP cost. Tame gives Shield at the same rhythm instead.")]
-        public int needlerHpPerNeedles = 8;
-        [Min(0f), Tooltip("Needler Tame: Shield you gain every needlerHpPerNeedles needles instead of the HP cost.")]
-        public float needlerTameShield = 1f;
         [Min(1), Tooltip("Needler Twist: the needle that makes this many hits on one enemy within needleBurstWindow bursts on it.")]
         public int needleBurstCount = 6;
         [Min(0f), Tooltip("Needler Twist: seconds the hit count lasts after the last needle on that enemy.")]
@@ -150,26 +131,12 @@ namespace AnomalyArena
         public float needleBurstRadius = 2f;
         [Min(0f), Tooltip("Needler Twist: burst damage as a multiple of one needle.")]
         public float needleBurstShare = 2f;
-        [Min(0f), Tooltip("Needler backfire: HP you lose each time; it ignores Shield.")]
-        public float needlerHpCost = 1f;
-        [Range(0f, 1f), Tooltip("Execute: starting HP share below which a non-boss enemy is executed.")]
+        [Range(0f, 1f), Tooltip("Execute: HP share below which a non-boss enemy is executed. Owner 2026-10-27: it no longer grows with kills.")]
         public float executeThreshold = .4f;
-        [Min(0f), Tooltip("Execute: threshold gained for every kill made with this weapon.")]
-        public float executeThresholdPerKill = .02f;
-        [Range(0f, 1f), Tooltip("Execute: highest threshold the kills can reach.")]
-        public float executeThresholdCap = .7f;
-        [Min(0f), Tooltip("Execute backfire: max HP you lose per execution. Tame removes it.")]
-        public float executeMaxHpLoss = 1f;
-        [Min(0f), Tooltip("Execute backfire: max HP never drops below this.")]
-        public float executeMaxHpFloor = 10f;
         [Min(0f), Tooltip("Execute Twist: seconds a hit enemy stays marked; any damage that leaves it under the execute line executes it.")]
         public float executeMarkSeconds = 6f;
         [Min(1), Tooltip("Execute Twist: marks at once; a new one replaces the oldest.")]
         public int executeMarkMax = 3;
-        [Min(0f), Tooltip("Execute Tame: max HP gained (and healed) per execution.")]
-        public float executeTameHpGain = 1f;
-        [Min(0f), Tooltip("Execute Tame: most max HP one Execute can add in a run.")]
-        public float executeTameHpCap = 20f;
         [Min(0f), Tooltip("Lance Twist: seconds a slug's path stays on the ground; the next slug that crosses it bursts at the crossing.")]
         public float lanceTrailSeconds = 3f;
         [Range(0f, 2f), Tooltip("Lance Twist: crossing blast damage as a share of one slug's base hit (Mk and cards included, the Tame brace not).")]
@@ -184,12 +151,6 @@ namespace AnomalyArena
         public float lanceBraceDistance = 4f;
         [Min(1f), Tooltip("Lance Tame: damage multiplier of a braced shot.")]
         public float lanceBraceDamage = 1.4f;
-        [Range(0f, 180f), Tooltip("Barrage backfire: widest rocket angle from the aim in degrees (180 = straight back).")]
-        public float barrageMaxAngle = 180f;
-        [Min(.01f), Tooltip("Barrage backfire: angle = ±max × r^exponent with r uniform in [0,1]. Higher keeps more rockets near the aim (3: about 55% within 30°).")]
-        public float barrageAngleExponent = 3f;
-        [Min(0f), Tooltip("Barrage Tame: a rocket flying more than 90 degrees off the aim turns to the nearest visible enemy behind you within this range (cells).")]
-        public float barrageRearRange = 8f;
         [Min(0f), Tooltip("Barrage Twist: seconds after the first rocket sticks to an enemy before all rockets on it merge into one blast.")]
         public float swarmHiveFuse = 1f;
         [Min(0f), Tooltip("Barrage Twist: merged blast radius gained per rocket after the first (starts at the rocket radius 1.5).")]
@@ -228,7 +189,7 @@ namespace AnomalyArena
         public float knifeSpinRadius = 1.5f;
         [Range(0f, 2f), Tooltip("Throwing Knife Twist: damage share of the spin slash.")]
         public float knifeSpinShare = .8f;
-        [Min(0), Tooltip("Throwing Knife Tame: extra bounce targets of the next throw after a kill return sweeps through you.")]
+        [Min(0), Tooltip("Flying Blade Tame: extra bounce targets of the next throw after a return sweeps through you (a catch).")]
         public int knifeCatchTargets = 2;
         [Min(0f), Tooltip("Hook Tame: an empty hook that hits a wall pushes you toward it, stopping this many cells short of the wall.")]
         public float hookTameWallGap = 1f;
@@ -276,27 +237,214 @@ namespace AnomalyArena
         public float turretSeconds = 3f;
         [Min(0f), Tooltip("Spin-up Twist: seconds of holding fire needed before a switch leaves the minigun behind.")]
         public float turretSpinSeconds = 3f;
-        [Range(0f, 1f), Tooltip("Spin-up Tame: knockback distance you take while firing at full spin, as a share.")]
+        [Range(0f, 1f), Tooltip("Spin-up Tame: knockback distance you take while braced against a wall at full spin, as a share.")]
         public float spinAnchorKnockFactor = .5f;
-        [Min(0f), Tooltip("Spin-up Tame: seconds of holding fire before you are anchored (half knockback, no black-hole pull).")]
+        [Min(0f), Tooltip("Spin-up Tame: seconds of holding fire (full spin) before backing into a wall braces you (no retreat, less knockback, no black-hole pull, faster fire).")]
         public float spinAnchorSpinSeconds = 3f;
         [Min(0f), Tooltip("Scatter Blast: knockback distance of every hit, cells.")]
         public float scatterKnockback = 6f;
-        [Min(0f), Tooltip("Ice patch backfire: Frost stacks a patch can build on you at most. Kept below the freeze threshold, so it only slows.")]
-        public float iceFrostCap = 5f;
         [Min(0f), Tooltip("Execute: seconds the tracer line of every shot stays visible.")]
         public float executeTracerSeconds = .08f;
         [Min(.01f), Tooltip("Execute: tracer line width, cells.")]
         public float executeTracerWidth = .15f;
-        [Min(0f), Tooltip("Gunner backfire: Energy every drone shot costs.")]
-        public float gunnerEnergyCost = 2f;
         [Range(0f, 1f), Tooltip("Chance that a weapon with an element and another axis still open shows a change-element card instead.")]
         public float reinfuseChance = .15f;
         [Min(0f), Tooltip("Hook: gap kept between a held enemy and a wall in front of you, cells.")]
         public float hookWallGap = .05f;
+
+        [Min(1f), Tooltip("Charged Shot backfire: enemy attacks (punches, projectiles, charges) that hit you while you charge deal this many times "
+                          + "their damage (1.5 = +50%). Burn and Poison ticks and wall hits are not changed.")]
+        public float chargeDamageTaken = 1.5f;
+        [Range(0f, 1f), Tooltip("Charged Shot Tame: the backfire turns into a guard: enemy attacks that hit you while you charge deal this many "
+                                + "times their damage instead (0.5 = half).")]
+        public float chargeTameDamageTaken = .5f;
+        [Range(0f, 360f), Tooltip("Charged Shot Twist: full width in degrees of the muzzle blast cone a full-charge release sends along the aim.")]
+        public float chargedBlastAngle = 60f;
+        [Min(0f), Tooltip("Charged Shot Twist: reach of the muzzle blast in cells from your centre (an enemy's own radius is added).")]
+        public float chargedBlastRange = 3f;
+        [Min(0f), Tooltip("Charged Shot Twist: knockback in cells of every enemy in the muzzle blast (scaled by knockback stats and body size; "
+                          + "bosses and Spires are not moved). The blast itself deals no damage.")]
+        public float chargedBlastPush = 6f;
+        [Min(0f), Tooltip("Charged Shot Twist: a full-charge round deals this share of its first hit more for every enemy it has already passed "
+                          + "through (0.2 = +20% each, added up).")]
+        public float chargedPierceGrowth = .2f;
+        [Min(0f), Tooltip("Charged Shot Twist: the most that growth can add, as a share of the first hit (1 = at most +100%, double damage).")]
+        public float chargedPierceGrowthCap = 1f;
+        [Min(0f), Tooltip("Reverse Shot Tame: every round's recoil pushes you this many cells along the aim (a push: you keep control and a "
+                          + "wall does not hurt); a burst stacks the pushes.")]
+        public float reverseTameRecoil = .7f;
+        [Range(0f, 1f), Tooltip("Flying Blade Tame: after a catch the throw's cooldown is this share of the usual one (0.5 = half).")]
+        public float knifeCatchCooldownShare = .5f;
+        [Min(1f), Tooltip("Flying Blade Tame: the throw after a catch flies out and back this many times as fast (1.3 = 30% faster).")]
+        public float knifeCatchSpeed = 1.3f;
+        [Min(0f), Tooltip("Chain Blade Tame: the moment you and the caught enemy meet, a shockwave knocks other enemies within this many cells "
+                          + "of you (plus their radius) back; no damage.")]
+        public float hookShockRadius = 2.5f;
+        [Min(0f), Tooltip("Chain Blade Tame: knockback of that shockwave in cells (scaled by knockback stats and body size; bosses and Spires "
+                          + "are not moved).")]
+        public float hookShockPush = 4f;
+
+        [Header("2026-10-27 Scatter Blast shells, Shatter ice, Blizzard snow")]
+        [Min(0f), Tooltip("Scatter Blast backfire: cells from your centre, left and right of the aim, where the two hot shells land when a reload starts.")]
+        public float scatterShellSide = 1.2f;
+        [Min(0f), Tooltip("Scatter Blast Tame: cells from your centre where the tamed shells land (owner decision 10-27: farther than the tamed fire's "
+            + "radius, so you take a step to stand on one; standing still never finishes the reload by itself).")]
+        public float scatterShellTameSide = 1.8f;
+        [Min(0f), Tooltip("Scatter Blast backfire: seconds a landed shell lies before it flares up into a small fire.")]
+        public float scatterShellFuse = .4f;
+        [Min(0f), Tooltip("Scatter Blast backfire: radius of each shell fire, cells. Enemies touching it burn; you burn only with your centre on it (you stepped on it).")]
+        public float scatterShellRadius = 1f;
+        [Min(.01f), Tooltip("Scatter Blast backfire: seconds each shell fire burns.")]
+        public float scatterShellBurn = 1.5f;
+        [Min(0f), Tooltip("Scatter Blast backfire: damage of each 0.25 s tick of a shell fire on an enemy, as a share of one full point-blank blast (Mk and cards included).")]
+        public float scatterShellShare = .15f;
+        [Min(0f), Tooltip("Scatter Blast backfire: flat HP each 0.25 s tick of your own shell fire costs you (never scaled; a fraction waits for the next tick).")]
+        public float scatterShellSelfDamage = .5f;
+        [Min(1f), Tooltip("Scatter Blast Tame: shell fire radius multiplier (the tamed fire never burns you).")]
+        public float scatterShellTameRadius = 1.5f;
+        [Min(1f), Tooltip("Scatter Blast Tame: your movement multiplier after your centre touches a burning shell of yours while it reloads (that also finishes the reload).")]
+        public float scatterShellTameSpeed = 1.3f;
+        [Min(0f), Tooltip("Scatter Blast Tame: seconds that speed bonus lasts.")]
+        public float scatterShellTameSpeedSeconds = 1.5f;
+        [Min(.05f), Tooltip("Shatter ice: cells a body keeps sliding after it stops walking at its own normal speed; on ice it also starts and turns gradually. Bosses and the Spire never slip.")]
+        public float iceSlideDistance = 1.5f;
+        [Min(1f), Tooltip("Shatter Tame: your movement multiplier while you stand on your own ice (you no longer slip on it; enemies still do).")]
+        public float shatterTameSpeed = 1.3f;
+        [Min(.05f), Tooltip("Blizzard backfire: seconds between two snow patches laid at your feet while you spray.")]
+        public float snowInterval = .3f;
+        [Min(0f), Tooltip("Blizzard backfire: radius of each snow patch, cells.")]
+        public float snowRadius = 1f;
+        [Min(0f), Tooltip("Blizzard backfire: seconds each snow patch stays.")]
+        public float snowLife = 3f;
+        [Min(0f), Tooltip("Blizzard backfire: Frost stacks per second you gain standing in your snow (your own Frost still fades 1 a second).")]
+        public float snowFrostPerSecond = 2f;
+        [Min(0f), Tooltip("Blizzard backfire: Frost stacks your snow builds on you at most. Kept below the freeze threshold, so it only slows.")]
+        public float snowFrostCap = 5f;
+        [Range(0f, 1f), Tooltip("Blizzard Tame: multiplier on the damage you take while you stand in your own snow (0.7 = 30% less).")]
+        public float snowTameDamageTaken = .7f;
+        [Range(.05f, 1f), Tooltip("Blizzard Tame: movement multiplier of enemies standing in your snow; it lifts when they leave it.")]
+        public float snowTameSlow = .6f;
+        [Min(0f), Tooltip("Blizzard Tame: extra Frost stacks per second enemies standing in your snow gain.")]
+        public float snowTameFrostPerSecond = 2f;
+
+        [Header("2026-10-27 Arc Cannon, Venom Launcher, Railgun")]
+        [Min(.1f), Tooltip("Arc Jump Tame: your movement multiplier while the Arc Cannon is in your hand and holds stored jumps (1.1 = 10% faster).")]
+        public float chainTameMoveSpeed = 1.1f;
+        [Min(0f), Tooltip("Poison Cloud: seconds a landed cloud lasts; a Twist detonation resets it to this.")]
+        public float cloudSeconds = 5f;
+        [Min(0f), Tooltip("Poison Cloud Twist: radius of the detonation as a multiple of the cloud's own radius (1.5 = half as wide again).")]
+        public float cloudBlastRadiusShare = 1.5f;
+        [Min(0f), Tooltip("Poison Cloud Twist: detonation damage to each enemy, as this many of the cloud's own ticks (6 ticks of 0.5 s = 3 s of cloud).")]
+        public float cloudBlastTicks = 6f;
+        [Min(0f), Tooltip("Needler backfire: radius in cells of the poison mist that bursts where you stand as each reload starts.")]
+        public float needlerMistRadius = 1.2f;
+        [Min(0f), Tooltip("Needler backfire: seconds that mist lasts (Tame: times needlerMistTameLength).")]
+        public float needlerMistSeconds = 2f;
+        [Min(.05f), Tooltip("Needler backfire: seconds between two ticks of that mist.")]
+        public float needlerMistTick = .5f;
+        [Min(0f), Tooltip("Needler backfire: base damage per mist tick. Enemies take it scaled by Mk and cards and are poisoned; you take it flat, without poison (rule R6).")]
+        public float needlerMistDamage = 1f;
+        [Min(1f), Tooltip("Needler Tame: the mist lasts this many times as long (2 = 2 s becomes 4 s); it no longer hurts you.")]
+        public float needlerMistTameLength = 2f;
+        [Min(1f), Tooltip("Needler Tame: your reload runs this many times as fast while your body touches one of the Needler's mists.")]
+        public float needlerMistTameReload = 2f;
+        [Min(.01f), Tooltip("Lance: width in cells of the rail beam drawn along the slug's real path.")]
+        public float lanceBeamWidth = .35f;
+        [Min(0f), Tooltip("Lance: seconds the rail beam stays visible after the slug stops.")]
+        public float lanceBeamSeconds = .15f;
+        [Range(0f, 1f), Tooltip("Execute: share of the shot's full cooldown given back at once when that shot kills or executes an enemy.")]
+        public float executeKillRefund = .5f;
+        [Min(0f), Tooltip("Execute: damage bonus of the next shot after a shot that killed (0.3 = +30%). It does not stack; the next shot spends it, kill or not.")]
+        public float executeNextShotBonus = .3f;
+        [Min(0f), Tooltip("Execute backfire: HP a shot that kills no enemy shocks you for; flat, never scaled by Mk or cards (rule R6). A boss hit but not killed does not count.")]
+        public float executeSelfShock = 5f;
+        [Min(1f), Tooltip("Execute backfire: a shot that kills no enemy puts the gun on this many times its cooldown (attack speed still shortens it).")]
+        public float executeMissCooldown = 2.5f;
+        [Min(0f), Tooltip("Execute Tame: seconds the arc shield circles you after a shot that kills no enemy; another such shot restarts it, it does not stack.")]
+        public float executeAuraSeconds = 3f;
+        [Min(0f), Tooltip("Execute Tame: radius in cells of the arc shield; enemies within it (plus their own radius), not behind a wall, are shocked.")]
+        public float executeAuraRadius = 2.5f;
+        [Min(.05f), Tooltip("Execute Tame: seconds between two shocks of the arc shield.")]
+        public float executeAuraInterval = .5f;
+        [Min(0f), Tooltip("Execute Tame: each shock of the arc shield deals this share of the shot's damage. It blocks no damage.")]
+        public float executeAuraShare = .15f;
+
+        [Min(0f), Tooltip("Spin-up backfire: cells per second the spin pushes you back against your aim while you hold fire, growing with the spin from 0 at the first shot to this at full spin (3 s). A push you keep control through, never a knockback: a wall behind you stops it without hurting you.")]
+        public float spinUpRetreatSpeed = 1f;
+        [Min(0f), Tooltip("Spin-up Tame: a wall (map bound or Bulwark) this close behind your body (cells, against the aim) braces you once you have held fire spinAnchorSpinSeconds.")]
+        public float spinBraceWallGap = .25f;
+        [Min(0f), Tooltip("Spin-up Tame: extra fire rate while braced against a wall (0.3 = +30%: 10 to 13 shots a second at full spin). The deployed Twist minigun keeps the plain top rate.")]
+        public float spinBraceRateBonus = .3f;
+        [Min(0f), Tooltip("Meltdown Tame: cells the overheat blast knocks back the enemies it hits (scaled by knockback stats; large enemies and elites by their own factor). Bosses and the Spire are not knocked back.")]
+        public float meltdownTamePush = 4f;
+        [Min(0f), Tooltip("Meltdown Tame: movement speed bonus for the same meltdownTameHasteSeconds as the attack speed bonus (0.3 = +30%), whichever weapon is in your hand.")]
+        public float meltdownTameMoveBonus = .3f;
+        [Min(0f), Tooltip("Barrage: degrees per second a missile turns toward the body it is locked on.")]
+        public float barrageTurnRate = 360f;
+        [Range(0f, 90f), Tooltip("Barrage: the missiles leave in a fan this many degrees either side of the aim (one locked on an enemy: either side of the way to it) and curve in from there.")]
+        public float barrageLaunchSpread = 40f;
+        [Min(0f), Tooltip("Barrage: within this distance of the edge of its target's body (cells) a missile flies straight at it, so it never circles a target it cannot turn tightly enough for.")]
+        public float barrageTerminalRange = 2f;
+        [Min(0), Tooltip("Barrage backfire: one missile locks one visible enemy in range; of the missiles left without an enemy, at most this many lock onto you and come back to blast you (the weapon's base damage each); the rest fly straight on. None once tamed.")]
+        public int barrageSelfLockMax = 2;
+        [Min(0f), Tooltip("Barrage backfire: seconds a missile locked onto you flies out along the aim before it turns back for you.")]
+        public float barrageSelfLockDelay = .25f;
+        [Min(0f), Tooltip("Barrage Tame: seconds the missiles circle you when there is no enemy to lock; the first enemy that comes within range meanwhile is locked at once, and the missiles still circling at the end vanish without a blast.")]
+        public float barrageEscortSeconds = 1.5f;
+        [Min(0f), Tooltip("Barrage Tame: radius of that escort circle around you, cells.")]
+        public float barrageEscortRadius = 1.5f;
+        [Min(0f), Tooltip("Barrage Tame: degrees per second the escorting missiles circle you.")]
+        public float barrageEscortSpin = 240f;
+
+        [Header("g5-auto: auto weapons (owner 2026-10-27)")]
+        [Min(0f), Tooltip("Closed Blade: seconds before the blade tips can knock the same pickup or corpse again (they are checked every frame).")]
+        public float orbitKnockRepeat = .5f;
+        [Min(0f), Tooltip("Closed Blade: cells a corpse the blade tips touch is knocked outward, away from you (pickups use OrbPool.repelDistance).")]
+        public float orbitCorpseKnock = 3f;
+        [Min(1), Tooltip("Gunner: rounds in one magazine; when it is empty the drone drops to the ground to cool down.")]
+        public int gunnerClip = 20;
+        [Min(0f), Tooltip("Gunner: seconds a dropped drone lies on the ground before it flies back by itself with a full magazine; stepping on it does that at once.")]
+        public float gunnerAutoReturn = 8f;
+        [Min(1f), Tooltip("Gunner: bullet speed, cells per second.")]
+        public float gunnerBulletSpeed = 30f;
+        [Min(.05f), Tooltip("Sentry Drone: body radius in cells; a dropped drone is picked up when your body touches it.")]
+        public float droneRadius = .4f;
+        [Tooltip("Sentry Drone: where it hovers relative to your centre, cells: x and z on the ground, y its height (0.8 = the height shots fly at, so they visibly leave the drone). Its shots and beam leave from there.")]
+        public Vector3 droneHoverOffset = new(-.8f, Query.CastHeight, .6f);
+        [Min(0f), Tooltip("Whirl: nearest distance (cells, centre to centre) of an enemy it may pull; the farthest is the weapon's range (WeaponRoster rangeB).")]
+        public float whirlMinRange = 5f;
+        [Min(0f), Tooltip("Whirl: an enemy counts as alone only when no other enemy's body is within this many cells of its centre.")]
+        public float whirlLoneRadius = 3f;
+        [Min(0f), Tooltip("Whirl: the enemy is slammed where you stood this many seconds before the beam locked on; your afterimage marks the spot.")]
+        public float whirlAfterimageSeconds = 2f;
+        [Min(1f), Tooltip("Whirl: speed of the throw along the ground, cells per second; it lasts at least whirlMinFlight.")]
+        public float whirlThrowSpeed = 14f;
+        [Min(.05f), Tooltip("Whirl: shortest throw, seconds.")]
+        public float whirlMinFlight = .35f;
+        [Min(0f), Tooltip("Whirl: height of the throw's arc at its middle, cells.")]
+        public float whirlArcHeight = 2f;
+        [Min(0f), Tooltip("Whirl: other enemies within this many cells (plus their own radius) of the landing take the slam too; you never do.")]
+        public float whirlSlamRadius = 1.5f;
+        [Range(.05f, 1f), Tooltip("Deflect: movement multiplier of enemies inside the ring with no wall between, bosses included (0.7 = 30% slower).")]
+        public float deflectSlow = .7f;
+        [Range(0f, 1f), Tooltip("Deflect: chance an enemy projectile coming into the ring is deflected and fizzles, and that one of your own bullets or lobs leaving the ring is knocked off course; rolled once per projectile.")]
+        public float deflectChance = .3f;
+        [Range(0f, 90f), Tooltip("Deflect: one of your own projectiles knocked off course turns by a random angle up to this many degrees either way.")]
+        public float deflectOwnAngle = 25f;
+        [Min(0f), Tooltip("Drain: seconds without an enemy attack before the Energy Shield forms, at Mk1; a higher Mk divides it by its Mk damage factor.")]
+        public float drainShieldWait = 4f;
+        [Min(0f), Tooltip("Drain: Energy you gain each time the Energy Shield blocks an attack.")]
+        public float drainBlockEnergy = 5f;
+        [Min(0f), Tooltip("Drain backfire: seconds after the shield breaks during which the next enemy attack costs Energy (once per break).")]
+        public float drainOverloadSeconds = 2f;
+        [Min(0f), Tooltip("Drain backfire: Energy that attack costs.")]
+        public float drainOverloadEnergy = 20f;
+
+        [Min(.01f), Tooltip("Capacitor, stowed (document 5.4): seconds a stowed Capacitor takes to lose a full charge; it drains evenly (10 s = 3 charge a second at the default max of 30). While stowed its full-charge timer also runs back one second a second, so it never discharges while stowed and a quick switch out and back does not reset the timer.")]
+        public float capacitorStowedDrainSeconds = 10f;
     }
 
-    public enum GroundHazardKind { IcePatch, SporePod }
+    public enum GroundHazardKind { IcePatch, SporePod, ScatterShell, Snow }
 
     public struct GroundHazard
     {
@@ -323,15 +471,11 @@ namespace AnomalyArena
         readonly List<IceStone> iceStones = new();
         readonly Dictionary<Combatant, float> wildfireFenceHitAt = new();
         readonly Dictionary<Combatant, float> blizzardFrozenSince = new();
-        readonly HashSet<Combatant> blizzardAura = new();
 
         readonly object blizzardDose = new();
         readonly Dictionary<(Combatant body, int version), (int count, float last)> needleHits = new();
         readonly List<Combatant> elementTargets = new();
         readonly List<Combatant> elementPruned = new();
-
-        public bool BlizzardAuraActive { get; private set; }
-        public float BlizzardAuraRadius => upgrades.blizzardAuraRadius;
         readonly List<GroundHazard> hazards = new();
         public IReadOnlyList<GroundHazard> Hazards => hazards;
         readonly List<WeaponTracer> tracers = new();
@@ -373,10 +517,7 @@ namespace AnomalyArena
                     Damage(w,body,hit*falloff,upgrades.scatterKnockback,delta.normalized);
                 }
             }
-            bool reloading=SpendRound(w,upgrades.scatterReload);
-            if(reloading&&!w.Has(UpgradeAxis.Tame)&&UnityEngine.Random.value<upgrades.scatterJamChance)
-            {w.reload+=upgrades.scatterJamRepair*CooldownScale(w);w.jammed=true;V3WorldAudio.Instance?.Play(ArenaWorldCue.WeaponJam,player.Position);}
-            if(reloading){w.reloadTotal=w.reload;w.quickReloadTried=false;}
+            if(SpendRound(w,upgrades.scatterReload))DropShells(w);
         }
 
         void Focus(RunWeapon w,Vector3 aim,float damage)
@@ -407,27 +548,95 @@ namespace AnomalyArena
             }
         }
 
-        float BarrageAngle()
+        void Barrage(RunWeapon w,Vector3 aim,float range,float damage,float selfDamage)
         {
-            float r=UnityEngine.Random.value;
-            return (UnityEngine.Random.value<.5f?-1f:1f)*upgrades.barrageMaxAngle*Mathf.Pow(r,Mathf.Max(.01f,upgrades.barrageAngleExponent));
+            int n=w.Has(UpgradeAxis.Reach)?11:8;bool tame=w.Has(UpgradeAxis.Tame);
+            var locks=BarrageTargets(range);
+            if(tame&&locks.Count==0){var far=BarrageNearest(player.Position,float.PositiveInfinity);if(far)locks.Add(far);}
+            Vector3 forward=Query.Flat(aim).normalized;int selfLocks=0;
+            for(int i=0;i<n;i++)
+            {
+                Combatant target=i<locks.Count?locks[i]:tame&&locks.Count>0?locks[i%locks.Count]:null;
+                bool self=!tame&&!target&&selfLocks<upgrades.barrageSelfLockMax;
+                if(self){target=player;selfLocks++;}
+
+                float slot=n>1?i/(n-1f)*2f-1f:0f;
+                Vector3 toward=target&&target!=player?Query.Flat(target.Position-player.Position):forward;
+                if(toward.sqrMagnitude<1e-4f)toward=forward;
+                var a=Bolt(w,Quaternion.Euler(0f,slot*upgrades.barrageLaunchSpread,0f)*toward.normalized,damage,0,range,15);if(!a)continue;
+                a.mode=AttackMode.Swarm;a.radius=1.5f;a.hurtOwner=self;a.ownerDamage=selfDamage;
+                if(tame&&locks.Count==0)a.EscortOwner(upgrades.barrageEscortSeconds,i*360f/n);
+                else a.HomeOn(target,self?upgrades.barrageSelfLockDelay:0f);
+
+                if(self){if(a.visual)a.visual.sharedMaterial=GameManager.Instance.Mat(BarrageSelfLockColor);Fx.Ring(player.Position,player.radius+.45f,BarrageSelfLockColor,.4f);}
+                else if(target&&i<locks.Count)Fx.Ring(target.Position,target.radius+.35f,new Color(1f,.7f,.3f,.85f),.3f);
+            }
+        }
+        static readonly Color BarrageSelfLockColor=new(1f,.25f,.2f,.95f);
+        readonly List<Combatant> barrageLocks=new();
+
+        List<Combatant> BarrageTargets(float radius)
+        {
+            barrageLocks.Clear();
+            Vector3 at=player.Position;
+            foreach(var c in Combatant.All)
+                if(c!=player&&c.IsAlive&&Query.Flat(c.Position-at).sqrMagnitude<=radius*radius&&!WallBlocks(at,c.Position))barrageLocks.Add(c);
+            barrageLocks.Sort((x,y)=>Query.Flat(x.Position-at).sqrMagnitude.CompareTo(Query.Flat(y.Position-at).sqrMagnitude));
+            return barrageLocks;
         }
 
-        Vector3 BarrageDirection(RunWeapon w,Vector3 aim)
+        public Combatant BarrageNearest(Vector3 from,float radius)
         {
-            float angle=BarrageAngle();Vector3 dir=Quaternion.Euler(0,angle,0)*aim;
-            if(!w.Has(UpgradeAxis.Tame)||Mathf.Abs(angle)<=90f)return dir;
-            Vector3 forward=Query.Flat(aim).normalized;
-            var rear=NearestVisible(upgrades.barrageRearRange,c=>c is Enemy&&Vector3.Angle(forward,Query.Flat(c.Position-player.Position))>90f);
-            return rear?Query.Flat(rear.Position-player.Position).normalized:dir;
+            Combatant best=null;float nearest=radius*radius;
+            foreach(var c in Combatant.All)
+            {
+                if(c==player||!c.IsAlive)continue;
+                float d=Query.Flat(c.Position-from).sqrMagnitude;
+                if(d>nearest||WallBlocks(from,c.Position))continue;
+                best=c;nearest=d;
+            }
+            return best;
         }
 
-        void NeedlerCost(RunWeapon w)
+        public Combatant BarrageEscortTarget(RunWeapon w,float radius)
         {
-            if(!player||++w.needlesFired<Mathf.Max(1,upgrades.needlerHpPerNeedles))return;
-            w.needlesFired=0;
-            if(w.Has(UpgradeAxis.Tame)){ElementStatus.For(player)?.GainShield(upgrades.needlerTameShield);return;}
-            player.ReceiveDamage(new DamageInfo{amount=upgrades.needlerHpCost,source=DamageSource.Burn,ignoreShield=true,dealer=player});                                                
+            Combatant best=null;int fewest=int.MaxValue;
+            foreach(var c in BarrageTargets(radius))
+            {
+                int locked=0;
+                foreach(var a in AttackPool.Instance.actors)if(a&&a.gameObject.activeSelf&&a.weapon==w&&a.mode==AttackMode.Swarm&&a.HomeTarget==c)locked++;
+                if(locked<fewest){best=c;fewest=locked;}
+            }
+            return best;
+        }
+
+        void NeedlerReloadMist(RunWeapon w)
+        {
+            var mist=player&&AttackPool.Instance?AttackPool.Instance.Acquire():null;if(!mist)return;
+            bool tame=w.Has(UpgradeAxis.Tame);
+            float life=Mathf.Max(0f,upgrades.needlerMistSeconds)*(tame?Mathf.Max(1f,upgrades.needlerMistTameLength):1f);
+
+            mist.Configure(AttackMode.Field,player,w,player.Position,player.AimDirection,upgrades.needlerMistDamage*DamageScale(w),0,0,0,upgrades.needlerMistRadius,life);
+            mist.tickInterval=Mathf.Max(.05f,upgrades.needlerMistTick);mist.hurtOwner=!tame;mist.ownerDamage=upgrades.needlerMistDamage;
+            WeaponSound(w,WeaponAudioPhase.Impact);
+        }
+
+        public bool InNeedlerMist(RunWeapon w)
+        {
+            if(w==null||!player||!AttackPool.Instance)return false;
+            foreach(var actor in AttackPool.Instance.actors)
+                if(actor&&actor.gameObject.activeSelf&&actor.weapon==w&&actor.mode==AttackMode.Field&&!BattlefieldFrozen(actor.gameObject)
+                   &&Query.Flat(player.Position-actor.point).magnitude<=actor.radius+player.radius)return true;
+            return false;
+        }
+
+        void TickNeedlerMists(float dt)
+        {
+            if(!player)return;
+            float chill=ElementStatus.For(player)?.PlayerChillMultiplier??1f;
+            foreach(var w in Hand)
+                if(w!=null&&w.form==WeaponForm.SporeLauncher&&w.variant==1&&w.Has(UpgradeAxis.Tame)&&w.reload>0f&&InNeedlerMist(w))
+                    w.reload=Mathf.Max(0f,w.reload-dt*chill*(Mathf.Max(1f,upgrades.needlerMistTameReload)-1f));
         }
 
         public void NeedleLanded(AttackActor needle,Combatant body)
@@ -448,27 +657,6 @@ namespace AnomalyArena
             WeaponSound(w,WeaponAudioPhase.Explosion);
             foreach(var c in elementTargets)Damage(w,c,needle.damage*upgrades.needleBurstShare,0,Query.Flat(c.Position-at).normalized);
             Fx.Ring(at,upgrades.needleBurstRadius,ElementCombat.ColorFor(ElementKind.Poison));
-        }
-
-        void BlizzardChill(RunWeapon w)
-        {
-            if(!player)return;
-            bool spraying=w==Active&&w.heldTime>0f&&player.IsAlive;
-            if(spraying&&!w.Has(UpgradeAxis.Tame))player.AddMovementModifier(w,upgrades.blizzardSelfSlow);
-            else player.RemoveMovementModifier(w);
-            BlizzardAuraActive=spraying&&w.Has(UpgradeAxis.Tame);
-            elementPruned.Clear();
-            foreach(var body in blizzardAura)
-                if(!BlizzardAuraActive||!body||!body.IsAlive||Query.Flat(body.Position-player.Position).magnitude>upgrades.blizzardAuraRadius+body.radius||WallBlocks(player.Position,body.Position))
-                    elementPruned.Add(body);
-            foreach(var body in elementPruned){if(body)body.RemoveMovementModifier(w);blizzardAura.Remove(body);}
-            if(!BlizzardAuraActive)return;
-            foreach(var body in Combatant.All)
-            {
-                if(body==player||!body.IsAlive||body.Team==Team.Player||blizzardAura.Contains(body))continue;
-                if(Query.Flat(body.Position-player.Position).magnitude>upgrades.blizzardAuraRadius+body.radius||WallBlocks(player.Position,body.Position))continue;
-                body.AddMovementModifier(w,upgrades.blizzardSelfSlow);blizzardAura.Add(body);
-            }
         }
 
         void BlizzardShatter(RunWeapon w)
@@ -598,11 +786,12 @@ namespace AnomalyArena
             Fx.Ring(at,upgrades.shatterBurstRadius,ElementCombat.ColorFor(ElementKind.Frost));
         }
 
-        public float ExecuteThreshold(RunWeapon w)=>w==null?upgrades.executeThreshold:Mathf.Min(upgrades.executeThresholdCap,upgrades.executeThreshold+w.executeBonus);
-        void RaiseExecuteThreshold(RunWeapon w)=>w.executeBonus=Mathf.Min(w.executeBonus+upgrades.executeThresholdPerKill,Mathf.Max(0f,upgrades.executeThresholdCap-upgrades.executeThreshold));
+        public float ExecuteThreshold(RunWeapon w)=>upgrades.executeThreshold;
 
         void Execute(RunWeapon w,float range,float hit)
         {
+
+            hit*=1f+Mathf.Max(0f,w.executeNextShot);w.executeNextShot=0f;
             var target=RayTarget(player.AimDirection,range);
 
             WeaponSound(w);
@@ -614,32 +803,69 @@ namespace AnomalyArena
                 if(Query.WallBetween(Query.AtCastHeight(player.Position),end,out var wall))end=Query.AtCastHeight(wall.point);
             }
             AddTracer(muzzle,end,upgrades.executeTracerWidth,upgrades.executeTracerSeconds,new Color(1f,.85f,.55f,.9f));
-            if(!target)return;
+            bool killed=false;
+            if(target)
+            {
 
-            Unmark(target as Enemy);
-            Damage(w,target,hit,0,player.AimDirection);
+                Unmark(target as Enemy);
+                Damage(w,target,hit,0,player.AimDirection);
 
-            if(target.IsAlive&&target is Enemy{IsBoss:false} low&&target.Hp/target.maxHp<ExecuteThreshold(w))ExecuteKill(w,low);
-            else if(!target.IsAlive)RaiseExecuteThreshold(w);
+                if(target.IsAlive&&target is Enemy{IsBoss:false} low&&target.Hp/target.maxHp<ExecuteThreshold(w))ExecuteKill(w,low);
+                killed=!target.IsAlive;
 
-            if(target.IsAlive&&w.Has(UpgradeAxis.Twist)&&target is Enemy{IsBoss:false} survivor)MarkForExecute(w,survivor);
+                if(target.IsAlive&&w.Has(UpgradeAxis.Twist)&&target is Enemy{IsBoss:false} survivor)MarkForExecute(w,survivor);
+            }
+            if(killed)
+            {
+                w.cooldown=Mathf.Max(0f,w.cooldown-Mathf.Clamp01(upgrades.executeKillRefund)*CycleSeconds(w));
+                w.executeNextShot=Mathf.Max(0f,upgrades.executeNextShotBonus);
+                Fx.Ring(player.Position,.9f,new Color(1f,.85f,.45f,.9f));
+            }
+            else if(target is not Enemy{IsBoss:true})ExecuteBackflow(w,hit);
         }
+
+        void ExecuteBackflow(RunWeapon w,float hit)
+        {
+            Color arc=ElementCombat.ColorFor(ElementKind.Lightning);
+            if(w.Has(UpgradeAxis.Tame))
+            {
+
+                if(w.executeAuraLeft<=0f)w.executeAuraClock=0f;
+                w.executeAuraLeft=Mathf.Max(0f,upgrades.executeAuraSeconds);w.executeAuraDamage=hit*Mathf.Max(0f,upgrades.executeAuraShare);
+                Fx.Ring(player.Position,upgrades.executeAuraRadius,arc);
+                return;
+            }
+            if(upgrades.executeSelfShock>0f)player.ReceiveDamage(DamageInfo.Attack(upgrades.executeSelfShock,player));                                                
+            w.cooldown=Mathf.Max(w.cooldown,CycleSeconds(w)*Mathf.Max(1f,upgrades.executeMissCooldown));w.holeReturnSpan=w.cooldown;
+            Fx.Ring(player.Position,.9f,arc);Fx.Burst(Query.AtCastHeight(player.Position),Vector3.zero,arc,6,4f,360f,.2f);
+        }
+
+        void TickExecuteAura(RunWeapon w,float dt)
+        {
+            if(w.executeAuraLeft<=0f)return;
+            if(!player||!player.IsAlive){w.executeAuraLeft=0f;return;}
+            w.executeAuraLeft=Mathf.Max(0f,w.executeAuraLeft-dt);
+            if(w.executeAuraLeft<=0f)return;
+            float radius=upgrades.executeAuraRadius;Vector3 at=player.Position;
+
+            if(Mathf.Floor((w.executeAuraLeft+dt)*8f)!=Mathf.Floor(w.executeAuraLeft*8f))Fx.Ring(at,radius,ElementCombat.ColorFor(ElementKind.Lightning),.15f);
+            w.executeAuraClock-=dt;
+            if(w.executeAuraClock>0f)return;
+            w.executeAuraClock+=Mathf.Max(.05f,upgrades.executeAuraInterval);
+
+            auraTargets.Clear();
+            foreach(var c in Combatant.All)
+                if(c!=player&&c.IsAlive&&c.Team!=Team.Player&&Query.Flat(c.Position-at).magnitude<=radius+c.radius&&!WallBlocks(at,c.Position))auraTargets.Add(c);
+            foreach(var c in auraTargets)Damage(w,c,w.executeAuraDamage,0,Query.Flat(c.Position-at).normalized,false,true);
+            auraTargets.Clear();
+        }
+        readonly List<Combatant> auraTargets = new();
 
         void ExecuteKill(RunWeapon w,Enemy target)
         {
             Vector3 at=target.Position;
             target.Kill(player);
             if(target.IsAlive)return;
-            if(progression)
-            {
-                if(!w.Has(UpgradeAxis.Tame))progression.AdjustMaxHp(-upgrades.executeMaxHpLoss,upgrades.executeMaxHpFloor);
-                else
-                {
-                    float gain=Mathf.Min(upgrades.executeTameHpGain,upgrades.executeTameHpCap-w.executeHpGained);
-                    if(gain>0f){progression.AdjustMaxHp(gain,0f);w.executeHpGained+=gain;}
-                }
-            }
-            RaiseExecuteThreshold(w);
             Fx.Ring(at,1.2f,new Color(1f,.3f,.25f,.9f));
         }
 
@@ -820,6 +1046,44 @@ namespace AnomalyArena
             }
         }
 
+        void SporePodBurst(RunWeapon w,Vector3 at)
+        {
+            if(w==null||w.form!=WeaponForm.SporeLauncher||w.variant!=0||!w.Has(UpgradeAxis.Twist)||!player)return;
+            for(int i=0;i<sporeClouds.Count;i++)
+            {
+                var cloud=sporeClouds[i].actor;
+                if(sporeClouds[i].weapon!=w||!cloud||!cloud.gameObject.activeSelf||cloud.Sequence!=sporeClouds[i].sequence||cloud.LobInFlight||BattlefieldFrozen(cloud.gameObject))continue;
+                if(Query.Flat(at-cloud.point).magnitude<=cloud.radius)DetonateCloud(w,cloud);
+            }
+        }
+
+        void DetonateCloud(RunWeapon w,AttackActor cloud)
+        {
+            Vector3 centre=Query.Flat(cloud.point);
+            float radius=cloud.radius*Mathf.Max(0f,upgrades.cloudBlastRadiusShare),hit=cloud.damage*Mathf.Max(0f,upgrades.cloudBlastTicks);
+
+            cloudBlastTargets.Clear();
+            foreach(var c in Combatant.All)
+                if(c!=player&&c.IsAlive&&c.Team!=Team.Player&&Query.Flat(c.Position-centre).magnitude<=radius+c.radius&&!WallBlocks(centre,c.Position))cloudBlastTargets.Add(c);
+            WeaponSound(w,WeaponAudioPhase.Explosion);
+            foreach(var c in cloudBlastTargets)
+            {
+                Damage(w,c,hit,0,Query.Flat(c.Position-centre).normalized);
+                var status=c.IsAlive?ElementStatus.For(c):null;
+                if(status&&status.Rules)status.Add(ElementKind.Poison,status.Rules.poisonOnEnemyCap,player);
+            }
+            cloudBlastTargets.Clear();
+            cloud.remaining=Mathf.Max(0f,upgrades.cloudSeconds);
+            Fx.Ring(centre,radius,ElementCombat.ColorFor(ElementKind.Poison),.4f);
+        }
+
+        readonly List<Combatant> cloudBlastTargets = new();
+
+        public void SporeLobLanded(AttackActor lob)
+        {
+            if(lob&&lob.weapon!=null&&!IsMainCloud(lob))SporePodBurst(lob.weapon,lob.point);
+        }
+
         void TickHazards(float dt)
         {
             TickIceStones();
@@ -827,8 +1091,11 @@ namespace AnomalyArena
             for(int i=hazards.Count-1;i>=0;i--)
             {
                 var h=hazards[i];h.timeLeft-=dt;
-                if(h.timeLeft<=0f){hazards.RemoveAt(i);continue;}
+
+                if(h.timeLeft<=0f){if(h.kind==GroundHazardKind.ScatterShell)IgniteShell(h);hazards.RemoveAt(i);continue;}
                 hazards[i]=h;
+
+                if(h.kind is GroundHazardKind.ScatterShell or GroundHazardKind.Snow)continue;
                 if(h.kind==GroundHazardKind.IcePatch)
                 {
 
@@ -837,13 +1104,6 @@ namespace AnomalyArena
                         foreach(var body in Combatant.All)
                             if(body!=player&&body.IsAlive&&body.Team!=Team.Player&&Query.Flat(body.Position-h.position).magnitude<=h.radius+body.radius&&!WallBlocks(h.position,body.Position))
                                 ElementStatus.For(body)?.Add(ElementKind.Frost,upgrades.iceFrostPerSecond*dt,player);
-                    }
-                    else if(player&&player.IsAlive&&Query.Flat(player.Position-h.position).magnitude<=h.radius+player.radius&&!WallBlocks(h.position,player.Position))
-                    {
-
-                        var status=ElementStatus.For(player);
-                        float room=status?Mathf.Min(upgrades.iceFrostCap,status.FrostThreshold-.01f)-status.Frost:0f;
-                        if(room>0f)status.Add(ElementKind.Frost,Mathf.Min(room,upgrades.iceFrostPerSecond*dt),player);
                     }
                     continue;
                 }
@@ -859,7 +1119,7 @@ namespace AnomalyArena
                     float podDamage=def!=null?def.damageA:1f;
                     var burst=Field(h.weapon,AttackMode.Field,h.position,podDamage*DamageScale(h.weapon),0,upgrades.sporeBurstRadius,upgrades.sporeBurstLife,0,!tame);
                     if(burst){burst.tickInterval=.5f;burst.ownerDamage=podDamage;}
-                    hazards.RemoveAt(i);break;
+                    hazards.RemoveAt(i);SporePodBurst(h.weapon,h.position);break;
                 }
             }
         }
@@ -944,6 +1204,12 @@ namespace AnomalyArena
             }
         }
 
+        void DrainStowedCapacitor(RunWeapon w,float dt)
+        {
+            w.charge=Mathf.Max(0f,w.charge-dt*CapacitorMax/Mathf.Max(.01f,upgrades.capacitorStowedDrainSeconds));
+            w.chargeFullTime=Mathf.Max(0f,w.chargeFullTime-dt);
+        }
+
         void CapacitorDischarge(RunWeapon w,float range,float damage)
         {
             float hit=damage*Mathf.Clamp01(w.charge/CapacitorMax)*(w.charge>=CapacitorMax?upgrades.capacitorFullBonus:1f);
@@ -1011,9 +1277,8 @@ namespace AnomalyArena
             {
                 if(w==null)continue;
                 w.trailCount=w.trailHead=0;
-                foreach(var body in blizzardAura)if(body)body.RemoveMovementModifier(w);
             }
-            blizzardAura.Clear();BlizzardAuraActive=false;
+            ClearGround();
         }
 
         bool EnemyWithin(float radius)
@@ -1027,10 +1292,10 @@ namespace AnomalyArena
         {
             WeaponSound(w,WeaponAudioPhase.Explosion);
             float blast=upgrades.meltdownDamage*DamageScale(w),self=upgrades.meltdownDamage;
-            Area(w,player.Position,4,blast,0,!w.Has(UpgradeAxis.Tame),self);
+            Area(w,player.Position,4,blast,w.Has(UpgradeAxis.Tame)?upgrades.meltdownTamePush:0,!w.Has(UpgradeAxis.Tame),self);
             if(w.Has(UpgradeAxis.Tame)&&upgrades.meltdownTameHasteSeconds>0f)
             {
-                meltdownHasteLeft=upgrades.meltdownTameHasteSeconds;
+                meltdownHasteLeft=upgrades.meltdownTameHasteSeconds;SyncMeltdownMove();
                 V3WorldAudio.Instance?.Play(ArenaWorldCue.WeaponRepair,player.Position);
                 Fx.Ring(player.Position,1.2f,new Color(1f,.8f,.35f,.9f));
             }
@@ -1043,7 +1308,15 @@ namespace AnomalyArena
 
         public float MeltdownHaste=>meltdownHasteLeft>0f?1f+Mathf.Max(0f,upgrades.meltdownTameHaste):1f;
 
-        void TickMeltdownHaste(float dt)=>meltdownHasteLeft=Mathf.Max(0f,meltdownHasteLeft-dt);
+        void TickMeltdownHaste(float dt){meltdownHasteLeft=Mathf.Max(0f,meltdownHasteLeft-dt);SyncMeltdownMove();}
+        static readonly object MeltdownMoveKey=new();
+
+        void SyncMeltdownMove()
+        {
+            if(!player)return;
+            if(meltdownHasteLeft>0f&&upgrades.meltdownTameMoveBonus>0f)player.AddMovementModifier(MeltdownMoveKey,1f+upgrades.meltdownTameMoveBonus);
+            else player.RemoveMovementModifier(MeltdownMoveKey);
+        }
 
         void MeltdownWarning(RunWeapon w,float before)
         {
@@ -1118,6 +1391,57 @@ namespace AnomalyArena
             a.ignoreShieldReduction=true;a.hurtOwner=false;
         }
 
+        struct LanceBeam { public AttackActor slug; public int sequence; public Vector3 from, to; }
+        readonly List<LanceBeam> lanceBeams = new();
+        static readonly Color LanceBeamColor = new(.8f,.95f,1f,.95f);
+        void StartLanceBeam(AttackActor slug)
+        {
+            if(!slug)return;
+            Vector3 at=slug.transform.position;
+            lanceBeams.Add(new LanceBeam{slug=slug,sequence=slug.Sequence,from=at,to=at});
+        }
+
+        void TickLanceBeams()
+        {
+            for(int i=lanceBeams.Count-1;i>=0;i--)
+            {
+                var beam=lanceBeams[i];
+                bool same=beam.slug&&beam.slug.Sequence==beam.sequence,flying=same&&beam.slug.gameObject.activeSelf&&!BattlefieldFrozen(beam.slug.gameObject);
+
+                if(same)beam.to=beam.slug.transform.position;
+                SetLanceBeamTracer(beam,flying?Time.unscaledTime+.1f:Time.unscaledTime+Mathf.Max(0f,upgrades.lanceBeamSeconds));
+                if(flying)lanceBeams[i]=beam;else lanceBeams.RemoveAt(i);
+            }
+        }
+
+        public void LanceSlugStopped(AttackActor slug)
+        {
+            for(int i=lanceBeams.Count-1;i>=0;i--)
+            {
+                var beam=lanceBeams[i];
+                if(beam.slug!=slug||beam.sequence!=slug.Sequence)continue;
+                beam.to=slug.transform.position;
+                SetLanceBeamTracer(beam,Time.unscaledTime+Mathf.Max(0f,upgrades.lanceBeamSeconds));
+                lanceBeams.RemoveAt(i);return;
+            }
+        }
+
+        void SetLanceBeamTracer(LanceBeam beam,float until)
+        {
+            for(int i=0;i<tracers.Count;i++)
+            {
+                if(tracers[i].from!=beam.from)continue;
+                var line=tracers[i];line.to=beam.to;line.until=until;tracers[i]=line;return;
+            }
+            AddTracer(beam.from,beam.to,upgrades.lanceBeamWidth,until-Time.unscaledTime,LanceBeamColor);
+        }
+
+        void TickRailgunEffects(float dt)
+        {
+            TickLanceBeams();
+            foreach(var w in Hand)if(w!=null)TickExecuteAura(w,dt);
+        }
+
         public void BombardSelfTouch(RunWeapon w)
         {
             if(w==null||w.bombardRefunded)return;
@@ -1188,18 +1512,23 @@ namespace AnomalyArena
             if(pool&&pool.muzzleFlash)pool.EmitDirectional(pool.muzzleFlash,from+dir*.6f,dir,.6f,.07f,new Color(1f,.88f,.6f));
         }
 
-        public bool Anchored
+        public bool Anchored=>SpinBraceReady(Active)&&SpinWallBehind();
+        bool SpinBraceReady(RunWeapon w)=>w!=null&&w.form==WeaponForm.Minigun&&w.variant==0&&w.Has(UpgradeAxis.Tame)&&inputHeld&&w.heldTime>=upgrades.spinAnchorSpinSeconds&&player&&player.IsAlive;
+
+        bool SpinWallBehind()
         {
-            get
-            {
-                var w=Active;
-                return w!=null&&w.form==WeaponForm.Minigun&&w.variant==0&&w.Has(UpgradeAxis.Tame)&&inputHeld&&w.heldTime>=upgrades.spinAnchorSpinSeconds&&player&&player.IsAlive;
-            }
+            Vector3 aim=Query.Flat(player.AimDirection);if(aim.sqrMagnitude<1e-4f)return false;aim.Normalize();
+            const float lead=.3f;
+            return Physics.SphereCast(Query.AtCastHeight(player.Position+aim*lead),player.radius*.9f,-aim,out _,upgrades.spinBraceWallGap+lead,GameManager.WallMask,QueryTriggerInteraction.Ignore);
         }
         float anchorRingClock;
+
         void TickAnchor(float dt)
         {
-            if(!Anchored){anchorRingClock=0f;return;}
+            var w=Active;
+            bool spinning=w!=null&&w.form==WeaponForm.Minigun&&w.variant==0&&inputHeld&&w.heldTime>0f&&CanUseHand,braced=spinning&&Anchored;
+            if(spinning&&!braced)player.Push(-player.AimDirection,Mathf.Max(0f,upgrades.spinUpRetreatSpeed)*Mathf.Clamp01(w.heldTime/3f)*dt);
+            if(!braced){anchorRingClock=0f;return;}
             anchorRingClock-=dt;
             if(anchorRingClock<=0f){anchorRingClock=.3f;Fx.Ring(player.Position,.9f,new Color(1f,.85f,.45f,.7f));}
         }

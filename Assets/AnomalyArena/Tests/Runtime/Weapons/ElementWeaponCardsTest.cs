@@ -193,20 +193,27 @@ namespace AnomalyArena
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
-        public async Task ShatterTame_IcePatches_LeaveYouAloneFreezeEnemiesAndCapAtSix()
+        public async Task ShatterTame_OwnIce_KeepsYourFootingAndSpeedsYouUpWhileEnemiesSlipFreezeAndThePatchesStayCapped()
         {
             var (game, targets) = await V3CombatSmokeTest.StartSandbox();
+            var tuning = game.runWeapons.upgrades;
             targets[1].DiscardWithoutReward(); targets[2].DiscardWithoutReward();
             var enemy = targets[0];
+            var player = game.player;
 
-            Place(enemy, game.player.Position + Vector3.forward * 1.3f);
+            Place(enemy, player.Position + Vector3.forward * 1.3f);
             var shatter = Equip(game, WeaponForm.CryoCannon, 0, UpgradeAxis.Tame);
-            var mine = ElementStatus.For(game.player); var theirs = ElementStatus.For(enemy);
+            var mine = ElementStatus.For(player); var theirs = ElementStatus.For(enemy);
             mine.ClearStatuses(); theirs.ClearStatuses();
 
             game.runWeapons.HandleInput(true, true, false);
             await Until(() => game.runWeapons.Hazards.Any(h => h.kind == GroundHazardKind.IcePatch
-                && Query.Flat(h.position - game.player.Position).magnitude <= h.radius + game.player.radius), 1f, "a patch under you and the enemy");
+                && Query.Flat(h.position - player.Position).magnitude <= h.radius + player.radius), 1f, "a patch under you and the enemy");
+            await Awaitable.NextFrameAsync();
+
+            Assert.That(game.runWeapons.IceGrip(player), Is.Zero, "you keep your footing on your own ice");
+            Assert.That(player.ExternalMoveMultiplier, Is.EqualTo(tuning.shatterTameSpeed).Within(.001f), "and move faster on it");
+            Assert.That(game.runWeapons.IceGrip(enemy), Is.GreaterThan(0f), "the enemy on it slips");
             bool froze = false; float until = Time.time + 3f;
             while (Time.time < until && !froze)
             {
@@ -215,6 +222,12 @@ namespace AnomalyArena
                 await Awaitable.NextFrameAsync();
             }
             Assert.That(froze, Is.True, "4 Frost a second freezes the enemy standing on it");
+            Vector3 stand = player.Position;
+            V3CombatSmokeTest.Teleport(player, stand + Vector3.forward * 12f);                                         
+            await Awaitable.NextFrameAsync(); await Awaitable.NextFrameAsync();
+            Assert.That(player.ExternalMoveMultiplier, Is.EqualTo(1f).Within(.001f), "off the ice your speed is back at once");
+            V3CombatSmokeTest.Teleport(player, stand);
+            Physics.SyncTransforms();
 
             for (int volley = 0; volley < 2; volley++)
             {
@@ -224,6 +237,7 @@ namespace AnomalyArena
                 game.runWeapons.HandleInput(true, true, false);
             }
             await Until(() => !ActiveActors(shatter, AttackMode.Shard), 2f, "the last shards land");
+
             Assert.That(game.runWeapons.Hazards.Count(h => h.kind == GroundHazardKind.IcePatch && h.weapon == shatter),
                 Is.EqualTo(game.runWeapons.upgrades.icePatchTamedCap), "nine shards, six patches kept");
         }
@@ -267,26 +281,90 @@ namespace AnomalyArena
             Assert.That(status.Frozen, Is.False, "and it cannot freeze again for a while");
         }
 
+        static async Task Spray(GameManager game, float seconds)
+        {
+            game.runWeapons.HandleInput(true, true, false);
+            float start = Time.time;
+            while (Time.time < start + seconds) { await Awaitable.NextFrameAsync(); game.runWeapons.HandleInput(false, true, false); }
+        }
+
+        static bool SnowAt(GameManager game, Vector3 at) =>
+            game.runWeapons.Hazards.Any(h => h.kind == GroundHazardKind.Snow && Query.Flat(h.position - at).magnitude < .3f);
+
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
-        public async Task BlizzardTame_Spraying_SlowsEnemiesAroundYouInsteadOfYou()
+        public async Task Blizzard_Spraying_LeavesASnowTrailThatChillsYouUpToTheCapAndNoLongerSlowsYourWalk()
         {
             var (game, targets) = await V3CombatSmokeTest.StartSandbox();
             var tuning = game.runWeapons.upgrades;
-            Place(targets[0], game.player.Position + Vector3.forward * 2f);
+            var player = game.player;
+            foreach (var t in targets) t.DiscardWithoutReward();                             
+            Equip(game, WeaponForm.CryoCannon, 1);
+            player.DebugSetAim(Vector3.back);                       
+            var status = ElementStatus.For(player);
+            status.ClearStatuses();
+            Vector3 start = player.Position;
+
+            await Spray(game, .5f);
+            Assert.That(player.ExternalMoveMultiplier, Is.EqualTo(1f).Within(.001f), "spraying no longer slows you by itself");
+            Assert.That(SnowAt(game, start), Is.True, "snow under your feet");
+            Assert.That(game.runWeapons.Hazards.Count(h => h.kind == GroundHazardKind.Snow), Is.InRange(2, 3), $"a patch every {tuning.snowInterval} s");
+            Assert.That(status.Frost, Is.GreaterThan(0f), "standing in it chills you");
+
+            V3CombatSmokeTest.Teleport(player, start + Vector3.forward * 3f);
+            Physics.SyncTransforms();
+            game.runWeapons.HandleInput(false, true, false);
+            await Until(() => SnowAt(game, start + Vector3.forward * 3f), 1f, "snow where you stand now");
+            Assert.That(SnowAt(game, start), Is.True, "and the old snow stays");
+
+            status.ClearStatuses();
+            status.Add(ElementKind.Frost, tuning.snowFrostCap - .3f, player);
+            float most = 0f, until = Time.time + 1.5f;
+            while (Time.time < until)
+            {
+                await Awaitable.NextFrameAsync();
+                game.runWeapons.HandleInput(false, true, false);
+                Assert.That(status.Frozen, Is.False, "your snow never freezes you");
+                most = Mathf.Max(most, status.Frost);
+            }
+            Assert.That(most, Is.GreaterThan(tuning.snowFrostCap - .3f).And.LessThanOrEqualTo(tuning.snowFrostCap + .001f), "it chills you up to the cap");
+            game.runWeapons.HandleInput(false, false, true);
+        }
+
+        [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
+        public async Task BlizzardTame_Snow_SparesYouCutsYourDamageAndSlowsAndChillsEnemiesStandingInIt()
+        {
+            var (game, targets) = await V3CombatSmokeTest.StartSandbox();
+            var tuning = game.runWeapons.upgrades;
+            var player = game.player;
+            targets[2].DiscardWithoutReward();
+            var near = targets[0];
+
+            Place(near, player.Position + Vector3.forward * (tuning.snowRadius + near.radius * .5f));
             Equip(game, WeaponForm.CryoCannon, 1, UpgradeAxis.Tame);
+            player.DebugSetAim(Vector3.back);                                
+            var mine = ElementStatus.For(player); var theirs = ElementStatus.For(near);
+            mine.ClearStatuses(); theirs.ClearStatuses();
+            Assume.That(mine.Shield, Is.Zero, "no Shield to soak the test hit");
 
-            game.runWeapons.HandleInput(true, true, false);
-            for (int i = 0; i < 3; i++) { await Awaitable.NextFrameAsync(); game.runWeapons.HandleInput(false, true, false); }
-
-            Assert.That(game.player.ExternalMoveMultiplier, Is.EqualTo(1f).Within(.001f), "you keep your speed");
-            Assert.That(targets[0].ExternalMoveMultiplier, Is.EqualTo(tuning.blizzardSelfSlow).Within(.001f), "the enemy beside you is slowed");
-            Assert.That(targets[1].ExternalMoveMultiplier, Is.EqualTo(1f).Within(.001f), "one 6 cells away is not");
-            Assert.That(game.runWeapons.BlizzardAuraActive, Is.True, "the chill ring shows");
+            await Spray(game, .4f);
+            Assert.That(mine.Frost, Is.Zero, "the tamed snow never chills you");
+            Assert.That(near.ExternalMoveMultiplier, Is.EqualTo(tuning.snowTameSlow).Within(.001f), "the enemy in the snow is slowed");
+            Assert.That(theirs.Frost + (theirs.Frozen ? 99f : 0f), Is.GreaterThan(0f), "and gains Frost");
+            Assert.That(targets[1].ExternalMoveMultiplier, Is.EqualTo(1f).Within(.001f), "one out of the snow is not");
+            Assert.That(game.runWeapons.SnowGuardActive, Is.True, "you stand in your own snow");
+            float hp = player.Hp;
+            player.ReceiveDamage(new DamageInfo { amount = 10f, source = DamageSource.Wall });
+            Assert.That(hp - player.Hp, Is.EqualTo(10f * game.progression.Stats.DamageTakenMultiplier * tuning.snowTameDamageTaken).Within(.01f), "and take less damage");
 
             game.runWeapons.HandleInput(false, false, true);
             await Awaitable.NextFrameAsync(); await Awaitable.NextFrameAsync();
-            Assert.That(targets[0].ExternalMoveMultiplier, Is.EqualTo(1f).Within(.001f), "letting go frees it at once");
-            Assert.That(game.runWeapons.BlizzardAuraActive, Is.False);
+            Assert.That(near.ExternalMoveMultiplier, Is.EqualTo(tuning.snowTameSlow).Within(.001f), "the snow outlasts the spray");
+            Place(near, player.Position + Vector3.forward * 9f);
+            V3CombatSmokeTest.Teleport(player, player.Position + Vector3.forward * 12f);
+            Physics.SyncTransforms();
+            await Awaitable.NextFrameAsync(); await Awaitable.NextFrameAsync();
+            Assert.That(near.ExternalMoveMultiplier, Is.EqualTo(1f).Within(.001f), "out of the snow it walks at its pace again");
+            Assert.That(game.runWeapons.SnowGuardActive, Is.False, "and so do you take full damage");
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
@@ -327,6 +405,14 @@ namespace AnomalyArena
             Assert.That(chain.chainStoredJumps, Is.EqualTo(2), "five jumps, three targets: two stored");
             Assert.That(game.UiSnapshot.handSlots[game.runWeapons.ActiveIndex].detail, Does.Contain("+2"), "the slot shows them");
 
+            Assert.That(game.runWeapons.MoveMultiplier, Is.EqualTo(tuning.chainTameMoveSpeed).Within(.0001f), "stored jumps in hand speed you up");
+            int hand = game.runWeapons.ActiveIndex;
+            game.runWeapons.Hand[1 - hand] = new RunWeapon { form = WeaponForm.Rifle, variant = 1, revealed = true, rounds = 3 };
+            game.runWeapons.Switch();
+            Assert.That(game.runWeapons.MoveMultiplier, Is.EqualTo(1f), "stowed, it does not");
+            game.runWeapons.Switch();
+            Assert.That(game.runWeapons.MoveMultiplier, Is.EqualTo(tuning.chainTameMoveSpeed).Within(.0001f), "back in hand it does again");
+
             int cap = tuning.chainStoreMax;
             try
             {
@@ -340,6 +426,10 @@ namespace AnomalyArena
             chain.cooldown = 0f;
             game.runWeapons.HandleInput(true, true, false);
             Assert.That(chain.chainStoredJumps, Is.EqualTo(cap), "at most +3 are kept");
+
+            game.runWeapons.ClearWaveEffects();
+            Assert.That(chain.chainStoredJumps, Is.Zero);
+            Assert.That(game.runWeapons.MoveMultiplier, Is.EqualTo(1f), "nothing stored, no speed-up");
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
@@ -387,8 +477,10 @@ namespace AnomalyArena
             weapons.Switch();
             capacitor.charge = tuning.capacitorMax; capacitor.chargeFullTime = 3.98f;
             await Seconds(.3f);
-            Assert.That(targets[0].Hp, Is.EqualTo(targets[0].maxHp), "a stowed Capacitor waits");
+            Assert.That(targets[0].Hp, Is.EqualTo(targets[0].maxHp), "a stowed Capacitor never discharges");
             weapons.Switch();
+
+            capacitor.charge = tuning.capacitorMax;
 
             await Until(() => targets[0].Hp < targets[0].maxHp, 1f, "the full Capacitor discharges by itself");
             Assert.That(targets[0].maxHp - targets[0].Hp, Is.EqualTo(hit * tuning.capacitorFullBonus).Within(.01f), "a normal full discharge");
@@ -398,27 +490,62 @@ namespace AnomalyArena
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
-        public async Task CloudTwist_StandingInTheLandedCloud_PullsItTowardYouOnlyWhileInside()
+        public async Task CloudTwist_SporePodBurstingInsideALandedCloud_DetonatesItAndRestartsItsTime()
         {
-            var (game, _) = await V3CombatSmokeTest.StartSandbox();
-            var player = game.player;
-            Vector3 origin = player.Position;
+            var (game, targets) = await V3CombatSmokeTest.StartSandbox();
+            var player = game.player; var tuning = game.runWeapons.upgrades;
+            Vector3 origin = player.Position, at = origin + Vector3.forward * 8f;
             var cloud = Equip(game, WeaponForm.SporeLauncher, 0, UpgradeAxis.Twist);
-            player.DebugSetAimPoint(origin + Vector3.forward * 3f);
+            cloud.element = ElementKind.Poison; cloud.builtInElement = true;                          
+
+            var watched = targets[0];
+            Place(watched, at + Vector3.forward * (watched.radius + 4.4f));
+            targets[1].DiscardWithoutReward();
+            var stepper = targets[2];
+            Place(stepper, origin + Vector3.forward * 2f);
+            player.DebugSetAimPoint(at);
+            float playerHp = player.Hp;
+
+            int Touched(Vector3 spot) => game.runWeapons.Hazards.Count(h => h.kind == GroundHazardKind.SporePod && Query.Flat(h.position - spot).magnitude <= h.radius + stepper.radius);
 
             game.runWeapons.HandleInput(true, true, false);
-            await Until(() => ActiveActors(cloud, AttackMode.Field), 2f, "the cloud lands");
-            var actor = AttackPool.Instance.actors.First(a => a && a.gameObject.activeSelf && a.weapon == cloud && a.mode == AttackMode.Field);
-            float before = Query.Flat(actor.point - origin).magnitude;
-            await Seconds(.4f);
-            float after = Query.Flat(actor.point - origin).magnitude;
-            Assert.That(before - after, Is.InRange(1f, game.runWeapons.upgrades.cloudFollowSpeed * .4f + .3f), "it comes toward you at its speed");
+            await Until(() => ActiveActors(cloud, AttackMode.Field), 2f, "the first cloud lands");
+            var first = AttackPool.Instance.actors.First(a => a && a.gameObject.activeSelf && a.weapon == cloud && a.mode == AttackMode.Field);
+            cloud.cooldown = 0f;
+            game.runWeapons.HandleInput(true, true, false);
+            await Until(() => AttackPool.Instance.actors.Count(a => a && a.gameObject.activeSelf && a.weapon == cloud && a.mode == AttackMode.Field) == 2, 2f, "the second cloud lands");
+            var second = AttackPool.Instance.actors.First(a => a && a.gameObject.activeSelf && a.weapon == cloud && a.mode == AttackMode.Field && a != first);
+            await Seconds(.6f);
+            UnityEngine.Random.InitState(11);
+            first.Release();
+            await Until(() => game.runWeapons.Hazards.Count(h => h.kind == GroundHazardKind.SporePod) == tuning.sporePods, 1f, "the first cloud drops its pods");
+            Assume.That(watched.Hp, Is.EqualTo(watched.maxHp), "nothing has reached the watched enemy yet");
+            float left = second.remaining;
+            Assume.That(left, Is.LessThan(tuning.cloudSeconds - .4f));
+            float blast = second.damage * tuning.cloudBlastTicks;
 
-            V3CombatSmokeTest.Teleport(player, origin + Vector3.forward * 12f);
-            await Awaitable.NextFrameAsync();
-            Vector3 left = actor.point;
-            await Seconds(.3f);
-            Assert.That(Query.Flat(actor.point - left).magnitude, Is.LessThan(.01f), "out of it, it stays put");
+            var pod = game.runWeapons.Hazards.First(h => h.kind == GroundHazardKind.SporePod);
+            int bursts = Touched(pod.position);
+            Place(stepper, pod.position);
+            await Until(() => watched.Hp < watched.maxHp, 2f, "the pod sets the cloud off");
+            float lost = watched.maxHp - watched.Hp;
+
+            Assert.That(lost, Is.GreaterThanOrEqualTo(blast * bursts - .01f).And.LessThan(blast * bursts + 2f), "each detonation deals the cloud's ticks at once");
+            var status = ElementStatus.For(watched);
+            Assert.That(status.Poison, Is.GreaterThanOrEqualTo(status.Rules.poisonOnEnemyCap - .01f), "and fills its Poison");
+            Assert.That(second.remaining, Is.GreaterThan(tuning.cloudSeconds - .2f), "the cloud's time starts again");
+            Assert.That(AttackPool.Instance.actors.Any(a => a && a.gameObject.activeSelf && a.weapon == cloud && a.mode == AttackMode.Field
+                && Mathf.Approximately(a.radius, tuning.sporeBurstRadius)), Is.True, "the pod's own mist still appears");
+
+            if (game.runWeapons.Hazards.Any(h => h.kind == GroundHazardKind.SporePod))
+            {
+                await Seconds(.3f);
+                float before = second.remaining;
+                var next = game.runWeapons.Hazards.First(h => h.kind == GroundHazardKind.SporePod);
+                Place(stepper, next.position);
+                await Until(() => second.remaining > before + .1f, 2f, "the next pod sets it off again");
+            }
+            Assert.That(player.Hp, Is.EqualTo(playerHp), "it never touches you");
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
@@ -484,25 +611,52 @@ namespace AnomalyArena
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
-        public async Task NeedlerTame_EveryEighthNeedle_GivesShieldInsteadOfCostingHp()
+        public async Task NeedlerTame_ReloadMist_SparesYouLastsLongerAndSpeedsTheReloadWhileYouTouchIt()
         {
-            var (game, _) = await V3CombatSmokeTest.StartSandbox();
+            var (game, targets) = await V3CombatSmokeTest.StartSandbox();
+            foreach (var t in targets) t.DiscardWithoutReward();
             var tuning = game.runWeapons.upgrades;
-            game.player.DebugSetAim(Vector3.back);
+            var player = game.player;
+            Vector3 origin = player.Position;
+            player.DebugSetAim(Vector3.back);
             var needler = Equip(game, WeaponForm.SporeLauncher, 1, UpgradeAxis.Tame);
-            var status = ElementStatus.For(game.player);
-            status.SetShield(0f);
-            float hp = game.player.Hp;
+            needler.element = ElementKind.Poison; needler.builtInElement = true;
+            var status = ElementStatus.For(player);
+            status.ClearStatuses(); status.SetShield(0f);
+            float hp = player.Hp;
 
-            for (int i = 0; i < tuning.needlerHpPerNeedles; i++)
+            needler.rounds = 1;
+            game.runWeapons.HandleInput(true, true, false);
+            var mist = AttackPool.Instance.actors.Single(a => a && a.gameObject.activeSelf && a.weapon == needler && a.mode == AttackMode.Field);
+            Assert.That(mist.remaining, Is.EqualTo(tuning.needlerMistSeconds * tuning.needlerMistTameLength).Within(.05f), "the tamed mist lasts longer");
+            Assert.That(game.runWeapons.InNeedlerMist(needler), Is.True, "it bursts where you stand");
+
+            async Task<float> ReloadRate(float seconds)
             {
-                needler.cooldown = needler.reload = 0f; needler.rounds = 24;
-                game.runWeapons.HandleInput(true, true, false);
+                float r0 = needler.reload, t0 = Time.time;
+                await Seconds(seconds);
+                return (r0 - needler.reload) / Mathf.Max(.01f, Time.time - t0);
             }
+            float inside = await ReloadRate(.5f);
+            Assert.That(inside, Is.EqualTo(tuning.needlerMistTameReload).Within(.3f), "touching it, the reload runs faster");
 
-            Assert.That(game.player.Hp, Is.EqualTo(hp), "firing is free");
-            Assert.That(status.Shield, Is.EqualTo(tuning.needlerTameShield).Within(.001f), "eight needles, one Shield");
+            V3CombatSmokeTest.Teleport(player, origin + Vector3.forward * (tuning.needlerMistRadius + player.radius + 1f));
             await Awaitable.NextFrameAsync();
+            Assert.That(game.runWeapons.InNeedlerMist(needler), Is.False);
+            float outside = await ReloadRate(.4f);
+            Assert.That(outside, Is.EqualTo(1f).Within(.25f), "out of it, the normal rate at once");
+            Assert.That(player.Hp, Is.EqualTo(hp), "the tamed mist never hurts you");
+            Assert.That(status.Poison, Is.Zero);
+
+            var plain = Equip(game, WeaponForm.SporeLauncher, 1);
+            plain.element = ElementKind.Poison; plain.builtInElement = true;
+            plain.rounds = 1;
+            game.runWeapons.HandleInput(true, true, false);
+            Assume.That(game.runWeapons.InNeedlerMist(plain), Is.True);
+            plain.axes |= UpgradeAxis.Tame;
+            hp = player.Hp;
+            await Seconds(.8f);
+            Assert.That(player.Hp, Is.EqualTo(hp), "a mist left before the card was taken spares you too");
         }
     }
 }

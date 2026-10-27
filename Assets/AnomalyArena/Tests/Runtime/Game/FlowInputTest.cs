@@ -53,8 +53,9 @@ namespace AnomalyArena
             Assert.That(modules.Select(module => module.GetType().GetProperty("submit").GetValue(module)), Has.All.Null,
                 "no submit action, so Enter cannot press the selected button either");
             Assert.That(game.RunPhase, Is.EqualTo(ArenaUiState.Title), "Space and Enter do not start the run, even on the selected Start button");
+
             Assert.That(GameManager.ShownKeyCodes, Is.EquivalentTo(new[]
-                { KeyCode.Escape, KeyCode.T, KeyCode.Tab, KeyCode.R, KeyCode.Alpha1, KeyCode.Alpha2, KeyCode.Alpha3 }),
+                { KeyCode.Escape, KeyCode.T, KeyCode.Tab, KeyCode.R, KeyCode.Alpha1, KeyCode.Alpha2, KeyCode.Alpha3, KeyCode.Space, KeyCode.Return, KeyCode.KeypadEnter }),
                 "the menus read only the keys the game shows");
 
             artWas = Art.Enabled;
@@ -90,7 +91,7 @@ namespace AnomalyArena
         }
 
         [Test, LoadScene(SceneCn), Category("Integration"), Timeout(60000)]
-        public async Task CrateWeaponCardAndMidWavePick_SpaceOrEnter_DoNothingAndNoTextNamesThem()
+        public async Task CrateAndMidWavePick_SpaceOrEnter_DoNothingAndNoTextNamesThem()
         {
             var game = await ReadyScene();
             await CommandUntil(game, ArenaUiCommand.Start, () => game.RunPhase == ArenaUiState.SupplyDrop);
@@ -109,15 +110,8 @@ namespace AnomalyArena
             Assert.That(crate.openHint.text, Does.Contain("CLICK").IgnoreCase.And.Not.Contain("Space").IgnoreCase.And.Not.Contain("Enter").IgnoreCase, "the crate asks for a click");
 
             await CommandUntil(game, ArenaUiCommand.OpenSupply, () => game.RunPhase == ArenaUiState.Loadout);
+
             await CommandUntil(game, ArenaUiCommand.ChooseLoadout, () => game.RunPhase == ArenaUiState.WeaponIntro, 1);
-            SelectButton(ArenaUiCommand.DismissWeaponIntro);
-            await keyboard.TapFor(.8f, SpaceAndEnter);
-
-            Assert.That(game.RunPhase, Is.EqualTo(ArenaUiState.WeaponIntro), "Space and Enter do not close the weapon card, even on its button");
-            var snapshot = game.UiSnapshot;
-            Assert.That(snapshot.weaponIntroHint + snapshot.weaponIntroContinue, Does.Not.Contain("Space").IgnoreCase.And.Not.Contain("Enter").IgnoreCase,
-                "the weapon card names no key it ignores");
-
             await CommandUntil(game, ArenaUiCommand.DismissWeaponIntro, () => game.RunPhase != ArenaUiState.WeaponIntro);
             await ReachCombat(game);
             game.progression.GainXp(game.progression.XpRequired);
@@ -131,6 +125,23 @@ namespace AnomalyArena
             Assert.That(screen.startNext.GetComponentInChildren<UnityEngine.UI.Text>().text, Does.Contain("Esc"), "the pick-later button names its key");
 
             await keyboard.TapUntil(KeyCode.Escape, () => game.RunPhase == ArenaUiState.WaveActive, "Esc puts the pick off");
+        }
+
+        [TestCase(KeyCode.Space), TestCase(KeyCode.Return), TestCase(KeyCode.KeypadEnter), LoadScene(SceneCn), Category("Integration"), Timeout(60000)]
+        public async Task WeaponCard_SpaceOrEnter_ClosesIt(KeyCode key)
+        {
+            var game = await ReadyScene();
+            await CommandUntil(game, ArenaUiCommand.Start, () => game.RunPhase == ArenaUiState.SupplyDrop);
+            await Until(() => game.SupplyDropReady, 5f, "supply crate lands");
+            await CommandUntil(game, ArenaUiCommand.OpenSupply, () => game.RunPhase == ArenaUiState.Loadout);
+            await CommandUntil(game, ArenaUiCommand.ChooseLoadout, () => game.RunPhase == ArenaUiState.WeaponIntro, 1);
+            Assert.That(game.UiSnapshot.weaponIntroHint, Does.Contain("CLICK").And.Contain("Space").And.Contain("Enter"),
+                "the weapon card names the keys that close it");
+            keyboard = new TestKeyboard();
+
+            await keyboard.TapUntil(key, () => game.RunPhase != ArenaUiState.WeaponIntro, key + " closes the weapon card");
+
+            Assert.That(game.State, Is.EqualTo(GameState.Playing), "the run goes on as after a click");
         }
 
         [Test, LoadScene(SceneCn), Category("Integration"), Timeout(30000)]

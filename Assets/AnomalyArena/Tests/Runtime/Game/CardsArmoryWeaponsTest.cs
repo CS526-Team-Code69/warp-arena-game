@@ -508,7 +508,9 @@ namespace AnomalyArena
             Assert.That(ArenaTerms.WeaponAnomaly(WeaponForm.ArcCoil, 0), Is.EqualTo("Arc Jump"), "Arc Jump");
             Assert.That(ArenaTerms.WeaponAnomaly(WeaponForm.ArcCoil, 1), Is.EqualTo("Capacitor"), "Capacitor keeps its name");
             Assert.That(ArenaTerms.WeaponForm(WeaponForm.Minigun), Is.EqualTo("Gatling"), "Gatling");
-            Assert.That(ArenaTerms.WeaponAnomaly(WeaponForm.Knife, 1), Is.EqualTo("Fling Hook"), "Fling Hook");
+                                                                                                    
+            Assert.That(ArenaTerms.WeaponAnomaly(WeaponForm.Knife, 0), Is.EqualTo("Flying Blade"), "Flying Blade");
+            Assert.That(ArenaTerms.WeaponAnomaly(WeaponForm.Knife, 1), Is.EqualTo("Chain Blade"), "Chain Blade");
         }
 
         [Test, LoadScene(SceneEn), Category("Integration"), Timeout(30000)]
@@ -520,7 +522,8 @@ namespace AnomalyArena
             Assert.That(ArenaTerms.WeaponForm(WeaponForm.ArcCoil), Is.EqualTo("Arc Cannon"), "Arc Cannon");
             Assert.That(ArenaTerms.WeaponAnomaly(WeaponForm.ArcCoil, 0), Is.EqualTo("Arc Jump"), "Arc Jump");
             Assert.That(ArenaTerms.WeaponForm(WeaponForm.Minigun), Is.EqualTo("Gatling"), "Gatling");
-            Assert.That(ArenaTerms.WeaponAnomaly(WeaponForm.Knife, 1), Is.EqualTo("Fling Hook"), "Fling Hook");
+            Assert.That(ArenaTerms.WeaponAnomaly(WeaponForm.Knife, 0), Is.EqualTo("Flying Blade"), "Flying Blade");
+            Assert.That(ArenaTerms.WeaponAnomaly(WeaponForm.Knife, 1), Is.EqualTo("Chain Blade"), "Chain Blade");
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]

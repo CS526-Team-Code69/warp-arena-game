@@ -109,14 +109,15 @@ namespace AnomalyArena
             var knife = Equip(game, WeaponForm.Knife, 0, mk: 3);
             var victim = targets[0];
             victim.ReceiveDamage(new DamageInfo { amount = victim.Hp - 1f, source = DamageSource.Poison, ignoreShield = true });
-            float baseCut = game.runWeapons.roster.Get(WeaponForm.Knife).damageA;
+
+            float baseCut = game.runWeapons.roster.Get(WeaponForm.Knife).damageA * game.runWeapons.StartingFormDamageFactor(WeaponForm.Knife);
             Assume.That(Mathf.Abs(game.runWeapons.HitDamage(knife) - baseCut), Is.GreaterThan(.5f), "Mk 3 scales the hit away from the base value");
             float hp = player.Hp;
 
             game.runWeapons.HandleInput(true, true, false);
             await Until(() => !victim.IsAlive, 2f, "the knife kills the enemy");
             await Until(() => !knife.inFlight, 3f, "the knife flies back to where it was thrown");
-            Assert.That(hp - player.Hp, Is.EqualTo(baseCut).Within(.01f), "the kill return cuts you for the base value, not the scaled hit");
+            Assert.That(hp - player.Hp, Is.EqualTo(baseCut).Within(.01f), "the kill return cuts you for the base value times the starting factor, not the scaled hit");
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(30000)]
@@ -133,19 +134,19 @@ namespace AnomalyArena
                 Assert.That(text, Does.Not.Contain("{").And.Not.Contain("}"), $"{(WeaponForm)form} {variant} {axis}: every number filled in");
             }
 
-            float range = tuning.wildfireFenceRange;
-            int cap = tuning.icePatchTamedCap;
+            float range = tuning.wildfireFenceRange, iceSpeed = tuning.shatterTameSpeed;
             try
             {
                 tuning.wildfireFenceRange = 7.5f;
-                tuning.icePatchTamedCap = 7;
+                tuning.shatterTameSpeed = 1.45f;
                 Assert.That(ArenaTerms.ExpandedUpgradeDescription(WeaponForm.Flamethrower, 1, UpgradeAxis.Twist), Does.Contain("7.5"), "a retuned fence range shows");
-                Assert.That(ArenaTerms.ExpandedUpgradeDescription(WeaponForm.CryoCannon, 0, UpgradeAxis.Tame), Does.Contain("7"), "a retuned patch cap shows");
+
+                Assert.That(ArenaTerms.ExpandedUpgradeDescription(WeaponForm.CryoCannon, 0, UpgradeAxis.Tame), Does.Contain("1.45"), "a retuned ice speed shows");
             }
             finally
             {
                 tuning.wildfireFenceRange = range;
-                tuning.icePatchTamedCap = cap;
+                tuning.shatterTameSpeed = iceSpeed;
             }
         }
 

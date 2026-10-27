@@ -13,7 +13,8 @@ namespace AnomalyArena
                                                                                                                                              
                                                                                                                                            
                                                                                                                                            
-                                                                                                                                   
+                                                                                                                                         
+                                                                                      
     [TestFixture]
     public class ElementsWeaponsRulesTest
     {
@@ -340,6 +341,10 @@ namespace AnomalyArena
                         WeaponGuide.Backfire(WeaponForm.ScatterCannon, 1),
                         ArenaTerms.ExpandedUpgradeDescription(WeaponForm.Railgun, 0, UpgradeAxis.Tame),
                         ArenaTerms.ExpandedUpgradeDescription(WeaponForm.ScatterCannon, 1, UpgradeAxis.Tame),
+                        WeaponGuide.Backfire(WeaponForm.ScatterCannon, 0),
+                        WeaponGuide.How(WeaponForm.Flamethrower, 0),
+                        WeaponGuide.How(WeaponForm.CryoCannon, 0),
+                        WeaponGuide.Backfire(WeaponForm.CryoCannon, 0),
                     };
                 }
             }
@@ -353,12 +358,15 @@ namespace AnomalyArena
             string[] zh = texts["zh-Hans"], en = texts["en"];
             Assert.That(zh[0], Does.Contain("where it lands").And.Not.Contain("at your feet"), "Wildfire: the burning ground is where it lands");
             Assert.That(en[0], Does.Contain("where it lands"));
-            Assert.That(zh[1], Does.Contain("move slower").And.Not.Contain("Frost").And.Not.Contain("buff"), "Blizzard: spraying only slows your walk");
-            Assert.That(en[1], Does.Contain("move slower").And.Not.Contain("Frost"));
-            Assert.That(zh[2], Does.Contain("short wait"), "Fling Hook: a short wait before the next hook");
-            Assert.That(en[2], Does.Contain("short wait"));
-            Assert.That(zh[3], Does.Contain("a little damage"), "Repulsor: the push also deals a little damage");
-            Assert.That(en[3], Does.Contain("a little damage"));
+                                                                                                              
+            Assert.That(zh[0], Does.Not.Contain("at most"), "Wildfire: no patch cap on the card");
+            Assert.That(en[0], Does.Not.Contain("at most"));
+            Assert.That(zh[1], Does.Contain("snow").And.Contain("Frost").And.Not.Contain("move slower"), "Blizzard: snow at your feet chills you; spraying no longer slows you");
+            Assert.That(en[1], Does.Contain("snow").And.Contain("Frost").And.Not.Contain("move slower"));
+            Assert.That(zh[2], Does.Contain("drags you").And.Not.Contain("short wait"), "Chain Blade (owner 2026-10-27): the two-way pull is its backfire; the wait is only a cooldown now");
+            Assert.That(en[2], Does.Contain("drags you"));
+            Assert.That(zh[3], Does.Contain("force field").And.Contain("Deflect"), "Deflect (owner 2026-10-27): a slowing field that deflects shots");
+            Assert.That(en[3], Does.Contain("force field").And.Contain("deflected"));
             for (int i = 4; i <= 5; i++)
             {
                 Assert.That(zh[i], Does.Contain("Shield's damage cut"), "the Lance and its crossing blast skip only the Shield's cut");
@@ -375,59 +383,68 @@ namespace AnomalyArena
             string focusShare = (tuning.focusTameRecoilShare * 100f).ToString("0.#") + "%";
             Assert.That(zh[9], Does.Contain(focusShare).And.Not.Contain("wall"), "Focus Tame: the halved push, no more talk of walls");
             Assert.That(en[9], Does.Contain(focusShare).And.Not.Contain("wall"));
+                                                                                                                                         
+            Assert.That(zh[10], Does.Contain("shells").And.Not.Contain("jam"), "Scatter Blast: hot shells, no jam");
+            Assert.That(en[10], Does.Contain("shells").And.Not.Contain("jam"));
+            Assert.That(zh[11], Does.Not.Contain("built-in"), "Stream: no built-in note");
+            Assert.That(en[11], Does.Not.Contain("built-in"));
+            Assert.That(zh[12], Does.Contain("one per enemy").And.Not.Contain("built-in"), "Shatter: one shard per enemy, no built-in note");
+            Assert.That(en[12], Does.Contain("one per enemy").And.Not.Contain("built-in"));
+            Assert.That(zh[13], Does.Contain("slip").And.Not.Contain("Frost"), "Shatter: the ice makes you slip and no longer chills you");
+            Assert.That(en[13], Does.Contain("slip").And.Not.Contain("Frost"));
         }
 
-                                                                 
+                                                                                                          
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
-        public async Task RollArmory_BeforeTheFirstSkill_NeverOffersTheGunner_AfterwardItCan()
+        public async Task RollArmory_BeforeTheFirstSkill_RingIsAlwaysDeflectAndDroneIsAFairCoin()
         {
             await Awaitable.NextFrameAsync();
             await Until(() => GameManager.Instance && ArenaText.Ready, 12f, "scene and localization initialize");
             var game = GameManager.Instance;
             var weapons = game.runWeapons;
             Assume.That(game.progression.EnergyUnlocked, Is.False, "no skill yet, so no energy bar");
-            Assume.That(weapons.GunnerOfferable, Is.False);
+            Assume.That(weapons.DrainOfferable, Is.False);
             float upgradeChance = weapons.armoryUpgradeChance;
             var savedRandom = UnityEngine.Random.state;
             UnityEngine.Random.InitState(2610);
             try
             {
-                var (newDrones, versions) = DrawDrones(weapons);
-                Assert.That(newDrones, Is.Not.Empty, "the Sentry Drone still comes up as a new weapon");
-                Assert.That(newDrones, Has.All.Matches<RunWeapon>(w => w.variant == 1), "but always as the Whirl");
-                Assert.That(versions, Is.Not.Empty, "and a held Whirl still comes up as a stronger version");
-                Assert.That(versions, Has.All.Matches<RunWeapon>(w => w.variant == 1), "that never turns into the Gunner");
+                var rings = DrawAuto(weapons, WeaponForm.ShieldRing, 0);
+                Assert.That(rings.newOnes, Is.Not.Empty, "the Energy Ring still comes up as a new weapon");
+                Assert.That(rings.newOnes, Has.All.Matches<RunWeapon>(w => w.variant == 0), "but always as the Deflect: the Drain costs Energy");
+                Assert.That(rings.versions, Is.Not.Empty, "and a held Deflect still comes up as a stronger version");
+                Assert.That(rings.versions, Has.All.Matches<RunWeapon>(w => w.variant == 0), "that never turns into the Drain");
+                var drones = DrawAuto(weapons, WeaponForm.SentryDrone, 1);
+                Assert.That(drones.newOnes, Has.Some.Matches<RunWeapon>(w => w.variant == 0).And.Some.Matches<RunWeapon>(w => w.variant == 1),
+                    "the Gunner costs no Energy now (Q103), so the drone is a fair coin from the start");
+                Assert.That(drones.versions, Has.Some.Matches<RunWeapon>(w => w.variant == 0), "also as a stronger version");
 
                 game.progression.UnlockEnergy();                                    
-                var after = DrawDrones(weapons);
-                Assert.That(weapons.GunnerOfferable, Is.True);
-                Assert.That(after.newDrones, Has.Some.Matches<RunWeapon>(w => w.variant == 0), "with the energy bar the Gunner is offered again");
-                Assert.That(after.versions, Has.Some.Matches<RunWeapon>(w => w.variant == 0), "also as a stronger version");
+                var after = DrawAuto(weapons, WeaponForm.ShieldRing, 0);
+                Assert.That(weapons.DrainOfferable, Is.True);
+                Assert.That(after.newOnes, Has.Some.Matches<RunWeapon>(w => w.variant == 1), "with the energy bar the Drain is offered");
+                Assert.That(after.versions, Has.Some.Matches<RunWeapon>(w => w.variant == 1), "also as a stronger version");
             }
             finally { weapons.armoryUpgradeChance = upgradeChance; UnityEngine.Random.state = savedRandom; }
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
-        public async Task Gunner_NoEnergyBarYet_HoldsFireAndNeverBringsTheBar()
+        public async Task Gunner_NoEnergyBarYet_FiresAndNeverCostsEnergy()
         {
             var (game, _) = await V3CombatSmokeTest.StartSandbox();
             game.runWeapons.Hand[0] = game.runWeapons.Hand[1] = null;
             Assume.That(game.progression.EnergyUnlocked, Is.False, "the sandbox run has learned no skill");
             var gunner = EquipAuto(game, WeaponForm.SentryDrone, 0);
 
-            bool fired = false;
-            float until = Time.time + 1f;
-            while (Time.time < until) { fired |= ActiveBolts(gunner) || gunner.cooldown > 0f; await Awaitable.NextFrameAsync(); }
-
-            Assert.That(fired, Is.False, "no shot without an energy bar, though enemies stand in sight");
-            Assert.That(game.progression.EnergyUnlocked, Is.False, "and the drone does not bring the bar itself");
+            await Until(() => ActiveBolts(gunner), 2f, "the drone fires without an energy bar (owner 2026-10-27, Q86)");
+            Assert.That(game.progression.EnergyUnlocked, Is.False, "and does not bring the bar itself");
 
             game.progression.UnlockEnergy();                                    
             float energy = game.progression.Energy;
-            await Until(() => ActiveBolts(gunner), 2f, "the drone fires once the bar is there");
-            Assert.That(game.progression.Energy, Is.EqualTo(energy - game.runWeapons.upgrades.gunnerEnergyCost).Within(.01f),
-                "and pays the shot from it");
+            int shots = gunner.droneShots;
+            await Until(() => gunner.droneShots >= shots + 2 || game.runWeapons.DroneDown(gunner), 2f, "the drone keeps firing");
+            Assert.That(game.progression.Energy, Is.EqualTo(energy).Within(.01f), "its shots cost no Energy");
         }
 
                               
@@ -522,10 +539,10 @@ namespace AnomalyArena
         }
 
                                                                                                                                               
-                                                                                                                                      
-        static (List<RunWeapon> newDrones, List<RunWeapon> versions) DrawDrones(RunWeapons weapons)
+                                                                                                                                                       
+        static (List<RunWeapon> newOnes, List<RunWeapon> versions) DrawAuto(RunWeapons weapons, WeaponForm form, int heldVariant)
         {
-            var newDrones = new List<RunWeapon>();
+            var newOnes = new List<RunWeapon>();
             var versions = new List<RunWeapon>();
             weapons.Hand = new[] { new RunWeapon { form = WeaponForm.Rifle, revealed = true }, new RunWeapon { form = WeaponForm.Knife, variant = 1, revealed = true } };
             weapons.Auto = new RunWeapon[RunWeapons.AutoSlotCount];
@@ -533,17 +550,17 @@ namespace AnomalyArena
             for (int draw = 0; draw < 200; draw++)
             {
                 weapons.RollArmory(3);
-                newDrones.AddRange(weapons.Offers.Where(w => w != null && w.form == WeaponForm.SentryDrone && w.upgradeOf == null));
+                newOnes.AddRange(weapons.Offers.Where(w => w != null && w.form == form && w.upgradeOf == null));
             }
-            var whirl = new RunWeapon { form = WeaponForm.SentryDrone, variant = 1, revealed = true };
-            weapons.Auto = new[] { whirl, new RunWeapon { form = WeaponForm.OrbitBlades, revealed = true } };
+            var held = new RunWeapon { form = form, variant = heldVariant, revealed = true };
+            weapons.Auto = new[] { held, new RunWeapon { form = form == WeaponForm.OrbitBlades ? WeaponForm.ShieldRing : WeaponForm.OrbitBlades, revealed = true } };
             weapons.armoryUpgradeChance = 1f;
             for (int draw = 0; draw < 200; draw++)
             {
                 weapons.RollArmory(3);
-                versions.AddRange(weapons.Offers.Where(w => w != null && w.upgradeOf == whirl));
+                versions.AddRange(weapons.Offers.Where(w => w != null && w.upgradeOf == held));
             }
-            return (newDrones, versions);
+            return (newOnes, versions);
         }
 
         static bool ActiveBolts(RunWeapon w) =>

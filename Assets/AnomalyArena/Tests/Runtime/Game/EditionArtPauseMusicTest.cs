@@ -122,6 +122,7 @@ namespace AnomalyArena
         {
             ChoiceInitialized.SetValue(null, true);
             Art.Enabled = false;                                       
+            IllustratedOnly.SetValue(null, false);                                                       
 
             await SceneManagerHelper.LoadSceneAsync(SceneLab);
             await Until(() => GameManager.Instance && ArenaText.Ready, 12f, "the lab and localization initialize");
