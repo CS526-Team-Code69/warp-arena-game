@@ -70,6 +70,8 @@ namespace AnomalyArena
         public object continuousSource;
                                                                                   
         public HitFeel feel;
+                                                                                                                                         
+        public RunWeapon weapon;
 
         public static DamageInfo Attack(float amount, IDamageDealer dealer, Vector3 knockDir = default,
             float knockDistance = 0f,

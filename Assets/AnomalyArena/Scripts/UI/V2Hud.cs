@@ -172,7 +172,8 @@ namespace AnomalyArena
             SetText(hpLabel, ArenaText.Text("ui.hp", Mathf.CeilToInt(s.hp), Mathf.CeilToInt(s.maxHp)));
             SetFill(hpFill, s.hp, s.maxHp);
             shieldRoot.SetActive(s.shield > 0f);
-            SetFill(shieldFill, s.shield, s.maxHp * .5f);
+                                                                                                
+            SetFill(shieldFill, s.shield, s.maxHp * .6f);
             SetText(staminaLabel, ArenaText.Text("ui.stamina"));
             SetFill(staminaFill, s.stamina, 1f);
             if (staminaFill) staminaFill.color = s.staminaExhausted ? new Color(.48f, .55f, .63f) : ElementColors[3];

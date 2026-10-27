@@ -368,7 +368,7 @@ namespace AnomalyArena
             if (Poison > 0f)
             {
                 poisonClock += dt;
-                float interval = Mathf.Max(.01f, Rules.poisonInterval);
+                float interval = Mathf.Max(.01f, Rules.poisonOnEnemyInterval);
                 while (poisonClock >= interval && Poison > 0f && body.IsAlive)
                 {
                     poisonClock -= interval;

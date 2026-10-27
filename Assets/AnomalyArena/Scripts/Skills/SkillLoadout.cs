@@ -490,8 +490,10 @@ namespace AnomalyArena
             for (int i = effects.Count - 1; i >= 0; i--)
             {
                 var effect = effects[i]; var def = effect.definition; int level = effect.level;
-                float activeDt = Mathf.Min(worldDt, Mathf.Max(0f, effect.remaining));
-                effect.remaining = Mathf.Max(0f, effect.remaining - worldDt); effect.clock += activeDt;
+
+                float step = effect.id == SkillId.Singularity ? dt : worldDt;
+                float activeDt = Mathf.Min(step, Mathf.Max(0f, effect.remaining));
+                effect.remaining = Mathf.Max(0f, effect.remaining - step); effect.clock += activeDt;
                 switch (effect.id)
                 {
                     case SkillId.FlameWake:
