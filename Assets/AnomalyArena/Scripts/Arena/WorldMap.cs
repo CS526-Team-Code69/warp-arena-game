@@ -544,7 +544,7 @@ namespace AnomalyArena
         {
             if (!player || !hole || hole.Phase != HolePhase.Portal || TrialActive || TrialWon) return false;
             if (player.State != CharacterState.Normal || player.ActionsBlocked) return false;
-            if (!GM.BuildWalking && (!GM.IsCombatActive || GM.waves.Phase != WavePhase.WaveActive)) return false;
+            if (!GM.BuildWalking && !GM.BuildCrateWalking && (!GM.IsCombatActive || GM.waves.Phase != WavePhase.WaveActive)) return false;
             return Mathf.Abs(player.Position.x - hole.Centre.x) <= 0.5f && Mathf.Abs(player.Position.z - hole.Centre.z) <= 0.5f;
         }
                                                                                                                                           
@@ -741,6 +741,32 @@ namespace AnomalyArena
                     if (wall && wall.gameObject.activeSelf && !wall.BattlefieldFrozen && wall.Owner == owner) return true;
             return false;
         }
+                                                                                                                                            
+                                                                                                                                   
+        public int BreakBulwarks(Func<TemporaryWall, bool> touched)
+        {
+            int broken = 0;
+            if (temporaryWalls != null)
+                foreach (var wall in temporaryWalls)
+                {
+                    if (!wall || !wall.gameObject.activeInHierarchy || wall.BattlefieldFrozen || !touched(wall)) continue;
+                    Vector3 at = wall.transform.position;
+                    TyrantTerrain.Rubble(new Vector2(at.x, at.z));
+                    wall.gameObject.SetActive(false);
+                    broken++;
+                }
+            if (broken > 0) HoleChanged();
+            return broken;
+        }
+                                                                                                                                                                                                      
+                                              
+        public int BreakBulwarksWithin(Vector3 centre, float radius) => BreakBulwarks(wall =>
+        {
+            Vector3 c = Query.Flat(centre);
+            if (!wall.TryGetComponent(out Collider body) || !body.enabled) return Query.Flat(wall.transform.position - c).magnitude <= radius;
+            Vector3 near = body.ClosestPoint(new Vector3(c.x, wall.transform.position.y, c.z));
+            return Query.Flat(near - c).magnitude <= radius;
+        });
         bool VoidHoleOpen(Combatant owner)
         {
             for (int i = 0; i < PlayerHoleCount; i++) { var hole = TemporaryHoleAt(i); if (hole && hole.gameObject.activeSelf && hole.Owner == owner) return true; }

@@ -384,6 +384,32 @@ namespace AnomalyArena
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(30000)]
+        public async Task RollArmory_TopMk_ComesOnlyFromTheMkJustBelowIt()
+        {
+            var game = await ReadyScene();
+            var weapons = game.runWeapons;
+            var original = weapons.roster;
+            var roster = Object.Instantiate(original);
+            try
+            {
+                weapons.roster = roster;
+                const int wave = 13;                                                                                                
+                var behind = new RunWeapon { form = WeaponForm.Rifle, variant = 0, revealed = true, mk = 1 };
+                HoldFullLoadout(weapons, behind);
+                var fromBehind = DrawOffers(weapons, roster, wave, 1f).Where(w => w.upgradeOf == behind).ToList();
+                var justBelow = new RunWeapon { form = WeaponForm.Rifle, variant = 0, revealed = true, mk = roster.MaxMk - 1 };
+                HoldFullLoadout(weapons, justBelow);
+                var fromJustBelow = DrawOffers(weapons, roster, wave, 1f).Where(w => w.upgradeOf == justBelow).ToList();
+
+                Assert.That(fromBehind.Select(w => w.mk), Is.Not.Empty.And.All.EqualTo(roster.MaxMk - 1),
+                    "a weapon further behind stops one short of the top Mk (document 5.7)");
+                Assert.That(fromJustBelow.Select(w => w.mk), Is.Not.Empty.And.All.EqualTo(roster.MaxMk),
+                    "only the Mk just below it upgrades to the top Mk");
+            }
+            finally { weapons.roster = original; Object.Destroy(roster); }
+        }
+
+        [Test, LoadScene(Scene), Category("Integration"), Timeout(30000)]
         public async Task UiSnapshot_StrongerVersionOffer_SaysItReplacesTheHeldWeapon()
         {
             var game = await ReadyScene();

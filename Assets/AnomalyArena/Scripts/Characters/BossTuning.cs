@@ -72,11 +72,12 @@ namespace AnomalyArena
         [Range(0f, 1f), Tooltip("Below this share of its max HP it enters phase 2: void pillars, the predictive volley and the gravity pull join, the rings come several at a time and the pulse pushes harder. The platform keeps its size.")] public float nashPhase2HpShare = .6f;
         [Range(0f, 1f), Tooltip("Below this share it enters phase 3: Shades instead of Wardens, bigger pillars, more rings and volley shots, a harder pulse and pull.")] public float nashPhase3HpShare = .3f;
         [Min(0f), Tooltip("Damage factor (Y): every hit deals the Hollow asset's damage × this × the move's share, whatever the wave. 1.12 is the wave-8 enemy factor, the wave its fixed HP is budgeted on.")] public float nashDamageFactor = 1.12f;
-        [Min(0f), Tooltip("Player this close or closer (centre to centre): repulse pulse, void summon or void pillars. Farther: equilibrium ring, predictive volley or gravity pull.")] public float nashNearRange = 6.5f;
+        [Min(0f), Tooltip("Player this close or closer (centre to centre): repulse pulse, void summon or equilibrium ring. Farther: equilibrium ring, predictive volley, void pillars or gravity pull (document 10-27).")] public float nashNearRange = 6.5f;
         [Min(0f), Tooltip("Seconds it waits after a move before winding up the next; after rings, a volley, a pull or a summon it counts from the moment they are over.")] public float nashMoveRest = 1.1f;
         [Min(0f), Tooltip("Close: chance weight of the repulse pulse.")] public float nashPulseWeight = 1f;
         [Min(0f), Tooltip("Close: chance weight of the void summon. It is only chosen while none of its summons lives and the summon rest is over.")] public float nashSummonWeight = 1.5f;
-        [Min(0f), Tooltip("Close, from phase 2: chance weight of the void pillars.")] public float nashPillarWeight = 1f;
+        [Min(0f), Tooltip("Close: chance weight of the equilibrium ring (0 keeps the ring a far move only).")] public float nashNearRingWeight = 1f;
+        [Min(0f), Tooltip("Far, from phase 2: chance weight of the void pillars (document 10-27; before, a close move).")] public float nashPillarWeight = 1f;
         [Min(0f), Tooltip("Far: chance weight of the equilibrium ring.")] public float nashRingWeight = 1f;
         [Min(0f), Tooltip("Far, from phase 2: chance weight of the predictive volley.")] public float nashVolleyWeight = 1f;
         [Min(0f), Tooltip("Far, from phase 2: chance weight of the gravity pull.")] public float nashPullWeight = .8f;
@@ -84,7 +85,7 @@ namespace AnomalyArena
 
         [Header("Nash Prophet (2026-10-25): repulse pulse and gravity pull")]
         [Min(0f), Tooltip("Wind-up of the repulse pulse; a ground circle shows its reach.")] public float nashPulseWindup = .8f;
-        [Min(0f), Tooltip("Pulse reach from its centre in every phase (the player's body counts); the ground circle shows it. 7.5 reaches a cell past the close range (nashNearRange); the platform runs on past it to its edge, so the player can still step out of the circle.")] public float nashPulseReach = 7.5f;
+        [Min(0f), Tooltip("Pulse reach from its centre in every phase (the player's body counts); the ground circle shows it. 7.5 reaches a cell past the close range (nashNearRange); the platform runs on past it to its edge, so the player can still step out of the circle. Every Bulwark wall any part of which lies inside it breaks when the pulse goes off (audit decision P29, 2026-10-27).")] public float nashPulseReach = 7.5f;
         [Min(0f), Tooltip("Pulse damage, × its base damage (Hollow asset damage × nashDamageFactor).")] public float nashPulseDamage = 1.5f;
         [Min(0f), Tooltip("Phase 1: cells the pulse pushes the player away from it (the slide runs about 5% longer). It throws off a player hit farther out than the platform radius less the slide: 4.8 on the 12-cell platform spares the whole close range and throws off only from about 7 cells out to the rim of its circle (8 cells: its reach plus the player's body).")] public float nashPulsePush = 4.8f;
         [Min(0f), Tooltip("Phase 2: cells the pulse pushes the player (owner 2026-10-27: 5.2). 5.2 on the 12-cell platform spares about the whole close range (6.5 cells out); only the outer part of its circle, about 1.5 cells wide, throws the player off. Above about 5.2 the outer end of the close range throws off too.")] public float nashPhase2PulsePush = 5.2f;
@@ -224,7 +225,7 @@ namespace AnomalyArena
         [Min(0f), Tooltip("Reach of the tail in phase 2.")] public float sweepRangePhase2 = 9.5f;
         [Range(10f, 360f), Tooltip("Width of the fan in degrees (150 matches the saved sector art).")] public float sweepArc = 150f;
         [Min(0f), Tooltip("Half the tail's thickness, cells: it hits you and breaks walls this far beside its line.")] public float sweepTailHalfWidth = .6f;
-        [Min(.5f), Tooltip("Map walls break in pieces at most this many cells across: the tail removes only the pieces it touches, for the rest of the fight. A bulwark cannot be broken by the tail (only the Rampage Charge breaks one) and shields you from it.")] public float sweepWallPiece = 2f;
+        [Min(.5f), Tooltip("Map walls break in pieces at most this many cells across: the tail removes only the pieces it touches, for the rest of the fight. A bulwark cannot be broken by the tail (of the Tyrant's moves only the Rampage Charge breaks one) and shields you from it.")] public float sweepWallPiece = 2f;
         [Min(0f), Tooltip("Damage, × attack damage.")] public float sweepDamage = 1f;
         [Tooltip("Knockback tier on you (document 5.3: heavy); you are thrown along the swing and away from it.")] public KnockTier sweepKnock = KnockTier.Heavy;
 

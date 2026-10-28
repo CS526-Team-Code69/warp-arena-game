@@ -18,9 +18,6 @@ MonoBehaviour:
   fireInterval: 0.5
   fireCap: 20
   fireShieldFactor: 0.5
-  poisonInterval: 1
-  poisonCap: 30
-  poisonDamagePerStack: 0.5
   frostThreshold: 6
   frostDuration: 1.5
   frostDecay: 1

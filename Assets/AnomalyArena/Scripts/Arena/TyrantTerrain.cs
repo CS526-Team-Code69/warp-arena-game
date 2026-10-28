@@ -228,19 +228,7 @@ namespace AnomalyArena
         int BreakBulwarks(Vector2 a, Vector2 b, float radius)
         {
             var map = GetComponent<WorldMap>();
-            if (!map || map.temporaryWalls == null) return 0;
-            int broken = 0;
-            foreach (var wall in map.temporaryWalls)
-            {
-                if (!wall || !wall.gameObject.activeInHierarchy || !RunTouches(wall, a, b, radius)) continue;
-                Vector3 at = wall.transform.position;
-                Rubble(new Vector2(at.x, at.z));
-                wall.gameObject.SetActive(false);
-                broken++;
-            }
-
-            if (broken > 0) map.HoleChanged();
-            return broken;
+            return map ? map.BreakBulwarks(wall => RunTouches(wall, a, b, radius)) : 0;
         }
 
         bool TouchesSavedWall(Func<Rect, bool> touched)
@@ -296,7 +284,7 @@ namespace AnomalyArena
             }
         }
 
-        static void Rubble(Vector2 at) =>
+        internal static void Rubble(Vector2 at) =>
             Fx.Burst(Query.AtCastHeight(new Vector3(at.x, 0f, at.y)), Vector3.zero, RubbleColour, 6, 7f, 360f, .3f);
 
         static bool Occupied(Rect rect)

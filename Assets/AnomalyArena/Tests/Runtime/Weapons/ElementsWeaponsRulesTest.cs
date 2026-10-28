@@ -181,7 +181,7 @@ namespace AnomalyArena
                                                   
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
-        public async Task LanceRecoil_OpenGround_PushesYouTheWholeRecoilWithoutKnockback_TameHalvesIt()
+        public async Task LanceRecoil_OpenGround_PushesYouTheWholeRecoilWithoutKnockback_TameKeepsTheWholePush()
         {
             var (game, targets) = await V3CombatSmokeTest.StartSandbox();
             foreach (var target in targets) target.DiscardWithoutReward();
@@ -203,7 +203,9 @@ namespace AnomalyArena
             var (pushed, tamedKnocked) = await LanceShot(game, tamed);
 
             Assert.That(tamedKnocked, Is.False);
-            Assert.That(pushed / untamed, Is.EqualTo(tuning.lanceTameRecoilShare).Within(.1f), "Tame halves the push on open ground");
+                                                                                                                            
+            Assert.That(game.runWeapons.LanceRecoil(tamed), Is.EqualTo(tuning.lanceRecoil));
+            Assert.That(pushed, Is.EqualTo(untamed).Within(.6f), "Tame keeps the whole push on open ground");
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
@@ -229,7 +231,7 @@ namespace AnomalyArena
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
-        public async Task FocusRecoil_FullCharge_PushesYouWithoutKnockback_TameHalvesItAndStillGuards()
+        public async Task FocusRecoil_FullCharge_PushesYouWithoutKnockback_TameKeepsThePushAndGuards()
         {
             var (game, targets) = await V3CombatSmokeTest.StartSandbox();
             foreach (var target in targets) target.DiscardWithoutReward();
@@ -253,7 +255,9 @@ namespace AnomalyArena
             var (pushed, tamedKnocked, tamedGuard) = await FocusShot(game, tamed);
 
             Assert.That(tamedKnocked, Is.False);
-            Assert.That(pushed / untamed, Is.EqualTo(tuning.focusTameRecoilShare).Within(.1f), "Tame halves the push");
+                                                                                                                 
+            Assert.That(game.runWeapons.FocusRecoil(tamed, 1f), Is.EqualTo(tuning.focusRecoilMax).Within(.001f));
+            Assert.That(pushed, Is.EqualTo(untamed).Within(.8f), "Tame keeps the whole push");
             Assert.That(tamedGuard, Is.True, "and still guards you against attacks for a moment");
         }
 
@@ -367,6 +371,8 @@ namespace AnomalyArena
             Assert.That(en[2], Does.Contain("drags you"));
             Assert.That(zh[3], Does.Contain("force field").And.Contain("Deflect"), "Deflect (owner 2026-10-27): a slowing field that deflects shots");
             Assert.That(en[3], Does.Contain("force field").And.Contain("deflected"));
+            Assert.That(zh[3], Does.Contain("轻伤"), "Deflect (P22): the card states its light hit");
+            Assert.That(en[3], Does.Contain("light"));
             for (int i = 4; i <= 5; i++)
             {
                 Assert.That(zh[i], Does.Contain("Shield's damage cut"), "the Lance and its crossing blast skip only the Shield's cut");
@@ -377,12 +383,11 @@ namespace AnomalyArena
                 Assert.That(zh[i], Does.Contain("does not hurt"), "the Lance and Focus recoil never hurts against a wall");
                 Assert.That(en[i], Does.Contain("does not hurt"));
             }
-            string lanceTamed = (tuning.lanceRecoil * tuning.lanceTameRecoilShare).ToString("0.##");
-            Assert.That(zh[8], Does.Contain($"only {lanceTamed}"), "Lance Tame: the halved push on open ground");
-            Assert.That(en[8], Does.Contain($"only {lanceTamed}"));
-            string focusShare = (tuning.focusTameRecoilShare * 100f).ToString("0.#") + "%";
-            Assert.That(zh[9], Does.Contain(focusShare).And.Not.Contain("wall"), "Focus Tame: the halved push, no more talk of walls");
-            Assert.That(en[9], Does.Contain(focusShare).And.Not.Contain("wall"));
+            string lanceRecoil = tuning.lanceRecoil.ToString("0.##");
+            Assert.That(zh[8], Does.Contain($"没墙时照样后退 {lanceRecoil}").And.Not.Contain("只推"), "Lance Tame (P17): the whole push on open ground");
+            Assert.That(en[8], Does.Contain($"still pushes you back {lanceRecoil}").And.Not.Contain("only"));
+            Assert.That(zh[9], Does.Contain("照样把你推开").And.Contain("免受攻击").And.Not.Contain("%").And.Not.Contain("wall"), "Focus Tame (P18): the push stays, the guard is added");
+            Assert.That(en[9], Does.Contain("as far").And.Contain("immune").And.Not.Contain("%").And.Not.Contain("wall"));
                                                                                                                                          
             Assert.That(zh[10], Does.Contain("shells").And.Not.Contain("jam"), "Scatter Blast: hot shells, no jam");
             Assert.That(en[10], Does.Contain("shells").And.Not.Contain("jam"));

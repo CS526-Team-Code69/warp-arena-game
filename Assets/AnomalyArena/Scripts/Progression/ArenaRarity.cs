@@ -63,7 +63,7 @@ namespace AnomalyArena
 
         public static CardRarity ForSkill(SkillDefinition definition, int level)
         {
-            if (definition && (definition.greaterVoid || definition.element == ElementKind.Void))
+            if (definition && definition.greaterVoid)
                 return CardRarity.Void;
             return level >= 5 ? CardRarity.Legendary : level >= 4 ? CardRarity.Epic : level >= 3 ? CardRarity.Exceptional
                 : level >= 2 ? CardRarity.Rare : CardRarity.Common;

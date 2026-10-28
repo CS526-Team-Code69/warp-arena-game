@@ -321,7 +321,11 @@ namespace AnomalyArena
 
             Spin();
             Assert.That(weapons.AimTurnRateLimit, Is.Zero, "turning is free");
-            Assert.That(weapons.MoveMultiplier, Is.EqualTo(tuning.spinUpMoveFloor).Within(.01f), "the spin still slows your feet");
+
+            Assert.That(weapons.MoveMultiplier, Is.EqualTo(1f), "the spin does not slow your feet");
+            gun.axes &= ~UpgradeAxis.Tame;
+            Assert.That(weapons.MoveMultiplier, Is.EqualTo(1f), "nor untamed");
+            gun.axes |= UpgradeAxis.Tame;
             Assert.That(weapons.Anchored, Is.False, "open ground: nothing braces you");
             float openCycle = weapons.GetCooldownDuration(gun);
             Assert.That(openCycle, Is.EqualTo(1f / tuning.spinUpTopRate).Within(.0005f), "the plain top rate");
@@ -787,7 +791,7 @@ namespace AnomalyArena
             foreach (var text in new[] { spinTame, meltTame, barrageTame }) Assert.That(text, Does.Not.Contain("{"), "every number is filled in");
             Assert.That(WeaponGuide.How(WeaponForm.SwarmLauncher, 0), Does.Contain("micro-missiles").And.Contain("home in"), "Barrage card: homing micro-missiles");
             Assert.That(WeaponGuide.Backfire(WeaponForm.SwarmLauncher, 0), Does.Contain($"up to {tuning.barrageSelfLockMax} spare").And.Contain("lock onto you"), "Barrage card: the missiles that come back for you");
-            Assert.That(WeaponGuide.Backfire(WeaponForm.Minigun, 0), Does.Contain("pushes you back").And.Contain(P(tuning.spinUpMoveFloor)), "Spin-up card: the slow retreat beside the slow walk");
+            Assert.That(WeaponGuide.Backfire(WeaponForm.Minigun, 0), Does.Contain("pushes you back").And.Not.Contain("移速"), "Spin-up card: the slow retreat, no slow walk (P20)");
         }
     }
 }

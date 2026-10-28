@@ -532,8 +532,8 @@ namespace AnomalyArena
                             if (struck)
                             {
 
-                                if (level >= MaxLevel) ElementCombat.ApplyStacks(c, ElementKind.Lightning, def.hitStacks, body);
-                                else if (c.IsAlive) ElementStatus.For(c)?.Add(ElementKind.Lightning, def.hitStacks, body);
+                                if (level >= MaxLevel) ElementCombat.ApplyStacks(c, ElementKind.Lightning, def.HitStacks(level), body);
+                                else if (c.IsAlive) ElementStatus.For(c)?.Add(ElementKind.Lightning, def.HitStacks(level), body);
                             }
                             OnVisualRequested(effect.id, c.Position, 0.5f, 0.2f);
                         }

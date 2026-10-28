@@ -40,12 +40,17 @@ MonoBehaviour:
   - 12
   strength:
   - 3
-  - 3
-  - 3
-  - 3
-  - 3
+  - 3.5
+  - 4
+  - 4.5
+  - 5
   hitDamage: 6
-  hitStacks: 3
+  hitStacksByLevel:
+  - 3
+  - 4
+  - 4
+  - 5
+  - 5
   endDamage: 10
   endKnockback: 10
   freezeHold: 3

@@ -210,32 +210,28 @@ namespace AnomalyArena
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
-        public async Task ChainCoil_ThreeInALane_HitsEachOnceDrawsArcsAndShocksNearbyPerUnusedJump()
+        public async Task ChainCoil_ThreeInALane_HitsEachOnceDrawsArcs_UnusedJumpsChargeOnlyYou()
         {
             var (game, targets) = await V3CombatSmokeTest.StartSandbox();
-            var tuning = game.runWeapons.upgrades;
             var chain = Equip(game, WeaponForm.ArcCoil, 0);
             var status = ElementStatus.For(game.player);
             status.ClearStatuses();
-            float hit = game.runWeapons.HitDamage(chain), scale = Scale(game, chain);
+            float hit = game.runWeapons.HitDamage(chain);
 
             game.runWeapons.HandleInput(true, true, false);
 
             Assert.That(targets[1].Hp, Is.EqualTo(targets[1].maxHp - hit).Within(.01f), "no element jump adds damage on top of the chain");
             Assert.That(targets[2].Hp, Is.EqualTo(targets[2].maxHp - hit).Within(.01f));
 
-            var rules = ElementStatus.For(targets[0]).Rules;
-            float shocked = 1f + rules.lightningVulnerabilityPerStack * rules.stacksPerHit * rules.builtInElementStackFactor;
-            Assert.That(targets[0].Hp, Is.EqualTo(targets[0].maxHp - hit - tuning.chainReturnDamagePerJump * 2f * scale * shocked).Within(.01f), "1 per unused jump");
+            Assert.That(targets[0].Hp, Is.EqualTo(targets[0].maxHp - hit).Within(.01f), "only the arc's own hit");
             Assert.That(status.Lightning + (status.Paralysed ? 99f : 0f), Is.EqualTo(2f).Within(.01f), "one Lightning per unused jump on you");
             Assert.That(game.runWeapons.Tracers.Count, Is.EqualTo(3), "an arc to each target");
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
-        public async Task ChainCoil_FourUnusedJumps_ShockCountsThreeAtMost()
+        public async Task ChainCoil_FourUnusedJumps_EachChargesYou_NoEnemyNearYouIsShocked()
         {
             var (game, targets) = await V3CombatSmokeTest.StartSandbox();
-            var tuning = game.runWeapons.upgrades;
             var chain = Equip(game, WeaponForm.ArcCoil, 0);
             var status = ElementStatus.For(game.player);
             status.ClearStatuses();
@@ -248,8 +244,7 @@ namespace AnomalyArena
             game.runWeapons.HandleInput(true, true, false);
 
             Assert.That(targets[0].Hp, Is.EqualTo(targets[0].maxHp - game.runWeapons.HitDamage(chain)).Within(.01f), "the arc hits the target in the cone");
-            Assert.That(targets[1].Hp, Is.EqualTo(targets[1].maxHp - tuning.chainReturnDamagePerJump * tuning.chainReturnMaxJumps * Scale(game, chain)).Within(.01f),
-                "four unused jumps shock for three");
+            Assert.That(targets[1].Hp, Is.EqualTo(targets[1].maxHp), "the enemy beside you takes nothing from the returning current (P21)");
             Assert.That(status.Lightning, Is.EqualTo(4f).Within(.01f), "your own Lightning still counts every unused jump");
         }
 
@@ -828,7 +823,7 @@ namespace AnomalyArena
             spin.heldTime = 3f;
             Assert.That(weapons.GetCooldownDuration(spin), Is.EqualTo(1f / weapons.upgrades.spinUpTopRate).Within(.001f));
             Assert.That(weapons.upgrades.spinUpTopRate, Is.EqualTo(10f));
-            Assert.That(weapons.upgrades.chainReturnDamagePerJump, Is.EqualTo(1f));
+            Assert.That(roster.Get(WeaponForm.ShieldRing).damageB, Is.EqualTo(4f), "Drain Infusion: 4 per released hit (audit decision P23, 2026-10-27)");
         }
     }
 }

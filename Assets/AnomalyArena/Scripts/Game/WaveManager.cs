@@ -176,7 +176,11 @@ namespace AnomalyArena
         public float HpMultiplier => waveSet && WaveIndex >= 0 ? waveSet.waves[Mathf.Min(WaveIndex, waveSet.waves.Length - 1)].hpMultiplier * waveSet.ExtraHp(WaveIndex+1) : 1f;
         public float EnemyDamageFactor => waveSet ? waveSet.DamageFactor(WaveIndex+1) : 1f;
                                                                                                                                                                            
-        public float CombatScale => waveSet && waveSet.encounterBalance && WaveIndex >= 0 ? waveSet.encounterBalance.DpsAt(WaveIndex + 1) / waveSet.encounterBalance.DpsAt(1) : 1f;
+                                                                                                                                           
+        public float CombatScale => waveSet && waveSet.encounterBalance && WaveIndex >= 0 ? waveSet.encounterBalance.DpsAt(Phase == WavePhase.FinalBoss ? WaveCount + 1 : WaveIndex + 1) / waveSet.encounterBalance.DpsAt(1) : 1f;
+                                                                                                                                            
+                                                                                                       
+        public float FinalBossDamageFactor => waveSet ? waveSet.DamageFactor(WaveCount + 1) : 1f;
         public float EnemySpeedFactor => (waveSet ? waveSet.SpeedFactor(WaveIndex+1) : 1f) * MovementSpeedScale;
         public float BuildTime => waveSet && WaveIndex >= 0 ? waveSet.waves[Mathf.Min(WaveIndex, waveSet.waves.Length - 1)].buildTime : 20f;
         public event Action<int> WaveCompleted;

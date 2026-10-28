@@ -53,7 +53,8 @@ namespace AnomalyArena
         [Min(0f), Tooltip("Cloud Tame: a spore pod you step on is kicked this far away from you and bursts where it lands.")]
         public float sporeKickDistance = 5f;
         public float sporePodRadius = .7f, sporePodLife = 12f, sporeBurstRadius = 1.8f, sporeBurstLife = 3f;
-        public float spinUpMoveFloor = .8f, spinUpFreeTurn = 1080f, spinUpFullTurn = 90f;
+
+        public float spinUpFreeTurn = 1080f, spinUpFullTurn = 90f;
         [Header("10-21 design alignment — candidate values")]
         [Range(.05f, 1f), Tooltip("Charged Shot Tame: movement multiplier of non-boss enemies on your aim line while you charge "
                                   + "(0.3 = they move 70% slower; owner 2026-10-27, renamed so this default replaces the scene's 0.5).")]
@@ -115,8 +116,6 @@ namespace AnomalyArena
         public float focusRecoilMin = 2f;
         [Min(0f), Tooltip("Scatter Focus backfire: cells the recoil pushes you back on a full charge. Owner 2026-10-26: a push you keep control through, never a knockback, so a wall behind you does not hurt.")]
         public float focusRecoilMax = 6f;
-        [Range(0f, 1f), Tooltip("Scatter Focus Tame: share of the recoil push left after taming (owner 2026-10-26: half); the short guard against attacks stays.")]
-        public float focusTameRecoilShare = .5f;
         [Range(0f, 1f), Tooltip("Scatter Focus Twist: damage share a bolt keeps after piercing its first target.")]
         public float focusPierceRetention = .6f;
         [Min(0f), Tooltip("Scatter Focus Tame: seconds you are immune to enemy attacks after an uncharged release (burn and poison ticks still land).")]
@@ -145,8 +144,6 @@ namespace AnomalyArena
         public float lanceCrossRadius = 2.5f;
         [Min(0f), Tooltip("Lance backfire: cells the recoil pushes you back on open ground. Owner 2026-10-26: a push you keep control through, never a knockback, so a wall behind you does not hurt.")]
         public float lanceRecoil = 4f;
-        [Range(0f, 1f), Tooltip("Lance Tame: share of the recoil push left on open ground after taming (owner 2026-10-26: half). A wall close behind still braces the shot instead.")]
-        public float lanceTameRecoilShare = .5f;
         [Min(0f), Tooltip("Lance Tame: a wall this close behind you (cells) braces the shot: no recoil and more damage.")]
         public float lanceBraceDistance = 4f;
         [Min(1f), Tooltip("Lance Tame: damage multiplier of a braced shot.")]
@@ -175,10 +172,6 @@ namespace AnomalyArena
         public float bombardTameCooldownCut = .25f;
         [Range(0f, 180f), Tooltip("Chain: the first target is the nearest visible enemy within range inside this cone around the aim (full width, degrees).")]
         public float chainConeAngle = 30f;
-        [Min(0f), Tooltip("Chain backfire: damage per unused jump to each enemy around you (scaled like the weapon).")]
-        public float chainReturnDamagePerJump = 1f;
-        [Min(0), Tooltip("Chain backfire: unused jumps counted for that damage at most. Your own Lightning still gains 1 per unused jump.")]
-        public int chainReturnMaxJumps = 3;
         [Min(0f), Tooltip("Chain: seconds the yellow arc between two consecutive targets stays visible.")]
         public float chainArcSeconds = .1f;
         [Min(.01f), Tooltip("Chain: width of that arc, cells.")]
@@ -435,6 +428,8 @@ namespace AnomalyArena
         public float drainShieldWait = 4f;
         [Min(0f), Tooltip("Drain: Energy you gain each time the Energy Shield blocks an attack.")]
         public float drainBlockEnergy = 5f;
+        [Min(0f), Tooltip("Drain Infusion (audit decision P23, 2026-10-27): each block releases one hit of the element on the enemies within this many cells (no wall between), damageB x the weapon's scale.")]
+        public float drainInfuseRadius = 2.5f;
         [Min(0f), Tooltip("Drain backfire: seconds after the shield breaks during which the next enemy attack costs Energy (once per break).")]
         public float drainOverloadSeconds = 2f;
         [Min(0f), Tooltip("Drain backfire: Energy that attack costs.")]
@@ -926,10 +921,6 @@ namespace AnomalyArena
 
             if(w.Has(UpgradeAxis.Tame)){w.chainStoredJumps=Mathf.Clamp(w.chainStoredJumps+jumps,0,Mathf.Max(0,upgrades.chainStoreMax));return;}
             ElementStatus.For(player)?.Add(ElementKind.Lightning,jumps,player);
-            float shock=upgrades.chainReturnDamagePerJump*Mathf.Min(jumps,Mathf.Max(0,upgrades.chainReturnMaxJumps))*DamageScale(w);
-            if(shock>0f)foreach(var body in Combatant.All)
-                if(body!=player&&body.IsAlive&&Query.Flat(body.Position-player.Position).magnitude<=upgrades.chainReturnRadius+body.radius&&!WallBlocks(player.Position,body.Position))
-                    Damage(w,body,shock,0,Query.Flat(body.Position-player.Position).normalized,true);
             Fx.Ring(player.Position,upgrades.chainReturnRadius,ElementCombat.ColorFor(ElementKind.Lightning));
         }
 
@@ -1337,10 +1328,9 @@ namespace AnomalyArena
             else w.heat=Mathf.Max(0f,w.heat-upgrades.meltdownKillVent);
         }
 
-        public float LanceRecoil(RunWeapon w)=>Mathf.Max(0f,upgrades.lanceRecoil)*(w!=null&&w.Has(UpgradeAxis.Tame)?Mathf.Clamp01(upgrades.lanceTameRecoilShare):1f);
+        public float LanceRecoil(RunWeapon w)=>Mathf.Max(0f,upgrades.lanceRecoil);
 
-        public float FocusRecoil(RunWeapon w,float charge)=>Mathf.Lerp(upgrades.focusRecoilMin,upgrades.focusRecoilMax,Mathf.Clamp01(charge))
-            *(w!=null&&w.Has(UpgradeAxis.Tame)?Mathf.Clamp01(upgrades.focusTameRecoilShare):1f);
+        public float FocusRecoil(RunWeapon w,float charge)=>Mathf.Lerp(upgrades.focusRecoilMin,upgrades.focusRecoilMax,Mathf.Clamp01(charge));
 
         bool LanceBraced(Vector3 aim,out Vector3 wallPoint)
         {

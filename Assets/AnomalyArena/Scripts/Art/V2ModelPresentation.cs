@@ -61,7 +61,41 @@ namespace AnomalyArena
             if (animator) animator.applyRootMotion = false;
         }
         void OnEnable() { modeInitialized = false; stateHash = 0; winding = corpse = false; }
-        void OnDisable() { if (animator) animator.speed = 0f; }
+        void OnDisable() { if (animator) animator.speed = 0f; ShowEliteOutline(false); }
+
+        static Material eliteOutlineMaterial;
+        Material[][] withoutOutline;
+        bool outlined;
+
+        public bool EliteOutlined => outlined;
+        void ShowEliteOutline(bool show)
+        {
+            if (show == outlined || modelRenderers == null) return;
+            if (show)
+            {
+                if (!eliteOutlineMaterial)
+                {
+                    var shader = Resources.Load<Shader>("EliteOutline");
+                    if (!shader || !shader.isSupported) return;
+                    eliteOutlineMaterial = new Material(shader) { name = "EliteOutline" };
+                }
+                withoutOutline = new Material[modelRenderers.Length][];
+                for (int i = 0; i < modelRenderers.Length; i++)
+                {
+                    var renderer = modelRenderers[i];
+                    if (!renderer) continue;
+                    withoutOutline[i] = renderer.sharedMaterials;
+                    var materials = new Material[withoutOutline[i].Length + 1];
+                    withoutOutline[i].CopyTo(materials, 0);
+                    materials[^1] = eliteOutlineMaterial;
+                    renderer.sharedMaterials = materials;
+                }
+            }
+            else
+                for (int i = 0; i < modelRenderers.Length; i++)
+                    if (modelRenderers[i] && withoutOutline?[i] != null) modelRenderers[i].sharedMaterials = withoutOutline[i];
+            outlined = show;
+        }
 
         public void MarkAttack() => requestedAttack++;
 
@@ -89,6 +123,7 @@ namespace AnomalyArena
             bool cloaked = enemy && enemy.IsAlive && enemy.Cloaked;
             foreach (var renderer in modelRenderers)
                 if (renderer && renderer.enabled != (visible && !cloaked)) renderer.enabled = visible && !cloaked;
+            ShowEliteOutline(visible && enemy && enemy.ShowsEliteOutline);
             if (!visible) return;
             if (spawnVersion != body.SpawnVersion) ResetPose();
 
@@ -109,6 +144,7 @@ namespace AnomalyArena
                         modelRoot.position += Vector3.up * Mathf.Max(0f, body.Position.y + corpseGroundClearance - bottom);
                 }
                 animator.speed = 0f;
+                if (enemy && enemy.Swell > 1f) modelRoot.localScale = authoredScale * SizeNow;                                         
                 ApplyHitFeedback();
                 return;
             }
@@ -117,7 +153,7 @@ namespace AnomalyArena
             animator.speed = frozen ? 0f : clockScale;
             if (dt <= 0f || frozen)
             {
-                float held = (scaleWithBodyRadius ? body.radius / Mathf.Max(.01f, referenceBodyRadius) : 1f) * PresentationScale;
+                float held = SizeNow;
                 float heldSquash = body.HitSquash01 * hitSquash;
                 modelRoot.localScale = Vector3.Scale(authoredScale * held, new Vector3(1f + heldSquash, 1f - heldSquash, 1f + heldSquash));
                 ApplyHitFeedback(); return;
@@ -162,7 +198,7 @@ namespace AnomalyArena
             Vector3 facing = attacking || !enemy && playerFacesAim ? Query.Flat(body.AimDirection) : walking ? velocity : Query.Flat(body.AimDirection);
             if (facing.sqrMagnitude > .0001f)
                 modelRoot.rotation = Quaternion.LookRotation(facing.normalized, Vector3.up) * Quaternion.Euler(rotationOffsetEuler);
-            float scale = (scaleWithBodyRadius ? body.radius / Mathf.Max(.01f, referenceBodyRadius) : 1f) * PresentationScale;
+            float scale = SizeNow;
             float squash = body.HitSquash01 * hitSquash;
             modelRoot.localScale = Vector3.Scale(authoredScale * scale, new Vector3(1f + squash, 1f - squash, 1f + squash));
             if (!attacking)
@@ -185,6 +221,8 @@ namespace AnomalyArena
             if (stateHash == next) return;
             animator.CrossFadeInFixedTime(next, blendSeconds, 0, 0f); stateHash = next;
         }
+
+        float SizeNow => (scaleWithBodyRadius ? body.radius / Mathf.Max(.01f, referenceBodyRadius) : 1f) * PresentationScale * (enemy ? enemy.Swell : 1f);
         float PresentationScale => presentationScale > 0f ? presentationScale : enemy ? (enemy.IsBoss ? 1.1f : 1.35f) : 1.3f;
         void ApplyHitFeedback()
         {

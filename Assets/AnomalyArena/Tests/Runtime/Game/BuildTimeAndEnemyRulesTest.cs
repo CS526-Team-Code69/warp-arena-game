@@ -15,8 +15,9 @@ namespace AnomalyArena
                                                                                                                                         
                                                                                                                                               
                                                                                                                                          
-                                                                                                                                     
-                                 
+                                                                                                                                         
+                                                                                                                                        
+                                                                
     [TestFixture]
     public class BuildTimeAndEnemyRulesTest
     {
@@ -80,10 +81,10 @@ namespace AnomalyArena
                 if (probe.FollowsIntoGravity) follows.Add(kind);
             }
 
-            Assert.That(probe.gravityFollowSpeed, Is.EqualTo(4.5f), "the threshold stays 4.5");
-            Assert.That(follows, Is.EquivalentTo(new[]
-                    { EnemyKind.Grunt, EnemyKind.Skitter, EnemyKind.Splitter, EnemyKind.Shade, EnemyKind.Stomper, EnemyKind.Warden, EnemyKind.Chanter }),
-                "the fast kinds and the 4.5-speed kinds follow; the slower ones do not");
+                                                                                                                        
+            Assert.That(probe.gravityFollowSpeed, Is.EqualTo(5f), "the threshold is 5");
+            Assert.That(follows, Is.EquivalentTo(new[] { EnemyKind.Grunt, EnemyKind.Skitter, EnemyKind.Splitter, EnemyKind.Shade }),
+                "only the kinds authored at 5 or faster follow; the 4.5 kinds and the slower ones do not");
             foreach (var target in targets) target.DiscardWithoutReward();
 
             var (hole, inside, start) = RingApproach(world);
@@ -175,6 +176,45 @@ namespace AnomalyArena
                 var fuse = BodyColour(bloater);
                 Assert.That(fuse.r, Is.GreaterThan(.9f), "the lit fuse keeps the body yellow, flashing toward red");
                 Assert.That(Diff(fuse, data.colour), Is.GreaterThan(.3f), "never its own colour while the fuse burns");
+            }
+            finally
+            {
+                if (bloater && bloater.IsAlive) bloater.DiscardWithoutReward();
+                Object.Destroy(data);
+            }
+        }
+
+        [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
+        public async Task Bloater_OwnFuseAtThePlayer_SwellsBeforeItBlows_ModelAndIllustration()
+        {
+            var (game, targets) = await Sandbox();
+            Art.Enabled = true;
+            targets[1].DiscardWithoutReward();
+            targets[2].DiscardWithoutReward();
+            var bloater = targets[0];
+            var data = Object.Instantiate(game.waves.DefinitionOf(EnemyKind.Bloater));
+            game.player.ProtectFor(30f);
+            var drawn = bloater.GetComponent<V2CharacterIllustration>();
+            try
+            {
+                Release(bloater, data, game.player.Position + Vector3.forward * (data.triggerDistance - .5f));
+                await Awaitable.NextFrameAsync();
+                float body = bloater.bodyRenderer.transform.localScale.y;
+                float picture = drawn && drawn.illustration ? drawn.illustration.transform.lossyScale.y : 0f;
+                var model = bloater.GetComponent<V2ModelPresentation>();
+                float shown = model && model.modelRoot ? model.modelRoot.localScale.y : 0f;
+                Assume.That(bloater.Swell, Is.EqualTo(1f), "it walks in at its own size");
+
+                                                                                                                                        
+                await UntilFixed(() => bloater.WindingUp, 5f, "it reaches the player and lights its fuse");
+                float fuse = Mathf.Max(.05f, data.windup);
+                await UntilFixed(() => !bloater.WindingUp || bloater.Swell > 1f + .2f, fuse * 3f, "the fuse burns");
+                Assert.That(bloater.Swell, Is.GreaterThan(1.2f), "the Bloater has swollen by its fuse's end");
+                Assert.That(bloater.bodyRenderer.transform.localScale.y, Is.GreaterThan(body * 1.2f), "the whitebox body with it");
+                if (model && model.UsingModel)
+                    Assert.That(model.modelRoot.localScale.y, Is.GreaterThan(shown * 1.15f), "and its 3D model, the look the illustrated style shows");
+                if (drawn && drawn.illustration && drawn.illustration.enabled)
+                    Assert.That(drawn.illustration.transform.lossyScale.y, Is.GreaterThan(picture * 1.15f), "and the illustration");
             }
             finally
             {
@@ -315,7 +355,7 @@ namespace AnomalyArena
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(120000)]
-        public async Task BuildPhase_SupplyCrateWeaponCardAndGreaterVoidReward_KeepTheirFreeze()
+        public async Task BuildPhase_SupplyCrateFlows_WeaponCardAndGreaterVoidReward_KeepTheirFreeze()
         {
             var game = await ReadyScene();
             ShortenWaves(game, 1.5f);
@@ -324,11 +364,26 @@ namespace AnomalyArena
             Assume.That(game.skills.Learn(SkillId.Overcharge), Is.True, "the player learns a skill");
             var slot = game.skills.Slots[0];
 
+                                                                                                                                  
+            var player = game.player;
+            var stand = player.Position;
             slot.CooldownLeft = 5f;
-            await RealSeconds(.6f);
-            Assert.That(Time.timeScale, Is.Zero, "the build phase's supply crate keeps its freeze");
-            Assert.That(game.BuildTimeFlows, Is.False, "its clock does not run");
-            Assert.That(slot.CooldownLeft, Is.EqualTo(5f), "nor do the timers");
+            player.debugMoveHeld = Vector2.right;
+            try
+            {
+                await ForGameSeconds(.5f, null);
+            }
+            finally
+            {
+                player.debugMoveHeld = null;
+            }
+
+            Assert.That(Time.timeScale, Is.EqualTo(1f), "time flows while the build phase's supply crate comes down");
+            Assert.That(game.BuildTimeFlows && game.BuildCrateWalking, Is.True, "its clock runs");
+            Assert.That(slot.CooldownLeft, Is.LessThan(4.7f), "and so do the timers");
+            Assert.That(Flat(player.Position - stand).magnitude, Is.GreaterThan(.5f), "the player walks");
+            Assert.That(game.CanUseCombatInput, Is.False, "but cannot fire");
+            Assert.That(game.waves.LivingCount + game.waves.PendingCount, Is.Zero, "and nothing spawns");
 
             await CommandUntil(game, ArenaUiCommand.OpenSupply, () => game.RunPhase == ArenaUiState.Armory);
             await CommandUntil(game, ArenaUiCommand.TakeArmory, () => game.RunPhase != ArenaUiState.Armory, 0);
@@ -374,6 +429,36 @@ namespace AnomalyArena
             float back = slot.CooldownLeft;
             await ForGameSeconds(.4f, null);
             Assert.That(slot.CooldownLeft, Is.LessThan(back - .2f), "and the timers run again");
+        }
+
+        [Test, LoadScene(Scene), Category("Integration"), Timeout(120000)]
+        public async Task BuildPhase_SupplyCrate_ThePortalCanBeTaken_AndTheCrateComesDownAgainAfterTheTrial()
+        {
+            var game = await ReadyScene();
+            ShortenWaves(game, 1.5f);
+            await ReachBuildCrate(game);
+            var world = WorldMap.Active;
+            Assume.That(game.BuildCrateWalking, Is.True, "the build phase's crate is down and waits to be opened");
+
+                                                                                                            
+            var portal = world.holes.First(h => h && h.Phase == HolePhase.Active);
+            portal.Feed(portal.feedsToOpen, game.waves.WaveIndex + 1);
+            await Until(() => portal.Phase == HolePhase.Portal, 4f, "the fed hole collapses into a portal while the crate waits");
+            V3CombatSmokeTest.Teleport(game.player, portal.Centre);
+            Physics.SyncTransforms();
+            Assert.That(world.CanEnterPortal(game.player, portal), Is.True, "standing on the portal, E can take the player in");
+            using var keyboard = new TestKeyboard();
+            await keyboard.TapUntil(KeyCode.E, () => world.TrialActive, "E on the portal enters the trial");
+            Assert.That(game.RunPhase, Is.EqualTo(ArenaUiState.VoidTrial), "the trial runs");
+
+            world.CompleteTrial();
+            Assume.That(game.UiSnapshot.isGreaterReward, Is.True, "the greater void reward is offered");
+            await CommandUntil(game, ArenaUiCommand.StartNextWave, () => !game.UiSnapshot.isGreaterReward);
+            Assert.That(game.RunPhase, Is.EqualTo(ArenaUiState.SupplyDrop), "back in the build phase, the crate comes down again");
+            Assert.That(game.BuildCrateWalking && Time.timeScale == 1f, Is.True, "and time flows while it does");
+            await Until(() => game.SupplyDropReady, 5f, "the crate lands again");
+            await CommandUntil(game, ArenaUiCommand.OpenSupply, () => game.RunPhase != ArenaUiState.SupplyDrop);
+            Assert.That(game.RunPhase, Is.EqualTo(ArenaUiState.Armory), "and opens the armory the trial interrupted");
         }
 
                               

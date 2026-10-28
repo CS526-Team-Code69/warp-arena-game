@@ -25,7 +25,9 @@ namespace AnomalyArena
         [Tooltip("One value per level, levels 1 to 5 (stacks, bolts, pull, shield share, HP line or speed, depending on the skill).")]
         public float[] strength = { 0f, 0f, 0f, 0f, 0f };
         [Tooltip("Storm Call direct damage per bolt.")] public float hitDamage = 6f;
-        [Tooltip("Storm Call Lightning stacks per bolt. Levels 1-4 do not chain; level 5 chains through ElementCombat.ApplyStacks.")] public float hitStacks = 3f;
+        [Tooltip("Storm Call Lightning stacks per bolt, one value per level, levels 1 to 5 (numbers by audit decision P28, 2026-10-27; document 7.3: stacking skills give "
+            + "more stacks per level). Levels 1-4 do not chain; level 5 chains through ElementCombat.ApplyStacks.")]
+        public float[] hitStacksByLevel = { 3f, 4f, 4f, 5f, 5f };
         [Tooltip("Gravity Well level 5 ending hit.")] public float endDamage = 10f;
         [Tooltip("Gravity Well level 5 ending push.")] public float endKnockback = 10f;
         [Tooltip("Frost Nova level 5: an enemy frozen by the cast stays frozen at least this many seconds in total (rules freeze 1.5 s + 1.5 s extra).")]
@@ -68,6 +70,7 @@ namespace AnomalyArena
         public float Range(int level) => At(range, level);
         public float Strength(int level) => At(strength, level);
         public float ContactKnockback(int level) => At(contactKnockback, level);
+        public float HitStacks(int level) => At(hitStacksByLevel, level);
         public float StatusResistance(int level) => Mathf.Clamp01(At(statusResistance, level));
 
         static float At(float[] values, int level) => values is { Length: > 0 } ? values[Mathf.Clamp(level - 1, 0, values.Length - 1)] : 0f;
@@ -94,9 +97,9 @@ namespace AnomalyArena
                 + (level >= 2 ? " Lasts longer" + (level >= MaxLevel ? "; at max level it jumps to two enemies, spreading outward" : "") + "." : ""),
             SkillId.FrostNova => $"Frost on the enemies around you; small enemies freeze at once ({Strength(level):0.#} Frost within {Radius(level):0.#})."
                 + (level >= 2 ? " Larger area" + (level >= MaxLevel ? $"; at max level frozen enemies stay frozen at least {freezeHold:0.#} s" : "") + "." : ""),
-            SkillId.StormCall => $"Random lightning near the cursor: damage plus Lightning ({Strength(level):0} bolts within {Radius(level):0.#} over {Duration(level):0.#} s; {ScaledDamage(hitDamage, level):0.#} damage and {hitStacks:0.#} Lightning each, damage grows with waves and Damage cards)."
+            SkillId.StormCall => $"Random lightning near the cursor: damage plus Lightning ({Strength(level):0} bolts within {Radius(level):0.#} over {Duration(level):0.#} s; {ScaledDamage(hitDamage, level):0.#} damage and {HitStacks(level):0.#} Lightning each, damage grows with waves and Damage cards)."
                 + (level >= 2 ? " More bolts, wider area" + (level >= MaxLevel ? "; at max level a hit also chains to nearby enemies" : "") + "." : ""),
-            SkillId.Bulwark => $"A wall at the cursor knocks back enemies touching it; only the Tyrant King's charge can break it. Plus a Shield (wall {Radius(level):0.#} long, {Duration(level):0.#} s, knockback {ContactKnockback(level):0.#}, "
+            SkillId.Bulwark => $"A wall at the cursor knocks back enemies touching it; only a boss can destroy it: the Tyrant King's charge or the Nash Prophet's Repulse Pulse. Plus a Shield (wall {Radius(level):0.#} long, {Duration(level):0.#} s, knockback {ContactKnockback(level):0.#}, "
                 + (shieldScalesWithMaxHp ? $"Shield {Strength(level) * 100f:0}% of max HP)." : $"Shield {Strength(level):0.#}).")
                 + (level >= 2 ? " Thicker Shield, farther knockback, longer wall" + (level >= MaxLevel ? $"; at max level a very thick Shield, hits on it count {bulwarkShieldDirectFactor * 100f:0}%" : "") + "." : ""),
             SkillId.Radiance => $"Clear your statuses; then your attacks heal you and status resistance rises ({Duration(level):0.#} s, {Strength(level) * 100f:0}% lifesteal, {StatusResistance(level) * 100f:0}% resistance)."
@@ -128,26 +131,26 @@ namespace AnomalyArena
             {
                 case SkillId.FlameWake:
                     displayName = "Flame Wake"; element = ElementKind.Fire; category = SkillCategory.BasicElement; cost = 25f;
-                    duration = new[] { 4f, 4.5f, 5f, 5.5f, 6f }; radius = new[] { 0.75f, 0.75f, 0.75f, 0.75f, 1.5f }; strength = new[] { 3f, 3f, 3f, 3f, 3f };
-                    descriptions = new[] { "Leave a burning trail for 4 s: burns 3 per second.", "Trail for 4.5 s.", "Trail for 5 s.", "Trail for 5.5 s.", "A 6 s trail, twice as wide: burns 3 per second." }; break;
+                    duration = new[] { 4f, 4.5f, 5f, 5.5f, 6f }; radius = new[] { 0.75f, 0.75f, 0.75f, 0.75f, 1.5f }; strength = new[] { 3f, 3.5f, 4f, 4.5f, 5f };
+                    descriptions = new[] { "Leave a burning trail for 4 s: burns 3 per second.", "Trail for 4.5 s, burns 3.5 per second.", "Trail for 5 s, burns 4 per second.", "Trail for 5.5 s, burns 4.5 per second.", "A 6 s trail, twice as wide: burns 5 per second." }; break;
                 case SkillId.Contagion:
                     displayName = "Contagion"; element = ElementKind.Poison; category = SkillCategory.BasicElement; cost = 20f;
-                    duration = new[] { 8f, 9f, 10f, 11f, 12f }; radius = new[] { 5f, 5f, 5f, 5f, 5f }; strength = new[] { 6f, 6f, 6f, 6f, 6f };
-                    descriptions = new[] { "6 Poison to all within 5. For 8 s, Poison jumps on death within 5.", "Poison jumps for 9 s.", "Poison jumps for 10 s.", "Poison jumps for 11 s.", "6 Poison to all within 5. For 12 s, Poison jumps to the two nearest on death." }; break;
+                    duration = new[] { 8f, 9f, 10f, 11f, 12f }; radius = new[] { 5f, 5f, 5f, 5f, 5f }; strength = new[] { 6f, 7f, 8f, 9f, 10f };
+                    descriptions = new[] { "6 Poison to all within 5. For 8 s, Poison jumps on death within 5.", "7 Poison; jumps for 9 s.", "8 Poison; jumps for 10 s.", "9 Poison; jumps for 11 s.", "10 Poison to all within 5. For 12 s, Poison jumps to the two nearest on death." }; break;
                 case SkillId.FrostNova:
                     displayName = "Frost Nova"; element = ElementKind.Frost; category = SkillCategory.BasicElement; cost = 30f;
-                    radius = new[] { 4f, 4.375f, 4.75f, 5.125f, 5.5f }; strength = new[] { 6f, 6f, 6f, 6f, 6f }; freezeHold = 3f;
-                    descriptions = new[] { "6 Frost within 4: small enemies freeze.", "6 Frost within 4.375.", "6 Frost within 4.75.", "6 Frost within 5.125.", "6 Frost within 5.5; enemies it freezes stay frozen at least 3 s." }; break;
+                    radius = new[] { 4f, 4.375f, 4.75f, 5.125f, 5.5f }; strength = new[] { 6f, 7f, 8f, 9f, 10f }; freezeHold = 3f;
+                    descriptions = new[] { "6 Frost within 4: small enemies freeze.", "7 Frost within 4.375.", "8 Frost within 4.75.", "9 Frost within 5.125.", "10 Frost within 5.5; enemies it freezes stay frozen at least 3 s." }; break;
                 case SkillId.StormCall:
                     displayName = "Storm Call"; element = ElementKind.Lightning; category = SkillCategory.BasicElement; cost = 30f;
 
-                    duration = new[] { 1.5f, 1.5f, 1.5f, 1.5f, 1.5f }; radius = new[] { 5f, 5.25f, 5.5f, 5.75f, 6f }; strength = new[] { 3f, 4f, 5f, 5f, 6f };
-                    descriptions = new[] { "3 bolts within 5 over 1.5 s: 6 damage and 3 Lightning each.", "4 bolts within 5.25 over 1.5 s.", "5 bolts within 5.5 over 1.5 s.", "5 bolts within 5.75 over 1.5 s.", "6 bolts within 6 over 1.5 s; bolts chain to nearby enemies." }; break;
+                    duration = new[] { 1.5f, 1.5f, 1.5f, 1.5f, 1.5f }; radius = new[] { 5f, 5.25f, 5.5f, 5.75f, 6f }; strength = new[] { 3f, 4f, 5f, 5f, 6f }; hitStacksByLevel = new[] { 3f, 4f, 4f, 5f, 5f };
+                    descriptions = new[] { "3 bolts within 5 over 1.5 s: 6 damage and 3 Lightning each.", "4 bolts within 5.25 over 1.5 s, 4 Lightning each.", "5 bolts within 5.5 over 1.5 s, 4 Lightning each.", "5 bolts within 5.75 over 1.5 s, 5 Lightning each.", "6 bolts within 6 over 1.5 s, 5 Lightning each; bolts chain to nearby enemies." }; break;
                 case SkillId.Bulwark:
                     displayName = "Bulwark"; element = ElementKind.Earth; category = SkillCategory.BasicElement; cost = 30f;
                     duration = new[] { 8f, 8f, 8f, 8f, 8f }; radius = new[] { 5f, 5.5f, 6f, 6.5f, 8f }; strength = new[] { 0.2f, 0.25f, 0.3f, 0.35f, 0.6f };
                     contactKnockback = new[] { 4f, 5f, 6f, 7f, 8f }; shieldScalesWithMaxHp = true; bulwarkShieldDirectFactor = 0.5f;
-                    descriptions = new[] { "Wall 5 long for 8 s, broken only by the Tyrant King charge, contact push 4; Shield 20% max HP.", "Wall 5.5 long, contact push 5; Shield 25% max HP.", "Wall 6 long, contact push 6; Shield 30% max HP.", "Wall 6.5 long, contact push 7; Shield 35% max HP.", "Wall 8 long, contact push 8; Shield 60% max HP, above the usual cap; direct hits on it count 50%." }; break;
+                    descriptions = new[] { "Wall 5 long for 8 s, broken only by a boss (Tyrant King charge, Nash Prophet pulse), contact push 4; Shield 20% max HP.", "Wall 5.5 long, contact push 5; Shield 25% max HP.", "Wall 6 long, contact push 6; Shield 30% max HP.", "Wall 6.5 long, contact push 7; Shield 35% max HP.", "Wall 8 long, contact push 8; Shield 60% max HP, above the usual cap; direct hits on it count 50%." }; break;
                 case SkillId.Radiance:
                     displayName = "Radiance"; element = ElementKind.Light; category = SkillCategory.AdvancedElement; cost = 30f;
                     duration = new[] { 5f, 5.5f, 6f, 6.5f, 7f }; strength = new[] { 0.25f, 0.25f, 0.25f, 0.25f, 0.25f }; statusResistance = new[] { 0.3f, 0.4f, 0.5f, 0.6f, 0.7f };

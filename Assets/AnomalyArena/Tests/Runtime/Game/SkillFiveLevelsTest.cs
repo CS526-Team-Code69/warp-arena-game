@@ -39,6 +39,10 @@ namespace AnomalyArena
 
         static readonly Dictionary<(SkillId, string), float[]> OwnerSetValues = new()
         {
+            [(SkillId.Contagion, "strength")] = new[] { 6f, 7f, 8f, 9f, 10f },
+            [(SkillId.FrostNova, "strength")] = new[] { 6f, 7f, 8f, 9f, 10f },
+            [(SkillId.FlameWake, "strength")] = new[] { 3f, 3.5f, 4f, 4.5f, 5f },
+            [(SkillId.StormCall, "hitStacksByLevel")] = new[] { 3f, 4f, 4f, 5f, 5f },
             [(SkillId.Bulwark, "radius")] = new[] { 5f, 5.5f, 6f, 6.5f, 8f },
             [(SkillId.Bulwark, "strength")] = new[] { .2f, .25f, .3f, .35f, .6f },
             [(SkillId.Singularity, "duration")] = new[] { 3f, 3f, 3f, 3f, 3f },
@@ -63,18 +67,18 @@ namespace AnomalyArena
             Assert.That(actual, Is.EqualTo(expected));
         }
 
-        [TestCase(4)]
-        [TestCase(5)]
-        public void ForSkill_VoidSkillAtLevelsFourAndFive_StaysBlack(int level)
+        [TestCase(4, CardRarity.Epic)]
+        [TestCase(5, CardRarity.Legendary)]
+        public void ForSkill_VoidElementSkillAtLevelsFourAndFive_ColoursByLevel(int level, CardRarity expected)
         {
             var definition = ScriptableObject.CreateInstance<SkillDefinition>();
             try
             {
-                definition.element = ElementKind.Void;
+                definition.element = ElementKind.Void;                                                              
 
                 var actual = ArenaRarity.ForSkill(definition, level);
 
-                Assert.That(actual, Is.EqualTo(CardRarity.Void));
+                Assert.That(actual, Is.EqualTo(expected));
             }
             finally { Object.DestroyImmediate(definition); }
         }
@@ -203,10 +207,90 @@ namespace AnomalyArena
             Assert.That(texts["zh-Hans"].noClauseAtFive, Is.Empty, "Chinese: every ordinary skill names its max-level effect at level 5");
             Assert.That(texts["en"].clauseAtFour, Is.Empty, "English: no max-level clause at level 4");
             Assert.That(texts["en"].noClauseAtFive, Is.Empty, "English: every ordinary skill names its max-level effect at level 5");
-            Assert.That(texts["zh-Hans"].bulwark, Does.Contain("Tyrant King").And.Not.Contain("unbreakable"), "Chinese Bulwark: only the Tyrant King's charge breaks it");
-            Assert.That(texts["en"].bulwark, Does.Contain("Tyrant King").And.Not.Contain("unbreakable"), "English Bulwark: only the Tyrant King's charge breaks it");
+            Assert.That(texts["zh-Hans"].bulwark, Does.Contain("只有 Boss").And.Contain("Tyrant King").And.Contain("纳什先知").And.Not.Contain("unbreakable"),
+                "Chinese Bulwark: only a boss breaks it, the Tyrant King's charge or the Nash Prophet's pulse");
+            Assert.That(texts["en"].bulwark, Does.Contain("only a boss").And.Contain("Tyrant King").And.Contain("Nash Prophet").And.Not.Contain("unbreakable"),
+                "English Bulwark: only a boss breaks it, the Tyrant King's charge or the Nash Prophet's pulse");
             Assert.That(texts["zh-Hans"].singularity, Does.Contain("heavily slowed").And.Not.Contain("hold still"), "Chinese Singularity: slowed, not held");
             Assert.That(texts["en"].singularity, Does.Contain("heavily slowed").And.Not.Contain("hold still"), "English Singularity: slowed, not held");
+        }
+
+        [Test, LoadScene(Scene), Category("Integration"), Timeout(30000)]
+        public async Task StackingSkillCards_EachLevel_ShowThatLevelsStacks()
+        {
+            var catalog = (await ReadyScene()).skills.Catalog;
+            var expected = new (SkillId id, float[] stacks, string zh, string en)[]
+            {
+                (SkillId.Contagion, new[] { 6f, 7f, 8f, 9f, 10f }, "{0} 层毒素", "{0} Poison"),
+                (SkillId.FrostNova, new[] { 6f, 7f, 8f, 9f, 10f }, "{0} 层冰冻", "{0} Frost"),
+                (SkillId.StormCall, new[] { 3f, 4f, 4f, 5f, 5f }, "{0} 层雷电", "{0} Lightning each"),
+                (SkillId.FlameWake, new[] { 3f, 3.5f, 4f, 4.5f, 5f }, "每秒烧 {0} 点", "burns {0} per second"),
+            };
+            var problems = new List<string>();
+
+            foreach (var (id, stacks, zh, en) in expected)
+            {
+                var definition = catalog.Find(id);
+                for (int level = 1; level <= SkillDefinition.MaxLevel; level++)
+                {
+                    string number = stacks[level - 1].ToString("0.#"), text = definition.Description(level);
+                    float value = id == SkillId.StormCall ? definition.HitStacks(level) : definition.Strength(level);
+                    if (!Near(value, stacks[level - 1])) problems.Add($"{id} level {level}: {value} stacks, expected {number}");
+                    if (!text.Contains(string.Format(zh, number)) && !text.Contains(string.Format(en, number))) problems.Add($"{id} level {level}: \"{text}\" lacks {number}");
+                }
+            }
+
+            Assert.That(problems, Is.Empty);
+        }
+
+        [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
+        public async Task Contagion_LevelThree_PutsEightPoisonOnAnEnemyNearby()
+        {
+            var (game, targets) = await V3CombatSmokeTest.StartSandbox();
+            var target = LoneTarget(game, targets);
+            var skills = game.skills;
+            skills.ResetRun();
+            Assume.That(skills.Learn(SkillId.Contagion, -1, 3), Is.True, "Contagion at level 3");
+            Assume.That(Vector3.Distance(game.player.Position, target.Position), Is.LessThan(skills.Catalog.Find(SkillId.Contagion).Radius(3)), "the target is in reach");
+
+            Assume.That(skills.TryCast(0), Is.True, "Contagion is cast");
+
+            Assert.That(ElementStatus.For(target).Poison, Is.EqualTo(8f).Within(1e-4f));
+        }
+
+        [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
+        public async Task StormCall_LevelFourBolt_PutsFiveLightningOnItsTarget()
+        {
+            var (game, targets) = await V3CombatSmokeTest.StartSandbox();
+            var target = LoneTarget(game, targets);
+            var skills = game.skills;
+            skills.ResetRun();
+            var originalCatalog = skills.Catalog;
+
+            var storm = Object.Instantiate(originalCatalog.Find(SkillId.StormCall));
+            storm.strength = new[] { 1f, 1f, 1f, 1f, 1f };
+            var stormOnly = ScriptableObject.CreateInstance<SkillCatalog>();
+            stormOnly.skills = new[] { storm };
+            try
+            {
+                skills.Catalog = stormOnly;
+                Assume.That(skills.Learn(SkillId.StormCall, -1, 4), Is.True, "Storm Call at level 4");
+                game.player.DebugSetAimPoint(target.Position);
+                int bolts = 0;
+                skills.VisualRequested += (id, _, _, _) => bolts += id == SkillId.StormCall ? 1 : 0;
+                Assume.That(skills.TryCast(0), Is.True, "Storm Call is cast");
+
+                await Until(() => bolts >= 1, 4f, "the bolt falls");
+
+                Assert.That(ElementStatus.For(target).Lightning, Is.EqualTo(5f).Within(1e-4f));
+            }
+            finally
+            {
+                skills.ClearWaveEffects();
+                skills.Catalog = originalCatalog;
+                Object.Destroy(stormOnly);
+                Object.Destroy(storm);
+            }
         }
 
         [Test]
@@ -439,6 +523,7 @@ namespace AnomalyArena
             yield return ("strength", definition.strength);
             yield return ("contactKnockback", definition.contactKnockback);
             yield return ("statusResistance", definition.statusResistance);
+            if (definition.id == SkillId.StormCall) yield return ("hitStacksByLevel", definition.hitStacksByLevel);                            
         }
 
         static bool Near(float a, float b) => Mathf.Abs(a - b) <= 1e-3f;

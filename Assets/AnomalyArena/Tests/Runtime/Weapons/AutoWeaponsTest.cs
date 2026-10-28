@@ -349,6 +349,49 @@ namespace AnomalyArena
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
+        public async Task DrainInfused_EachBlock_ReleasesTheElementOnEnemiesWithinReach_UninfusedReleasesNothing()
+        {
+            var (game, targets) = await V3CombatSmokeTest.StartSandbox();
+            game.runWeapons.Hand[0] = game.runWeapons.Hand[1] = null;
+            var weapons = game.runWeapons;
+            var tuning = weapons.upgrades;
+            float wait = tuning.drainShieldWait;
+            try
+            {
+                tuning.drainShieldWait = .4f;
+                game.progression.UnlockEnergy();
+                Assume.That(game.progression.TrySpendEnergy(50f), Is.True);
+                var player = game.player;
+                Place(targets[0], player.Position + Vector3.forward * 1.5f);
+                Place(targets[1], player.Position + Vector3.forward * 6f);
+                var near = targets[0]; var far = targets[1];
+                var drain = EquipAuto(game, WeaponForm.ShieldRing, 1);
+                Assume.That(weapons.HitDamage(drain), Is.GreaterThan(0f), "damageB carries the released hit");
+
+                await Until(() => drain.drainShieldUp, 2f, "the Energy Shield forms");
+                Assert.That(player.ReceiveDamage(DamageInfo.Attack(4f, far)), Is.False, "the shield takes the attack");
+                await Awaitable.NextFrameAsync(); await Awaitable.NextFrameAsync(); await Awaitable.NextFrameAsync();
+                Assert.That(near.Hp, Is.EqualTo(near.maxHp), "uninfused, a block releases nothing");
+
+                drain.axes |= UpgradeAxis.Infusion; drain.element = ElementKind.Frost;
+                await Until(() => drain.drainShieldUp, 2f, "the Energy Shield forms again");
+                float hp = player.Hp, energy = game.progression.Energy;
+                Assert.That(player.ReceiveDamage(DamageInfo.Attack(4f, far)), Is.False, "the shield takes the attack whole");
+                await Until(() => near.Hp < near.maxHp, 1f, "the block releases the element");
+                Assert.That(near.maxHp - near.Hp, Is.EqualTo(weapons.HitDamage(drain)).Within(.01f), "one hit of damageB, scaled like the weapon");
+                Assert.That(ElementStatus.For(near).Frost, Is.GreaterThan(0f), "carrying the infused element");
+                Assert.That(far.Hp, Is.EqualTo(far.maxHp), $"nothing beyond {tuning.drainInfuseRadius} cells");
+                Assert.That(ElementStatus.For(far).Frost, Is.Zero);
+                Assert.That(player.Hp, Is.EqualTo(hp), "you take nothing");
+                Assert.That(game.progression.Energy, Is.EqualTo(energy + tuning.drainBlockEnergy).Within(.01f), "the block still gives Energy");
+                float once = near.Hp;
+                await Awaitable.NextFrameAsync(); await Awaitable.NextFrameAsync();
+                Assert.That(near.Hp, Is.EqualTo(once), "one release per block");
+            }
+            finally { tuning.drainShieldWait = wait; }
+        }
+
+        [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task Drain_BurnAndPoisonTicks_NeitherBreakTheShieldNorRestartTheWait_HigherMkWaitsLess()
         {
             var (game, targets) = await V3CombatSmokeTest.StartSandbox();
@@ -386,7 +429,7 @@ namespace AnomalyArena
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(30000)]
-        public async Task RingCards_DrainTakesNoInfusion_DeflectDoes_AndTheCardsReadTheLiveTuning()
+        public async Task RingCards_DrainAndDeflectBothTakeInfusion_AndTheCardsReadTheLiveTuning()
         {
             await Awaitable.NextFrameAsync();
             await Until(() => GameManager.Instance && ArenaText.Ready, 12f, "scene and localization initialize");
@@ -396,8 +439,13 @@ namespace AnomalyArena
             try
             {
                 weapons.Hand = new RunWeapon[2];
-                weapons.Auto = new[] { new RunWeapon { form = WeaponForm.ShieldRing, variant = 1, revealed = true }, null };
-                for (int i = 0; i < 20; i++) Assert.That(weapons.RollUpgradeCard(), Is.Null, "the Drain has no hit to carry an element");
+
+                var drained = new RunWeapon { form = WeaponForm.ShieldRing, variant = 1, revealed = true };
+                weapons.Auto = new[] { drained, null };
+                var drainCard = weapons.RollUpgradeCard();
+                Assert.That(drainCard, Is.Not.Null, "the Drain is offered an Infusion");
+                Assert.That(((WeaponUpgradeOffer)drainCard.Payload).Weapon, Is.SameAs(drained));
+                Assert.That(((WeaponUpgradeOffer)drainCard.Payload).Axis, Is.EqualTo(UpgradeAxis.Infusion));
                 var deflect = new RunWeapon { form = WeaponForm.ShieldRing, variant = 0, revealed = true };
                 weapons.Auto = new[] { deflect, null };
                 var card = weapons.RollUpgradeCard();
@@ -410,6 +458,8 @@ namespace AnomalyArena
                 Assert.That(ArenaTerms.WeaponForm(WeaponForm.ShieldRing), Is.EqualTo("Energy Ring"), "owner 2026-10-27 (Q100)");
                 Assert.That(ArenaTerms.WeaponAnomaly(WeaponForm.ShieldRing, 0), Is.EqualTo("Deflect"));
                 Assert.That(WeaponGuide.Backfire(WeaponForm.OrbitBlades, 0), Does.Contain("pickups").And.Contain("corpses"));
+                Assert.That(WeaponGuide.How(WeaponForm.ShieldRing, 1), Does.Contain("灌注后").And.Contain($"{tuning.drainInfuseRadius:0.##} 格内"), "the Drain card says what an Infusion does (P23)");
+                Assert.That(WeaponGuide.How(WeaponForm.ShieldRing, 0), Does.Contain("轻伤").And.Contain("Infusion"), "the Deflect card states its light hit (P22)");
                 tuning.gunnerClip = 17;
                 Assert.That(WeaponGuide.How(WeaponForm.SentryDrone, 0), Does.Contain("17"), "the Gunner card reads the live magazine");
 
