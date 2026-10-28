@@ -15,7 +15,7 @@ namespace AnomalyArena
 
         [Tooltip(
             "Authored walk speed at or above which this enemy follows the player into a gravity zone. Compared before the global movement multiplier, so slowing everyone down does not switch the rule off.")]
-        public float gravityFollowSpeed = 4.5f;
+        public float gravityFollowSpeed = 5f;                                                                                     
 
         [Tooltip("How close to the player's body edge before winding up (almost touching)")]
         public float triggerRange = 0.3f;
@@ -51,6 +51,9 @@ namespace AnomalyArena
 
         public bool IsBoss => definition && EnemyRoles.IsBoss(definition.kind);
         public bool IsBossOrElite => IsBoss || Elite;
+                                                                                                                                           
+                                                                                                                                         
+        public bool ShowsEliteOutline => Elite && IsAlive && !Cloaked;
 
                                                                                                                                                           
         public bool IsSpecial => Elite || definition && EnemyRoles.IsSpecial(definition.kind);
@@ -76,6 +79,10 @@ namespace AnomalyArena
 
         public bool BloaterWarningActive => definition && definition.kind == EnemyKind.Bloater &&
                                             (IsAlive && windup || dyingExplosion && explosionTimer > 0f);
+                                                                                                                                        
+                                                                                                                                     
+        public float Swell { get; private set; } = 1f;
+        const float BloaterFuseSwell = .3f;                                                    
 
                                                                       
         public const int PulseMove = 0, InhaleMove = 1, DoubleShotMove = 2, RingMove = 3, ProphecyMove = 4;
@@ -284,7 +291,7 @@ namespace AnomalyArena
             moveSpeed = data.speed * (GM && GM.waves ? GM.waves.EnemySpeedFactor : 1f);
             radius = data.radius * bodyScale;
             attackDamage = data.damage * (elite ? 1.5f : 1f) * (mini ? MiniDamageShare : 1f) *
-                           (GM && GM.waves ? GM.waves.EnemyDamageFactor : 1f);
+                           (GM && GM.waves ? data.kind == EnemyKind.Tyrant ? GM.waves.FinalBossDamageFactor : GM.waves.EnemyDamageFactor : 1f);
             windupTime = data.windup;
             attackInterval =
                 data.interval * (Affix == ElementKind.Void ? VoidIntervalFactor : 1f);                           
@@ -346,6 +353,7 @@ namespace AnomalyArena
                 bodyRenderer.enabled = true;
                 RefreshBodyTint();
             }
+            Swell = 1f;
 
             if (telegraph) telegraph.gameObject.SetActive(false);
             if (rb)
@@ -403,6 +411,7 @@ namespace AnomalyArena
             float dt = GM.WorldDeltaTime;
             explosionTimer -= dt;
             if (bodyRenderer) bodyRenderer.transform.localScale *= 1f + dt * 0.6f;
+            Swell *= 1f + dt * 0.6f;
             if (explosionTimer > 0f) return;
             Explode();
             dyingExplosion = false;
@@ -459,6 +468,12 @@ namespace AnomalyArena
             {
                                                                        
                 Stop();
+                if (definition && definition.kind == EnemyKind.Bloater)
+                {
+                    float grow = 1f + dt * BloaterFuseSwell / Mathf.Max(.05f, windupTime);
+                    if (bodyRenderer) bodyRenderer.transform.localScale *= grow;
+                    Swell *= grow;
+                }
                 windupTimer -= dt;
                 if (windupTimer <= 0f)
                 {

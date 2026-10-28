@@ -6,10 +6,11 @@ namespace AnomalyArena
                  
                                                                                                                                                 
                                                                                                                                             
-                                                                                                                                              
+                                                                                                                                           
+                                                                                                                                            
                                                                                                                                              
-                                                                                                                                               
-                                                                                                                                             
+                                                                                                                                      
+                                                                                         
                                                                                                                                              
                       
                   
@@ -205,18 +206,27 @@ namespace AnomalyArena
 
                                                                                                                                              
                                                                                                                                                  
-                                                                                                                                           
-                                        
+                                                                                                                                             
+                                                                                                                     
         public static int NashMoveFor(int phase, bool near, bool canSummon, bool pillarsStanding, float roll, BossTuning b)
         {
-            float first = Mathf.Max(0f, near ? b.nashPulseWeight : b.nashRingWeight);
-            float second = Mathf.Max(0f, near ? canSummon ? b.nashSummonWeight : 0f : phase >= 2 ? b.nashVolleyWeight : 0f);
-            float third = Mathf.Max(0f, near ? phase >= 2 ? b.nashPillarWeight : 0f
-                : phase >= 2 ? b.nashPullWeight * (pillarsStanding ? Mathf.Max(1f, b.nashPullPillarBonus) : 1f) : 0f);
-            float pick = Mathf.Clamp01(roll) * (first + second + third);
-            int slot = pick < first || second + third <= 0f ? 0 : pick < first + second || third <= 0f ? 1 : 2;
-            if (near) return slot == 0 ? PulseMove : slot == 1 ? VoidSummonMove : VoidPillarMove;
-            return slot == 0 ? RingMove : slot == 1 ? PredictiveVolleyMove : GravityPullMove;
+            if (near) return NashPick(roll, PulseMove, b.nashPulseWeight, VoidSummonMove, canSummon ? b.nashSummonWeight : 0f, RingMove, b.nashNearRingWeight, RingMove, 0f);
+            bool late = phase >= 2;
+            float pull = b.nashPullWeight * (pillarsStanding ? Mathf.Max(1f, b.nashPullPillarBonus) : 1f);
+            return NashPick(roll, RingMove, b.nashRingWeight, PredictiveVolleyMove, late ? b.nashVolleyWeight : 0f,
+                VoidPillarMove, late ? b.nashPillarWeight : 0f, GravityPullMove, late ? pull : 0f);
+        }
+
+                                                                                                                                 
+        static int NashPick(float roll, int m1, float w1, int m2, float w2, int m3, float w3, int m4, float w4)
+        {
+            w1 = Mathf.Max(0f, w1); w2 = Mathf.Max(0f, w2); w3 = Mathf.Max(0f, w3); w4 = Mathf.Max(0f, w4);
+            float pick = Mathf.Clamp01(roll) * (w1 + w2 + w3 + w4);
+            if (pick < w1 || w2 + w3 + w4 <= 0f) return m1;
+            pick -= w1;
+            if (pick < w2 || w3 + w4 <= 0f) return m2;
+            pick -= w2;
+            return pick < w3 || w4 <= 0f ? m3 : m4;
         }
 
         void StartNashMove(int move, PlayerController player, BossTuning b)
@@ -248,6 +258,10 @@ namespace AnomalyArena
                     V3WorldAudio.Instance?.Play(ArenaWorldCue.BossSlam, Position);
                     Fx.Ring(Position, b.nashPulseReach, definition.colour);
                     PlayerBlast(Position, b.nashPulseReach, NashDamage(b.nashPulseDamage), NashPulsePush(bossPhase, b));
+                                                                                                                                         
+                                                                            
+                    var world = WorldMap.Active;
+                    if (world) world.BreakBulwarksWithin(Position, b.nashPulseReach);
                     break;
                 case VoidSummonMove:
                     BeginVoidSummon(player, b);

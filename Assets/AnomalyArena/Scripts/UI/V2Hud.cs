@@ -55,10 +55,22 @@ namespace AnomalyArena
         ArenaUiSnapshot lastSnapshot;
         int seenPick = -1;
 
+                                                                                                                                     
+                                                                                                                                   
+        GameObject bootCover;
+
         void Awake()
         {
             source = modelSource as IArenaUiSource;
             if (localizedCanvas) localizedCanvas.enabled = ArenaText.Ready;
+            if (!ArenaText.Ready)
+            {
+                bootCover = new GameObject("BootCover", typeof(Canvas), typeof(UnityEngine.UI.Image));
+                var cover = bootCover.GetComponent<Canvas>();
+                cover.renderMode = RenderMode.ScreenSpaceOverlay; cover.sortingOrder = short.MaxValue;
+                var black = bootCover.GetComponent<UnityEngine.UI.Image>();
+                black.color = Color.black; black.raycastTarget = false;
+            }
             int n = damageLabels?.Length ?? 0;
             damageWorld = new Vector3[n];
             damageAge = new float[n];
@@ -94,6 +106,7 @@ namespace AnomalyArena
         {
             if (localizedCanvas && localizedCanvas.enabled != ArenaText.Ready) localizedCanvas.enabled = ArenaText.Ready;
             if (!ArenaText.Ready) return;
+            if (bootCover) Destroy(bootCover);
             if (ArenaText.Font && appliedFont != ArenaText.Font)
             {
                 appliedFont = ArenaText.Font;
@@ -103,7 +116,12 @@ namespace AnomalyArena
             float dt = Time.unscaledDeltaTime;
             transientTime = Mathf.Max(0f, transientTime - dt);
             flash = Mathf.Max(0f, flash - dt * 3f);
-            if (damageFlash) damageFlash.color = new Color(1f, .1f, .04f, flash * .15f);
+            if (damageFlash)
+            {
+                                                                                                                                         
+                if (!edgeVignette) { edgeVignette = EdgeVignette(); damageFlash.sprite = edgeVignette; damageFlash.type = UnityEngine.UI.Image.Type.Simple; }
+                damageFlash.color = new Color(1f, .1f, .04f, flash * .45f);
+            }
             TickDamage(dt);
                                                                                           
             if (lastSnapshot != null && lastSnapshot.cardPickSequence != seenPick) nextRefresh = 0f;
@@ -122,6 +140,26 @@ namespace AnomalyArena
         }
 
         public void FlashDamage() => flash = 1f;
+
+        Sprite edgeVignette;
+                                                                                                                                         
+                                                                                                                  
+        public static Sprite EdgeVignette()
+        {
+            const int size = 256;
+            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false) { name = "HitEdgeVignette", wrapMode = TextureWrapMode.Clamp };
+            var pixels = new Color32[size * size];
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    float dx = (x + .5f) / size * 2f - 1f, dy = (y + .5f) / size * 2f - 1f;
+                    float t = Mathf.Clamp01((Mathf.Sqrt(dx * dx + dy * dy) - .45f) / .55f);
+                    pixels[y * size + x] = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(255f * t * t * (3f - 2f * t)));
+                }
+            texture.SetPixels32(pixels);
+            texture.Apply(false);
+            return Sprite.Create(texture, new Rect(0, 0, size, size), new Vector2(.5f, .5f));
+        }
 
         public void DamageNumber(Vector3 world, float amount, Color color, bool heavy)
         {

@@ -159,6 +159,40 @@ namespace AnomalyArena
         }
 
         [Test, LoadScene(ArenaScene), Category("Integration"), Timeout(60000)]
+        public async Task FinalBossFight_CountsAsWaveFifteen_ForRAndTheTyrantsDamage_ItsSummonsKeepWaveFourteen()
+        {
+            var (game, targets) = await V3CombatSmokeTest.StartSandbox();
+            var waves = game.waves;
+            var balance = waves.waveSet.encounterBalance;
+            var waveField = typeof(WaveManager).GetField("<WaveIndex>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic);
+            var phaseField = typeof(WaveManager).GetField("<Phase>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic);
+            object wave = waveField.GetValue(waves), phase = phaseField.GetValue(waves);
+            try
+            {
+                waveField.SetValue(waves, waves.WaveCount - 1);
+                Assert.That(waves.CombatScale, Is.EqualTo(balance.DpsAt(14) / balance.DpsAt(1)).Within(1e-4f), "the last ordinary wave: R(14)");
+                phaseField.SetValue(waves, WavePhase.FinalBoss);
+                Assert.That(waves.CombatScale, Is.EqualTo(balance.DpsAt(15) / balance.DpsAt(1)).Within(1e-4f), "the final boss fight: R(15)");
+
+                var tyrant = waves.SpawnLabTyrant(game.player.Position + Vector3.forward * 9f);
+                Assume.That(tyrant && tyrant.IsBoss, Is.True, "the scene keeps the Tyrant");
+                Assert.That(tyrant.attackDamage, Is.EqualTo(tyrant.definition.damage * waves.waveSet.DamageFactor(15)).Within(1e-3f),
+                    "the Tyrant hits with wave 15's damage growth");
+                var minion = targets[1];
+                var grunt = waves.DefinitionOf(EnemyKind.Grunt);
+                minion.Configure(grunt, 1f, false);
+                minion.enabled = false;
+                Assert.That(minion.attackDamage, Is.EqualTo(grunt.damage * waves.waveSet.DamageFactor(14)).Within(1e-3f),
+                    "an ordinary enemy in that fight keeps wave 14's");
+            }
+            finally
+            {
+                waveField.SetValue(waves, wave);
+                phaseField.SetValue(waves, phase);
+            }
+        }
+
+        [Test, LoadScene(ArenaScene), Category("Integration"), Timeout(60000)]
         public async Task MoveChoice_ByDistanceAlone_AtMiddleDistanceOffScreen_ItStillCharges()
         {
             var (game, targets, tyrant) = await TyrantSandbox(5f);

@@ -33,7 +33,7 @@ namespace AnomalyArena
         MaterialPropertyBlock[] blocks;
         Color[] surfaceColor;
         Color dustColor, glowColor, uiDustColor, uiGlowColor;
-        Vector3 anchor;
+        Vector3 anchor, dropDirection;
         float began;
         bool active, landed;
         void Awake()
@@ -66,8 +66,8 @@ namespace AnomalyArena
             var direction = Query.Flat(game.player.AimDirection);
             if (direction.sqrMagnitude < .0001f) direction = Query.Flat(game.player.transform.forward);
             if (direction.sqrMagnitude < .0001f) direction = Vector3.forward;
-            anchor = game.player.Position + direction.normalized * forwardDistance;
-            anchor.y = game.player.Position.y + Mathf.Max(0f, headHeight);
+            dropDirection = direction.normalized;
+            anchor = AbovePlayer();
             dropRoot.position = anchor;
             dropRoot.rotation = Quaternion.LookRotation(direction.normalized, Vector3.up);
             crateRoot.localPosition = Vector3.up * Mathf.Max(0f, dropHeight);
@@ -80,8 +80,18 @@ namespace AnomalyArena
         void LateUpdate()
         {
             if (!active) return;
+
+            if (game && game.RunPhase == ArenaUiState.Paused) return;
             if (!game || game.RunPhase != ArenaUiState.SupplyDrop) { Hide(); return; }
+
+            if (game.player) { anchor = AbovePlayer(); dropRoot.position = anchor; }
             Tick(Time.unscaledTime - began);
+        }
+        Vector3 AbovePlayer()
+        {
+            var at = game.player.Position + dropDirection * forwardDistance;
+            at.y = game.player.Position.y + Mathf.Max(0f, headHeight);
+            return at;
         }
         void Tick(float age)
         {

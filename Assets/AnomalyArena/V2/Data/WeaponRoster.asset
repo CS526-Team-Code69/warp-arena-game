@@ -193,7 +193,7 @@ MonoBehaviour:
     unlockWave: 3
     retired: 0
     damageA: 1
-    damageB: 0
+    damageB: 4
     cooldownA: 1
     cooldownB: 1
     rangeA: 3

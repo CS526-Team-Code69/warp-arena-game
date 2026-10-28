@@ -92,16 +92,33 @@ namespace AnomalyArena
 
         [TestCase(1)]
         [TestCase(3)]
-        public void ForSkill_VoidDefinition_StaysVoidAtEveryExistingLevel(int level)
+        public void ForSkill_GreaterVoidDefinition_StaysVoid(int level)
         {
             var definition = ScriptableObject.CreateInstance<SkillDefinition>();
             try
             {
                 definition.element = ElementKind.Void;
+                definition.greaterVoid = true;
 
                 var actual = ArenaRarity.ForSkill(definition, level);
 
                 Assert.That(actual, Is.EqualTo(CardRarity.Void));
+            }
+            finally { Object.DestroyImmediate(definition); }
+        }
+
+        [TestCase(1, CardRarity.Common)]
+        [TestCase(3, CardRarity.Exceptional)]
+        public void ForSkill_VoidElementSkill_ColoursByLevel(int level, CardRarity expected)
+        {
+            var definition = ScriptableObject.CreateInstance<SkillDefinition>();
+            try
+            {
+                definition.element = ElementKind.Void;                         
+
+                var actual = ArenaRarity.ForSkill(definition, level);
+
+                Assert.That(actual, Is.EqualTo(expected));
             }
             finally { Object.DestroyImmediate(definition); }
         }

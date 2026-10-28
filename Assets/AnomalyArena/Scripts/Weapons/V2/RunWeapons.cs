@@ -76,8 +76,7 @@ namespace AnomalyArena
                 var w=Active;if(w==null)return 1;
                                                                                                                                                   
                 if(w.charging&&w.form!=WeaponForm.ScatterCannon&&!(w.form==WeaponForm.Rifle&&w.Has(UpgradeAxis.Tame)))return .5f;
-                                                                                                                            
-                if(w.form==WeaponForm.Minigun&&w.variant==0&&w.heldTime>0)return Mathf.Lerp(1,upgrades.spinUpMoveFloor,Mathf.Clamp01(w.heldTime/3));
+                                                                                                                           
                                                                                                                     
                 if(w.form==WeaponForm.ArcCoil&&w.variant==0&&w.Has(UpgradeAxis.Tame)&&w.chainStoredJumps>0)return Mathf.Max(.1f,upgrades.chainTameMoveSpeed);
                 return 1;
@@ -199,7 +198,10 @@ namespace AnomalyArena
             int pick=UnityEngine.Random.Range(0,upgradable.Count);var owned=upgradable[pick];upgradable.RemoveAt(pick);
                                                                                                                            
             var version=CreateWeapon(owned.form,UnityEngine.Random.Range(0,2),wave);
-            version.mk=roster?Mathf.Min(roster.MaxMk,UpgradeTargetMk(owned,wave)+MkBonus(wave)):owned.mk+1;
+            int target=roster?Mathf.Min(roster.MaxMk,UpgradeTargetMk(owned,wave)+MkBonus(wave)):owned.mk+1;
+                                                                                                                                      
+            if(roster&&target>=roster.MaxMk&&owned.mk<roster.MaxMk-1)target=roster.MaxMk-1;
+            version.mk=target;
             version.upgradeOf=owned;
             return version;
         }
@@ -792,8 +794,7 @@ namespace AnomalyArena
             var axes=new System.Collections.Generic.List<UpgradeAxis>();
             foreach(var axis in w.IsAuto?AutoDraftAxes:HandDraftAxes)
                 if(!w.Has(axis)&&(axis!=UpgradeAxis.Infusion||!w.builtInElement))axes.Add(axis);
-                                                                                                         
-            if(w.form==WeaponForm.ShieldRing&&w.variant==1)axes.Remove(UpgradeAxis.Infusion);
+                                                                                                                                                   
             return axes;
         }
         static ElementKind RollElement(ElementKind previous)

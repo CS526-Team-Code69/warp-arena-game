@@ -181,7 +181,9 @@ namespace AnomalyArena
                     Fire = Mathf.Min(Rules.fireCap, Fire + amount); fireSource = source; return true;
                 case ElementKind.Poison:
                     if (Poison <= 0f) poisonClock = 0f;
-                    Poison = Mathf.Min(Rules.poisonCap, Poison + amount); poisonSource = source; return true;
+                    Poison = Mathf.Min(Rules.poisonOnEnemyCap, Poison + amount); poisonSource = source;
+                    poisonWindow = Rules.elementWindow; poisonDrain = 0f;
+                    return true;
                 case ElementKind.Frost:
                     if (frostImmune > 0f || Frozen) return false;
                     Frost += amount;
@@ -308,18 +310,9 @@ namespace AnomalyArena
                     if (damage > 0f) OnDamageTicked(damage, DamageSource.Burn, fireSource);
                 }
             }
-            if (Poison > 0f)
-            {
-                poisonClock += dt;
-                while (poisonClock >= Rules.poisonInterval && Poison > 0f && body.IsAlive)
-                {
-                    poisonClock -= Rules.poisonInterval;
-                    float damage = Mathf.Ceil(Mathf.Floor(Poison) * Rules.poisonDamagePerStack);
 
-                    Poison = Mathf.Max(0f, Poison - 1f);
-                    if (damage > 0f) OnDamageTicked(damage, DamageSource.Poison, poisonSource);
-                }
-            }
+            Poison = Drain(Poison, ref poisonWindow, ref poisonDrain, dt);
+            TickPoison(dt, 1f);
         }
 
         void TickEnemy(float dt)
@@ -365,19 +358,21 @@ namespace AnomalyArena
                     Fire = 0f; fireWindow = 0f; fireClock = 0f;
                 }
             }
-            if (Poison > 0f)
-            {
-                poisonClock += dt;
-                float interval = Mathf.Max(.01f, Rules.poisonOnEnemyInterval);
-                while (poisonClock >= interval && Poison > 0f && body.IsAlive)
-                {
-                    poisonClock -= interval;
+            TickPoison(dt, ElementCombat.WaveScale);
+        }
 
-                    poisonCarry += Poison * Rules.poisonOnEnemyDamagePerStack * interval * ElementCombat.WaveScale;
-                    float damage = Mathf.Floor(poisonCarry);
-                    poisonCarry -= damage;
-                    if (damage > 0f) OnDamageTicked(damage, DamageSource.Poison, poisonSource);
-                }
+        void TickPoison(float dt, float scale)
+        {
+            if (Poison <= 0f) return;
+            poisonClock += dt;
+            float interval = Mathf.Max(.01f, Rules.poisonOnEnemyInterval);
+            while (poisonClock >= interval && Poison > 0f && body.IsAlive)
+            {
+                poisonClock -= interval;
+                poisonCarry += Poison * Rules.poisonOnEnemyDamagePerStack * interval * scale;
+                float damage = Mathf.Floor(poisonCarry);
+                poisonCarry -= damage;
+                if (damage > 0f) OnDamageTicked(damage, DamageSource.Poison, poisonSource);
             }
         }
 

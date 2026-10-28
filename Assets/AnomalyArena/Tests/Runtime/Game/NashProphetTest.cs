@@ -14,8 +14,8 @@ namespace AnomalyArena
                                                                                                                                             
                                                                                                                                               
                                                                                                                                          
-                                                                                                                                              
-                                                                                                                                             
+                                                                                                                                               
+                                                                                                                                                                                                                       
                                                                                                                                            
                                                                                                                                             
                                                                                                                                               
@@ -37,12 +37,12 @@ namespace AnomalyArena
             var b = new BossTuning();
             for (int phase = 1; phase <= 3; phase++)
             {
-                var close = phase == 1 ? new[] { Enemy.PulseMove, Enemy.VoidSummonMove }
-                    : new[] { Enemy.PulseMove, Enemy.VoidSummonMove, Enemy.VoidPillarMove };
+                                                                                                      
+                var close = new[] { Enemy.PulseMove, Enemy.VoidSummonMove, Enemy.RingMove };
                 var far = phase == 1 ? new[] { Enemy.RingMove }
-                    : new[] { Enemy.RingMove, Enemy.PredictiveVolleyMove, Enemy.GravityPullMove };
-                Assert.That(Moves(phase, true, true, false, b), Is.EquivalentTo(close), $"phase {phase}, close: pulse and summon, pillars from phase 2");
-                Assert.That(Moves(phase, false, true, false, b), Is.EquivalentTo(far), $"phase {phase}, far: the ring, the volley and the pull from phase 2");
+                    : new[] { Enemy.RingMove, Enemy.PredictiveVolleyMove, Enemy.VoidPillarMove, Enemy.GravityPullMove };
+                Assert.That(Moves(phase, true, true, false, b), Is.EquivalentTo(close), $"phase {phase}, close: pulse, summon and ring, never the pillars");
+                Assert.That(Moves(phase, false, true, false, b), Is.EquivalentTo(far), $"phase {phase}, far: the ring; the volley, the pillars and the pull from phase 2");
                 Assert.That(Moves(phase, true, false, false, b), Has.No.Member(Enemy.VoidSummonMove),
                     $"phase {phase}: no summon while one lives or its rest runs");
             }
@@ -55,6 +55,22 @@ namespace AnomalyArena
             int Pulls(bool pillars) => Enumerable.Range(0, 1000)
                 .Count(i => Enemy.NashMoveFor(2, false, true, pillars, i / 1000f, b) == Enemy.GravityPullMove);
             Assert.That(Pulls(true), Is.GreaterThan(Pulls(false) * 1.5f), "pillars up: the pull comes far more often, to drag the player in");
+        }
+
+        [Test]
+        public void NashMoveFor_TheWeightsAsDecided_CloseRingAsLikelyAsThePulse_FarFourWays()
+        {
+            var b = new BossTuning();
+            int Count(int phase, bool near, bool canSummon, bool pillars, int move) =>
+                Enumerable.Range(0, 1000).Count(i => Enemy.NashMoveFor(phase, near, canSummon, pillars, i / 1000f, b) == move);
+                                                                                                                        
+            Assert.That(Count(1, true, true, false, Enemy.RingMove), Is.EqualTo(Count(1, true, true, false, Enemy.PulseMove)).Within(2), "close: the ring as likely as the pulse");
+            Assert.That(Count(1, true, false, false, Enemy.RingMove), Is.EqualTo(500).Within(2), "no summon ready: ring or pulse, half and half");
+                                                                                                   
+            Assert.That(Count(2, false, true, false, Enemy.VoidPillarMove), Is.EqualTo(1000 / 3.8f).Within(3), "far: the pillars weigh 1 of 3.8");
+            Assert.That(Count(3, false, true, true, Enemy.GravityPullMove), Is.EqualTo(1000 * 2f / 5f).Within(3), "pillars up: the pull weighs 2 of 5");
+            b.nashNearRingWeight = 0f;
+            Assert.That(Count(2, true, true, false, Enemy.RingMove), Is.Zero, "a close ring weight of 0 keeps the ring a far move only");
         }
 
         [Test]
@@ -449,6 +465,30 @@ namespace AnomalyArena
         }
 
         [Test, LoadScene(LabScene), Category("Integration"), Timeout(60000)]
+        public async Task RepulsePulse_BreaksEveryBulwarkInItsCircle_ABulwarkOutsideItStands()
+        {
+            var (game, world, hollow) = await StartTrial();
+            var b = game.waves.bosses;
+            var player = game.player;
+            Vector3 centre = Flat(world.trialPlatform.position);
+            Place(player, centre + Vector3.back * (b.nashPulseReach + 3f));                             
+                                                                                                                                                         
+            var inside = Bulwark(world, centre + Vector3.left * (b.nashPulseReach - .5f), 2f, player);
+            var outside = Bulwark(world, centre + Vector3.right * (b.nashPulseReach + 2.5f), 2f, player);
+            Assume.That(inside && outside && inside != outside, Is.True, "two bulwarks stand, one at the rim of its circle, one past it");
+            await Awaitable.FixedUpdateAsync();
+            Assume.That(inside.gameObject.activeSelf && outside.gameObject.activeSelf, Is.True, "both still up before the pulse");
+
+            Force(hollow, Enemy.PulseMove);
+            await Until(() => hollow.WindingUp && hollow.BossAttackIndex == Enemy.PulseMove, 2f, "the pulse wind-up");
+            Assert.That(inside.gameObject.activeSelf, Is.True, "the wind-up breaks nothing");
+            await Until(() => !inside.gameObject.activeSelf, b.nashPulseWindup + 2f, "the pulse breaks the bulwark in its circle");
+            hollow.HoldAttacks(60f);
+            Assert.That(outside.gameObject.activeSelf, Is.True, "a bulwark past its circle stands");
+            Assert.That(world.SkillObjectStanding(SkillId.Bulwark, player), Is.True, "the one left still counts as the player's wall");
+        }
+
+        [Test, LoadScene(LabScene), Category("Integration"), Timeout(60000)]
         public async Task RepulsePulse_PhaseOne_AHitInTheCloseRangeOnlyPushes_OnTheRimOfItsCircleItThrowsThePlayerOff()
         {
             var (game, world, hollow) = await StartTrial();
@@ -712,6 +752,14 @@ namespace AnomalyArena
         }
 
                               
+
+                                                                                                                                                        
+        static TemporaryWall Bulwark(WorldMap world, Vector3 at, float width, Combatant user)
+        {
+            world.CreateWall(at, width, 60f, 0f, user);
+            Physics.SyncTransforms();
+            return world.temporaryWalls.FirstOrDefault(w => w && w.gameObject.activeSelf && Flat(w.transform.position - at).magnitude < .1f);
+        }
 
         static Vector3 Flat(Vector3 v) => Query.Flat(v);
 

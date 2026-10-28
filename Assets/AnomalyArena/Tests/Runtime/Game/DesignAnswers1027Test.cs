@@ -77,6 +77,46 @@ namespace AnomalyArena
                 "ten stacks deal 1.5 (× the wave scale) on the first tick");
         }
 
+                                                                                                                                                  
+                                                                                                                          
+        [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
+        public async Task PoisonOnThePlayer_FollowsTheEnemyRules_TenStacksThreeASecond_GoneAfterTheWindowAndDrain()
+        {
+            var (game, targets) = await V3CombatSmokeTest.StartSandbox();
+            var board = Bare(game.player);
+            board.enabled = false;
+            var rules = board.Rules;
+            float dealt = 0f;
+            void Count(float amount, DamageSource source, Combatant _) { if (source == DamageSource.Poison) dealt += amount; }
+            board.DamageTicked += Count;
+            try
+            {
+                board.Add(ElementKind.Poison, 30f, targets[0]);
+                Assume.That(board.Poison, Is.GreaterThan(0f), "the player is poisoned");
+                Assert.That(board.Poison, Is.EqualTo(rules.poisonOnEnemyCap).Within(.001f), "thirty stacks stop at the enemy cap of ten");
+
+                board.Tick(.49f);
+                Assert.That(dealt, Is.Zero, "nothing before half a second");
+                board.Tick(.02f);
+                Assert.That(dealt, Is.EqualTo(Mathf.Floor(rules.poisonOnEnemyCap * rules.poisonOnEnemyDamagePerStack * rules.poisonOnEnemyInterval)),
+                    "the first tick pays 1 of its 1.5, without the wave scale");
+                board.Tick(.49f);
+                Assert.That(dealt, Is.EqualTo(3f).Within(.01f), "ten stacks deal 3 a second");
+                for (int i = 0; i < 39; i++) board.Tick(.05f);
+                Assert.That(board.Poison, Is.EqualTo(rules.poisonOnEnemyCap).Within(.001f), "the stacks hold while the window lasts");
+                                                                                                                                                   
+                Assert.That(dealt, Is.EqualTo(7f).Within(.01f), "five ticks of 1.5 by 2.95 s");
+
+                board.Add(ElementKind.Poison, 1f, targets[0]);
+                board.Tick(rules.elementWindow - .1f);
+                Assert.That(board.Poison, Is.EqualTo(rules.poisonOnEnemyCap).Within(.001f), "a new stack starts the window again");
+                for (int i = 0; i < 30; i++) board.Tick(.05f);
+                Assert.That(board.Poison, Is.Zero, "the stacks drain within a second of the window running out");
+                Assert.That(rules.enemyPoisonStacks, Is.EqualTo(1f), "a Poison affix still adds one stack a hit");
+            }
+            finally { board.DamageTicked -= Count; board.ClearStatuses(); board.enabled = true; }
+        }
+
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task Singularity_UnderTimeStop_LastsThreeOfThePlayersSeconds_AndSlowsTheEnemiesItDrawsInBySeventyPercent()
         {

@@ -21,14 +21,18 @@ namespace AnomalyArena
         bool supplyChoiceOpened;
         public void MarkSupplyLanded(){if(RunPhase==ArenaUiState.SupplyDrop)SupplyDropReady=true;}
         public bool IsCombatActive => State==GameState.Playing&&RunPhase is ArenaUiState.WaveActive or ArenaUiState.VoidTrial or ArenaUiState.FinalBoss;
-        public bool CanPlayerMove => State==GameState.Playing&&(RunPhase is ArenaUiState.WaveIntro or ArenaUiState.WaveActive or ArenaUiState.VoidTrial or ArenaUiState.FinalBoss||BuildWalking);
+        public bool CanPlayerMove => State==GameState.Playing&&(RunPhase is ArenaUiState.WaveIntro or ArenaUiState.WaveActive or ArenaUiState.VoidTrial or ArenaUiState.FinalBoss||BuildWalking||BuildCrateWalking);
                                                                                                                                             
         public bool BuildWalking => buildWalking&&RunPhase is ArenaUiState.Armory or ArenaUiState.Draft or ArenaUiState.Ready;
+                                                                                                                                         
+                                                                                                                                          
+                                                                                                                          
+        public bool BuildCrateWalking => State==GameState.Playing&&RunPhase==ArenaUiState.SupplyDrop&&pendingSupplyChoice is ArenaUiState.Armory or ArenaUiState.Draft;
                                                                                                                                             
+                                                                                                                                 
                                                                                                                                         
-                                                                                                                                     
-                                                                            
-        public bool BuildTimeFlows => State==GameState.Playing&&!greaterDraft&&(RunPhase is ArenaUiState.Armory or ArenaUiState.Draft or ArenaUiState.Ready or ArenaUiState.ReplaceWeapon||RunPhase==ArenaUiState.ReplaceSkill&&replaceReturn==ArenaUiState.Draft);
+                                                                                                                        
+        public bool BuildTimeFlows => State==GameState.Playing&&!greaterDraft&&(RunPhase is ArenaUiState.Armory or ArenaUiState.Draft or ArenaUiState.Ready or ArenaUiState.ReplaceWeapon||RunPhase==ArenaUiState.ReplaceSkill&&replaceReturn==ArenaUiState.Draft||BuildCrateWalking);
         public float WorldTimeScale => RunPhase==ArenaUiState.TrialReturn ? 0f : IsCombatActive && slipLeft > 0 ? slipScale : 1f;
         public float WorldDeltaTime => Time.deltaTime * WorldTimeScale;
         public float WorldFixedDeltaTime => Time.fixedDeltaTime * WorldTimeScale;
@@ -110,7 +114,7 @@ namespace AnomalyArena
             }
             else if(RunPhase==ArenaUiState.TrialReturn)TickTrialReturn();
             else if(RunPhase==ArenaUiState.WaveEnd&&Time.unscaledTime>=waveEndAt)OpenBuild();
-            else if(RunPhase is ArenaUiState.Armory or ArenaUiState.Draft or ArenaUiState.Ready or ArenaUiState.ReplaceWeapon or ArenaUiState.ReplaceSkill)
+            else if(RunPhase is ArenaUiState.Armory or ArenaUiState.Draft or ArenaUiState.Ready or ArenaUiState.ReplaceWeapon or ArenaUiState.ReplaceSkill||BuildCrateWalking)
             {if(BuildTimeFlows)TickBuildPhase();if(!greaterDraft&&selectionTimeLimit>0f){buildTimeLeft=Mathf.Max(0,buildTimeLeft-Time.unscaledDeltaTime);if(buildTimeLeft<=0)BeginNextV2Wave(true);}}
             Cursor.visible=true;
         }
@@ -144,7 +148,8 @@ namespace AnomalyArena
                                                                                                                      
         void BeginWaveDrafts(){progression.BeginWave();levelUpSeen=0;}
         void CloseLevelUp(){levelUpSeen=progression.BankedDrafts;SetPhase(ArenaUiState.WaveActive);}
-        void AfterLevelUpPick(){levelUpSeen=progression.BankedDrafts;if(progression.BankedDrafts>0)OpenLevelUp();else SetPhase(ArenaUiState.WaveActive);}
+                                                                                                                                                     
+        void AfterLevelUpPick(){levelUpSeen=progression.BankedDrafts;SetPhase(ArenaUiState.WaveActive);}
         void BeginNextV2Wave(bool automatic)
         {
             if(automatic){int count=progression.BankedDrafts;progression.ResolvePendingRandom();if(count>0)buildSummary+=ArenaText.Pair($"\n{count} pending drafts resolved automatically",$"\n{count} pending drafts resolved automatically");}snapshot.earlyStartConfirmation=false;pendingDraft=pendingOffer=-1;
@@ -156,7 +161,9 @@ namespace AnomalyArena
                                                                          
         public void BeginCutscene(){if(RunPhase==ArenaUiState.Cutscene)return;cutsceneResumePhase=RunPhase;SetPhase(ArenaUiState.Cutscene);}
         public void EndCutscene(){if(RunPhase!=ArenaUiState.Cutscene)return;SetPhase(cutsceneResumePhase);}
-        public void EnterVoidTrial(){trialResumePhase=RunPhase;SetPhase(ArenaUiState.VoidTrial);skills.FreezeBattlefieldForTrial(true);runWeapons.FreezeBattlefieldForTrial(true);orbs?.FreezeForTrial(true);}
+                                                                                                                                     
+                                                                                  
+        public void EnterVoidTrial(){trialResumePhase=RunPhase==ArenaUiState.SupplyDrop?pendingSupplyChoice:RunPhase;SetPhase(ArenaUiState.VoidTrial);skills.FreezeBattlefieldForTrial(true);runWeapons.FreezeBattlefieldForTrial(true);orbs?.FreezeForTrial(true);}
         public void CompleteVoidTrial(){if(!player.IsAlive)return;                                                                                     
             progression.CompleteVoidTrial();
                                                                                                                                       
@@ -275,7 +282,7 @@ namespace AnomalyArena
                 case ArenaUiCommand.StartNextWave:
                     if(RunPhase==ArenaUiState.LevelUp){CloseLevelUp();break;}
                     if(greaterDraft&&RunPhase==ArenaUiState.Draft){FinishGreaterReward();break;}
-                    if(RunPhase is not (ArenaUiState.Armory or ArenaUiState.Draft or ArenaUiState.Ready))return;if(progression.BankedDrafts>0||RunPhase==ArenaUiState.Armory)snapshot.earlyStartConfirmation=true;else BeginNextV2Wave(false);break;
+                    if(RunPhase is not (ArenaUiState.Armory or ArenaUiState.Draft or ArenaUiState.Ready))return;if(progression.BankedDrafts>0)snapshot.earlyStartConfirmation=true;else BeginNextV2Wave(false);break;                                                                                  
                 case ArenaUiCommand.ConfirmEarlyStart:if(greaterDraft&&RunPhase==ArenaUiState.Draft)FinishGreaterReward();else if(snapshot.earlyStartConfirmation)BeginNextV2Wave(true);break;
                 case ArenaUiCommand.Cancel:snapshot.earlyStartConfirmation=false;if(RunPhase==ArenaUiState.ReplaceWeapon)SetPhase(ArenaUiState.Armory);else if(RunPhase==ArenaUiState.ReplaceSkill)SetPhase(replaceReturn);else if(RunPhase==ArenaUiState.LevelUp)CloseLevelUp();break;
                                                                                                                                              
@@ -325,7 +332,7 @@ namespace AnomalyArena
                 snapshot.state=RunPhase;snapshot.buildWalking=BuildWalking;snapshot.supplyLanded=SupplyDropReady;snapshot.isGreaterReward=greaterDraft;snapshot.illustrated=Art.Enabled;snapshot.hp=player?player.Hp:50;snapshot.maxHp=player?player.maxHp:50;snapshot.stamina=player?player.stamina.Value:1;snapshot.staminaExhausted=player&&player.stamina.Exhausted;
                 if(progression){snapshot.level=progression.Level;snapshot.xp=progression.Xp;snapshot.xpNeeded=progression.XpRequired;snapshot.energy=progression.Energy;snapshot.maxEnergy=progression.Stats.maxEnergy;snapshot.energyUnlocked=progression.EnergyUnlocked;snapshot.voidEnergy=progression.VoidEnergy;snapshot.voidLevel=progression.VoidBadge;snapshot.maxLevel=progression.Rules?progression.Rules.maxLevel:12;snapshot.bankedDrafts=progression.BankedDrafts;snapshot.rerolls=progression.RerollsRemaining;}
                 var status=player?ElementStatus.For(player):null;snapshot.shield=status?status.Shield:0;snapshot.playerStatuses=status?ArenaText.Pair($"Fire {status.Fire:0.#} · Poison {status.Poison:0.#} · Frost {status.Frost:0.#} · Lightning {status.Lightning:0.#}",$"Fire {status.Fire:0.#} · Poison {status.Poison:0.#} · Frost {status.Frost:0.#} · Lightning {status.Lightning:0.#}"):"";
-                snapshot.wave=waves?Mathf.Max(1,waves.WaveIndex+1):1;snapshot.maxWaves=waves?waves.WaveCount:14;snapshot.waveTime=waves?waves.TimeLeft:0;snapshot.buildTime=buildTimeLeft;snapshot.selectionUnlimited=selectionTimeLimit<=0f;snapshot.kills=waves?waves.Kills:0;snapshot.charge01=runWeapons?runWeapons.Charge01:0;snapshot.hint=BuildWalking?(WorldMap.Active&&WorldMap.Active.HasOpenPortal&&!WorldMap.Active.TrialWon?ArenaText.Pair("WALKING · TAB BACK TO THE CARDS · STAND ON THE PORTAL AND PRESS E","WALKING · TAB BACK TO THE CARDS · STAND ON THE PORTAL AND PRESS E"):ArenaText.Pair("WALKING · TAB BACK TO THE CARDS","WALKING · TAB BACK TO THE CARDS")):RunPhase==ArenaUiState.WaveActive&&progression&&progression.BankedDrafts>0?ArenaText.Pair($"CARD PICKS ×{progression.BankedDrafts} · PRESS T",$"CARD PICKS ×{progression.BankedDrafts} · PRESS T"):runNotice;
+                snapshot.wave=waves?Mathf.Max(1,waves.WaveIndex+1):1;snapshot.maxWaves=waves?waves.WaveCount:14;snapshot.waveTime=waves?waves.TimeLeft:0;snapshot.buildTime=buildTimeLeft;snapshot.selectionUnlimited=selectionTimeLimit<=0f;snapshot.kills=waves?waves.Kills:0;snapshot.charge01=runWeapons?runWeapons.Charge01:0;snapshot.hint=BuildWalking?(WorldMap.Active&&WorldMap.Active.HasOpenPortal&&!WorldMap.Active.TrialWon?ArenaText.Pair("WALKING · TAB BACK TO THE CARDS · STAND ON THE PORTAL AND PRESS E","WALKING · TAB BACK TO THE CARDS · STAND ON THE PORTAL AND PRESS E"):ArenaText.Pair("WALKING · TAB BACK TO THE CARDS","WALKING · TAB BACK TO THE CARDS")):BuildCrateWalking?(WorldMap.Active&&WorldMap.Active.HasOpenPortal&&!WorldMap.Active.TrialWon?ArenaText.Pair("YOU CAN WALK · CLICK THE CRATE ABOVE YOU · STAND ON THE PORTAL AND PRESS E","YOU CAN WALK · CLICK THE CRATE ABOVE YOU · STAND ON THE PORTAL AND PRESS E"):ArenaText.Pair("YOU CAN WALK · CLICK THE CRATE ABOVE YOU","YOU CAN WALK · CLICK THE CRATE ABOVE YOU")):RunPhase==ArenaUiState.WaveActive&&progression&&progression.BankedDrafts>0?ArenaText.Pair($"CARD PICKS ×{progression.BankedDrafts} · PRESS T",$"CARD PICKS ×{progression.BankedDrafts} · PRESS T"):runNotice;
                 snapshot.waveTimeExpired=waves&&waves.Phase==WavePhase.WaveActive&&waves.TimeExpired;snapshot.waveBatch=waves?waves.BatchIndex:0;snapshot.waveLiving=waves?waves.LivingCount:0;snapshot.wavePending=waves?waves.PendingCount:0;
                 snapshot.draftCount=greaterDraft?1:buildDraftCount;snapshot.draftIndex=greaterDraft?1:Mathf.Clamp(buildDraftCount-snapshot.bankedDrafts+1,1,Mathf.Max(1,buildDraftCount));snapshot.buildSummary=buildSummary.Trim();
                 snapshot.bossImmunities="";
@@ -401,7 +408,8 @@ namespace AnomalyArena
         }
         void WriteSkillSlot(ArenaUiSlot view,SkillSlot skill)
         {
-            view.title=skill.Name;view.detail=skill.Empty?ArenaText.Pair("Empty","Empty"):ArenaText.Pair($"Lv {skill.Level} · {skill.Cost:0} Energy",$"Lv {skill.Level} · {skill.Cost:0} Energy");view.cooldown01=skill.CooldownLeft/Mathf.Max(.01f,skill.Cooldown);view.elementIndex=skill.Empty?-1:ElementIndex(skill.Definition.element);view.skillIndex=skill.Empty?-1:(int)skill.Id;view.formIndex=-1;view.active=false;view.available=!skill.Empty&&skill.CooldownLeft<=0&&progression.Energy>=skill.Cost;
+                                                                                                                
+            view.title=skill.Name;view.detail=skill.Empty?ArenaText.Pair("Empty","Empty"):skill.Definition.greaterVoid?ArenaText.Pair($"{skill.Cost:0} Energy",$"{skill.Cost:0} Energy"):ArenaText.Pair($"Lv {skill.Level} · {skill.Cost:0} Energy",$"Lv {skill.Level} · {skill.Cost:0} Energy");view.cooldown01=skill.CooldownLeft/Mathf.Max(.01f,skill.Cooldown);view.elementIndex=skill.Empty?-1:ElementIndex(skill.Definition.element);view.skillIndex=skill.Empty?-1:(int)skill.Id;view.formIndex=-1;view.active=false;view.available=!skill.Empty&&skill.CooldownLeft<=0&&progression.Energy>=skill.Cost;
             view.rarity=ArenaRarity.ForSkill(skill.Definition,skill.Level);if(!skill.Empty)view.detail=ArenaTerms.Rarity(view.rarity)+" · "+view.detail;
                                                                 
             if(!skill.Empty&&skill.Id==SkillId.Blink&&skills.BlinkChargesMax>1){view.detail+=ArenaText.Pair($" · Charges {skills.BlinkCharges}/{skills.BlinkChargesMax}",$" · Charges {skills.BlinkCharges}/{skills.BlinkChargesMax}");view.available=skills.BlinkCharges>0&&progression.Energy>=skill.Cost;}

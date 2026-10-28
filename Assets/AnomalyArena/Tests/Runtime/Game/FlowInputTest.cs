@@ -166,6 +166,44 @@ namespace AnomalyArena
             Assert.That(ArenaText.Text("ui.controls"), Does.Contain("ESC PAUSE"), "the title lists the pause key");
         }
 
+        [Test, LoadScene(SceneCn), Category("Integration"), Timeout(60000)]
+        public async Task MidWavePick_OneCard_BackToTheFight_TheOtherBankedPickWaitsForT()
+        {
+            var game = await ReadyScene();
+            await StartRun(game);
+            var progression = game.progression;
+            progression.GainXp(progression.XpRequired);
+            progression.GainXp(progression.XpRequired);
+            await Until(() => game.RunPhase == ArenaUiState.LevelUp, 3f, "two levels gained mid-wave open a pick");
+            Assume.That(progression.BankedDrafts, Is.EqualTo(2), "two picks are banked");
+
+            await CommandUntil(game, ArenaUiCommand.ChooseCard, () => game.RunPhase != ArenaUiState.LevelUp, 0);
+            Assert.That(game.RunPhase, Is.EqualTo(ArenaUiState.WaveActive), "one card, then back to the fight");
+            Assert.That(progression.BankedDrafts, Is.EqualTo(1), "the other pick stays banked");
+            Assert.That(game.UiSnapshot.hint, Does.Contain("T"), "the HUD says T opens it");
+
+            keyboard = new TestKeyboard();
+            await keyboard.TapUntil(KeyCode.T, () => game.RunPhase == ArenaUiState.LevelUp, "T opens the banked pick");
+        }
+
+        [Test, LoadScene(SceneCn), Category("Integration"), Timeout(90000)]
+        public async Task BuildPhase_StartNextWave_NoPickBanked_StartsAtOnceEvenAtTheArmory()
+        {
+            var game = await ReadyScene();
+            ShortenWaves(game, 6f);
+            await StartRun(game);
+            await Until(() => game.waves.TimeExpired, 15f, "the shortened wave times out");
+            await ClearTheWave(game);
+            await Until(() => game.RunPhase == ArenaUiState.SupplyDrop && game.SupplyDropReady, 8f, "the build phase crate lands");
+            await CommandUntil(game, ArenaUiCommand.OpenSupply, () => game.RunPhase == ArenaUiState.Armory);
+            if (game.progression.BankedDrafts > 0) game.progression.ResolvePendingRandom();
+            Assume.That(game.progression.BankedDrafts, Is.Zero, "no card pick is banked");
+
+            await CommandUntil(game, ArenaUiCommand.StartNextWave, () => game.RunPhase != ArenaUiState.Armory);
+            Assert.That(game.UiSnapshot.earlyStartConfirmation, Is.False, "nothing to confirm without unpicked cards");
+            Assert.That(game.RunPhase, Is.EqualTo(ArenaUiState.WaveIntro).Or.EqualTo(ArenaUiState.WaveActive), "the next wave starts at once");
+        }
+
         [Test, LoadScene(SceneCn), Category("Integration"), Timeout(90000)]
         public async Task BuildPhase_OpenPortal_EnteredOnlyByStandingOnItWithThePanelAway()
         {

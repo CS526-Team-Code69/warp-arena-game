@@ -52,6 +52,21 @@ namespace AnomalyArena
         }
 
         [Test]
+        public void EdgeVignette_ClearCentre_FullEdgesAndCorners()
+        {
+            var sprite = V2Hud.EdgeVignette();
+            try
+            {
+                var texture = sprite.texture;
+                Assert.That(texture.GetPixel(128, 128).a, Is.EqualTo(0f).Within(.01f), "the centre stays clear");
+                Assert.That(texture.GetPixel(178, 128).a, Is.EqualTo(0f).Within(.01f), "and so does the inner 40%");
+                Assert.That(texture.GetPixel(255, 128).a, Is.GreaterThan(.95f), "an edge's middle is full");
+                Assert.That(texture.GetPixel(0, 0).a, Is.GreaterThan(.95f), "and so are the corners");
+            }
+            finally { Object.DestroyImmediate(sprite.texture); Object.DestroyImmediate(sprite); }
+        }
+
+        [Test]
         public void EnsureV2Default_ChineseEdition_TurnsTheArtOnWhateverWasKept_AndToggleCannotTurnItOff()
         {
             ChoiceInitialized.SetValue(null, true);
@@ -181,6 +196,8 @@ namespace AnomalyArena
             Assert.That(slot.CooldownLeft, Is.LessThan(resumed - .2f), "the timers run again");
             Assert.That(game.buildTimeLeft, Is.LessThan(clockResumed - .2f), "and so does the build clock");
 
+            game.progression.GainXp(game.progression.XpRequired);
+            Assume.That(game.progression.BankedDrafts, Is.GreaterThan(0), "a card pick is banked");
             await CommandUntil(game, ArenaUiCommand.StartNextWave, () => game.UiSnapshot.earlyStartConfirmation);
             await keyboard.TapUntil(KeyCode.Escape, () => game.RunPhase == ArenaUiState.Paused, "Esc pauses over the question");
             Assert.That(game.UiSnapshot.earlyStartConfirmation, Is.False, "the early-start question is closed");
@@ -188,6 +205,7 @@ namespace AnomalyArena
             Assert.That(game.RunPhase, Is.EqualTo(ArenaUiState.Paused), "its confirm does nothing on the pause menu");
             Assert.That(game.waves.Phase, Is.EqualTo(WavePhase.WaitingBuild), "the next wave waits");
             await keyboard.TapUntil(KeyCode.Escape, () => game.RunPhase == ArenaUiState.Armory, "Esc resumes the armory");
+            game.progression.ResolvePendingRandom();                                                                                
 
             await keyboard.TapUntil(KeyCode.Tab, () => game.BuildWalking, "Tab puts the panel away");
             await keyboard.TapUntil(KeyCode.Escape, () => game.RunPhase == ArenaUiState.Paused, "Esc pauses the walk");
@@ -276,7 +294,7 @@ namespace AnomalyArena
         }
 
         [Test, LoadScene(SceneCn), Category("Integration"), Timeout(60000)]
-        public async Task MidWavePick_TheMusicFadesOutAndHolds_ThenPlaysOnFromThere()
+        public async Task MidWavePick_TheMusicFadesOutAndStops_ThenStartsAgainFromTheTop()
         {
             var game = await ReadyScene();
             var audio = V3WorldAudio.Instance;
@@ -284,22 +302,20 @@ namespace AnomalyArena
             var music = audio.musicSource;
             await StartRun(game);
             float full = audio.musicGain * audio.masterGain;
-            await Until(() => music.isPlaying && music.volume >= full * .99f, 5f, "the combat music plays in the wave");
+            await Until(() => music.isPlaying && music.volume >= full * .99f && music.time >= 2f, 8f, "the combat music has played a while in the wave");
 
+            float before = music.time;
             game.progression.GainXp(game.progression.XpRequired);
             await Until(() => game.RunPhase == ArenaUiState.LevelUp, 3f, "a level gained mid-wave opens its pick");
             await RealSeconds(audio.backgroundFadeSeconds + .4f);
-            float heldVolume = music.volume, heldAt = music.time;
-            bool heldPlaying = music.isPlaying;
-            await RealSeconds(.4f);
-            float heldLater = music.time;
+            float stoppedVolume = music.volume;
+            bool stoppedPlaying = music.isPlaying;
             await CommandUntil(game, ArenaUiCommand.Cancel, () => game.RunPhase != ArenaUiState.LevelUp);
             await Until(() => music.isPlaying && music.volume >= full * .99f, 3f, "the music comes back in the wave");
 
-            Assert.That(heldVolume, Is.EqualTo(0f).Within(.001f), "the pick fades the music out");
-            Assert.That(heldPlaying, Is.False, "and holds it");
-            Assert.That(heldLater, Is.EqualTo(heldAt).Within(.1f), "where it was");
-            Assert.That(music.time, Is.GreaterThanOrEqualTo(heldAt - .01f), "back in the wave it plays on from there, not from the start");
+            Assert.That(stoppedVolume, Is.EqualTo(0f).Within(.001f), "the pick fades the music out");
+            Assert.That(stoppedPlaying, Is.False, "and stops it");
+            Assert.That(music.time, Is.LessThan(Mathf.Min(1.5f, before - .3f)), "back in the wave it starts again from the top");
         }
 
         [Test, LoadScene(SceneCn), Category("Integration"), Timeout(40000)]

@@ -77,7 +77,7 @@ namespace AnomalyArena
                 if(w.form!=WeaponForm.ShieldRing)continue;
                 Reveal(w);
                 if(w.variant==0){deflect=true;TickDeflect(w,hit,range,cycle);}
-                else TickDrain(w,dt);
+                else TickDrain(w,dt,hit);
             }
 
             if(!deflect)ClearDeflectSlow();
@@ -372,8 +372,9 @@ namespace AnomalyArena
 
         static bool Roll(float chance)=>UnityEngine.Random.Range(0,10000)<chance*10000f;
 
-        void TickDrain(RunWeapon w,float dt)
+        void TickDrain(RunWeapon w,float dt,float hit)
         {
+            if(drainReleaseFrom==w){drainReleaseFrom=null;ReleaseDrainElement(w,hit);}
             w.drainOverloadLeft=Mathf.Max(0f,w.drainOverloadLeft-dt);
             if(w.drainShieldUp)return;
             w.drainQuiet+=dt;
@@ -393,6 +394,8 @@ namespace AnomalyArena
             {
                 drain.drainShieldUp=false;drain.drainOverloadLeft=Mathf.Max(0f,upgrades.drainOverloadSeconds);drain.drainOverloadPaid=false;
                 if(progression)progression.GainEnergy(upgrades.drainBlockEnergy);
+
+                if(drain.element!=ElementKind.None)drainReleaseFrom=drain;
                 WeaponSound(drain);
                 Fx.Ring(player.Position,player.radius+.6f,new Color(.6f,1f,.95f,.9f));
                 return true;
@@ -404,6 +407,19 @@ namespace AnomalyArena
                 Fx.Pop(Query.AtCastHeight(player.Position),new Color(1f,.45f,.75f,.9f),1.4f);
             }
             return false;
+        }
+
+        RunWeapon drainReleaseFrom;
+
+        void ReleaseDrainElement(RunWeapon w,float hit)
+        {
+            if(w.element==ElementKind.None||!player||!player.IsAlive)return;
+            float radius=Mathf.Max(0f,upgrades.drainInfuseRadius);
+            autoTargets.Clear();
+            foreach(var c in Combatant.All)if(c!=player&&c.IsAlive&&c.Team==Team.Enemy&&InField(c,radius))autoTargets.Add(c);
+            foreach(var c in autoTargets)Damage(w,c,hit,0,Query.Flat(c.Position-player.Position).normalized);
+            autoTargets.Clear();
+            Fx.Ring(player.Position,radius,ElementCombat.ColorFor(w.element));
         }
 
         string AutoSlotDetail(RunWeapon w)
@@ -421,7 +437,7 @@ namespace AnomalyArena
         void FreezeAutoWeaponsForTrial(bool freeze)
         {
 
-            ClearDeflectSlow();orbKnockReady.Clear();corpseKnockReady.Clear();playerTrailCount=0;
+            ClearDeflectSlow();orbKnockReady.Clear();corpseKnockReady.Clear();playerTrailCount=0;drainReleaseFrom=null;
             if(freeze)
             {
                 trialAutoStates.Clear();
