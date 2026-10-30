@@ -7,6 +7,18 @@ namespace AnomalyArena
     public class PlayerController : Combatant
     {
         [Header("Sprint")] public Stamina stamina = new Stamina();
+        // Dash feature. - H.
+        [Header("Dash")]
+        [SerializeField, Min(0f)] float dashSpeed = 27f;
+        [SerializeField, Min(0.01f)] float dashDuration = 0.15f;
+        [SerializeField, Min(0f)] float dashCooldown = 0.4f;
+
+        Vector3 lastMoveDirection = Vector3.forward;
+        Vector3 dashDirection;
+        float dashTimeRemaining;
+        float dashCooldownRemaining;
+
+        bool IsDashing => dashTimeRemaining > 0f;
 
         const float SprintDustInterval = 0.07f;
 
@@ -46,7 +58,7 @@ namespace AnomalyArena
                 if (moveInput.sqrMagnitude > 1f) moveInput.Normalize();
             }
             if (playing && debugMoveHeld.HasValue) moveInput = Vector2.ClampMagnitude(debugMoveHeld.Value, 1f);
-
+            TickDash(playing, kb);
             TickSprint(playing, kb);
             if (!playing || mouse == null || !GM.CanUseCombatInput) return;
             var inventory = GM.runWeapons;
@@ -55,12 +67,49 @@ namespace AnomalyArena
 
             if (inventory.Active != null) inventory.HandleInput(mouse.leftButton.wasPressedThisFrame, mouse.leftButton.isPressed, mouse.leftButton.wasReleasedThisFrame);
         }
+        // Dash feature. - H.
+        void TickDash(bool playing, Keyboard kb)
+        {
+            float dt = Time.deltaTime;
 
+            dashCooldownRemaining =
+            Mathf.Max(0f, dashCooldownRemaining - dt);
+
+            dashTimeRemaining =
+            Mathf.Max(0f, dashTimeRemaining - dt);
+
+            // Cancel an active dash if movement becomes unavailable.
+            if (!playing || WalkHeld || State != CharacterState.Normal)
+            {
+                dashTimeRemaining = 0f;
+                return;
+            }
+
+            // Remember movement direction, including diagonal movement.
+            if (moveInput.sqrMagnitude > 0.01f)
+            {
+                lastMoveDirection =
+                    new Vector3(moveInput.x, 0f, moveInput.y).normalized;
+            }
+
+            if (ActionsBlocked || IsDashing || dashCooldownRemaining > 0f)
+                return;
+
+            if (kb == null || !kb.spaceKey.wasPressedThisFrame)
+                return;
+
+            // Lock the direction for this dash.
+            dashDirection = lastMoveDirection;
+            dashTimeRemaining = dashDuration;
+
+            // Cooldown starts after the dash ends.
+            dashCooldownRemaining = dashDuration + dashCooldown;
+        }
         void TickSprint(bool playing, Keyboard kb)
         {
             bool held = debugSprintHeld ?? (kb != null && (kb.leftShiftKey.isPressed || kb.rightShiftKey.isPressed));
             bool moving = moveInput.sqrMagnitude > 0.01f || debugSprintHeld == true;
-            bool want = playing && held && moving && State == CharacterState.Normal && !WalkHeld;
+            bool want =  playing && held && moving && State == CharacterState.Normal && !WalkHeld && !IsDashing;
             float recovery = GM.runWeapons ? GM.runWeapons.StaminaRecoveryMultiplier : 1f;
             sprintMultiplier = stamina.Tick(Time.deltaTime, want, recovery);
             if (!stamina.Sprinting) return;
@@ -108,17 +157,39 @@ namespace AnomalyArena
         protected override void TickNormal(float dt)
         {
             Vector3 v = Vector3.zero;
+
             if (!WalkHeld && GM.State == GameState.Playing)
-                v = new Vector3(moveInput.x, 0f, moveInput.y) * (moveSpeed * sprintMultiplier * (GM.runWeapons ? GM.runWeapons.MoveMultiplier : 1f)
-                    * (ElementStatus.For(this)?.PlayerChillMultiplier ?? 1f) * (GM.skills ? GM.skills.PlayerMoveMultiplier : 1f));
-            v *= Quicksand.SpeedFactor(Position);                                                                        
-            rb.linearVelocity = new Vector3(v.x, rb.linearVelocity.y, v.z);
+            {
+                if (IsDashing)
+                {
+                    v = dashDirection * dashSpeed;
+                }
+                else
+                {
+                    v = new Vector3(moveInput.x, 0f, moveInput.y)
+                        * (moveSpeed
+                            * sprintMultiplier
+                            * (GM.runWeapons
+                                ? GM.runWeapons.MoveMultiplier : 1f)
+                            * (ElementStatus.For(this)?.PlayerChillMultiplier
+                                ?? 1f)
+                            * (GM.skills
+                                ? GM.skills.PlayerMoveMultiplier : 1f));
+                }
+
+                v *= Quicksand.SpeedFactor(Position);
+            }
+
+            // Preserve vertical velocity for gravity and other vertical motion.
+            rb.linearVelocity =
+                new Vector3(v.x, rb.linearVelocity.y, v.z);
         }
 
         protected override void OnDamaged(float amount) => GM.hud.FlashDamage();
 
         protected override void OnDied()
         {
+            dashTimeRemaining = 0f;
             if (bodyRenderer) bodyRenderer.transform.localScale = new Vector3(1.3f, 0.2f, 1.3f);
         }
     }
