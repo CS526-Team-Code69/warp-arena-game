@@ -57,7 +57,11 @@ namespace AnomalyArena
             executeTicks = new UnityEngine.UI.Image[enemyLabels.Length];
             hpColors = new Color[enemyLabels.Length];
             executeBelow = new bool[enemyLabels.Length];
-            for (int i = 0; i < enemyLabels.Length; i++) hpColors[i] = enemyLabels[i].hp ? enemyLabels[i].hp.color : Color.white;
+            for (int i = 0; i < enemyLabels.Length; i++)
+            {
+                hpColors[i] = enemyLabels[i].hp ? enemyLabels[i].hp.color : Color.white;
+                if (enemyLabels[i].name) AddNameShadow(enemyLabels[i].name);
+            }
         }
 
                                                                                                                                 
@@ -239,8 +243,12 @@ namespace AnomalyArena
                 view.shield.fillAmount = status && enemy.maxHp > 0f ? Mathf.Clamp01(status.Shield / enemy.maxHp) : 0f;
                 view.shield.gameObject.SetActive(status && status.Shield > 0f);
                                                                                                                                                
+                                                                                                                             
+                string kind = enemy.definition ? KindName(enemy.definition.kind) : "";
                 string name = enemy.IsBoss ? enemy.definition.kind == EnemyKind.Hollow ? ArenaText.Pair("THE NASH PROPHET","THE NASH PROPHET") : ArenaText.Pair("THE TYRANT KING","THE TYRANT KING")
-                    : enemy.Elite ? ArenaText.Text("ui.elite") + (enemy.Affix != ElementKind.None ? " · " + ArenaTerms.Element(enemy.Affix) : "") : "";
+                    : enemy.Elite ? kind + " · " + ArenaText.Text("ui.elite") + (enemy.Affix != ElementKind.None ? " · " + ArenaTerms.Element(enemy.Affix) : "") : kind;
+                Color nameColor = enemy.IsBoss || enemy.Elite ? Color.white : CommonNameColor;
+                if (view.name.color != nameColor) view.name.color = nameColor;
                 if (enemy.Chanted) name = (name.Length > 0 ? name + " · " : "") + ArenaText.Pair("CHANTED","CHANTED");
                                                                        
                 if (weapons && weapons.IsExecuteMarked(enemy)) name = (name.Length > 0 ? name + " · " : "") + ArenaText.Pair("MARKED","MARKED");
@@ -262,6 +270,27 @@ namespace AnomalyArena
                 }
             }
             for (int i = index; i < bindings.Length; i++) bindings[i] = null;
+        }
+
+        static readonly Color CommonNameColor = new(.86f, .89f, .94f, .92f);
+        static readonly string[] kindNames = new string[Enum.GetValues(typeof(EnemyKind)).Length];
+        static bool kindNamesChinese;
+
+                                                                                                                              
+        static string KindName(EnemyKind kind)
+        {
+            if (kindNamesChinese != ArenaText.IsChinese) { Array.Clear(kindNames, 0, kindNames.Length); kindNamesChinese = ArenaText.IsChinese; }
+            int i = (int)kind;
+            if (i < 0 || i >= kindNames.Length) return "";
+            return kindNames[i] ??= ArenaText.Text("enemy." + kind);
+        }
+
+                                                                                            
+        static void AddNameShadow(UnityEngine.UI.Text label)
+        {
+            var shadow = label.gameObject.AddComponent<UnityEngine.UI.Shadow>();
+            shadow.effectColor = new Color(0f, 0f, 0f, .8f);
+            shadow.effectDistance = new Vector2(1f, -1f);
         }
 
         bool PlaceWorld(RectTransform label, Vector3 world, Camera cam)

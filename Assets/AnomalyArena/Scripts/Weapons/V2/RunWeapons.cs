@@ -190,14 +190,15 @@ namespace AnomalyArena
         }
                                                                                                                                                                    
         public int UpgradeTargetMk(RunWeapon owned,int wave)=>roster?Mathf.Min(roster.MaxMk,Mathf.Max(owned.mk+1,roster.ParMk(wave)+1)):owned.mk+1;
-                                                                                                                                                
+                                                                                                                                             
+                                                                                                                                             
                                                                                                                                          
-                                                                                                                                              
+                                                         
         RunWeapon TakeUpgradeOffer(System.Collections.Generic.List<RunWeapon> upgradable,int wave)
         {
             int pick=UnityEngine.Random.Range(0,upgradable.Count);var owned=upgradable[pick];upgradable.RemoveAt(pick);
-                                                                                                                           
-            var version=CreateWeapon(owned.form,UnityEngine.Random.Range(0,2),wave);
+            var version=new RunWeapon{form=owned.form,variant=owned.variant,revealed=owned.revealed,axes=owned.axes,element=owned.element,
+                builtInElement=owned.builtInElement,rounds=ClipSize(owned.form,owned.variant)};
             int target=roster?Mathf.Min(roster.MaxMk,UpgradeTargetMk(owned,wave)+MkBonus(wave)):owned.mk+1;
                                                                                                                                       
             if(roster&&target>=roster.MaxMk&&owned.mk<roster.MaxMk-1)target=roster.MaxMk-1;
@@ -222,11 +223,11 @@ namespace AnomalyArena
             if(index<0||index>=Offers.Length||Offers[index]==null)return false;var w=Offers[index];
             if(w.upgradeOf!=null)
             {
-                                                                                                                                       
-                                                                                                                                 
-                var held=Array.IndexOf(Hand,w.upgradeOf)>=0?Hand:Array.IndexOf(Auto,w.upgradeOf)>=0?Auto:null;
-                if(held==null)return false;
-                held[Array.IndexOf(held,w.upgradeOf)]=w;w.upgradeOf=null;Offers=new RunWeapon[ArmoryOfferCount];return true;
+                                                                                                                                         
+                                                                      
+                var owned=w.upgradeOf;
+                if(Array.IndexOf(Hand,owned)<0&&Array.IndexOf(Auto,owned)<0)return false;
+                owned.mk=Mathf.Max(owned.mk,w.mk);Offers=new RunWeapon[ArmoryOfferCount];return true;
             }
             if(OwnsForm(w.form))return false;var slots=w.IsAuto?Auto:Hand;
             int free=Array.FindIndex(slots,x=>x==null);int at=free>=0?free:replace;if(at<0||at>=slots.Length)return false;slots[at]=w;Offers=new RunWeapon[ArmoryOfferCount];return true;

@@ -380,9 +380,9 @@ namespace AnomalyArena
             if(w.upgradeOf!=null)
             {
                 float gain=runWeapons.MkDamage(w)/Mathf.Max(.01f,runWeapons.MkDamage(w.upgradeOf))-1f;
-                                                                                                                                            
-                card.title=w.FormName+" "+w.upgradeOf.MkLabel+" → "+w.MkLabel;card.kind=ArenaText.Pair("STRONGER · ","STRONGER · ")+hand;
-                card.body=ArenaText.Pair($"Replaces your {w.upgradeOf.Label}: Mk damage +{gain*100f:0}%. Its pairing is revealed when taken; the old upgrades and infusion are lost.",$"Replaces your {w.upgradeOf.Label}: Mk damage +{gain*100f:0}%. Its pairing is revealed when taken; the old upgrades and infusion are lost.");
+                                                                                                                                 
+                card.title=w.FormName+" "+w.upgradeOf.MkLabel+" → "+w.MkLabel;card.kind=ArenaText.Pair("UPGRADE · ","UPGRADE · ")+hand;
+                card.body=ArenaText.Pair($"Upgrades your {w.upgradeOf.Label}: Mk damage +{gain*100f:0}%. Its attack and trait stay the same; its upgrades and infusion are kept.",$"Upgrades your {w.upgradeOf.Label}: Mk damage +{gain*100f:0}%. Its attack and trait stay the same; its upgrades and infusion are kept.");
                 return;
             }
             card.title=w.FormName;card.kind=hand;

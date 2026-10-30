@@ -100,9 +100,7 @@ namespace AnomalyArena
             TickVoices(lifecycleVoices,lifeLeft);
             if(!paused)TickVoices(worldVoices,worldLeft);
 
-            bool fadeOut=gm&&gm.State==GameState.Playing&&(gm.RunPhase is ArenaUiState.LevelUp or ArenaUiState.Cutscene or ArenaUiState.TrialReturn
-                ||gm.RunPhase==ArenaUiState.ReplaceSkill&&gm.waves&&gm.waves.Phase==WavePhase.WaveActive);
-            bool running=gm&&gm.State==GameState.Playing&&!fadeOut;
+            bool running=gm&&gm.CanPlayerMove;
             if(!paused)backgroundBlend=Mathf.MoveTowards(backgroundBlend,running?1f:0f,Time.unscaledDeltaTime/Mathf.Max(.01f,backgroundFadeSeconds));
             var world=WorldMap.Active;
             if(world&&(selectedBiome!=world.biome || selectedTrial!=world.TrialActive))
