@@ -240,11 +240,14 @@ namespace AnomalyArena
             var chanter = Hold(game.waves.SpawnLab(EnemyKind.Chanter, origin + Vector3.forward * (5f + Enemy.ChantRadius + 4f), false, ElementKind.None));
             Physics.SyncTransforms();
             Assume.That(elite.Elite && elite.Affix == ElementKind.Fire, Is.True, "an elite with the Fire affix");
-            string eliteTag = ArenaText.Text("ui.elite") + " · " + ArenaTerms.Element(ElementKind.Fire);
+                                                                                                                              
+            string eliteTag = ArenaText.Text("enemy." + kind) + " · " + ArenaText.Text("ui.elite") + " · " + ArenaTerms.Element(ElementKind.Fire);
+            string grunt = ArenaText.Text("enemy.Grunt");
             string chant = ArenaText.Pair("CHANTED","CHANTED");
 
-            await Until(() => Texts(labels).Contains(eliteTag), 3f, "outside the aura the elite's bar shows its affix");
+            await Until(() => Texts(labels).Contains(eliteTag), 3f, "outside the aura the elite's bar shows its kind and affix");
             Assert.That(elite.Chanted, Is.False, "outside the aura");
+            Assert.That(Texts(labels), Has.Member(grunt).And.Member(ArenaText.Text("enemy.Chanter")), "an ordinary enemy names its kind");
 
             V3CombatSmokeTest.Teleport(chanter, origin + Vector3.forward * 8f);
             Physics.SyncTransforms();
@@ -252,7 +255,7 @@ namespace AnomalyArena
             Assume.That(elite.Chanted && plain.Chanted, Is.True, "both stand in the Chanter's aura");
 
             await Until(() => Texts(labels).Contains(eliteTag + " · " + chant), 3f, "inside the aura the elite's bar adds the chant tag after its affix");
-            Assert.That(Texts(labels), Has.Member(chant), "an ordinary enemy shows the chant tag alone, as before");
+            Assert.That(Texts(labels), Has.Member(grunt + " · " + chant), "an ordinary enemy shows the chant tag after its kind");
         }
 
                                                              

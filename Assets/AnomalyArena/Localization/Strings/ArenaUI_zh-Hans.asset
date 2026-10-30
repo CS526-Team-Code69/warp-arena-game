@@ -71,11 +71,11 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 818548747
-    m_Localized: "START NEXT WAVE"
+    m_Localized: START NEXT WAVE
     m_Metadata:
       m_Items: []
   - m_Id: 818548748
-    m_Localized: "RETURN / DECLINE SKILL"
+    m_Localized: RETURN / DECLINE SKILL
     m_Metadata:
       m_Items: []
   - m_Id: 818548749
@@ -195,7 +195,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 818548778
-    m_Localized: "SHADE INCOMING"
+    m_Localized: SHADE INCOMING
     m_Metadata:
       m_Items: []
   - m_Id: 818548779
@@ -203,7 +203,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 818548780
-    m_Localized: "Pick one of three Greater Void skills (or none); they have no further levels. 1 / 2 / 3 select."
+    m_Localized: Pick one of three Greater Void skills (or none); they have no further levels. 1 / 2 / 3 select.
     m_Metadata:
       m_Items: []
   - m_Id: 818548781
@@ -215,27 +215,29 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 818548783
-    m_Localized: "Pick one familiar form. Which backfire it has is unknown until you take it; the moment you choose, the game pauses and the weapon card appears.\nAim manually; use the terrain."
+    m_Localized: 'Pick one familiar form. Which backfire it has is unknown until you take it; the moment you choose, the game pauses and the weapon card appears.
+
+      Aim manually; use the terrain.'
     m_Metadata:
       m_Items: []
   - m_Id: 818548784
-    m_Localized: "Pick one of three: a new weapon, or a higher Mk of one you hold (weapons grow stronger through higher Mks from the armory). You may skip. Upgrades stay with the weapon: replace it and they are gone with it."
+    m_Localized: 'Pick one of three: a new weapon, or a higher Mk of one you hold (weapons grow stronger through higher Mks from the armory). You may skip. Upgrades stay with the weapon: replace it and they are gone with it.'
     m_Metadata:
       m_Items: []
   - m_Id: 818548785
-    m_Localized: "Three cards, one of each: a stat card, a weapon card (an upgrade direction a revealed weapon has not taken yet) and a skill card (a new skill, or one level for a skill you own). 1 / 2 / 3 select; R rerolls (once per build phase)."
+    m_Localized: 'Three cards, one of each: a stat card, a weapon card (an upgrade direction a revealed weapon has not taken yet) and a skill card (a new skill, or one level for a skill you own). 1 / 2 / 3 select; R rerolls (once per build phase).'
     m_Metadata:
       m_Items: []
   - m_Id: 818548786
-    m_Localized: "Choose the weapon to replace. Upgrades stay with the weapon: replace it and they are gone with it."
+    m_Localized: 'Choose the weapon to replace. Upgrades stay with the weapon: replace it and they are gone with it.'
     m_Metadata:
       m_Items: []
   - m_Id: 818548787
-    m_Localized: "With 3 skills already, taking a new one means replacing an old one; the new skill starts at level 1."
+    m_Localized: With 3 skills already, taking a new one means replacing an old one; the new skill starts at level 1.
     m_Metadata:
       m_Items: []
   - m_Id: 818548788
-    m_Localized: "Build choices complete. Click START NEXT WAVE to go on."
+    m_Localized: Build choices complete. Click START NEXT WAVE to go on.
     m_Metadata:
       m_Items: []
   - m_Id: 818548789
@@ -275,7 +277,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 818548798
-    m_Localized: "Tyrant King immunities: {0}"
+    m_Localized: 'Tyrant King immunities: {0}'
     m_Metadata:
       m_Items: []
   - m_Id: 818548799
@@ -327,11 +329,11 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 818548811
-    m_Localized: "Backfire unrevealed"
+    m_Localized: Backfire unrevealed
     m_Metadata:
       m_Items: []
   - m_Id: 818548812
-    m_Localized: "Which backfire it has is unknown until you take it; it is revealed the moment you choose."
+    m_Localized: Which backfire it has is unknown until you take it; it is revealed the moment you choose.
     m_Metadata:
       m_Items: []
   - m_Id: 818548813
@@ -383,11 +385,11 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 818548825
-    m_Localized: "Adds a new variant to this anomaly"
+    m_Localized: Adds a new variant to this anomaly
     m_Metadata:
       m_Items: []
   - m_Id: 818548826
-    m_Localized: "Removes or softens this anomaly's backfire"
+    m_Localized: Removes or softens this anomaly's backfire
     m_Metadata:
       m_Items: []
   - m_Id: 818548827
@@ -887,7 +889,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 818548951
-    m_Localized: "Charging no longer slows you."
+    m_Localized: Charging no longer slows you.
     m_Metadata:
       m_Items: []
   - m_Id: 818548952
@@ -1107,7 +1109,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 818549006
-    m_Localized: "Portal open: stand on it and press E to enter the Void Trial"
+    m_Localized: 'Portal open: stand on it and press E to enter the Void Trial'
     m_Metadata:
       m_Items: []
   - m_Id: 818549007

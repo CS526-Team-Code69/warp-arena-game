@@ -218,7 +218,9 @@ namespace AnomalyArena
             await CommandUntil(game, ArenaUiCommand.OpenSupply, () => game.RunPhase == ArenaUiState.Armory);
             Assume.That(portal.Phase, Is.EqualTo(HolePhase.Portal), "the portal stays open into the build phase");
             var armory = Object.FindAnyObjectByType<V2Hud>().screens.First(s => s && s.state == ArenaUiState.Armory);
-            Assert.That(armory.body.text, Does.Contain("stand on it and press E").IgnoreCase.And.Contain("shield").IgnoreCase.And.Not.Contain("can also enter").IgnoreCase,
+
+            string help = System.Text.RegularExpressions.Regex.Replace(armory.body.text, "<[^<>]+>", "");
+            Assert.That(help, Does.Contain("stand on it and press E").IgnoreCase.And.Contain("shield").IgnoreCase.And.Not.Contain("can also enter").IgnoreCase,
                 "the build panel says to stand on the portal and what entering costs");
             keyboard = new TestKeyboard();
 

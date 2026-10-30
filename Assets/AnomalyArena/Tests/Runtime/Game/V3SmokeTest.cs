@@ -231,7 +231,7 @@ namespace AnomalyArena
         }
 
         [Test, LoadScene(SceneCn), Timeout(20000)]
-        public async Task TakeOffer_HeldWeaponVersion_ReplacesTheHeldWeaponInItsSlotWithAFreshOne()
+        public async Task TakeOffer_HeldWeaponVersion_UpgradesTheHeldWeaponInPlace()
         {
             var game = await ReadyScene();
             var rifle = new RunWeapon { form = WeaponForm.Rifle, variant = 0, axes = UpgradeAxis.Twist | UpgradeAxis.Infusion, element = ElementKind.Fire, revealed = true };
@@ -249,14 +249,16 @@ namespace AnomalyArena
 
             Assert.That(game.runWeapons.TakeOffer(index), Is.True);
 
-            Assert.That(game.runWeapons.Hand[0], Is.SameAs(version), "the version takes the rifle's slot");
-            Assert.That(version.form, Is.EqualTo(WeaponForm.Rifle), "same form");
-            Assert.That(version.mk, Is.InRange(target, target + 1), "one tier above the wave standard, or one more with the wave's bonus chance");
-            Assert.That(version.axes, Is.EqualTo(UpgradeAxis.None), "the old upgrades are gone");
-            Assert.That(version.element, Is.EqualTo(ElementKind.None), "and so is the infusion");
-            Assert.That(version.revealed, Is.False, "its anomaly waits for the weapon card");
-            Assert.That(version.upgradeOf, Is.Null, "once held it is no longer an offer");
+            Assert.That(game.runWeapons.Hand[0], Is.SameAs(rifle), "the held rifle stays in its slot");
+            Assert.That(rifle.mk, Is.EqualTo(version.mk).And.InRange(target, target + 1),
+                "its Mk rises to the offer's: one tier above the wave standard, or one more with the wave's bonus chance");
+            Assert.That(rifle.form, Is.EqualTo(WeaponForm.Rifle), "same form");
+            Assert.That(rifle.variant, Is.Zero, "same pairing");
+            Assert.That(rifle.axes, Is.EqualTo(UpgradeAxis.Twist | UpgradeAxis.Infusion), "its upgrades stay");
+            Assert.That(rifle.element, Is.EqualTo(ElementKind.Fire), "and so does its infusion");
+            Assert.That(rifle.revealed, Is.True, "nothing to reveal again");
             Assert.That(game.runWeapons.Hand[1], Is.Null, "no other slot is filled");
+            Assert.That(game.runWeapons.Offers, Has.All.Null, "the armory is spent");
         }
 
         [Test, LoadScene(SceneCn), Timeout(20000)]

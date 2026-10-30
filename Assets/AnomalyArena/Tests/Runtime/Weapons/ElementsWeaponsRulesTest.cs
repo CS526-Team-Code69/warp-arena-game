@@ -423,13 +423,15 @@ namespace AnomalyArena
                 var drones = DrawAuto(weapons, WeaponForm.SentryDrone, 1);
                 Assert.That(drones.newOnes, Has.Some.Matches<RunWeapon>(w => w.variant == 0).And.Some.Matches<RunWeapon>(w => w.variant == 1),
                     "the Gunner costs no Energy now (Q103), so the drone is a fair coin from the start");
-                Assert.That(drones.versions, Has.Some.Matches<RunWeapon>(w => w.variant == 0), "also as a stronger version");
+                Assert.That(drones.versions, Is.Not.Empty.And.All.Matches<RunWeapon>(w => w.variant == 1),
+                    "a stronger version keeps the held drone's anomaly (owner 2026-10-28)");
 
                 game.progression.UnlockEnergy();                                    
                 var after = DrawAuto(weapons, WeaponForm.ShieldRing, 0);
                 Assert.That(weapons.DrainOfferable, Is.True);
                 Assert.That(after.newOnes, Has.Some.Matches<RunWeapon>(w => w.variant == 1), "with the energy bar the Drain is offered");
-                Assert.That(after.versions, Has.Some.Matches<RunWeapon>(w => w.variant == 1), "also as a stronger version");
+                Assert.That(after.versions, Is.Not.Empty.And.All.Matches<RunWeapon>(w => w.variant == 0),
+                    "a held Deflect's stronger version stays the Deflect (owner 2026-10-28)");
             }
             finally { weapons.armoryUpgradeChance = upgradeChance; UnityEngine.Random.state = savedRandom; }
         }

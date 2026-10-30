@@ -38,10 +38,16 @@ namespace AnomalyArena
                     locale.SelectLocale();
                     bool chinese = code.StartsWith("zh");
                     await Until(() => ArenaText.Ready && ArenaText.IsChinese == chinese, 12f, "locale " + code);
+                    if (chinese)
+                    {
+
+                        choice.ShowBody("拿到之前不知道是哪种攻击方式和特性；选中的那一刻揭晓。");
+                        Assert.That(choice.body.fontSize, Is.EqualTo(savedSize), "a short Chinese text keeps the largest size and wraps");
+                    }
                     var overflow = new List<string>();
                     foreach (var (name, text) in CardTexts())
                     {
-                        choice.body.text = text;
+                        choice.ShowBody(text);
                         Canvas.ForceUpdateCanvases();
                         var settings = choice.body.GetGenerationSettings(choice.body.rectTransform.rect.size);
                         var generator = new TextGenerator();
@@ -49,7 +55,7 @@ namespace AnomalyArena
                         int visible = generator.characterCountVisible;
                         int needed = text.Count(c => !char.IsWhiteSpace(c));
                         int shown = text.Take(visible).Count(c => !char.IsWhiteSpace(c));
-                        if (shown < needed) overflow.Add($"{code} {name}: {shown}/{needed} chars at size {generator.fontSizeUsedForBestFit}");
+                        if (shown < needed) overflow.Add($"{code} {name}: {shown}/{needed} chars at size {choice.body.fontSize}");
                     }
                     Assert.That(overflow, Is.Empty, "card texts cut off in " + code);
                 }

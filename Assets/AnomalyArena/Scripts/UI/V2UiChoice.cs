@@ -11,16 +11,41 @@ namespace AnomalyArena
         public UnityEngine.UI.Button button;
         [Range(.3f, 1f), Tooltip("Smallest body size, as a share of the saved font size, that a long card text may shrink to so it stays inside its box.")]
         public float minBodyScale = .6f;
+        [Min(8), Tooltip("Largest size of the card text (owner 2026-10-28: the saved size was easy to skip). Long texts still shrink, no smaller than before.")]
+        public int bodyFontSize = 19;
+        int savedBodySize;
 
-        void Awake() => FitBody();
+        void Awake()
+        {
+            FitBody();
+            ArenaEmphasis.Style(body);
+        }
 
         public void FitBody()
         {
-            if (!body || body.resizeTextForBestFit) return;
+            if (!body || savedBodySize > 0) return;
+            GrowBody();
             body.resizeTextMaxSize = body.fontSize;
-            body.resizeTextMinSize = Mathf.Max(8, Mathf.RoundToInt(body.fontSize * minBodyScale));
+            body.resizeTextMinSize = Mathf.Max(8, Mathf.RoundToInt(savedBodySize * minBodyScale));
             body.verticalOverflow = UnityEngine.VerticalWrapMode.Truncate;
-            body.resizeTextForBestFit = true;
+            body.resizeTextForBestFit = false;
+        }
+
+        public void ShowBody(string text)
+        {
+            FitBody();
+            ArenaTextFit.Show(body, text, body.resizeTextMaxSize, body.resizeTextMinSize);
+        }
+
+        void GrowBody()
+        {
+            savedBodySize = body.fontSize;
+            body.fontSize = Mathf.Max(body.fontSize, bodyFontSize);
+            if (!badge) return;
+            RectTransform box = body.rectTransform, below = badge.rectTransform;
+            if (below.parent != box.parent || box.pivot.y != 1f || below.pivot.y != 1f || box.anchorMin != below.anchorMin || box.anchorMax != below.anchorMax) return;
+            float room = box.anchoredPosition.y - box.sizeDelta.y - below.anchoredPosition.y - 4f;
+            if (room > 0f) box.sizeDelta += new Vector2(0f, room);
         }
 
         public void Render(ArenaUiCard card, V2ArtSet art)
@@ -28,9 +53,8 @@ namespace AnomalyArena
             bool show = card != null && !string.IsNullOrEmpty(card.title);
             if (gameObject.activeSelf != show) gameObject.SetActive(show);
             if (!show) return;
-            FitBody();
             if (title.text != card.title) title.text = card.title;
-            if (body.text != card.body) body.text = card.body;
+            ShowBody(ArenaEmphasis.Apply(card.body));
             if (kind.text != card.kind) kind.text = card.kind;
             if (badge.text != card.badge) badge.text = card.badge;
             ApplyRarity(card.rarity);

@@ -71,6 +71,7 @@ namespace AnomalyArena.EditorTools
                     label.text=value;EditorUtility.SetDirty(label);changed++;
                 }
             }
+            if(hud)FitEnglishText(hud);
             if(!EditorSceneManager.SaveScene(scene,scenePath))throw new InvalidOperationException("English scene save failed.");
             if(!EditorSceneManager.SaveScene(scene,"Assets/AnomalyArena/Scenes/ArenaV2.unity",true))throw new InvalidOperationException("Authoring scene save failed.");
             EditorBuildSettings.scenes=new[]{new EditorBuildSettingsScene(scenePath,true)};
@@ -79,6 +80,45 @@ namespace AnomalyArena.EditorTools
             Directory.CreateDirectory("Logs");
             File.WriteAllText("Logs/english-publication.txt",$"Saved English scenes and string tables. Roots: {scene.rootCount}, labels: {labels}, replaced strings: {changed}. Compilation failed: {EditorUtility.scriptCompilationFailed}.");
             Debug.Log("English publication setup complete.");
+        }
+
+        /// <summary>The scene's layout is the Chinese edition's, whose slot boxes hold two or three characters. English names and details need
+        /// more room, so here the slot titles and details take the slot's width on up to two lines and the icons make way; card texts get
+        /// tighter lines, as the CJK font's line height is too tall for Latin text. Nothing else moves.</summary>
+        static void FitEnglishText(V2Hud hud)
+        {
+            foreach(var slot in hud.handSlots)Slot(slot,106f,156f,new Vector2(132f,-38f),new Vector2(46f,24f),slot?slot.weaponIcon:null,slot?slot.contentIcon:null);
+            foreach(var slot in hud.autoSlots)Slot(slot,96f,96f,Vector2.zero,Vector2.zero,slot?slot.weaponIcon:null,slot?slot.contentIcon:null);
+            foreach(var slot in hud.skillSlots)Slot(slot,62f,96f,new Vector2(86f,-38f),new Vector2(24f,24f),slot?slot.weaponIcon:null,slot?slot.contentIcon:null);
+            foreach(var screen in hud.screens)
+            {
+                if(!screen||screen.choices==null)continue;
+                foreach(var choice in screen.choices)
+                    if(choice&&choice.body){choice.body.lineSpacing=.9f;EditorUtility.SetDirty(choice.body);}
+            }
+        }
+
+        static void Slot(V2UiSlot slot,float titleWidth,float detailWidth,Vector2 iconAt,Vector2 iconSize,params UnityEngine.UI.Image[] icons)
+        {
+            if(!slot)return;
+            Box(slot.title,-33f,titleWidth,30f,10,15);
+            Box(slot.detail,-62f,detailWidth,27f,9,13);
+            foreach(var icon in icons)
+            {
+                if(!icon)continue;
+                icon.rectTransform.anchoredPosition=iconAt;icon.rectTransform.sizeDelta=iconSize;
+                EditorUtility.SetDirty(icon.rectTransform);
+            }
+        }
+
+        static void Box(UnityEngine.UI.Text text,float top,float width,float height,int smallest,int largest)
+        {
+            if(!text)return;
+            var rect=text.rectTransform;
+            rect.anchoredPosition=new Vector2(rect.anchoredPosition.x,top);rect.sizeDelta=new Vector2(width,height);
+            text.resizeTextForBestFit=true;text.resizeTextMinSize=smallest;text.resizeTextMaxSize=largest;text.fontSize=largest;
+            text.horizontalOverflow=HorizontalWrapMode.Wrap;text.verticalOverflow=VerticalWrapMode.Truncate;text.lineSpacing=.85f;
+            EditorUtility.SetDirty(text);EditorUtility.SetDirty(rect);
         }
 
         static bool HasCjk(string value)=>value!=null && value.Any(c=>c>=0x3400 && c<=0x9fff);

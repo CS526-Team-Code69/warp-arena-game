@@ -223,7 +223,7 @@ namespace AnomalyArena
         }
 
         [Test, LoadScene(SceneCn), Category("Integration"), Timeout(120000)]
-        public async Task WaveEndCrateAndBuildPanels_TheMusicPlaysOn_OnlyThePauseMenuHoldsIt()
+        public async Task WaveEndAndBuildPanels_FadeTheMusicOut_WalkingStartsItFromTheTop_ThePauseMenuHoldsIt()
         {
             var game = await ReadyScene();
             var audio = V3WorldAudio.Instance;
@@ -234,50 +234,27 @@ namespace AnomalyArena
             float full = audio.musicGain * audio.masterGain;
             await Until(() => music.isPlaying && music.volume >= full * .99f, 5f, "the combat music plays in the wave");
 
-            bool watching = true, stopped = false, restarted = false;
-            float quietest = float.MaxValue;
-            async Task Watch()
-            {
-                float last = music.time;
-                while (watching && music)
-                {
-                    await Awaitable.NextFrameAsync();
-                    if (!watching || !music) break;
-                    stopped |= !music.isPlaying;
-                    quietest = Mathf.Min(quietest, music.volume);
-                    float now = music.time;
-                    if (now + .05f < last && music.clip && last < music.clip.length - 1f) restarted = true;
-                    last = now;
-                }
-            }
+            await ClearTheWave(game);
+            Assume.That(game.RunPhase, Is.EqualTo(ArenaUiState.WaveEnd), "the wave has ended");
+            await Until(() => !music.isPlaying, .9f, "the wave's end fades the music out and stops it");
+            Assert.That(game.RunPhase, Is.EqualTo(ArenaUiState.WaveEnd), "before the build phase opens");
 
-            var watch = Watch();
-            try
-            {
-                await ClearTheWave(game);
-                await Until(() => game.RunPhase == ArenaUiState.SupplyDrop && game.SupplyDropReady, 10f, "the build phase's supply crate lands");
-                await RealSeconds(.6f);
-                await CommandUntil(game, ArenaUiCommand.OpenSupply, () => game.RunPhase == ArenaUiState.Armory);
-                await RealSeconds(1f);
-                await CommandUntil(game, ArenaUiCommand.TakeArmory, () => game.RunPhase != ArenaUiState.Armory, 0);
-                Assume.That(game.RunPhase, Is.EqualTo(ArenaUiState.WeaponIntro), "the armory weapon's card opens");
-                await RealSeconds(.6f);
-                await CommandUntil(game, ArenaUiCommand.DismissWeaponIntro, () => game.RunPhase != ArenaUiState.WeaponIntro);
-                await RealSeconds(1f);
-            }
-            finally
-            {
-                watching = false;
-            }
+            await Until(() => game.BuildCrateWalking && music.isPlaying && music.volume >= full * .99f, 5f, "the music plays while the crate comes down");
+            Assert.That(music.time, Is.LessThan(1.5f), "from the top");
 
-            await watch;
-            Assume.That(game.RunPhase is ArenaUiState.Draft or ArenaUiState.Ready, Is.True, "a build panel is open");
-            Assert.That(stopped, Is.False, "the music never stops between the wave and the build panels");
-            Assert.That(quietest, Is.GreaterThanOrEqualTo(full * .99f), "nor fades");
-            Assert.That(restarted, Is.False, "nor starts over");
+            await Until(() => game.SupplyDropReady, 10f, "the build phase's supply crate lands");
+            await CommandUntil(game, ArenaUiCommand.OpenSupply, () => game.RunPhase == ArenaUiState.Armory);
+            await RealSeconds(audio.backgroundFadeSeconds + .4f);
+            Assert.That(music.volume, Is.EqualTo(0f).Within(.001f), "the armory panel fades the music out");
+            Assert.That(music.isPlaying, Is.False, "and stops it");
 
             using var keyboard = new TestKeyboard();
-            await keyboard.TapUntil(KeyCode.Escape, () => game.RunPhase == ArenaUiState.Paused, "Esc pauses the build panel");
+            await keyboard.TapUntil(KeyCode.Tab, () => game.BuildWalking, "Tab puts the panel away");
+            await Until(() => music.isPlaying && music.volume >= full * .99f, 3f, "the music plays on the walk");
+            Assert.That(music.time, Is.LessThan(1.5f), "from the top");
+
+            await RealSeconds(.5f);
+            await keyboard.TapUntil(KeyCode.Escape, () => game.RunPhase == ArenaUiState.Paused, "Esc pauses the walk");
             await Awaitable.NextFrameAsync();
             bool heldPlaying = music.isPlaying;
             float heldAt = music.time;

@@ -152,7 +152,7 @@ namespace AnomalyArena
             {
                 var offers = game.UiSnapshot.armoryOffers;
                 Assert.That(offers[0].body, Does.Contain("pairing unrevealed").And.Not.Contain("Backfire"), "a new weapon's pairing is unrevealed");
-                Assert.That(offers[1].body, Does.Contain("pairing is revealed when taken").And.Not.Contain("Backfire"), "a stronger version's pairing is revealed when taken");
+                Assert.That(offers[1].body, Does.Contain("Its attack and trait stay the same").And.Not.Contain("Backfire"), "a stronger version keeps its pairing (owner 2026-10-28)");
 
                 locale.localeCode = "en";
                 locale.SelectLocale();
