@@ -24,6 +24,7 @@ namespace AnomalyArena
 
         void ReadShownKeys(Keyboard keyboard)
         {
+            if (V2Tutorial.HoldsInput) return;
             bool digitRead = false;
             foreach (var (key, code) in ShownKeys)
             {

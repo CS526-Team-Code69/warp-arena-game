@@ -700,6 +700,8 @@ namespace AnomalyArena
             while (!completed())
             {
                 if (Time.realtimeSinceStartup > deadline) Assert.Fail($"Button {command}[{index}] unreachable or rejected: {blocker}; phase={game.RunPhase}");
+                // A player skips the how-to-play pages that open as the run enters the arena.
+                if (V2Tutorial.IsOpen) { V2Tutorial.Close(); blocker = "how-to-play pages"; }
                 Canvas.ForceUpdateCanvases();
                 await Awaitable.NextFrameAsync();
                 var action = Object.FindObjectsByType<ArenaUiButton>(FindObjectsInactive.Exclude, FindObjectsSortMode.None)
