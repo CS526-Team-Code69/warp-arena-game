@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using TestHelper.Attributes;
@@ -112,20 +113,169 @@ namespace AnomalyArena
                 Rect box = Bounds(slot.transform, hud.transform);
                 for (int j = i + 1; j < slots.Length; j++)
                     Assert.That(box.Overlaps(Bounds(slots[j].transform, hud.transform)), Is.False, $"{slot.name} overlaps {slots[j].name}");
-                var texts = new[] { slot.transform.Find("SlotKey").GetComponent<Text>(), slot.title, slot.detail };
-                var glyphs = new Graphic[] { slot.icon, slot.weaponIcon, slot.contentIcon, slot.cooldown };
-                foreach (var text in texts)
+                AssertPartsKeepToTheirBoxes(slot, hud);
+            }
+        }
+
+        [Test, LoadScene(SceneCn), Category("Integration"), Timeout(25000)]
+        public async Task BottomRow_ChineseSlotParts_StayInsideTheirOwnBoxes()
+        {
+            await ReadyScene();
+            AssumeChineseEdition();
+            var hud = Object.FindAnyObjectByType<V2Hud>(FindObjectsInactive.Include);
+            foreach (var slot in hud.handSlots.Concat(hud.autoSlots).Concat(hud.skillSlots)) AssertPartsKeepToTheirBoxes(slot, hud);
+        }
+
+        static void AssumeChineseEdition() =>
+            Assume.That(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name, Is.EqualTo(V2Hud.ChineseEditionScene), "the Chinese edition's boxes");
+
+        [Test, LoadScene(SceneCn), Category("Integration"), Timeout(25000)]
+        public async Task BottomRow_ChineseNames_ShowInFullInEverySlot()
+        {
+            await ReadyScene();
+            AssumeChineseEdition();
+            var hud = Object.FindAnyObjectByType<V2Hud>(FindObjectsInactive.Include);
+            string empty = ArenaText.Pair("Empty slot","Empty slot");
+            var weapons = new List<(string name, bool inHand, bool inAuto)> { (empty, true, true) };
+            foreach (WeaponForm form in Enum.GetValues(typeof(WeaponForm)))
+                foreach (int mk in new[] { 1, 6 })
                 {
-                    Rect area = Bounds(text.transform, hud.transform);
-                    Assert.That(area.xMin >= box.xMin - .5f && area.xMax <= box.xMax + .5f && area.yMin >= box.yMin - .5f && area.yMax <= box.yMax + .5f,
-                        Is.True, $"{slot.name}/{text.name} stays inside the slot");
-                    Assert.That(text.resizeTextForBestFit && text.verticalOverflow == VerticalWrapMode.Truncate, Is.True,
-                        $"{slot.name}/{text.name} shrinks to fit instead of spilling");
-                    foreach (var glyph in glyphs)
-                        if (glyph) Assert.That(area.Overlaps(Bounds(glyph.transform, hud.transform)), Is.False, $"{slot.name}/{text.name} is clear of {glyph.name}");
-                    foreach (var other in texts)
-                        if (other != text) Assert.That(area.Overlaps(Bounds(other.transform, hud.transform)), Is.False, $"{slot.name}/{text.name} is clear of {other.name}");
+                    bool auto = new RunWeapon { form = form }.IsAuto;
+                    weapons.Add((new RunWeapon { form = form, mk = mk }.Label, !auto, auto));
+                    for (int variant = 0; variant < 2; variant++) weapons.Add((new RunWeapon { form = form, variant = variant, revealed = true, mk = mk }.Label, !auto, auto));
                 }
+            var skills = new List<string> { ArenaText.Pair("Empty","Empty") };
+            foreach (SkillId id in Enum.GetValues(typeof(SkillId))) skills.Add(ArenaTerms.Skill(id));
+
+            var cutOff = new List<string>();
+            foreach (var view in hud.handSlots) foreach (var weapon in weapons) CollectCutOffName(hud, view, weapon.name, weapon.inHand, cutOff);
+            foreach (var view in hud.autoSlots) foreach (var weapon in weapons) CollectCutOffName(hud, view, weapon.name, weapon.inAuto, cutOff);
+            foreach (var view in hud.skillSlots) foreach (var name in skills) CollectCutOffName(hud, view, name, true, cutOff);
+            Assert.That(cutOff, Is.Empty, $"{cutOff.Count} names are cut off, first ones: {string.Join("; ", cutOff.Take(12))}");
+
+            var noticed = new List<string>();
+            CollectCutOffName(hud, hud.autoSlots[0], new string('M', 60), false, noticed);
+            Assert.That(noticed, Is.Not.Empty, "a name too long for the box counts as cut off");
+            noticed.Clear();
+            CollectCutOffName(hud, hud.autoSlots[0], new string('M', 18), false, noticed);
+            Assert.That(noticed, Has.Some.Contains("split word True"), "a name broken inside a word counts too");
+            noticed.Clear();
+            CollectCutOffName(hud, hud.autoSlots[0], new string('M', 8) + " " + new string('M', 8), true, noticed);
+            Assert.That(noticed, Is.Not.Empty, "a name that belongs in this slot kind has to keep to the lines the slot asks for");
+            noticed.Clear();
+            CollectCutOffName(hud, hud.autoSlots[0], new string('M', 8) + " " + new string('M', 8), false, noticed);
+            Assert.That(noticed, Is.Empty, "a name from another slot kind may wrap at a space, as long as it shows in full");
+        }
+
+        [Test, LoadScene(SceneCn), Category("Integration"), Timeout(25000)]
+        public async Task BottomRow_ChineseDetails_ShowInFullInEverySlot()
+        {
+            var game = await ReadyScene();
+            AssumeChineseEdition();
+            var hud = Object.FindAnyObjectByType<V2Hud>(FindObjectsInactive.Include);
+            var weapons = game.runWeapons;
+            typeof(RunWeapons).GetField("meltdownHasteLeft", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(weapons, 4.2f);
+            var cutOff = new List<string>();
+            foreach (WeaponForm form in Enum.GetValues(typeof(WeaponForm)))
+                for (int variant = 0; variant < 2; variant++)
+                    for (int moment = 0; moment < 3; moment++)
+                    {
+                        var weapon = new RunWeapon { form = form, variant = variant, revealed = true, mk = 6 };
+                        if (moment > 0)
+                        {
+                            if (!weapon.IsAuto) weapon.reload = 1.2f;
+                            if (form == WeaponForm.Minigun && variant == 0) weapon.turretLeft = 3.4f;
+                            weapon.chainStoredJumps = 9; weapon.knifeCaught = true; weapon.executeNextShot = .5f; weapon.executeAuraLeft = 3.2f; weapon.heat = 4f; weapon.charge = 99f;
+                        }
+                        if (moment == 1) { weapon.droneDownLeft = 3.2f; weapon.drainOverloadLeft = 3.2f; }
+                        if (moment == 2) weapon.drainShieldUp = true;
+                        var held = weapon.IsAuto ? weapons.Auto : weapons.Hand;
+                        held[1] = weapon;
+                        var snapshot = game.UiSnapshot;
+                        CollectCutOffDetail(hud, weapon.IsAuto ? hud.autoSlots[1] : hud.handSlots[1], weapon.IsAuto ? snapshot.autoSlots[1] : snapshot.handSlots[1], cutOff);
+                        held[1] = null;
+                    }
+            foreach (SkillId id in Enum.GetValues(typeof(SkillId)))
+                foreach (int level in new[] { 1, SkillDefinition.MaxLevel })
+                {
+                    game.skills.ResetRun();
+                    Assume.That(game.skills.Learn(id, -1, level), Is.True, "the skill can be learned");
+                    var value = game.UiSnapshot.skillSlots[0];
+                    CollectCutOffDetail(hud, hud.skillSlots[0], value, cutOff);
+                    if (!hud.skillSlots[0].detail.text.Contains(ArenaText.Pair("Energy","Energy"))) cutOff.Add($"{id} level {level} lost its cost: {hud.skillSlots[0].detail.text}");
+                }
+            Assert.That(cutOff, Is.Empty, $"{cutOff.Count} detail lines are cut off, first ones: {string.Join("; ", cutOff.Take(12))}");
+
+            weapons.Hand[1] = new RunWeapon { form = WeaponForm.Rifle, revealed = true };
+            weapons.Auto[1] = new RunWeapon { form = WeaponForm.OrbitBlades, revealed = true };
+            var plain = game.UiSnapshot;
+            hud.handSlots[1].Render(plain.handSlots[1], hud.art);
+            hud.autoSlots[1].Render(plain.autoSlots[1], hud.art);
+            string whole = ArenaText.Pair("Common Lv 1 None","Common Lv 1 None");
+            Assert.That(hud.handSlots[1].detail.text, Is.EqualTo(whole), "a hand slot shows all three");
+            Assert.That(hud.autoSlots[1].detail.text, Is.EqualTo(whole), "an auto slot shows all three");
+
+            game.skills.ResetRun();
+            Assume.That(game.skills.Learn(SkillId.GravityWell), Is.True, "a skill with a level");
+            hud.skillSlots[0].Render(game.UiSnapshot.skillSlots[0], hud.art);
+            Assert.That(hud.skillSlots[0].detail.text, Does.Contain("1  "), "the gap between two numbers is wider than a space");
+        }
+
+        static void CollectCutOffDetail(V2Hud hud, V2UiSlot view, ArenaUiSlot value, List<string> cutOff)
+        {
+            view.Render(value, hud.art);
+            string shown = view.detail.text;
+            string now = value.detail.Split(" · ").Last().Replace(" ", "");
+            if (!shown.Replace(" ", "").EndsWith(now, StringComparison.Ordinal)) cutOff.Add($"{view.name}: \"{value.detail}\" lost its last part: \"{shown}\"");
+            foreach (float scale in CanvasScales)
+            {
+                var generator = Generate(view.detail, scale);
+                if (generator.characterCountVisible < shown.Length)
+                    cutOff.Add($"{view.name} ({view.detail.rectTransform.rect.width:0}x{view.detail.rectTransform.rect.height:0}) scale {scale:0.00} size {generator.fontSizeUsedForBestFit}: {shown} ({generator.characterCountVisible}/{shown.Length} characters, from \"{value.detail}\")");
+            }
+        }
+
+        static readonly float[] CanvasScales = Enumerable.Range(0, 31).Select(step => .5f + step * .05f).ToArray();
+
+        static TextGenerator Generate(Text label, float scale)
+        {
+            var settings = label.GetGenerationSettings(label.rectTransform.rect.size);
+            settings.scaleFactor = scale;
+            var generator = new TextGenerator();
+            generator.Populate(label.text, settings);
+            return generator;
+        }
+
+        static void CollectCutOffName(V2Hud hud, V2UiSlot view, string name, bool holdsThisName, List<string> cutOff)
+        {
+            view.Render(new ArenaUiSlot { title = name }, hud.art);
+            string shown = view.title.text;
+            int asked = shown.Count(c => c == '\n') + 1;
+            foreach (float scale in CanvasScales)
+            {
+                var generator = Generate(view.title, scale);
+                bool splitsWord = generator.GetLinesArray().Any(line => line.startCharIdx > 0 && line.startCharIdx < shown.Length && shown[line.startCharIdx - 1] != '\n' && shown[line.startCharIdx - 1] != ' ');
+                if (generator.characterCountVisible < shown.Length || generator.lineCount > 2 || splitsWord || holdsThisName && generator.lineCount != asked)
+                    cutOff.Add($"{view.name} ({view.title.rectTransform.rect.width:0}x{view.title.rectTransform.rect.height:0}) scale {scale:0.00} size {generator.fontSizeUsedForBestFit}: {shown.Replace('\n', '/')} ({generator.characterCountVisible}/{shown.Length} characters, {generator.lineCount} lines, split word {splitsWord})");
+            }
+        }
+
+        static void AssertPartsKeepToTheirBoxes(V2UiSlot slot, V2Hud hud)
+        {
+            Rect box = Bounds(slot.transform, hud.transform);
+            var texts = new[] { slot.transform.Find("SlotKey").GetComponent<Text>(), slot.title, slot.detail };
+            var glyphs = new Graphic[] { slot.icon, slot.weaponIcon, slot.contentIcon, slot.cooldown };
+            foreach (var text in texts)
+            {
+                Rect area = Bounds(text.transform, hud.transform);
+                Assert.That(area.xMin >= box.xMin - .5f && area.xMax <= box.xMax + .5f && area.yMin >= box.yMin - .5f && area.yMax <= box.yMax + .5f,
+                    Is.True, $"{slot.name}/{text.name} stays inside the slot");
+                Assert.That(text.resizeTextForBestFit && text.verticalOverflow == VerticalWrapMode.Truncate, Is.True,
+                    $"{slot.name}/{text.name} shrinks to fit instead of spilling");
+                foreach (var glyph in glyphs)
+                    if (glyph) Assert.That(area.Overlaps(Bounds(glyph.transform, hud.transform)), Is.False, $"{slot.name}/{text.name} is clear of {glyph.name}");
+                foreach (var other in texts)
+                    if (other != text) Assert.That(area.Overlaps(Bounds(other.transform, hud.transform)), Is.False, $"{slot.name}/{text.name} is clear of {other.name}");
             }
         }
 

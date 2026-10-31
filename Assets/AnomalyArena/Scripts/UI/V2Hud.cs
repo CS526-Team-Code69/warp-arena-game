@@ -88,7 +88,7 @@ namespace AnomalyArena
         const int WeaponCardTextSize = 24;
         int weaponCardSmallest = 10;
 
-        const string ChineseEditionScene = "ArenaV2_CN";
+        public const string ChineseEditionScene = "ArenaV2_CN";
         static readonly string[] ChineseTitleHidden = { "InterstellarSubtitle", "ToggleArt", "ChineseTeam", "EnglishShowcase" };
 
         void SimplifyChineseTitle()

@@ -53,6 +53,8 @@ namespace AnomalyArena.EditorTools
             if (showInside)
             {
                 EditorGUI.indentLevel++;
+                if (layout.gameObject.scene.name == V2Hud.ChineseEditionScene)
+                    EditorGUILayout.HelpBox("At run time the Chinese edition rearranges the inside of the slots so names and detail lines show in full: the program places the name box, the weapon and skill icons and the detail row. So \"Name row from top\" has no effect at run time, and the program also decides the element icon size and weapon icon size on auto slots and the largest element icon on skill slots. The edit view still shows the boxes from before this rearrangement; see the real result in Play mode.", MessageType.Info);
                 Field("padding", "Padding", "Distance between the text and the slot's side frame, which is about 14 wide itself.");
                 Field("keyTop", "Key row from top", "Distance of the \"Auto 1 / Hand 1 [LMB] / Skill 1 [1]\" line from the slot's top edge.");
                 Field("titleTop", "Name row from top", "");
