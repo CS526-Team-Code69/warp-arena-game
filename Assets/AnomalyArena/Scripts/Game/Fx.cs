@@ -11,12 +11,14 @@ namespace AnomalyArena
                                                          
         public static void Pop(Vector3 pos, Color c, float size)
         {
+            if (V5Vfx.On) { V5Vfx.I.Pop(pos, c, size); return; }
             if (FxPool.Active) FxPool.Active.Emit(pos, c, size, .25f);
         }
 
                                                                                                                                                                 
         public static void Burst(Vector3 pos, Vector3 dir, Color c, int count, float speed, float spreadDeg, float size)
         {
+            if (V5Vfx.On) { V5Vfx.I.Burst(pos, dir, c, count, speed, spreadDeg, size); return; }
             var pool = FxPool.Active;
             if (!pool) return;
             Vector3 forward = dir.sqrMagnitude > 0f ? dir.normalized : Vector3.forward;
@@ -30,17 +32,19 @@ namespace AnomalyArena
                                                                                   
         public static void Ring(Vector3 pos, float radius, Color c, float life = 0.25f)
         {
+            if (V5Vfx.On) { V5Vfx.I.Ring(pos, radius, c, life); return; }
             if (FxPool.Active) FxPool.Active.Emit(pos, c, radius * 2, life, texture: FxPool.Active.ring, flat: true);
         }
 
                                                                                                                     
         public static void Sector(Vector3 origin, Vector3 dir, float radius, float arcDeg, Color c)
-            => Flat(origin, dir, radius, arcDeg, c, FxPool.Active ? FxPool.Active.conePlain : null, .15f);
+            => Flat(origin, dir, radius, arcDeg, c, V5Vfx.On ? V5Vfx.I.TeleCone : FxPool.Active ? FxPool.Active.conePlain : null, .15f);
 
                                                                                                                                        
                                                                                                   
         public static void Cone(Vector3 origin, Vector3 dir, float radius, float arcDeg, ElementKind element)
         {
+            if (V5Vfx.On) { V5Vfx.I.Cone(origin, dir, radius, arcDeg, element); return; }
             var pool = FxPool.Active;
             if (!pool) return;
             var texture = pool.ConeTexture(element);
@@ -67,7 +71,7 @@ namespace AnomalyArena
 
                                                                                                                 
         public static void Telegraph(Vector3 origin, Vector3 dir, float radius, float arcDeg, Color c)
-            => Flat(origin, dir, radius, arcDeg, c, FxPool.Active ? FxPool.Active.telegraph : null, .18f);
+            => Flat(origin, dir, radius, arcDeg, c, V5Vfx.On ? V5Vfx.I.TeleCone : FxPool.Active ? FxPool.Active.telegraph : null, .18f);
 
                                                                                                                                         
                                                                            

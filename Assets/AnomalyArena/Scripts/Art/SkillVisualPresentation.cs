@@ -31,6 +31,13 @@ namespace AnomalyArena
             if (!skills) { HideAll(); return; }
             var gm = GameManager.Instance;
             var camera = gm ? gm.cam : null;
+            if (V5Vfx.On)
+            {
+
+                HideAll();
+                if (skills.SingularityActive) V5Vfx.I.SingularityTick(skills.SingularityOrigin, skills.SingularityProgress01);
+                return;
+            }
             if (voidWalkAfterimages != null)
             {
                 RecordTrail(gm);

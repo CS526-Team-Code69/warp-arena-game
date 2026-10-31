@@ -565,7 +565,8 @@ namespace AnomalyArena
                             float damage = def.ScaledDamage(def.singularityBaseDamage + effect.absorbed.Count * def.singularityDamagePerEnemy, level, DamageMultiplier);
                             AreaHit(effect.center, def.Radius(level), damage, 0f, def.element);
                             var fx = FxPool.Active;
-                            if (fx) fx.Emit(effect.center, ElementCombat.ColorFor(ElementKind.Void), def.Radius(level) * 2f, 2f,
+                            if (V5Vfx.On) V5Vfx.I.VoidExplosion(effect.center, def.Radius(level));
+                            else if (fx) fx.Emit(effect.center, ElementCombat.ColorFor(ElementKind.Void), def.Radius(level) * 2f, 2f,
                                 texture: fx.ring, flat: true);
                         }
                         break;

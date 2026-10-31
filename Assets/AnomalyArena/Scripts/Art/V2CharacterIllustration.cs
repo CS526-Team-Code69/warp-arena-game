@@ -24,6 +24,7 @@ namespace AnomalyArena
         public float whiteboxOutlineScale = 1.15f;
         Combatant body;
         Enemy enemy;
+        Renderer facingMark;
         V2ModelPresentation model;
         Rigidbody motion;
         MaterialPropertyBlock block;
@@ -44,12 +45,16 @@ namespace AnomalyArena
             body = GetComponent<Combatant>(); enemy = body as Enemy;
             model = GetComponent<V2ModelPresentation>();
             motion = GetComponent<Rigidbody>(); block = new MaterialPropertyBlock();
+            foreach (var t in GetComponentsInChildren<Transform>(true))
+                if (t.name == "Facing") { facingMark = t.GetComponent<Renderer>(); break; }
         }
         void OnEnable() { started = false; walkPhase = 0f; }
         void OnDisable() { if (hitImpact) hitImpact.enabled = false; ShowIllustrationOutline(false); ShowWhiteboxOutline(false); }
 
         void LateUpdate()
         {
+
+            if (facingMark && facingMark.enabled == Art.Enabled) facingMark.enabled = !Art.Enabled;
             if (!body || !illustration) return;
             if (!started) { ApplyLook(); started = true; }
             if (illustrated != Art.Enabled || modelVisible != (model && model.UsingModel)) ApplyVisibility();

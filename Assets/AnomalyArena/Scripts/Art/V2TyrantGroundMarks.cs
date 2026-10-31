@@ -78,6 +78,18 @@ namespace AnomalyArena
             tail.SetPosition(0, centre + Vector3.up * .07f);
             tail.SetPosition(1, centre + enemy.TailDirection * reach + Vector3.up * .07f);
             Flatten(tail);
+            if (V5Vfx.On)
+            {
+
+                Style(fanRim, lineWidth * .6f, new Color(1f, .62f, .28f, .6f));
+                tail.sharedMaterial = V5Vfx.I.TailMaterial;
+                tail.startWidth = Mathf.Max(lineWidth, enemy.TailHalfWidth * 2.2f);
+                tail.endWidth = .08f;
+                tail.widthMultiplier = 1f;
+                tail.startColor = tail.endColor = new Color(1f, .68f, .32f, 1f);
+                V5Vfx.I.TailSweepTick(centre, enemy.TailDirection, reach, enemy.TailHalfWidth);
+                return;
+            }
             Style(tail, Mathf.Max(lineWidth, enemy.TailHalfWidth * 2f), tailColor);
         }
 
@@ -114,12 +126,23 @@ namespace AnomalyArena
             Style(impactRim, lineWidth, rimColor);
 
             Circle(impactFill, enemy.MeteorTarget, reach - filled * .5f, .05f);
-            Style(impactFill, filled, fillColor);
+            Style(impactFill, filled, V5Vfx.On ? new Color(.7f, .12f, .03f, .3f) : fillColor);
             DrawMeteorBody(enemy.MeteorPosition);
         }
 
+        Vector3 meteorLast;
+
         void DrawMeteorBody(Vector3 at)
         {
+            if (V5Vfx.On)
+            {
+
+                meteor.enabled = false;
+                V5Vfx.I.MeteorBody(at, meteorSize * 1.25f);
+                V5Vfx.I.MeteorTick(at, at - meteorLast, meteorSize);
+                meteorLast = at;
+                return;
+            }
             var cam = GameManager.Instance ? GameManager.Instance.cam : null;
             if (!cam)
             {

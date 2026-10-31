@@ -165,6 +165,54 @@ namespace AnomalyArena
             Assert.That(game.UiSnapshot.illustrated, Is.True, "the switch turns the illustrated art on");
         }
 
+        [Test, BuildScene(SceneCn), Category("Integration"), Timeout(60000)]
+        public async Task ChineseEdition_HasTheMenuLookFromTheTitle()
+        {
+            await SceneManagerHelper.LoadSceneAsync(SceneCn);
+            var game = await ReadyScene();
+
+            Assert.That(game.RunPhase, Is.EqualTo(ArenaUiState.Title));
+            Assert.That(MenuSkin().Installed, Is.True, "the Chinese edition has no whitebox to wait for");
+        }
+
+        [Test, BuildScene(SceneEn), Category("Integration"), Timeout(60000)]
+        public async Task EnglishEdition_HasTheMenuLookInWhitebox_AndKeepsItWithTheArtOn()
+        {
+            ChoiceInitialized.SetValue(null, false);
+            ToggleChoice.SetValue(null, null);
+
+            await SceneManagerHelper.LoadSceneAsync(SceneEn);
+            var game = await ReadyScene();
+            bool whitebox = !Art.Enabled, inWhitebox = MenuSkin().Installed;
+            await CommandUntil(game, ArenaUiCommand.ToggleArt, () => Art.Enabled);
+            await Awaitable.NextFrameAsync();
+
+            Assert.That(whitebox, Is.True, "whitebox is the default");
+            Assert.That(inWhitebox, Is.True, "the art switch is not about the menus (owner 2026-10-30)");
+            Assert.That(MenuSkin().Installed, Is.True, "and the art on keeps them");
+        }
+
+        [Test, BuildScene(SceneEn), Category("Integration"), Timeout(60000)]
+        public async Task EnglishEdition_SwitchOnAndOffAtTheTitle_TheTrialPlatformGetsItsSavedMaterialBack()
+        {
+            ChoiceInitialized.SetValue(null, false);
+            ToggleChoice.SetValue(null, null);
+
+            await SceneManagerHelper.LoadSceneAsync(SceneEn);
+            var game = await ReadyScene();
+            var platform = WorldMap.Active.trialPlatform.GetComponent<Renderer>();
+            var saved = platform.sharedMaterial;
+
+            await CommandUntil(game, ArenaUiCommand.ToggleArt, () => Art.Enabled);
+            await Until(() => platform.sharedMaterial != saved, 5f, "the art dresses the platform");
+            await CommandUntil(game, ArenaUiCommand.ToggleArt, () => !Art.Enabled);
+            await Until(() => platform.sharedMaterial == saved, 5f, "whitebox gives the saved material back");
+
+            Assert.That(platform.sharedMaterial, Is.SameAs(saved));
+        }
+
+        static V5MenuSkin MenuSkin() => Object.FindAnyObjectByType<V2Hud>(FindObjectsInactive.Include).GetComponent<V5MenuSkin>();
+
         [Test, LoadScene(SceneCn), Category("Integration"), Timeout(120000)]
         public async Task BuildPanelOpen_Esc_PausesTheRunAndItsClocks_EscAgainResumesThePanelOrTheWalk()
         {

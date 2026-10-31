@@ -145,7 +145,8 @@ namespace AnomalyArena
                     {
                         float angle = Random.Range(0f, Mathf.PI * 2f);
                         var dir = new Vector3(Mathf.Sin(angle), 0f, Mathf.Cos(angle));
-                        pool.Emit(centre + dir * AbsorbRadius + Vector3.up * Random.Range(-.3f, .5f), new Color(tint.r, tint.g, tint.b, .9f),
+                        if (V5Vfx.On) V5Vfx.I.AbsorbMote(centre + dir * AbsorbRadius + Vector3.up * Random.Range(-.3f, .5f), -dir * AbsorbRadius / AbsorbMoteLife, AbsorbMoteLife);
+                        else pool.Emit(centre + dir * AbsorbRadius + Vector3.up * Random.Range(-.3f, .5f), new Color(tint.r, tint.g, tint.b, .9f),
                             Random.Range(.3f, .5f), AbsorbMoteLife, -dir * speed);
                     }
                 }

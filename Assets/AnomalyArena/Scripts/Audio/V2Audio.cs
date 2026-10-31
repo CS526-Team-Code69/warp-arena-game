@@ -41,6 +41,8 @@ namespace AnomalyArena
             for (int i = 0; i < weaponAssignments.Length; i++) if (weaponVoices[i]) weaponBaseVolumes[i] = weaponVoices[i].volume;
             for (int i = 0; i < uiAssignments.Length; i++) if (uiVoices[i]) uiBaseVolumes[i] = uiVoices[i].volume;
             for (int i = 0; i < warningAssignments.Length; i++) if (warningVoices[i]) warningBaseVolumes[i] = warningVoices[i].volume;
+
+            if (!GetComponent<V5WeaponAudio>()) gameObject.AddComponent<V5WeaponAudio>();
         }
         void Update()
         {

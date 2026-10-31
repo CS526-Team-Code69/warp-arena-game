@@ -106,6 +106,7 @@ namespace AnomalyArena
             {
                 landed = true;
                 game.MarkSupplyLanded();
+                if (V5Vfx.On && game.player) V5Vfx.I.GroundSlam(game.player.Position, 1.8f, new Color(.82f, .76f, .66f), false);
 
                 if (openButton) openButton.interactable = true;
                 if (landingSound) V2Audio.Instance?.PlayWorld(ArenaSoundCue.Impact, anchor);

@@ -28,6 +28,9 @@ namespace AnomalyArena
         bool tinted;
 
                                                                                                                                  
+                                                                                                    
+        public ElementKind Affix => owner ? owner.Affix : ElementKind.None;
+
         public bool IsPoisonSpike => !IsBossShot && owner && owner.definition && owner.definition.spikePoisonStacks > 0f;
 
         public void Launch(Enemy enemy, Vector3 at, Vector3 dir)

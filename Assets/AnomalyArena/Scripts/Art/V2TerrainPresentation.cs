@@ -2,6 +2,7 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
+
     [DisallowMultipleComponent]
     public sealed class V2TerrainPresentation : MonoBehaviour
     {
@@ -17,8 +18,15 @@ namespace AnomalyArena
         void Apply()
         {
             applied = true; illustrated = Art.Enabled;
-            if (illustratedRoot) illustratedRoot.gameObject.SetActive(illustrated);
+            bool stone = V5TerrainWalls.StyleOfGroup(transform.parent, out var style);
+            if (stone) V5TerrainWallArt.Attach(gameObject, style).Invalidate();
+            if (illustratedRoot) illustratedRoot.gameObject.SetActive(illustrated && !stone);
             if (whitebox) whitebox.enabled = !illustrated;
+        }
+
+        public void Refresh()
+        {
+            if (TryGetComponent(out V5TerrainWallArt art)) art.Refresh();
         }
     }
 }

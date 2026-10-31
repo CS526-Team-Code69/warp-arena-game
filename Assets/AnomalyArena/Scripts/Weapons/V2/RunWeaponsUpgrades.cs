@@ -453,6 +453,8 @@ namespace AnomalyArena
     {
         public Vector3 from, to;
         public float width, until;
+
+        public bool drawnByV5;
         public Color color;
     }
 
@@ -520,7 +522,7 @@ namespace AnomalyArena
             float charge=Mathf.Clamp01(w.charge);
             int pellets=Mathf.Max(1,upgrades.focusPellets);
             w.burstLeft=pellets;w.burstTimer=0f;w.burstDirection=aim;
-            V3WorldAudio.Instance?.Play(ArenaWorldCue.WeaponFocusRelease,player.Position);
+            V5WeaponAudio.FocusRelease(charge,player.Position);
             w.burstDamage=damage/pellets*Mathf.Lerp(upgrades.focusMinChargeDamage,1f,charge);
 
             player.Push(-aim,FocusRecoil(w,charge));
@@ -734,7 +736,7 @@ namespace AnomalyArena
 
         void Shatter(RunWeapon w,Combatant first,float hit,Vector3 dir)
         {
-            WeaponSound(w);
+            WeaponSound(w,WeaponAudioPhase.Fire,true);
             var status=ElementStatus.For(first);
             bool frozen=status&&status.Frozen;
 
@@ -1003,6 +1005,7 @@ namespace AnomalyArena
 
             Area(w,player.Position,upgrades.fuelTankRadius,upgrades.fuelTankDamage*DamageScale(w),w.Has(UpgradeAxis.Tame)?upgrades.fuelTankTamePush:0,false);
             if(!w.Has(UpgradeAxis.Tame))ElementStatus.For(player)?.Add(ElementKind.Fire,upgrades.fuelTankSelfFire,player);
+            if(V5Vfx.On){V5Vfx.I.Explosion(player.Position,upgrades.fuelTankRadius);return;}
             var fx=FxPool.Active;var art=V4CombatVfx.Active;
             if(fx&&art&&art.strikeFlash)fx.Emit(player.Position+Vector3.up*.8f,new Color(1f,.75f,.45f),upgrades.fuelTankRadius*1.8f,.3f,texture:art.strikeFlash,pulse:true);
         }
@@ -1209,7 +1212,7 @@ namespace AnomalyArena
             elementTargets.Clear();upgradeHits.Clear();
             foreach(var c in Combatant.All)
                 if(c!=player&&c.IsAlive&&Query.Flat(c.Position-at).magnitude<=range+c.radius&&!WallBlocks(at,c.Position)&&upgradeHits.Add(c))elementTargets.Add(c);
-            Fx.Ring(at,range,ElementCombat.ColorFor(w.element));
+            if(V5Vfx.On)V5Vfx.I.Nova(at,range,V5Vfx.ElementTint(w.element));else Fx.Ring(at,range,ElementCombat.ColorFor(w.element));
             if(w.Has(UpgradeAxis.Twist)&&w.trailPoints!=null)
             {
                 Color bolt=ElementCombat.ColorFor(ElementKind.Lightning);
@@ -1227,7 +1230,8 @@ namespace AnomalyArena
                     else point=Query.Flat(at);
                     if(joined&&Query.Flat(point-previous).magnitude<=upgrades.capacitorTrailBreak)
                     {
-                        AddTracer(Query.AtCastHeight(previous),Query.AtCastHeight(point),.35f,.2f,bolt);
+                        if(V5Vfx.On)V5Vfx.I.Bolt(Query.AtCastHeight(previous),Query.AtCastHeight(point),bolt,1.1f,.2f);
+                        AddTracer(Query.AtCastHeight(previous),Query.AtCastHeight(point),.35f,.2f,bolt,V5Vfx.On);
                         foreach(var c in Combatant.All)
                         {
                             if(c==player||!c.IsAlive||upgradeHits.Contains(c))continue;
@@ -1497,9 +1501,10 @@ namespace AnomalyArena
             Vector3 dir=w.turretDir,from=Query.AtCastHeight(w.turretPoint);float distance=.7f;
             if(Physics.Linecast(from,from+dir*distance,out var wall,GameManager.WallMask,QueryTriggerInteraction.Ignore))distance=Mathf.Max(0f,wall.distance-upgrades.spawnWallBackoff);
             a.Configure(AttackMode.Bolt,player,w,w.turretPoint+dir*distance,dir,hit,0,reach,40,0,reach/40+3);
-            V2Audio.Instance?.PlayWeapon(w.form,w.variant,WeaponAudioPhase.Fire);
+            V5WeaponAudio.Weapon(w,WeaponAudioPhase.Fire);
             var pool=FxPool.Active;
-            if(pool&&pool.muzzleFlash)pool.EmitDirectional(pool.muzzleFlash,from+dir*.6f,dir,.6f,.07f,new Color(1f,.88f,.6f));
+            if(V5Vfx.On)V5Vfx.I.Muzzle(from+dir*.6f,dir,new Color(1f,.82f,.5f),.8f);
+            else if(pool&&pool.muzzleFlash)pool.EmitDirectional(pool.muzzleFlash,from+dir*.6f,dir,.6f,.07f,new Color(1f,.88f,.6f));
         }
 
         public bool Anchored=>SpinBraceReady(Active)&&SpinWallBehind();
@@ -1523,11 +1528,11 @@ namespace AnomalyArena
             if(anchorRingClock<=0f){anchorRingClock=.3f;Fx.Ring(player.Position,.9f,new Color(1f,.85f,.45f,.7f));}
         }
 
-        void AddTracer(Vector3 from,Vector3 to,float width,float seconds,Color color)
+        void AddTracer(Vector3 from,Vector3 to,float width,float seconds,Color color,bool drawnByV5=false)
         {
             if(seconds<=0f)return;
             if(tracers.Count>=32)tracers.RemoveAt(0);
-            tracers.Add(new WeaponTracer{from=from,to=to,width=width,until=Time.unscaledTime+seconds,color=color});
+            tracers.Add(new WeaponTracer{from=from,to=to,width=width,until=Time.unscaledTime+seconds,color=color,drawnByV5=drawnByV5});
         }
 
         void PruneTracers(){for(int i=tracers.Count-1;i>=0;i--)if(tracers[i].until<Time.unscaledTime)tracers.RemoveAt(i);}

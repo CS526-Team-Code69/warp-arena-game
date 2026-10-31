@@ -50,6 +50,9 @@ namespace AnomalyArena
         static readonly int RunHash = Animator.StringToHash("Base Layer.Run");
         static readonly int AttackHash = Animator.StringToHash("Base Layer.Attack");
         static readonly int EmissionId = Shader.PropertyToID("_EmissionColor");
+        static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+
+        [System.NonSerialized] public Color baseTint = Color.white;
 
         public bool HasAssignedModel => modelRoot && animator && animator.runtimeAnimatorController && idleClip && runClip && attackClip && modelRenderers != null && modelRenderers.Length > 0;
         public bool UsingModel => HasAssignedModel && Art.Enabled;
@@ -234,6 +237,7 @@ namespace AnomalyArena
                 if (!renderer) continue;
                 renderer.GetPropertyBlock(block);
                 block.SetColor(EmissionId, glow);
+                block.SetColor(BaseColorId, baseTint);
                 renderer.SetPropertyBlock(block);
             }
         }

@@ -119,6 +119,7 @@ namespace AnomalyArena
             {
                 var enemy = bindings[i]; var view = enemyLabels[i];
                 bool show = enemy && enemy.IsAlive && enemy.gameObject.activeInHierarchy && !enemy.Cloaked;
+                if (show) NarrowBars(view, enemy);
                 if (show) show = PlaceWorld(view.root, enemy.HeadPoint(gm.cam), gm.cam);
                 if (view.root.gameObject.activeSelf != show) view.root.gameObject.SetActive(show);
             }
@@ -220,6 +221,16 @@ namespace AnomalyArena
 
                 if (label.gameObject.activeSelf != show) label.gameObject.SetActive(show);
             }
+        }
+
+                                                                                                                                                 
+        static void NarrowBars(EnemyLabel view, Enemy enemy)
+        {
+            float width = enemy.IsBoss || enemy.Elite ? 1f : Mathf.Clamp(enemy.radius * .85f, .42f, .78f);
+            var bar = view.hp ? view.hp.rectTransform.parent as RectTransform : null;
+            if (bar && !Mathf.Approximately(bar.localScale.x, width)) bar.localScale = new Vector3(width, 1f, 1f);
+            bar = view.shield ? view.shield.rectTransform.parent as RectTransform : null;
+            if (bar && !Mathf.Approximately(bar.localScale.x, width)) bar.localScale = new Vector3(width, 1f, 1f);
         }
 
         static bool Offscreen(Vector3 world, Camera camera)

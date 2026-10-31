@@ -13,6 +13,8 @@ namespace AnomalyArena
         public float minBodyScale = .6f;
         [Min(8), Tooltip("Largest size of the card text (owner 2026-10-28: the saved size was easy to skip). Long texts still shrink, no smaller than before.")]
         public int bodyFontSize = 19;
+
+        [System.NonSerialized] public System.Action<CardRarity> rarityApplied;
         int savedBodySize;
 
         void Awake()
@@ -69,6 +71,7 @@ namespace AnomalyArena
             Color tint = ArenaRarity.ColorFor(rarity);
             if (title) title.color = tint;
             if (badge) badge.color = tint;
+            rarityApplied?.Invoke(rarity);
             if (!button) return;
             var colours = button.colors;
             colours.normalColor = Color.Lerp(Color.white, tint, .20f);

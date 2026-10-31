@@ -144,6 +144,9 @@ namespace AnomalyArena
             if (!Rules || !body || !body.IsAlive || amount <= 0f) return;
 
             if (IsPlayer && GameManager.Instance && GameManager.Instance.skills && GameManager.Instance.skills.SingularityActive) return;
+            if (V5Vfx.On && ElementFactor(element) > 0f) V5Vfx.I.ElementTouch(body, element);
+
+            if (ElementFactor(element) > 0f) V5WeaponAudio.ElementHit(element, body.Position, amount);
 
             if (!IsPlayer && element == ElementKind.Fire)
             {
@@ -170,6 +173,7 @@ namespace AnomalyArena
             fireWindow = Rules.elementWindow;
             fireSource = source;
             OnStatusApplied(ElementKind.Fire);
+            V5WeaponAudio.ElementHit(ElementKind.Fire, body.Position);
         }
 
         bool AddToPlayer(ElementKind element, float amount, Combatant source)
@@ -479,6 +483,8 @@ namespace AnomalyArena
         public void PayWielder(ElementKind element, float damage)
         {
             if (!body || !body.IsAlive || !Rules || damage <= 0f) return;
+            if (V5Vfx.On) V5Vfx.I.WielderPay(body, element);
+            V5WeaponAudio.ElementHit(element, body.Position);
             switch (element)
             {
                 case ElementKind.Earth:
@@ -498,6 +504,10 @@ namespace AnomalyArena
             + (Frozen ? "  FROZEN" : "") + (Paralysed ? "  PARALYSED" : "");
         void OnStatusApplied(ElementKind element) => StatusApplied?.Invoke(element);
         void OnDamageTicked(float amount, DamageSource source, Combatant dealer) => DamageTicked?.Invoke(amount, source, dealer);
-        void OnShieldBroken() => ShieldBroken?.Invoke();
+        void OnShieldBroken()
+        {
+            ShieldBroken?.Invoke();
+            if (body) V5WeaponAudio.At(V5Sfx.RingShieldBreak, body.Position, .5f, 1.15f);                                                                                    
+        }
     }
 }

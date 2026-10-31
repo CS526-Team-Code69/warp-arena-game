@@ -116,7 +116,7 @@ namespace AnomalyArena
                 var rect = new Rect(at.x - half, at.z - half, size, size);
                 if (!world.Contains(at, half) || world.IsWall(at, half) || world.IsHole(at) || Occupied(rect) || Overlaps(rect)) continue;
                 var template = group && savedCount > 0 ? LayoutWalls.ClosestInSize(group, Mathf.Min(savedCount, group.childCount), rect) : null;
-                pieces.Add(new Piece { rect = rect, body = Copy(template ? template.gameObject : null, rect), fragment = true, life = life });
+                pieces.Add(new Piece { rect = rect, body = Copy(template ? template.gameObject : null, rect, true), fragment = true, life = life });
                 added++;
             }
 
@@ -258,7 +258,7 @@ namespace AnomalyArena
             world.HoleChanged();
         }
 
-        GameObject Copy(GameObject template, Rect rect)
+        GameObject Copy(GameObject template, Rect rect, bool fragment = false)
         {
             if (!template || !group) return null;
             var copy = Instantiate(template, group);
@@ -268,6 +268,8 @@ namespace AnomalyArena
             t.localRotation = template.transform.localRotation;
             t.localScale = new Vector3(rect.width, template.transform.localScale.y, rect.height);
             copy.SetActive(true);
+            if (fragment && copy.TryGetComponent(out V5TerrainWallArt art)) art.style = V5WallStyle.Meteor;
+            if (copy.TryGetComponent(out V2TerrainPresentation look)) look.Refresh();
             copies.Add(copy);
             return copy;
         }

@@ -56,6 +56,11 @@ namespace AnomalyArena
         static readonly int TextureId = Shader.PropertyToID("_BaseMap");
         MaterialPropertyBlock block;
         int used;
+        Material baseMaterial;
+
+        Texture shadowTexture, softGlow, thinRing, shellTexture, sporeTexture, orbTexture, hexTexture;
+        (Texture frostShell, Texture frostRing, Texture slowRing, Texture auraShield) savedTextures;
+        bool v5Textures;
         Transform cameraTransform;
         public static V4CombatVfx Active { get; private set; }
 
@@ -76,6 +81,40 @@ namespace AnomalyArena
         void Awake()
         {
             block = new MaterialPropertyBlock();
+            if (items != null && items.Length > 0 && items[0])
+            {
+                baseMaterial = items[0].sharedMaterial;
+
+                int saved = items.Length;
+                System.Array.Resize(ref items, saved + 160);
+                for (int i = saved; i < items.Length; i++)
+                {
+                    items[i] = Instantiate(items[0], items[0].transform.parent);
+                    items[i].enabled = false;
+                }
+            }
+        }
+
+        void SwapTextures(bool v5)
+        {
+            if (v5 == v5Textures) return;
+            v5Textures = v5;
+            if (v5)
+            {
+                savedTextures = (frostShell, frostRing, slowRing, auraShield);
+                shadowTexture = V5Vfx.Tex("shadow");
+                softGlow = V5Vfx.Tex("glow");
+                thinRing = V5Vfx.Tex("ring");
+                shellTexture = V5Vfx.Tex("shell");
+                sporeTexture = V5Vfx.Tex("spore");
+                orbTexture = V5Vfx.Tex("orb");
+                hexTexture = V5Vfx.Tex("hex");
+                frostShell = V5Vfx.Tex("iceshell");
+                frostRing = V5Vfx.Tex("frost");
+                slowRing = thinRing;
+                auraShield = hexTexture;
+            }
+            else (frostShell, frostRing, slowRing, auraShield) = savedTextures;
         }
 
         void OnEnable() => Active = this;
@@ -116,6 +155,7 @@ namespace AnomalyArena
             cameraTransform = gm.cam.transform;
             float time = Time.unscaledTime;
             var player = gm.player;
+            SwapTextures(V5Vfx.On);
             if (!Art.Enabled)
             {
 
@@ -126,6 +166,7 @@ namespace AnomalyArena
                 return;
             }
 
+            DrawBodyShadows(gm);
             DrawStrikes(gm, time);
             DrawHazards(gm, time);
             DrawBolts(gm);
@@ -148,12 +189,42 @@ namespace AnomalyArena
             HideRest();
         }
 
+        void DrawBodyShadows(GameManager gm)
+        {
+            if (!v5Textures || !shadowTexture) return;
+            Vector3 centre = gm.player ? gm.player.Position : cameraTransform.position;
+            float maxSqr = maxDistance * maxDistance * 1.6f;
+            foreach (var body in Combatant.All)
+            {
+                if (used >= items.Length) break;
+                if (!body || !body.IsAlive || !body.gameObject.activeInHierarchy) continue;
+                if (Query.Flat(body.Position - centre).sqrMagnitude > maxSqr) continue;
+                if (body is Enemy { Cloaked: true }) continue;
+                Flat(shadowTexture, new Vector3(body.Position.x, .03f, body.Position.z), Mathf.Max(1.5f, body.radius * 3.4f), new Color(0f, 0f, 0f, .62f), 0f);
+            }
+
+            if (gm.player && gm.player.IsAlive && softGlow)
+            {
+                Flat(thinRing, new Vector3(gm.player.Position.x, .05f, gm.player.Position.z), 2.5f, new Color(.4f, .85f, 1f, .3f), 0f, true);
+            }
+        }
+
         void DrawStatus(Combatant body, ElementStatus status, float time)
         {
             float r = Mathf.Max(.35f, body.radius) * 1.3f;
             Vector3 feet = new Vector3(body.Position.x, .07f, body.Position.z);
             Vector3 chest = Query.AtCastHeight(body.Position) + Vector3.up * r * .35f;
             float phase = (body.GetHashCode() & 255) * .137f;
+            if (v5Textures && V5Vfx.On)
+            {
+                V5Vfx.I.Status(body, status, r, chest);
+                if (status.Frozen) Billboard(frostShell, chest, r * 2.9f, new Color(.9f, .97f, 1f, .94f));
+                else if (status.Frost > .05f) Flat(frostRing, feet, r * (2.2f + .9f * status.Chill01), new Color(.72f, .93f, 1f, .25f + .55f * status.Chill01), phase * 90f);
+                if (status.Paralysed) Flat(slowRing, feet, r * 2.5f, new Color(1f, .88f, .42f, .38f), -time * 40f, true);
+
+                if (status.Shield > 0f) Billboard(auraShield, chest, r * 2.3f, new Color(1f, .86f, .55f, .13f), true);
+                return;
+            }
             if (status.Frozen)
                 Billboard(frostShell, chest, r * 2.7f, new Color(.75f, .95f, 1f, .9f));
             else if (status.Frost > .05f)
@@ -213,6 +284,16 @@ namespace AnomalyArena
                     Vector3 position = Vector3.Lerp(strike.start, strike.target, fall);
                     Vector3 velocity = strike.target - strike.start;
                     float pulse = .5f + .5f * Mathf.Sin(time * 18f);
+                    if (v5Textures)
+                    {
+
+                        Flat(thinRing, strike.target, strike.radius * 2f, new Color(1f, .42f, .18f, Mathf.Lerp(.55f, 1f, strike.progress)), 0f, true);
+                        Flat(softGlow, strike.target, strike.radius * 2f * Mathf.Lerp(1.4f, .7f, strike.progress), new Color(1f, .3f, .1f, Mathf.Lerp(.08f, .42f, strike.progress) * (.75f + .25f * pulse)), 0f, true);
+                        PlaceStretched(strikeRocket, position, ScreenRoll(velocity), strikeRocketLength, strikeRocketLength * .5f, Color.white);
+                        V5Vfx.I.RocketTrail(position - velocity.normalized * strikeRocketLength * .4f, -velocity.normalized);
+                        strikes[actor] = strike;
+                        continue;
+                    }
                     Flat(strikeTarget, strike.target, strike.radius * 2f * Mathf.Lerp(1.6f, 1f, strike.progress),
                         new Color(1f, 1f, 1f, Mathf.Lerp(.45f, .9f, strike.progress) * (.75f + .25f * pulse)),
                         time * 60f);
@@ -252,6 +333,29 @@ namespace AnomalyArena
                 var h = hazards[i];
                 float fade = Mathf.Clamp01(h.timeLeft / Mathf.Max(.01f, Mathf.Min(1f, h.life)));
                 bool tamed = h.weapon != null && h.weapon.Has(UpgradeAxis.Tame);
+                if (v5Textures && V5Vfx.On && h.kind != GroundHazardKind.IcePatch)
+                {
+                    var fx5 = V5Vfx.I;
+                    if (h.kind == GroundHazardKind.ScatterShell)
+                    {
+                        float heat = 1f - Mathf.Clamp01(h.timeLeft / Mathf.Max(.01f, h.life));
+
+                        Flat(shellTexture, h.position + Vector3.up * .08f, .72f, new Color(1f, 1f - .25f * heat, 1f - .55f * heat, 1f), i * 71f);
+                        Flat(thinRing, h.position + Vector3.up * .06f, h.radius * 2f, new Color(1f, .5f, .2f, .25f + .55f * heat), 0f, true);
+                        fx5.HotShell(h.position, heat);
+                    }
+                    else if (h.kind == GroundHazardKind.Snow)
+                    {
+                        Flat(frostRing, h.position + Vector3.up * .055f, h.radius * 2.2f, tamed ? new Color(.6f, .8f, 1f, .2f * fade) : new Color(.95f, .98f, 1f, .2f * fade), i * 53f);
+                        fx5.FrostField(h.position, h.radius, .4f);
+                    }
+                    else
+                    {
+                        Billboard(sporeTexture, h.position + Vector3.up * .5f, Mathf.Clamp(h.radius * 1.1f, .6f, 1.1f), new Color(1f, 1f, 1f, fade));
+                        fx5.PoisonField(h.position, h.radius * .8f, .3f);
+                    }
+                    continue;
+                }
 
                 if (h.kind == GroundHazardKind.IcePatch)
                     Flat(frostRing, h.position + Vector3.up * .06f, h.radius * 2.4f,
@@ -287,6 +391,12 @@ namespace AnomalyArena
                 var zone = zones[i];
                 float fade = Mathf.Clamp01(zone.timeLeft / Mathf.Max(.01f, Mathf.Min(1f, zone.life)));
                 float pulse = .85f + .15f * Mathf.Sin(time * 9f + i);
+                if (v5Textures && V5Vfx.On)
+                {
+                    V5Vfx.I.Radiation(zone.position, zone.radius, fade);
+                    Flat(thinRing, zone.position + Vector3.up * .07f, zone.radius * 2f, new Color(.8f, 1f, .25f, .16f * fade), 0f, true);
+                    continue;
+                }
                 Flat(ground, zone.position + Vector3.up * .06f, zone.radius * 2.3f * pulse, new Color(.95f, 1f, .35f, .5f * fade), time * 12f + i * 51f);
                 if (slowRing) Flat(slowRing, zone.position + Vector3.up * .07f, zone.radius * 2f, new Color(1f, .9f, .3f, .35f * fade), -time * 30f);
             }
@@ -299,9 +409,27 @@ namespace AnomalyArena
             foreach (var enemy in gm.waves.Alive)
             {
                 if (!enemy || !enemy.IsAlive || !enemy.gameObject.activeInHierarchy || !enemy.definition || used >= items.Length) continue;
+                if (v5Textures && V5Vfx.On)
+                {
+
+                    if (enemy.Affix != ElementKind.None)
+                    {
+                        V5Vfx.I.AffixAura(enemy, enemy.Affix);
+                        Color tint = V5Vfx.ElementTint(enemy.Affix);
+                        Flat(softGlow, new Vector3(enemy.Position.x, .05f, enemy.Position.z), Mathf.Max(2f, enemy.radius * 4.2f), new Color(tint.r, tint.g, tint.b, .3f), 0f, true);
+                    }
+                    if (enemy.Chanted) Flat(softGlow, new Vector3(enemy.Position.x, .05f, enemy.Position.z), Mathf.Max(1.8f, enemy.radius * 3.4f), new Color(.6f, .3f, 1f, .32f), 0f, true);
+                }
                 if (enemy.definition.kind == EnemyKind.Chanter)
                 {
                     float pulse = .5f + .5f * Mathf.Sin(time * 3f);
+                    if (v5Textures && V5Vfx.On)
+                    {
+                        V5Vfx.I.ChantMotes(enemy.Position, Enemy.ChantRadius);
+                        Flat(thinRing, new Vector3(enemy.Position.x, .07f, enemy.Position.z), Enemy.ChantRadius * 2f, new Color(.72f, .5f, 1f, .14f + .08f * pulse), 0f, true);
+                        Flat(softGlow, new Vector3(enemy.Position.x, .06f, enemy.Position.z), Enemy.ChantRadius * 2.1f, new Color(.45f, .22f, .9f, .08f + .05f * pulse), 0f, true);
+                        continue;
+                    }
                     Flat(aura, new Vector3(enemy.Position.x, .07f, enemy.Position.z), Enemy.ChantRadius * 2f * (.96f + .04f * pulse),
                         new Color(.8f, .55f, 1f, .22f + .12f * pulse), time * 20f);
                 }
@@ -317,7 +445,7 @@ namespace AnomalyArena
 
                     float width = fired ? prismBeamWidth : prismBeamWidth * .22f;
                     Color color = fired ? new Color(1f, .55f, .35f, .85f) : new Color(1f, .3f, .25f, .5f);
-                    PlaceStretched(prismBeam, from + direction * length * .5f, ScreenRoll(direction), length, width, color);
+                    PlaceStretched(prismBeam, from + direction * length * .5f, ScreenRoll(direction), length, width, color, v5Textures);
                 }
             }
             if (lasers.Count > 64) lasers.Clear();
@@ -330,12 +458,12 @@ namespace AnomalyArena
             for (int i = 0; i < tracers.Count && used < items.Length; i++)
             {
                 var tracer = tracers[i];
-                if (time > tracer.until) continue;
+                if (time > tracer.until || tracer.drawnByV5) continue;
                 Vector3 line = Query.Flat(tracer.to - tracer.from);
                 float length = line.magnitude;
                 if (length < .05f) continue;
                 Vector3 direction = line / length;
-                PlaceStretched(prismBeam, tracer.from + direction * length * .5f, ScreenRoll(direction), length, tracer.width, tracer.color);
+                PlaceStretched(prismBeam, tracer.from + direction * length * .5f, ScreenRoll(direction), length, tracer.width * (v5Textures ? 2.2f : 1f), tracer.color, v5Textures);
             }
         }
 
@@ -375,7 +503,24 @@ namespace AnomalyArena
                 var bolt = bolts[i];
                 bool drawn = poisonSpike && bolt && bolt.gameObject.activeInHierarchy && bolt.IsPoisonSpike &&
                              used < items.Length;
-                if (drawn)
+
+                bool orb = v5Textures && orbTexture && V5Vfx.On && bolt && bolt.gameObject.activeInHierarchy && !bolt.IsPoisonSpike && used < items.Length;
+                if (orb)
+                {
+                    Color shot = bolt.IsBossShot ? new Color(.82f, .5f, 1f) : bolt.Affix != ElementKind.None ? V5Vfx.ElementTint(bolt.Affix) : new Color(.6f, 1f, .4f);
+                    Billboard(orbTexture, bolt.transform.position, 1.15f, shot, true);
+                    Billboard(orbTexture, bolt.transform.position, .42f, Color.white, true);
+                    V5Vfx.I.ShotMote(bolt.transform.position, shot);
+                    drawn = true;
+                }
+                else if (drawn && v5Textures && bolt.Affix != ElementKind.None)
+                {
+
+                    V5Vfx.I.ShotMote(bolt.transform.position, V5Vfx.ElementTint(bolt.Affix));
+                    Vector3 direction = bolt.Direction;
+                    PlaceStretched(poisonSpike, bolt.transform.position - direction * spikeLength * .24f, ScreenRoll(direction), spikeLength, spikeLength * .375f, Color.white);
+                }
+                else if (drawn)
                 {
                     Vector3 direction = bolt.Direction;
 
@@ -398,7 +543,8 @@ namespace AnomalyArena
 
         void Impact(GameManager gm, FxPool fx, Strike strike)
         {
-            if (fx)
+
+            if (fx && !V5Vfx.On)
             {
                 if (strikeFlash)
                     fx.Emit(strike.target + Vector3.up * 1.1f, Color.white, strike.radius * 2.8f, .34f,
@@ -426,10 +572,10 @@ namespace AnomalyArena
             return Mathf.Atan2(local.y, local.x) * Mathf.Rad2Deg;
         }
 
-        void PlaceStretched(Texture texture, Vector3 at, float roll, float width, float height, Color color)
+        void PlaceStretched(Texture texture, Vector3 at, float roll, float width, float height, Color color, bool additive = false)
         {
             if (!texture || used >= items.Length) return;
-            Place(texture, at, cameraTransform.rotation * Quaternion.Euler(0f, 0f, roll), 1f, color);
+            Place(texture, at, cameraTransform.rotation * Quaternion.Euler(0f, 0f, roll), 1f, color, additive);
             items[used - 1].transform.localScale = new Vector3(width, height, 1f);
         }
 
@@ -439,6 +585,37 @@ namespace AnomalyArena
             Vector3 feet = new Vector3(player.Position.x, .08f, player.Position.z);
             Vector3 chest = Query.AtCastHeight(player.Position) + Vector3.up * .3f;
             float pulse = .5f + .5f * Mathf.Sin(time * 6f);
+            if (v5Textures && V5Vfx.On)
+            {
+                var fx5 = V5Vfx.I;
+                if (skills && skills.TimeSlipActive)
+                {
+                    Flat(thinRing, feet, 3.2f + .3f * pulse, new Color(.6f, .82f, 1f, .6f), 0f, true);
+                    fx5.BuffMotes(feet, 1.8f, new Color(.55f, .8f, 1f), 10f, .8f);
+                }
+                if (skills && skills.OverchargeActive)
+                {
+                    Flat(softGlow, feet, 3.4f, new Color(1f, .6f, .2f, .32f + .1f * pulse), 0f, true);
+                    fx5.OverchargeTick(chest, .9f);
+                }
+                if (skills && skills.RadianceActive)
+                {
+                    Flat(softGlow, feet, 4.2f + .3f * pulse, new Color(1f, .86f, .45f, .36f), 0f, true);
+                    fx5.BuffMotes(feet, 1.2f, new Color(1f, .9f, .55f), 18f);
+                }
+                if (skills && skills.VoidWalkActive)
+                {
+                    Flat(softGlow, feet, 3.4f, new Color(.42f, .16f, .9f, .4f), 0f, true);
+                    fx5.VoidSmoke(chest);
+                }
+                var board = ElementStatus.For(player);
+                if (board && board.Shield > 0f)
+                {
+                    float share5 = Mathf.Clamp01(board.Shield / Mathf.Max(1f, player.maxHp * (board.Rules ? board.Rules.playerShieldCapShare : .5f)));
+                    Billboard(auraShield, chest, 2.7f, new Color(1f, .9f, .68f, .06f + .2f * share5), true);
+                }
+                return;
+            }
             if (skills && skills.TimeSlipActive)
                 Flat(auraTimeSlip, feet, 5.5f, new Color(.7f, .85f, 1f, .55f + .2f * pulse), -time * 25f);
             if (skills && skills.OverchargeActive)
@@ -461,24 +638,26 @@ namespace AnomalyArena
             return frames[Mathf.Abs((int)(time * framesPerSecond)) % frames.Length];
         }
 
-        void Billboard(Texture texture, Vector3 at, float size, Color color)
+        void Billboard(Texture texture, Vector3 at, float size, Color color, bool additive = false)
         {
             if (!texture || used >= items.Length) return;
 
             Vector3 toCamera = (cameraTransform.position - at).normalized;
-            Place(texture, at + toCamera * size * .35f, cameraTransform.rotation, size, color);
+            Place(texture, at + toCamera * size * .35f, cameraTransform.rotation, size, color, additive);
         }
 
-        void Flat(Texture texture, Vector3 at, float size, Color color, float angle)
+        void Flat(Texture texture, Vector3 at, float size, Color color, float angle, bool additive = false)
         {
             if (!texture || used >= items.Length) return;
-            Place(texture, at, Quaternion.Euler(90f, angle, 0f), size, color);
+            Place(texture, at, Quaternion.Euler(90f, angle, 0f), size, color, additive);
         }
 
-        void Place(Texture texture, Vector3 at, Quaternion rotation, float size, Color color)
+        void Place(Texture texture, Vector3 at, Quaternion rotation, float size, Color color, bool additive = false)
         {
             var item = items[used++];
             if (!item) return;
+            var wanted = additive && V5Vfx.I ? V5Vfx.I.QuadAdditive : baseMaterial;
+            if (wanted && item.sharedMaterial != wanted) item.sharedMaterial = wanted;
             var t = item.transform;
             t.SetPositionAndRotation(at, rotation);
             t.localScale = new Vector3(size, size, 1f);

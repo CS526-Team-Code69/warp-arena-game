@@ -55,6 +55,8 @@ namespace AnomalyArena
         public int ActiveIndex { get; private set; }
         public Combatant HeldEnemy => Active?.hooked && !BattlefieldFrozen(Active.hooked.gameObject) ? Active.hooked : null;
         public RunWeapon Active => Hand[ActiveIndex];
+                                                                                                                                                               
+        public bool TriggerHeld => inputHeld;
         public bool HandHookBusy
         {
             get
@@ -267,6 +269,7 @@ namespace AnomalyArena
                 if(w.form==WeaponForm.CryoCannon&&w.variant==1&&w.Has(UpgradeAxis.Twist)&&w.heldTime>0)BlizzardShatter(w);
                 StopTrigger(w);
             }
+            if(pressed&&w.reload>0)V5WeaponAudio.Instance?.Play(V5Sfx.DryClick);                                                                   
             if(!held&&!pressed||w.cooldown>0||w.reload>0||w.inFlight||w.charging)return;
             bool charge=(w.form==WeaponForm.Rifle&&w.variant==0)||(w.form==WeaponForm.Railgun&&w.variant==0)||(w.form==WeaponForm.ScatterCannon&&w.variant==1);
             if(charge){if(pressed){w.charging=true;w.charge=0;Reveal(w);WeaponSound(w,WeaponAudioPhase.ChargeStart);if(w.form==WeaponForm.ScatterCannon)V3WorldAudio.Instance?.Play(ArenaWorldCue.WeaponFocusCharge,player.Position);}return;}
@@ -423,7 +426,8 @@ namespace AnomalyArena
         }
         float KnockScale=>(progression?progression.Stats.KnockbackMultiplier:1)*(GameManager.Instance.skills?GameManager.Instance.skills.KnockbackMultiplier:1);
         public float UpgradePushScale=>KnockScale;
-        static void WeaponSound(RunWeapon weapon,WeaponAudioPhase phase=WeaponAudioPhase.Fire)
+                                                                                                                                                       
+        static void WeaponSound(RunWeapon weapon,WeaponAudioPhase phase=WeaponAudioPhase.Fire,bool strike=false)
         {
             if(weapon==null)return;
             if(!weapon.IsAuto && phase is WeaponAudioPhase.Fire or WeaponAudioPhase.Launch)
@@ -431,7 +435,7 @@ namespace AnomalyArena
                 var playerBody=GameManager.Instance?GameManager.Instance.player:null;
                 if(playerBody){playerBody.GetComponent<V2ModelPresentation>()?.MarkAttack();FireFeedback(weapon,playerBody);}
             }
-            V2Audio.Instance?.PlayWeapon(weapon.form,weapon.variant,phase);
+            V5WeaponAudio.Weapon(weapon,phase,strike);
         }
                                                                                                                                                     
         static void FireFeedback(RunWeapon weapon,PlayerController body)
@@ -441,6 +445,7 @@ namespace AnomalyArena
             Vector3 aim=Query.Flat(body.AimDirection);if(aim.sqrMagnitude<1e-4f)return;aim.Normalize();
             body.VisualKick(-aim,profile.fireRecoil,.1f);
             gm.Kick(-aim,profile.fireKick);
+            if(profile.muzzleFlash>0f&&V5Vfx.On){V5Vfx.I.Muzzle(Query.AtCastHeight(body.Position)+aim*(body.radius+.45f),aim,new Color(1f,.82f,.5f),profile.muzzleFlash*1.25f);return;}
             var pool=FxPool.Active;
             if(profile.muzzleFlash>0f&&pool&&pool.muzzleFlash)
                 pool.EmitDirectional(pool.muzzleFlash,Query.AtCastHeight(body.Position)+aim*(body.radius+.45f),aim,profile.muzzleFlash,.07f,new Color(1f,.88f,.6f));
@@ -449,7 +454,7 @@ namespace AnomalyArena
         {
             Reveal(w);
                                                                                           
-            if(w.form==WeaponForm.ArcCoil&&w.variant==1&&w.charge<upgrades.capacitorMinCharge)return;
+            if(w.form==WeaponForm.ArcCoil&&w.variant==1&&w.charge<upgrades.capacitorMinCharge){V5WeaponAudio.Instance?.Play(V5Sfx.DryClick);return;}
             var d=roster.Get(w.form);float damage=(w.variant==0?d.damageA:d.damageB)*DamageScale(w);float range=(w.variant==0?d.rangeA:d.rangeB)*w.Reach;w.cooldown=(w.variant==0?d.cooldownA:d.cooldownB)*CooldownScale(w);
             Vector3 aim=player.AimDirection,at=player.Position,point=at+Vector3.ClampMagnitude(Query.Flat(player.AimPoint-at),range);
             if(w.form==WeaponForm.Rifle&&w.variant==0)
@@ -681,7 +686,8 @@ namespace AnomalyArena
                 }
                 if(!next){ReturnCurrent(w,count-i);break;}
                 if(i==0)WeaponSound(w);
-                AddTracer(from,Query.AtCastHeight(next.Position),upgrades.chainArcWidth,upgrades.chainArcSeconds,arc);
+                if(V5Vfx.On)V5Vfx.I.Bolt(from,Query.AtCastHeight(next.Position),arc,Mathf.Max(.9f,upgrades.chainArcWidth*2.5f),Mathf.Max(.09f,upgrades.chainArcSeconds));
+                AddTracer(from,Query.AtCastHeight(next.Position),upgrades.chainArcWidth,upgrades.chainArcSeconds,arc,V5Vfx.On);
                 upgradeHits.Add(next);Damage(w,next,hit,0,Query.Flat(next.Position-at).normalized,true);at=next.Position;from=Query.AtCastHeight(at);Fx.Ring(at,.6f,ElementCombat.ColorFor(w.element));
             }
         }
