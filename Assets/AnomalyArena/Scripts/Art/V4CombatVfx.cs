@@ -59,6 +59,8 @@ namespace AnomalyArena
         Material baseMaterial;
 
         Texture shadowTexture, softGlow, thinRing, shellTexture, sporeTexture, orbTexture, hexTexture;
+
+        const float RingEdge = 1.075f;
         (Texture frostShell, Texture frostRing, Texture slowRing, Texture auraShield) savedTextures;
         bool v5Textures;
         Transform cameraTransform;
@@ -287,7 +289,7 @@ namespace AnomalyArena
                     if (v5Textures)
                     {
 
-                        Flat(thinRing, strike.target, strike.radius * 2f, new Color(1f, .42f, .18f, Mathf.Lerp(.55f, 1f, strike.progress)), 0f, true);
+                        Flat(thinRing, strike.target, strike.radius * 2f * RingEdge, new Color(1f, .42f, .18f, Mathf.Lerp(.55f, 1f, strike.progress)), 0f, true);
                         Flat(softGlow, strike.target, strike.radius * 2f * Mathf.Lerp(1.4f, .7f, strike.progress), new Color(1f, .3f, .1f, Mathf.Lerp(.08f, .42f, strike.progress) * (.75f + .25f * pulse)), 0f, true);
                         PlaceStretched(strikeRocket, position, ScreenRoll(velocity), strikeRocketLength, strikeRocketLength * .5f, Color.white);
                         V5Vfx.I.RocketTrail(position - velocity.normalized * strikeRocketLength * .4f, -velocity.normalized);
@@ -341,7 +343,7 @@ namespace AnomalyArena
                         float heat = 1f - Mathf.Clamp01(h.timeLeft / Mathf.Max(.01f, h.life));
 
                         Flat(shellTexture, h.position + Vector3.up * .08f, .72f, new Color(1f, 1f - .25f * heat, 1f - .55f * heat, 1f), i * 71f);
-                        Flat(thinRing, h.position + Vector3.up * .06f, h.radius * 2f, new Color(1f, .5f, .2f, .25f + .55f * heat), 0f, true);
+                        Flat(thinRing, h.position + Vector3.up * .06f, h.radius * 2f * RingEdge, new Color(1f, .5f, .2f, .25f + .55f * heat), 0f, true);
                         fx5.HotShell(h.position, heat);
                     }
                     else if (h.kind == GroundHazardKind.Snow)
@@ -394,7 +396,7 @@ namespace AnomalyArena
                 if (v5Textures && V5Vfx.On)
                 {
                     V5Vfx.I.Radiation(zone.position, zone.radius, fade);
-                    Flat(thinRing, zone.position + Vector3.up * .07f, zone.radius * 2f, new Color(.8f, 1f, .25f, .16f * fade), 0f, true);
+                    Flat(thinRing, zone.position + Vector3.up * .07f, zone.radius * 2f * RingEdge, new Color(.8f, 1f, .25f, .16f * fade), 0f, true);
                     continue;
                 }
                 Flat(ground, zone.position + Vector3.up * .06f, zone.radius * 2.3f * pulse, new Color(.95f, 1f, .35f, .5f * fade), time * 12f + i * 51f);
@@ -426,7 +428,7 @@ namespace AnomalyArena
                     if (v5Textures && V5Vfx.On)
                     {
                         V5Vfx.I.ChantMotes(enemy.Position, Enemy.ChantRadius);
-                        Flat(thinRing, new Vector3(enemy.Position.x, .07f, enemy.Position.z), Enemy.ChantRadius * 2f, new Color(.72f, .5f, 1f, .14f + .08f * pulse), 0f, true);
+                        Flat(thinRing, new Vector3(enemy.Position.x, .07f, enemy.Position.z), Enemy.ChantRadius * 2f * RingEdge, new Color(.72f, .5f, 1f, .14f + .08f * pulse), 0f, true);
                         Flat(softGlow, new Vector3(enemy.Position.x, .06f, enemy.Position.z), Enemy.ChantRadius * 2.1f, new Color(.45f, .22f, .9f, .08f + .05f * pulse), 0f, true);
                         continue;
                     }

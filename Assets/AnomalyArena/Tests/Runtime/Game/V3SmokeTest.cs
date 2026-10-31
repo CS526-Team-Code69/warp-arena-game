@@ -105,6 +105,7 @@ namespace AnomalyArena
         {
             await ReadyScene();
             var hud = Object.FindAnyObjectByType<V2Hud>(FindObjectsInactive.Include);
+            ((RectTransform)hud.transform).sizeDelta = hud.GetComponentInParent<CanvasScaler>().referenceResolution;
             var slots = hud.handSlots.Concat(hud.autoSlots).Concat(hud.skillSlots).Where(slot => slot).ToArray();
             Assert.That(slots, Has.Length.EqualTo(8), "two hand, three auto and three skill slots");
             for (int i = 0; i < slots.Length; i++)

@@ -430,7 +430,7 @@ namespace AnomalyArena
             float c = on ? Mathf.Clamp01(w.charge) : 0f;
             Drive(charge, sfx, on, Mathf.Lerp(.45f, 1.25f, c), Mathf.Lerp(low, high, c), .03f);
 
-            bool full = on && c >= .999f;
+            bool full = on && w.form != WeaponForm.Railgun && c >= .999f;
             if (full && !chargeFull) Play(V5Sfx.ChargeFull);
             chargeFull = full;
         }

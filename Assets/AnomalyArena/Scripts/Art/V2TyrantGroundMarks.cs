@@ -87,7 +87,7 @@ namespace AnomalyArena
                 tail.endWidth = .08f;
                 tail.widthMultiplier = 1f;
                 tail.startColor = tail.endColor = new Color(1f, .68f, .32f, 1f);
-                V5Vfx.I.TailSweepTick(centre, enemy.TailDirection, reach, enemy.TailHalfWidth);
+                V5Vfx.I.TailSweepTick(centre, enemy.TailDirection, reach);
                 return;
             }
             Style(tail, Mathf.Max(lineWidth, enemy.TailHalfWidth * 2f), tailColor);

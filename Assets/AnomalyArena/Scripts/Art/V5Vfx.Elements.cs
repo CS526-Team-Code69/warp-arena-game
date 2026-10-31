@@ -154,7 +154,12 @@ namespace AnomalyArena
             if (gm.waves && subscribedWaves != gm.waves)
             {
                 subscribedWaves = gm.waves;
-                gm.waves.EnemySpawned += enemy => { if (On) SpawnPuff(enemy); };
+                gm.waves.EnemySpawned += enemy =>
+                {
+                    bossPhases.Remove(enemy);
+                    cloaks.Remove(enemy);
+                    if (On) SpawnPuff(enemy);
+                };
             }
             var world = WorldMap.Active;
             if (world && subscribedWorld != world)
@@ -251,11 +256,192 @@ namespace AnomalyArena
             }
         }
 
-        public void CaseEject(Vector3 at, Vector3 aim)
+        public void CaseEject(Vector3 at, Vector3 aim, bool shotgun = false)
         {
             Vector3 side = new Vector3(-aim.z, 0f, aim.x) * (Random.value < .5f ? -1f : 1f);
-            spark.Emit(at, (side * R(3f, 6f) + Vector3.up * R(2f, 4f)), R(.05f, .07f), R(.22f, .36f), new Color(1f, .78f, .35f));
+            casing.Emit(at, side * R(3.5f, 6.5f) + Vector3.up * R(3f, 6f) - aim * R(.5f, 1.8f), shotgun ? .56f : .42f, R(.42f, .66f), shotgun ? new Color(1f, .58f, .48f) : Color.white);
         }
+
+        public void FireKick(RunWeapon w, PlayerController body, Vector3 aim, HitFeelProfile profile)
+        {
+            var gm = GameManager.Instance;
+            float charge = Mathf.Clamp01(w.charge);
+            (float kick, float shake, float recoil, float punch, float size) = (w.form, w.variant) switch
+            {
+                (WeaponForm.Rifle, 0) => (.12f + .4f * charge, .04f + .14f * charge, .2f + .35f * charge, .004f + .012f * charge, 1.9f + 1.6f * charge),
+                (WeaponForm.Rifle, _) => (.09f, 0f, .16f, 0f, 1.7f),
+                (WeaponForm.ScatterCannon, 0) => (.56f, .24f, .5f, .017f, 0f),                                   
+                (WeaponForm.ScatterCannon, _) => (.16f, .05f, .2f, .002f, 1.9f),
+                (WeaponForm.RocketLauncher, 0) => (.32f, .1f, .42f, .006f, 2.6f),
+                (WeaponForm.Railgun, 0) => (.6f, .3f, .55f, .02f, 3.2f),
+                (WeaponForm.Railgun, _) => (.3f, .1f, .3f, .006f, 2.4f),
+                (WeaponForm.Minigun, _) => (.07f, .035f, .08f, 0f, 1.6f),
+                (WeaponForm.SwarmLauncher, _) => (.12f, .04f, .14f, 0f, 1.7f),
+                (WeaponForm.CryoCannon, 0) => (.1f, .02f, .14f, 0f, 1.6f),
+                (WeaponForm.ArcCoil, _) => (.08f, .03f, .1f, 0f, 1.4f),
+                (WeaponForm.SporeLauncher, _) => (.07f, 0f, .08f, 0f, 1f),
+                _ => (profile.fireKick, 0f, profile.fireRecoil, 0f, profile.muzzleFlash * 1.25f),
+            };
+            body.VisualKick(-aim, recoil, .12f);
+            gm.Kick(-aim, kick);
+            if (shake > 0f) gm.Shake(shake);
+            if (punch > 0f) gm.Punch(punch);
+            Color flashColour = w.element == ElementKind.None ? new Color(1f, .82f, .5f) : ElementTint(w.element);
+            if (size > 0f) Muzzle(Query.AtCastHeight(body.Position) + aim * (body.radius + .45f), aim, flashColour, size, w.form is WeaponForm.Rifle or WeaponForm.Minigun or WeaponForm.ScatterCannon);
+        }
+
+        public void ScatterShot(Vector3 origin, Vector3 dir, float range, float arcDeg, ElementKind element)
+        {
+            Vector3 d = FlatDir(dir, Vector3.forward);
+            Vector3 at = new Vector3(origin.x, Query.CastHeight, origin.z) + d * 1.1f;
+            float half = Mathf.Clamp(arcDeg, 10f, 170f) * .5f;
+            Color hot = element == ElementKind.None ? new Color(1f, .86f, .56f) : ElementTint(element);
+
+            float roll = ScreenRoll(d);
+            blastFlash.Emit(at + d * 1.3f, d * 5f, 5.2f, .09f, Bright(hot, .3f), -roll);
+            flash.Emit(at + d * .4f, Vector3.zero, 3.6f, .07f, hot);
+            groundGlow.Emit(OnGround(at + d * range * .32f), Vector3.zero, range * 1.5f, .13f, WithAlpha(hot, .6f));
+            for (int i = 0; i < Count(6); i++)
+            {
+                Vector3 v = Quaternion.Euler(0f, R(-half, half) * .55f, 0f) * d;
+                fireball.Emit(at + v * R(.1f, .7f), v * R(13f, 22f), R(.9f, 1.5f), R(.09f, .15f), new Color(hot.r, hot.g * R(.8f, 1f), hot.b * R(.6f, 1f)), R(0f, 360f));
+            }
+            int pellets = Count(20);
+            for (int i = 0; i < pellets; i++)
+            {
+
+                float spread = R(-1f, 1f);
+                Vector3 v = Quaternion.Euler(0f, spread * Mathf.Abs(spread) * .4f * half + spread * .6f * half, 0f) * d;
+                float speed = R(46f, 78f);
+                float stop = PelletStop(at, v, range * R(.68f, 1.04f), out bool body);
+                pellet.Emit(at + v * R(0f, .6f), v * speed, R(.2f, .3f), Mathf.Max(.02f, stop / speed), Bright(hot, .4f));
+                if (pelletHits.Count < 64) pelletHits.Add(new PelletHit { when = Time.unscaledTime + stop / speed, at = at + v * stop, along = v, body = body, tint = hot });
+            }
+            for (int i = 0; i < Count(4); i++)
+            {
+                Vector3 v = Quaternion.Euler(0f, R(-half, half) * .7f, 0f) * d;
+                smokeLow.Emit(at + v * R(.5f, range * .4f), v * R(2f, 5f) + Vector3.up * .3f, R(1.1f, 1.9f), R(.32f, .55f), new Color(.62f, .6f, .56f, .34f), R(0f, 360f));
+            }
+            CaseEject(at - d * .7f, d, true);
+        }
+
+        struct PelletHit
+        {
+            public float when;
+            public Vector3 at, along;
+            public bool body;
+            public Color tint;
+        }
+
+        readonly List<PelletHit> pelletHits = new();
+
+        static float PelletStop(Vector3 from, Vector3 dir, float reach, out bool body)
+        {
+            float best = reach;
+            body = false;
+            if (Query.WallBetween(from, from + dir * reach, out var wall)) best = Mathf.Min(best, wall.distance);
+            foreach (var target in Combatant.All)
+            {
+                if (!target || !target.IsAlive || target is PlayerController) continue;
+                Vector3 to = target.Position - from;
+                to.y = 0f;
+                float along = Vector3.Dot(to, dir);
+                if (along <= 0f || along >= best) continue;
+                if ((to - dir * along).sqrMagnitude > target.radius * target.radius) continue;
+                best = along;
+                body = true;
+            }
+            return best;
+        }
+
+        void TickPellets()
+        {
+            for (int i = pelletHits.Count - 1; i >= 0; i--)
+            {
+                var hit = pelletHits[i];
+                if (Time.unscaledTime < hit.when) continue;
+                pelletHits.RemoveAt(i);
+                if (!On) continue;
+                if (hit.body)
+                {
+                    flash.Emit(hit.at, Vector3.zero, R(.5f, .8f), .05f, Bright(hit.tint, .3f));
+                    for (int n = 0; n < 2; n++) spark.Emit(hit.at, (Quaternion.Euler(0f, R(-50f, 50f), 0f) * hit.along * R(7f, 15f)) + Vector3.up * R(0f, 2f), R(.09f, .15f), R(.1f, .2f), Bright(hit.tint, .35f));
+                    droplet.Emit(hit.at, (Quaternion.Euler(0f, R(-35f, 35f), 0f) * hit.along * R(3f, 8f)) + Vector3.up * R(2f, 5f), R(.14f, .26f), R(.28f, .5f), Ichor);
+                }
+                else
+                {
+
+                    smokeLow.Emit(new Vector3(hit.at.x, .4f, hit.at.z), Vector3.up * R(.5f, 1.4f) + hit.along * R(.5f, 1.5f), R(.45f, .8f), R(.2f, .36f), new Color(.66f, .6f, .52f, .42f), R(0f, 360f));
+                    if (Random.value < .5f) debris.Emit(new Vector3(hit.at.x, .4f, hit.at.z), Vector3.up * R(2f, 5f) + hit.along * R(-1f, 2f), R(.12f, .22f), R(.25f, .45f), new Color(.5f, .46f, .42f), R(0f, 360f));
+                    spark.Emit(new Vector3(hit.at.x, .4f, hit.at.z), Vector3.up * R(2f, 5f) + hit.along * R(1f, 5f), R(.07f, .11f), R(.07f, .14f), Bright(hit.tint, .3f));
+                }
+            }
+        }
+
+        static readonly Color Ichor = new(.42f, .05f, .09f);
+
+        void BlastShake(Vector3 at, float radius)
+        {
+            var gm = GameManager.Instance;
+            if (!gm || !gm.player) return;
+            float near = 1f - Mathf.Clamp01(Query.Flat(at - gm.player.Position).magnitude / 34f);
+            if (near <= 0f) return;
+            gm.Shake(Mathf.Clamp(radius * .055f, .05f, .34f) * near);
+            gm.Punch(Mathf.Clamp(radius * .0028f, 0f, .016f) * near);
+        }
+
+        float footClock;
+
+        void TickFeet()
+        {
+            var gm = GameManager.Instance;
+            if (!On || !gm || !gm.player || gm.player.stamina == null || !gm.player.stamina.Sprinting) return;
+            footClock -= Time.deltaTime;
+            if (footClock > 0f) return;
+            footClock = .07f;
+            Vector3 p = gm.player.Position;
+            smokeLow.Emit(new Vector3(p.x + R(-.3f, .3f), .25f, p.z + R(-.3f, .3f)), Vector3.up * R(.2f, .6f), R(.6f, 1.05f), R(.28f, .46f), new Color(.62f, .58f, .5f, .32f), R(0f, 360f));
+        }
+
+        public void EarthRise(Vector3 at, Quaternion facing, float width)
+        {
+            Vector3 along = facing * Vector3.right, side = facing * Vector3.forward;
+            for (int k = -1; k <= 1; k++)
+                crack.Emit(OnGround(at + along * k * width * .34f, .055f), Vector3.zero, R(5.5f, 7f), 5.5f, new Color(.05f, .035f, .025f, .9f), R(0f, 360f));
+            int rocks = Count(width * 5f);
+            for (int i = 0; i < rocks; i++)
+            {
+                Vector3 p = at + along * R(-.5f, .5f) * width;
+                debris.Emit(new Vector3(p.x, .7f, p.z), side * R(-3.5f, 3.5f) + along * R(-1.5f, 1.5f) + Vector3.up * R(6f, 13f), R(.3f, .75f), R(.55f, 1f), new Color(1f, .82f, .62f), R(0f, 360f));
+            }
+            int dust = Count(width * 5f);
+            for (int i = 0; i < dust; i++)
+            {
+                Vector3 p = at + along * R(-.55f, .55f) * width;
+                float out_ = Random.value < .5f ? -1f : 1f;
+                smokeLow.Emit(new Vector3(p.x, .5f, p.z) + side * out_ * .6f, side * out_ * R(1.5f, 4.5f) + Vector3.up * R(.2f, 1.2f), R(1.1f, 2f), R(.5f, .95f), new Color(.6f, .5f, .4f, .55f), R(0f, 360f));
+            }
+            var gm = GameManager.Instance;
+            if (gm)
+            {
+                gm.Shake(.26f);
+                gm.Punch(.014f);
+            }
+        }
+
+        public void EarthCrumble(Vector3 at, Quaternion facing, float width)
+        {
+            Vector3 along = facing * Vector3.right;
+            int rocks = Count(width * 4f);
+            for (int i = 0; i < rocks; i++)
+            {
+                Vector3 p = at + along * R(-.5f, .5f) * width;
+                debris.Emit(new Vector3(p.x, R(.6f, 2f), p.z), Random.insideUnitSphere * 2.5f + Vector3.up * R(1f, 4f), R(.3f, .7f), R(.4f, .75f), new Color(1f, .82f, .62f), R(0f, 360f));
+                smokeLow.Emit(new Vector3(p.x, R(.4f, 1.4f), p.z), Random.insideUnitSphere * 1.2f + Vector3.up * R(.2f, .8f), R(1f, 1.8f), R(.45f, .8f), new Color(.6f, .5f, .4f, .5f), R(0f, 360f));
+            }
+        }
+
+        public Material EffectMaterial(string texture) => Mat(texture, false, 1f, 0f, 0f);
 
         readonly List<ParticleSystem> allLayers = new();
         bool layersFrozen;

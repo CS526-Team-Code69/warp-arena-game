@@ -140,6 +140,11 @@ namespace AnomalyArena
             if (cam && cam.TryGetComponent<CameraRig>(out var rig)) rig.Shake(amount);
         }
 
+        public void Punch(float amount)
+        {
+            if (cam && cam.TryGetComponent<CameraRig>(out var rig)) rig.Punch(amount);
+        }
+
         public void Kick(Vector3 dir, float amount)
         {
             if (amount > 0f && cam && cam.TryGetComponent<CameraRig>(out var rig)) rig.Kick(dir, amount);

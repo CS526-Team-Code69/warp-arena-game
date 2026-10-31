@@ -505,7 +505,8 @@ namespace AnomalyArena
             else
             {
                 WeaponSound(w);
-                Fx.Cone(player.Position,player.AimDirection,range,60,w.element);
+                if(V5Vfx.On)V5Vfx.I.ScatterShot(player.Position,player.AimDirection,range,60f,w.element);
+                else Fx.Cone(player.Position,player.AimDirection,range,60,w.element);
                 foreach(var body in Combatant.All)
                 {
                     if(body==player||!body.IsAlive||!InCone(body,range,60)||WallBlocks(player.Position,body.Position))continue;

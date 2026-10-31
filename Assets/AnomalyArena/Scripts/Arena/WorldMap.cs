@@ -752,7 +752,7 @@ namespace AnomalyArena
                     if (!wall || !wall.gameObject.activeInHierarchy || wall.BattlefieldFrozen || !touched(wall)) continue;
                     Vector3 at = wall.transform.position;
                     TyrantTerrain.Rubble(new Vector2(at.x, at.z));
-                    wall.gameObject.SetActive(false);
+                    wall.Fall();
                     broken++;
                 }
             if (broken > 0) HoleChanged();

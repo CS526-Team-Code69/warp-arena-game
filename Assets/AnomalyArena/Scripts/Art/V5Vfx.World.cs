@@ -29,9 +29,6 @@ namespace AnomalyArena
                     flash.Emit(new Vector3(point.x, Query.CastHeight, point.z), Vector3.zero, 2.2f, .16f, new Color(.45f, .85f, 1f));
                     ringLayer.Emit(OnGround(point, .09f), Vector3.zero, 2.6f, .28f, new Color(.5f, .88f, 1f, .85f));
                     break;
-                case SkillId.Bulwark:
-                    GroundSlam(point, 2.2f, new Color(.8f, .68f, .5f), false);
-                    break;
             }
         }
 
@@ -118,7 +115,7 @@ namespace AnomalyArena
             }
         }
 
-        public void TailSweepTick(Vector3 centre, Vector3 tailDirection, float reach, float halfWidth)
+        public void TailSweepTick(Vector3 centre, Vector3 tailDirection, float reach)
         {
             Vector3 d = FlatDir(tailDirection, Vector3.forward);
             float angle = Mathf.Atan2(d.x, d.z) * Mathf.Rad2Deg;

@@ -51,7 +51,7 @@ namespace AnomalyArena
         {
             public int tilesX, tilesY;
             public bool flipbook;
-            public float cycles, drag, gravity;
+            public float drag, gravity;
             public AnimationCurve size;
             public Gradient fade;
             public ParticleSystemRenderMode mode;
@@ -62,11 +62,13 @@ namespace AnomalyArena
         }
 
         Shader particleShader;
-        Layer spark, flash, star, ember, ringLayer, softRing, groundGlow, decal, frostDecal, explosion, smoke, smokeLow, cloud, fireball, flame, smallFlame, muzzle, slash, elec, bolt, glint, bubble, twirl, rune, puff, energy, debris;
+        Layer pellet, blastFlash, casing, droplet, crack, spark, flash, star, ember, ringLayer, softRing, groundGlow, decal, frostDecal, explosion, smoke, smokeLow, cloud, fireball, flame, smallFlame, muzzle, slash, elec, bolt, glint, bubble, twirl, energy, debris;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void Boot()
         {
+            Quality = 1f;
+            bloomDropped = false;
             SceneManager.sceneLoaded += (_, _) => Make();
             Make();
         }
@@ -95,6 +97,8 @@ namespace AnomalyArena
 
         void Update()
         {
+            TickPellets();
+            TickFeet();
             AdaptQuality();
             if (!lookApplied || lookIllustrated != Art.Enabled) ApplyLook();
             TickLook();
@@ -181,7 +185,7 @@ namespace AnomalyArena
                 if (s.flipbook)
                 {
                     sheet.frameOverTime = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 0f, 1f, 1f));
-                    sheet.cycleCount = Mathf.Max(1, Mathf.RoundToInt(s.cycles));
+                    sheet.cycleCount = 1;
                 }
                 else
                 {
@@ -243,9 +247,8 @@ namespace AnomalyArena
             decal = Make("Scorch", Mat("scorch", false, .9f, 0f, 0f), new LayerShape { tilesX = 2, tilesY = 2, mode = Flat, fade = Fade(.03f, .55f), order = -2, max = 96 });
             frostDecal = Make("Frost", Mat("frost", false, 1f, 0f, 0f), new LayerShape { mode = Flat, fade = Fade(.08f, .6f), order = -2, max = 64 });
             groundGlow = Make("GroundGlow", Mat("glow", true, 1.4f, 0f, 0f), new LayerShape { mode = Flat, fade = Fade(.05f, .2f), order = -1, max = 128 });
-            ringLayer = Make("Ring", Mat("ring", true, 2.2f, 0f, 0f), new LayerShape { mode = Flat, size = Curve(.62f, 1f, 2.4f), fade = Fade(0f, .35f), order = -1, max = 128 });
+            ringLayer = Make("Ring", Mat("ring", true, 2.2f, 0f, 0f), new LayerShape { mode = Flat, size = Curve(.67f, 1.075f, 2.4f), fade = Fade(0f, .35f), order = -1, max = 128 });
             softRing = Make("SoftRing", Mat("shock", true, 1.3f, 0f, 0f), new LayerShape { mode = Flat, size = Curve(.45f, 1.06f, 2.4f), fade = Fade(0f, .15f), order = -1, max = 64 });
-            rune = Make("Runes", Mat("runes", true, 1.6f, 0f, 0f), new LayerShape { tilesX = 2, tilesY = 1, mode = Flat, fade = Fade(.1f, .7f), order = -1, max = 16 });
             twirl = Make("Twirl", Mat("twirl", true, 1.8f, 0f, 0f), new LayerShape { tilesX = 2, tilesY = 2, mode = Flat, size = Curve(.9f, 1.05f), fade = Fade(.1f, .5f), order = -1, max = 96 });
 
             smokeLow = Make("SmokeLow", Mat("puffs", false, .55f), new LayerShape { tilesX = 2, tilesY = 2, mode = Face, size = Curve(.7f, 1.5f), fade = Fade(.1f, .35f), drag = 1.2f, order = 0, max = 192 });
@@ -257,7 +260,6 @@ namespace AnomalyArena
             smallFlame = Make("SmallFlame", FireMat("smallflame", .98f, .45f, 1.6f, 2.2f), new LayerShape { tilesX = 11, tilesY = 11, flipbook = true, mode = Face, fade = Fade(.08f, .75f), order = 3, max = 256 });
             energy = Make("Energy", Mat("energy", true, 1.8f, 1f, 1.4f), new LayerShape { tilesX = 6, tilesY = 6, flipbook = true, mode = Face, size = Curve(.8f, 1.15f), fade = Fade(0f, .55f), order = 3, max = 96 });
             debris = Make("Debris", Mat("debris", false, .55f, 0f, 1f), new LayerShape { tilesX = 2, tilesY = 2, mode = Face, gravity = 1.1f, drag = .6f, randomRotation = true, fade = Fade(0f, .75f), order = 2, max = 256 });
-            puff = Make("Puff", Mat("glow", false, 1f), new LayerShape { mode = Face, size = Curve(.5f, 1.3f), fade = Fade(.05f, .3f), drag = 1.5f, order = 2, max = 128 });
 
             flash = Make("Flash", Mat("orb", true, 2f, 0f, 2f), new LayerShape { mode = Face, size = Curve(.7f, 1.2f), fade = Fade(0f, .1f), order = 5, max = 128 });
             star = Make("Star", Mat("stars", true, 3f, 0f, 2f), new LayerShape { tilesX = 4, tilesY = 2, mode = Face, size = Curve(.6f, 1.15f), fade = Fade(0f, .25f), order = 5, max = 96 });
@@ -265,6 +267,11 @@ namespace AnomalyArena
             slash = Make("Slash", Mat("slash", true, 2.6f, 0f, 1.6f), new LayerShape { tilesX = 2, tilesY = 2, mode = Flat, size = Curve(.8f, 1.15f), fade = Fade(0f, .3f), order = 4, max = 64 });
             elec = Make("Elec", Mat("elec", true, 3.2f, 0f, 1.8f), new LayerShape { tilesX = 2, tilesY = 2, mode = Face, fade = Fade(0f, .4f), order = 5, max = 192 });
             bolt = Make("Bolt", Mat("bolt", true, 3.4f, 0f, 1f), new LayerShape { tilesX = 1, tilesY = 8, mode = Face, sized3D = true, fade = Fade(0f, .35f), order = 5, max = 128 });
+            pellet = Make("Pellet", Mat("pellet", true, 4.4f, 0f, 1.4f), new LayerShape { mode = ParticleSystemRenderMode.Stretch, stretch = .034f, fade = Fade(0f, .72f), order = 6, max = 256 });
+            blastFlash = Make("BlastFlash", Mat("blastflash", true, 3.6f, 0f, 1.6f), new LayerShape { tilesX = 2, tilesY = 2, mode = Face, size = Curve(.7f, 1.25f), fade = Fade(0f, .35f), order = 5, max = 32 });
+            casing = Make("Casing", Mat("shell", false, 1f, 0f, 1.2f), new LayerShape { mode = Face, gravity = 1.7f, drag = .25f, randomRotation = true, fade = Fade(0f, .86f), order = 4, max = 192 });
+            droplet = Make("Droplet", Mat("orb", false, 1f, 0f, 1.2f), new LayerShape { mode = Face, size = Curve(1f, .55f), gravity = 1.25f, drag = .5f, fade = Fade(0f, .72f), order = 4, max = 384 });
+            crack = Make("Crack", Mat("earthcrack", false, 1f, 0f, 0f), new LayerShape { mode = Flat, size = Curve(.78f, 1f, 6f), fade = Fade(.02f, .8f), order = -2, max = 16 });
             spark = Make("Spark", Mat("trace", true, 3.6f, 0f, 1.4f), new LayerShape { mode = ParticleSystemRenderMode.Stretch, stretch = .055f, gravity = .35f, drag = 2.2f, fade = Fade(0f, .4f), order = 6, max = 512 });
             ember = Make("Ember", Mat("orb", true, 2.4f, 0f, 1f), new LayerShape { mode = Face, size = Curve(1f, .5f), gravity = -.05f, drag = 1.4f, fade = Fade(.05f, .55f), order = 6, max = 512 });
             glint = Make("Glint", Mat("stars", true, 2.4f, 0f, 1.4f), new LayerShape { tilesX = 4, tilesY = 2, mode = Face, size = Curve(.3f, 1f), fade = Fade(.2f, .4f), order = 6, max = 192 });
@@ -314,16 +321,23 @@ namespace AnomalyArena
             if (radius > .8f) softRing.Emit(OnGround(at, .08f), Vector3.zero, size, Mathf.Max(.14f, life) * .8f, WithAlpha(c, .16f * alpha));
         }
 
-        public void Hit(Vector3 at, Vector3 dir, Color c, float radius, bool heavy, bool crit)
+        public void Hit(Vector3 at, Vector3 dir, Color c, float radius, bool heavy, bool crit, bool organic = false)
         {
             Vector3 d = FlatDir(dir, Vector3.forward);
-            int n = Count(heavy ? 7 : 3);
+            int n = Count(heavy ? 10 : 4);
             for (int i = 0; i < n; i++)
             {
-                Vector3 v = Quaternion.Euler(0f, R(-42f, 42f), 0f) * d * R(7f, heavy ? 17f : 13f) + Vector3.up * R(-.5f, 2f);
-                spark.Emit(at, v, R(.06f, heavy ? .13f : .1f), R(.09f, .22f), Bright(c, .35f));
+                Vector3 v = Quaternion.Euler(0f, R(-42f, 42f), 0f) * d * R(8f, heavy ? 20f : 15f) + Vector3.up * R(-.5f, 2.4f);
+                spark.Emit(at, v, R(.09f, heavy ? .2f : .14f), R(.1f, .24f), Bright(c, .35f));
             }
-            flash.Emit(at, Vector3.zero, Mathf.Max(.5f, radius * (heavy ? 1.7f : 1f)), heavy ? .08f : .06f, WithAlpha(Bright(c, .3f), .85f));
+            flash.Emit(at, Vector3.zero, Mathf.Max(.7f, radius * (heavy ? 2.1f : 1.3f)), heavy ? .09f : .06f, WithAlpha(Bright(c, .3f), .9f));
+            if (organic)
+            {
+
+                int drops = Count(heavy ? 7 : 2);
+                for (int i = 0; i < drops; i++)
+                    droplet.Emit(at, (Quaternion.Euler(0f, R(-38f, 38f), 0f) * d * R(3f, heavy ? 11f : 8f)) + Vector3.up * R(2f, 6f), R(.14f, heavy ? .32f : .24f), R(.26f, .52f), Ichor);
+            }
             if (heavy)
             {
                 star.Emit(at, Vector3.zero, Mathf.Max(1f, radius * 3f), .12f, Bright(c, .5f), R(0f, 90f));
@@ -336,14 +350,15 @@ namespace AnomalyArena
             }
         }
 
-        public void Muzzle(Vector3 at, Vector3 dir, Color c, float size)
+        public void Muzzle(Vector3 at, Vector3 dir, Color c, float size, bool throwCase = false)
         {
             Vector3 d = FlatDir(dir, Vector3.forward);
             float roll = ScreenRoll(d) - 90f;                     
             muzzle.Emit(at + d * size * .28f, d * 1.5f, size * 1.25f, .055f, Bright(c, .35f), -roll);
             flash.Emit(at, Vector3.zero, size * .7f, .05f, c);
-            groundGlow.Emit(OnGround(at), Vector3.zero, size * 2.2f, .07f, WithAlpha(c, .4f));
-            CaseEject(at - d * .4f, d);
+            groundGlow.Emit(OnGround(at), Vector3.zero, size * 2.6f, .08f, WithAlpha(c, .5f));
+            if (throwCase) CaseEject(at - d * .4f, d);
+            if (size > 1.4f && Random.value < .6f) smokeLow.Emit(at + d * size * .4f, d * R(1f, 2.4f) + Vector3.up * .3f, size * R(.45f, .7f), R(.22f, .38f), new Color(.6f, .58f, .54f, .3f), R(0f, 360f));
             int n = Count(2);
             for (int i = 0; i < n; i++)
                 spark.Emit(at, (Quaternion.Euler(0f, R(-16f, 16f), 0f) * d * R(9f, 18f)) + Vector3.up * R(0f, 1f), R(.04f, .07f), R(.05f, .11f), Bright(c, .4f));
@@ -399,6 +414,7 @@ namespace AnomalyArena
             }
             ringLayer.Emit(OnGround(at, .09f), Vector3.zero, radius * 2f, .26f, WithAlpha(Bright(warm, .3f), .85f), R(0f, 360f));
             if (scorch) Scorch(at, radius);
+            BlastShake(at, radius);
         }
 
         public void Scorch(Vector3 at, float radius, float life = 5f)
@@ -486,7 +502,7 @@ namespace AnomalyArena
         Volume volume, slipVolume;
         bool lookApplied, lookIllustrated;
         UniversalAdditionalCameraData cameraData;
-        bool bloomDropped;
+        static bool bloomDropped;
 
         void ApplyLook()
         {
@@ -518,6 +534,7 @@ namespace AnomalyArena
                     volume.isGlobal = true;
                     volume.priority = 50f;
                     volume.sharedProfile = profile;
+                    if (bloomDropped && volume.profile.TryGet<Bloom>(out var bloom)) bloom.active = false;
                 }
             }
             if (volume) volume.enabled = Art.Enabled;

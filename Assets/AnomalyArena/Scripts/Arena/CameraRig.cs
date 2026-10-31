@@ -8,11 +8,13 @@ namespace AnomalyArena
         public Transform target;
         public Camera camera;
         public Vector3 offset = new Vector3(0f, 46f, -15f);
+                                                                                              
+        public Vector3 Transient { get; private set; }
         public float smoothTime = 0.12f;
         [Min(0f), Tooltip("How fast a camera push springs back (per second).")] public float kickReturn = 14f;
         [Min(0f), Tooltip("Largest push, so stacked kicks never throw the view.")] public float kickLimit = .6f;
         Vector3 follow, velocity, kick;
-        float amplitude;
+        float amplitude, punch;
         bool started;
                                                                                                                             
         Vector3 focusPoint;
@@ -33,6 +35,9 @@ namespace AnomalyArena
         public bool Focused => focusTarget > 0f;
 
         public void Shake(float amount) => amplitude = Mathf.Max(amplitude, amount);
+
+                                                                                                                                                              
+        public void Punch(float amount) => punch = Mathf.Max(punch, Mathf.Min(amount, .05f));
 
                                                                                                                                                   
         public void Kick(Vector3 worldDirection, float amount)
@@ -81,8 +86,10 @@ namespace AnomalyArena
             amplitude = Mathf.MoveTowards(amplitude, 0f, 4f * Time.unscaledDeltaTime);
             Vector2 shake = amplitude > 0f ? Random.insideUnitCircle * amplitude : Vector2.zero;
             kick = Vector3.Lerp(kick, Vector3.zero, 1f - Mathf.Exp(-kickReturn * Time.unscaledDeltaTime));
-            Vector3 viewOffset = offset * Mathf.Lerp(1f, focusZoom, eased);
+            punch = Mathf.Lerp(punch, 0f, 1f - Mathf.Exp(-kickReturn * Time.unscaledDeltaTime));
+            Vector3 viewOffset = offset * (Mathf.Lerp(1f, focusZoom, eased) * (1f - punch));
             transform.position = follow + viewOffset + new Vector3(shake.x, 0f, shake.y) + kick;
+            Transient = transform.position - (follow + offset * Mathf.Lerp(1f, focusZoom, eased));
         }
     }
 }
