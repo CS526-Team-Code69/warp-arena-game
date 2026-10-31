@@ -3,6 +3,7 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
+
     [DefaultExecutionOrder(400)]
     public sealed class V2BiomeArt : MonoBehaviour
     {
@@ -39,11 +40,19 @@ namespace AnomalyArena
                 bool match = false;
                 if (style.variants != null) foreach (var variant in style.variants) if (variant == selected) { match = true; break; }
                 if (match) active = style;
-                if (style.detailRoot) style.detailRoot.gameObject.SetActive(match && illustrated && !trial);
+
+                bool ruins = match && selected && selected.name.Contains("WreckField");
+                if (style.detailRoot) style.detailRoot.gameObject.SetActive(match && illustrated && !trial && !ruins);
             }
             if (active == null || !active.ground) return;
             float size = Mathf.Max(1f, active.tileWorldSize);
             surface.SetIllustratedMaterial(active.ground, new Vector2(ground.bounds.size.x / size, ground.bounds.size.z / size));
+
+            if (illustrated && world.biomes != null && world.biomeWallGroups != null)
+            {
+                int index = System.Array.IndexOf(world.biomes, selected);
+                if (index >= 0 && index < world.biomeWallGroups.Length && V5TerrainWalls.StyleOfGroup(world.biomeWallGroups[index], out _)) V5TerrainGround.Attach(world, ground);
+            }
             block ??= new MaterialPropertyBlock(); ground.GetPropertyBlock(block);
 
             Color tint = illustrated ? Color.white : selected && selected.floor ? selected.floor.color : Color.white;

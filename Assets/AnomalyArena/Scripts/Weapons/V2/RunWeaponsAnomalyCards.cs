@@ -47,6 +47,7 @@ namespace AnomalyArena
         void ChargedMuzzleBlast(RunWeapon w,Vector3 aim)
         {
             aim=Query.Flat(aim).normalized;float range=upgrades.chargedBlastRange,angle=upgrades.chargedBlastAngle;
+            V5WeaponAudio.Instance?.Play(V5Sfx.ScatterBlast,.55f,1.15f);
             Fx.Cone(player.Position,aim,range,angle,w.element);
             foreach(var c in Combatant.All)
             {

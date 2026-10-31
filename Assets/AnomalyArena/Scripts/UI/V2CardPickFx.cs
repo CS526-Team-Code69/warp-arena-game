@@ -64,7 +64,8 @@ namespace AnomalyArena
             float scale = root.lossyScale.x > 0f ? card.lossyScale.x / root.lossyScale.x : 1f;
             size = card.rect.size * scale;
             power = Power(rarity);
-            tint = ArenaRarity.ColorFor(rarity);
+
+            tint = rarity == CardRarity.Void ? V5MenuSkin.VoidGlow : ArenaRarity.ColorFor(rarity);
             age = 0f;
             Plays++;
             MakeGhost(card);

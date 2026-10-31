@@ -228,11 +228,21 @@ namespace AnomalyArena
             if (feel == HitFeel.Auto) feel = WeaponFeel.FromKind(kind);
             var profile = fb.For(feel);
             if (!isPlayer) count = Mathf.Max(1, Mathf.RoundToInt(count * profile.splash));
-            Fx.Burst(at, spread >= 360f ? Vector3.zero : dir, c, count, speed, spread, size);
-            bool v4Sparks = FxPool.Active && FxPool.Active.hitSparks is { Length: > 0 };
-            if (!v4Sparks) Fx.Pop(at, c, radius * (heavy ? 3.5f : 2.5f));
-                                                                                                                                                 
-            if (crit || amount >= heavyAt || kind == HitKind.Slam) Fx.Ring(Position, radius + 2.5f, c);
+            if (V5Vfx.On)
+            {
+                                                                                                                         
+                V5Vfx.I.Hit(at, dir, c, radius, crit || amount >= heavyAt || kind == HitKind.Slam, crit);
+                                                                                                                    
+                if (kind == HitKind.Slam) V5Vfx.I.GroundSlam(Position, radius + 1.4f, c, false);
+            }
+            else
+            {
+                Fx.Burst(at, spread >= 360f ? Vector3.zero : dir, c, count, speed, spread, size);
+                bool v4Sparks = FxPool.Active && FxPool.Active.hitSparks is { Length: > 0 };
+                if (!v4Sparks) Fx.Pop(at, c, radius * (heavy ? 3.5f : 2.5f));
+                                                                                                                                                     
+                if (crit || amount >= heavyAt || kind == HitKind.Slam) Fx.Ring(Position, radius + 2.5f, c);
+            }
 
             if (!isPlayer) PlayLocalImpact(at, dir, heavy, crit, c, profile, attacker);
             if(amount>0f)GM.hud.DamageNumber(Position, amount, isPlayer ? new Color(1f, 0.3f, 0.25f) : crit ? new Color(1f, 0.55f, 0.12f) : new Color(1f, 0.95f, 0.6f),
@@ -264,7 +274,7 @@ namespace AnomalyArena
             var hitDirection = Query.Flat(dir).sqrMagnitude > .0001f ? Query.Flat(dir).normalized : LastHitDirection;
             VisualKick(hitDirection, profile.victimJolt * (big ? 1.4f : 1f), .12f);
             if (attacker is PlayerController && profile.attackerHold > 0f) attacker.HoldPose(profile.attackerHold);
-            var pool = FxPool.Active;
+            var pool = V5Vfx.On ? null : FxPool.Active;
             if (pool)
             {
                 var flatDir = Query.Flat(dir).sqrMagnitude > .0001f ? Query.Flat(dir).normalized : LastHitDirection;

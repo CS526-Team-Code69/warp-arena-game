@@ -217,7 +217,8 @@ namespace AnomalyArena
                 var drawn = Quicksand.Build(world);
                 Assert.That(drawn, Is.Not.Null, "the Dunes layout has pools to draw");
                 var decals = drawn.GetComponentsInChildren<MeshRenderer>();
-                Assert.That(decals, Has.Length.EqualTo(dunes.layout.quicksand.Length * dunes.quicksandLayers.Count(l => l.texture)), "one decal per pool and layer");
+                int perPool = Art.Enabled ? 1 : dunes.quicksandLayers.Count(l => l.texture);
+                Assert.That(decals, Has.Length.EqualTo(dunes.layout.quicksand.Length * perPool), "one pit per pool with the illustrated art, one decal per pool and layer in whitebox");
                 Assert.That(drawn.GetComponentsInChildren<Collider>(true), Is.Empty, "quicksand blocks neither bodies nor shots");
                 Assert.That(decals, Has.All.Matches<MeshRenderer>(r => r.sortingOrder < 0 && r.transform.position.y > 0f && r.transform.position.y < .06f),
                     "drawn on the floor, under the ground telegraphs");

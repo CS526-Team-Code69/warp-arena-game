@@ -834,7 +834,9 @@ namespace AnomalyArena
             blastTargets.Clear();
             if (chainPoints.Count > 0) Shooter?.StrikeChain(weapon, chainPoints, damage);
             chainPoints.Clear();
-            Fx.Ring(point, radius, ElementCombat.ColorFor(element));
+
+            if (V5Vfx.On) { if (mode is not (AttackMode.Field or AttackMode.Pull)) V5Vfx.I.Explosion(point, radius, element == ElementKind.None ? null : V5Vfx.ElementTint(element)); }
+            else Fx.Ring(point, radius, ElementCombat.ColorFor(element));
         }
         public bool TryManualDetonate()
         {
@@ -859,7 +861,7 @@ namespace AnomalyArena
         }
         void PlaySound(WeaponAudioPhase phase)
         {
-            if(weapon!=null)V2Audio.Instance?.PlayWeapon(weapon.form,weapon.variant,phase);
+            V5WeaponAudio.Weapon(weapon,phase);
         }
         sealed class HitComparer : IComparer<RaycastHit>
         {

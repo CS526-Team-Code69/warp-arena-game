@@ -252,7 +252,7 @@ namespace AnomalyArena
             windup = true;
             specialWindup = true;
             windupTimer = Mathf.Max(0f, time);
-            V3WorldAudio.Instance?.Play(bossAttack == RampageChargeMove ? ArenaWorldCue.NpcChargeWarning : ArenaWorldCue.NpcWindup, Position);
+            TyrantWindupSound(windupTimer);
             SetLook(true);
             Stop();
             TelegraphRange = range;
@@ -264,6 +264,19 @@ namespace AnomalyArena
             telegraph.gameObject.SetActive(range > 0f && (line || fan));
         }
 
+        void TyrantWindupSound(float time)
+        {
+            switch (bossAttack)
+            {
+                case TailSweepMove: V5WeaponAudio.At(V5Sfx.TyrantGrowl, Position); break;
+                case GroundPoundMove: V5WeaponAudio.At(V5Sfx.TyrantGrowl, Position, 1f, .82f); break;
+                case RampageChargeMove: V3WorldAudio.Instance?.Play(ArenaWorldCue.NpcChargeWarning, Position, .78f, 1.1f); break;
+                case RoyalScepterMove: V5WeaponAudio.AtFit(V5Sfx.ScepterRaise, Position, time); break;
+                case AstralGuardMove: V5WeaponAudio.AtFit(V5Sfx.EnergyRise, Position, time); break;
+                default: V5WeaponAudio.AtFit(V5Sfx.EnergyRise, Position, time, .85f); break;
+            }
+        }
+
         void StrikeTyrantMove(PlayerController player)
         {
             AttackSequence++;
@@ -271,6 +284,7 @@ namespace AnomalyArena
             {
                 case TailSweepMove:
                     V3WorldAudio.Instance?.Play(ArenaWorldCue.BossCleave, Position);
+                    V5WeaponAudio.AtFit(V5Sfx.TyrantSweep, Position, Boss.sweepSeconds);
                     tyrantStage = TyrantStage.Sweep;
                     sweepClock = 0f;
                     sweepAngle = -SweepArc * .5f;
@@ -410,7 +424,10 @@ namespace AnomalyArena
                 return;
             }
 
-            Fx.Ring(centre, Mathf.Max(band, PoundWidth) * .5f, definition.colour);
+            if (V5Vfx.On) V5Vfx.I.GroundSlam(centre, Mathf.Max(band, PoundWidth) * .5f, definition.colour, false);
+            else Fx.Ring(centre, Mathf.Max(band, PoundWidth) * .5f, definition.colour);
+
+            if (poundStep > 0) V5WeaponAudio.At(V5Sfx.PoundBand, centre, Mathf.Max(.45f, 1f - .08f * poundStep), 1f - .03f * poundStep);
             if (poundLanded || !player || !player.IsAlive) return;
             Vector3 offset = Query.Flat(player.Position - poundOrigin);
             float along = Vector3.Dot(offset, poundFacing), across = Mathf.Abs(Vector3.Dot(offset, Vector3.Cross(Vector3.up, poundFacing)));
@@ -559,7 +576,7 @@ namespace AnomalyArena
             rb.isKinematic = true;                              
             var capsule = GetComponent<CapsuleCollider>();
             if (capsule) capsule.enabled = false;
-            V3WorldAudio.Instance?.Play(ArenaWorldCue.BossCharge, Position);
+            V5WeaponAudio.At(V5Sfx.HeavyWhoosh, Position);
         }
 
         void TickRushLeap(float dt)
@@ -576,7 +593,8 @@ namespace AnomalyArena
             if (capsule) capsule.enabled = true;
             AttackSequence++;
             V3WorldAudio.Instance?.Play(ArenaWorldCue.BossSlam, rushLanding);
-            Fx.Ring(rushLanding, rushSlamReach, definition.colour);
+            if (V5Vfx.On) V5Vfx.I.GroundSlam(rushLanding, rushSlamReach, definition.colour);
+            else Fx.Ring(rushLanding, rushSlamReach, definition.colour);
 
             float damage = TyrantHit(b.rushSlamDamage), push = TierPush(b.rushSlamKnock);
             foreach (var target in Query.Characters(Query.AtCastHeight(rushLanding), rushSlamReach + radius))
@@ -595,7 +613,7 @@ namespace AnomalyArena
         {
             var b = Boss;
             scepterWait = Mathf.Max(0f, b.scepterCooldown);
-            V3WorldAudio.Instance?.Play(ArenaWorldCue.NpcChant, Position);
+            V5WeaponAudio.At(V5Sfx.ScepterBlast, Position);
             int crowd = ScepterCrowd();
             if (crowd > 0 && GM && GM.waves) GM.waves.SpawnBossWave(crowd, Position, b.scepterRingRadius);
         }
@@ -624,7 +642,8 @@ namespace AnomalyArena
             meteorReach = Mathf.Max(0f, bossPhase >= TyrantPhaseCount ? b.meteorRadiusPhase2 : b.meteorRadius);
             meteorPieces = Mathf.Max(0, bossPhase >= TyrantPhaseCount ? b.meteorFragmentsPhase2 : b.meteorFragments);
             meteorDamage = TyrantHit(b.meteorDamage);
-            V3WorldAudio.Instance?.Play(ArenaWorldCue.NpcSwing, Position);
+            V5WeaponAudio.At(V5Sfx.HeavyWhoosh, Position, .9f, 1.15f);
+            V5WeaponAudio.AtFit(V5Sfx.MeteorWhistle, meteorTarget, b.meteorFlight);                                                                       
         }
 
         void TickMeteor(float dt, PlayerController player)
@@ -636,8 +655,12 @@ namespace AnomalyArena
             meteorFlying = false;
             V3WorldAudio.Instance?.Play(ArenaWorldCue.BossSlam, meteorTarget);
             V2Audio.Instance?.PlayWorld(ArenaSoundCue.Explosion, meteorTarget);
-            Fx.Ring(meteorTarget, meteorReach, MeteorColour);
-            Fx.Pop(meteorTarget + Vector3.up, MeteorColour, meteorReach);
+            if (V5Vfx.On) V5Vfx.I.Explosion(meteorTarget, meteorReach);
+            else
+            {
+                Fx.Ring(meteorTarget, meteorReach, MeteorColour);
+                Fx.Pop(meteorTarget + Vector3.up, MeteorColour, meteorReach);
+            }
             if (player && player.IsAlive)
             {
                 Vector3 away = Query.Flat(player.Position - meteorTarget);
@@ -682,7 +705,8 @@ namespace AnomalyArena
             if (!waves || meal.Count == 0) return;
             foreach (var minion in meal)
             {
-                Fx.Pop(minion.Position + Vector3.up * minion.Radius, AstralColour, minion.Radius * 3f);
+                if (V5Vfx.On) V5Vfx.I.Swallow(minion.Position, Mathf.Max(1f, minion.Radius * 2f));
+                else Fx.Pop(minion.Position + Vector3.up * minion.Radius, AstralColour, minion.Radius * 3f);
                 waves.DevourSummon(minion);
             }
 
@@ -694,7 +718,7 @@ namespace AnomalyArena
             }
 
             Fx.Ring(Position, AstralReach, AstralColour);
-            V3WorldAudio.Instance?.Play(ArenaWorldCue.BossInhale, Position);
+            V5WeaponAudio.At(V5Sfx.AstralDevour, Position);
         }
     }
 }

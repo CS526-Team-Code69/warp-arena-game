@@ -26,6 +26,16 @@ namespace AnomalyArena
             transform.rotation = Quaternion.LookRotation(Query.Flat(user.AimDirection));
             transform.localScale = new Vector3(width, 2f, 1f);
             gameObject.SetActive(true);
+            if (TryGetComponent(out Renderer block)) block.enabled = !Art.Enabled;
+            if (Art.Enabled)
+            {
+
+                var world = WorldMap.Active;
+                var stone = !world || world.TrialActive ? V5WallStyle.Meteor : world.biome && world.biome.displayName.StartsWith("Dunes") ? V5WallStyle.Dunes : V5WallStyle.Ruins;
+                var art = V5TerrainWallArt.Attach(gameObject, stone, allSides: true);
+                art.style = stone;
+                art.Invalidate();
+            }
             foreach (var combatant in Query.Characters(at, width * 0.5f + 1f))
             {
                 Vector3 direction = Query.Flat(combatant.Position - at);

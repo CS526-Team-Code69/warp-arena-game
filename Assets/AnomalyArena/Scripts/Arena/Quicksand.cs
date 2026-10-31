@@ -15,6 +15,9 @@ namespace AnomalyArena
         static Mesh quad;
         static Quicksand drawn;
         readonly List<(Transform decal, float spin)> spinning = new();
+        Biome biome;
+        MapLayout.SandPool[] pools;
+        bool illustrated;
 
         public static bool IsQuicksand(Vector3 point)
         {
@@ -34,9 +37,26 @@ namespace AnomalyArena
             var pools = world && world.layout ? world.layout.quicksand : null;
             if (pools == null || pools.Length == 0) return null;
             drawn = new GameObject("Quicksand").AddComponent<Quicksand>();
-            var look = world.biome;
-            if (!look || !look.quicksandMaterial || look.quicksandLayers == null) return drawn;
+            drawn.biome = world.biome;
+            drawn.pools = pools;
+            drawn.Draw();
+            return drawn;
+        }
+
+        void Draw()
+        {
+            illustrated = Art.Enabled;
+            for (int i = transform.childCount - 1; i >= 0; i--)
+            {
+                var old = transform.GetChild(i).gameObject;
+                old.SetActive(false);
+                Destroy(old);
+            }
+            spinning.Clear();
             if (!quad) quad = BuildQuad();
+            if (illustrated && V5TerrainPits.Draw(transform, pools, quad, DecalHeight, SortingOrder)) return;
+            var look = biome;
+            if (!look || !look.quicksandMaterial || look.quicksandLayers == null) return;
             var block = new MaterialPropertyBlock();
             for (int p = 0; p < pools.Length; p++)
             for (int l = 0; l < look.quicksandLayers.Length; l++)
@@ -44,7 +64,7 @@ namespace AnomalyArena
                 var layer = look.quicksandLayers[l];
                 if (!layer.texture) continue;
                 var decal = new GameObject($"Pool{p}_{l}").transform;
-                decal.SetParent(drawn.transform, false);
+                decal.SetParent(transform, false);
 
                 decal.SetPositionAndRotation(new Vector3(pools[p].centre.x, DecalHeight + l * LayerStep, pools[p].centre.y), Quaternion.Euler(0f, (p * 67f + l * 41f) % 360f, 0f));
                 float size = pools[p].radius * 2f * Mathf.Max(.1f, layer.size);
@@ -59,14 +79,15 @@ namespace AnomalyArena
                 block.SetColor(ColorId, layer.tint);
                 block.SetTexture(TextureId, layer.texture);
                 renderer.SetPropertyBlock(block);
-                if (layer.spin != 0f) drawn.spinning.Add((decal, layer.spin));
+                if (layer.spin != 0f) spinning.Add((decal, layer.spin));
             }
-            return drawn;
         }
 
         void Update()
         {
+            if (illustrated != Art.Enabled) Draw();
             float dt = Time.deltaTime;
+            if (illustrated) V5TerrainPits.Tick(dt);
             foreach (var (decal, spin) in spinning) if (decal) decal.Rotate(0f, spin * dt, 0f, Space.World);
         }
 

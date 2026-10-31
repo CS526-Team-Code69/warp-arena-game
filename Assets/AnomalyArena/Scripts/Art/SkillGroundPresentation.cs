@@ -3,6 +3,7 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
+
     [DefaultExecutionOrder(1400)]
     public sealed class SkillGroundPresentation : MonoBehaviour
     {
@@ -28,6 +29,7 @@ namespace AnomalyArena
         ParticleSystemRenderer groundRenderer, plumeRenderer;
         float[] boltLife;
         int nextBolt;
+        Vector3 lastPlayerAt;
 
         void Awake()
         {
@@ -64,10 +66,25 @@ namespace AnomalyArena
             var game = GameManager.Instance;
             float dt = game && game.IsCombatActive ? game.WorldDeltaTime : 0f;
             AnimationTime += dt;
+
+            if (game && game.player) lastPlayerAt = game.player.Position;
             skills.CopyGroundVisuals(samples);
             VisibleFlameCount = VisibleAreaCount = 0;
+            bool v5 = V5Vfx.On;
             foreach (var sample in samples)
             {
+                if (v5)
+                {
+
+                    if (sample.Id == SkillId.FlameWake) { VisibleFlameCount++; V5Vfx.I.WakeSample(sample.Position, sample.Radius); }
+                    else
+                    {
+                        VisibleAreaCount++;
+                        if (sample.Id == SkillId.GravityWell) V5Vfx.I.GravityWellTick(sample.Position, sample.Radius);
+                        else V5Vfx.I.StormTick(sample.Position, sample.Radius);
+                    }
+                    continue;
+                }
                 if (sample.Id == SkillId.FlameWake)
                 {
                     if (VisibleFlameCount >= Capacity) continue;
@@ -97,11 +114,11 @@ namespace AnomalyArena
                     field.SetPropertyBlock(properties);
                 }
             }
-            if (flameGround) flameGround.SetParticles(ground, VisibleFlameCount);
-            if (flamePlumes) flamePlumes.SetParticles(plumes, VisibleFlameCount);
+            if (flameGround) flameGround.SetParticles(ground, v5 ? 0 : VisibleFlameCount);
+            if (flamePlumes) flamePlumes.SetParticles(plumes, v5 ? 0 : VisibleFlameCount);
             SetFireTime(groundRenderer); SetFireTime(plumeRenderer);
             if (areaFields != null)
-                for (int i = VisibleAreaCount; i < areaFields.Length; i++) if (areaFields[i]) areaFields[i].enabled = false;
+                for (int i = v5 ? 0 : VisibleAreaCount; i < areaFields.Length; i++) if (areaFields[i]) areaFields[i].enabled = false;
             for (int i = 0; i < boltLife.Length; i++)
             {
                 if (!lightningBolts[i]) continue;
@@ -124,6 +141,12 @@ namespace AnomalyArena
         }
         void OnCast(SkillId id, Vector3 point, float radius, float duration)
         {
+            if (V5Vfx.On)
+            {
+                V5Vfx.I.SkillCast(id, point, radius, lastPlayerAt);
+                return;
+            }
+
             if (id is SkillId.FlameWake or SkillId.GravityWell or SkillId.StormCall
                 or SkillId.PocketVoid or SkillId.VoidWalk or SkillId.Singularity) return;
             var definition = skills.Catalog ? skills.Catalog.Find(id) : null;
@@ -133,6 +156,7 @@ namespace AnomalyArena
         }
         void OnImpact(SkillId id, Vector3 point, float radius, float duration)
         {
+            if (id == SkillId.StormCall && V5Vfx.On) { V5Vfx.I.LightningStrike(point, new Color(.72f, .85f, 1f)); return; }
             if (id != SkillId.StormCall || boltLife.Length == 0) return;
             int index = nextBolt++ % boltLife.Length;
             var bolt = lightningBolts[index]; if (!bolt) return;

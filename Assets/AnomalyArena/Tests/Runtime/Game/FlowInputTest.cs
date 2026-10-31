@@ -318,7 +318,7 @@ namespace AnomalyArena
             Assert.That(Time.timeScale, Is.Zero, "nothing moves during the freeze");
             await CommandFor(game, ArenaUiCommand.Pause, .8f);
             Assert.That(game.RunPhase, Is.EqualTo(ArenaUiState.TrialReturn), "no input acts during the freeze, pausing included");
-            Assert.That(FxPool.Active.items.Any(item => item && item.gameObject.activeSelf), Is.True, "the absorb animation is playing");
+            Assert.That(FxPool.Active.items.Any(item => item && item.gameObject.activeSelf) || V5Vfx.On && V5Vfx.I.LiveParticles > 0, Is.True, "the absorb animation is playing");
             Assert.That(Query.Flat(game.player.Position - stood).magnitude, Is.LessThan(.01f), "the player stays where they came back");
             Assert.That(portal.Phase, Is.Not.EqualTo(HolePhase.Gone), "the portal is still in view during the freeze");
 

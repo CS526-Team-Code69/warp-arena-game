@@ -54,7 +54,7 @@ namespace AnomalyArena
         }
         public void OnAcceptedReroll()=>Play(ArenaWorldCue.CardReroll,Vector3.zero);
 
-        public void Play(ArenaWorldCue cue,Vector3 at)
+        public void Play(ArenaWorldCue cue,Vector3 at,float pitch=1f,float gainScale=1f)
         {
             if(!isActiveAndEnabled||byCue==null)return;
             var sound=byCue[(int)cue];bool life=Lifecycle(cue);
@@ -76,12 +76,20 @@ namespace AnomalyArena
                 float shortest=float.PositiveInfinity;
                 for(int i=0;i<voices.Length;i++)if(voices[i]&&left[i]<shortest){shortest=left[i];free=i;}
             }
+
+            if(free<0&&!life&&Warns(cue))
+            {
+                float shortest=float.PositiveInfinity;
+                for(int i=0;i<voices.Length;i++)if(voices[i]&&assignments[i] is ArenaWorldCue.NpcHit or ArenaWorldCue.NpcDeath or ArenaWorldCue.PlayerStepMetal or ArenaWorldCue.PlayerStepStone&&left[i]<shortest){shortest=left[i];free=i;}
+            }
             if(free<0)return;
             var voice=voices[free];voice.Stop();voice.transform.position=at;
-            voice.pitch=1f;voice.volume=sound.gain*(life?lifecycleGain:worldGain)*masterGain;
-            voice.clip=sound.clip;voice.Play();left[free]=sound.clip.length;assignments[free]=cue;
+            pitch=Mathf.Clamp(pitch,.25f,3f);
+            voice.pitch=pitch;voice.volume=sound.gain*gainScale*(life?lifecycleGain:worldGain)*masterGain;
+            voice.clip=sound.clip;voice.Play();left[free]=sound.clip.length/pitch;assignments[free]=cue;
             nextCue[(int)cue]=Time.unscaledTime+sound.minimumInterval;
         }
+        static bool Warns(ArenaWorldCue cue)=>cue is ArenaWorldCue.NpcWindup or ArenaWorldCue.NpcChargeWarning or ArenaWorldCue.NpcChargeRush or ArenaWorldCue.NpcPulse or ArenaWorldCue.NpcLaserLock or ArenaWorldCue.NpcLaserFire;
         static bool Lifecycle(ArenaWorldCue cue)=>cue is ArenaWorldCue.BossEnter or ArenaWorldCue.BossPhase or ArenaWorldCue.BossDeath
             or ArenaWorldCue.PlayerHit or ArenaWorldCue.PlayerDeath or ArenaWorldCue.PortalOpen or ArenaWorldCue.PortalEnter or ArenaWorldCue.PortalClose
             or ArenaWorldCue.LevelUp or ArenaWorldCue.CardReveal or ArenaWorldCue.CardReroll or ArenaWorldCue.WaveEnd or ArenaWorldCue.Victory or ArenaWorldCue.Defeat
