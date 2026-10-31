@@ -109,6 +109,7 @@ namespace AnomalyArena
             ResourcePanel();
             WaveTexts();
             LayOutBottomRow();
+            if (Application.isPlaying) FitChineseNames();
             AboveRow();
             appliedState = CurrentState();
 #if UNITY_EDITOR
@@ -271,6 +272,76 @@ namespace AnomalyArena
                 Place(bar, 8f, h - cooldownBottom, w - 16f, cooldownHeight);
                 Place(slot.cooldown, 0f, 0f, w - 16f, cooldownHeight);
             }
+        }
+
+                                                                                                                                        
+                                                                        
+        void Awake()
+        {
+            if (hud) FitChineseNames();
+        }
+
+                                                                                                                                        
+                                                                                                                                        
+        const float WeaponNameEms = 7.7f, SkillNameEms = 4.2f;
+        const float NameGap = 4f, SmallestSideGlyph = 24f, FrameEdge = 16f, KeyRowElement = 20f, KeyRowGlyphWidth = 30f, KeyRowGap = 2f, KeyRowHeight = 20f;
+                                                                                                                                               
+        const float DetailDrop = 2f, ChineseLineSpacing = .8f, OneLineNameHeight = 25f;
+        const int TitleShrink = 2, SmallestDetail = 8;
+
+                                                                                                                                        
+                                                                                                                                    
+                                                                                                                                          
+                                                                                                             
+                                                                                                    
+        void FitChineseNames()
+        {
+            if (gameObject.scene.name != V2Hud.ChineseEditionScene) return;
+            if (hud.handSlots != null) foreach (var slot in hud.handSlots) FitChineseSlot(slot, hand, WeaponNameEms, weaponIconSize, false);
+            if (hud.autoSlots != null) foreach (var slot in hud.autoSlots) FitChineseSlot(slot, auto, WeaponNameEms, weaponIconSize, false);
+            if (hud.skillSlots != null) foreach (var slot in hud.skillSlots) FitChineseSlot(slot, skill, SkillNameEms, Vector2.one * skillIconSize, true);
+        }
+
+        void FitChineseSlot(V2UiSlot slot, SlotGroup group, float nameEms, Vector2 glyph, bool oneLineName)
+        {
+            if (!slot) return;
+            float w = group.size.x, top = keyTop + KeyRowHeight, normalDetailTop = group.size.y - detailBottom + DetailDrop, detailEnd = normalDetailTop + detailHeight;
+                                                                                                                         
+            float height = oneLineName ? OneLineNameHeight : normalDetailTop - top, detailTop = top + height;
+            float room = w - padding * 2f - nameEms * group.titleFont.x - NameGap;
+            float keyRight;
+            if (room >= SmallestSideGlyph)
+            {
+                Vector2 size = glyph * Mathf.Min(1f, room / glyph.x, height / glyph.y);
+                float glyphX = w - padding - size.x, glyphY = top + (height - size.y) * .5f;
+                float element = Mathf.Min(elementIconSize, glyphY - (keyTop - 2f));
+                Place(slot.icon, w - padding - element, keyTop - 2f, element, element);
+                Place(slot.weaponIcon, glyphX, glyphY, size.x, size.y);
+                Place(slot.contentIcon, glyphX, glyphY, size.x, size.y);
+                Place(slot.title, padding, top, glyphX - NameGap - padding, height);
+                keyRight = w - padding - element - 6f;
+            }
+            else
+            {
+                float glyphW = Mathf.Min(KeyRowGlyphWidth, KeyRowElement * glyph.x / glyph.y), glyphH = glyphW * glyph.y / glyph.x;
+                float right = w - FrameEdge, elementX = right - KeyRowElement, glyphX = elementX - KeyRowGap - glyphW, glyphY = keyTop + (KeyRowElement - glyphH) * .5f;
+                Place(slot.icon, elementX, keyTop, KeyRowElement, KeyRowElement);
+                Place(slot.weaponIcon, glyphX, glyphY, glyphW, glyphH);
+                Place(slot.contentIcon, glyphX, glyphY, glyphW, glyphH);
+                Place(slot.title, padding, top, right - padding, height);
+                keyRight = glyphX - KeyRowGap;
+            }
+            var keyTransform = slot.transform.Find("SlotKey");
+            if (keyTransform) Place(keyTransform.GetComponent<Text>(), padding, keyTop, keyRight - padding, KeyRowHeight);
+            Place(slot.detail, padding, detailTop, w - padding - FrameEdge, detailEnd - detailTop);
+                                                                                                                                           
+                                                                       
+            Fit(slot.title, new Vector2Int(group.titleFont.x - TitleShrink, group.titleFont.y), TextAnchor.MiddleLeft);
+            Fit(slot.detail, new Vector2Int(SmallestDetail, group.detailFont.y), oneLineName ? TextAnchor.LowerLeft : TextAnchor.MiddleLeft);
+            if (slot.title) slot.title.lineSpacing = ChineseLineSpacing;
+            if (slot.detail) slot.detail.lineSpacing = ChineseLineSpacing;
+            slot.nameOnTwoLines = true;
+            slot.compactDetailSize = group.detailFont.x;
         }
 
         void AboveRow()
