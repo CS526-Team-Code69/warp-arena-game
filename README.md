@@ -2,7 +2,7 @@
 
 **A top-down arena survival game where your weapons misbehave and the map is your best weapon.**
 
-**[Play in your browser](https://cs526-team-code69.github.io/warp-arena-game/)** · desktop Chrome, Edge or Firefox, with mouse and keyboard · [中文版](https://cs526-team-code69.github.io/warp-arena-game/zh/)
+**[Play in your browser](https://cs526-team-code69.github.io/warp-arena-game/)** · desktop Chrome, Edge or Firefox, with mouse and keyboard
 
 | | |
 |---|---|
