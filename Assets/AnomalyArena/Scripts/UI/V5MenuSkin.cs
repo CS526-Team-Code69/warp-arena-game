@@ -337,28 +337,31 @@ namespace AnomalyArena
 
         void SkinPaused(V2UiScreen screen, RectTransform content)
         {
-            const float w = 640f, h = 600f;
+            const float w = 1040f, buttonW = 226f, buttonGap = 18f;
+            float top = V2Hud.PauseTableBottom + 24f, h = top + 64f + 16f + 128f + 24f;
             var panel = MakePanel(screen.gameObject, content, new Vector2(w, h));
-            panel.heightWithoutSummary = 440f;
+            panel.heightWithoutSummary = top + 64f + 40f;
             panel.summary = screen.summary;
                                                                      
             Backdrop(screen, false);
             Style(screen.heading, 40f, 28f, w - 80f, 56f, 36, TextAnchor.MiddleCenter);
             Gradient(screen.heading);
             Rule(content, "HeadingRule", 40f, 86f, w - 80f, 14f, AccentCyan);
-            Style(screen.body, 40f, 106f, w - 80f, 40f, 18, TextAnchor.MiddleCenter);
+            // The paused line; V2Hud puts the controls table under it.
+            Style(screen.body, 40f, 106f, w - 80f, 36f, 18, TextAnchor.MiddleCenter);
             if (screen.body) screen.body.color = SoftText;
-            float top = 166f;
-            foreach (var name in new[] { "ResumeRun", "RestartRun", "QuitToTitle" })
+            float left = (w - V2Hud.PauseButtons.Length * (buttonW + buttonGap) + buttonGap) * .5f;
+            foreach (var name in V2Hud.PauseButtons)
             {
                 if (content.Find(name) is RectTransform go && go.GetComponent<Button>() is { } button)
                 {
                     SkinButton(button, name == "ResumeRun", 20);
-                    Place(go, (w - 440f) * .5f, top, 440f, 64f);
+                    Place(go, left, top, buttonW, 64f);
                 }
-                top += 82f;
+                left += buttonW + buttonGap;
             }
-            panel.summaryTop = top + 6f;
+            top += 64f + 16f;
+            panel.summaryTop = top;
             Style(screen.summary, 40f, panel.summaryTop, w - 80f, 128f, 15, TextAnchor.UpperCenter);
             if (screen.summary) screen.summary.color = FaintText;
             Fit(panel, screen.summary, 15, 10);

@@ -73,6 +73,7 @@ namespace AnomalyArena
             for (int i = 0; i < n; i++) { damageAge[i] = 1f; damageLabels[i].gameObject.SetActive(false); }
             if (themeBackground) themeBackground.texture = art ? art.themeBackground : null;
             SimplifyChineseTitle();
+            PlaceControlsTables();
 
             if (screens != null)
                 foreach (var screen in screens)
@@ -133,9 +134,40 @@ namespace AnomalyArena
             if (source == null || Time.unscaledTime < nextRefresh) return;
             nextRefresh = Time.unscaledTime + Mathf.Max(.02f, refreshInterval);
             Render(source.UiSnapshot);
+            ShowHowToPlayOnArrival(source.UiSnapshot);
         }
 
-        public void Dispatch(ArenaUiCommand command, int index = -1) => source?.ExecuteUiCommand(command, index);
+        // A copy of the restart button that opens the how-to-play pages over the pause screen.
+        void AddHowToPlayButton(Transform content)
+        {
+            if (content.Find("HowToPlay") || content.Find("RestartRun") is not { } restart) return;
+            var copy = Instantiate(restart.gameObject, content);
+            copy.name = "HowToPlay";
+            if (copy.GetComponent<ArenaUiButton>() is { } relay) Destroy(relay);
+            foreach (var localizer in copy.GetComponentsInChildren<UnityEngine.Localization.Components.LocalizeStringEvent>(true)) Destroy(localizer);
+            var button = copy.GetComponent<UnityEngine.UI.Button>();
+            button.onClick = new UnityEngine.UI.Button.ButtonClickedEvent();
+            button.onClick.AddListener(() => V2Tutorial.Show(appliedFont, null));
+            howToPlayLabel = copy.GetComponentInChildren<UnityEngine.UI.Text>();
+            if (howToPlayLabel) howToPlayLabel.text = "HOW TO PLAY";
+        }
+
+        public void Dispatch(ArenaUiCommand command, int index = -1)
+        {
+            if (command == ArenaUiCommand.Start && source != null && source.UiSnapshot.state == ArenaUiState.Title) howToPlayPending = true;
+            source?.ExecuteUiCommand(command, index);
+        }
+
+        // START RUN from the title opens the how-to-play pages once the run reaches the arena. Restart and quit go back
+        // through the title, so every run gets them; a run started by code (the tests) does not.
+        bool howToPlayPending;
+
+        void ShowHowToPlayOnArrival(ArenaUiSnapshot s)
+        {
+            if (!howToPlayPending || s.state != ArenaUiState.SupplyDrop) return;
+            howToPlayPending = false;
+            V2Tutorial.Show(appliedFont, null);
+        }
         public void RefreshView(){if(source!=null&&ArenaText.Ready)Render(source.UiSnapshot);}
 
         public void ShowBanner(string message, float seconds = 2.2f)
@@ -369,6 +401,8 @@ namespace AnomalyArena
                     break;
                 case ArenaUiState.Paused:
                     SetText(screen.body, ArenaText.Pair("The battlefield and the build clock are paused.","The battlefield and the build clock are paused."));
+                    if (pauseControls) pauseControls.SetFont(screen.body ? screen.body.font : null);
+                    if (howToPlayLabel && screen.body && howToPlayLabel.font != screen.body.font) howToPlayLabel.font = screen.body.font;
                     break;
                 case ArenaUiState.Result:
                     SetText(screen.heading, s.resultTitle);
@@ -378,6 +412,68 @@ namespace AnomalyArena
             if (cards == null || screen.choices == null) return;
             for (int i = 0; i < screen.choices.Length; i++)
                 screen.choices[i].Render(i < cards.Length ? cards[i] : null, art);
+        }
+
+        // GDD section 7, row for row: action, then input.
+        public static readonly (string action, string input)[] Controls =
+        {
+            ("Move", "WASD"),
+            ("Aim", "Mouse"),
+            ("Use the held weapon", "Left mouse button (hold to charge or to keep firing, depending on the weapon)"),
+            ("Swap the two hand slots", "Right mouse button"),
+            ("Sprint", "Hold left Shift"),
+            ("Cast a skill / select a card while a card panel is open", "1, 2, 3"),
+            ("Open the banked card pick during combat / switch art mode on the title screen", "T"),
+            ("Put the build panel away to walk the empty arena, and bring it back", "Tab"),
+            ("Enter the void trial", "E while standing on the portal"),
+            ("Start, open the crate, close the weapon card, start the next wave; pick later on a mid-wave card panel", "Space or Enter"),
+            ("Pause / resume; pick later on a mid-wave card panel", "Esc"),
+            ("Reroll while a card panel is open (once per wave) / restart on the result screen", "R"),
+        };
+
+        // The pause screen's table sits under the paused line; V5MenuSkin puts the buttons under PauseTableBottom.
+        public const float PauseTableTop = 150f, PauseTableRow = 28f;
+        public static float PauseTableBottom => PauseTableTop + Controls.Length * PauseTableRow;
+        public static readonly string[] PauseButtons = { "ResumeRun", "RestartRun", "HowToPlay", "QuitToTitle" };
+        V2ControlsTable pauseControls;
+        UnityEngine.UI.Text howToPlayLabel;
+
+        void PlaceControlsTables()
+        {
+            if (screens == null) return;
+            foreach (var screen in screens)
+            {
+                if (!screen) continue;
+                var content = screen.transform.Find("Content");
+                if (!content) continue;
+                if (screen.state == ArenaUiState.Paused)
+                {
+                    AddHowToPlayButton(content);
+                    pauseControls = V2ControlsTable.Create(content, 1, PauseTableRow, 190f, 15);
+                    var rect = pauseControls.Rect;
+                    rect.anchorMin = new Vector2(0f, 1f);
+                    rect.anchorMax = new Vector2(1f, 1f);
+                    rect.pivot = new Vector2(.5f, 1f);
+                    rect.offsetMin = new Vector2(64f, -PauseTableBottom);
+                    rect.offsetMax = new Vector2(-64f, -PauseTableTop);
+                    // Without the menu skin (the Editor's Play button keeps the loaded scene): paused line, table, then the buttons in a row.
+                    if (screen.body) PlaceTopLeft(screen.body.rectTransform, 44f, 100f, 1012f, 40f);
+                    float left = 44f, top = PauseTableBottom + 24f;
+                    foreach (var name in PauseButtons)
+                    {
+                        if (content.Find(name) is RectTransform button) PlaceTopLeft(button, left, top, 237f, 65f);
+                        left += 255f;
+                    }
+                    if (screen.summary) PlaceTopLeft(screen.summary.rectTransform, 44f, top + 80f, 1012f, 60f);
+                }
+            }
+        }
+
+        static void PlaceTopLeft(RectTransform rect, float left, float top, float width, float height)
+        {
+            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0f, 1f);
+            rect.anchoredPosition = new Vector2(left, -top);
+            rect.sizeDelta = new Vector2(width, height);
         }
 
         static string WalkHint() => ArenaText.Pair("\nTab puts this panel away so you can walk the empty arena; Tab again brings it back.","\nTab puts this panel away so you can walk the empty arena; Tab again brings it back.");
