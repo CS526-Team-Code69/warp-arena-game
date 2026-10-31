@@ -24,9 +24,8 @@ namespace AnomalyArena
             foreach (V5WallStyle style in System.Enum.GetValues(typeof(V5WallStyle)))
             foreach (var rect in rects)
             foreach (int axis in new[] { 0, 1 })
-            foreach (bool allSides in new[] { false, true })
             {
-                var shape = V5TerrainWalls.Build(style, rect, axis, allSides);
+                var shape = V5TerrainWalls.Build(style, rect, axis);
                 try
                 {
                     string what = $"{style} {rect} axis {axis}";

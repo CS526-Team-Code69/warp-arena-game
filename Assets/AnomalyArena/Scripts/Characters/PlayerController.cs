@@ -76,6 +76,7 @@ namespace AnomalyArena
             var cam = GM.cam;
             if (debugLockAim || mouse == null || cam == null) return;
             Ray ray = cam.ScreenPointToRay(mouse.position.ReadValue());
+            if (V5Vfx.On && cam.TryGetComponent<CameraRig>(out var rig)) ray.origin -= rig.Transient;
             var plane = new Plane(Vector3.up, new Vector3(0f, Query.CastHeight, 0f));
             if (!plane.Raycast(ray, out float t)) return;
             aimPoint = Query.Flat(ray.GetPoint(t));

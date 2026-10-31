@@ -139,7 +139,7 @@ namespace AnomalyArena
 
         static Look LookOf(V5WallStyle style) => style switch { V5WallStyle.Dunes => Dunes, V5WallStyle.Meteor => Meteor, _ => Ruins };
 
-        public static V5WallShape Build(V5WallStyle style, Rect rect, int axis, bool allSides = false)
+        public static V5WallShape Build(V5WallStyle style, Rect rect, int axis)
         {
             var look = LookOf(style);
             Points.Clear(); Normals.Clear(); Colors.Clear(); Uvs.Clear(); Triangles.Clear(); Stones.Clear();
@@ -156,8 +156,8 @@ namespace AnomalyArena
             Vector2 centre = rect.center;
             Plinth(look, rect, centre);
             foreach (var stone in Stones) Top(look, stone, rect, centre, shape);
-            Sides(look, rect, centre, allSides);
-            Risers(look, centre, allSides);
+            Sides(look, rect, centre);
+            Risers(look, centre);
             shape.mesh = Finish();
             return shape;
         }
@@ -304,13 +304,9 @@ namespace AnomalyArena
             return 1f;
         }
 
-        static void Sides(Look look, Rect rect, Vector2 c, bool allSides)
+        static void Sides(Look look, Rect rect, Vector2 c)
         {
             OuterFace(look, Vector3.right, rect.yMin, c, 0);
-            if (!allSides) return;
-            OuterFace(look, Vector3.left, rect.yMax, c, 1);
-            OuterFace(look, Vector3.forward, rect.xMax, c, 2);
-            OuterFace(look, Vector3.back, rect.xMin, c, 3);
         }
 
         static void OuterFace(Look look, Vector3 along, float plane, Vector2 c, int side)
@@ -339,7 +335,7 @@ namespace AnomalyArena
             }
         }
 
-        static void Risers(Look look, Vector2 c, bool allSides)
+        static void Risers(Look look, Vector2 c)
         {
             for (int a = 0; a < Stones.Count; a++)
             {
@@ -350,13 +346,6 @@ namespace AnomalyArena
                     if (low.top >= high.top) continue;
                     if (Mathf.Abs(low.z1 - high.z0) < .001f && Overlap(high.x0, high.x1, low.x0, low.x1, out float x0, out float x1))
                         Face(look, Vector3.right, high.z0, c, 0, x0, x1, low.top - look.drop, high.top - look.drop);
-                    if (!allSides) continue;
-                    if (Mathf.Abs(low.z0 - high.z1) < .001f && Overlap(high.x0, high.x1, low.x0, low.x1, out x0, out x1))
-                        Face(look, Vector3.left, high.z1, c, 1, -x1, -x0, low.top - look.drop, high.top - look.drop);
-                    if (Mathf.Abs(low.x0 - high.x1) < .001f && Overlap(high.z0, high.z1, low.z0, low.z1, out float z0, out float z1))
-                        Face(look, Vector3.forward, high.x1, c, 2, z0, z1, low.top - look.drop, high.top - look.drop);
-                    if (Mathf.Abs(low.x1 - high.x0) < .001f && Overlap(high.z0, high.z1, low.z0, low.z1, out z0, out z1))
-                        Face(look, Vector3.back, high.x0, c, 3, -z1, -z0, low.top - look.drop, high.top - look.drop);
                 }
             }
         }

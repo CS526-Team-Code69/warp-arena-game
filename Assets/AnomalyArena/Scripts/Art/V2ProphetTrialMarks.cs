@@ -102,8 +102,6 @@ namespace AnomalyArena
                     if (standing)
                     {
                         V5Vfx.I.PillarTick(pillar.centre, pillar.radius);
-                        beams[i].startColor = new Color(.6f, .34f, 1f, .5f);
-                        beams[i].endColor = new Color(.6f, .34f, 1f, 0f);
                     }
                 }
                 if (!standing) continue;
@@ -113,6 +111,11 @@ namespace AnomalyArena
                 beam.widthMultiplier = pillar.radius * 2f;                         
                 beam.startColor = pillarBeamColor;
                 beam.endColor = new Color(pillarBeamColor.r, pillarBeamColor.g, pillarBeamColor.b, 0f);
+                if (V5Vfx.On)
+                {
+                    beam.startColor = new Color(.6f, .34f, 1f, .5f);
+                    beam.endColor = new Color(.6f, .34f, 1f, 0f);
+                }
             }
         }
 

@@ -223,14 +223,23 @@ namespace AnomalyArena
             }
         }
 
-                                                                                                                                                 
+                                                                                                                                                                        
         static void NarrowBars(EnemyLabel view, Enemy enemy)
         {
             float width = enemy.IsBoss || enemy.Elite ? 1f : Mathf.Clamp(enemy.radius * .85f, .42f, .78f);
-            var bar = view.hp ? view.hp.rectTransform.parent as RectTransform : null;
-            if (bar && !Mathf.Approximately(bar.localScale.x, width)) bar.localScale = new Vector3(width, 1f, 1f);
-            bar = view.shield ? view.shield.rectTransform.parent as RectTransform : null;
-            if (bar && !Mathf.Approximately(bar.localScale.x, width)) bar.localScale = new Vector3(width, 1f, 1f);
+            NarrowBar(view.hp ? view.hp.rectTransform.parent as RectTransform : null, width);
+            NarrowBar(view.shield ? view.shield.rectTransform.parent as RectTransform : null, width);
+        }
+
+                                                                                     
+        static void NarrowBar(RectTransform bar, float width)
+        {
+            if (!bar || Mathf.Approximately(bar.localScale.x, width)) return;
+            float toMiddle = bar.rect.width * (.5f - bar.pivot.x);
+            var at = bar.anchoredPosition;
+            at.x += toMiddle * (bar.localScale.x - width);
+            bar.anchoredPosition = at;
+            bar.localScale = new Vector3(width, 1f, 1f);
         }
 
         static bool Offscreen(Vector3 world, Camera camera)

@@ -231,7 +231,7 @@ namespace AnomalyArena
             if (V5Vfx.On)
             {
                                                                                                                          
-                V5Vfx.I.Hit(at, dir, c, radius, crit || amount >= heavyAt || kind == HitKind.Slam, crit);
+                V5Vfx.I.Hit(at, dir, c, radius, crit || amount >= heavyAt || kind == HitKind.Slam, crit, this is Enemy);
                                                                                                                     
                 if (kind == HitKind.Slam) V5Vfx.I.GroundSlam(Position, radius + 1.4f, c, false);
             }

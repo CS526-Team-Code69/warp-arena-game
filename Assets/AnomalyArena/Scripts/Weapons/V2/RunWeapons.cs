@@ -443,9 +443,9 @@ namespace AnomalyArena
             var gm=GameManager.Instance;if(!gm)return;
             var profile=gm.feedback.For(WeaponFeel.Of(weapon));
             Vector3 aim=Query.Flat(body.AimDirection);if(aim.sqrMagnitude<1e-4f)return;aim.Normalize();
+            if(V5Vfx.On){V5Vfx.I.FireKick(weapon,body,aim,profile);return;}
             body.VisualKick(-aim,profile.fireRecoil,.1f);
             gm.Kick(-aim,profile.fireKick);
-            if(profile.muzzleFlash>0f&&V5Vfx.On){V5Vfx.I.Muzzle(Query.AtCastHeight(body.Position)+aim*(body.radius+.45f),aim,new Color(1f,.82f,.5f),profile.muzzleFlash*1.25f);return;}
             var pool=FxPool.Active;
             if(profile.muzzleFlash>0f&&pool&&pool.muzzleFlash)
                 pool.EmitDirectional(pool.muzzleFlash,Query.AtCastHeight(body.Position)+aim*(body.radius+.45f),aim,profile.muzzleFlash,.07f,new Color(1f,.88f,.6f));

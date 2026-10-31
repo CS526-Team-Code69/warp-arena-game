@@ -13,7 +13,8 @@ namespace AnomalyArena
                                                                                                                                
                                                                                                                                
                                                                                                                              
-                                                                                                                          
+                                                                                                                                   
+                                                                                                                      
                   
     public static class RunAnalytics
     {
@@ -147,6 +148,17 @@ namespace AnomalyArena
             return string.IsNullOrEmpty(guid) ? Application.version : Application.version + "+" + guid.Substring(0, Mathf.Min(8, guid.Length));
         }
 
+                                                                                                                                             
+                                                                                                                           
+        public static bool IsLocalPage(string url)
+        {
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var page)) return false;
+            if (page.IsFile) return true;
+            string host = page.Host.ToLowerInvariant();
+            return host is "localhost" or "127.0.0.1" or "[::1]"
+                || host.EndsWith(".localhost", StringComparison.Ordinal) || host.EndsWith(".test", StringComparison.Ordinal);
+        }
+
         static void Send(RunEvent e)
         {
             string json = JsonUtility.ToJson(e);
@@ -205,7 +217,7 @@ namespace AnomalyArena
                     loading = false;
                     return;
                 }
-                endpoint = url.StartsWith("https://", StringComparison.Ordinal) ? url : "";
+                endpoint = url.StartsWith("https://", StringComparison.Ordinal) && !IsLocalPage(Application.absoluteURL) ? url : "";
                 foreach (var json in waiting) Post(json);
                 waiting.Clear();
             };

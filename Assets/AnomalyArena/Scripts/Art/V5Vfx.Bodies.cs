@@ -360,14 +360,25 @@ namespace AnomalyArena
         public void Death(Vector3 at, float radius, Color body)
         {
             Color c = Color.Lerp(body, new Color(.45f, .1f, .12f), .5f);
-            flash.Emit(at, Vector3.zero, radius * 1.8f, .08f, Bright(c, .25f));
-            int n = Count(5);
+            flash.Emit(at, Vector3.zero, radius * 2.5f, .09f, Bright(c, .3f));
+            int n = Count(6);
             for (int i = 0; i < n; i++)
             {
                 Vector3 d = Quaternion.Euler(0f, R(0f, 360f), 0f) * Vector3.forward;
-                smokeLow.Emit(at + d * radius * .3f, d * R(1f, 2.6f) + Vector3.up * R(0f, 1f), radius * R(1f, 1.7f), R(.25f, .5f), new Color(c.r * .55f, c.g * .5f, c.b * .55f, .5f), R(0f, 360f));
-                spark.Emit(at, (d + Vector3.up * R(.2f, .9f)) * R(4f, 9f), R(.05f, .09f), R(.12f, .3f), Bright(c, .4f));
+                smokeLow.Emit(at + d * radius * .3f, d * R(1.2f, 3.2f) + Vector3.up * R(0f, 1f), radius * R(1.1f, 1.9f), R(.28f, .55f), new Color(c.r * .55f, c.g * .5f, c.b * .55f, .55f), R(0f, 360f));
+                spark.Emit(at, (d + Vector3.up * R(.2f, .9f)) * R(5f, 12f), R(.08f, .14f), R(.14f, .34f), Bright(c, .4f));
             }
+
+            int bits = Count(Mathf.Clamp(radius * 7f, 6f, 16f));
+            for (int i = 0; i < bits; i++)
+            {
+                Vector3 d = Quaternion.Euler(0f, R(0f, 360f), 0f) * Vector3.forward;
+                droplet.Emit(at, d * R(2f, 9f) + Vector3.up * R(3f, 9f), R(.16f, .36f), R(.3f, .6f), Ichor);
+                if (i % 2 == 0) debris.Emit(at, d * R(2f, 7f) + Vector3.up * R(3f, 8f), R(.18f, .4f), R(.35f, .7f), new Color(.2f, .14f, .16f), R(0f, 360f));
+            }
+            decal.Emit(OnGround(at, .05f), Vector3.zero, radius * R(2.4f, 3.2f), 5f, new Color(.2f, .03f, .06f, .6f), R(0f, 360f));
+            var gm = GameManager.Instance;
+            if (gm) gm.Shake(Mathf.Clamp(radius * .07f, .04f, .16f));
         }
 
         public void Swallow(Vector3 at, float size)
