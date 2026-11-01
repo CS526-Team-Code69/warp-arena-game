@@ -205,6 +205,23 @@ namespace AnomalyArena
         }
 
         [Test, LoadScene(SceneCn), Category("Integration"), Timeout(90000)]
+        public async Task Chinese_ThePausePanel_CoversTheBuildCrateAndTheDamageNumbers() => await ThePausePanelCoversTheBuildCrate();
+
+        [Test, LoadScene(SceneEn), Category("Integration"), Timeout(90000)]
+        public async Task English_ThePausePanel_CoversTheBuildCrateAndTheDamageNumbers() => await ThePausePanelCoversTheBuildCrate();
+
+        async Task ThePausePanelCoversTheBuildCrate()
+        {
+            var game = await ReadyScene();
+            ShortenWaves(game, 6f);
+            await StartRun(game);
+            await Until(() => game.waves.TimeExpired, 15f, "the shortened wave times out");
+            await ClearTheWave(game);
+            await Until(() => game.RunPhase == ArenaUiState.SupplyDrop && game.SupplyDropReady, 8f, "the build phase crate lands");
+            await ControlsTableTest.PauseCoversTheCrate(game);
+        }
+
+        [Test, LoadScene(SceneCn), Category("Integration"), Timeout(90000)]
         public async Task BuildPhase_OpenPortal_EnteredOnlyByStandingOnItWithThePanelAway()
         {
             var game = await ReadyScene();

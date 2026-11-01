@@ -22,7 +22,7 @@ namespace AnomalyArena
 
         public static bool HoldsInput => IsOpen || Time.frameCount == closedFrame;
         public static int Page => instance ? instance.page : -1;
-        public const int PageCount = 5;
+        public const int PageCount = 7;
 
         static (string title, string line, Func<Demo> demo)[] Pages() => new (string, string, Func<Demo>)[]
         {
@@ -33,6 +33,12 @@ namespace AnomalyArena
             (ArenaText.Pair("SPRINT","SPRINT"), ArenaText.Pair("Hold Shift while moving to sprint. It drains stamina.","Hold Shift while moving to sprint. It drains stamina."), () => new SprintDemo()),
             (ArenaText.Pair("SWAP & SKILLS","SWAP & SKILLS"), ArenaText.Pair("Right click swaps the two hand slots. 1, 2, 3 cast skills.","Right click swaps the two hand slots. 1, 2, 3 cast skills."), () => new SkillDemo()),
             (ArenaText.Pair("USE THE ARENA","USE THE ARENA"), ArenaText.Pair("Knock enemies into walls and black holes.","Knock enemies into walls and black holes."), () => new TerrainDemo()),
+            (ArenaText.Pair("PUT THE PANEL AWAY","PUT THE PANEL AWAY"),
+                ArenaText.Pair("Between waves, Tab puts the card panel away so you can walk and reach a portal. Tab again brings it back.","Between waves, Tab puts the card panel away so you can walk and reach a portal. Tab again brings it back."),
+                () => new BuildWalkDemo()),
+            (ArenaText.Pair("PAUSE","PAUSE"),
+                ArenaText.Pair("Esc pauses. The pause screen lists the keys and has How to Play, Restart Run and Quit to Title.","Esc pauses. The pause screen lists the keys and has How to Play, Restart Run and Quit to Title."),
+                () => new PauseDemo()),
         };
 
         Font font;
@@ -174,7 +180,7 @@ namespace AnomalyArena
             tutorial.line.resizeTextMinSize = 14;
             tutorial.line.resizeTextMaxSize = 21;
             tutorial.footnote = NewText(body, "Footnote", 15, Faint, FontStyle.Normal, TextAnchor.MiddleCenter);
-            tutorial.footnote.text = ArenaText.Pair("Other keys are shown on screen when you need them. Esc pauses and lists them all.","Other keys are shown on screen when you need them. Esc pauses and lists them all.");
+            tutorial.footnote.text = ArenaText.Pair("On a mid-wave card panel, Esc picks later and T opens it again. Other keys are shown on screen when needed.","On a mid-wave card panel, Esc picks later and T opens it again. Other keys are shown on screen when needed.");
             Place(tutorial.footnote.rectTransform, 48f, 486f, PanelW - 96f, 24f);
 
             tutorial.dots = new Image[PageCount];
@@ -248,14 +254,31 @@ namespace AnomalyArena
                 return new Key { cap = cap, text = text };
             }
 
-            protected Text Label(string value, int size, Color colour, Vector2 at, float width = 200f)
+            protected Text Label(string value, int size, Color colour, Vector2 at, float width = 200f, RectTransform parent = null, TextAnchor anchor = TextAnchor.MiddleCenter)
             {
-                var text = NewText(window, "Label", size, colour, FontStyle.Bold, TextAnchor.MiddleCenter);
+                var text = NewText(parent ? parent : window, "Label", size, colour, FontStyle.Bold, anchor);
                 text.font = font;
                 text.text = value;
                 text.rectTransform.sizeDelta = new Vector2(width, size + 10f);
                 text.rectTransform.anchoredPosition = at;
                 return text;
+            }
+
+            protected (RectTransform rect, CanvasGroup fade) Sheet(Vector2 size, Vector2 at)
+            {
+                var frame = NewImage(window, "Sheet", button, button ? Color.white : new Color(.12f, .22f, .34f), Image.Type.Sliced, 2f);
+                frame.rectTransform.sizeDelta = size;
+                frame.rectTransform.anchoredPosition = at;
+                Part(frame.rectTransform, null, new Color(.03f, .05f, .10f, .96f), size - Vector2.one * 12f, Vector2.zero);
+                return (frame.rectTransform, frame.gameObject.AddComponent<CanvasGroup>());
+            }
+
+            protected static Image Part(RectTransform parent, Sprite sprite, Color colour, Vector2 size, Vector2 at)
+            {
+                var image = NewImage(parent, "Part", sprite, colour, Image.Type.Sliced, 2f);
+                image.rectTransform.sizeDelta = size;
+                image.rectTransform.anchoredPosition = at;
+                return image;
             }
 
             protected (Image left, Image right) Mouse(Vector2 at)
@@ -509,6 +532,117 @@ namespace AnomalyArena
                 intoWall.rectTransform.localScale = Vector3.one * (1f - Mathf.InverseLerp(3.6f, 3.9f, t));
                 wall.color = hit ? new Color(1f, .9f, .6f, .9f) : new Color(.55f, .65f, .8f, .6f);
                 slam.enabled = hit;
+            }
+        }
+
+        sealed class BuildWalkDemo : Demo
+        {
+            static readonly Vector2 At = new(20f, 10f), From = new(20f, -20f), Portal = new(310f, 40f);
+            Image player;
+            Image[] swirl;
+            RectTransform sheet;
+            CanvasGroup fade;
+            Key tab;
+            Text tabLabel;
+            string awayLabel, backLabel;
+            protected override void Build()
+            {
+                swirl = new Image[3];
+                for (int i = 0; i < swirl.Length; i++) swirl[i] = Ring(Void, 60f, Portal);
+                Label(ArenaText.Pair("portal","portal"), 14, Faint, Portal + new Vector2(0f, -70f), 120f);
+                player = Dot(Player, 30f, From);
+
+                (sheet, fade) = Sheet(new Vector2(420f, 270f), At);
+                Label(ArenaText.Pair("PICK A CARD","PICK A CARD"), 18, Soft, new Vector2(0f, 104f), 300f, sheet);
+                Color[] marks = { Cyan, Bullet, Void };
+                for (int i = 0; i < marks.Length; i++)
+                {
+                    var card = Part(sheet, pill, KeyIdle, new Vector2(116f, 170f), new Vector2(-130f + i * 130f, -20f));
+                    Part(card.rectTransform, circle, marks[i], Vector2.one * 44f, new Vector2(0f, 34f));
+                    Part(card.rectTransform, null, Faint, new Vector2(76f, 6f), new Vector2(0f, -22f));
+                    Part(card.rectTransform, null, Faint, new Vector2(56f, 6f), new Vector2(0f, -40f));
+                }
+
+                tab = Cap("Tab", new Vector2(-300f, -100f), 64f);
+                awayLabel = ArenaText.Pair("put it away","put it away");
+                backLabel = ArenaText.Pair("bring it back","bring it back");
+                tabLabel = Label(awayLabel, 14, Faint, new Vector2(-300f, -146f), 130f);
+            }
+
+            public override void Tick(float time)
+            {
+                float t = Loop(time, 6f);
+                tab.Light(t is > 1f and < 1.3f || t is > 4.2f and < 4.5f);
+                tabLabel.text = t is > 1.4f and < 4.5f ? backLabel : awayLabel;
+                float away = Ease(1.05f, 1.4f, t) * (1f - Ease(4.25f, 4.6f, t));
+                fade.alpha = 1f - away;
+                sheet.anchoredPosition = At + Vector2.down * 40f * away;
+
+                player.rectTransform.anchoredPosition = Vector2.Lerp(From, Portal, Ease(1.5f, 3.2f, t));
+                player.color = new Color(Player.r, Player.g, Player.b, 1f - Ease(5.6f, 6f, t));
+                for (int i = 0; i < swirl.Length; i++)
+                {
+                    float phase = Mathf.Repeat(time * .6f + i / 3f, 1f);
+                    swirl[i].rectTransform.sizeDelta = Vector2.one * Mathf.Lerp(110f, 44f, phase);
+                    swirl[i].color = new Color(Void.r, Void.g, Void.b, .7f * phase);
+                }
+            }
+        }
+
+        sealed class PauseDemo : Demo
+        {
+            static readonly Vector2 Centre = new(60f, 0f);
+            Image[] enemies;
+            RectTransform sheet;
+            CanvasGroup fade;
+            Key esc;
+            protected override void Build()
+            {
+                enemies = new Image[5];
+                for (int i = 0; i < enemies.Length; i++) enemies[i] = Dot(Enemy, 26f, Centre);
+                Dot(Player, 30f, Centre);
+
+                (sheet, fade) = Sheet(new Vector2(560f, 300f), Centre);
+                Label(ArenaText.Pair("PAUSED","PAUSED"), 20, Soft, new Vector2(0f, 118f), 300f, sheet);
+                var rows = V2Hud.ControlRows();
+                for (int i = 0; i < 5; i++)
+                {
+                    float y = 84f - i * 28f;
+                    Part(sheet, pill, new Color(Cyan.r, Cyan.g, Cyan.b, .7f), new Vector2(150f, 24f), new Vector2(-170f, y));
+                    Label(rows[i].input, 13, Cyan, new Vector2(-170f, y), 150f, sheet);
+                    Label(rows[i].action, 14, Soft, new Vector2(70f, y), 300f, sheet, TextAnchor.MiddleLeft);
+                }
+                string[] names =
+                {
+                    ArenaText.Pair("RESUME","RESUME"), ArenaText.Pair("RESTART RUN","RESTART RUN"),
+                    ArenaText.Pair("HOW TO PLAY","HOW TO PLAY"), ArenaText.Pair("QUIT TO TITLE","QUIT TO TITLE"),
+                };
+                for (int i = 0; i < names.Length; i++)
+                {
+                    var at = new Vector2(-198f + i * 132f, -100f);
+                    var plate = i == 0 ? buttonPrimary : button;
+                    Part(sheet, plate, plate ? Color.white : new Color(.12f, .22f, .34f), new Vector2(124f, 46f), at);
+                    Label(names[i], 13, Soft, at, 120f, sheet);
+                }
+
+                esc = Cap("Esc", new Vector2(-300f, -100f), 60f);
+                Label(ArenaText.Pair("pause / resume","pause / resume"), 14, Faint, new Vector2(-300f, -146f), 130f);
+            }
+
+            public override void Tick(float time)
+            {
+                float t = Loop(time, 6f);
+                esc.Light(t is > 1f and < 1.3f || t is > 4.6f and < 4.9f);
+                float shown = Ease(1.05f, 1.3f, t) * (1f - Ease(4.65f, 4.9f, t));
+                fade.alpha = shown;
+                sheet.localScale = Vector3.one * Mathf.Lerp(.96f, 1f, shown);
+
+                float fight = t < 1.05f ? t : t < 4.65f ? 1.05f : t - 3.6f;
+                for (int i = 0; i < enemies.Length; i++)
+                {
+                    float angle = (i / (float)enemies.Length + fight / 2.4f) * Mathf.PI * 2f;
+                    enemies[i].rectTransform.anchoredPosition = Centre + new Vector2(Mathf.Cos(angle) * 180f, Mathf.Sin(angle) * 100f);
+                }
             }
         }
 

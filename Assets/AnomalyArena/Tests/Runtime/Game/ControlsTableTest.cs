@@ -49,6 +49,7 @@ namespace AnomalyArena
             Assert.That(game.RunPhase, Is.EqualTo(ArenaUiState.SupplyDrop));
             Assert.That(Time.timeScale, Is.EqualTo(0f), "the arena is frozen while they are open");
 
+            var lines = new List<string>();
             for (int i = 0; i < V2Tutorial.PageCount; i++)
             {
                 Assert.That(V2Tutorial.Page, Is.EqualTo(i));
@@ -57,8 +58,11 @@ namespace AnomalyArena
                 var line = GameObject.Find("HowToPlay/Panel/Line").GetComponent<UnityEngine.UI.Text>();
                 Assert.That(line.text, Is.Not.Empty, $"page {i + 1} has its line");
                 Assert.That(line.cachedTextGenerator.characterCountVisible, Is.GreaterThanOrEqualTo(line.text.Length), $"page {i + 1}: \"{line.text}\" is not cut off");
+                lines.Add(line.text);
                 Click(TutorialButton("Next"));
             }
+            Assert.That(lines, Has.Some.Contains("Tab"), "a page teaches putting the card panel away");
+            Assert.That(lines, Has.Some.Contains("Esc"), "a page teaches the pause screen");
             Assert.That(V2Tutorial.IsOpen, Is.False, "the last page closes them");
             Assert.That(Time.timeScale, Is.EqualTo(game.CanPlayerMove || game.BuildTimeFlows ? 1f : 0f), "and the arena gets its own time back");
             await Until(() => game.SupplyDropReady, 5f, "supply crate lands");
@@ -128,6 +132,70 @@ namespace AnomalyArena
             Assert.That(paused.gameObject.activeInHierarchy, Is.False, "the table goes away with the pause screen");
         }
 
+        internal static async Task PauseCoversTheCrate(GameManager game)
+        {
+            var hud = Object.FindAnyObjectByType<V2Hud>();
+            var crate = Object.FindAnyObjectByType<V3SupplyDropPresentation>();
+            Assert.That(crate.overlayRoot.gameObject.activeInHierarchy, Is.True, "the crate and its hint are up");
+            hud.DamageNumber(game.player.Position, 5f, Color.white, false);
+            hud.FlashDamage();
+
+            await CommandUntil(game, ArenaUiCommand.Pause, () => game.RunPhase == ArenaUiState.Paused);
+            await Awaitable.NextFrameAsync();
+            await Awaitable.NextFrameAsync();
+            var paused = Screen(ArenaUiState.Paused).transform;
+            Assert.That(crate.overlayRoot.gameObject.activeInHierarchy, Is.True, "the crate waits under the panel");
+            Assert.That(hud.damageLabels.Any(label => label.gameObject.activeInHierarchy), Is.True, "the number is still up");
+            foreach (var part in new[] { crate.overlayRoot, hud.damageLabels[0].transform.parent, hud.damageFlash.transform })
+                Assert.That(part.GetSiblingIndex(), Is.LessThan(paused.GetSiblingIndex()), $"{part.name} draws under the pause panel");
+            var canvas = paused.parent;
+            for (int i = paused.GetSiblingIndex() + 1; i < canvas.childCount; i++)
+                foreach (var graphic in canvas.GetChild(i).GetComponentsInChildren<UnityEngine.UI.Graphic>(true))
+                    Assert.That(graphic.gameObject.activeInHierarchy && graphic.enabled && graphic.color.a > 0f, Is.False, $"{graphic.name} under {canvas.GetChild(i).name} draws over the pause panel");
+
+            await CommandUntil(game, ArenaUiCommand.Resume, () => game.RunPhase == ArenaUiState.SupplyDrop);
+            await Until(() => !paused.gameObject.activeInHierarchy, 2f, "the pause screen goes at the HUD's next refresh");
+
+            float deadline = Time.realtimeSinceStartup + 3f;
+            while (game.RunPhase == ArenaUiState.SupplyDrop)
+            {
+                if (Time.realtimeSinceStartup > deadline) Assert.Fail("The click never opened the crate.");
+                await Awaitable.NextFrameAsync();
+                Click((RectTransform)crate.openButton.transform);
+            }
+        }
+
+        [Test, BuildScene(SceneCn), Category("Integration"), Timeout(90000)]
+        public async Task T_DoesNothingWithoutAPick_AndOpensTheOneEscKeptForLater()
+        {
+            await SceneManagerHelper.LoadSceneAsync(SceneCn);
+            var game = await ReadyScene();
+            await StartRun(game);
+            await Until(() => game.CanUseCombatInput, 3f, "the fight takes input");
+            Assert.That(game.progression.BankedDrafts, Is.Zero);
+            game.PressKey(KeyCode.T);
+            await Awaitable.NextFrameAsync();
+            Assert.That(game.RunPhase, Is.EqualTo(ArenaUiState.WaveActive), "no pick kept, so T has nothing to open");
+
+            game.progression.GainXp(game.progression.XpRequired);
+            await Until(() => game.RunPhase == ArenaUiState.LevelUp, 3f, "the level opens a pick");
+            await KeyUntil(game, KeyCode.Escape, () => game.RunPhase == ArenaUiState.WaveActive);
+            Assert.That(game.progression.BankedDrafts, Is.EqualTo(1), "Esc keeps it for later");
+            Assert.That(game.UiSnapshot.hint, Does.Contain("T"), "the screen says T opens it");
+            await KeyUntil(game, KeyCode.T, () => game.RunPhase == ArenaUiState.LevelUp);
+        }
+
+        static async Task KeyUntil(GameManager game, KeyCode key, Func<bool> completed)
+        {
+            float deadline = Time.realtimeSinceStartup + 5f;
+            while (!completed())
+            {
+                if (Time.realtimeSinceStartup > deadline) Assert.Fail($"{key} did not answer in {game.RunPhase}.");
+                game.PressKey(key);
+                await Awaitable.NextFrameAsync();
+            }
+        }
+
         static void AssertTable(V2UiScreen screen)
         {
             var table = screen.GetComponentInChildren<V2ControlsTable>(true);
@@ -136,9 +204,9 @@ namespace AnomalyArena
             Assert.That(table.keys.Select(key => key.text).ToArray(), Is.EqualTo(new[]
             {
                 "WASD", ArenaText.Pair("Mouse","Mouse"), ArenaText.Pair("Left mouse button","Left mouse button"), ArenaText.Pair("Right mouse button","Right mouse button"),
-                "Shift", "1 / 2 / 3", "E", "Esc", "R", "T", "Tab", "Space / Enter",
+                "Shift", "1 / 2 / 3", "E", "Esc", "R", "T", "Tab",
             }));
-            foreach (var key in new[] { KeyCode.Alpha1, KeyCode.Alpha2, KeyCode.Alpha3, KeyCode.Escape, KeyCode.R, KeyCode.T, KeyCode.Tab, KeyCode.Space, KeyCode.Return })
+            foreach (var key in new[] { KeyCode.Alpha1, KeyCode.Alpha2, KeyCode.Alpha3, KeyCode.Escape, KeyCode.R, KeyCode.T, KeyCode.Tab })
                 Assert.That(GameManager.ShownKeyCodes, Does.Contain(key), "the table names only keys the game reads");
 
             Canvas.ForceUpdateCanvases();
