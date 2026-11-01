@@ -73,6 +73,10 @@ namespace AnomalyArena
             for (int i = 0; i < n; i++) { damageAge[i] = 1f; damageLabels[i].gameObject.SetActive(false); }
             if (themeBackground) themeBackground.texture = art ? art.themeBackground : null;
             SimplifyChineseTitle();
+            PlaceControlsTables();
+            V2SlotFeedback.Add(handSlots, V2SlotFeedback.Kind.Hand);
+            V2SlotFeedback.Add(autoSlots, V2SlotFeedback.Kind.Auto);
+            V2SlotFeedback.Add(skillSlots, V2SlotFeedback.Kind.Skill);
 
             if (screens != null)
                 foreach (var screen in screens)
@@ -132,10 +136,17 @@ namespace AnomalyArena
             if (lastSnapshot != null && lastSnapshot.cardPickSequence != seenPick) nextRefresh = 0f;
             if (source == null || Time.unscaledTime < nextRefresh) return;
             nextRefresh = Time.unscaledTime + Mathf.Max(.02f, refreshInterval);
-            Render(source.UiSnapshot);
+            var snapshot = source.UiSnapshot;
+            Render(snapshot);
+            ShowTutorialOnArrival(snapshot);
         }
 
-        public void Dispatch(ArenaUiCommand command, int index = -1) => source?.ExecuteUiCommand(command, index);
+        public void Dispatch(ArenaUiCommand command, int index = -1)
+        {
+            if (command == ArenaUiCommand.Start && source != null && source.UiSnapshot.state == ArenaUiState.Title) tutorialPending = true;
+            source?.ExecuteUiCommand(command, index);
+        }
+
         public void RefreshView(){if(source!=null&&ArenaText.Ready)Render(source.UiSnapshot);}
 
         public void ShowBanner(string message, float seconds = 2.2f)
@@ -369,6 +380,12 @@ namespace AnomalyArena
                     break;
                 case ArenaUiState.Paused:
                     SetText(screen.body, ArenaText.Pair("The battlefield and the build clock are paused.","The battlefield and the build clock are paused."));
+                    if (pauseControls) pauseControls.Fill(screen.body ? screen.body.font : null);
+                    if (tutorialLabel)
+                    {
+                        tutorialLabel.text = ArenaText.Pair("HOW TO PLAY","HOW TO PLAY");
+                        if (screen.body) tutorialLabel.font = screen.body.font;
+                    }
                     break;
                 case ArenaUiState.Result:
                     SetText(screen.heading, s.resultTitle);
@@ -378,6 +395,85 @@ namespace AnomalyArena
             if (cards == null || screen.choices == null) return;
             for (int i = 0; i < screen.choices.Length; i++)
                 screen.choices[i].Render(i < cards.Length ? cards[i] : null, art);
+        }
+
+        public static (string input, string action, string note)[] ControlRows() => new[]
+        {
+            ("WASD", ArenaText.Pair("Move","Move"), ""),
+            (ArenaText.Pair("Mouse","Mouse"), ArenaText.Pair("Aim","Aim"), ""),
+            (ArenaText.Pair("Left mouse button","Left mouse button"), ArenaText.Pair("Use the held weapon","Use the held weapon"),
+                ArenaText.Pair("(hold to charge or to keep firing, depending on the weapon)","(hold to charge or to keep firing, depending on the weapon)")),
+            (ArenaText.Pair("Right mouse button","Right mouse button"), ArenaText.Pair("Swap the two hand slots","Swap the two hand slots"), ""),
+            ("Shift", ArenaText.Pair("Sprint","Sprint"), ""),
+            ("1 / 2 / 3", ArenaText.Pair("Cast a skill; pick that option while a panel is open","Cast a skill; pick that option while a panel is open"), ""),
+            ("E", ArenaText.Pair("On the void portal, enter the trial; in the trial, on a black-hole portal, go to a fragment","On the void portal, enter the trial; in the trial, on a black-hole portal, go to a fragment"), ""),
+            ("Esc", ArenaText.Pair("Pause / resume; on a mid-wave card panel, pick later","Pause / resume; on a mid-wave card panel, pick later"), ""),
+            ("R", ArenaText.Pair("Restart on the result screen; reroll while a card panel is open","Restart on the result screen; reroll while a card panel is open"), ""),
+            ("T", ArenaText.Pair("Open the card pick you kept for later, during combat","Open the card pick you kept for later, during combat"), ""),
+            ("Tab", ArenaText.Pair("Put the build panel away in the build phase; press again to bring it back","Put the build panel away in the build phase; press again to bring it back"), ""),
+            ("Space / Enter", ArenaText.Pair("Close the weapon card (or click anywhere)","Close the weapon card (or click anywhere)"), ""),
+        };
+
+        public const float PauseTableTop = 150f, PauseTableRow = 28f;
+        public static float PauseTableBottom => PauseTableTop + ControlRows().Length * PauseTableRow;
+        public static readonly string[] PauseButtons = { "ResumeRun", "RestartRun", "HowToPlay", "QuitToTitle" };
+        V2ControlsTable pauseControls;
+        UnityEngine.UI.Text tutorialLabel;
+        bool tutorialPending;
+
+        void ShowTutorialOnArrival(ArenaUiSnapshot s)
+        {
+            if (!tutorialPending || s.state != ArenaUiState.SupplyDrop) return;
+            tutorialPending = false;
+            V2Tutorial.ShowFirstTime(appliedFont);
+        }
+
+        void PlaceControlsTables()
+        {
+            if (screens == null) return;
+            foreach (var screen in screens)
+            {
+                if (!screen || screen.state != ArenaUiState.Paused) continue;
+                var content = screen.transform.Find("Content");
+                if (!content) continue;
+                AddTutorialButton(content);
+                pauseControls = V2ControlsTable.Create(content, PauseTableRow, 190f, 18);
+                var rect = pauseControls.Rect;
+                rect.anchorMin = new Vector2(0f, 1f);
+                rect.anchorMax = new Vector2(1f, 1f);
+                rect.pivot = new Vector2(.5f, 1f);
+                rect.offsetMin = new Vector2(64f, -PauseTableBottom);
+                rect.offsetMax = new Vector2(-64f, -PauseTableTop);
+
+                if (screen.body) PlaceTopLeft(screen.body.rectTransform, 44f, 100f, 1012f, 40f);
+                float left = 44f, top = PauseTableBottom + 24f;
+                foreach (var name in PauseButtons)
+                {
+                    if (content.Find(name) is RectTransform button) PlaceTopLeft(button, left, top, 237f, 65f);
+                    left += 255f;
+                }
+                if (screen.summary) PlaceTopLeft(screen.summary.rectTransform, 44f, top + 80f, 1012f, 60f);
+            }
+        }
+
+        void AddTutorialButton(Transform content)
+        {
+            if (content.Find("HowToPlay") || content.Find("RestartRun") is not { } restart) return;
+            var copy = Instantiate(restart.gameObject, content);
+            copy.name = "HowToPlay";
+            if (copy.GetComponent<ArenaUiButton>() is { } relay) Destroy(relay);
+            foreach (var localizer in copy.GetComponentsInChildren<UnityEngine.Localization.Components.LocalizeStringEvent>(true)) Destroy(localizer);
+            var button = copy.GetComponent<UnityEngine.UI.Button>();
+            button.onClick = new UnityEngine.UI.Button.ButtonClickedEvent();
+            button.onClick.AddListener(() => V2Tutorial.Show(appliedFont));
+            tutorialLabel = copy.GetComponentInChildren<UnityEngine.UI.Text>();
+        }
+
+        static void PlaceTopLeft(RectTransform rect, float left, float top, float width, float height)
+        {
+            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0f, 1f);
+            rect.anchoredPosition = new Vector2(left, -top);
+            rect.sizeDelta = new Vector2(width, height);
         }
 
         static string WalkHint() => ArenaText.Pair("\nTab puts this panel away so you can walk the empty arena; Tab again brings it back.","\nTab puts this panel away so you can walk the empty arena; Tab again brings it back.");

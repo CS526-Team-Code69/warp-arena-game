@@ -13,6 +13,8 @@ namespace AnomalyArena
         [System.NonSerialized] public bool nameOnTwoLines;
 
         [System.NonSerialized] public int compactDetailSize;
+
+        [System.NonSerialized] public V2SlotFeedback feedback;
         string renderedTitle, renderedDetail;
 
         const string Separator = " · ";
@@ -73,6 +75,7 @@ namespace AnomalyArena
             V2Hud.SetWeaponIcon(weaponIcon, art, slot.formIndex);
             V2Hud.SetContentIcon(contentIcon, art, slot.skillIndex, -1, -1);
             if (contentIcon && !slot.available) contentIcon.color = new Color(.48f, .55f, .63f);
+            if (feedback) feedback.Bind(slot);
         }
     }
 }

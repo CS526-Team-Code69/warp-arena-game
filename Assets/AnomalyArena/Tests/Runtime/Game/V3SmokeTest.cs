@@ -700,6 +700,8 @@ namespace AnomalyArena
             while (!completed())
             {
                 if (Time.realtimeSinceStartup > deadline) Assert.Fail($"Button {command}[{index}] unreachable or rejected: {blocker}; phase={game.RunPhase}");
+
+                if (V2Tutorial.IsOpen) { V2Tutorial.Close(); blocker = "tutorial"; }
                 Canvas.ForceUpdateCanvases();
                 await Awaitable.NextFrameAsync();
                 var action = Object.FindObjectsByType<ArenaUiButton>(FindObjectsInactive.Exclude, FindObjectsSortMode.None)
