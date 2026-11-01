@@ -73,6 +73,7 @@ namespace AnomalyArena
             for (int i = 0; i < n; i++) { damageAge[i] = 1f; damageLabels[i].gameObject.SetActive(false); }
             if (themeBackground) themeBackground.texture = art ? art.themeBackground : null;
             SimplifyChineseTitle();
+            KeepScreensOverTheRun();
             PlaceControlsTables();
             V2SlotFeedback.Add(handSlots, V2SlotFeedback.Kind.Hand);
             V2SlotFeedback.Add(autoSlots, V2SlotFeedback.Kind.Auto);
@@ -109,6 +110,19 @@ namespace AnomalyArena
                     if (element) element.gameObject.SetActive(false);
                 }
             }
+        }
+
+        static readonly string[] UnderTheScreens = { "DamageNumberPool", "PlayerDamageFlash", "SupplyDropOverlay" };
+
+        void KeepScreensOverTheRun()
+        {
+            if (!localizedCanvas || screens == null) return;
+            var canvas = localizedCanvas.transform;
+            int first = canvas.childCount;
+            foreach (var screen in screens)
+                if (screen && screen.transform.parent == canvas) first = Mathf.Min(first, screen.transform.GetSiblingIndex());
+            foreach (var name in UnderTheScreens)
+                if (canvas.Find(name) is { } part && part.GetSiblingIndex() > first) part.SetSiblingIndex(first++);
         }
 
         void Update()
@@ -409,9 +423,8 @@ namespace AnomalyArena
             ("E", ArenaText.Pair("On the void portal, enter the trial; in the trial, on a black-hole portal, go to a fragment","On the void portal, enter the trial; in the trial, on a black-hole portal, go to a fragment"), ""),
             ("Esc", ArenaText.Pair("Pause / resume; on a mid-wave card panel, pick later","Pause / resume; on a mid-wave card panel, pick later"), ""),
             ("R", ArenaText.Pair("Restart on the result screen; reroll while a card panel is open","Restart on the result screen; reroll while a card panel is open"), ""),
-            ("T", ArenaText.Pair("Open the card pick you kept for later, during combat","Open the card pick you kept for later, during combat"), ""),
+            ("T", ArenaText.Pair("During a wave, open a card pick you kept for later (the screen tells you)","During a wave, open a card pick you kept for later (the screen tells you)"), ""),
             ("Tab", ArenaText.Pair("Put the build panel away in the build phase; press again to bring it back","Put the build panel away in the build phase; press again to bring it back"), ""),
-            ("Space / Enter", ArenaText.Pair("Close the weapon card (or click anywhere)","Close the weapon card (or click anywhere)"), ""),
         };
 
         public const float PauseTableTop = 150f, PauseTableRow = 28f;
