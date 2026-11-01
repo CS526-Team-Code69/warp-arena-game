@@ -430,6 +430,7 @@ namespace AnomalyArena
         static void WeaponSound(RunWeapon weapon,WeaponAudioPhase phase=WeaponAudioPhase.Fire,bool strike=false)
         {
             if(weapon==null)return;
+            if((phase is WeaponAudioPhase.Fire or WeaponAudioPhase.Launch)&&GameManager.Instance)GameManager.Instance.NoteWeaponAttack(weapon);
             if(!weapon.IsAuto && phase is WeaponAudioPhase.Fire or WeaponAudioPhase.Launch)
             {
                 var playerBody=GameManager.Instance?GameManager.Instance.player:null;

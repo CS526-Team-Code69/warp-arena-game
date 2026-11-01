@@ -14,5 +14,7 @@ namespace AnomalyArena
         public int elementIndex = -1;
         public int formIndex = -1;
         public int skillIndex = -1;
+
+        public int pulses;
     }
 }

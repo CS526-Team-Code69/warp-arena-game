@@ -24,6 +24,7 @@ namespace AnomalyArena
 
         void ReadShownKeys(Keyboard keyboard)
         {
+            if (V2Tutorial.HoldsInput) return;
             bool digitRead = false;
             foreach (var (key, code) in ShownKeys)
             {
@@ -69,6 +70,21 @@ namespace AnomalyArena
                     ChooseByNumber(key - KeyCode.Alpha1);
                     break;
             }
+        }
+
+        public void NoteWeaponAttack(RunWeapon weapon)
+        {
+            if (!runWeapons || weapon == null) return;
+            for (int i = 0; i < runWeapons.Hand.Length && i < snapshot.handSlots.Length; i++)
+                if (runWeapons.Hand[i] == weapon) snapshot.handSlots[i].pulses++;
+            for (int i = 0; i < runWeapons.Auto.Length && i < snapshot.autoSlots.Length; i++)
+                if (runWeapons.Auto[i] == weapon) snapshot.autoSlots[i].pulses++;
+        }
+
+        void NoteSkillCast(SkillId id)
+        {
+            for (int i = 0; i < skills.Slots.Length && i < snapshot.skillSlots.Length; i++)
+                if (!skills.Slots[i].Empty && skills.Slots[i].Id == id) snapshot.skillSlots[i].pulses++;
         }
 
         bool CanToggleBuildWalk => RunPhase is (ArenaUiState.Armory or ArenaUiState.Draft or ArenaUiState.Ready) && !greaterDraft;
