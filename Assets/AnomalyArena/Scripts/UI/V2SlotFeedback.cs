@@ -16,6 +16,8 @@ namespace AnomalyArena
 
         const float RapidGap = .2f, RapidPeak = .7f;
         const float AttackFill = .42f, CastFill = .55f, SwapFill = .3f, OtherHandAlpha = .6f, IconPop = .16f, ClockFollow = 12f;
+
+        const float PictureScale = .88f;
         static readonly Color InUse = new(.45f, .9f, 1f), Attack = new(1f, .92f, .68f), Cast = new(.86f, .78f, 1f), Clock = new(.62f, .52f, 1f, .3f);
         static readonly Color TagText = new(.02f, .07f, .12f);
         static readonly Dictionary<(Vector2Int size, int cut), (Sprite fill, Sprite edge)> Shapes = new();
@@ -229,10 +231,24 @@ namespace AnomalyArena
                     edgeImage.fillClockwise = true;
                 }
                 if (kind == Kind.Hand) BuildHandParts();
+                ShrinkPicture(slot.weaponIcon);
+                ShrinkPicture(slot.contentIcon);
+                ShrinkPicture(slot.icon);
             }
             clockImage.sprite = fill;
             flashImage.sprite = fill;
             edgeImage.sprite = edge;
+        }
+
+        static void ShrinkPicture(Image picture)
+        {
+            if (!picture) return;
+            var rect = picture.rectTransform;
+            if (rect.anchorMin != rect.anchorMax) return;
+            var size = rect.rect.size;
+            rect.anchoredPosition += new Vector2((.5f - rect.pivot.x) * size.x, (.5f - rect.pivot.y) * size.y);
+            rect.pivot = new Vector2(.5f, .5f);
+            rect.sizeDelta = size * PictureScale;
         }
 
         void BuildHandParts()

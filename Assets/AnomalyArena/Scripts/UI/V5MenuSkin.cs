@@ -23,7 +23,8 @@ namespace AnomalyArena
                                                                                                           
         const float CardPanelW = 1328f, CardPanelH = 776f, CardPanelNoButtonsH = 704f, Margin = 52f;
         const float CardW = 392f, CardH = 474f, CardGap = 24f, CardsTop = 198f, BottomRowTop = 684f, BottomRowH = 56f;
-        const float ArtH = 208f, MainWeaponW = 348f, MainWeaponH = 174f, MainGlyph = 180f, SmallIcon = 38f;
+                                                                              
+        const float ArtH = 208f, MainWeaponW = 304f, MainWeaponH = 152f, MainGlyph = 156f, SmallIcon = 34f;
         const int TitleLargest = 26, TitleSmallest = 18;
 
                                                                                                                                                        
@@ -33,8 +34,8 @@ namespace AnomalyArena
         static readonly Color AccentCyan = new(.47f, .89f, 1f);
                                                                           
         static readonly float[] GlowByRank = { .10f, .50f, .58f, .72f, .88f, .95f };
-        static readonly float[] CloudByRank = { .15f, .50f, .55f, .60f, .66f, .85f };
-        static readonly float[] RadialByRank = { .16f, .55f, .62f, .68f, .76f, .85f };
+        static readonly float[] CloudByRank = { .12f, .40f, .44f, .48f, .53f, .68f };
+        static readonly float[] RadialByRank = { .12f, .40f, .45f, .50f, .56f, .64f };
                                                                                                                                  
         static readonly Color CommonBackdrop = new(.70f, .76f, .90f);
 
@@ -313,16 +314,16 @@ namespace AnomalyArena
             Rule(content, "HeadingRule", 40f, 84f, w - 80f, 14f, AccentCyan);
             var plate = NewImage(content, "ArtPlate", cardSprite, Color.white, Image.Type.Sliced);
             Place(plate, Margin, 112f, 420f, 440f);
-            var cloud = NewImage(plate.transform, "Cloud", cloudSprite, WithAlpha(new Color(.42f, .30f, .95f), .36f), Image.Type.Simple);
+            var cloud = NewImage(plate.transform, "Cloud", cloudSprite, WithAlpha(new Color(.42f, .30f, .95f), .28f), Image.Type.Simple);
             Place(cloud, 3f, 3f, 414f, 221f);
-            var radial = NewImage(plate.transform, "Radial", radialSprite, WithAlpha(AccentCyan, .30f), Image.Type.Simple);
+            var radial = NewImage(plate.transform, "Radial", radialSprite, WithAlpha(AccentCyan, .22f), Image.Type.Simple);
             Place(radial, -20f, -10f, 460f, 460f);
             var line = NewImage(plate.transform, "CardLine", cardLine, WithAlpha(AccentCyan, .9f), Image.Type.Sliced);
             Stretch(line.rectTransform);
             if (screen.icon)
             {
                 screen.icon.preserveAspect = true;
-                Place(screen.icon, Margin + 10f, 232f, 400f, 200f);
+                Place(screen.icon, Margin + 36f, 245f, 348f, 174f);
                 screen.icon.transform.SetAsLastSibling();
             }
             Style(screen.body, Margin + 448f, 112f, w - Margin * 2f - 448f, 440f, 24, TextAnchor.UpperLeft);

@@ -84,7 +84,12 @@ namespace AnomalyArena
         void NoteSkillCast(SkillId id)
         {
             for (int i = 0; i < skills.Slots.Length && i < snapshot.skillSlots.Length; i++)
-                if (!skills.Slots[i].Empty && skills.Slots[i].Id == id) snapshot.skillSlots[i].pulses++;
+                if (!skills.Slots[i].Empty && skills.Slots[i].Id == id)
+                {
+                    snapshot.skillSlots[i].pulses++;
+
+                    snapshot.skillSlots[i].cooldown01 = skills.Slots[i].CooldownLeft / Mathf.Max(.01f, skills.Slots[i].Cooldown);
+                }
         }
 
         bool CanToggleBuildWalk => RunPhase is (ArenaUiState.Armory or ArenaUiState.Draft or ArenaUiState.Ready) && !greaterDraft;

@@ -137,7 +137,13 @@ namespace AnomalyArena
             await Awaitable.NextFrameAsync();
             Assert.That(feedback.Flash, Is.GreaterThan(.5f), "the cast flashes the slot at once");
             Assert.That(feedback.Spin, Is.GreaterThanOrEqualTo(0f), "and starts the light round its edge");
-            Assert.That(feedback.ClockShown, Is.GreaterThan(.9f), "and its cooldown shows full");
+
+            float watchUntil = Time.realtimeSinceStartup + .25f;
+            while (Time.realtimeSinceStartup < watchUntil)
+            {
+                Assert.That(feedback.ClockShown, Is.GreaterThanOrEqualTo(skills.Slots[slot].CooldownLeft / skills.Slots[slot].Cooldown - .01f), "the clock keeps up with the cooldown");
+                await Awaitable.NextFrameAsync();
+            }
             await Until(() => feedback.Spin >= 1f, 2f, "the light goes all the way round");
             await Until(() => feedback.Spin < 0f && feedback.Flash <= 0f, 2f, "the light and the flash end");
 
