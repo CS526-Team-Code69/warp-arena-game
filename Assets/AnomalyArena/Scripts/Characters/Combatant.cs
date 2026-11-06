@@ -50,6 +50,8 @@ namespace AnomalyArena
         public event Action<Combatant> Eliminated;
                                                                                                              
         public event Action<DamageInfo> AttackReceived;
+        // Any damage that took HP or shield: hits, burn and poison ticks, wall slams. The float is the amount taken.
+        public event Action<DamageInfo, float> DamageTaken;
         public int SpawnVersion { get; private set; }
         protected Vector3 DeathVelocity { get; private set; }
 
@@ -645,7 +647,7 @@ namespace AnomalyArena
             float hpDamage=Mathf.Min(beforeHp,Mathf.Max(0f,dealt));
             float shieldDamage=Mathf.Max(0f,beforeShield-(elementStatus?elementStatus.Shield:0));
             float actualDamage=hpDamage+shieldDamage;
-            if(actualDamage>0f){LastDamagedBy=info.dealer?.Owner;LastDamageSource=info.source;}
+            if(actualDamage>0f){LastDamagedBy=info.dealer?.Owner;LastDamageSource=info.source;DamageTaken?.Invoke(info,actualDamage);}
             if(!tick&&actualDamage>0f)
             {
                 PlayHitFeedback(hpDamage,info.knockDir,info.kind,crit,info.feel,info.dealer?.Owner);

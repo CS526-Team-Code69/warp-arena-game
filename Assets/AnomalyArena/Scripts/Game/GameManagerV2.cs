@@ -48,6 +48,7 @@ namespace AnomalyArena
         int pendingOffer=-1,pendingDraft=-1;
         int levelUpSeen;ArenaUiState replaceReturn=ArenaUiState.Draft;                                                                               
         bool greaterDraft;
+        bool draftRerolled;
         bool menuMouseReleased;
         float phaseOpenedAt;
         int buildDraftCount;
@@ -63,6 +64,7 @@ namespace AnomalyArena
             State=GameState.Title;RunPhase=ArenaUiState.Title;supplyChoiceOpened=false;SupplyDropReady=false;pendingSupplyChoice=ArenaUiState.Title;LockMenuInput();
             progression.ResetRun();skills.ResetRun();runWeapons.ResetRun();
             progression.HealingRequested+=player.Heal;
+            player.DamageTaken+=(info,amount)=>RunAnalytics.PlayerDamaged(this,info,amount);
             progression.StatChanged+=(_,__)=>ApplyStats();
             progression.LevelGained+=level=>hud?.Banner(ArenaText.Pair("LEVEL "+level,"LEVEL "+level),ArenaText.Pair($"Max HP +{progression.LastLevelHpGain:0.#}, Max Energy +{progression.LastLevelEnergyGain:0.#}.",$"Max HP +{progression.LastLevelHpGain:0.#}, Max Energy +{progression.LastLevelEnergyGain:0.#}."));
             runWeapons.Revealed+=w=>hud?.Toast(w.Label,ElementCombat.ColorFor(w.element));
@@ -115,7 +117,7 @@ namespace AnomalyArena
             else if(RunPhase==ArenaUiState.TrialReturn)TickTrialReturn();
             else if(RunPhase==ArenaUiState.WaveEnd&&Time.unscaledTime>=waveEndAt)OpenBuild();
             else if(RunPhase is ArenaUiState.Armory or ArenaUiState.Draft or ArenaUiState.Ready or ArenaUiState.ReplaceWeapon or ArenaUiState.ReplaceSkill||BuildCrateWalking)
-            {if(BuildTimeFlows)TickBuildPhase();if(!greaterDraft&&selectionTimeLimit>0f){buildTimeLeft=Mathf.Max(0,buildTimeLeft-Time.unscaledDeltaTime);if(buildTimeLeft<=0)BeginNextV2Wave(true);}}
+            {if(BuildTimeFlows)TickBuildPhase();if(!greaterDraft&&selectionTimeLimit>0f){buildTimeLeft=Mathf.Max(0,buildTimeLeft-Time.unscaledDeltaTime);if(buildTimeLeft<=0){RunAnalytics.SupplyResolved(this,RunAnalytics.SupplyTimeout);BeginNextV2Wave(true);}}}
             Cursor.visible=true;
         }
                                                                                                                                                 
@@ -132,11 +134,12 @@ namespace AnomalyArena
         void OnV2WaveEnded(int wave)
         {
             if(!player.IsAlive)return;
+            RunAnalytics.FlushDamage(this);
                                                                                                                        
             player.ClearWaveState();skills.ClearWaveEffects();runWeapons.ClearWaveEffects();orbs?.Clear();
             SetPhase(ArenaUiState.WaveEnd);waveEndAt=Time.unscaledTime+1f;
         }
-        void OpenBuild(){supplyChoiceOpened=false;buildTimeLeft=Mathf.Max(0f,selectionTimeLimit);buildDraftCount=progression.BankedDrafts;buildSummary="";UpdatePenetrationEligibility();runWeapons.RollArmory(waves.WaveIndex+2);progression.BeginBuildPhase(waves.WaveIndex+1,WeaponCard,SkillCard);SetPhase(ArenaUiState.Armory);}
+        void OpenBuild(){supplyChoiceOpened=false;buildTimeLeft=Mathf.Max(0f,selectionTimeLimit);buildDraftCount=progression.BankedDrafts;buildSummary="";UpdatePenetrationEligibility();runWeapons.RollArmory(waves.WaveIndex+2);RunAnalytics.SupplyOpened(runWeapons.Offers);progression.BeginBuildPhase(waves.WaveIndex+1,WeaponCard,SkillCard);SetPhase(ArenaUiState.Armory);}
         void OpenDraft(){supplyChoiceOpened=false;UpdatePenetrationEligibility();pendingDraft=-1;pendingOffer=-1;if(progression.BankedDrafts>0){DrawDraft();SetPhase(ArenaUiState.Draft);}else SetPhase(ArenaUiState.Ready);}
                                                                                                                                                                                                                                       
         void OpenLevelUp(){if(progression.BankedDrafts==0)return;pendingDraft=-1;DrawDraft();SetPhase(ArenaUiState.LevelUp);}
@@ -146,12 +149,13 @@ namespace AnomalyArena
         DraftCard SkillCard(DraftCard replacing)=>skills.RollCard(waves.WaveIndex+1,replacing?.Payload is SkillId id?id:(SkillId?)null);
                                                                                                                                                
                                                                                                                      
-        void BeginWaveDrafts(){progression.BeginWave();levelUpSeen=0;}
+        void BeginWaveDrafts(){progression.BeginWave();levelUpSeen=0;draftRerolled=false;}
         void CloseLevelUp(){levelUpSeen=progression.BankedDrafts;SetPhase(ArenaUiState.WaveActive);}
                                                                                                                                                      
         void AfterLevelUpPick(){levelUpSeen=progression.BankedDrafts;SetPhase(ArenaUiState.WaveActive);}
         void BeginNextV2Wave(bool automatic)
         {
+            RunAnalytics.SupplyResolved(this,RunAnalytics.SupplySkip);
             if(automatic){int count=progression.BankedDrafts;progression.ResolvePendingRandom();if(count>0)buildSummary+=ArenaText.Pair($"\n{count} pending drafts resolved automatically",$"\n{count} pending drafts resolved automatically");}snapshot.earlyStartConfirmation=false;pendingDraft=pendingOffer=-1;
             player.Heal(player.maxHp);player.stamina.Refill();player.ClearWaveState();BeginWaveDrafts();
             if(waves.WaveIndex+1>=waves.WaveCount){SetPhase(ArenaUiState.FinalBoss);waves.BeginFinalBoss();}
@@ -266,25 +270,26 @@ namespace AnomalyArena
                 case ArenaUiCommand.ChooseLoadout:
                     if(RunPhase!=ArenaUiState.Loadout||index<0||index>2)return;runWeapons.GiveStarting(index==0?WeaponForm.RocketLauncher:index==1?WeaponForm.Rifle:WeaponForm.Knife);NotifyCardPicked(ArenaUiState.Loadout,index,CardRarity.Common);ShowWeaponIntro(runWeapons.Hand[0],()=>{State=GameState.Playing;BeginWaveDrafts();SetPhase(ArenaUiState.WaveIntro);waves.StartWaves();V2Audio.Instance?.PlayWave();RunAnalytics.RunStarted(this);});break;
                 case ArenaUiCommand.TakeArmory:
-                    if(RunPhase!=ArenaUiState.Armory||index<0||index>=runWeapons.Offers.Length||runWeapons.Offers[index]==null)return;var offered=runWeapons.Offers[index];var offeredRarity=ArenaRarity.ForWeapon(offered);string taken=offered.FormName+(offered.upgradeOf!=null?" "+offered.MkLabel:"");if(runWeapons.TakeOffer(index)){buildSummary+=ArenaText.Pair("\nArmory: ","\nArmory: ")+taken;NotifyCardPicked(ArenaUiState.Armory,index,offeredRarity);ShowWeaponIntro(offered.upgradeOf??offered,OpenDraft);}else{pendingOffer=index;SetPhase(ArenaUiState.ReplaceWeapon);}break;
-                case ArenaUiCommand.SkipArmory:if(RunPhase==ArenaUiState.Armory)OpenDraft();break;
-                case ArenaUiCommand.ReplaceWeapon:if(RunPhase==ArenaUiState.ReplaceWeapon&&pendingOffer>=0){var replacing=runWeapons.Offers[pendingOffer];var replacingRarity=ArenaRarity.ForWeapon(replacing);string replacement=replacing?.FormName;if(runWeapons.TakeOffer(pendingOffer,index)){buildSummary+=ArenaText.Pair("\nArmory: ","\nArmory: ")+replacement;NotifyCardPicked(ArenaUiState.ReplaceWeapon,index,replacingRarity);ShowWeaponIntro(replacing?.upgradeOf??replacing,OpenDraft);}}break;
+                    if(RunPhase!=ArenaUiState.Armory||index<0||index>=runWeapons.Offers.Length||runWeapons.Offers[index]==null)return;var offered=runWeapons.Offers[index];var offeredRarity=ArenaRarity.ForWeapon(offered);string taken=offered.FormName+(offered.upgradeOf!=null?" "+offered.MkLabel:"");if(runWeapons.TakeOffer(index)){RunAnalytics.SupplyResolved(this,offered.upgradeOf!=null?RunAnalytics.SupplyMerge:RunAnalytics.SupplyTakeFree,offered);buildSummary+=ArenaText.Pair("\nArmory: ","\nArmory: ")+taken;NotifyCardPicked(ArenaUiState.Armory,index,offeredRarity);ShowWeaponIntro(offered.upgradeOf??offered,OpenDraft);}else{pendingOffer=index;SetPhase(ArenaUiState.ReplaceWeapon);}break;
+                case ArenaUiCommand.SkipArmory:if(RunPhase==ArenaUiState.Armory){RunAnalytics.SupplyResolved(this,RunAnalytics.SupplySkip);OpenDraft();}break;
+                case ArenaUiCommand.ReplaceWeapon:if(RunPhase==ArenaUiState.ReplaceWeapon&&pendingOffer>=0){var replacing=runWeapons.Offers[pendingOffer];var replacingRarity=ArenaRarity.ForWeapon(replacing);string replacement=replacing?.FormName;var replacedSlots=replacing!=null&&replacing.IsAuto?runWeapons.Auto:runWeapons.Hand;var replacedWeapon=index>=0&&index<replacedSlots.Length?replacedSlots[index]:null;if(runWeapons.TakeOffer(pendingOffer,index)){RunAnalytics.SupplyResolved(this,RunAnalytics.SupplyReplace,replacing,replacedWeapon);buildSummary+=ArenaText.Pair("\nArmory: ","\nArmory: ")+replacement;NotifyCardPicked(ArenaUiState.ReplaceWeapon,index,replacingRarity);ShowWeaponIntro(replacing?.upgradeOf??replacing,OpenDraft);}}break;
                 case ArenaUiCommand.ChooseCard:
                     if(RunPhase is not (ArenaUiState.Draft or ArenaUiState.LevelUp)||index<0||index>2)return;
                     var cards=greaterDraft?greaterCards:progression.CurrentCards;if(index>=cards.Length)return;
                     if(cards[index].NeedsReplacement){pendingDraft=index;replaceReturn=RunPhase;SetPhase(ArenaUiState.ReplaceSkill);break;}
                     var pickedRarity=cards[index].Rarity;
                     if(greaterDraft){if(cards[index].Apply()){NotifyCardPicked(ArenaUiState.Draft,index,pickedRarity);FinishGreaterReward();}}
-                    else if(progression.ApplyCard(index)){buildSummary+="\n"+cards[index].Title;NotifyCardPicked(ArenaUiState.Draft,index,pickedRarity);UpdatePenetrationEligibility();if(RunPhase==ArenaUiState.LevelUp)AfterLevelUpPick();else OpenDraft();}break;
+                    else{var offeredIds=RunAnalytics.CardIds(cards);bool atLevelUp=RunPhase==ArenaUiState.LevelUp;string pickedTitle=cards[index].Title;
+                        if(progression.ApplyCard(index)){RunAnalytics.UpgradePicked(this,atLevelUp,offeredIds,index,draftRerolled);draftRerolled=false;buildSummary+="\n"+pickedTitle;NotifyCardPicked(ArenaUiState.Draft,index,pickedRarity);UpdatePenetrationEligibility();if(RunPhase==ArenaUiState.LevelUp)AfterLevelUpPick();else OpenDraft();}}break;
                 case ArenaUiCommand.ReplaceSkill:
-                    if(RunPhase!=ArenaUiState.ReplaceSkill)return;var skillRarity=(greaterDraft?greaterCards:progression.CurrentCards)[pendingDraft].Rarity;if(greaterDraft){if(greaterCards[pendingDraft].Apply(index)){NotifyCardPicked(ArenaUiState.ReplaceSkill,index,skillRarity);FinishGreaterReward();}}else{string chosen=progression.CurrentCards[pendingDraft].Title;if(progression.ApplyCard(pendingDraft,index)){buildSummary+="\n"+chosen;NotifyCardPicked(ArenaUiState.ReplaceSkill,index,skillRarity);UpdatePenetrationEligibility();if(replaceReturn==ArenaUiState.LevelUp)AfterLevelUpPick();else OpenDraft();}}break;
-                case ArenaUiCommand.Reroll:if((RunPhase==ArenaUiState.Draft||RunPhase==ArenaUiState.LevelUp)&&!greaterDraft)progression.Reroll();break;
+                    if(RunPhase!=ArenaUiState.ReplaceSkill)return;var skillRarity=(greaterDraft?greaterCards:progression.CurrentCards)[pendingDraft].Rarity;if(greaterDraft){if(greaterCards[pendingDraft].Apply(index)){NotifyCardPicked(ArenaUiState.ReplaceSkill,index,skillRarity);FinishGreaterReward();}}else{string chosen=progression.CurrentCards[pendingDraft].Title;var offeredIds=RunAnalytics.CardIds(progression.CurrentCards);int pickedDraft=pendingDraft;if(progression.ApplyCard(pendingDraft,index)){RunAnalytics.UpgradePicked(this,replaceReturn==ArenaUiState.LevelUp,offeredIds,pickedDraft,draftRerolled);draftRerolled=false;buildSummary+="\n"+chosen;NotifyCardPicked(ArenaUiState.ReplaceSkill,index,skillRarity);UpdatePenetrationEligibility();if(replaceReturn==ArenaUiState.LevelUp)AfterLevelUpPick();else OpenDraft();}}break;
+                case ArenaUiCommand.Reroll:if((RunPhase==ArenaUiState.Draft||RunPhase==ArenaUiState.LevelUp)&&!greaterDraft&&progression.Reroll())draftRerolled=true;break;
                 case ArenaUiCommand.StartNextWave:
                     if(RunPhase==ArenaUiState.LevelUp){CloseLevelUp();break;}
                     if(greaterDraft&&RunPhase==ArenaUiState.Draft){FinishGreaterReward();break;}
                     if(RunPhase is not (ArenaUiState.Armory or ArenaUiState.Draft or ArenaUiState.Ready))return;if(progression.BankedDrafts>0)snapshot.earlyStartConfirmation=true;else BeginNextV2Wave(false);break;                                                                                  
                 case ArenaUiCommand.ConfirmEarlyStart:if(greaterDraft&&RunPhase==ArenaUiState.Draft)FinishGreaterReward();else if(snapshot.earlyStartConfirmation)BeginNextV2Wave(true);break;
-                case ArenaUiCommand.Cancel:snapshot.earlyStartConfirmation=false;if(RunPhase==ArenaUiState.ReplaceWeapon)SetPhase(ArenaUiState.Armory);else if(RunPhase==ArenaUiState.ReplaceSkill)SetPhase(replaceReturn);else if(RunPhase==ArenaUiState.LevelUp)CloseLevelUp();break;
+                case ArenaUiCommand.Cancel:snapshot.earlyStartConfirmation=false;if(RunPhase==ArenaUiState.ReplaceWeapon){RunAnalytics.SupplyReplaceCancelled();SetPhase(ArenaUiState.Armory);}else if(RunPhase==ArenaUiState.ReplaceSkill)SetPhase(replaceReturn);else if(RunPhase==ArenaUiState.LevelUp)CloseLevelUp();break;
                                                                                                                                              
                                                                                                                               
                 case ArenaUiCommand.Pause:if(CanPause){resumePhase=RunPhase;resumeWalking=BuildWalking;snapshot.earlyStartConfirmation=false;SetPhase(ArenaUiState.Paused);}break;

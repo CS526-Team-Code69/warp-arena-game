@@ -1,4 +1,4 @@
-# Analytics: how runs end
+# Analytics: how runs end, and the beta metrics
 
 This folder holds the data pipeline for Metric 2 of the course GDD, "How runs end": for every run, the wave it ended in, the run time, and what ended it (an enemy, the Tyrant, the player's own weapon, a wall slam, damage over time, a black hole, the void trial, a victory, or the player leaving). Grouped by wave and cause, it shows where the difficulty spikes and whether deaths come from enemies or from the player's own weapons and the terrain.
 
@@ -141,6 +141,73 @@ Options:
 - `--edition en` or `--edition zh` counts one edition only.
 
 The main panel stacks run endings by cause for each wave bucket (1 to 14 and Boss); the side panel lists the enemy kinds behind `enemy` and `tyrant` deaths. A footer line gives runs started, runs ended and unfinished runs. The same counts are printed as a plain-text table. With no `run_end` rows yet, the script still writes a PNG that says so. Run `python Analytics/plot_run_endings.py --help` for all options.
+
+## Beta metrics
+
+Three more metrics for the beta, sent from the same build to the same endpoint. Every beta row starts with the same six columns as "runs" (`received_at`, `event`, `run_id`, `session_id`, `edition`, `build`), so it joins "runs" on `run_id`. Only real runs send them (never the enemy lab, the editor, tests or a local page).
+
+### 1. Upgrade picks at level-up: `upgrade_pick` -> sheet "upgrade_picks"
+
+One row per card picked from a level-up draft, mid-wave (`context = levelup`) or in the build phase (`context = build`). Void-trial rewards and drafts resolved automatically when the build timer runs out are not player choices and are not sent.
+
+| Col | Field | Notes |
+|---|---|---|
+| G | context | `levelup` or `build` |
+| H | wave | 1 to 14 |
+| I | level | 1 to 12 |
+| J-L | offer_1..3 | The three cards on offer: `Weapon:<form>:<direction>`, `Skill:<id>` or `Stat:<stat>` (never the translated title) |
+| M | picked | The card picked, same format |
+| N | picked_kind | `Weapon`, `Skill` or `Stat`, worked out by the endpoint |
+| O | weapon_offered | How many of the three were weapon upgrades, worked out by the endpoint |
+| P | rerolled | The draft was rerolled before this pick |
+
+Directions: `Power` (damage), `Tempo` (cooldown), `Reach` (range / area), `Infusion` (element), `Twist`, `Tame`. Sheet "Upgrade picks" shows offered / picked / pick rate per direction and per card type, and how often a weapon upgrade was taken when one was on offer.
+
+### 2. Supply drop choices: `supply_pick` -> sheet "supply_picks"
+
+One row per supply drop (the armory's three weapons in the build phase), sent when the player decides.
+
+| Col | Field | Notes |
+|---|---|---|
+| G | wave | The wave just cleared |
+| H | level | 1 to 12 |
+| I-K | offer_1..3 | `<form>`, or `<form>:upgrade` for a higher Mk of a weapon the player already has |
+| L | action | `take_free` (into a free slot), `merge` (higher Mk), `replace`, `skip`, `timeout` (the build timer ran out) |
+| M | picked | The weapon taken; empty for `skip` and `timeout` |
+| N | replaced | The weapon given up; only for `replace` |
+| O | replace_cancels | Times the replace screen was opened and cancelled for this drop |
+
+Leaving the build phase without choosing (starting the next wave) counts as `skip`. Sheet "Supply picks" shows the share of each choice, the weapons replaced most often and the weapons taken most often.
+
+### 3. Damage sources: `wave_damage` -> sheet "damage"
+
+The game adds up every hit, burn or poison tick and wall slam that took HP or shield from the player, per wave, stage and source, and sends the totals at the end of each wave and when the run ends. The endpoint writes one row per source.
+
+| Col | Field | Notes |
+|---|---|---|
+| G | stage | `wave`, `build`, `void_trial`, `final_boss` |
+| H | wave | 1 to 14; 14 during the final boss |
+| I | bucket | `W01` to `W14`, or `W15 Boss` |
+| J | source | The enemy kind (`Grunt`, `Brute`, ..., `Tyrant`), with `_elite` for an elite (`Brute_elite`); `backfire` (the player's own weapon), `wall_slam`, or `other` |
+| K | dot | The damage was burn or poison |
+| L | damage | Damage taken |
+| M | damage_pct | The same as % of the player's max HP at the time of each hit, so early and late waves compare |
+| N | hits | Number of hits or ticks |
+
+Burn and poison count for whoever applied them (a Spitter's poison is `Spitter`, with `dot = TRUE`; the player's own fire is `backfire`). Wall slams are always `wall_slam`, as in the death causes. Black holes and the void-trial fall kill without damage, so they show up only in "runs". Sheet "Damage sources" shows total damage and share per source with the burn / poison part, and a by-wave pivot with a 100% stacked chart.
+
+### Charts from CSV exports
+
+```
+python Analytics/plot_beta_metrics.py --upgrades upgrade_picks.csv --supply supply_picks.csv --damage damage.csv --out-dir charts
+python Analytics/plot_beta_metrics.py --demo --out-dir Analytics/mock-charts
+```
+
+Each option takes a path or a CSV export URL, as for `plot_run_endings.py`. `--demo` charts made-up data (fixed seed) and writes it as `demo-*.csv` in the sheets' columns; `Analytics/mock-charts/` holds the demo charts.
+
+### Deploying the beta metrics
+
+Paste the new `Code.gs`, then **Deploy > Manage deployments**, edit the existing deployment and pick **Version: New version** (the `/exec` URL stays the same). Run `setup()` once to create the three data sheets and the three summary sheets with their charts; it never removes rows. A browser check of the URL now also lists `beta_rows`.
 
 ## Tests
 
