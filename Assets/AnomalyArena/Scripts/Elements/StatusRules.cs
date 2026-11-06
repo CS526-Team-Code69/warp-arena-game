@@ -6,7 +6,7 @@ namespace AnomalyArena
     public sealed class StatusRules : ScriptableObject
     {
         [Header("GDD §4.6 candidate parameters")]
-        [Tooltip("Element stacks one player weapon hit adds, however much damage it deals (owner 2026-10-26: stacks count hits, so fast weapons stack faster).")]
+        [Tooltip("Element stacks one player weapon hit adds, however much damage it deals (2026-10-26: stacks count hits, so fast weapons stack faster).")]
         [Min(0f)] public float stacksPerHit = 1f;
         [Tooltip("A weapon's own built-in element adds this many times stacksPerHit; an infused element adds stacksPerHit.")]
         public float builtInElementStackFactor = 2f;
@@ -35,7 +35,7 @@ namespace AnomalyArena
         public float enemyVoidDrain = 10f;
         [Tooltip("Share of each hit's damage a Light-affixed enemy heals back (design document: 15%).")] public float lightAffixLifesteal = .15f;
 
-        [Header("Element rules on enemies (owner 2026-10-26; the player keeps the stack rules above, except Poison: audit decision P11, 2026-10-27)")]
+        [Header("Element rules on enemies (2026-10-26; the player keeps the stack rules above, except Poison: decision P11, 2026-10-27)")]
         [Tooltip("Seconds an element status lasts on an enemy after its last hit of that element; every hit of the same element starts it again. A burn ends when it runs out; stacks then drain away.")]
         [Min(0f)] public float elementWindow = 3f;
         [Tooltip("Once an enemy's window has run out, its remaining Poison, Frost or Lightning stacks drain to zero within this many seconds (0 = at once).")]
@@ -44,20 +44,20 @@ namespace AnomalyArena
         [Min(0f)] public float controlImmunity = 2f;
         [Tooltip("Fire on an enemy: a Fire weapon hit sets it burning for elementWindow seconds at this share of the hit's damage per second (0.25 = 25% a second, 75% over 3 s). The heaviest hit while it burns sets the burn; each Fire hit starts the window again.")]
         [Min(0f)] public float fireBurnShare = .25f;
-        [Min(0f), Tooltip("Owner 2026-10-27: a weapon's built-in Fire (the Flamethrower) burns fireBurnShare of the weapon's DPS times "
+        [Min(0f), Tooltip("2026-10-27: a weapon's built-in Fire (the Flamethrower) burns fireBurnShare of the weapon's DPS times "
             + "this. 1.6 brings the Flamethrower Stream at Mk1 with no cards to about 3 a second (25% of its 7.5 DPS is 1.875).")]
         public float builtInFireBurnFactor = 1.6f;
-        [Min(0f), Tooltip("Owner 2026-10-27: the Flamethrower Wildfire's built-in Fire uses this factor instead of builtInFireBurnFactor. "
+        [Min(0f), Tooltip("2026-10-27: the Flamethrower Wildfire's built-in Fire uses this factor instead of builtInFireBurnFactor. "
             + "12 brings it at Mk1 with no cards to about 3 a second too (25% of its 1.0 DPS is 0.25), like the Stream.")]
         public float wildfireFireBurnFactor = 12f;
         [Tooltip("Fire stacks given to an enemy by a source with no burn rate of its own (ElementStatus.Add; Flame Wake, fire fences and Fire affixes set their own rates): each stack is worth this much burn damage over the burn's window (wave-1 value, × R(w)); 1.5 is what one Burning stack dealt before 2026-10-26.")]
         [Min(0f)] public float fireStackDamage = 1.5f;
-        [Tooltip("Poison on an enemy: each stack deals this much per second (wave-1 value, × R(w)). Stacks stay while hits keep coming and drain once the window runs out. The player's Poison follows the same rules without R(w) (audit decision P11, 2026-10-27).")]
+        [Tooltip("Poison on an enemy: each stack deals this much per second (wave-1 value, × R(w)). Stacks stay while hits keep coming and drain once the window runs out. The player's Poison follows the same rules without R(w) (decision P11, 2026-10-27).")]
         [Min(0f)] public float poisonOnEnemyDamagePerStack = 0.3f;
-        [Min(.01f), Tooltip("Owner 2026-10-27 (M225): seconds between Poison ticks on an enemy, and on the player too (audit decision P11). Each tick deals the stacks × "
+        [Min(.01f), Tooltip("2026-10-27 (M225): seconds between Poison ticks on an enemy, and on the player too (decision P11). Each tick deals the stacks × "
             + "poisonOnEnemyDamagePerStack × this, × R(w) on an enemy only.")]
         public float poisonOnEnemyInterval = .5f;
-        [Tooltip("Most Poison stacks an enemy, or the player (audit decision P11, 2026-10-27), can carry.")]
+        [Tooltip("Most Poison stacks an enemy, or the player (decision P11, 2026-10-27), can carry.")]
         [Min(1f)] public float poisonOnEnemyCap = 10f;
         [Tooltip("Frost on an enemy: each stack slows its movement and its attack timers by this share (0.1 = 10%), the same on any body; a large body or an elite only needs more stacks to freeze.")]
         [Min(0f)] public float frostSlowPerStack = .1f;

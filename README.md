@@ -1,46 +1,45 @@
 # WARP ARENA
 
-A top-down arena survival game about unpredictable weapons, elemental builds and dangerous void phenomena, built in Unity.
+**A top-down arena survival game where your weapons misbehave and the map is your best weapon.**
 
-**Play in the browser:** https://cs526-team-code69.github.io/warp-arena-game/ (desktop Chrome, Edge or Firefox).
+**[Play in your browser](https://cs526-team-code69.github.io/warp-arena-game/)** · desktop Chrome, Edge or Firefox, with mouse and keyboard
+
+| | |
+|---|---|
+| ![Title screen](Docs/images/title.jpg) | ![Weapon card](Docs/images/weapon-card.jpg) |
+| ![Level-up card pick](Docs/images/level-up.jpg) | ![A black hole in the arena](Docs/images/black-hole.jpg) |
 
 ## The game
 
-Survive fourteen waves in the arena, then defeat the Tyrant. Every weapon hides one of two anomalies, each with its own backfire; black holes and walls are weapons for both sides; and a build of weapons, elements, skills and stat cards grows through each run.
+Survive fourteen waves in the warp, then defeat the Tyrant King. A run takes about ten to fifteen minutes.
 
-The game starts in whitebox mode; press T on the title screen for the optional illustrated mode.
+- **Weapons that misbehave.** Fourteen weapon forms each hide one of two anomalies, and each anomaly has a backfire. You only find out what you got the moment you take the weapon, and a good player turns the backfire into a move.
+- **The terrain is a weapon, for both sides.** Knock monsters into black holes and slam them into walls, and watch out for the same happening to you.
+- **A build of your own.** Two hand weapons, two auto weapons, three skills out of sixteen, seven elements and a stack of stat cards, all chosen inside one run.
+- **A gamble.** Feed a black hole forty enemies and it opens a door to a void trial against the Nash Prophet. Win for a greater void skill; lose and the run is over.
 
-## Open the project
-
-Use **Unity 6000.6.3f1**. Clone with Git LFS, add the folder in Unity Hub, open `Assets/AnomalyArena/Scenes/ArenaV2_EN.unity` and press Play.
-
-```sh
-git lfs install
-git clone https://github.com/CS526-Team-Code69/warp-arena-game.git
-```
-
-To try enemies one at a time, open `Assets/AnomalyArena/Scenes/EnemyLab.unity` instead: there are no waves, the panel on the right spawns any enemy, and the numbers live on the assets under `Assets/AnomalyArena/V2/Data/Enemies` (edit one, then press F6 to respawn).
+The game starts in whitebox; the art button on the title screen switches to the illustrated mode shown above.
 
 ## Controls
 
 | Action | Input |
 | --- | --- |
-| Move | WASD |
-| Sprint | Hold left Shift |
-| Aim / attack | Mouse / left mouse button (hold to charge or to keep firing, depending on the weapon) |
-| Swap held weapon | Right mouse button |
-| Skills / select a card while a card panel is open | 1, 2, 3 |
-| Open the banked card pick (in combat) / switch art mode (title screen) | T |
-| Put the build panel away to walk the empty arena, and bring it back | Tab |
-| Enter the void portal | E while standing on it |
-| Start, open the crate, close the weapon card, start the next wave; pick later on a mid-wave card panel | Space or Enter |
-| Pause / resume; pick later on a mid-wave card panel | Esc |
-| Reroll while a card panel is open (once per wave) / restart (result screen) | R |
+| Move / sprint | WASD / hold Shift |
+| Aim / attack | Mouse / left mouse button |
+| Swap hand weapon | Right mouse button |
+| Skills, or pick a card | 1, 2, 3 |
+| Reopen a card pick kept for later | T |
+| Put the build panel away to walk the arena | Tab |
+| Enter the void portal | E |
+| Close the weapon card | Space, Enter or a click |
+| Pause / keep a card pick for later | Esc |
+| Reroll cards / restart after a run | R |
 
-## Documentation
+## More
 
 - [Game design document](Docs/GDD.md)
-- [Analytics: how runs end](Analytics/README.md): the WebGL build reports how each run ends to a Google Sheet (wave, cause, run time; random ids only). The collection code is in `Assets/AnomalyArena/Scripts/Analytics`.
+- From source: Unity 6000.6.3f1 with Git LFS; open `Assets/AnomalyArena/Scenes/ArenaV2_EN.unity`. See the [developer guide](Assets/AnomalyArena/README.md).
+- The web build reports how each run ends (wave, cause and run time, with random ids only). See [Analytics](Analytics/README.md).
 
 ## Team
 

@@ -26,6 +26,11 @@ namespace AnomalyArena
             transform.rotation = Quaternion.LookRotation(Query.Flat(user.AimDirection));
             transform.localScale = new Vector3(width, 2f, 1f);
             gameObject.SetActive(true);
+
+            bool earth = Art.Enabled && V5EarthWall.Raise(gameObject, width, 1f);
+            if (TryGetComponent(out Renderer block)) block.enabled = !earth;
+            if (earth && V5Vfx.On) V5Vfx.I.EarthRise(at, transform.rotation, width);
+            V5WeaponAudio.At(V5Sfx.StomperSlam, at, 1f, .82f);
             foreach (var combatant in Query.Characters(at, width * 0.5f + 1f))
             {
                 Vector3 direction = Query.Flat(combatant.Position - at);
@@ -42,8 +47,15 @@ namespace AnomalyArena
             age += dt;
             life -= dt;
             if (life > 0f) return;
-            gameObject.SetActive(false);
+            Fall();
             WorldMap.Active.HoleChanged();
+        }
+
+        public void Fall()
+        {
+            if (V5Vfx.On) V5Vfx.I.EarthCrumble(transform.position, transform.rotation, transform.localScale.x);
+            V5WeaponAudio.At(V5Sfx.RamCrash, transform.position, .45f, .7f);
+            gameObject.SetActive(false);
         }
 
         void OnCollisionEnter(Collision collision) => KnockAway(collision);

@@ -205,6 +205,23 @@ namespace AnomalyArena
         }
 
         [Test, LoadScene(SceneCn), Category("Integration"), Timeout(90000)]
+        public async Task Chinese_ThePausePanel_CoversTheBuildCrateAndTheDamageNumbers() => await ThePausePanelCoversTheBuildCrate();
+
+        [Test, LoadScene(SceneEn), Category("Integration"), Timeout(90000)]
+        public async Task English_ThePausePanel_CoversTheBuildCrateAndTheDamageNumbers() => await ThePausePanelCoversTheBuildCrate();
+
+        async Task ThePausePanelCoversTheBuildCrate()
+        {
+            var game = await ReadyScene();
+            ShortenWaves(game, 6f);
+            await StartRun(game);
+            await Until(() => game.waves.TimeExpired, 15f, "the shortened wave times out");
+            await ClearTheWave(game);
+            await Until(() => game.RunPhase == ArenaUiState.SupplyDrop && game.SupplyDropReady, 8f, "the build phase crate lands");
+            await ControlsTableTest.PauseCoversTheCrate(game);
+        }
+
+        [Test, LoadScene(SceneCn), Category("Integration"), Timeout(90000)]
         public async Task BuildPhase_OpenPortal_EnteredOnlyByStandingOnItWithThePanelAway()
         {
             var game = await ReadyScene();
@@ -218,7 +235,9 @@ namespace AnomalyArena
             await CommandUntil(game, ArenaUiCommand.OpenSupply, () => game.RunPhase == ArenaUiState.Armory);
             Assume.That(portal.Phase, Is.EqualTo(HolePhase.Portal), "the portal stays open into the build phase");
             var armory = Object.FindAnyObjectByType<V2Hud>().screens.First(s => s && s.state == ArenaUiState.Armory);
-            Assert.That(armory.body.text, Does.Contain("stand on it and press E").IgnoreCase.And.Contain("shield").IgnoreCase.And.Not.Contain("can also enter").IgnoreCase,
+
+            string help = System.Text.RegularExpressions.Regex.Replace(armory.body.text, "<[^<>]+>", "");
+            Assert.That(help, Does.Contain("stand on it and press E").IgnoreCase.And.Contain("shield").IgnoreCase.And.Not.Contain("can also enter").IgnoreCase,
                 "the build panel says to stand on the portal and what entering costs");
             keyboard = new TestKeyboard();
 
@@ -316,7 +335,7 @@ namespace AnomalyArena
             Assert.That(Time.timeScale, Is.Zero, "nothing moves during the freeze");
             await CommandFor(game, ArenaUiCommand.Pause, .8f);
             Assert.That(game.RunPhase, Is.EqualTo(ArenaUiState.TrialReturn), "no input acts during the freeze, pausing included");
-            Assert.That(FxPool.Active.items.Any(item => item && item.gameObject.activeSelf), Is.True, "the absorb animation is playing");
+            Assert.That(FxPool.Active.items.Any(item => item && item.gameObject.activeSelf) || V5Vfx.On && V5Vfx.I.LiveParticles > 0, Is.True, "the absorb animation is playing");
             Assert.That(Query.Flat(game.player.Position - stood).magnitude, Is.LessThan(.01f), "the player stays where they came back");
             Assert.That(portal.Phase, Is.Not.EqualTo(HolePhase.Gone), "the portal is still in view during the freeze");
 

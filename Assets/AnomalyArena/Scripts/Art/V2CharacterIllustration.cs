@@ -17,13 +17,14 @@ namespace AnomalyArena
         [Range(1f, 16f)] public float pixelBlock = 6f;
         public float walkBob = .065f, walkCyclesPerMetre = .7f;
         public float walkTilt = 3f, hitSquash = .24f, hitRecoil = .15f;
-        [Header("Elite outline (owner M116)")]
+        [Header("Elite outline (M116)")]
         [Tooltip("Size of the white silhouette behind an elite's illustration, as a share of the illustration.")]
         public float eliteOutlineScale = 1.12f;
         [Tooltip("Size of the white back-face shell round an elite's whitebox body, as a share of the body.")]
         public float whiteboxOutlineScale = 1.15f;
         Combatant body;
         Enemy enemy;
+        Renderer facingMark;
         V2ModelPresentation model;
         Rigidbody motion;
         MaterialPropertyBlock block;
@@ -44,12 +45,16 @@ namespace AnomalyArena
             body = GetComponent<Combatant>(); enemy = body as Enemy;
             model = GetComponent<V2ModelPresentation>();
             motion = GetComponent<Rigidbody>(); block = new MaterialPropertyBlock();
+            foreach (var t in GetComponentsInChildren<Transform>(true))
+                if (t.name == "Facing") { facingMark = t.GetComponent<Renderer>(); break; }
         }
         void OnEnable() { started = false; walkPhase = 0f; }
         void OnDisable() { if (hitImpact) hitImpact.enabled = false; ShowIllustrationOutline(false); ShowWhiteboxOutline(false); }
 
         void LateUpdate()
         {
+
+            if (facingMark && facingMark.enabled == Art.Enabled) facingMark.enabled = !Art.Enabled;
             if (!body || !illustration) return;
             if (!started) { ApplyLook(); started = true; }
             if (illustrated != Art.Enabled || modelVisible != (model && model.UsingModel)) ApplyVisibility();

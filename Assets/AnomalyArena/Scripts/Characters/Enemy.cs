@@ -495,7 +495,7 @@ namespace AnomalyArena
             {
                 windup = true;
                 windupTimer = windupTime;
-                V3WorldAudio.Instance?.Play(ArenaWorldCue.NpcWindup, Position);
+                V5WeaponAudio.Windup(definition ? definition.kind : EnemyKind.Grunt, Position);
                 if (definition && definition.kind == EnemyKind.Shade) revealTimer = windupTime + 1f;
                 SetLook(true);
                 Stop();
@@ -536,9 +536,11 @@ namespace AnomalyArena
             AttackSequence++;
             if (!definition || definition.kind is EnemyKind.Grunt or EnemyKind.Brute or EnemyKind.Skitter
                     or EnemyKind.Splitter or EnemyKind.Shade)
-                V3WorldAudio.Instance?.Play(ArenaWorldCue.NpcSwing, Position);
+                V5WeaponAudio.Swing(definition ? definition.kind : EnemyKind.Grunt, Position);
             if (definition && PerformSpecialAttack()) return;
-            Fx.Telegraph(Position, facing, radius + attackRange, attackArc, new Color(1f, 0.3f, 0.2f, 0.55f));
+                                                                                                   
+            Color punch = V5Vfx.On && Affix != ElementKind.None ? V5Vfx.ElementTint(Affix) : new Color(1f, 0.3f, 0.2f, 1f);
+            Fx.Telegraph(Position, facing, radius + attackRange, attackArc, new Color(punch.r, punch.g, punch.b, 0.55f));
 
             var p = GM.player;
             var shield = p.HeldShield;
@@ -680,6 +682,7 @@ namespace AnomalyArena
                     {
                         ReceiveDamage(new DamageInfo
                             { amount = GM.rules.wallDamage * GM.waves.HpMultiplier * 2, kind = HitKind.Slam });
+                        V5WeaponAudio.At(V5Sfx.RamCrash, Position);
                         cooldown = 1.5f;
                         Stun(1.5f);
                     }
@@ -751,6 +754,7 @@ namespace AnomalyArena
                                     float before = board.Shield;
                                     board.SetShield(Mathf.Max(board.Shield, enemy.maxHp * 0.3f));
                                     shieldAdded |= board.Shield > before;
+                                    if (V5Vfx.On && board.Shield > before) V5Vfx.I.WardLink(Position, enemy.Position, enemy.radius);
                                 }
                             }
 
@@ -1012,7 +1016,8 @@ namespace AnomalyArena
             if (capsule) capsule.enabled = true;
             if (telegraph) telegraph.gameObject.SetActive(false);
             V3WorldAudio.Instance?.Play(ArenaWorldCue.BossSlam, leapTarget);
-            Fx.Ring(leapTarget, Boss.leapRadius, definition.colour);
+            if (V5Vfx.On) V5Vfx.I.GroundSlam(leapTarget, Boss.leapRadius, definition.colour);
+            else Fx.Ring(leapTarget, Boss.leapRadius, definition.colour);
             PlayerBlast(leapTarget, Boss.leapRadius, attackDamage * Boss.leapDamage, Boss.leapPush);
             bossRecovery = Boss.leapRecovery;
         }
@@ -1101,6 +1106,7 @@ namespace AnomalyArena
                     marker.gameObject.SetActive(false);
             summonMarkers.Clear();
             GM.waves.SpawnExtrasAt(summonKind, summonPoints, true);
+            V5WeaponAudio.At(V5Sfx.NashSummon, Position, .6f, 1.25f);                                
             summonPoints.Clear();
         }
 
@@ -1305,11 +1311,12 @@ namespace AnomalyArena
             windupTimer = time;
             if (definition.kind == EnemyKind.Bloater)
                 V2Audio.Instance?.PlayWorld(ArenaSoundCue.BloaterWarning, Position);
+            else if (definition.kind == EnemyKind.Hollow)
+                V5WeaponAudio.At(V5Sfx.NashWindup, Position, 1f, NashWindupPitch(bossAttack));
+            else if (definition.kind == EnemyKind.Rammer || definition.kind == EnemyKind.Tyrant && bossAttack == ChargeMove)
+                V3WorldAudio.Instance?.Play(ArenaWorldCue.NpcChargeWarning, Position);
             else
-                V3WorldAudio.Instance?.Play(
-                    definition.kind == EnemyKind.Rammer || definition.kind == EnemyKind.Tyrant && bossAttack == ChargeMove
-                        ? ArenaWorldCue.NpcChargeWarning
-                        : ArenaWorldCue.NpcWindup, Position);
+                V5WeaponAudio.Windup(definition.kind, Position);
             SetLook(true);
             Stop();
             if (telegraph)
@@ -1361,7 +1368,7 @@ namespace AnomalyArena
                     TryLockLaser(definition.pulseRadius);
                     return true;
                 case EnemyKind.Stomper:
-                    V3WorldAudio.Instance?.Play(ArenaWorldCue.NpcPulse, Position);
+                    V5WeaponAudio.At(V5Sfx.StomperSlam, Position);
                     ConeSlam(definition.pulseRadius, definition.coneAngle, attackDamage, attackKnockback);
                     return true;
                 case EnemyKind.Hollow:
@@ -1472,7 +1479,14 @@ namespace AnomalyArena
 
         void AreaAttack(float reach, float damage, float push)
         {
-            Fx.Ring(Position, reach, definition.colour);
+                                                                                             
+            if (V5Vfx.On)
+            {
+                Color? tint = Affix != ElementKind.None ? V5Vfx.ElementTint(Affix) : null;
+                if (definition.kind == EnemyKind.Bloater) V5Vfx.I.Explosion(Position, reach, tint);
+                else V5Vfx.I.GroundSlam(Position, reach, tint ?? definition.colour);
+            }
+            else Fx.Ring(Position, reach, definition.colour);
             foreach (var target in Query.Characters(Position, reach))
                 if (target != this && target.IsAlive)
                     DealHit(target, damage, target.Position - Position, push);
@@ -1492,6 +1506,7 @@ namespace AnomalyArena
         void ConeSlam(float reach, float arcDeg, float damage, float push)
         {
             Fx.Sector(Position, facing, reach, arcDeg, definition.colour);
+            if (V5Vfx.On) V5Vfx.I.GroundSlam(Position + Query.Flat(facing).normalized * reach * .55f, reach * .5f, Affix != ElementKind.None ? V5Vfx.ElementTint(Affix) : definition.colour, false);
             foreach (var target in Query.InSector(this, Position, facing, reach, arcDeg))
                 if (target.IsAlive) DealHit(target, damage, target.Position - Position, push);
         }
@@ -1704,7 +1719,13 @@ namespace AnomalyArena
             if (definition && definition.splitsOnDeath && !Mini && !IsTrialSummon &&
                 DeathCause == DeathCause.HpDepleted && GM && GM.waves)
                 GM.waves.QueueSplit(this);
-            Fx.Pop(Position + Vector3.up * radius, bodyRenderer ? bodyRenderer.sharedMaterial.color : Color.red,
+            if (V5Vfx.On)
+            {
+                if (IsBoss && definition.kind == EnemyKind.Hollow) V5Vfx.I.VoidExplosion(Position, 8f);
+                else if (IsBoss) V5Vfx.I.Explosion(Position, 7f);
+                else V5Vfx.I.Death(Position + Vector3.up * radius, radius, definition ? definition.colour : Color.red);
+            }
+            else Fx.Pop(Position + Vector3.up * radius, bodyRenderer ? bodyRenderer.sharedMaterial.color : Color.red,
                 radius * 3f);
             BeginCorpse();
         }

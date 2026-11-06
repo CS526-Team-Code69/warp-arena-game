@@ -24,6 +24,7 @@ namespace AnomalyArena
         V2CharacterIllustration look;
         Combatant holder;
         LineRenderer fieldRing, shieldRing, beam, ghostRing, ghostFill, droneDisc, droneRim, dropRing;
+        MeshRenderer fieldDisc, shieldDisc;
         SpriteRenderer droneSprite, ghostSprite;
         Vector3 droneShown;
         bool droneShownSet;
@@ -34,6 +35,8 @@ namespace AnomalyArena
             foreach (var line in new[] { fieldRing, shieldRing, beam, ghostRing, ghostFill, droneDisc, droneRim, dropRing }) if (line) line.enabled = false;
             if (droneSprite) droneSprite.enabled = false;
             if (ghostSprite) ghostSprite.enabled = false;
+            if (fieldDisc) fieldDisc.enabled = false;
+            if (shieldDisc) shieldDisc.enabled = false;
             droneShownSet = false;
         }
 
@@ -74,6 +77,20 @@ namespace AnomalyArena
 
         void DrawField(RunWeapon deflect, Combatant player)
         {
+            if (V5Vfx.On)
+            {
+
+                if (fieldRing) fieldRing.enabled = false;
+                bool on = deflect != null;
+                if (on && !fieldDisc) fieldDisc = V5Vfx.I.MakeFlatDisc("DeflectField", "hex", transform);
+                if (fieldDisc)
+                {
+                    fieldDisc.enabled = on;
+                    if (on) V5Vfx.PlaceDisc(fieldDisc, player.Position, weapons.FieldRadius(deflect), .07f, Time.time * 8f, new Color(.42f, .85f, 1f, .3f + .06f * Mathf.Sin(Time.time * 3f)));
+                }
+                return;
+            }
+            if (fieldDisc) fieldDisc.enabled = false;
             if (!Line(ref fieldRing, "DeflectField", deflect != null, true)) return;
             Circle(fieldRing, player.Position, weapons.FieldRadius(deflect), .06f);
             fieldRing.widthMultiplier = lineWidth;
@@ -83,6 +100,19 @@ namespace AnomalyArena
         void DrawShield(RunWeapon drain, Combatant player)
         {
             bool overload = drain != null && !drain.drainShieldUp && drain.drainOverloadLeft > 0f && !drain.drainOverloadPaid;
+            if (V5Vfx.On)
+            {
+                if (shieldRing) shieldRing.enabled = false;
+                bool on = drain != null && (drain.drainShieldUp || overload);
+                if (on && !shieldDisc) shieldDisc = V5Vfx.I.MakeFlatDisc("EnergyShield", "hex", transform);
+                if (shieldDisc)
+                {
+                    shieldDisc.enabled = on;
+                    if (on) V5Vfx.PlaceDisc(shieldDisc, player.Position, player.radius + 1.05f, .1f, -Time.time * 22f, overload ? new Color(1f, .4f, .7f, Mathf.Repeat(Time.time, .2f) > .1f ? .2f : .8f) : new Color(.5f, 1f, .95f, .62f));
+                }
+                return;
+            }
+            if (shieldDisc) shieldDisc.enabled = false;
             if (!Line(ref shieldRing, "EnergyShield", drain != null && (drain.drainShieldUp || overload), true)) return;
             Circle(shieldRing, player.Position, player.radius + .45f, .5f);
             shieldRing.widthMultiplier = lineWidth * (overload ? 1.5f : 2.5f);
@@ -115,8 +145,10 @@ namespace AnomalyArena
                 dropRing.widthMultiplier = lineWidth;
                 Paint(dropRing, droneDownColor, .6f + .4f * Mathf.Sin(Time.time * 6f));
             }
+            if (on && !down && V5Vfx.On) V5Vfx.I.DroneGlow(droneShown);
             if (!down || Time.time < smokeAt || !FxPool.Active) return;
             smokeAt = Time.time + smokeInterval;
+            if (V5Vfx.On) { V5Vfx.I.CoolingSmoke(new Vector3(drone.dronePoint.x, .5f, drone.dronePoint.z)); return; }
             FxPool.Active.Emit(new Vector3(drone.dronePoint.x, .5f, drone.dronePoint.z), new Color(.75f, .75f, .8f, .55f), .7f, .9f, Vector3.up * .9f);
         }
 
@@ -130,6 +162,12 @@ namespace AnomalyArena
                 beam.SetPosition(1, body.Position + Vector3.up * .5f);
                 beam.widthMultiplier = lineWidth * 1.5f;
                 Paint(beam, beamColor, .75f + .25f * Mathf.Sin(Time.time * 30f));
+                if (V5Vfx.On)
+                {
+                    beam.sharedMaterial = V5Vfx.I.TrailMaterial;
+                    beam.widthMultiplier = lineWidth * 2.6f;
+                    V5Vfx.I.TractorMotes(droneShownSet ? droneShown : weapons.DroneHover(), body.Position + Vector3.up * .5f);
+                }
             }
             Vector3 spot = on ? drone.whirlTo : Vector3.zero;
             Sprite sprite = on && Art.Enabled && look && look.illustration ? look.illustration.sprite : null;

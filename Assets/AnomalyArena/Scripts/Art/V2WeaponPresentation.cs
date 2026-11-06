@@ -2,6 +2,7 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
+
     public class V2WeaponPresentation : MonoBehaviour
     {
         public RunWeapons weapons;
@@ -11,6 +12,8 @@ namespace AnomalyArena
         public Sprite[] formSprites = new Sprite[17];
         public float length = 2.2f;
         int lastForm = -1;
+        bool lastV5;
+        const float V5HandShare = .62f;
         void LateUpdate()
         {
             var active = weapons ? weapons.Active : null;
@@ -20,10 +23,12 @@ namespace AnomalyArena
                 && (active.inFlight || active.recallPlanted);
             if (illustration) illustration.enabled = valid && !daggerAway && Art.Enabled;
             if (whitebox) whitebox.enabled = valid && !daggerAway && !Art.Enabled;
-            if (!valid || form == lastForm || !illustration) return;
-            lastForm = form; illustration.sprite = formSprites[form];
+            bool v5 = V5Vfx.On;
+            if (!valid || !illustration || form == lastForm && v5 == lastV5) return;
+            lastForm = form; lastV5 = v5; illustration.sprite = formSprites[form];
+
             if (illustration.sprite)
-                illustration.transform.localScale = Vector3.one * (length / Mathf.Max(.01f, illustration.sprite.bounds.size.x));
+                illustration.transform.localScale = Vector3.one * ((v5 ? length * V5HandShare : length) / Mathf.Max(.01f, illustration.sprite.bounds.size.x));
         }
     }
 }

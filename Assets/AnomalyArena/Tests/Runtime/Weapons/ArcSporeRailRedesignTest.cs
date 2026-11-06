@@ -57,7 +57,7 @@ namespace AnomalyArena
             var weapons = game.runWeapons; var tuning = weapons.upgrades;
             var rail = Equip(game, WeaponForm.Railgun, 1);
             float hit = weapons.HitDamage(rail), cycle = weapons.CycleSeconds(rail);
-            Assert.That(weapons.roster.Get(WeaponForm.Railgun).damageB, Is.EqualTo(36f), "owner 2026-10-27: one very heavy shot");
+            Assert.That(weapons.roster.Get(WeaponForm.Railgun).damageB, Is.EqualTo(36f), "2026-10-27: one very heavy shot");
             Assert.That(weapons.roster.Get(WeaponForm.Railgun).cooldownB, Is.EqualTo(1.8f), "fired less often, so its damage per second stays");
 
             LeaveHp(targets[0], hit + targets[0].maxHp * .2f);

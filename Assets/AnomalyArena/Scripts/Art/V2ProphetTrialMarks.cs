@@ -93,6 +93,17 @@ namespace AnomalyArena
                 Circle(fills[i], pillar.centre, pillar.radius - band * .5f, FillHeight);
                 fills[i].widthMultiplier = band;
                 fills[i].startColor = fills[i].endColor = standing ? pillarColor : pillarFillColor;
+                if (V5Vfx.On)
+                {
+
+                    fills[i].sharedMaterial = V5Vfx.I.TrailMaterial;
+                    beams[i].sharedMaterial = V5Vfx.I.TrailMaterial;
+                    fills[i].startColor = fills[i].endColor = standing ? new Color(.42f, .16f, .85f, .55f) : new Color(.3f, .08f, .55f, .4f);
+                    if (standing)
+                    {
+                        V5Vfx.I.PillarTick(pillar.centre, pillar.radius);
+                    }
+                }
                 if (!standing) continue;
                 var beam = beams[i];
                 beam.SetPosition(0, new Vector3(pillar.centre.x, FillHeight, pillar.centre.z));
@@ -100,6 +111,11 @@ namespace AnomalyArena
                 beam.widthMultiplier = pillar.radius * 2f;                         
                 beam.startColor = pillarBeamColor;
                 beam.endColor = new Color(pillarBeamColor.r, pillarBeamColor.g, pillarBeamColor.b, 0f);
+                if (V5Vfx.On)
+                {
+                    beam.startColor = new Color(.6f, .34f, 1f, .5f);
+                    beam.endColor = new Color(.6f, .34f, 1f, 0f);
+                }
             }
         }
 

@@ -11,7 +11,7 @@ using Object = UnityEngine.Object;
 namespace AnomalyArena
 {
                                                                                                                                            
-                                                                                                                                                                                           
+                                                                                                                                                                                                           
                                                                                                                                          
                                                                                                 
     [TestFixture]
@@ -331,7 +331,7 @@ namespace AnomalyArena
                              
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(30000)]
-        public async Task RollArmory_StrongerVersionOfAHeldWeapon_IsAFreshWeaponWithAFreshAnomaly()
+        public async Task RollArmory_StrongerVersionOfAHeldWeapon_KeepsItsAnomalyUpgradesAndInfusion()
         {
             var game = await ReadyScene();
             var weapons = game.runWeapons;
@@ -347,10 +347,10 @@ namespace AnomalyArena
 
             Assert.That(versions, Is.Not.Empty, "the held rifle comes up as a stronger version");
             Assert.That(versions, Has.All.Matches<RunWeapon>(w => w.form == WeaponForm.Rifle && w.mk > rifle.mk), "same form, higher Mk");
-            Assert.That(versions, Has.All.Matches<RunWeapon>(w => w.axes == UpgradeAxis.None && w.element == ElementKind.None),
-                "none of the held rifle's upgrades or infusion");
-            Assert.That(versions, Has.None.Matches<RunWeapon>(w => w.revealed), "its anomaly is revealed only when taken");
-            Assert.That(versions.Select(w => w.variant).Distinct().Count(), Is.EqualTo(2), "the anomaly is rolled afresh: either one comes up");
+            Assert.That(versions, Has.All.Matches<RunWeapon>(w => w.variant == rifle.variant && w.revealed),
+                "the held rifle's own anomaly, already known: it never turns into another pairing");
+            Assert.That(versions, Has.All.Matches<RunWeapon>(w => w.axes == rifle.axes && w.element == rifle.element),
+                "with the held rifle's upgrades and infusion");
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(30000)]
@@ -410,7 +410,7 @@ namespace AnomalyArena
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(30000)]
-        public async Task UiSnapshot_StrongerVersionOffer_SaysItReplacesTheHeldWeapon()
+        public async Task UiSnapshot_StrongerVersionOffer_SaysItUpgradesTheHeldWeapon()
         {
             var game = await ReadyScene();
             var weapons = game.runWeapons;
@@ -426,9 +426,9 @@ namespace AnomalyArena
 
             var card = game.UiSnapshot.armoryOffers[index];
 
-            Assert.That(card.body, Does.Contain(rifle.Label), "it names the weapon it replaces");
-            Assert.That(card.body, Does.Not.Contain("keep"), "it no longer promises to keep the anomaly and upgrades");
-            Assert.That(card.rarity, Is.EqualTo(CardRarity.Common), "a fresh weapon has no upgrades to colour it");
+            Assert.That(card.body, Does.Contain(rifle.Label), "it names the weapon it upgrades");
+            Assert.That(card.body, Does.Contain("Its attack and trait stay the same").And.Contain("keep"), "it says the pairing stays and the upgrades are kept");
+            Assert.That(card.rarity, Is.EqualTo(ArenaRarity.ForWeapon(rifle)), "it is coloured like the held rifle, upgrades included");
         }
 
                               

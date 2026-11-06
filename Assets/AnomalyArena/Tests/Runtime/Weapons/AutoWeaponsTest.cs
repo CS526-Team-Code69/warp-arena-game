@@ -181,7 +181,7 @@ namespace AnomalyArena
             Assert.That(targets[1].ExternalMoveMultiplier, Is.EqualTo(1f).Within(.001f), "one outside it does not");
             float hp = targets[0].Hp;
             await Seconds(weapons.CycleSeconds(ring) + .15f);
-            Assert.That(hp - targets[0].Hp, Is.EqualTo(weapons.HitDamage(ring)).Within(.01f), "one light hit a cycle (owner 2026-10-27, Q99)");
+            Assert.That(hp - targets[0].Hp, Is.EqualTo(weapons.HitDamage(ring)).Within(.01f), "one light hit a cycle (2026-10-27, Q99)");
             Assert.That(targets[1].Hp, Is.EqualTo(targets[1].maxHp), "nothing outside the ring");
 
             WallAhead(game, 1f, 4f);
@@ -455,7 +455,7 @@ namespace AnomalyArena
                 Assert.That(offer.Axis, Is.EqualTo(UpgradeAxis.Infusion), "the Deflect's light hit carries one");
 
                 Assume.That(ArenaText.IsChinese, Is.True, "the Chinese scene starts in Chinese");
-                Assert.That(ArenaTerms.WeaponForm(WeaponForm.ShieldRing), Is.EqualTo("Energy Ring"), "owner 2026-10-27 (Q100)");
+                Assert.That(ArenaTerms.WeaponForm(WeaponForm.ShieldRing), Is.EqualTo("Energy Ring"), "2026-10-27 (Q100)");
                 Assert.That(ArenaTerms.WeaponAnomaly(WeaponForm.ShieldRing, 0), Is.EqualTo("Deflect"));
                 Assert.That(WeaponGuide.Backfire(WeaponForm.OrbitBlades, 0), Does.Contain("pickups").And.Contain("corpses"));
                 Assert.That(WeaponGuide.How(WeaponForm.ShieldRing, 1), Does.Contain("灌注后").And.Contain($"{tuning.drainInfuseRadius:0.##} 格内"), "the Drain card says what an Infusion does (P23)");

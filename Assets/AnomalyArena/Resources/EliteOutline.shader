@@ -1,6 +1,6 @@
 Shader "AnomalyArena/EliteOutline"
 {
-    // Owner M116 (2026-10-22): an elite wears a bright white outline. Drawn as one more material on the elite's model renderers: the
+    // M116 (2026-10-22): an elite wears a bright white outline. Drawn as one more material on the elite's model renderers: the
     // back faces, pushed out along the screen-space normal by a fixed number of pixels, so a white rim shows round the body whatever the
     // model's size. Loaded from Resources so the web build always carries it (V2ModelPresentation).
     Properties

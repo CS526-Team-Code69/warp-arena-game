@@ -29,6 +29,12 @@ namespace AnomalyArena
             }
             if (spireLine) spireLine.enabled = false;
             Sprite sprite = enemy.LineTelegraph ? art.telegraphCharge : enemy.CleaveTelegraph ? art.telegraphCleave : art.telegraphRing;
+
+            if (V5Vfx.On)
+            {
+                var drawn = V5Vfx.I.Sprite(enemy.LineTelegraph ? "tele-charge" : enemy.CleaveTelegraph ? "tele-cleave" : "tele-ring", sprite ? sprite.pixelsPerUnit : 100f);
+                if (drawn) sprite = drawn;
+            }
             bool show = enemy.TelegraphActive && sprite;
             illustration.enabled = show;
             if (whitebox) whitebox.enabled = !show;

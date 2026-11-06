@@ -93,7 +93,7 @@ namespace AnomalyArena
             board.Tick(rules.poisonOnEnemyInterval);
             float expected = 2f * rules.poisonOnEnemyInterval * rules.poisonOnEnemyCap * rules.poisonOnEnemyDamagePerStack * ElementCombat.WaveScale;
 
-            Assert.That(rules.poisonOnEnemyCap, Is.EqualTo(10f), "the owner's cap: ten stacks");
+            Assert.That(rules.poisonOnEnemyCap, Is.EqualTo(10f), "the design cap: ten stacks");
             Assert.That(capped, Is.EqualTo(rules.poisonOnEnemyCap), "more Poison stops at the cap");
 
             Assert.That(hp - sut.Hp, Is.EqualTo(expected).Within(1f), "each stack deals its share a second");
@@ -734,14 +734,14 @@ namespace AnomalyArena
 
         static bool FitsTheCard(V2UiChoice choice, string text, out string report)
         {
-            choice.body.text = text;
+            choice.ShowBody(text);
             Canvas.ForceUpdateCanvases();
             var settings = choice.body.GetGenerationSettings(choice.body.rectTransform.rect.size);
             var generator = new TextGenerator();
             generator.PopulateWithErrors(text, settings, choice.gameObject);
             int needed = text.Count(c => !char.IsWhiteSpace(c));
             int shown = text.Take(generator.characterCountVisible).Count(c => !char.IsWhiteSpace(c));
-            report = $"{shown}/{needed} chars at size {generator.fontSizeUsedForBestFit}";
+            report = $"{shown}/{needed} chars at size {choice.body.fontSize}";
             return shown >= needed;
         }
 

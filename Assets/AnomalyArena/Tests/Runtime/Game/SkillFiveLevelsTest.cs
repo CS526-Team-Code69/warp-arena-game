@@ -37,7 +37,7 @@ namespace AnomalyArena
             [(SkillId.TimeSlip, "duration")] = (2.5f, 3.5f),
         };
 
-        static readonly Dictionary<(SkillId, string), float[]> OwnerSetValues = new()
+        static readonly Dictionary<(SkillId, string), float[]> DesignSetValues = new()
         {
             [(SkillId.Contagion, "strength")] = new[] { 6f, 7f, 8f, 9f, 10f },
             [(SkillId.FrostNova, "strength")] = new[] { 6f, 7f, 8f, 9f, 10f },
@@ -112,7 +112,7 @@ namespace AnomalyArena
                 {
                     string at = $"{definition.id}.{name}";
                     if (values == null || values.Length != SkillDefinition.MaxLevel) { problems.Add($"{at}: {values?.Length ?? 0} entries"); continue; }
-                    if (OwnerSetValues.TryGetValue((definition.id, name), out var set))
+                    if (DesignSetValues.TryGetValue((definition.id, name), out var set))
                     {
                         if (!values.Zip(set, Near).All(fits => fits)) problems.Add($"{at}: {string.Join(", ", values)}, expected {string.Join(", ", set)}");
                         continue;

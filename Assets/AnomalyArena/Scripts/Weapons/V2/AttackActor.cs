@@ -27,7 +27,7 @@ namespace AnomalyArena
         public ElementKind element;
         [Tooltip("Damage this attack deals to its own shooter when it hurts them; negative means the same as damage. Backfires use the weapon's base value.")]
         public float ownerDamage = -1f;
-        [Tooltip("Scatter Blast shell fire (owner 2026-10-27): it touches its shooter only with the shooter's centre inside it, as if stepped on; others by their edge as usual.")]
+        [Tooltip("Scatter Blast shell fire (2026-10-27): it touches its shooter only with the shooter's centre inside it, as if stepped on; others by their edge as usual.")]
         public bool ownerStepsOn;
 
         float ownerCarry;
@@ -834,7 +834,9 @@ namespace AnomalyArena
             blastTargets.Clear();
             if (chainPoints.Count > 0) Shooter?.StrikeChain(weapon, chainPoints, damage);
             chainPoints.Clear();
-            Fx.Ring(point, radius, ElementCombat.ColorFor(element));
+
+            if (V5Vfx.On) { if (mode is not (AttackMode.Field or AttackMode.Pull)) V5Vfx.I.Explosion(point, radius, element == ElementKind.None ? null : V5Vfx.ElementTint(element)); }
+            else Fx.Ring(point, radius, ElementCombat.ColorFor(element));
         }
         public bool TryManualDetonate()
         {
@@ -859,7 +861,7 @@ namespace AnomalyArena
         }
         void PlaySound(WeaponAudioPhase phase)
         {
-            if(weapon!=null)V2Audio.Instance?.PlayWeapon(weapon.form,weapon.variant,phase);
+            V5WeaponAudio.Weapon(weapon,phase);
         }
         sealed class HitComparer : IComparer<RaycastHit>
         {

@@ -37,7 +37,7 @@ namespace AnomalyArena
         public float shatterBurstRadius = 2f;
         [Min(0f), Tooltip("Shatter Twist: burst damage to the other enemies, as a share of one shard.")]
         public float shatterSplashShare = .5f;
-        [Min(1), Tooltip("Shatter Tame: ice patches one weapon may keep at once; a new one removes the oldest (owner 2026-10-27: kept, no longer on the card).")]
+        [Min(1), Tooltip("Shatter Tame: ice patches one weapon may keep at once; a new one removes the oldest (2026-10-27: kept, no longer on the card).")]
         public int icePatchTamedCap = 6;
         public float blizzardConeAngle = 50f, blizzardMaxRange = 7f, blizzardFrostPerTick = .8f, blizzardFrozenHold = .6f;
         [Min(0f), Tooltip("Blizzard Twist: on release, damage per second each frozen enemy in the cone has been frozen under this spray (scaled like the weapon).")]
@@ -57,7 +57,7 @@ namespace AnomalyArena
         public float spinUpFreeTurn = 1080f, spinUpFullTurn = 90f;
         [Header("10-21 design alignment — candidate values")]
         [Range(.05f, 1f), Tooltip("Charged Shot Tame: movement multiplier of non-boss enemies on your aim line while you charge "
-                                  + "(0.3 = they move 70% slower; owner 2026-10-27, renamed so this default replaces the scene's 0.5).")]
+                                  + "(0.3 = they move 70% slower; 2026-10-27, renamed so this default replaces the scene's 0.5).")]
         public float chargeLineSlowFactor = .3f;
         [Min(0f), Tooltip("Charged Shot Tame: half width of that aim line in cells; an enemy's own radius is added.")]
         public float chargeLineHalfWidth = .5f;
@@ -114,7 +114,7 @@ namespace AnomalyArena
         public float focusPelletSpeed = 60f;
         [Min(0f), Tooltip("Scatter Focus backfire: cells the recoil pushes you back on an uncharged release.")]
         public float focusRecoilMin = 2f;
-        [Min(0f), Tooltip("Scatter Focus backfire: cells the recoil pushes you back on a full charge. Owner 2026-10-26: a push you keep control through, never a knockback, so a wall behind you does not hurt.")]
+        [Min(0f), Tooltip("Scatter Focus backfire: cells the recoil pushes you back on a full charge. 2026-10-26: a push you keep control through, never a knockback, so a wall behind you does not hurt.")]
         public float focusRecoilMax = 6f;
         [Range(0f, 1f), Tooltip("Scatter Focus Twist: damage share a bolt keeps after piercing its first target.")]
         public float focusPierceRetention = .6f;
@@ -130,7 +130,7 @@ namespace AnomalyArena
         public float needleBurstRadius = 2f;
         [Min(0f), Tooltip("Needler Twist: burst damage as a multiple of one needle.")]
         public float needleBurstShare = 2f;
-        [Range(0f, 1f), Tooltip("Execute: HP share below which a non-boss enemy is executed. Owner 2026-10-27: it no longer grows with kills.")]
+        [Range(0f, 1f), Tooltip("Execute: HP share below which a non-boss enemy is executed. 2026-10-27: it no longer grows with kills.")]
         public float executeThreshold = .4f;
         [Min(0f), Tooltip("Execute Twist: seconds a hit enemy stays marked; any damage that leaves it under the execute line executes it.")]
         public float executeMarkSeconds = 6f;
@@ -142,7 +142,7 @@ namespace AnomalyArena
         public float lanceCrossShare = .6f;
         [Min(0f), Tooltip("Lance Twist: crossing blast radius, cells. Like the slug it skips the Shield's damage cut (the Shield still takes it first) and spares you.")]
         public float lanceCrossRadius = 2.5f;
-        [Min(0f), Tooltip("Lance backfire: cells the recoil pushes you back on open ground. Owner 2026-10-26: a push you keep control through, never a knockback, so a wall behind you does not hurt.")]
+        [Min(0f), Tooltip("Lance backfire: cells the recoil pushes you back on open ground. 2026-10-26: a push you keep control through, never a knockback, so a wall behind you does not hurt.")]
         public float lanceRecoil = 4f;
         [Min(0f), Tooltip("Lance Tame: a wall this close behind you (cells) braces the shot: no recoil and more damage.")]
         public float lanceBraceDistance = 4f;
@@ -280,7 +280,7 @@ namespace AnomalyArena
         [Header("2026-10-27 Scatter Blast shells, Shatter ice, Blizzard snow")]
         [Min(0f), Tooltip("Scatter Blast backfire: cells from your centre, left and right of the aim, where the two hot shells land when a reload starts.")]
         public float scatterShellSide = 1.2f;
-        [Min(0f), Tooltip("Scatter Blast Tame: cells from your centre where the tamed shells land (owner decision 10-27: farther than the tamed fire's "
+        [Min(0f), Tooltip("Scatter Blast Tame: cells from your centre where the tamed shells land (decision of 10-27: farther than the tamed fire's "
             + "radius, so you take a step to stand on one; standing still never finishes the reload by itself).")]
         public float scatterShellTameSide = 1.8f;
         [Min(0f), Tooltip("Scatter Blast backfire: seconds a landed shell lies before it flares up into a small fire.")]
@@ -389,7 +389,7 @@ namespace AnomalyArena
         [Min(0f), Tooltip("Barrage Tame: degrees per second the escorting missiles circle you.")]
         public float barrageEscortSpin = 240f;
 
-        [Header("g5-auto: auto weapons (owner 2026-10-27)")]
+        [Header("g5-auto: auto weapons (2026-10-27)")]
         [Min(0f), Tooltip("Closed Blade: seconds before the blade tips can knock the same pickup or corpse again (they are checked every frame).")]
         public float orbitKnockRepeat = .5f;
         [Min(0f), Tooltip("Closed Blade: cells a corpse the blade tips touch is knocked outward, away from you (pickups use OrbPool.repelDistance).")]
@@ -428,7 +428,7 @@ namespace AnomalyArena
         public float drainShieldWait = 4f;
         [Min(0f), Tooltip("Drain: Energy you gain each time the Energy Shield blocks an attack.")]
         public float drainBlockEnergy = 5f;
-        [Min(0f), Tooltip("Drain Infusion (audit decision P23, 2026-10-27): each block releases one hit of the element on the enemies within this many cells (no wall between), damageB x the weapon's scale.")]
+        [Min(0f), Tooltip("Drain Infusion (decision P23, 2026-10-27): each block releases one hit of the element on the enemies within this many cells (no wall between), damageB x the weapon's scale.")]
         public float drainInfuseRadius = 2.5f;
         [Min(0f), Tooltip("Drain backfire: seconds after the shield breaks during which the next enemy attack costs Energy (once per break).")]
         public float drainOverloadSeconds = 2f;
@@ -453,6 +453,8 @@ namespace AnomalyArena
     {
         public Vector3 from, to;
         public float width, until;
+
+        public bool drawnByV5;
         public Color color;
     }
 
@@ -503,7 +505,8 @@ namespace AnomalyArena
             else
             {
                 WeaponSound(w);
-                Fx.Cone(player.Position,player.AimDirection,range,60,w.element);
+                if(V5Vfx.On)V5Vfx.I.ScatterShot(player.Position,player.AimDirection,range,60f,w.element);
+                else Fx.Cone(player.Position,player.AimDirection,range,60,w.element);
                 foreach(var body in Combatant.All)
                 {
                     if(body==player||!body.IsAlive||!InCone(body,range,60)||WallBlocks(player.Position,body.Position))continue;
@@ -520,7 +523,7 @@ namespace AnomalyArena
             float charge=Mathf.Clamp01(w.charge);
             int pellets=Mathf.Max(1,upgrades.focusPellets);
             w.burstLeft=pellets;w.burstTimer=0f;w.burstDirection=aim;
-            V3WorldAudio.Instance?.Play(ArenaWorldCue.WeaponFocusRelease,player.Position);
+            V5WeaponAudio.FocusRelease(charge,player.Position);
             w.burstDamage=damage/pellets*Mathf.Lerp(upgrades.focusMinChargeDamage,1f,charge);
 
             player.Push(-aim,FocusRecoil(w,charge));
@@ -734,7 +737,7 @@ namespace AnomalyArena
 
         void Shatter(RunWeapon w,Combatant first,float hit,Vector3 dir)
         {
-            WeaponSound(w);
+            WeaponSound(w,WeaponAudioPhase.Fire,true);
             var status=ElementStatus.For(first);
             bool frozen=status&&status.Frozen;
 
@@ -1003,6 +1006,7 @@ namespace AnomalyArena
 
             Area(w,player.Position,upgrades.fuelTankRadius,upgrades.fuelTankDamage*DamageScale(w),w.Has(UpgradeAxis.Tame)?upgrades.fuelTankTamePush:0,false);
             if(!w.Has(UpgradeAxis.Tame))ElementStatus.For(player)?.Add(ElementKind.Fire,upgrades.fuelTankSelfFire,player);
+            if(V5Vfx.On){V5Vfx.I.Explosion(player.Position,upgrades.fuelTankRadius);return;}
             var fx=FxPool.Active;var art=V4CombatVfx.Active;
             if(fx&&art&&art.strikeFlash)fx.Emit(player.Position+Vector3.up*.8f,new Color(1f,.75f,.45f),upgrades.fuelTankRadius*1.8f,.3f,texture:art.strikeFlash,pulse:true);
         }
@@ -1209,7 +1213,7 @@ namespace AnomalyArena
             elementTargets.Clear();upgradeHits.Clear();
             foreach(var c in Combatant.All)
                 if(c!=player&&c.IsAlive&&Query.Flat(c.Position-at).magnitude<=range+c.radius&&!WallBlocks(at,c.Position)&&upgradeHits.Add(c))elementTargets.Add(c);
-            Fx.Ring(at,range,ElementCombat.ColorFor(w.element));
+            if(V5Vfx.On)V5Vfx.I.Nova(at,range,V5Vfx.ElementTint(w.element));else Fx.Ring(at,range,ElementCombat.ColorFor(w.element));
             if(w.Has(UpgradeAxis.Twist)&&w.trailPoints!=null)
             {
                 Color bolt=ElementCombat.ColorFor(ElementKind.Lightning);
@@ -1227,7 +1231,8 @@ namespace AnomalyArena
                     else point=Query.Flat(at);
                     if(joined&&Query.Flat(point-previous).magnitude<=upgrades.capacitorTrailBreak)
                     {
-                        AddTracer(Query.AtCastHeight(previous),Query.AtCastHeight(point),.35f,.2f,bolt);
+                        if(V5Vfx.On)V5Vfx.I.Bolt(Query.AtCastHeight(previous),Query.AtCastHeight(point),bolt,1.1f,.2f);
+                        AddTracer(Query.AtCastHeight(previous),Query.AtCastHeight(point),.35f,.2f,bolt,V5Vfx.On);
                         foreach(var c in Combatant.All)
                         {
                             if(c==player||!c.IsAlive||upgradeHits.Contains(c))continue;
@@ -1497,9 +1502,10 @@ namespace AnomalyArena
             Vector3 dir=w.turretDir,from=Query.AtCastHeight(w.turretPoint);float distance=.7f;
             if(Physics.Linecast(from,from+dir*distance,out var wall,GameManager.WallMask,QueryTriggerInteraction.Ignore))distance=Mathf.Max(0f,wall.distance-upgrades.spawnWallBackoff);
             a.Configure(AttackMode.Bolt,player,w,w.turretPoint+dir*distance,dir,hit,0,reach,40,0,reach/40+3);
-            V2Audio.Instance?.PlayWeapon(w.form,w.variant,WeaponAudioPhase.Fire);
+            V5WeaponAudio.Weapon(w,WeaponAudioPhase.Fire);
             var pool=FxPool.Active;
-            if(pool&&pool.muzzleFlash)pool.EmitDirectional(pool.muzzleFlash,from+dir*.6f,dir,.6f,.07f,new Color(1f,.88f,.6f));
+            if(V5Vfx.On)V5Vfx.I.Muzzle(from+dir*.6f,dir,new Color(1f,.82f,.5f),.8f);
+            else if(pool&&pool.muzzleFlash)pool.EmitDirectional(pool.muzzleFlash,from+dir*.6f,dir,.6f,.07f,new Color(1f,.88f,.6f));
         }
 
         public bool Anchored=>SpinBraceReady(Active)&&SpinWallBehind();
@@ -1523,11 +1529,11 @@ namespace AnomalyArena
             if(anchorRingClock<=0f){anchorRingClock=.3f;Fx.Ring(player.Position,.9f,new Color(1f,.85f,.45f,.7f));}
         }
 
-        void AddTracer(Vector3 from,Vector3 to,float width,float seconds,Color color)
+        void AddTracer(Vector3 from,Vector3 to,float width,float seconds,Color color,bool drawnByV5=false)
         {
             if(seconds<=0f)return;
             if(tracers.Count>=32)tracers.RemoveAt(0);
-            tracers.Add(new WeaponTracer{from=from,to=to,width=width,until=Time.unscaledTime+seconds,color=color});
+            tracers.Add(new WeaponTracer{from=from,to=to,width=width,until=Time.unscaledTime+seconds,color=color,drawnByV5=drawnByV5});
         }
 
         void PruneTracers(){for(int i=tracers.Count-1;i>=0;i--)if(tracers[i].until<Time.unscaledTime)tracers.RemoveAt(i);}

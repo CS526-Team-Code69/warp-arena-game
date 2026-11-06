@@ -106,7 +106,7 @@ The game reads the endpoint from `analytics.json` in StreamingAssets:
 - The source of truth is `Assets/StreamingAssets/analytics.json` in the repository: every build copies it into its `StreamingAssets/` folder, so commit the endpoint there and the next deploy keeps it.
 - To switch the live site on at once, also edit `StreamingAssets/analytics.json` on the `gh-pages` branch (the English build at `/`, the Chinese one at `/zh/`). A later deploy replaces that branch, which is why the repository file must hold the same URL.
 
-With no file or an empty endpoint, the game sends nothing. If the file cannot be read because of a network error, the game tries again on the next event, up to three times per page load.
+With no file or an empty endpoint, the game sends nothing. A page opened from the same machine (localhost, 127.0.0.1, [::1], a host ending in `.localhost` or `.test`, or `file://`) also sends nothing, so a local test build never writes to the sheet. If the file cannot be read because of a network error, the game tries again on the next event, up to three times per page load.
 
 ## Check a deployment
 

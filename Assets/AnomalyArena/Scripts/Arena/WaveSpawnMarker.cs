@@ -22,7 +22,17 @@ namespace AnomalyArena
             transform.position = new Vector3(position.x, 0.04f, position.z);
             transform.localScale = Vector3.one * Mathf.Max(1.2f, enemy.radius * 2.4f);
             if (visual) Art.Tint(visual, enemy.kind == EnemyKind.Shade ? new Color(0.65f, 0.45f, 1f) : new Color(1f, 0.2f, 0.25f));
+            if (visual && V5Vfx.On)
+            {
+
+                block ??= new MaterialPropertyBlock();
+                visual.GetPropertyBlock(block);
+                block.SetTexture("_BaseMap", V5Vfx.Tex("spawn-cross"));
+                visual.SetPropertyBlock(block);
+            }
             gameObject.SetActive(true);
         }
+
+        static MaterialPropertyBlock block;
     }
 }

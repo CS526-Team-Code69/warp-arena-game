@@ -24,6 +24,7 @@ namespace AnomalyArena
 
         void ReadShownKeys(Keyboard keyboard)
         {
+            if (V2Tutorial.HoldsInput) return;
             bool digitRead = false;
             foreach (var (key, code) in ShownKeys)
             {
@@ -69,6 +70,26 @@ namespace AnomalyArena
                     ChooseByNumber(key - KeyCode.Alpha1);
                     break;
             }
+        }
+
+        public void NoteWeaponAttack(RunWeapon weapon)
+        {
+            if (!runWeapons || weapon == null) return;
+            for (int i = 0; i < runWeapons.Hand.Length && i < snapshot.handSlots.Length; i++)
+                if (runWeapons.Hand[i] == weapon) snapshot.handSlots[i].pulses++;
+            for (int i = 0; i < runWeapons.Auto.Length && i < snapshot.autoSlots.Length; i++)
+                if (runWeapons.Auto[i] == weapon) snapshot.autoSlots[i].pulses++;
+        }
+
+        void NoteSkillCast(SkillId id)
+        {
+            for (int i = 0; i < skills.Slots.Length && i < snapshot.skillSlots.Length; i++)
+                if (!skills.Slots[i].Empty && skills.Slots[i].Id == id)
+                {
+                    snapshot.skillSlots[i].pulses++;
+
+                    snapshot.skillSlots[i].cooldown01 = skills.Slots[i].CooldownLeft / Mathf.Max(.01f, skills.Slots[i].Cooldown);
+                }
         }
 
         bool CanToggleBuildWalk => RunPhase is (ArenaUiState.Armory or ArenaUiState.Draft or ArenaUiState.Ready) && !greaterDraft;
@@ -145,7 +166,8 @@ namespace AnomalyArena
                     {
                         float angle = Random.Range(0f, Mathf.PI * 2f);
                         var dir = new Vector3(Mathf.Sin(angle), 0f, Mathf.Cos(angle));
-                        pool.Emit(centre + dir * AbsorbRadius + Vector3.up * Random.Range(-.3f, .5f), new Color(tint.r, tint.g, tint.b, .9f),
+                        if (V5Vfx.On) V5Vfx.I.AbsorbMote(centre + dir * AbsorbRadius + Vector3.up * Random.Range(-.3f, .5f), -dir * AbsorbRadius / AbsorbMoteLife, AbsorbMoteLife);
+                        else pool.Emit(centre + dir * AbsorbRadius + Vector3.up * Random.Range(-.3f, .5f), new Color(tint.r, tint.g, tint.b, .9f),
                             Random.Range(.3f, .5f), AbsorbMoteLife, -dir * speed);
                     }
                 }
