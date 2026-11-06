@@ -18,6 +18,62 @@ namespace AnomalyArena
         public float swirlDegreesPerSecond = 32f;
         public float groundHeight = .035f;
         float rotation;
+        MeshRenderer disc;
+        Material discMaterial;
+        HolePhase lastPhase;
+        static Mesh flatQuad;
+
+        void DrawV5()
+        {
+            var fx = V5Vfx.I;
+            foreach (var layer in new[] { gravity, warningRing, inwardStreaks, coreGlow, core, swirl, rimGlow, portal }) if (layer) layer.enabled = false;
+            if (!disc) MakeDisc();
+            if (!disc) return;
+            bool portalOpen = hole.Phase == HolePhase.Portal;
+            bool active = hole.Phase is HolePhase.Active or HolePhase.Collapsing;
+
+            if (portalOpen && !hole.Temporary && lastPhase == HolePhase.Collapsing) fx.VoidExplosion(hole.Centre, 5f);
+            lastPhase = hole.Phase;
+            disc.enabled = portalOpen || active && hole.KillRadius > .001f;
+            if (!disc.enabled) return;
+            bool pulling = hole.Phase == HolePhase.Active;
+
+            float outer = portalOpen ? 1.7f : pulling ? hole.GravityRadius : hole.KillRadius * 1.6f;
+            disc.transform.position = new Vector3(hole.Centre.x, groundHeight + .01f, hole.Centre.z);
+            disc.transform.rotation = Quaternion.identity;
+            var p = disc.transform.parent ? disc.transform.parent.lossyScale : Vector3.one;
+            disc.transform.localScale = new Vector3(outer * 2f / Mathf.Max(.001f, Mathf.Abs(p.x)), 1f, outer * 2f / Mathf.Max(.001f, Mathf.Abs(p.z)));
+            discMaterial.SetFloat("_KillShare", portalOpen ? 0f : Mathf.Clamp01(hole.KillRadius / Mathf.Max(.01f, outer)));
+            discMaterial.SetFloat("_Portal", portalOpen ? 1f : 0f);
+            discMaterial.SetFloat("_Clock", Time.time);
+            if (portalOpen) fx.PortalTick(hole.Centre, outer);
+            else fx.HoleTick(hole.Centre, hole.GravityRadius, hole.KillRadius, pulling);
+        }
+
+        void MakeDisc()
+        {
+            var shader = Resources.Load<Shader>("V5/V5Hole");
+            if (!shader) return;
+            if (!flatQuad)
+            {
+                flatQuad = new Mesh { name = "V5HoleQuad" };
+                flatQuad.vertices = new[] { new Vector3(-.5f, 0f, -.5f), new Vector3(-.5f, 0f, .5f), new Vector3(.5f, 0f, .5f), new Vector3(.5f, 0f, -.5f) };
+                flatQuad.uv = new[] { new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(1f, 0f) };
+                flatQuad.normals = new[] { Vector3.up, Vector3.up, Vector3.up, Vector3.up };
+                flatQuad.triangles = new[] { 0, 1, 2, 0, 2, 3 };
+                flatQuad.RecalculateBounds();
+            }
+            var go = new GameObject("V5 Hole Disc");
+            go.transform.SetParent(transform, false);
+            go.AddComponent<MeshFilter>().sharedMesh = flatQuad;
+            disc = go.AddComponent<MeshRenderer>();
+            discMaterial = new Material(shader);
+            discMaterial.SetTexture("_NoiseMap", V5Vfx.Tex("noise"));
+            disc.sharedMaterial = discMaterial;
+            disc.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            disc.receiveShadows = false;
+            disc.sortingOrder = -3;
+        }
 
         void OnEnable() { HideBoxes(); rotation = 0f; }
         void HideBoxes() { if (obsoleteBoxRenderers != null) foreach (var box in obsoleteBoxRenderers) if (box) box.enabled = false; }
@@ -25,6 +81,8 @@ namespace AnomalyArena
         {
             if (!hole) return;
             HideBoxes();
+            if (V5Vfx.On) { DrawV5(); return; }
+            if (disc) disc.enabled = false;
             var gm = GameManager.Instance;
             float dt = gm ? gm.WorldDeltaTime : Time.deltaTime;
             rotation = Mathf.Repeat(rotation + dt * swirlDegreesPerSecond, 360f);

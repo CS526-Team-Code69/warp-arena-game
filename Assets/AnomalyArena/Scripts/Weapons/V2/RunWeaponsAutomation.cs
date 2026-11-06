@@ -163,6 +163,7 @@ namespace AnomalyArena
             var a=AttackPool.Instance?AttackPool.Instance.Acquire():null;if(!a)return null;
             float speed=Mathf.Max(1f,upgrades.gunnerBulletSpeed);
             a.Configure(AttackMode.Bolt,player,w,at,dir,hit,0,reach,speed,0,reach/speed+3);
+            if(V5Vfx.On)V5Vfx.I.Muzzle(at,dir,w.element==ElementKind.None?new Color(.6f,.95f,1f):V5Vfx.ElementTint(w.element),.5f);
             WeaponSound(w);return a;
         }
 
@@ -381,7 +382,7 @@ namespace AnomalyArena
             if(w.drainQuiet<DrainShieldWait(w))return;
 
             w.drainShieldUp=true;w.drainOverloadLeft=0f;
-            V3WorldAudio.Instance?.Play(ArenaWorldCue.NpcShield,player.Position);
+            V5WeaponAudio.Instance?.Play(V5Sfx.RingShieldUp);
         }
 
         public bool EnergyShieldBlocks()

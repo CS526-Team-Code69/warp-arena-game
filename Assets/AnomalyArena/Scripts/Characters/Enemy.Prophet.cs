@@ -68,6 +68,7 @@ namespace AnomalyArena
         {
             if (!ProphetWarded) return false;
             WardBlockSequence++;
+            V5WeaponAudio.At(V5Sfx.RingDeflect, Position, .7f, .8f);                                 
             return true;
         }
 
@@ -164,7 +165,7 @@ namespace AnomalyArena
                 if (!pillar.Standing) continue;
                 if (!stood)
                 {
-                    V3WorldAudio.Instance?.Play(ArenaWorldCue.NpcLaserFire, pillar.centre);
+                    V5WeaponAudio.At(V5Sfx.NashPillar, pillar.centre);
                     Fx.Ring(pillar.centre, pillar.radius, definition.colour);
                 }
 
@@ -229,6 +230,17 @@ namespace AnomalyArena
             return pick < w3 || w4 <= 0f ? m3 : m4;
         }
 
+                                                                                                                                   
+        static float NashWindupPitch(int move) => move switch
+        {
+            PulseMove => .8f,
+            GravityPullMove => .62f,
+            VoidSummonMove => .7f,
+            VoidPillarMove => .9f,
+            PredictiveVolleyMove => 1.25f,
+            _ => 1.05f,
+        };
+
         void StartNashMove(int move, PlayerController player, BossTuning b)
         {
             FacePlayer(player);
@@ -255,8 +267,9 @@ namespace AnomalyArena
             switch (bossAttack)
             {
                 case PulseMove:
-                    V3WorldAudio.Instance?.Play(ArenaWorldCue.BossSlam, Position);
-                    Fx.Ring(Position, b.nashPulseReach, definition.colour);
+                    V5WeaponAudio.At(V5Sfx.NashRepulse, Position);
+                    if (V5Vfx.On) V5Vfx.I.VoidExplosion(Position, b.nashPulseReach);
+                    else Fx.Ring(Position, b.nashPulseReach, definition.colour);
                     PlayerBlast(Position, b.nashPulseReach, NashDamage(b.nashPulseDamage), NashPulsePush(bossPhase, b));
                                                                                                                                          
                                                                             
@@ -276,6 +289,7 @@ namespace AnomalyArena
                 case GravityPullMove:
                     nashPullLeft = Mathf.Max(0f, b.nashPullSeconds);
                     V3WorldAudio.Instance?.Play(ArenaWorldCue.BossInhale, Position);
+                    V5WeaponAudio.Instance?.TrackPull(this);                                         
                     break;
                 default:
                     nashRingIndex = 0;
@@ -313,7 +327,7 @@ namespace AnomalyArena
             }
 
             summonWarning = b.nashSummonWarning;
-            V3WorldAudio.Instance?.Play(summonKind == EnemyKind.Shade ? ArenaWorldCue.NpcShadeSpawn : ArenaWorldCue.NpcShield, Position);
+            V5WeaponAudio.At(V5Sfx.NashSummon, Position, 1f, summonKind == EnemyKind.Shade ? .85f : 1f);
         }
 
                                                                                                                                                
@@ -335,7 +349,7 @@ namespace AnomalyArena
                     { centre = PillarSpot(at, size, world, b), radius = size, warning = b.nashPillarWarning, life = b.nashPillarLife });
             }
 
-            V3WorldAudio.Instance?.Play(ArenaWorldCue.NpcLaserLock, Position);
+            V5WeaponAudio.At(V5Sfx.NashPillarWarn, Position);
         }
 
         Vector3 PillarSpot(Vector3 at, float size, WorldMap world, BossTuning b)
@@ -381,7 +395,7 @@ namespace AnomalyArena
                 NashShot(new Vector3(Mathf.Sin(angle), 0f, Mathf.Cos(angle)), damage, b.nashRingSpeed);
             }
 
-            V3WorldAudio.Instance?.Play(ArenaWorldCue.NpcSpit, Position);
+            V5WeaponAudio.At(V5Sfx.NashRing, Position, 1f, 1f + .06f * nashRingIndex);
             nashRingIndex++;
             nashRingsLeft--;
             nashRingClock = b.nashRingInterval;
@@ -390,14 +404,14 @@ namespace AnomalyArena
                                                                                                                                                    
         void FireVolleyShot(PlayerController player, BossTuning b)
         {
-            bool first = nashVolleyLeft == NashVolleyShots(b);
+            int shot = NashVolleyShots(b) - nashVolleyLeft;
             nashVolleyLeft--;
             nashVolleyClock = b.nashVolleyInterval;
             if (!player || !player.IsAlive) return;
             var body = player.GetComponent<Rigidbody>();
             Vector3 aim = VolleyLeadPoint(Position, player.Position, body ? body.linearVelocity : Vector3.zero, b.nashVolleySpeed);
             NashShot(aim - Position, NashDamage(b.nashVolleyDamage), b.nashVolleySpeed, b.nashVolleyTurnRate, b.nashVolleyTrackSeconds);
-            if (first) V3WorldAudio.Instance?.Play(ArenaWorldCue.NpcSpit, Position);
+            V5WeaponAudio.At(V5Sfx.NashVolley, Position, 1f, 1f + .025f * shot);                                                        
         }
 
                                                                                                                                              

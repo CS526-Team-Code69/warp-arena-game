@@ -10,7 +10,7 @@ The font is distributed under the SIL Open Font License 1.1. The original copyri
 
 - Both the English and the Chinese locale use this one packaged Font asset; English text uses its Latin glyphs.
 - It is referenced as a project asset. The game does not look up a font installed on the player's operating system.
-- The full font is kept, not a subset, because the UI text is still changing. A smaller subset for the WebGL build is possible later; its size saving has not been measured.
+- This project keeps the full font, unmodified. The published web builds ship a subset with only the characters the game uses, cut with fontTools in a separate copy of the project at build time, so this file never changes.
 
 ## Sources
 

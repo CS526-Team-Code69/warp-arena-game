@@ -55,6 +55,8 @@ namespace AnomalyArena
         public int ActiveIndex { get; private set; }
         public Combatant HeldEnemy => Active?.hooked && !BattlefieldFrozen(Active.hooked.gameObject) ? Active.hooked : null;
         public RunWeapon Active => Hand[ActiveIndex];
+                                                                                                                                                               
+        public bool TriggerHeld => inputHeld;
         public bool HandHookBusy
         {
             get
@@ -190,14 +192,15 @@ namespace AnomalyArena
         }
                                                                                                                                                                    
         public int UpgradeTargetMk(RunWeapon owned,int wave)=>roster?Mathf.Min(roster.MaxMk,Mathf.Max(owned.mk+1,roster.ParMk(wave)+1)):owned.mk+1;
-                                                                                                                                                
+                                                                                                                                             
+                                                                                                                                             
                                                                                                                                          
-                                                                                                                                              
+                                                         
         RunWeapon TakeUpgradeOffer(System.Collections.Generic.List<RunWeapon> upgradable,int wave)
         {
             int pick=UnityEngine.Random.Range(0,upgradable.Count);var owned=upgradable[pick];upgradable.RemoveAt(pick);
-                                                                                                                           
-            var version=CreateWeapon(owned.form,UnityEngine.Random.Range(0,2),wave);
+            var version=new RunWeapon{form=owned.form,variant=owned.variant,revealed=owned.revealed,axes=owned.axes,element=owned.element,
+                builtInElement=owned.builtInElement,rounds=ClipSize(owned.form,owned.variant)};
             int target=roster?Mathf.Min(roster.MaxMk,UpgradeTargetMk(owned,wave)+MkBonus(wave)):owned.mk+1;
                                                                                                                                       
             if(roster&&target>=roster.MaxMk&&owned.mk<roster.MaxMk-1)target=roster.MaxMk-1;
@@ -222,11 +225,11 @@ namespace AnomalyArena
             if(index<0||index>=Offers.Length||Offers[index]==null)return false;var w=Offers[index];
             if(w.upgradeOf!=null)
             {
-                                                                                                                                       
-                                                                                                                                 
-                var held=Array.IndexOf(Hand,w.upgradeOf)>=0?Hand:Array.IndexOf(Auto,w.upgradeOf)>=0?Auto:null;
-                if(held==null)return false;
-                held[Array.IndexOf(held,w.upgradeOf)]=w;w.upgradeOf=null;Offers=new RunWeapon[ArmoryOfferCount];return true;
+                                                                                                                                         
+                                                                      
+                var owned=w.upgradeOf;
+                if(Array.IndexOf(Hand,owned)<0&&Array.IndexOf(Auto,owned)<0)return false;
+                owned.mk=Mathf.Max(owned.mk,w.mk);Offers=new RunWeapon[ArmoryOfferCount];return true;
             }
             if(OwnsForm(w.form))return false;var slots=w.IsAuto?Auto:Hand;
             int free=Array.FindIndex(slots,x=>x==null);int at=free>=0?free:replace;if(at<0||at>=slots.Length)return false;slots[at]=w;Offers=new RunWeapon[ArmoryOfferCount];return true;
@@ -266,6 +269,7 @@ namespace AnomalyArena
                 if(w.form==WeaponForm.CryoCannon&&w.variant==1&&w.Has(UpgradeAxis.Twist)&&w.heldTime>0)BlizzardShatter(w);
                 StopTrigger(w);
             }
+            if(pressed&&w.reload>0)V5WeaponAudio.Instance?.Play(V5Sfx.DryClick);                                                                   
             if(!held&&!pressed||w.cooldown>0||w.reload>0||w.inFlight||w.charging)return;
             bool charge=(w.form==WeaponForm.Rifle&&w.variant==0)||(w.form==WeaponForm.Railgun&&w.variant==0)||(w.form==WeaponForm.ScatterCannon&&w.variant==1);
             if(charge){if(pressed){w.charging=true;w.charge=0;Reveal(w);WeaponSound(w,WeaponAudioPhase.ChargeStart);if(w.form==WeaponForm.ScatterCannon)V3WorldAudio.Instance?.Play(ArenaWorldCue.WeaponFocusCharge,player.Position);}return;}
@@ -422,15 +426,17 @@ namespace AnomalyArena
         }
         float KnockScale=>(progression?progression.Stats.KnockbackMultiplier:1)*(GameManager.Instance.skills?GameManager.Instance.skills.KnockbackMultiplier:1);
         public float UpgradePushScale=>KnockScale;
-        static void WeaponSound(RunWeapon weapon,WeaponAudioPhase phase=WeaponAudioPhase.Fire)
+                                                                                                                                                       
+        static void WeaponSound(RunWeapon weapon,WeaponAudioPhase phase=WeaponAudioPhase.Fire,bool strike=false)
         {
             if(weapon==null)return;
+            if((phase is WeaponAudioPhase.Fire or WeaponAudioPhase.Launch)&&GameManager.Instance)GameManager.Instance.NoteWeaponAttack(weapon);
             if(!weapon.IsAuto && phase is WeaponAudioPhase.Fire or WeaponAudioPhase.Launch)
             {
                 var playerBody=GameManager.Instance?GameManager.Instance.player:null;
                 if(playerBody){playerBody.GetComponent<V2ModelPresentation>()?.MarkAttack();FireFeedback(weapon,playerBody);}
             }
-            V2Audio.Instance?.PlayWeapon(weapon.form,weapon.variant,phase);
+            V5WeaponAudio.Weapon(weapon,phase,strike);
         }
                                                                                                                                                     
         static void FireFeedback(RunWeapon weapon,PlayerController body)
@@ -438,6 +444,7 @@ namespace AnomalyArena
             var gm=GameManager.Instance;if(!gm)return;
             var profile=gm.feedback.For(WeaponFeel.Of(weapon));
             Vector3 aim=Query.Flat(body.AimDirection);if(aim.sqrMagnitude<1e-4f)return;aim.Normalize();
+            if(V5Vfx.On){V5Vfx.I.FireKick(weapon,body,aim,profile);return;}
             body.VisualKick(-aim,profile.fireRecoil,.1f);
             gm.Kick(-aim,profile.fireKick);
             var pool=FxPool.Active;
@@ -448,7 +455,7 @@ namespace AnomalyArena
         {
             Reveal(w);
                                                                                           
-            if(w.form==WeaponForm.ArcCoil&&w.variant==1&&w.charge<upgrades.capacitorMinCharge)return;
+            if(w.form==WeaponForm.ArcCoil&&w.variant==1&&w.charge<upgrades.capacitorMinCharge){V5WeaponAudio.Instance?.Play(V5Sfx.DryClick);return;}
             var d=roster.Get(w.form);float damage=(w.variant==0?d.damageA:d.damageB)*DamageScale(w);float range=(w.variant==0?d.rangeA:d.rangeB)*w.Reach;w.cooldown=(w.variant==0?d.cooldownA:d.cooldownB)*CooldownScale(w);
             Vector3 aim=player.AimDirection,at=player.Position,point=at+Vector3.ClampMagnitude(Query.Flat(player.AimPoint-at),range);
             if(w.form==WeaponForm.Rifle&&w.variant==0)
@@ -680,7 +687,8 @@ namespace AnomalyArena
                 }
                 if(!next){ReturnCurrent(w,count-i);break;}
                 if(i==0)WeaponSound(w);
-                AddTracer(from,Query.AtCastHeight(next.Position),upgrades.chainArcWidth,upgrades.chainArcSeconds,arc);
+                if(V5Vfx.On)V5Vfx.I.Bolt(from,Query.AtCastHeight(next.Position),arc,Mathf.Max(.9f,upgrades.chainArcWidth*2.5f),Mathf.Max(.09f,upgrades.chainArcSeconds));
+                AddTracer(from,Query.AtCastHeight(next.Position),upgrades.chainArcWidth,upgrades.chainArcSeconds,arc,V5Vfx.On);
                 upgradeHits.Add(next);Damage(w,next,hit,0,Query.Flat(next.Position-at).normalized,true);at=next.Position;from=Query.AtCastHeight(at);Fx.Ring(at,.6f,ElementCombat.ColorFor(w.element));
             }
         }

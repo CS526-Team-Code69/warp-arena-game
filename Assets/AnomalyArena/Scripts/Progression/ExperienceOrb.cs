@@ -45,6 +45,7 @@ namespace AnomalyArena
             appearance.SetColor(BaseColor, colour); appearance.SetColor(ColorProperty, colour);
             if (texture) appearance.SetTexture(BaseMap, texture);
             visual.SetPropertyBlock(appearance);
+            if (V5Vfx.On) V5Vfx.I.Orb(this, colour);
         }
 
         public void Merge(float amount) => Value += Mathf.Max(0f, amount);

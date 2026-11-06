@@ -37,6 +37,8 @@ namespace AnomalyArena
             V3CombatSmokeTest.Teleport(grunt, origin + Vector3.forward * (game.player.Radius + grunt.radius + .1f));
             grunt.moveSpeed = 0f;
             grunt.enabled = true;
+
+            game.player.GetComponent<Rigidbody>().constraints = RigidbodyConstraints.FreezeAll;
             Physics.SyncTransforms();
             Assert.That(Diff(BodyColour(grunt), data.colour), Is.LessThan(.01f), "kind colour before the wind-up");
 

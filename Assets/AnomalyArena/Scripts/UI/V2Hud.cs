@@ -2,10 +2,7 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-                 
-                                                                                                      
-                                                                                               
-                  
+
     public class V2Hud : MonoBehaviour
     {
         [Header("Run and independent interstellar art")]
@@ -77,8 +74,6 @@ namespace AnomalyArena
         ArenaUiSnapshot lastSnapshot;
         int seenPick = -1;
 
-                                                                                                                                     
-                                                                                                                                   
         GameObject bootCover;
 
         void Awake()
@@ -100,12 +95,27 @@ namespace AnomalyArena
             for (int i = 0; i < n; i++) { damageAge[i] = 1f; damageLabels[i].gameObject.SetActive(false); }
             if (themeBackground) themeBackground.texture = art ? art.themeBackground : null;
             SimplifyChineseTitle();
+            KeepScreensOverTheRun();
+            PlaceControlsTables();
+            V2SlotFeedback.Add(handSlots, V2SlotFeedback.Kind.Hand);
+            V2SlotFeedback.Add(autoSlots, V2SlotFeedback.Kind.Auto);
+            V2SlotFeedback.Add(skillSlots, V2SlotFeedback.Kind.Skill);
+
+            if (screens != null)
+                foreach (var screen in screens)
+                {
+                    if (!screen || screen.state is not (ArenaUiState.Loadout or ArenaUiState.Armory or ArenaUiState.Draft or ArenaUiState.ReplaceWeapon
+                            or ArenaUiState.ReplaceSkill or ArenaUiState.Ready or ArenaUiState.WeaponIntro)) continue;
+                    ArenaEmphasis.Style(screen.body);
+                    if (screen.state == ArenaUiState.WeaponIntro && screen.body)
+                        weaponCardSmallest = Mathf.Max(8, screen.body.resizeTextForBestFit ? screen.body.resizeTextMinSize : screen.body.fontSize);
+                }
         }
 
-                                                                                                                                         
-                                                                                                                                           
-                                    
-        const string ChineseEditionScene = "ArenaV2_CN";
+        const int WeaponCardTextSize = 24;
+        int weaponCardSmallest = 10;
+
+        public const string ChineseEditionScene = "ArenaV2_CN";
         static readonly string[] ChineseTitleHidden = { "InterstellarSubtitle", "ToggleArt", "ChineseTeam", "EnglishShowcase" };
 
         void SimplifyChineseTitle()
@@ -123,12 +133,53 @@ namespace AnomalyArena
                 }
             }
         }
+
+        static readonly string[] UnderTheScreens = { "DamageNumberPool", "PlayerDamageFlash", "SupplyDropOverlay" };
+
+        void KeepScreensOverTheRun()
+        {
+            if (!localizedCanvas || screens == null) return;
+            var canvas = localizedCanvas.transform;
+            int first = canvas.childCount;
+            foreach (var screen in screens)
+                if (screen && screen.transform.parent == canvas) first = Mathf.Min(first, screen.transform.GetSiblingIndex());
+            foreach (var name in UnderTheScreens)
+                if (canvas.Find(name) is { } part && part.GetSiblingIndex() > first) part.SetSiblingIndex(first++);
+        }
+
+        void Update()
    // Health bar opacity and pulsing when low health; see PlayerController.cs for the health threshold values and make adjustments in the Unity editor on the V2 Canvas object. - H.
     void Update()
     {
         if (localizedCanvas &&
             localizedCanvas.enabled != ArenaText.Ready)
         {
+            if (localizedCanvas && localizedCanvas.enabled != ArenaText.Ready) localizedCanvas.enabled = ArenaText.Ready;
+            if (!ArenaText.Ready) return;
+            if (bootCover) Destroy(bootCover);
+            if (ArenaText.Font && appliedFont != ArenaText.Font)
+            {
+                appliedFont = ArenaText.Font;
+                if (fontLabels != null) foreach (var label in fontLabels) if (label) label.font = appliedFont;
+                nextRefresh = 0f;
+            }
+            float dt = Time.unscaledDeltaTime;
+            transientTime = Mathf.Max(0f, transientTime - dt);
+            flash = Mathf.Max(0f, flash - dt * 3f);
+            if (damageFlash)
+            {
+
+                if (!edgeVignette) { edgeVignette = EdgeVignette(); damageFlash.sprite = edgeVignette; damageFlash.type = UnityEngine.UI.Image.Type.Simple; }
+                damageFlash.color = new Color(1f, .1f, .04f, flash * .45f);
+            }
+            TickDamage(dt);
+
+            if (lastSnapshot != null && lastSnapshot.cardPickSequence != seenPick) nextRefresh = 0f;
+            if (source == null || Time.unscaledTime < nextRefresh) return;
+            nextRefresh = Time.unscaledTime + Mathf.Max(.02f, refreshInterval);
+            var snapshot = source.UiSnapshot;
+            Render(snapshot);
+            ShowTutorialOnArrival(snapshot);
             localizedCanvas.enabled = ArenaText.Ready;
         }
 
@@ -170,6 +221,12 @@ namespace AnomalyArena
                 Time.unscaledTime + Mathf.Max(.02f, refreshInterval);
 
             Render(source.UiSnapshot);
+        }
+
+        public void Dispatch(ArenaUiCommand command, int index = -1)
+        {
+            if (command == ArenaUiCommand.Start && source != null && source.UiSnapshot.state == ArenaUiState.Title) tutorialPending = true;
+            source?.ExecuteUiCommand(command, index);
         }
 
         TickHealthWarning(dt);
@@ -265,8 +322,7 @@ namespace AnomalyArena
         public void FlashDamage() => flash = 1f;
 
         Sprite edgeVignette;
-                                                                                                                                         
-                                                                                                                  
+
         public static Sprite EdgeVignette()
         {
             const int size = 256;
@@ -321,10 +377,10 @@ namespace AnomalyArena
         {
             if (s == null) return;
             lastSnapshot = s;
-                                                                                                
+
             if (seenPick < 0) seenPick = s.cardPickSequence;
             else if (s.cardPickSequence != seenPick) { seenPick = s.cardPickSequence; PlayCardPick(s); }
-                                                                                                                    
+
             bool gameplay = s.state is ArenaUiState.SupplyDrop or ArenaUiState.WaveIntro or ArenaUiState.WaveActive or ArenaUiState.WaveEnd
                 or ArenaUiState.VoidTrial or ArenaUiState.FinalBoss or ArenaUiState.TrialReturn or ArenaUiState.Cutscene or ArenaUiState.LevelUp || s.buildWalking;
             gameplayRoot.SetActive(gameplay);
@@ -333,7 +389,7 @@ namespace AnomalyArena
             SetText(hpLabel, ArenaText.Text("ui.hp", Mathf.CeilToInt(s.hp), Mathf.CeilToInt(s.maxHp)));
             SetFill(hpFill, s.hp, s.maxHp);
             shieldRoot.SetActive(s.shield > 0f);
-                                                                                                
+
             SetFill(shieldFill, s.shield, s.maxHp * .6f);
             SetText(staminaLabel, ArenaText.Text("ui.stamina"));
             SetFill(staminaFill, s.stamina, 1f);
@@ -344,7 +400,7 @@ namespace AnomalyArena
             energyFill.color = s.voidEnergy ? ElementColors[6] : new Color(.22f, .68f, .93f);
             string level = s.level >= s.maxLevel ? ArenaText.Text("ui.level.max") : s.level.ToString();
             SetText(xpLabel, ArenaText.Text("ui.xp", level, Mathf.FloorToInt(s.xp), Mathf.CeilToInt(s.xpNeeded), s.bankedDrafts));
-                                                                                                                       
+
             xpLabel.color = s.voidLevel ? ElementColors[6] : Color.white;
             SetFill(xpFill, s.xp, s.xpNeeded);
             if (draftPips != null)
@@ -388,7 +444,7 @@ namespace AnomalyArena
             RenderSlots(handSlots, s.handSlots); RenderSlots(autoSlots, s.autoSlots); RenderSlots(skillSlots, s.skillSlots);
             foreach (var screen in screens)
             {
-                                                                      
+
                 bool active = (screen.state == s.state || screen.state == ArenaUiState.Draft && s.state == ArenaUiState.LevelUp) && !(s.buildWalking && screen.state is ArenaUiState.Armory or ArenaUiState.Draft or ArenaUiState.Ready);
                 if (screen.gameObject.activeSelf != active) screen.gameObject.SetActive(active);
                 if (active) RenderScreen(screen, s);
@@ -415,7 +471,7 @@ namespace AnomalyArena
             if (views == null || values == null) return;
             for (int i = 0; i < views.Length; i++)
             {
-                                                                                                                  
+
                 bool used = i < values.Length;
                 if (views[i] && views[i].gameObject.activeSelf != used) views[i].gameObject.SetActive(used);
                 if (used && views[i]) views[i].Render(values[i], art);
@@ -441,22 +497,22 @@ namespace AnomalyArena
             switch (s.state)
             {
                 case ArenaUiState.Title:
-                                                                                                                     
+
                     SetText(screen.heading, "WARP ARENA");
                     SetText(screen.body, "");
                     break;
                 case ArenaUiState.Loadout:
                     cards = s.loadoutChoices;
-                    SetText(screen.body, ArenaText.Pair("Pick one familiar form. Its attack and trait are unknown until you take it; the moment you choose, the game pauses and the weapon card appears.\nAim manually; use the terrain.","Pick one familiar form. Its attack and trait are unknown until you take it; the moment you choose, the game pauses and the weapon card appears.\nAim manually; use the terrain."));
+                    SetBody(screen.body, ArenaText.Pair("Pick one familiar form. Its attack and trait are unknown until you take it; the moment you choose, the game pauses and the weapon card appears.\nAim manually; use the terrain.","Pick one familiar form. Its attack and trait are unknown until you take it; the moment you choose, the game pauses and the weapon card appears.\nAim manually; use the terrain."));
                     break;
                 case ArenaUiState.Armory:
                     cards = s.armoryOffers;
-                    SetText(screen.body, ArenaText.Pair("Pick one of three: a new weapon, or a higher Mk of one you hold (weapons grow stronger through higher Mks from the armory). You may skip. Upgrades stay with the weapon: replace it and they are gone with it.","Pick one of three: a new weapon, or a higher Mk of one you hold (weapons grow stronger through higher Mks from the armory). You may skip. Upgrades stay with the weapon: replace it and they are gone with it.") + PortalHint() + WalkHint());
+                    SetBody(screen.body, ArenaText.Pair("Pick one of three: a new weapon, or a higher Mk for one you hold (its attack, trait and upgrades stay). You may skip. A new weapon that replaces an old one leaves the old one's upgrades behind.","Pick one of three: a new weapon, or a higher Mk for one you hold (its attack, trait and upgrades stay). You may skip. A new weapon that replaces an old one leaves the old one's upgrades behind.") + PortalHint() + WalkHint());
                     break;
                 case ArenaUiState.Draft:
                     cards = s.draftCards;
                     SetText(screen.heading, s.isGreaterReward ? ArenaText.Text("ui.greater.heading") : ArenaText.Text("ui.draft.counter", s.draftIndex, Mathf.Max(1, s.draftCount)));
-                    SetText(screen.body, s.isGreaterReward ? ArenaText.Pair("Pick one of three Greater Void skills (or none); they have no further levels. 1 / 2 / 3 select.","Pick one of three Greater Void skills (or none); they have no further levels. 1 / 2 / 3 select.")
+                    SetBody(screen.body, s.isGreaterReward ? ArenaText.Pair("Pick one of three Greater Void skills (or none); they have no further levels. 1 / 2 / 3 select.","Pick one of three Greater Void skills (or none); they have no further levels. 1 / 2 / 3 select.")
                         : ArenaText.Pair("Three cards, one of each: a stat card, a weapon card (an upgrade direction a revealed weapon has not taken yet) and a skill card (a new skill, or a higher level for one you own; its colour shows the level it gives). 1 / 2 / 3 select; R rerolls all three (once per wave).","Three cards, one of each: a stat card, a weapon card (an upgrade direction a revealed weapon has not taken yet) and a skill card (a new skill, or a higher level for one you own; its colour shows the level it gives). 1 / 2 / 3 select; R rerolls all three (once per wave).") + WalkHint());
                     if (screen.reroll) screen.reroll.interactable = s.rerolls > 0;
                     SetText(screen.rerollLabel, ArenaText.Text("ui.reroll.counter", s.rerolls));
@@ -464,30 +520,36 @@ namespace AnomalyArena
                 case ArenaUiState.LevelUp:
                     cards = s.draftCards;
                     SetText(screen.heading, ArenaText.Pair($"LEVEL UP · PICK ONE ({s.bankedDrafts} LEFT)",$"LEVEL UP · PICK ONE ({s.bankedDrafts} LEFT)"));
-                    SetText(screen.body, ArenaText.Pair("1 / 2 / 3 select; R rerolls (once per wave); Esc picks later, T opens this again in combat.","1 / 2 / 3 select; R rerolls (once per wave); Esc picks later, T opens this again in combat."));
+                    SetBody(screen.body, ArenaText.Pair("1 / 2 / 3 select; R rerolls (once per wave); Esc picks later, T opens this again in combat.","1 / 2 / 3 select; R rerolls (once per wave); Esc picks later, T opens this again in combat."));
                     if (screen.reroll) screen.reroll.interactable = s.rerolls > 0;
                     SetText(screen.rerollLabel, ArenaText.Text("ui.reroll.counter", s.rerolls));
                     break;
                 case ArenaUiState.ReplaceWeapon:
                     RenderReplacement(screen, s.replacementSlots, s.replacementCount);
-                    SetText(screen.body, ArenaText.Pair("Choose the weapon to replace. Upgrades stay with the weapon: replace it and they are gone with it.","Choose the weapon to replace. Upgrades stay with the weapon: replace it and they are gone with it."));
+                    SetBody(screen.body, ArenaText.Pair("Choose the weapon to replace. Upgrades stay with the weapon: replace it and they are gone with it.","Choose the weapon to replace. Upgrades stay with the weapon: replace it and they are gone with it."));
                     break;
                 case ArenaUiState.ReplaceSkill:
                     RenderReplacement(screen, s.skillSlots, 3);
-                    SetText(screen.body, ArenaText.Pair("With 3 skills already, taking a new one means replacing an old one; the new skill starts at the level this card gives.","With 3 skills already, taking a new one means replacing an old one; the new skill starts at the level this card gives."));
+                    SetBody(screen.body, ArenaText.Pair("With 3 skills already, taking a new one means replacing an old one; the new skill starts at the level this card gives.","With 3 skills already, taking a new one means replacing an old one; the new skill starts at the level this card gives."));
                     break;
                 case ArenaUiState.Ready:
-                    SetText(screen.body, ArenaText.Pair("Build choices complete. Click START NEXT WAVE to go on.","Build choices complete. Click START NEXT WAVE to go on.") + PortalHint() + WalkHint());
+                    SetBody(screen.body, ArenaText.Pair("Build choices complete. Click START NEXT WAVE to go on.","Build choices complete. Click START NEXT WAVE to go on.") + PortalHint() + WalkHint());
                     break;
                 case ArenaUiState.WeaponIntro:
                     SetText(screen.heading, s.weaponIntroTitle);
-                    SetText(screen.body, s.weaponIntroBody);
+                    ArenaTextFit.Show(screen.body, ArenaEmphasis.Apply(s.weaponIntroBody), WeaponCardTextSize, weaponCardSmallest);
                     SetText(screen.summary, s.weaponIntroHint);
                     if (screen.continueLabel) SetText(screen.continueLabel, s.weaponIntroContinue);
                     if (screen.icon) SetWeaponIcon(screen.icon, art, s.weaponIntroForm);
                     break;
                 case ArenaUiState.Paused:
                     SetText(screen.body, ArenaText.Pair("The battlefield and the build clock are paused.","The battlefield and the build clock are paused."));
+                    if (pauseControls) pauseControls.Fill(screen.body ? screen.body.font : null);
+                    if (tutorialLabel)
+                    {
+                        tutorialLabel.text = ArenaText.Pair("HOW TO PLAY","HOW TO PLAY");
+                        if (screen.body) tutorialLabel.font = screen.body.font;
+                    }
                     break;
                 case ArenaUiState.Result:
                     SetText(screen.heading, s.resultTitle);
@@ -499,11 +561,86 @@ namespace AnomalyArena
                 screen.choices[i].Render(i < cards.Length ? cards[i] : null, art);
         }
 
-                                                                                                                                          
+        public static (string input, string action, string note)[] ControlRows() => new[]
+        {
+            ("WASD", ArenaText.Pair("Move","Move"), ""),
+            (ArenaText.Pair("Mouse","Mouse"), ArenaText.Pair("Aim","Aim"), ""),
+            (ArenaText.Pair("Left mouse button","Left mouse button"), ArenaText.Pair("Use the held weapon","Use the held weapon"),
+                ArenaText.Pair("(hold to charge or to keep firing, depending on the weapon)","(hold to charge or to keep firing, depending on the weapon)")),
+            (ArenaText.Pair("Right mouse button","Right mouse button"), ArenaText.Pair("Swap the two hand slots","Swap the two hand slots"), ""),
+            ("Shift", ArenaText.Pair("Sprint","Sprint"), ""),
+            ("1 / 2 / 3", ArenaText.Pair("Cast a skill; pick that option while a panel is open","Cast a skill; pick that option while a panel is open"), ""),
+            ("E", ArenaText.Pair("On the void portal, enter the trial; in the trial, on a black-hole portal, go to a fragment","On the void portal, enter the trial; in the trial, on a black-hole portal, go to a fragment"), ""),
+            ("Esc", ArenaText.Pair("Pause / resume; on a mid-wave card panel, pick later","Pause / resume; on a mid-wave card panel, pick later"), ""),
+            ("R", ArenaText.Pair("Restart on the result screen; reroll while a card panel is open","Restart on the result screen; reroll while a card panel is open"), ""),
+            ("T", ArenaText.Pair("During a wave, open a card pick you kept for later (the screen tells you)","During a wave, open a card pick you kept for later (the screen tells you)"), ""),
+            ("Tab", ArenaText.Pair("Put the build panel away in the build phase; press again to bring it back","Put the build panel away in the build phase; press again to bring it back"), ""),
+        };
+
+        public const float PauseTableTop = 150f, PauseTableRow = 28f;
+        public static float PauseTableBottom => PauseTableTop + ControlRows().Length * PauseTableRow;
+        public static readonly string[] PauseButtons = { "ResumeRun", "RestartRun", "HowToPlay", "QuitToTitle" };
+        V2ControlsTable pauseControls;
+        UnityEngine.UI.Text tutorialLabel;
+        bool tutorialPending;
+
+        void ShowTutorialOnArrival(ArenaUiSnapshot s)
+        {
+            if (!tutorialPending || s.state != ArenaUiState.SupplyDrop) return;
+            tutorialPending = false;
+            V2Tutorial.ShowFirstTime(appliedFont);
+        }
+
+        void PlaceControlsTables()
+        {
+            if (screens == null) return;
+            foreach (var screen in screens)
+            {
+                if (!screen || screen.state != ArenaUiState.Paused) continue;
+                var content = screen.transform.Find("Content");
+                if (!content) continue;
+                AddTutorialButton(content);
+                pauseControls = V2ControlsTable.Create(content, PauseTableRow, 190f, 18);
+                var rect = pauseControls.Rect;
+                rect.anchorMin = new Vector2(0f, 1f);
+                rect.anchorMax = new Vector2(1f, 1f);
+                rect.pivot = new Vector2(.5f, 1f);
+                rect.offsetMin = new Vector2(64f, -PauseTableBottom);
+                rect.offsetMax = new Vector2(-64f, -PauseTableTop);
+
+                if (screen.body) PlaceTopLeft(screen.body.rectTransform, 44f, 100f, 1012f, 40f);
+                float left = 44f, top = PauseTableBottom + 24f;
+                foreach (var name in PauseButtons)
+                {
+                    if (content.Find(name) is RectTransform button) PlaceTopLeft(button, left, top, 237f, 65f);
+                    left += 255f;
+                }
+                if (screen.summary) PlaceTopLeft(screen.summary.rectTransform, 44f, top + 80f, 1012f, 60f);
+            }
+        }
+
+        void AddTutorialButton(Transform content)
+        {
+            if (content.Find("HowToPlay") || content.Find("RestartRun") is not { } restart) return;
+            var copy = Instantiate(restart.gameObject, content);
+            copy.name = "HowToPlay";
+            if (copy.GetComponent<ArenaUiButton>() is { } relay) Destroy(relay);
+            foreach (var localizer in copy.GetComponentsInChildren<UnityEngine.Localization.Components.LocalizeStringEvent>(true)) Destroy(localizer);
+            var button = copy.GetComponent<UnityEngine.UI.Button>();
+            button.onClick = new UnityEngine.UI.Button.ButtonClickedEvent();
+            button.onClick.AddListener(() => V2Tutorial.Show(appliedFont));
+            tutorialLabel = copy.GetComponentInChildren<UnityEngine.UI.Text>();
+        }
+
+        static void PlaceTopLeft(RectTransform rect, float left, float top, float width, float height)
+        {
+            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0f, 1f);
+            rect.anchoredPosition = new Vector2(left, -top);
+            rect.sizeDelta = new Vector2(width, height);
+        }
+
         static string WalkHint() => ArenaText.Pair("\nTab puts this panel away so you can walk the empty arena; Tab again brings it back.","\nTab puts this panel away so you can walk the empty arena; Tab again brings it back.");
 
-                                                                                                                                         
-                                              
         static string PortalHint() => WorldMap.Active && WorldMap.Active.HasOpenPortal && !WorldMap.Active.TrialWon
             ? ArenaText.Pair(                "\nPortal open: stand on it and press E for the Void Trial (losing ends the run; entering clears statuses and shield).",                "\nPortal open: stand on it and press E for the Void Trial (losing ends the run; entering clears statuses and shield).") : "";
 
@@ -515,7 +652,7 @@ namespace AnomalyArena
                 bool valid = i < slots.Length && i < count;
                 choice.gameObject.SetActive(valid);
                 if (!valid) continue;
-                SetText(choice.title, slots[i].title); SetText(choice.body, slots[i].detail);
+                SetText(choice.title, slots[i].title); choice.ShowBody(ArenaEmphasis.Apply(slots[i].detail));
                 SetText(choice.kind, ArenaText.Text("ui.slot", i + 1)); SetText(choice.badge, ArenaTerms.Rarity(slots[i].rarity));
                 choice.ApplyRarity(slots[i].rarity);
                 choice.button.interactable = true;
@@ -550,6 +687,8 @@ namespace AnomalyArena
         {
             if (label && label.text != (value ?? "")) label.text = value ?? "";
         }
+
+        static void SetBody(UnityEngine.UI.Text label, string value) => SetText(label, ArenaEmphasis.Apply(value));
 
         static void SetFill(UnityEngine.UI.Image image, float amount, float max)
         {

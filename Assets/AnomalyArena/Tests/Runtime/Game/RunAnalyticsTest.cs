@@ -64,6 +64,26 @@ namespace AnomalyArena
         [TestCase(ArenaUiState.FinalBoss, ExpectedResult = "final_boss")]
         public string StageOf_MapsTheRunPhase(ArenaUiState phase) => RunAnalytics.StageOf(phase);
 
+        [TestCase("http://localhost:8765/index.html")]
+        [TestCase("HTTP://LOCALHOST/")]
+        [TestCase("http://127.0.0.1:8000/")]
+        [TestCase("http://[::1]:8000/")]
+        [TestCase("http://arena.localhost:3000/zh/")]
+        [TestCase("https://arena.test/zh/")]
+        [TestCase("file:///D:/Builds/WebGL-CN/index.html")]
+        public void IsLocalPage_PageOpenedFromThisMachine_ReturnsTrue(string url) => Assert.That(RunAnalytics.IsLocalPage(url), Is.True);
+
+        [TestCase("https://cs526-team-code69.github.io/warp-arena-game/")]
+        [TestCase("https://cs526-team-code69.github.io/warp-arena-game/zh/")]
+        [TestCase("https://localhost.example.com/")]
+        [TestCase("https://notlocalhost/")]
+        [TestCase("https://contest/")]
+        [TestCase("https://arena.test.example.com/")]
+        [TestCase("https://example.com/?from=http://localhost/#127.0.0.1")]
+        [TestCase("")]
+        [TestCase(null)]
+        public void IsLocalPage_PublishedOrUnreadableAddress_ReturnsFalse(string url) => Assert.That(RunAnalytics.IsLocalPage(url), Is.False);
+
         [Test]
         public void RunEvent_Json_UsesTheSheetColumnNames()
         {

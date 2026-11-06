@@ -12,6 +12,7 @@ namespace AnomalyArena
     public class SkillVfxTest
     {
         const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        const string SceneEn = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
 
         [TearDown]
         public void TearDown() => Time.timeScale = 1f;
@@ -30,12 +31,10 @@ namespace AnomalyArena
                 V3CombatSmokeTest.Teleport(game.player, start + Vector3.right * (i * .7f));
                 await Awaitable.NextFrameAsync();
             }
-            var ground = Object.FindObjectsByType<ParticleSystem>(FindObjectsSortMode.None)
-                .SingleOrDefault(p => p.name == "FlameWake_Ground");
-            Assert.That(ground, Is.Not.Null, "authored fire ground renderer is connected to the saved scene");
-            Assert.That(ground.particleCount, Is.GreaterThanOrEqualTo(6), "old path remains visible after player moves");
-            Assert.That(casts,Is.EqualTo(1),"path samples never replay a cast event or cast audio");
             var view=Object.FindAnyObjectByType<SkillGroundPresentation>();
+            Assert.That(view.VisibleFlameCount, Is.GreaterThanOrEqualTo(6), "old path remains visible after player moves");
+            Assert.That(V5Vfx.I.LiveParticles, Is.GreaterThan(0), "and the illustrated art's flames burn on it");
+            Assert.That(casts,Is.EqualTo(1),"path samples never replay a cast event or cast audio");
             var samples=new List<SkillGroundVisual>();game.skills.CopyGroundVisuals(samples);
             var cameraRig=game.cam.GetComponent<CameraRig>();cameraRig.enabled=false;
             game.cam.transform.position=game.player.Position+cameraRig.offset;
@@ -51,7 +50,37 @@ namespace AnomalyArena
             game.skills.FreezeBattlefieldForTrial(false);await Awaitable.NextFrameAsync();
             Assert.That(view.VisibleFlameCount,Is.GreaterThan(0),"battlefield path restored with its lifetime");
             game.skills.ClearWaveEffects();await Awaitable.NextFrameAsync();
-            Assert.That(ground.particleCount,Is.Zero,"cleanup removes persistent fire");
+            Assert.That(view.VisibleFlameCount,Is.Zero,"cleanup removes persistent fire");
+        }
+
+        [Test, LoadScene(SceneEn), Timeout(40000)]
+        public async Task FlameWake_InWhitebox_ShowsTheSavedSceneFire()
+        {
+            var sandbox = await V3CombatSmokeTest.StartSandbox();
+            var game = sandbox.game;
+            bool savedArt = Art.Enabled;
+            Art.Enabled = false;
+            try
+            {
+                Assert.That(game.skills.Learn(SkillId.FlameWake), Is.True);
+                Assert.That(game.skills.TryCast(0), Is.True);
+                Vector3 start = game.player.Position;
+                for (int i = 1; i <= 6; i++)
+                {
+                    V3CombatSmokeTest.Teleport(game.player, start + Vector3.right * (i * .7f));
+                    await Awaitable.NextFrameAsync();
+                }
+                var ground = Object.FindObjectsByType<ParticleSystem>(FindObjectsSortMode.None)
+                    .SingleOrDefault(p => p.name == "FlameWake_Ground");
+                Assert.That(ground, Is.Not.Null, "authored fire ground renderer is connected to the saved scene");
+                Assert.That(ground.particleCount, Is.GreaterThanOrEqualTo(6), "whitebox keeps the saved scene's fire along the path");
+                game.skills.ClearWaveEffects();await Awaitable.NextFrameAsync();
+                Assert.That(ground.particleCount,Is.Zero,"cleanup removes persistent fire");
+            }
+            finally
+            {
+                Art.Enabled = savedArt;
+            }
         }
 
         [Test,LoadScene(Scene),Timeout(40000)]
@@ -73,7 +102,8 @@ namespace AnomalyArena
             var view=Object.FindAnyObjectByType<SkillGroundPresentation>();
             Assert.That(view.VisibleAreaCount,Is.EqualTo(1));
             var samples=new List<SkillGroundVisual>();game.skills.CopyGroundVisuals(samples);
-            Assert.That(Query.Flat(view.areaFields[0].transform.position-samples[0].Position).magnitude,Is.LessThan(.01f));
+
+            Assert.That(Query.Flat(samples[0].Position-world.trialPlatform.position).magnitude,Is.LessThan(world.trialRadius));
             game.skills.ClearWaveEffects();await Awaitable.NextFrameAsync();await Awaitable.NextFrameAsync();
             Assert.That(view.VisibleAreaCount,Is.Zero);
         }

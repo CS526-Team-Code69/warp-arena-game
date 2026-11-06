@@ -46,7 +46,9 @@ namespace AnomalyArena.EditorTools
             var clips = new Dictionary<ArenaWorldCue, AudioClip>();
             foreach (var take in Takes)
             {
-                string path = AudioFolder + take.file + ".mp3";
+
+                string path = AudioFolder + take.file + ".wav";
+                if (!File.Exists(path)) path = AudioFolder + take.file + ".mp3";
                 if (AssetImporter.GetAtPath(path) is AudioImporter importer)
                 {
 

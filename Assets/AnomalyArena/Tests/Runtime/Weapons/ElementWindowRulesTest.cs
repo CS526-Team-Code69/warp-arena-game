@@ -734,14 +734,14 @@ namespace AnomalyArena
 
         static bool FitsTheCard(V2UiChoice choice, string text, out string report)
         {
-            choice.body.text = text;
+            choice.ShowBody(text);
             Canvas.ForceUpdateCanvases();
             var settings = choice.body.GetGenerationSettings(choice.body.rectTransform.rect.size);
             var generator = new TextGenerator();
             generator.PopulateWithErrors(text, settings, choice.gameObject);
             int needed = text.Count(c => !char.IsWhiteSpace(c));
             int shown = text.Take(generator.characterCountVisible).Count(c => !char.IsWhiteSpace(c));
-            report = $"{shown}/{needed} chars at size {generator.fontSizeUsedForBestFit}";
+            report = $"{shown}/{needed} chars at size {choice.body.fontSize}";
             return shown >= needed;
         }
 
