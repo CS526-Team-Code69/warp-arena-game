@@ -1,0 +1,90 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 10a569c6dc67d2d4b8ed4ef7a354acb1, type: 3}
+  m_Name: FlameWake
+  m_EditorClassIdentifier: AnomalyArena::AnomalyArena.SkillDefinition
+  id: 0
+  displayName: Flame Wake
+  element: 1
+  category: 0
+  greaterVoid: 0
+  cost: 25
+  cooldown: 2
+  advancedCooldown: 4
+  duration:
+  - 4
+  - 4.5
+  - 5
+  - 5.5
+  - 6
+  radius:
+  - 0.75
+  - 0.75
+  - 0.75
+  - 0.75
+  - 1.5
+  range:
+  - 12
+  - 12
+  - 12
+  - 12
+  - 12
+  strength:
+  - 3
+  - 3.5
+  - 4
+  - 4.5
+  - 5
+  hitDamage: 6
+  hitStacksByLevel:
+  - 3
+  - 4
+  - 4
+  - 5
+  - 5
+  endDamage: 10
+  endKnockback: 10
+  freezeHold: 3
+  contactKnockback:
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  statusResistance:
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  healOnCast: 20
+  energyReward: 20
+  feedRange: 10
+  trailSpacing: 0.5
+  overchargeRate: 2
+  overchargeDamageMultiplier: 1.25
+  voidGravityWidth: 1
+  voidWalkMoveMultiplier: 1.6
+  singularitySlowMultiplier: 0.5
+  singularityBaseDamage: 10
+  singularityDamagePerEnemy: 4
+  singularityPlayerMoveMultiplier: 0.35
+  descriptions:
+  - 'Leave a burning trail for 4 s: burns 3 per second.'
+  - Trail for 4.5 s.
+  - Trail for 5 s.
+  - Trail for 5.5 s.
+  - 'A 6 s trail, twice as wide: burns 3 per second.'
+  icon: {fileID: 0}
+  levelDamageGrowth: 1.161895
+  shieldScalesWithMaxHp: 1
+  bulwarkShieldDirectFactor: 0.5

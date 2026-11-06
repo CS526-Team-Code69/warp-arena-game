@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 784a5c3f262c1f548bcd28871f35f16c, type: 3}
+  m_Name: SkillCatalog
+  m_EditorClassIdentifier: AnomalyArena::AnomalyArena.SkillCatalog
+  skills:
+  - {fileID: 11400000, guid: dbf3dbd842e42424e80a7ce14d98a8e8, type: 2}
+  - {fileID: 11400000, guid: e24c263fb74bd334baf7d27e440ec1da, type: 2}
+  - {fileID: 11400000, guid: 7f8cfa58512800d409e18194a0d6f49d, type: 2}
+  - {fileID: 11400000, guid: 527129b459113884daf3ba70af066f9c, type: 2}
+  - {fileID: 11400000, guid: d8aca5fb20eafee4d98b480270866645, type: 2}
+  - {fileID: 11400000, guid: d989dff648d48e2458f53e051d975a6a, type: 2}
+  - {fileID: 11400000, guid: b5bafe2c4ba10d748b36b8b066a31866, type: 2}
+  - {fileID: 11400000, guid: a67d01e02bc9c84439166090b0ea4c3d, type: 2}
+  - {fileID: 11400000, guid: 2c43a499efdf6784caad9ec4c8982973, type: 2}
+  - {fileID: 11400000, guid: 90eea064f5dbd8d47a363d0043af724e, type: 2}
+  - {fileID: 11400000, guid: 012ffa7bad71d2943b502fe128bbe221, type: 2}
+  - {fileID: 11400000, guid: 5f394c1f7ab5e7b41bb3697c1deb0894, type: 2}
+  - {fileID: 11400000, guid: df41eb937ce40ef43b47c68cef065f63, type: 2}
+  - {fileID: 11400000, guid: a4ba4bb804b07884cbefed5d661b0ef5, type: 2}
+  - {fileID: 11400000, guid: d2f76bc6bc4b4e54886afa20abefdc3c, type: 2}
+  - {fileID: 11400000, guid: 12b9772d4e82ebe4e8be4dd09d779009, type: 2}

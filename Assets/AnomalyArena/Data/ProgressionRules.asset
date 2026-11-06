@@ -1,0 +1,268 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 99d316746138a8747921243b934d4884, type: 3}
+  m_Name: ProgressionRules
+  m_EditorClassIdentifier: AnomalyArena::AnomalyArena.ProgressionRules
+  startingStats:
+    maxHp: 25
+    regeneration: 0
+    moveSpeed: 6
+    sprintDuration: 1
+    sprintRecovery: 1.5
+    damageBonus: 0
+    attackSpeedBonus: 0
+    knockbackBonus: 0
+    impact: 0
+    pickupRange: 2
+    protection: 0.5
+    maxEnergy: 100
+    energySiphon: 0
+    elementPenetration: 0
+    critChance: 0
+    critCap: 0.6
+    critMultiplier: 2
+    critMultiplierCap: 3.5
+    armor: 0
+    armorConstant: 100
+    armorCap: 300
+    caps:
+    - -1
+    - 5
+    - 8.4
+    - 1.75
+    - -1
+    - 2
+    - 1
+    - -1
+    - 10
+    - 1
+    - 30
+    - 250
+    - 2
+    - 1
+  levelCosts:
+  - 16
+  - 35
+  - 55
+  - 79
+  - 111
+  - 112
+  - 113
+  - 176
+  - 458
+  - 576
+  - 894
+  maxLevel: 12
+  xpPerStatDraft: 434
+  energyMax: 100
+  maxHpPerLevel: 5
+  maxEnergyPerLevel: 6
+  voidEnergyRegeneration: 4
+  regenerationInterval: 5
+  highTierPercent: 25
+  highTierPity: 4
+  statCards:
+  - stat: 0
+    common: 10
+    rare: 15
+    exceptional: 22
+    epic: 30
+    legendary: 40
+    bonus: 2
+    bonusCommon: 1
+    bonusRare: 1.5
+    bonusExceptional: 2
+    bonusEpic: 2.5
+    bonusLegendary: 3
+    retired: 0
+  - stat: 1
+    common: 1
+    rare: 1.5
+    exceptional: 2.1
+    epic: 2.8
+    legendary: 3.6
+    bonus: 0
+    bonusCommon: 0
+    bonusRare: 0
+    bonusExceptional: 0
+    bonusEpic: 0
+    bonusLegendary: 0
+    retired: 1
+  - stat: 2
+    common: 0.06
+    rare: 0.09
+    exceptional: 0.12
+    epic: 0.15
+    legendary: 0.18
+    bonus: 3
+    bonusCommon: 0.15
+    bonusRare: 0.2
+    bonusExceptional: 0.3
+    bonusEpic: 0.4
+    bonusLegendary: 0.5
+    retired: 0
+  - stat: 3
+    common: 0.15
+    rare: 0.225
+    exceptional: 0.315
+    epic: 0.42
+    legendary: 0.54
+    bonus: 0
+    bonusCommon: 0
+    bonusRare: 0
+    bonusExceptional: 0
+    bonusEpic: 0
+    bonusLegendary: 0
+    retired: 1
+  - stat: 4
+    common: 0.1
+    rare: 0.14
+    exceptional: 0.18
+    epic: 0.23
+    legendary: 0.3
+    bonus: 0
+    bonusCommon: 0
+    bonusRare: 0
+    bonusExceptional: 0
+    bonusEpic: 0
+    bonusLegendary: 0
+    retired: 0
+  - stat: 5
+    common: 0.1
+    rare: 0.14
+    exceptional: 0.18
+    epic: 0.23
+    legendary: 0.3
+    bonus: 0
+    bonusCommon: 0
+    bonusRare: 0
+    bonusExceptional: 0
+    bonusEpic: 0
+    bonusLegendary: 0
+    retired: 0
+  - stat: 6
+    common: 0.2
+    rare: 0.3
+    exceptional: 0.42
+    epic: 0.56
+    legendary: 0.72
+    bonus: 4
+    bonusCommon: 3
+    bonusRare: 4.5
+    bonusExceptional: 6.3
+    bonusEpic: 8.4
+    bonusLegendary: 10.8
+    retired: 1
+  - stat: 7
+    common: 3
+    rare: 4.5
+    exceptional: 6.3
+    epic: 8.4
+    legendary: 10.8
+    bonus: 0
+    bonusCommon: 0
+    bonusRare: 0
+    bonusExceptional: 0
+    bonusEpic: 0
+    bonusLegendary: 0
+    retired: 1
+  - stat: 8
+    common: 1.5
+    rare: 2.25
+    exceptional: 3.15
+    epic: 4.2
+    legendary: 5.4
+    bonus: 0
+    bonusCommon: 0
+    bonusRare: 0
+    bonusExceptional: 0
+    bonusEpic: 0
+    bonusLegendary: 0
+    retired: 1
+  - stat: 9
+    common: 15
+    rare: 22
+    exceptional: 30
+    epic: 40
+    legendary: 50
+    bonus: 0
+    bonusCommon: 0
+    bonusRare: 0
+    bonusExceptional: 0
+    bonusEpic: 0
+    bonusLegendary: 0
+    retired: 0
+  - stat: 10
+    common: 4
+    rare: 6
+    exceptional: 8.4
+    epic: 11.2
+    legendary: 14.4
+    bonus: 0
+    bonusCommon: 0
+    bonusRare: 0
+    bonusExceptional: 0
+    bonusEpic: 0
+    bonusLegendary: 0
+    retired: 1
+  - stat: 11
+    common: 20
+    rare: 30
+    exceptional: 40
+    epic: 50
+    legendary: 60
+    bonus: 5
+    bonusCommon: 0.3
+    bonusRare: 0.5
+    bonusExceptional: 0.7
+    bonusEpic: 0.9
+    bonusLegendary: 1.2
+    retired: 0
+  - stat: 12
+    common: 0.3
+    rare: 0.45
+    exceptional: 0.63
+    epic: 0.84
+    legendary: 1.08
+    bonus: 0
+    bonusCommon: 0
+    bonusRare: 0
+    bonusExceptional: 0
+    bonusEpic: 0
+    bonusLegendary: 0
+    retired: 1
+  - stat: 13
+    common: 0.2
+    rare: 0.3
+    exceptional: 0.4
+    epic: 0.5
+    legendary: 0.6
+    bonus: 0
+    bonusCommon: 0
+    bonusRare: 0
+    bonusExceptional: 0
+    bonusEpic: 0
+    bonusLegendary: 0
+    retired: 0
+  - stat: 14
+    common: 0.08
+    rare: 0.11
+    exceptional: 0.14
+    epic: 0.18
+    legendary: 0.22
+    bonus: 6
+    bonusCommon: 0.2
+    bonusRare: 0.3
+    bonusExceptional: 0.4
+    bonusEpic: 0.5
+    bonusLegendary: 0.6
+    retired: 0
