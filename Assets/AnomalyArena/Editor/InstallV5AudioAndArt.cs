@@ -14,7 +14,7 @@ namespace AnomalyArena.EditorTools
     {
         static readonly string[] ScenePaths =
         {
-            "Assets/AnomalyArena/Scenes/ArenaV2.unity", "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity", "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity"
+            "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity", "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity"
         };
         const string AudioFolder = "Assets/AnomalyArena/Audio/V5/DocAlign/";
         const string VfxFolder = "Assets/AnomalyArena/Art/V4/VFX/Textures/";

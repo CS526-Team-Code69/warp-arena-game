@@ -13,7 +13,6 @@ namespace AnomalyArena.EditorTools
         const string MaterialPath = "Assets/AnomalyArena/V2/Materials/SpawnCross.mat";
         static readonly string[] ScenePaths =
         {
-            "Assets/AnomalyArena/Scenes/ArenaV2.unity",
             "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity",
             "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity"
         };

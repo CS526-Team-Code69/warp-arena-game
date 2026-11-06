@@ -19,7 +19,7 @@ namespace AnomalyArena.EditorTools
     {
         static readonly string[] Scenes =
         {
-            "Assets/AnomalyArena/Scenes/ArenaV2.unity", "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity",
+            "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity",
             "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity"
         };
 

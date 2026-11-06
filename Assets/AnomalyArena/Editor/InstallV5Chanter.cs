@@ -19,7 +19,7 @@ namespace AnomalyArena.EditorTools
         const string ChanterDefinitionPath = "Assets/AnomalyArena/V2/Data/Enemies/Chanter.asset";
         static readonly string[] ScenePaths =
         {
-            "Assets/AnomalyArena/Scenes/ArenaV2.unity", "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity", "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity"
+            "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity", "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity"
         };
         [Tooltip("Pooled Chanters per scene; the Warden pool is the reference size.")]
         const int PoolSize = 12;

@@ -73,7 +73,6 @@ namespace AnomalyArena.EditorTools
             }
             if(hud)FitEnglishText(hud);
             if(!EditorSceneManager.SaveScene(scene,scenePath))throw new InvalidOperationException("English scene save failed.");
-            if(!EditorSceneManager.SaveScene(scene,"Assets/AnomalyArena/Scenes/ArenaV2.unity",true))throw new InvalidOperationException("Authoring scene save failed.");
             EditorBuildSettings.scenes=new[]{new EditorBuildSettingsScene(scenePath,true)};
             PlayerSettings.productName="WARP ARENA";
             AssetDatabase.SaveAssets();
