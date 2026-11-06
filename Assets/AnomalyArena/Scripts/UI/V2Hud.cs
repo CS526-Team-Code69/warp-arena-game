@@ -40,6 +40,23 @@ namespace AnomalyArena
         [Header("Official Localization")]
         public Canvas localizedCanvas;
         public UnityEngine.UI.Text[] fontLabels;
+
+        // feature/low hp warning. It will be used to flash the screen when the player's health is low. The thresholds and opacity values can be adjusted in the inspector under the V2 canvas. - H.
+        [Header("Low Health Warning")]
+        [SerializeField, Range(0.01f, 1f)]
+        float lowHealthThreshold = 0.50f;
+        [SerializeField, Range(0.01f, 1f)]
+        float criticalHealthThreshold = 0.50f;
+        [SerializeField, Range(0f, 1f)]
+        float lowHealthMinOpacity = 0.12f;
+        [SerializeField, Range(0f, 1f)]
+        float lowHealthMaxOpacity = 0.35f;
+        [SerializeField, Min(0.01f)]
+        float lowHealthFadeSpeed = 0.6f;
+        [SerializeField, Min(0f)]
+        float criticalPulseFrequency = 1f;
+        float lowHealthOpacity;
+
         Font appliedFont;
 
         IArenaUiSource source;
@@ -143,7 +160,7 @@ namespace AnomalyArena
             {
 
                 if (!edgeVignette) { edgeVignette = EdgeVignette(); damageFlash.sprite = edgeVignette; damageFlash.type = UnityEngine.UI.Image.Type.Simple; }
-                damageFlash.color = new Color(1f, .1f, .04f, flash * .45f);
+                TickHealthWarning(dt);
             }
             TickDamage(dt);
 
@@ -153,6 +170,70 @@ namespace AnomalyArena
             var snapshot = source.UiSnapshot;
             Render(snapshot);
             ShowTutorialOnArrival(snapshot);
+        }
+        // feature/low hp warning. It will be used to flash the screen when the player's health is low. The thresholds and opacity values can be adjusted in the inspector under the V2 canvas. - H.
+        void TickHealthWarning(float dt)
+        {
+            if (!damageFlash) return;
+
+            damageFlash.raycastTarget = false;
+
+            var s = lastSnapshot;
+
+            bool showFeedback =
+                source != null &&
+                gameplayRoot &&
+                gameplayRoot.activeInHierarchy &&
+                s != null &&
+                s.maxHp > 0f &&
+                s.hp > 0f;
+
+            if (!showFeedback)
+            {
+                lowHealthOpacity = 0f;
+                flash = 0f;
+                damageFlash.color = new Color(1f, .1f, .04f, 0f);
+                return;
+            }
+
+            float healthRatio = Mathf.Clamp01(s.hp / s.maxHp);
+            float threshold = Mathf.Clamp(lowHealthThreshold, 0.01f, 1f);
+            float targetOpacity = 0f;
+
+            if (healthRatio <= threshold)
+            {
+                float severity = Mathf.Clamp01(1f - healthRatio / threshold);
+
+                targetOpacity = Mathf.Lerp(
+                    lowHealthMinOpacity,
+                    lowHealthMaxOpacity,
+                    severity);
+            }
+
+            lowHealthOpacity = Mathf.MoveTowards(
+                lowHealthOpacity,
+                targetOpacity,
+                lowHealthFadeSpeed * dt);
+
+            float pulse = 0.5f + 0.5f * Mathf.Sin(
+                Time.unscaledTime *
+                criticalPulseFrequency *
+                Mathf.PI * 2f);
+
+            float criticalThreshold = Mathf.Clamp(
+                criticalHealthThreshold, 0f, threshold);
+
+            float minimumBrightness =
+                healthRatio <= criticalThreshold ? 0.35f : 0.65f;
+
+            float pulsingOpacity = lowHealthOpacity *
+                Mathf.Lerp(minimumBrightness, 1f, pulse);
+
+            float finalOpacity = Mathf.Max(
+                flash * .45f,
+                pulsingOpacity);
+
+            damageFlash.color =new Color(1f, .1f, .04f, finalOpacity);
         }
 
         public void Dispatch(ArenaUiCommand command, int index = -1)
