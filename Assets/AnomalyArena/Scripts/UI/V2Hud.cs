@@ -44,6 +44,28 @@ namespace AnomalyArena
         public Canvas localizedCanvas;
         public UnityEngine.UI.Text[] fontLabels;
         Font appliedFont;
+        // Health bar opacity and pulsing when low health; see PlayerController.cs for the health threshold values and use the Unity editor to make adjustments on the V2 canvas object. - H.
+        [Header("Low Health Warning")]
+        [SerializeField, Range(0.01f, 1f)]
+        float lowHealthThreshold = 0.50f;
+
+        [SerializeField, Range(0.01f, 1f)]
+        float criticalHealthThreshold = 0.50f;
+
+        [SerializeField, Range(0f, 1f)]
+        float lowHealthMinOpacity = 0.08f;
+
+        [SerializeField, Range(0f, 1f)]
+        float lowHealthMaxOpacity = 0.25f;
+
+        [SerializeField, Min(0.01f)]
+        float lowHealthFadeSpeed = 0.6f;
+
+        [SerializeField, Min(0f)]
+        float criticalPulseFrequency = 0.8f;
+
+        float lowHealthOpacity;
+
 
         IArenaUiSource source;
         float nextRefresh, transientTime, flash;
@@ -101,35 +123,136 @@ namespace AnomalyArena
                 }
             }
         }
-
-        void Update()
+   // Health bar opacity and pulsing when low health; see PlayerController.cs for the health threshold values and make adjustments in the Unity editor on the V2 Canvas object. - H.
+    void Update()
+    {
+        if (localizedCanvas &&
+            localizedCanvas.enabled != ArenaText.Ready)
         {
-            if (localizedCanvas && localizedCanvas.enabled != ArenaText.Ready) localizedCanvas.enabled = ArenaText.Ready;
-            if (!ArenaText.Ready) return;
-            if (bootCover) Destroy(bootCover);
-            if (ArenaText.Font && appliedFont != ArenaText.Font)
+            localizedCanvas.enabled = ArenaText.Ready;
+        }
+
+        if (!ArenaText.Ready) return;
+
+        if (bootCover) Destroy(bootCover);
+
+        if (ArenaText.Font && appliedFont != ArenaText.Font)
+        {
+            appliedFont = ArenaText.Font;
+
+            if (fontLabels != null)
             {
-                appliedFont = ArenaText.Font;
-                if (fontLabels != null) foreach (var label in fontLabels) if (label) label.font = appliedFont;
-                nextRefresh = 0f;
+                foreach (var label in fontLabels)
+                {
+                    if (label) label.font = appliedFont;
+                }
             }
-            float dt = Time.unscaledDeltaTime;
-            transientTime = Mathf.Max(0f, transientTime - dt);
-            flash = Mathf.Max(0f, flash - dt * 3f);
-            if (damageFlash)
-            {
-                                                                                                                                         
-                if (!edgeVignette) { edgeVignette = EdgeVignette(); damageFlash.sprite = edgeVignette; damageFlash.type = UnityEngine.UI.Image.Type.Simple; }
-                damageFlash.color = new Color(1f, .1f, .04f, flash * .45f);
-            }
-            TickDamage(dt);
-                                                                                          
-            if (lastSnapshot != null && lastSnapshot.cardPickSequence != seenPick) nextRefresh = 0f;
-            if (source == null || Time.unscaledTime < nextRefresh) return;
-            nextRefresh = Time.unscaledTime + Mathf.Max(.02f, refreshInterval);
+
+            nextRefresh = 0f;
+        }
+
+        float dt = Time.unscaledDeltaTime;
+
+        transientTime = Mathf.Max(0f, transientTime - dt);
+        flash = Mathf.Max(0f, flash - dt * 3f);
+
+        TickDamage(dt);
+
+        if (lastSnapshot != null &&
+            lastSnapshot.cardPickSequence != seenPick)
+        {
+            nextRefresh = 0f;
+        }
+
+        if (source != null && Time.unscaledTime >= nextRefresh)
+        {
+            nextRefresh =
+                Time.unscaledTime + Mathf.Max(.02f, refreshInterval);
+
             Render(source.UiSnapshot);
         }
 
+        TickHealthWarning(dt);
+    }
+
+   // Health bar opacity and pulsing when low health; see PlayerController.cs for the health threshold values and make adjustments in the Unity editor on the V2 Canvas object. - H.
+    void TickHealthWarning(float dt)     
+    {     
+    if (!damageFlash) return;     
+        
+    // Reuse the existing transparent-center vignette.     
+    if (!edgeVignette)     
+    {     
+        edgeVignette = EdgeVignette();     
+        damageFlash.sprite = edgeVignette;     
+        damageFlash.type = UnityEngine.UI.Image.Type.Simple;     
+    }     
+    
+        damageFlash.raycastTarget = false;   
+    
+        var s = lastSnapshot;   
+    
+        // Match the HUD's existing gameplay visibility.   
+        bool showFeedback =   
+            source != null &&   
+            gameplayRoot &&   
+            gameplayRoot.activeSelf &&   
+            s != null &&   
+            s.maxHp > 0f &&   
+            s.hp > 0f;   
+    
+        if (!showFeedback)   
+        {   
+            lowHealthOpacity = 0f;   
+            flash = 0f;   
+            damageFlash.color = new Color(1f, .1f, .04f, 0f);   
+            return;   
+        }   
+    
+        float healthRatio = Mathf.Clamp01(s.hp / s.maxHp);   
+        float targetOpacity = 0f;   
+    
+        if (healthRatio <= lowHealthThreshold)   
+    {   
+        float severity = Mathf.Clamp01(   
+            1f - healthRatio / lowHealthThreshold);   
+    
+        targetOpacity = Mathf.Lerp(   
+            lowHealthMinOpacity,   
+            lowHealthMaxOpacity,   
+            severity);   
+    }   
+    
+        lowHealthOpacity = Mathf.MoveTowards(   
+            lowHealthOpacity,   
+            targetOpacity,   
+            lowHealthFadeSpeed * dt);   
+    
+        // Apply the pulse AFTER smoothing so it remains visible.   
+    float pulse = 0.5f + 0.5f * Mathf.Sin(   
+        Time.unscaledTime *   
+        criticalPulseFrequency *   
+        Mathf.PI * 2f);   
+    
+    float criticalThreshold = Mathf.Min(   
+        criticalHealthThreshold,   
+        lowHealthThreshold);   
+    
+    // Critical health produces a deeper pulse.   
+    float minimumBrightness =   
+        healthRatio <= criticalThreshold ? 0.35f : 0.65f;   
+    
+    float pulsingOpacity = lowHealthOpacity *   
+        Mathf.Lerp(minimumBrightness, 1f, pulse);   
+    
+    // Preserve the existing damage flash.   
+    float finalOpacity = Mathf.Max(   
+        flash * .45f,   
+        pulsingOpacity);   
+    
+    damageFlash.color =   
+        new Color(1f, .1f, .04f, finalOpacity);   
+    }   
         public void Dispatch(ArenaUiCommand command, int index = -1) => source?.ExecuteUiCommand(command, index);
         public void RefreshView(){if(source!=null&&ArenaText.Ready)Render(source.UiSnapshot);}
 
