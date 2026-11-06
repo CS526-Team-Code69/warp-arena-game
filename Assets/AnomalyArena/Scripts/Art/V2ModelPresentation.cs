@@ -34,6 +34,9 @@ namespace AnomalyArena
         public Vector3 authoredPosition;
         public Color flashEmission = new Color(.7f, .65f, .4f);
         public Color windupEmission = new Color(.18f, .12f, .025f);
+        [Range(.5f, 2.5f), Tooltip("Brightness of the 3D model: multiplies its base colour, so its own colours read on the dark arena floor. " +
+                                   "1 = the texture as it is. Since 2026-11-06 the new enemy models start at 1.4. Can be tuned live in Play.")]
+        public float modelBrightness = 1f;
         [Range(0f, .4f)] public float hitSquash = .12f;
         [Tooltip("No Death clip was purchased. The saved model is paused and laid onto the ground.")]
         public Vector3 corpseRotationEuler = new Vector3(90f, 0f, 0f);
@@ -232,12 +235,14 @@ namespace AnomalyArena
 
             if (body.IsAlive) modelRoot.localPosition = authoredPosition + (modelRoot.parent ? modelRoot.parent.InverseTransformVector(body.VisualOffset) : body.VisualOffset);
             Color glow = body.IsAlive ? idleEmission + (body.LastHitCritical ? critFlashEmission : flashEmission) * body.HitFlash01 + (enemy && enemy.WindingUp ? windupEmission : Color.black) + StatusGlow() : Color.black;
+            Color tint = baseTint * modelBrightness;
+            tint.a = baseTint.a;
             foreach (var renderer in modelRenderers)
             {
                 if (!renderer) continue;
                 renderer.GetPropertyBlock(block);
                 block.SetColor(EmissionId, glow);
-                block.SetColor(BaseColorId, baseTint);
+                block.SetColor(BaseColorId, tint);
                 renderer.SetPropertyBlock(block);
             }
         }
