@@ -89,6 +89,16 @@ namespace AnomalyArena
             SceneManager.sceneLoaded += OnSceneLoaded;
         }
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        static void SkinOpenScenes()
+        {
+            for (int i = 0; i < SceneManager.sceneCount; i++)
+            {
+                var scene = SceneManager.GetSceneAt(i);
+                if (scene.isLoaded) OnSceneLoaded(scene, LoadSceneMode.Additive);
+            }
+        }
+
         static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
             foreach (var root in scene.GetRootGameObjects())
