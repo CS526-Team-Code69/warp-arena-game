@@ -13,7 +13,36 @@ using Object = UnityEngine.Object;
 
 namespace AnomalyArena.EditorTools
 {
-
+                 
+                                                                                                                                             
+                                                                                                                                       
+       
+                                                                                                                                           
+                                                                                                                                                     
+                                                                                                                       
+                                                                                                                                                    
+                                                                                                                                                   
+                                                                                                                                         
+                                                                                                                                                          
+                                                                                                                                              
+                                                                                                                                                          
+                                                                                                                                                                
+                                                                                                                                                         
+       
+                                                                                                                                  
+                                                                                                                                                           
+                                                                                                                                                  
+                                                                                                                                                    
+                                                                                                                                              
+                                                                                                                                               
+                                                                                                                                           
+       
+                                                                                       
+                                                                                                                                                           
+                                                                                   
+                                                                                               
+                                                                                                                  
+                  
     public static class InstallV6EnemyModels
     {
         const string Tag = "[V6Install] ";
@@ -22,22 +51,34 @@ namespace AnomalyArena.EditorTools
         const string V6ModelFolder = "Assets/AnomalyArena/Art/V6/EnemyModels/Generated/";
         const string SceneFolder = "Assets/AnomalyArena/Scenes";
         const string PrefabSearchFolder = "Assets/AnomalyArena";
-
+                                                                                           
         const string DefaultSourceRoot = "work/art-plans/v2-1104/models";
         const string OldSuffix = "_V3", NewSuffix = "_V6";
         const string RigGeneric = "blender-generic", RigHumanoid = "rigged-humanoid", RigNone = "none";
         const string LitShader = "Universal Render Pipeline/Lit";
-
+                                                                                                                                               
         const int TriangleWarning = 50000;
-
+                                                                                                                
         const float FacingAspect = 1.3f;
-
+                                                                                                                             
         const int MapSize = 2048;
         static readonly string[] Kinds = { "Grunt", "Brute", "Skitter", "Spitter", "Rammer", "Bloater", "Warden", "Splitter", "Spire", "Stomper", "Shade", "Tyrant" };
-
+                                                                                                                                   
+        const string PlayerKind = "PlayerV2";
+        const string PlayerSourceFolder = "Assets/AnomalyArena/Art/V6/Player/";
+        const string PlayerModelFolder = "Assets/AnomalyArena/Art/V6/PlayerModels/Generated/";
+                                                                                                                                          
+        static readonly string[] DefaultLoops = { "Idle", "Run", "Walk", "Sprint" };
+                                                                                                                         
+        static readonly string[] GaitClips = { "Run", "Walk", "Sprint" };
+        const string RunSpeedParameter = "RunSpeed";
+                                                                                            
+        const float PlayerPresentationScale = 1.3f;
+        const string PlayerStashFile = "explorer-presentation.json";
+                                                                                                                                          
         static readonly string[] ClipNames = { "Idle", "Run", "Attack" };
         static readonly string[] ClipFields = { "idleClip", "runClip", "attackClip" };
-
+                                                                                                                    
         static readonly string[] PresentationFields = { "modelRoot", "animator", "idleClip", "runClip", "attackClip", "modelRenderers", "authoredScale", "authoredPosition" };
         static readonly int EmissionColor = Shader.PropertyToID("_EmissionColor");
 
@@ -52,6 +93,7 @@ namespace AnomalyArena.EditorTools
             public Fit FitFor(string kind) => FitByKind.TryGetValue(kind, out var fit) ? fit : DefaultFit;
         }
 
+                                                                                                                 
         [Serializable]
         sealed class Manifest
         {
@@ -60,9 +102,11 @@ namespace AnomalyArena.EditorTools
             public float height;
             public float[] bounds_min, bounds_max;
             public string[] clips;
-
+                                                                                                                        
             public string model_file;
             public string[] clip_files;
+                                                                                                                              
+            public string[] extra_clips, loop_clips;
         }
 
         sealed class Job
@@ -71,14 +115,29 @@ namespace AnomalyArena.EditorTools
             public Manifest Manifest;
             public string[] Textures;
             public string[] ClipFiles;                                                                                    
+            public string[] Clips = ClipNames;                                                          
+            public bool Player => Kind == PlayerKind;
+            public bool Loops(string clip) => Manifest?.loop_clips != null && Manifest.loop_clips.Length > 0 ? Manifest.loop_clips.Contains(clip) : DefaultLoops.Contains(clip);
         }
 
+                                                                                                                                                
+        [Serializable]
+        sealed class PlayerStash
+        {
+            public float runReferenceSpeed;
+            public bool legsFollowMovement, playerAttackMotion;
+            public Color illustratedTint;                                                                
+        }
+
+                                                                                                                                                                
         sealed class OldModel
         {
             public string ControllerPath;
             public Material Material;
             public string MotionNode = "";
         }
+
+                                   
 
         [MenuItem("Anomaly Arena/V6/Install Enemy Models")]
         static void InstallMenu() => Install();
@@ -92,10 +151,13 @@ namespace AnomalyArena.EditorTools
         [MenuItem("Anomaly Arena/V6/Body Glow Off (V6 Materials)")]
         static void BodyGlowOffMenu() => SetBodyGlow(false);
 
+                                                                                                                                               
         public static void InstallBatch() => Install(Arg("-kinds"), Arg("-fit"), Arg("-bodyGlow"), Arg("-source"));
 
+                                                                                                                 
         public static void RevertBatch() => Revert(Arg("-kinds"));
 
+                                                                                                                                           
         public static void BodyGlowBatch()
         {
             string value = Arg("-bodyGlow");
@@ -103,6 +165,12 @@ namespace AnomalyArena.EditorTools
             SetBodyGlow(ParseSwitch(value, "-bodyGlow"), Arg("-kinds"));
         }
 
+                                                                                                                                         
+                                                                      
+                                                                                                                                                     
+                                                                                                          
+                                                                                                                                                                    
+                                                                                                                                    
         public static void Install(string kinds = null, string fit = null, string bodyGlow = null, string source = null)
         {
             var list = ParseKinds(kinds);
@@ -116,11 +184,17 @@ namespace AnomalyArena.EditorTools
             Run("install", list, kind => InstallKind(kind, options, scenes));
         }
 
+                                                                                                                                                     
         public static void Revert(string kinds = null) => Run("revert", ParseKinds(kinds), RevertKind);
 
+                     
+                                                                                                                                                     
+                                                                                                                                                  
+                                                                                                   
+                      
         public static void SetBodyGlow(bool on, string kinds = null) => Run(on ? "body glow on" : "body glow off", ParseKinds(kinds), kind =>
         {
-            string path = V6ModelFolder + $"Enemy_{kind}/PBR_0.mat";
+            string path = (kind == PlayerKind ? PlayerModelFolder + kind : V6ModelFolder + "Enemy_" + kind) + "/PBR_0.mat";
             var material = AssetDatabase.LoadAssetAtPath<Material>(path);
             if (!material) return "skipped: no V6 material yet (" + path + ")";
             ApplyBodyGlow(material, on);
@@ -128,6 +202,7 @@ namespace AnomalyArena.EditorTools
             return $"{path}: _EMISSION {(on ? "on" : "off")}";
         });
 
+                                                                                                                                                                               
         static void Run(string action, List<string> kinds, Func<string, string> step)
         {
             Require(!EditorApplication.isPlaying, "stop Play first");
@@ -163,6 +238,8 @@ namespace AnomalyArena.EditorTools
             if (failed.Count > 0) throw Fail($"{action} failed for {failed.Count} kind(s): {string.Join(" | ", failed)}");
         }
 
+                              
+
         static string InstallKind(string kind, Options options, SceneOverrides scenes)
         {
             string prefabPath = PrefabFolder + kind + ".prefab";
@@ -178,7 +255,9 @@ namespace AnomalyArena.EditorTools
             var controller = BuildController(job, clips, old.ControllerPath);
             AssetDatabase.SaveAssets();
             var model = BuildModelPrefab(job, material, controller, clips[0], out Bounds unit);
-            string fitted = SwapIntoEnemyPrefab(job, model, unit, clips, options.FitFor(kind), out string baseName);
+                                                                                                                            
+            var fit = job.Player && !options.FitByKind.ContainsKey(kind) ? Fit.Height : options.FitFor(kind);
+            string fitted = SwapIntoEnemyPrefab(job, model, unit, clips, fit, out string baseName);
             FollowInVariants(prefabPath, kind, baseName, installed: true);
             scenes.Warn(prefabPath, kind);
             return "installed, " + fitted;
@@ -199,13 +278,23 @@ namespace AnomalyArena.EditorTools
             Log($"{kind}: manifest rig {rig}, {manifest.triangles:N0} triangles, height {manifest.height:0.###}, clips [{Join(manifest.clips)}], source task {manifest.source_task_id}");
             if (!string.IsNullOrWhiteSpace(manifest.fbx_axis_note)) Log($"{kind}: axis note: {manifest.fbx_axis_note}");
             if (!string.IsNullOrWhiteSpace(manifest.notes)) Log($"{kind}: notes: {manifest.notes}");
+            bool player = kind == PlayerKind;
             var job = new Job
             {
                 Kind = kind, Rig = rig, Manifest = manifest, SourceDir = dir,
-                AssetDir = V6SourceFolder + kind + "/", ModelDir = V6ModelFolder + "Enemy_" + kind + "/"
+                AssetDir = (player ? PlayerSourceFolder : V6SourceFolder) + kind + "/",
+                ModelDir = player ? PlayerModelFolder + kind + "/" : V6ModelFolder + "Enemy_" + kind + "/"
             };
             if (rig == RigNone) return job;
             Require(manifest.clips != null && ClipNames.All(c => manifest.clips.Contains(c)), $"{file}: clips [{Join(manifest.clips)}] must include {string.Join(", ", ClipNames)}");
+            if (manifest.extra_clips != null && manifest.extra_clips.Length > 0)
+            {
+                Require(rig == RigGeneric, $"{file}: extra_clips need rig {RigGeneric} (one FBX holding every take)");
+                Require(manifest.extra_clips.All(c => !string.IsNullOrWhiteSpace(c) && !ClipNames.Contains(c)), $"{file}: extra_clips [{Join(manifest.extra_clips)}] repeat a main clip or are empty");
+                job.Clips = ClipNames.Concat(manifest.extra_clips.Select(c => c.Trim())).Distinct().ToArray();
+                Log($"{kind}: extra clips [{Join(manifest.extra_clips)}], looping [{string.Join(", ", job.Clips.Where(job.Loops))}]");
+            }
+            if (player) Require(job.Clips.Contains("Run"), $"{file}: the player needs a Run clip");
             if (manifest.triangles > TriangleWarning)
                 Warn($"{kind}: {manifest.triangles:N0} triangles; the web build pays for every one (T-014), the V3 enemies were about 2.6k and the web slim cuts models to 20k");
             job.Textures = new[] { "_BaseColor", "_Normal", "_Metallic", "_Roughness" }.Select(s => kind + s + ".png").ToArray();
@@ -214,7 +303,7 @@ namespace AnomalyArena.EditorTools
                 job.ModelFile = SafeRelative(manifest.model_file, file) ?? kind + ".fbx";
                 return job;
             }
-
+                                                                                                                                                             
             job.ModelFile = SafeRelative(manifest.model_file, file) ?? FirstExisting(dir, kind + ".fbx", kind + "-rigged.fbx");
             job.ClipFiles = new string[ClipNames.Length];
             for (int i = 0; i < ClipNames.Length; i++)
@@ -250,11 +339,12 @@ namespace AnomalyArena.EditorTools
         static void CopySources(Job job)
         {
             EnsureFolder(job.AssetDir);
-
+                                                                                                                                 
+                                                                                                                 
             var files = new List<string> { job.ModelFile };
             files.AddRange(job.Textures);
             if (job.ClipFiles != null) files.AddRange(job.ClipFiles);
-
+                                                                                                                 
             foreach (string relative in files.Distinct()) CopyOne(job, relative);
         }
 
@@ -270,27 +360,34 @@ namespace AnomalyArena.EditorTools
             Log($"{job.Kind}: {(same ? "unchanged" : "copied")} {to} ({new FileInfo(to).Length / 1048576.0:0.0} MB)");
         }
 
+                                   
+
+                                                                                                                                    
         static AnimationClip[] ImportGeneric(Job job)
         {
             string path = job.AssetDir + job.ModelFile;
             var importer = ModelImporterAt(path);
-
+                                                                                                                                             
             ApplyModelSettings(importer, null, "", importAnimation: true);
             importer.SaveAndReimport();                                                
             var takes = importer.defaultClipAnimations ?? Array.Empty<ModelImporterClipAnimation>();
             Log($"{job.Kind}: {path} takes [{string.Join(", ", takes.Select(t => $"{t.takeName} {t.firstFrame:0}-{t.lastFrame:0}"))}]");
-            importer.clipAnimations = ClipNames.Select(name => ClipFrom(FindTake(takes, name, path, allowSingle: false), name)).ToArray();
+            importer.clipAnimations = job.Clips.Select(name => ClipFrom(FindTake(takes, name, path, allowSingle: false), name, job.Loops(name))).ToArray();
             importer.SaveAndReimport();
             RequireAvatar(path, job.Kind);
             var model = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-            return ClipNames.Select(name =>
+            return job.Clips.Select(name =>
             {
-                var clip = LoadClip(path, name, job.Kind);
+                var clip = LoadClip(path, name, job.Kind, job.Loops(name));
                 CheckBindings(clip, model, job.Kind);
                 return clip;
             }).ToArray();
         }
 
+                     
+                                                                                                                                                    
+                                                                                                                                                          
+                      
         static AnimationClip[] ImportHumanoid(Job job, string v3MotionNode)
         {
             string modelPath = job.AssetDir + job.ModelFile;
@@ -316,9 +413,9 @@ namespace AnomalyArena.EditorTools
                 importer.SaveAndReimport();
                 var takes = importer.defaultClipAnimations ?? Array.Empty<ModelImporterClipAnimation>();
                 Log($"{job.Kind}: {path} takes [{string.Join(", ", takes.Select(t => t.takeName))}]");
-                importer.clipAnimations = new[] { ClipFrom(FindTake(takes, ClipNames[i], path, allowSingle: true), ClipNames[i]) };
+                importer.clipAnimations = new[] { ClipFrom(FindTake(takes, ClipNames[i], path, allowSingle: true), ClipNames[i], job.Loops(ClipNames[i])) };
                 importer.SaveAndReimport();
-                clips[i] = LoadClip(path, ClipNames[i], job.Kind);
+                clips[i] = LoadClip(path, ClipNames[i], job.Kind, job.Loops(ClipNames[i]));
                 CheckBindings(clips[i], model, job.Kind);
             }
             return clips;
@@ -326,11 +423,11 @@ namespace AnomalyArena.EditorTools
 
         static void ApplyModelSettings(ModelImporter importer, Avatar copyFrom, string motionNode, bool importAnimation)
         {
-
+                                                                                                                                                 
             importer.globalScale = 1f;
             importer.useFileScale = true;
             importer.bakeAxisConversion = false;
-
+                                                                                                                                        
             importer.materialImportMode = ModelImporterMaterialImportMode.None;
             importer.importCameras = false;
             importer.importLights = false;
@@ -344,12 +441,13 @@ namespace AnomalyArena.EditorTools
             else importer.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel;
             importer.motionNodeName = motionNode ?? "";
             importer.importAnimation = importAnimation;
-
+                                                                                                             
             importer.animationCompression = ModelImporterAnimationCompression.Off;
             importer.resampleCurves = false;
             importer.optimizeGameObjects = false;
         }
 
+                                                                                                                                                                                          
         static ModelImporterClipAnimation FindTake(ModelImporterClipAnimation[] takes, string clip, string where, bool allowSingle)
         {
             Require(takes != null && takes.Length > 0, $"{where} has no animation takes");
@@ -362,9 +460,10 @@ namespace AnomalyArena.EditorTools
             throw Fail($"{where}: no take for {clip}; the takes are [{string.Join(", ", takes.Select(t => t.takeName))}]");
         }
 
-        static ModelImporterClipAnimation ClipFrom(ModelImporterClipAnimation take, string name)
+                                                                                                                                                                
+                                                                                                                        
+        static ModelImporterClipAnimation ClipFrom(ModelImporterClipAnimation take, string name, bool loop)
         {
-            bool loop = name != "Attack";
             take.name = name;
             take.loopTime = loop;
             take.loopPose = loop;
@@ -380,18 +479,19 @@ namespace AnomalyArena.EditorTools
             return take;
         }
 
-        static AnimationClip LoadClip(string path, string name, string kind)
+        static AnimationClip LoadClip(string path, string name, string kind, bool loop)
         {
             var clip = AssetDatabase.LoadAllAssetsAtPath(path).OfType<AnimationClip>().FirstOrDefault(c => c.name == name);
             Require(clip, $"{kind}: {path} has no clip {name} after import");
             int curves = AnimationUtility.GetCurveBindings(clip).Length;
             Require(curves > 0, $"{kind}: clip {name} in {path} has no curves");
             if (Mathf.Abs(clip.frameRate - 30f) > .01f) Warn($"{kind}: clip {name} runs at {clip.frameRate:0.##} fps; the contract says 30");
-            if (clip.isLooping != (name != "Attack")) Warn($"{kind}: clip {name} loop={clip.isLooping}, expected {name != "Attack"}");
+            if (clip.isLooping != loop) Warn($"{kind}: clip {name} loop={clip.isLooping}, expected {loop}");
             Log($"{kind}: clip {name}: {clip.length:0.00} s at {clip.frameRate:0.##} fps, loop {clip.isLooping}, {curves} curves");
             return clip;
         }
 
+                                                                                                                                                       
         static void CheckBindings(AnimationClip clip, GameObject model, string kind)
         {
             var paths = AnimationUtility.GetCurveBindings(clip).Select(b => b.path).Distinct().ToList();
@@ -408,6 +508,8 @@ namespace AnomalyArena.EditorTools
             return avatar;
         }
 
+                                                         
+
         static Material BuildMaterial(Job job, Material v3Template, bool? bodyGlow)
         {
             EnsureFolder(job.ModelDir);
@@ -418,7 +520,8 @@ namespace AnomalyArena.EditorTools
             var material = AssetDatabase.LoadAssetAtPath<Material>(path);
             if (!material)
             {
-
+                                                                                                                                                     
+                                                                                                                                                      
                 if (v3Template && v3Template.shader && v3Template.shader.name == LitShader) material = new Material(v3Template) { name = "PBR_0" };
                 else
                 {
@@ -444,7 +547,7 @@ namespace AnomalyArena.EditorTools
             material.SetFloat("_Metallic", 1f);
             material.SetFloat("_Smoothness", 1f);
             material.SetFloat("_SmoothnessTextureChannel", 0f);
-
+                                                                                                                
             if (material.HasProperty("_EmissionMap")) material.SetTexture("_EmissionMap", null);
             Require(material.HasProperty(EmissionColor) && material.HasProperty("_BaseColor"), $"{path} lacks _EmissionColor or _BaseColor, which V2ModelPresentation drives");
             if (bodyGlow.HasValue) ApplyBodyGlow(material, bodyGlow.Value);
@@ -459,7 +562,7 @@ namespace AnomalyArena.EditorTools
             if (on)
             {
                 material.EnableKeyword("_EMISSION");
-
+                                                                                                                                                     
                 material.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
             }
             else
@@ -497,6 +600,7 @@ namespace AnomalyArena.EditorTools
             return texture;
         }
 
+                                                                                                                                               
         static Texture2D BuildMetallicSmoothness(Job job)
         {
             string metallicPath = job.AssetDir + job.Kind + "_Metallic.png", roughnessPath = job.AssetDir + job.Kind + "_Roughness.png";
@@ -523,6 +627,7 @@ namespace AnomalyArena.EditorTools
             return ImportTexture(path, srgb: false, alphaFromInput: true);
         }
 
+                                                                                                                            
         static Color32[] ReadPixels(string path, out int width, out int height)
         {
             var texture = new Texture2D(2, 2, TextureFormat.RGBA32, false, true);
@@ -536,8 +641,10 @@ namespace AnomalyArena.EditorTools
             finally { Object.DestroyImmediate(texture); }
         }
 
+                                                                                                                                                    
         static AnimatorController BuildController(Job job, AnimationClip[] clips, string v3Path)
         {
+            if (job.Player) return BuildPlayerController(job, clips);
             string path = job.ModelDir + "MovementCombat.controller";
             if (!AssetDatabase.LoadAssetAtPath<AnimatorController>(path))
             {
@@ -547,7 +654,7 @@ namespace AnomalyArena.EditorTools
             }
             var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(path);
             Require(controller && controller.layers.Length > 0, $"{job.Kind}: {path} has no layers");
-
+                                                                                                              
             Require(controller.layers[0].name == "Base Layer", $"{job.Kind}: {path} layer 0 is '{controller.layers[0].name}', not Base Layer");
             var top = controller.layers[0].stateMachine.states.Select(s => s.state.name).ToList();
             Require(ClipNames.All(top.Contains), $"{job.Kind}: {path} Base Layer states are [{string.Join(", ", top)}]; it needs {string.Join(", ", ClipNames)} at the top");
@@ -556,6 +663,56 @@ namespace AnomalyArena.EditorTools
             foreach (var layer in controller.layers) assigned += AssignMotions(layer.stateMachine, byName, job.Kind, path);
             EditorUtility.SetDirty(controller);
             Log($"{job.Kind}: {path}: {assigned} states play the V6 clips, {controller.parameters.Length} parameters as V3");
+            return controller;
+        }
+
+                     
+                                                                                                                                                     
+                                                                                                                                                   
+                                                                                                                                
+                      
+        static AnimatorController BuildPlayerController(Job job, AnimationClip[] clips)
+        {
+            EnsureFolder(job.ModelDir);
+            string path = job.ModelDir + "MovementCombat.controller";
+            var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(path);
+            if (!controller)
+            {
+                controller = AnimatorController.CreateAnimatorControllerAtPath(path);
+                Log($"{job.Kind}: created {path}");
+            }
+            Require(controller && controller.layers.Length > 0 && controller.layers[0].name == "Base Layer", $"{job.Kind}: {path} has no Base Layer first");
+            var parameters = controller.parameters;
+            int speed = Array.FindIndex(parameters, p => p.name == RunSpeedParameter);
+            if (speed < 0) controller.AddParameter(new AnimatorControllerParameter { name = RunSpeedParameter, type = AnimatorControllerParameterType.Float, defaultFloat = 1f });
+            else
+            {
+                Require(parameters[speed].type == AnimatorControllerParameterType.Float, $"{job.Kind}: {path} has a {RunSpeedParameter} that is not a float");
+                parameters[speed].defaultFloat = 1f;
+                controller.parameters = parameters;
+            }
+            var machine = controller.layers[0].stateMachine;
+            for (int i = 0; i < job.Clips.Length; i++)
+            {
+                string name = job.Clips[i];
+                var state = machine.states.Select(s => s.state).FirstOrDefault(s => s && s.name == name) ?? machine.AddState(name, new Vector3(300f, 60f * i, 0f));
+                Require(!(state.motion is BlendTree), $"{job.Kind}: {path} state {name} holds a blend tree");
+                state.motion = clips[i];
+                state.speed = 1f;
+                bool gait = GaitClips.Contains(name);
+                state.speedParameterActive = gait;
+                state.speedParameter = gait ? RunSpeedParameter : "";
+                EditorUtility.SetDirty(state);
+            }
+            foreach (var stale in machine.states.Select(s => s.state).Where(s => s && !job.Clips.Contains(s.name)).ToList())
+            {
+                Log($"{job.Kind}: {path}: removed state {stale.name}, which has no clip now");
+                machine.RemoveState(stale);
+            }
+            machine.defaultState = machine.states.Select(s => s.state).First(s => s.name == "Idle");
+            EditorUtility.SetDirty(machine);
+            EditorUtility.SetDirty(controller);
+            Log($"{job.Kind}: {path}: states [{string.Join(", ", job.Clips)}], {RunSpeedParameter} drives [{string.Join(", ", job.Clips.Where(GaitClips.Contains))}]");
             return controller;
         }
 
@@ -578,13 +735,22 @@ namespace AnomalyArena.EditorTools
             return assigned;
         }
 
+                     
+                                                                                                                                                   
+                                                                                                                                                  
+                                                                                                                                                
+                                                                                                                                        
+                      
         static GameObject BuildModelPrefab(Job job, Material material, AnimatorController controller, AnimationClip idle, out Bounds unit)
         {
             string path = job.ModelDir + "Model.prefab";
             var fbx = AssetDatabase.LoadAssetAtPath<GameObject>(job.AssetDir + job.ModelFile);
             Require(fbx, $"{job.Kind}: cannot load {job.AssetDir + job.ModelFile}");
             Bounds raw = MeasureFbx(fbx, idle, job.Kind + " new model");
-
+                                                                                                                                           
+                                                                                                                                               
+                                                                                                                                            
+                                                                                                                               
             var offset = job.Rig == RigGeneric ? Vector3.zero : new Vector3(-raw.center.x, -raw.min.y, -raw.center.z);
             unit = new Bounds(raw.center + offset, raw.size);
             if (job.Manifest.height > 0f)
@@ -595,6 +761,8 @@ namespace AnomalyArena.EditorTools
                 else Log(note);
             }
 
+                                                                                                                                                  
+                                                                                                            
             bool existed = AssetDatabase.LoadAssetAtPath<GameObject>(path);
             var scene = existed ? default : EditorSceneManager.NewPreviewScene();
             GameObject root;
@@ -646,6 +814,7 @@ namespace AnomalyArena.EditorTools
             }
         }
 
+                                                                                                                                                                             
         static Bounds MeasureFbx(GameObject fbx, AnimationClip idle, string what)
         {
             var scene = EditorSceneManager.NewPreviewScene();
@@ -659,6 +828,8 @@ namespace AnomalyArena.EditorTools
             finally { EditorSceneManager.ClosePreviewScene(scene); }
         }
 
+                                       
+
         static string SwapIntoEnemyPrefab(Job job, GameObject modelPrefab, Bounds unit, AnimationClip[] clips, Fit fit, out string baseName)
         {
             var root = PrefabUtility.LoadPrefabContents(job.PrefabPath);
@@ -671,7 +842,7 @@ namespace AnomalyArena.EditorTools
                 Transform parent = shown.parent, oldRoot, previous;
                 if (IsNew(shown))
                 {
-
+                                                                                                                              
                     baseName = BaseNameOf(shown);
                     oldRoot = parent.Find(baseName + OldSuffix);
                     Require(oldRoot, $"{job.PrefabPath}: {shown.name} is shown but {baseName}{OldSuffix} is missing");
@@ -683,9 +854,10 @@ namespace AnomalyArena.EditorTools
                     oldRoot = shown;
                     Require(!parent.Find(baseName + OldSuffix), $"{job.PrefabPath}: {baseName} is shown but {baseName}{OldSuffix} exists too; sort it out by hand");
                     previous = parent.Find(baseName + NewSuffix);
-
+                                                                                                                                             
                     oldRoot.localScale = presentation.authoredScale;
                     oldRoot.localPosition = presentation.authoredPosition;
+                    if (job.Player) WritePlayerStash(job, presentation);
                 }
                 var oldAnimator = oldRoot.GetComponentInChildren<Animator>(true);
                 Require(oldAnimator, $"{job.PrefabPath}: the V3 model {oldRoot.name} has no Animator");
@@ -697,14 +869,16 @@ namespace AnomalyArena.EditorTools
                 if (presentation.rotationOffsetEuler != Vector3.zero)
                     Warn($"{job.Kind}: rotationOffsetEuler is {presentation.rotationOffsetEuler}; the sizes below are measured without it");
 
+                                                                                                                     
                 Bounds before = MeasureClone(oldRoot, oldClips[0], $"{job.Kind} V3 model");
                 float oldHeight = before.size.y, newHeight = unit.size.y;
                 float oldFoot = Mathf.Sqrt(before.size.x * before.size.z), newFoot = Mathf.Sqrt(unit.size.x * unit.size.z);
                 Require(oldHeight > 1e-4f && oldFoot > 1e-4f && newHeight > 1e-4f && newFoot > 1e-4f, $"{job.Kind}: a model has no size (old {Size(before.size)}, new {Size(unit.size)})");
                 float byHeight = oldHeight / newHeight, byFoot = oldFoot / newFoot;
                 float scale = fit switch { Fit.Height => byHeight, Fit.Footprint => byFoot, _ => Mathf.Sqrt(byHeight * byFoot) };
-
-                var position = new Vector3(before.center.x, 0f, before.center.z);
+                                                                                                                                                          
+                                                                                                                                             
+                var position = job.Player ? Vector3.zero : new Vector3(before.center.x, 0f, before.center.z);
                 Log($"{job.Kind}: old model {Size(before.size)}, bottom at {before.min.y:0.###}, footprint centre ({before.center.x:0.###}, {before.center.z:0.###}); new model at scale 1 {Size(unit.size)}");
                 string fitted = $"fit {fit.ToString().ToLowerInvariant()}: height x{byHeight:0.####}, footprint x{byFoot:0.####}, scale {scale:0.####}; " +
                                 $"new {Size(unit.size * scale)}, height {Percent(scale * newHeight / oldHeight)}, footprint {Percent(scale * newFoot / oldFoot)} against the old model";
@@ -714,6 +888,8 @@ namespace AnomalyArena.EditorTools
                 Log($"{job.Kind}: collider {(capsule ? $"capsule radius {capsule.radius:0.###}, height {capsule.height:0.###}" : "none on the root")} and body radius {presentation.referenceBodyRadius:0.###} (reference) are not changed; " +
                     $"kept tuning: rotation offset {presentation.rotationOffsetEuler}, run reference speed {presentation.runReferenceSpeed:0.##}, attack contact {presentation.attackContactNormalized:0.##} of {clips[2].length:0.00} s");
 
+                                                                                                                                               
+                                                                                                                    
                 var replaced = previous ? ModelRenderers(previous) : Array.Empty<Renderer>();
                 bool reuse = previous && PrefabUtility.IsAnyPrefabInstanceRoot(previous.gameObject) && PrefabUtility.GetCorrespondingObjectFromSource(previous.gameObject) == modelPrefab;
                 oldRoot.name = baseName + OldSuffix;
@@ -736,6 +912,7 @@ namespace AnomalyArena.EditorTools
                 presentation.authoredScale = model.transform.localScale;
                 presentation.authoredPosition = position;
                 Require(presentation.HasAssignedModel, $"{job.Kind}: the presentation is incomplete after the swap");
+                if (job.Player) fitted += "; " + SetUpPlayer(job, root, presentation, model.transform, clips);
                 ReplaceSurfaces(root, oldRenderers.Concat(replaced).ToArray(), newRenderers, job.Kind);
                 if (previous && !reuse)
                 {
@@ -761,6 +938,114 @@ namespace AnomalyArena.EditorTools
             Warn($"{job.Kind}: the old model is longer along {(oldAspect > 1f ? "Z (forward)" : "X (sideways)")}, the new one along {(newAspect > 1f ? "Z (forward)" : "X (sideways)")}: " +
                  $"check its facing in Play; the rotation offset {rotationOffset} is kept. Axis note: {job.Manifest.fbx_axis_note}");
         }
+
+                                      
+
+                     
+                                                                                                                                     
+                                                                                                                                             
+                      
+        static string SetUpPlayer(Job job, GameObject prefabRoot, V2ModelPresentation presentation, Transform model, AnimationClip[] clips)
+        {
+            var body = prefabRoot.GetComponent<Combatant>();
+            Require(body, $"{job.PrefabPath} has no {nameof(Combatant)}");
+                                                                                                                                  
+            float size = (presentation.scaleWithBodyRadius ? body.radius / Mathf.Max(.01f, presentation.referenceBodyRadius) : 1f)
+                         * (presentation.presentationScale > 0f ? presentation.presentationScale : PlayerPresentationScale);
+            var byName = new Dictionary<string, AnimationClip>();
+            for (int i = 0; i < job.Clips.Length && i < clips.Length; i++) byName[job.Clips[i]] = clips[i];
+            float Measure(string name) => byName.TryGetValue(name, out var clip) ? MeasureGroundSpeed(model, clip, size, $"{job.Kind} {name}") : 0f;
+            float run = Measure("Run"), walk = Measure("Walk"), sprint = Measure("Sprint");
+            presentation.legsFollowMovement = true;
+            presentation.playerAttackMotion = false;
+                                                                                                                                    
+            presentation.illustratedTint = Color.white;
+            const float Least = .3f;                                                                                        
+            if (run > Least) presentation.runReferenceSpeed = run;
+            else Warn($"{job.Kind}: could not measure the Run clip's foot speed; runReferenceSpeed stays {presentation.runReferenceSpeed:0.##}");
+            if (walk > Least) presentation.walkReferenceSpeed = walk;
+            if (sprint > Least) presentation.sprintReferenceSpeed = sprint;
+                                                                                                                            
+            if (walk > Least && run > Least) presentation.walkBelowSpeed = Mathf.Sqrt(walk * run);
+            return $"legs follow movement, no attack motion; planted-foot speeds at size x{size:0.##}: run {run:0.##}, walk {walk:0.##}, sprint {sprint:0.##} m/s, " +
+                   $"walk below {presentation.walkBelowSpeed:0.##} m/s";
+        }
+
+                     
+                                                                                                                                                   
+                                                                                                                                         
+                      
+        static float MeasureGroundSpeed(Transform modelRoot, AnimationClip clip, float size, string what)
+        {
+            var scene = EditorSceneManager.NewPreviewScene();
+            try
+            {
+                var space = new GameObject("Measure");
+                SceneManager.MoveGameObjectToScene(space, scene);
+                var copy = Object.Instantiate(modelRoot.gameObject, space.transform, false);
+                copy.SetActive(true);
+                var animator = copy.GetComponentInChildren<Animator>(true);
+                var feet = copy.GetComponentsInChildren<Transform>(true).Where(t => BoneIs(t, "LeftFoot") || BoneIs(t, "RightFoot")).ToArray();
+                if (!animator || feet.Length < 2) { Warn($"{what}: no Animator or no LeftFoot and RightFoot bones to measure"); return 0f; }
+                var target = animator.transform;
+                Vector3 position = target.localPosition, scale = target.localScale;
+                Quaternion rotation = target.localRotation;
+                int steps = Mathf.Max(16, Mathf.RoundToInt(clip.length * 120f));
+                float dt = clip.length / steps;
+                var heights = feet.Select(_ => new float[steps + 1]).ToArray();
+                var flats = feet.Select(_ => new Vector3[steps + 1]).ToArray();
+                for (int i = 0; i <= steps; i++)
+                {
+                    clip.SampleAnimation(animator.gameObject, i * dt);
+                    target.localPosition = position; target.localRotation = rotation; target.localScale = scale;
+                    for (int f = 0; f < feet.Length; f++)
+                    {
+                        Vector3 p = space.transform.InverseTransformPoint(feet[f].position) * size;
+                        heights[f][i] = p.y;
+                        flats[f][i] = new Vector3(p.x, 0f, p.z);
+                    }
+                }
+                var speeds = new List<float>();
+                for (int f = 0; f < feet.Length; f++)
+                {
+                    float low = heights[f].Min(), high = heights[f].Max();
+                    float planted = low + Mathf.Max(.01f * size, (high - low) * .08f);
+                    for (int i = 0; i < steps; i++)
+                        if (heights[f][i] <= planted && heights[f][i + 1] <= planted)
+                            speeds.Add((flats[f][i + 1] - flats[f][i]).magnitude / dt);
+                }
+                if (speeds.Count < 4) { Warn($"{what}: only {speeds.Count} planted-foot samples"); return 0f; }
+                speeds.Sort();
+                float median = speeds[speeds.Count / 2];
+                Log($"{what}: planted-foot speed {median:0.###} m/s (median of {speeds.Count} samples, {clip.length:0.00} s clip, size x{size:0.##})");
+                return median;
+            }
+            finally { EditorSceneManager.ClosePreviewScene(scene); }
+        }
+
+        static bool BoneIs(Transform bone, string name)
+        {
+            string own = bone.name;
+            int colon = own.LastIndexOf(':');
+            return string.Equals(colon >= 0 ? own.Substring(colon + 1) : own, name, StringComparison.OrdinalIgnoreCase);
+        }
+
+        static string PlayerStashPath(string sourceRoot) => Path.Combine(sourceRoot, PlayerKind, PlayerStashFile).Replace('\\', '/');
+
+                                                                                                                                                    
+        static void WritePlayerStash(Job job, V2ModelPresentation presentation)
+        {
+            string path = job.SourceDir + "/" + PlayerStashFile;
+            var stash = new PlayerStash
+            {
+                runReferenceSpeed = presentation.runReferenceSpeed, legsFollowMovement = presentation.legsFollowMovement,
+                playerAttackMotion = presentation.playerAttackMotion, illustratedTint = presentation.illustratedTint
+            };
+            File.WriteAllText(path, JsonUtility.ToJson(stash, true));
+            Log($"{job.Kind}: kept the explorer's run reference speed {stash.runReferenceSpeed:0.##} in {path} for Revert");
+        }
+
+                             
 
         static string RevertKind(string kind)
         {
@@ -797,9 +1082,21 @@ namespace AnomalyArena.EditorTools
                 presentation.runClip = clips[1];
                 presentation.attackClip = clips[2];
                 presentation.modelRenderers = oldRenderers;
-
+                                                                                                
                 presentation.authoredScale = oldRoot.localScale;
                 presentation.authoredPosition = oldRoot.localPosition;
+                if (kind == PlayerKind)
+                {
+                                                                                                                                      
+                    string stashPath = PlayerStashPath(ResolveSourceRoot(null));
+                    var stash = File.Exists(stashPath) ? JsonUtility.FromJson<PlayerStash>(File.ReadAllText(stashPath)) : null;
+                    presentation.legsFollowMovement = stash != null && stash.legsFollowMovement;
+                    presentation.playerAttackMotion = stash != null && stash.playerAttackMotion;
+                    if (stash != null && stash.runReferenceSpeed > 0f) presentation.runReferenceSpeed = stash.runReferenceSpeed;
+                    else Warn($"{kind}: no {stashPath}; legsFollowMovement is off, runReferenceSpeed stays {presentation.runReferenceSpeed:0.##}");
+                                                                                                    
+                    presentation.illustratedTint = stash != null && stash.illustratedTint.a > 0f ? stash.illustratedTint : new Color(.62f, .82f, 1f);
+                }
                 ReplaceSurfaces(root, newRenderers, oldRenderers, kind);
                 RequireNoReferencesInto(root, shown, oldRoot, kind);
                 Object.DestroyImmediate(shown.gameObject);
@@ -810,6 +1107,8 @@ namespace AnomalyArena.EditorTools
             FollowInVariants(prefabPath, kind, baseName, installed: false);
             return "reverted to the V3 model";
         }
+
+                                                                                           
 
         static void FollowInVariants(string basePath, string kind, string baseName, bool installed)
         {
@@ -830,14 +1129,14 @@ namespace AnomalyArena.EditorTools
                         Require(inheritedNew, $"variant {path} lacks the inherited {baseName}{NewSuffix}");
                         if (!ownModel)
                         {
-
+                                                                                                                              
                             changed |= RevertOverrides(presentation, PresentationFields, path, kind);
                             if (inheritedOld && inheritedOld.gameObject.activeSelf) { inheritedOld.gameObject.SetActive(false); changed = true; }
                             Require(presentation.modelRoot == inheritedNew, $"variant {path} does not show the inherited {baseName}{NewSuffix} after its overrides were reverted");
                         }
                         else
                         {
-
+                                                                                                                                                      
                             if (inheritedNew.gameObject.activeSelf) { inheritedNew.gameObject.SetActive(false); changed = true; }
                             var own = ClipsOf(presentation.animator, $"variant {path}");
                             if (presentation.idleClip != own[0] || presentation.runClip != own[1] || presentation.attackClip != own[2])
@@ -851,7 +1150,7 @@ namespace AnomalyArena.EditorTools
                     }
                     else if (ownModel)
                     {
-
+                                                                                                             
                         var basePresentation = AssetDatabase.LoadAssetAtPath<GameObject>(basePath).GetComponent<V2ModelPresentation>();
                         var baseClips = new[] { basePresentation.idleClip, basePresentation.runClip, basePresentation.attackClip };
                         var ownClips = new[] { presentation.idleClip, presentation.runClip, presentation.attackClip };
@@ -885,6 +1184,7 @@ namespace AnomalyArena.EditorTools
             return any;
         }
 
+                                                                                                                 
         static List<string> VariantsOf(string basePath)
         {
             var prefabs = AssetDatabase.FindAssets("t:Prefab", new[] { PrefabSearchFolder }).Select(g => AssetDatabase.GUIDToAssetPath(g)).Where(File.Exists).Distinct().ToList();
@@ -894,12 +1194,12 @@ namespace AnomalyArena.EditorTools
             while (frontier.Count > 0)
             {
                 string source = frontier.Dequeue();
-
+                                                                                                                             
                 string marker = "m_SourcePrefab: {fileID: 100100000, guid: " + AssetDatabase.AssetPathToGUID(source);
                 foreach (string path in prefabs)
                 {
                     if (path == basePath || found.Contains(path) || !File.ReadAllText(path).Contains(marker)) continue;
-
+                                                                                                               
                     var asset = AssetDatabase.LoadAssetAtPath<GameObject>(path);
                     var parent = asset && PrefabUtility.GetPrefabAssetType(asset) == PrefabAssetType.Variant ? PrefabUtility.GetCorrespondingObjectFromSource(asset) : null;
                     if (!parent || AssetDatabase.GetAssetPath(parent) != source) continue;
@@ -910,6 +1210,9 @@ namespace AnomalyArena.EditorTools
             return found;
         }
 
+                                     
+
+                                                                                                                                   
         static AnimationClip[] ClipsOf(Animator animator, string what)
         {
             var controller = animator ? animator.runtimeAnimatorController as AnimatorController : null;
@@ -923,6 +1226,7 @@ namespace AnomalyArena.EditorTools
             }).ToArray();
         }
 
+                                                                                                                                                  
         static Bounds MeasureClone(Transform modelRoot, AnimationClip idle, string what)
         {
             var scene = EditorSceneManager.NewPreviewScene();
@@ -946,7 +1250,7 @@ namespace AnomalyArena.EditorTools
                 Vector3 position = target.localPosition, scale = target.localScale;
                 Quaternion rotation = target.localRotation;
                 idle.SampleAnimation(animator.gameObject, 0f);
-
+                                                                                                                       
                 target.localPosition = position;
                 target.localRotation = rotation;
                 target.localScale = scale;
@@ -955,6 +1259,7 @@ namespace AnomalyArena.EditorTools
             return bounds;
         }
 
+                                                                                                                                       
         static bool MeasureBounds(GameObject root, Transform space, out Bounds bounds)
         {
             bounds = default;
@@ -967,7 +1272,8 @@ namespace AnomalyArena.EditorTools
                     Mesh mesh;
                     if (renderer is SkinnedMeshRenderer skinned && skinned.sharedMesh)
                     {
-
+                                                                                                                                         
+                                                                                                                                           
                         skinned.BakeMesh(baked, true);
                         mesh = baked;
                     }
@@ -996,6 +1302,7 @@ namespace AnomalyArena.EditorTools
         static Renderer[] ModelRenderers(Transform root) =>
             root.GetComponentsInChildren<Renderer>(true).Where(r => r is SkinnedMeshRenderer || r is MeshRenderer).ToArray();
 
+                                                                                                                                  
         static void ReplaceSurfaces(GameObject root, Renderer[] from, Renderer[] to, string kind)
         {
             foreach (var feedback in root.GetComponentsInChildren<V2EnemyThreatFeedback>(true))
@@ -1015,6 +1322,7 @@ namespace AnomalyArena.EditorTools
             }
         }
 
+                                                                                                                                                                          
         static void RequireNoReferencesInto(GameObject root, Transform leaving, Transform staying, string kind)
         {
             var found = new List<string>();
@@ -1083,6 +1391,7 @@ namespace AnomalyArena.EditorTools
             return sha.ComputeHash(first).SequenceEqual(sha.ComputeHash(second));
         }
 
+                                                                                                                                   
         static string SafeRelative(string value, string manifestFile)
         {
             if (string.IsNullOrWhiteSpace(value)) return null;
@@ -1113,8 +1422,8 @@ namespace AnomalyArena.EditorTools
             var result = new List<string>();
             foreach (string part in list.Split(new[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries))
             {
-                string kind = Kinds.FirstOrDefault(k => string.Equals(k, part, StringComparison.OrdinalIgnoreCase));
-                Require(kind != null, $"unknown kind '{part}'; the V6 kinds are {string.Join(", ", Kinds)}");
+                string kind = Kinds.Append(PlayerKind).FirstOrDefault(k => string.Equals(k, part, StringComparison.OrdinalIgnoreCase));
+                Require(kind != null, $"unknown kind '{part}'; the V6 kinds are {string.Join(", ", Kinds)} and {PlayerKind}");
                 if (!result.Contains(kind)) result.Add(kind);
             }
             return result;
@@ -1128,7 +1437,7 @@ namespace AnomalyArena.EditorTools
                 var bits = part.Split('=');
                 if (bits.Length == 1) { options.DefaultFit = ParseFitMode(bits[0]); continue; }
                 Require(bits.Length == 2, $"-fit: '{part}' is not kind=mode");
-                string kind = Kinds.FirstOrDefault(k => string.Equals(k, bits[0].Trim(), StringComparison.OrdinalIgnoreCase));
+                string kind = Kinds.Append(PlayerKind).FirstOrDefault(k => string.Equals(k, bits[0].Trim(), StringComparison.OrdinalIgnoreCase));
                 Require(kind != null, $"-fit: unknown kind '{bits[0]}'");
                 options.FitByKind[kind] = ParseFitMode(bits[1]);
             }
@@ -1174,6 +1483,7 @@ namespace AnomalyArena.EditorTools
             if (!condition) throw Fail(message);
         }
 
+                                                                                                                                                            
         sealed class SceneOverrides
         {
             Dictionary<string, string> texts;

@@ -515,7 +515,7 @@ namespace AnomalyArena
             if (look)
             {
                 look.idleEmission = Art.Enabled ? new Color(.02f, .05f, .09f) : Color.black;
-                look.baseTint = Art.Enabled ? new Color(.62f, .82f, 1f) : Color.white;
+                look.baseTint = Art.Enabled ? look.illustratedTint : Color.white;
             }
             cameraData = gm.cam.GetUniversalAdditionalCameraData();
             if (cameraData)
