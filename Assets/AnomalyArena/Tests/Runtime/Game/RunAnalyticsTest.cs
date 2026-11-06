@@ -94,6 +94,76 @@ namespace AnomalyArena
             Assert.That(json, Does.Contain("\"event\":\"run_end\""));
         }
 
+        // ---------------------------------------------------------------- Beta metrics
+
+        [TestCase(DamageSource.Hit, false, EnemyKind.Brute, false, ExpectedResult = "Brute")]
+        [TestCase(DamageSource.Hit, false, EnemyKind.Brute, true, ExpectedResult = "Brute_elite")]
+        [TestCase(DamageSource.Poison, false, EnemyKind.Spitter, false, ExpectedResult = "Spitter")]
+        [TestCase(DamageSource.Burn, true, null, false, ExpectedResult = "backfire")]
+        [TestCase(DamageSource.Hit, true, null, false, ExpectedResult = "backfire")]
+        [TestCase(DamageSource.Wall, false, EnemyKind.Rammer, false, ExpectedResult = "wall_slam")]
+        [TestCase(DamageSource.Wall, true, null, false, ExpectedResult = "wall_slam")]
+        [TestCase(DamageSource.Hit, false, EnemyKind.Tyrant, false, ExpectedResult = "Tyrant")]
+        [TestCase(DamageSource.Hit, false, null, false, ExpectedResult = "other")]
+        public string DamageSourceOf_NamesTheApplierAndKeepsWallsApart(DamageSource source, bool bySelf, EnemyKind? byEnemy, bool byElite)
+            => RunAnalytics.DamageSourceOf(source, bySelf, byEnemy, byElite);
+
+        [Test]
+        public void CardIds_AlwaysThreeEntries_EmptyForMissingCards()
+        {
+            Assert.That(RunAnalytics.CardIds(null), Is.EqualTo(new[] { "", "", "" }));
+            Assert.That(RunAnalytics.CardIds(Array.Empty<DraftCard>()), Is.EqualTo(new[] { "", "", "" }));
+            Assert.That(RunAnalytics.CardId(null), Is.EqualTo(""));
+            var skill = new DraftCard(DraftCardKind.Skill, "Flame Wake", "", _ => true, payload: SkillId.FlameWake);
+            Assert.That(RunAnalytics.CardId(skill), Is.EqualTo("Skill:FlameWake"), "the id never uses the translated title");
+        }
+
+        [Test]
+        public void OfferId_MarksAHigherMkOfAnOwnedWeapon()
+        {
+            var owned = new RunWeapon { form = WeaponForm.Rifle };
+            Assert.That(RunAnalytics.OfferId(new RunWeapon { form = WeaponForm.Minigun }), Is.EqualTo("Minigun"));
+            Assert.That(RunAnalytics.OfferId(new RunWeapon { form = WeaponForm.Rifle, upgradeOf = owned }), Is.EqualTo("Rifle:upgrade"));
+            Assert.That(RunAnalytics.OfferId(null), Is.EqualTo(""));
+        }
+
+        [Test]
+        public void SupplyResolved_WithoutAnOpenDrop_SendsNothing()
+        {
+            RunAnalytics.SupplyResolved(null, RunAnalytics.SupplySkip);
+            RunAnalytics.SupplyReplaceCancelled();
+            RunAnalytics.FlushDamage(null);
+            Assert.That(sent, Is.Empty);
+        }
+
+        [Test]
+        public void BetaEvents_Json_UseTheSheetFieldNames()
+        {
+            string upgrade = JsonUtility.ToJson(new RunAnalytics.UpgradePickEvent { @event = "upgrade_pick", picked = "Weapon:Rifle:Power" });
+            foreach (var key in new[] { "schema", "event", "run_id", "session_id", "edition", "build", "context", "wave", "level",
+                         "offer_1", "offer_2", "offer_3", "picked", "rerolled" })
+                Assert.That(upgrade, Does.Contain($"\"{key}\":"), "upgrade_pick " + key);
+
+            string supply = JsonUtility.ToJson(new RunAnalytics.SupplyPickEvent { @event = "supply_pick", action = RunAnalytics.SupplyReplace });
+            foreach (var key in new[] { "schema", "event", "run_id", "wave", "level", "offer_1", "offer_2", "offer_3", "action", "picked",
+                         "replaced", "replace_cancels" })
+                Assert.That(supply, Does.Contain($"\"{key}\":"), "supply_pick " + key);
+
+            var row = new RunAnalytics.DamageRow { source = "Brute_elite", dot = false, stage = "wave", wave = 3, damage = 12.5, damage_pct = 25, hits = 2 };
+            string damage = JsonUtility.ToJson(new RunAnalytics.DamageEvent { @event = "wave_damage", rows = new[] { row } });
+            foreach (var key in new[] { "schema", "event", "run_id", "rows", "source", "dot", "stage", "wave", "damage", "damage_pct", "hits" })
+                Assert.That(damage, Does.Contain($"\"{key}\":"), "wave_damage " + key);
+            Assert.That(damage, Does.Contain("\"source\":\"Brute_elite\""));
+
+            // A full chunk of damage rows must stay under the endpoint's 4096-character limit.
+            var rows = new RunAnalytics.DamageRow[RunAnalytics.DamageRowsPerEvent];
+            for (int i = 0; i < rows.Length; i++)
+                rows[i] = new RunAnalytics.DamageRow { source = "Splitter_elite", dot = true, stage = "void_trial", wave = 14, damage = 99999.9, damage_pct = 9999.9, hits = 9999 };
+            string full = JsonUtility.ToJson(new RunAnalytics.DamageEvent { @event = "wave_damage", run_id = new string('a', 32), session_id = new string('b', 32),
+                edition = "en", build = "1.0.0+3fa2b1c9", rows = rows });
+            Assert.That(full.Length, Is.LessThan(4096));
+        }
+
         [Test]
         public void EnsureV2Default_FirstRun_StartsInWhitebox()
         {
@@ -121,12 +191,12 @@ namespace AnomalyArena
         public async Task Run_KilledByAnEnemy_SendsAStartRowAndADefeatRowNamingIt()
         {
             var game = await StartRun();
-            var start = Parse(sent.Single());
+            var start = Parse(RunRows().Single());
             Assert.That(start.@event, Is.EqualTo("run_start"));
             Assert.That(start.run_id, Does.Match("^[0-9a-f]{32}$"));
             Assert.That(start.session_id, Does.Match("^[0-9a-f]{32}$"));
             Assert.That(start.starting_weapon, Is.EqualTo(nameof(WeaponForm.Rifle)));
-            Assert.That(start.edition, Is.EqualTo("zh"));
+            Assert.That(start.edition, Is.EqualTo("en"));
 
             await Until(() => game.RunPhase == ArenaUiState.WaveActive && game.waves.Alive.Any(e => e && e.IsAlive && e.definition), 15f, "an enemy is in the arena");
             var killer = game.waves.Alive.First(e => e && e.IsAlive && e.definition);
@@ -135,14 +205,17 @@ namespace AnomalyArena
             Assert.That(game.player.ReceiveDamage(DamageInfo.Attack(99999f, killer)), Is.True, "the hit lands");
             await Until(() => game.RunPhase == ArenaUiState.Result, 5f, "the run ends");
 
-            Assert.That(sent, Has.Count.EqualTo(2));
-            var end = Parse(sent[1]);
+            Assert.That(RunRows(), Has.Count.EqualTo(2));
+            var end = Parse(RunRows()[1]);
             Assert.That(end.@event, Is.EqualTo("run_end"));
             Assert.That(end.run_id, Is.EqualTo(start.run_id), "both rows belong to the same run");
             Assert.That(end.session_id, Is.EqualTo(start.session_id));
             Assert.That((end.outcome, end.cause, end.enemy), Is.EqualTo(("defeat", "enemy", kind.ToString())));
             Assert.That((end.stage, end.wave), Is.EqualTo(("wave", 1)));
             Assert.That(end.run_seconds, Is.GreaterThan(0d));
+            Assert.That(DamageRows().Any(r => r.source.StartsWith(kind.ToString()) && !r.dot && r.wave == 1 && r.hits >= 1 && r.damage_pct > 0),
+                "the killing hit is reported as damage from that enemy kind");
+            Assert.That(sent.IndexOf(RunRows()[1]), Is.EqualTo(sent.Count - 1), "the damage of the last wave is sent before run_end");
         }
 
         [Test, LoadScene(Scene), Timeout(90000)]
@@ -151,16 +224,16 @@ namespace AnomalyArena
             var game = await StartRun();
             await Until(() => game.RunPhase == ArenaUiState.WaveActive, 15f, "the wave starts");
             await CommandUntil(game, ArenaUiCommand.Pause, () => game.RunPhase == ArenaUiState.Paused);
-            await CommandUntil(game, ArenaUiCommand.Restart, () => sent.Count == 2);
+            await CommandUntil(game, ArenaUiCommand.Restart, () => RunRows().Count == 2);
 
-            var end = Parse(sent[1]);
+            var end = Parse(RunRows()[1]);
             Assert.That((end.@event, end.outcome, end.cause, end.stage), Is.EqualTo(("run_end", "abandoned", "restart", "wave")));
                                                                                                                                  
                                                                                                                
             LogAssert.ignoreFailingMessages = true;
             float until = Time.realtimeSinceStartup + .5f;
             while (Time.realtimeSinceStartup < until) await Awaitable.NextFrameAsync();
-            Assert.That(sent, Has.Count.EqualTo(2), "a run ends only once");
+            Assert.That(RunRows(), Has.Count.EqualTo(2), "a run ends only once");
         }
 
         [Test, LoadScene(Scene), Timeout(90000)]
@@ -176,11 +249,21 @@ namespace AnomalyArena
             Assert.That(game.RunPhase, Is.EqualTo(ArenaUiState.VoidTrial), "a dead player gets no reward draft");
             await Until(() => game.RunPhase == ArenaUiState.Result, 5f, "the run ends");
 
-            var end = Parse(sent[1]);
+            var end = Parse(RunRows()[1]);
             Assert.That((end.outcome, end.cause, end.stage), Is.EqualTo(("defeat", "void_trial", "void_trial")));
+            Assert.That(DamageRows().Any(r => r.source == "wall_slam" && r.stage == "void_trial"), "the wall damage is reported as wall_slam in the trial");
         }
 
         static RunAnalytics.RunEvent Parse(string json) => JsonUtility.FromJson<RunAnalytics.RunEvent>(json);
+
+        // The "runs" rows only; beta events (damage, picks) are sent alongside them.
+        List<string> RunRows() => sent.Where(json => Parse(json).@event.StartsWith("run_")).ToList();
+
+        List<RunAnalytics.DamageRow> DamageRows() => sent
+            .Select(json => JsonUtility.FromJson<RunAnalytics.DamageEvent>(json))
+            .Where(e => e.@event == "wave_damage")
+            .SelectMany(e => e.rows)
+            .ToList();
 
                                                                                                                                              
         static async Task<GameManager> StartRun()

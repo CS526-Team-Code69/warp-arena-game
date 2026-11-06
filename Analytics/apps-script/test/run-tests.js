@@ -18,6 +18,13 @@ const CAUSES = [
   'enemy', 'tyrant', 'backfire', 'wall_slam', 'status', 'black_hole',
   'void_trial', 'unknown', 'victory', 'restart', 'quit_to_title'
 ];
+const ALL_SHEETS = ['runs', 'Summary', 'upgrade_picks', 'supply_picks', 'damage', 'Upgrade picks', 'Supply picks', 'Damage sources'];
+const UPGRADE_HEADER = ['received_at', 'event', 'run_id', 'session_id', 'edition', 'build',
+  'context', 'wave', 'level', 'offer_1', 'offer_2', 'offer_3', 'picked', 'picked_kind', 'weapon_offered', 'rerolled'];
+const SUPPLY_HEADER = ['received_at', 'event', 'run_id', 'session_id', 'edition', 'build',
+  'wave', 'level', 'offer_1', 'offer_2', 'offer_3', 'action', 'picked', 'replaced', 'replace_cancels'];
+const DAMAGE_HEADER = ['received_at', 'event', 'run_id', 'session_id', 'edition', 'build',
+  'stage', 'wave', 'bucket', 'source', 'dot', 'damage', 'damage_pct', 'hits'];
 const BUCKETS = ['W1', 'W2', 'W3', 'W4', 'W5', 'W6', 'W7', 'W8', 'W9', 'W10', 'W11', 'W12', 'W13', 'W14', 'Boss'];
 const COL = { received_at: 0 };
 HEADER.forEach((name, i) => { COL[name] = i; });
@@ -82,6 +89,10 @@ class MockRange {
   setFontWeight() {
     return this;
   }
+  setNumberFormat(format) {
+    this.numberFormat = format;
+    return this;
+  }
   getA1Notation() {
     return colLetter(this.col) + this.row + ':' + colLetter(this.col + this.numCols - 1) + (this.row + this.numRows - 1);
   }
@@ -133,6 +144,14 @@ class MockChartBuilder {
     this.spec.type = 'COLUMN';
     return new MockColumnChartBuilder(this);
   }
+  asBarChart() {
+    this.spec.type = 'BAR';
+    return new MockColumnChartBuilder(this);
+  }
+  asPieChart() {
+    this.spec.type = 'PIE';
+    return new MockPieChartBuilder(this);
+  }
   build() {
     if (!this.spec.ranges.length) throw new Error('Chart has no range');
     return { spec: JSON.parse(JSON.stringify(this.spec)) };
@@ -149,6 +168,15 @@ class MockColumnChartBuilder extends MockChartBuilder {
   setTitle(t) { this.spec.title = t; return this; }
   setXAxisTitle(t) { this.spec.xTitle = t; return this; }
   setYAxisTitle(t) { this.spec.yTitle = t; return this; }
+}
+
+// The pie builder has setTitle but no stacking or axis titles.
+class MockPieChartBuilder extends MockChartBuilder {
+  constructor(base) {
+    super(base.sheet);
+    this.spec = base.spec;
+  }
+  setTitle(t) { this.spec.title = t; return this; }
 }
 
 class MockSheet {
@@ -633,6 +661,7 @@ test('doGet reports status and row count', () => {
   assert.strictEqual(json.ok, true);
   assert.strictEqual(json.status, 'WARP ARENA analytics endpoint is running');
   assert.strictEqual(json.rows, 2);
+  assert.deepStrictEqual(json.beta_rows, { upgrade_picks: 0, supply_picks: 0, damage: 0 });
 
   const unbound = makeEnv({ bound: false });
   const json2 = JSON.parse(unbound.gs.doGet({}).getContent());
@@ -643,7 +672,7 @@ test('doGet reports status and row count', () => {
 test('setup creates the header, stores the id, builds the Summary grid and one chart', () => {
   const env = makeEnv();
   env.gs.setup();
-  assert.deepStrictEqual(env.ss.getSheets().map((s) => s.name), ['runs', 'Summary'], 'empty Sheet1 is reused as "runs"');
+  assert.deepStrictEqual(env.ss.getSheets().map((s) => s.name), ALL_SHEETS, 'empty Sheet1 is reused as "runs"');
   const runs = runsSheet(env);
   assert.deepStrictEqual(runs.rowValues(1), HEADER);
   assert.strictEqual(runs.frozenRows, 1);
@@ -700,7 +729,7 @@ test('setup is safe to run twice: one chart, one Summary, rows in "runs" kept', 
   const before = runsSheet(env).dataRows().map((r) => r.slice(1));
   env.gs.setup();
   env.gs.setup();
-  assert.deepStrictEqual(env.ss.getSheets().map((s) => s.name), ['runs', 'Summary']);
+  assert.deepStrictEqual(env.ss.getSheets().map((s) => s.name), ALL_SHEETS);
   const summary = env.ss.getSheetByName('Summary');
   assert.strictEqual(summary.charts.length, 1);
   assert.deepStrictEqual(summary.charts[0].spec.ranges, ['A1:L16']);
@@ -766,6 +795,212 @@ test('Summary formulas count the right rows (wave buckets, causes, test rows, to
   assert.strictEqual(ended, 9);
   // Runs 9 and 10 never ended; run 11 ended without a start, so started minus ended would give 1.
   assert.strictEqual(unfinished, 2);
+});
+
+// ---------------------------------------------------------------------------
+// Beta metrics
+// ---------------------------------------------------------------------------
+
+function betaBase(event, overrides) {
+  return Object.assign({ schema: 1, event: event, run_id: RUN_ID, session_id: SESSION_ID, edition: 'en', build: '1.0.0+3fa2b1c9' }, overrides);
+}
+function upgradeEvent(overrides) {
+  return betaBase('upgrade_pick', Object.assign({
+    context: 'levelup', wave: 4, level: 5,
+    offer_1: 'Weapon:Rifle:Power', offer_2: 'Skill:FlameWake', offer_3: 'Weapon:Minigun:Tempo',
+    picked: 'Weapon:Rifle:Power', rerolled: false,
+  }, overrides));
+}
+function supplyEvent(overrides) {
+  return betaBase('supply_pick', Object.assign({
+    wave: 3, level: 4, offer_1: 'Minigun', offer_2: 'Rifle:upgrade', offer_3: 'OrbitBlades',
+    action: 'replace', picked: 'Minigun', replaced: 'Knife', replace_cancels: 1,
+  }, overrides));
+}
+function damageEvent(rows, overrides) {
+  return betaBase('wave_damage', Object.assign({ rows: rows }, overrides));
+}
+function sheetOf(env, name) { return env.ss.getSheetByName(name); }
+
+// Minimal COUNTIFS / SUMIFS evaluator for the beta summaries: equality, "<>x", ">0" and "*" wildcards.
+function betaMatches(cell, criterion) {
+  if (criterion === true) return cell === true;
+  if (typeof criterion === 'number') return cell === criterion;
+  if (criterion.startsWith('<>')) return String(cell).toLowerCase() !== criterion.slice(2).toLowerCase();
+  if (criterion.startsWith('>')) return typeof cell === 'number' && cell > Number(criterion.slice(1));
+  const re = new RegExp('^' + criterion.split('*').map((s) => s.replace(/[.+?^${}()|[\]\\]/g, '\\$&')).join('.*') + '$', 'i');
+  return typeof cell === 'string' && re.test(cell);
+}
+function evalBetaFormula(formula, env) {
+  const terms = formula.replace(/^=/, '').split(/\+(?=COUNTIFS)/);
+  let total = 0;
+  for (const term of terms) {
+    const m = /^(COUNTIFS|SUMIFS)\((.*)\)$/.exec(term);
+    if (!m) throw new Error('Unexpected formula: ' + formula);
+    const args = m[2].match(/(\w+)!\$([A-Z]):\$\2|"[^"]*"|TRUE/g);
+    let sumCol = null;
+    let i = 0;
+    if (m[1] === 'SUMIFS') { sumCol = args[0]; i = 1; }
+    const pairs = [];
+    for (; i < args.length; i += 2) {
+      const crit = args[i + 1] === 'TRUE' ? true : args[i + 1].slice(1, -1);
+      pairs.push([args[i], crit]);
+    }
+    const colIndex = (ref) => ref.split('$')[1].charCodeAt(0) - 65;
+    const sheet = sheetOf(env, pairs[0][0].split('!')[0]);
+    for (let r = 2; r <= sheet.getLastRow(); r++) {
+      const row = sheet.rowValues(r);
+      if (pairs.every(([ref, crit]) => betaMatches(row[colIndex(ref)], crit))) total += sumCol ? Number(row[colIndex(sumCol)]) || 0 : 1;
+    }
+  }
+  return total;
+}
+
+test('upgrade_pick is stored in "upgrade_picks" with its kind and weapon count worked out', () => {
+  const env = readyEnv();
+  assert.deepStrictEqual(post(env, upgradeEvent({ rerolled: true, wave: 99, level: '7' })).json, { ok: true });
+  const sheet = sheetOf(env, 'upgrade_picks');
+  assert.deepStrictEqual(sheet.rowValues(1), UPGRADE_HEADER);
+  const row = sheet.rowValues(2);
+  assert.ok(isDate(row[0]));
+  assert.deepStrictEqual(row.slice(1), ['upgrade_pick', RUN_ID, SESSION_ID, 'en', '1.0.0+3fa2b1c9', 'levelup', 14, 7,
+    'Weapon:Rifle:Power', 'Skill:FlameWake', 'Weapon:Minigun:Tempo', 'Weapon:Rifle:Power', 'Weapon', 2, true]);
+  assert.strictEqual(runsSheet(env).getLastRow(), 1, 'nothing written to "runs"');
+
+  post(env, upgradeEvent({ context: 'build', picked: 'Stat:Damage', offer_1: 'Stat:Damage', offer_3: '=HYPERLINK("x")' }));
+  const second = sheet.rowValues(3);
+  assert.strictEqual(second[6], 'build');
+  assert.strictEqual(second[11], 'HYPERLINKx', 'offers can never become a formula');
+  assert.strictEqual(second[13], 'Stat');
+  assert.strictEqual(second[14], 0);
+});
+
+test('supply_pick keeps picked only when a weapon was taken and replaced only for replace', () => {
+  const env = readyEnv();
+  for (const ev of [
+    supplyEvent(),
+    supplyEvent({ action: 'skip', picked: 'Minigun', replaced: 'Knife', replace_cancels: 500 }),
+    supplyEvent({ action: 'merge', picked: 'Rifle', replaced: 'Knife' }),
+  ]) assert.deepStrictEqual(post(env, ev).json, { ok: true });
+  const sheet = sheetOf(env, 'supply_picks');
+  assert.deepStrictEqual(sheet.rowValues(1), SUPPLY_HEADER);
+  assert.deepStrictEqual(sheet.rowValues(2).slice(6), [3, 4, 'Minigun', 'Rifle:upgrade', 'OrbitBlades', 'replace', 'Minigun', 'Knife', 1]);
+  assert.deepStrictEqual(sheet.rowValues(3).slice(11), ['skip', '', '', 100]);
+  assert.deepStrictEqual(sheet.rowValues(4).slice(11), ['merge', 'Rifle', '', 1]);
+});
+
+test('wave_damage writes one row per source, with the wave bucket and clamped numbers', () => {
+  const env = readyEnv();
+  const res = post(env, damageEvent([
+    { source: 'Brute_elite', dot: false, stage: 'wave', wave: 3, damage: 12.34, damage_pct: 24.68, hits: 2 },
+    { source: 'Spitter', dot: true, stage: 'wave', wave: 3, damage: 4, damage_pct: 8, hits: 4 },
+    { source: '', dot: 'true', stage: 'final_boss', wave: 2, damage: -5, damage_pct: 'x', hits: 1.6 },
+  ]));
+  assert.deepStrictEqual(res.json, { ok: true });
+  const sheet = sheetOf(env, 'damage');
+  assert.deepStrictEqual(sheet.rowValues(1), DAMAGE_HEADER);
+  assert.strictEqual(sheet.getLastRow(), 4);
+  assert.deepStrictEqual(sheet.rowValues(2).slice(6), ['wave', 3, 'W03', 'Brute_elite', false, 12.3, 24.7, 2]);
+  assert.deepStrictEqual(sheet.rowValues(3).slice(6), ['wave', 3, 'W03', 'Spitter', true, 4, 8, 4]);
+  assert.deepStrictEqual(sheet.rowValues(4).slice(6), ['final_boss', 14, 'W15 Boss', 'other', true, 0, 0, 2]);
+  assert.ok(env.lock.releases >= 1 && !env.lock.held, 'written under the lock');
+});
+
+test('bad beta events are rejected and write nothing', () => {
+  const tooMany = [];
+  for (let i = 0; i < 25; i++) tooMany.push({ source: 'Grunt', wave: 1, damage: 1, damage_pct: 1, hits: 1 });
+  const cases = [
+    [upgradeEvent({ schema: 2 }), 'bad schema'],
+    [upgradeEvent({ run_id: 'nope' }), 'bad run_id'],
+    [upgradeEvent({ session_id: undefined }), 'bad session_id'],
+    [upgradeEvent({ edition: 'fr' }), 'bad edition'],
+    [upgradeEvent({ context: 'greater' }), 'bad context'],
+    [upgradeEvent({ picked: '' }), 'bad picked'],
+    [supplyEvent({ action: 'steal' }), 'bad action'],
+    [supplyEvent({ action: 'take_free', picked: '' }), 'bad picked'],
+    [damageEvent([]), 'bad rows'],
+    [damageEvent('Grunt'), 'bad rows'],
+    [damageEvent([null]), 'bad rows'],
+    [damageEvent(tooMany), 'too many rows'],
+  ];
+  for (const [body, error] of cases) {
+    const env = readyEnv();
+    const res = post(env, body);
+    assert.strictEqual(res.json.ok, false, error);
+    assert.strictEqual(res.json.error, error, JSON.stringify(body).slice(0, 80));
+    for (const name of ['runs', 'upgrade_picks', 'supply_picks', 'damage']) assert.strictEqual(sheetOf(env, name).getLastRow(), 1, name);
+  }
+});
+
+test('a beta event creates its sheet with the header when setup has not run', () => {
+  const env = makeEnv();
+  assert.deepStrictEqual(post(env, supplyEvent()).json, { ok: true });
+  const sheet = sheetOf(env, 'supply_picks');
+  assert.deepStrictEqual(sheet.rowValues(1), SUPPLY_HEADER);
+  assert.strictEqual(sheet.getLastRow(), 2);
+  assert.strictEqual(sheet.columnFormats[9], '@', 'offer columns are plain text');
+});
+
+test('setup builds the three beta summaries with their charts', () => {
+  const env = readyEnv();
+  const upgrades = sheetOf(env, 'Upgrade picks');
+  assert.deepStrictEqual(upgrades.rowValues(1), ['Upgrade direction', 'Offered', 'Picked', 'Pick rate']);
+  assert.deepStrictEqual([2, 3, 4, 5, 6, 7, 8].map((r) => upgrades.getCell(r, 1).value),
+    ['Power', 'Tempo', 'Reach', 'Infusion', 'Twist', 'Tame', 'All weapon upgrades']);
+  assert.deepStrictEqual([11, 12, 13].map((r) => upgrades.getCell(r, 1).value), ['Weapon', 'Skill', 'Stat']);
+  assert.deepStrictEqual(upgrades.charts.map((c) => [c.spec.type, c.spec.ranges]),
+    [['COLUMN', ['A1:A7', 'D1:D7']], ['COLUMN', ['A10:A13', 'D10:D13']]]);
+
+  const supply = sheetOf(env, 'Supply picks');
+  assert.deepStrictEqual([2, 3, 4, 5, 6].map((r) => supply.getCell(r, 1).value), ['take_free', 'merge', 'replace', 'skip', 'timeout']);
+  assert.ok(supply.getCell(1, 5).formula.indexOf("where L = 'replace'") > 0);
+  assert.deepStrictEqual(supply.charts.map((c) => c.spec.type), ['PIE', 'BAR']);
+
+  const damage = sheetOf(env, 'Damage sources');
+  assert.ok(damage.getCell(1, 1).formula.startsWith('=IFERROR(QUERY(damage!$A$2:$N,'));
+  assert.ok(damage.getCell(1, 8).formula.indexOf('pivot J') > 0);
+  assert.deepStrictEqual(damage.charts.map((c) => c.spec.type), ['BAR', 'COLUMN']);
+  assert.strictEqual(damage.charts[1].spec.options.isStacked, 'percent');
+  assert.deepStrictEqual(damage.charts[1].spec.ranges, ['H1:AV16']);
+
+  env.gs.setup();
+  assert.strictEqual(sheetOf(env, 'Upgrade picks').charts.length, 2, 'setup twice keeps one set of charts');
+  assert.strictEqual(sheetOf(env, 'Damage sources').charts.length, 2);
+});
+
+test('beta summary formulas count the right rows', () => {
+  const env = readyEnv();
+  const events = [
+    upgradeEvent(), // Rifle Power (picked), Minigun Tempo offered
+    upgradeEvent({ picked: 'Skill:FlameWake' }),
+    upgradeEvent({ offer_1: 'Stat:Damage', offer_2: 'Skill:Blink', offer_3: 'Stat:MaxHp', picked: 'Stat:MaxHp' }),
+    upgradeEvent({ edition: 'test' }),
+    supplyEvent(), supplyEvent({ replaced: 'Rifle' }), supplyEvent({ action: 'skip', replace_cancels: 2 }),
+    supplyEvent({ action: 'take_free', edition: 'test' }),
+    damageEvent([{ source: 'Grunt', wave: 1, damage: 10, damage_pct: 20, hits: 1 },
+      { source: 'Spitter', dot: true, wave: 2, damage: 5, damage_pct: 10, hits: 3 }]),
+    damageEvent([{ source: 'Grunt', wave: 2, damage: 5, damage_pct: 10, hits: 1 }], { edition: 'test' }),
+  ];
+  for (const ev of events) assert.strictEqual(post(env, ev).json.ok, true);
+
+  const up = sheetOf(env, 'Upgrade picks');
+  const rate = (row) => [evalBetaFormula(up.getCell(row, 2).formula, env), evalBetaFormula(up.getCell(row, 3).formula, env)];
+  assert.deepStrictEqual(rate(2), [2, 1], 'Power offered twice, picked once (test row left out)');
+  assert.deepStrictEqual(rate(3), [2, 0], 'Tempo');
+  assert.deepStrictEqual(rate(8), [4, 1], 'all weapon upgrades');
+  assert.deepStrictEqual(rate(11), [4, 1], 'Weapon cards');
+  assert.deepStrictEqual(rate(12), [3, 1], 'Skill cards');
+  assert.deepStrictEqual(rate(13), [2, 1], 'Stat cards');
+  assert.strictEqual(evalBetaFormula(up.getCell(15, 2).formula, env), 2, 'picks with a weapon on offer');
+  assert.strictEqual(evalBetaFormula(up.getCell(16, 2).formula, env), 1, 'of which a weapon was picked');
+
+  const sp = sheetOf(env, 'Supply picks');
+  assert.deepStrictEqual([2, 3, 4, 5, 6].map((r) => evalBetaFormula(sp.getCell(r, 2).formula, env)), [0, 0, 2, 1, 0]);
+  assert.strictEqual(evalBetaFormula(sp.getCell(9, 2).formula, env), 4, 'replace screen cancels: 1 + 1 + 2');
+
+  const dm = sheetOf(env, 'Damage sources');
+  assert.strictEqual(evalBetaFormula(dm.getCell(2, 5).formula.replace(/^=IF\(\$A2="","",(.*)\)$/, '=$1').replace('$A2', '"Spitter"'), env), 10,
+    'burn / poison part of Spitter damage');
 });
 
 test('appsscript.json is a V8 web app open to anonymous callers', () => {
