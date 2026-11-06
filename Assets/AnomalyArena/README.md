@@ -23,10 +23,10 @@ Scene objects and component references are saved in the scenes. Normal work does
 | `Tests/Runtime/` | Play Mode tests, assembly `AnomalyArena.Tests` |
 | `Tests/Editor/` | The test-result writer, assembly `AnomalyArena.Editor.Tests` |
 | `Data/` | Rule assets: `ProgressionRules`, `StatusRules`, `EncounterBalance`, `SkillCatalog`, one asset per element in `Data/Elements/`, one per skill in `Data/Skills/` |
-| `V2/Data/` | `WeaponRoster` (weapon forms and the Mk table), `Waves15` (wave table), biomes and map layouts (`DustFlats`, `RiftZone`, `InterstellarBattlefield` and their `…Map` assets, more layouts in `ExpandedWorld/`), enemy definitions in `Enemies/` |
+| `V2/Data/` | `WeaponRoster` (weapon forms and the Mk table), `Waves15` (wave table), biomes and map layouts in `ExpandedWorld/`, enemy definitions in `Enemies/` |
 | `V2/Prefabs/` | `PlayerV2` and one prefab per enemy type, including the bosses `Hollow` and `Tyrant` |
 | `V2/Materials/` | Materials for the game scene |
-| `Art/` | `Art/V2/` (player model, shaders, SVG sources, weapon, skill and element icons, `V2ArtSet.asset`); `Art/V3/` (enemy models and animations, ground, supply crate, title screen); `Art/V4/VFX/` (older combat effect sprites and their SVG sources); `Art/V5/Terrain/` (ground and wall shaders and textures) |
+| `Art/` | `Art/V2/` (player model, shaders, weapon, skill and element icons, `V2ArtSet.asset`); `Art/V3/` (enemy models and animations, ground, supply crate, title screen); `Art/V4/VFX/` (older combat effect sprites and their SVG sources); `Art/V5/Terrain/` (ground and wall shaders and textures) |
 | `Resources/V5/` | Loaded at run time: `V5Look.asset` (effect tuning), effect shaders, `Fx/`, `Terrain/` and `UI/` textures, and `Audio/` (the weapon, skill and boss sounds as `.bytes`, see Audio below) |
 | `Audio/` | `Audio/V2/`, the full sound bank in `Audio/V3/Full/`, and `Audio/V5/` |
 | `Localization/` | Unity Localization settings, the `en` and `zh-Hans` locales, the `ArenaUI` string table and `ArenaAssets` asset table |
