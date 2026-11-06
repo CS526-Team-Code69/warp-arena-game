@@ -226,8 +226,8 @@ AI tools used in making the game and this document:
 | Tool | Used for |
 |---|---|
 | Meshy | 3D models and character animation for the optional illustrated mode |
-| ElevenLabs | Sound effects and music |
-| GPT Image 2.5 | 2D illustrations and concept art for the optional illustrated mode, and references for the Meshy models |
+| ElevenLabs | Sound effects, music and the English voice-over of the V2 story |
+| GPT Image 2.5 | 2D illustrations and concept art for the optional illustrated mode, including the V2 memory cutscene and the room backgrounds, and references for the Meshy models |
 | Codex | Weapon, skill, stat and element icons, shown in both art modes |
 | Claude | Building the UI and VFX, and bringing these art assets into the game |
 
