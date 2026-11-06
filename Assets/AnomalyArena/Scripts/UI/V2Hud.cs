@@ -41,7 +41,6 @@ namespace AnomalyArena
         public Canvas localizedCanvas;
         public UnityEngine.UI.Text[] fontLabels;
 
-        // feature/low hp warning. It will be used to flash the screen when the player's health is low. The thresholds and opacity values can be adjusted in the inspector under the V2 canvas. - H.
         [Header("Low Health Warning")]
         [SerializeField, Range(0.01f, 1f)]
         float lowHealthThreshold = 0.50f;
@@ -171,7 +170,7 @@ namespace AnomalyArena
             Render(snapshot);
             ShowTutorialOnArrival(snapshot);
         }
-        // feature/low hp warning. It will be used to flash the screen when the player's health is low. The thresholds and opacity values can be adjusted in the inspector under the V2 canvas. - H.
+
         void TickHealthWarning(float dt)
         {
             if (!damageFlash) return;

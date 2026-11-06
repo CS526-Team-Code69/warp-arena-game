@@ -412,7 +412,7 @@ namespace AnomalyArena
 
             Assert.That(immune.Hp, Is.EqualTo(immuneHp), "the bolts deal nothing to the Lightning-immune target");
             Assert.That(immuneBoard.Lightning, Is.Zero, "nor add any Lightning to it");
-            Assert.That(beside.Hp, Is.EqualTo(besideHp), "and the Lightning does not jump on from it (owner 2026-10-25: an immune boss does not conduct)");
+            Assert.That(beside.Hp, Is.EqualTo(besideHp), "and the Lightning does not jump on from it (2026-10-25: an immune boss does not conduct)");
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
