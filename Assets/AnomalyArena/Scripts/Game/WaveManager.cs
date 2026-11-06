@@ -6,7 +6,13 @@ using Random = UnityEngine.Random;
 namespace AnomalyArena
 {
     public enum WavePhase { Idle, WaveIntro, WaveActive, WaitingBuild, FinalBoss }
-
+                 
+                                                                                               
+                                                                                              
+                                                                                    
+                                                                                                                       
+                                                                                   
+                  
     [DefaultExecutionOrder(100)]
     public class WaveManager : MonoBehaviour
     {
@@ -77,11 +83,11 @@ namespace AnomalyArena
         [Header("Bosses (system doc §13)")]
         [Tooltip("Move numbers of the Nash Prophet (void trial) and the Tyrant (final boss).")] public BossTuning bosses = new();
         static readonly ElementKind[] EliteElements = { ElementKind.Fire, ElementKind.Poison, ElementKind.Frost, ElementKind.Lightning, ElementKind.Earth, ElementKind.Light, ElementKind.Void };
-
+                                                                                                                                      
         static readonly ElementKind[] TyrantImmunityPool = new List<ElementKind>(ElementImmunity.Boss).ToArray();
-
+                                                                                       
         public int ActiveEliteCount { get { int count = 0; foreach (var enemy in alive) if (enemy && enemy.IsAlive && enemy.Elite) count++; if (preparedMarkers != null) foreach (var marker in preparedMarkers) if (marker && marker.gameObject.activeSelf && marker.elite) count++; return count; } }
-
+                                                                                                                     
         public ElementKind PickEliteAffix()
         {
             var free = new List<ElementKind>(EliteElements);
@@ -94,9 +100,13 @@ namespace AnomalyArena
         [Tooltip("First five waves as a fraction of full density; later waves use full density.")] public float[] earlyPopulationScale = { .3f,.4f,.5f,.65f,.8f };
         [SerializeField] int quickFeedbackRevision;
         int spawnSectorCursor;
-
+                     
+                                                                                                                                                 
+                                                                                                                                                    
+                                                                                                                              
+                      
         public Vector3 ActiveRoleShares => RoleShares(WaveIndex + 1);
-
+                                                                                                                                           
         public Vector3 RoleShares(int wave)
         {
             int first = FirstSpecialWave();
@@ -104,7 +114,7 @@ namespace AnomalyArena
             float elite = wave < firstEliteWave ? 0f : eliteShare * (wave < 8 ? .25f : wave < 10 ? .5f : 1f);
             return new Vector3(Mathf.Max(0f,1f-special-elite),special,elite);
         }
-
+                                                                                                                       
         int FirstSpecialWave()
         {
             if (!waveSet || waveSet.waves == null) return 0;
@@ -122,7 +132,13 @@ namespace AnomalyArena
             float ramp = earlyPopulationScale != null && index < earlyPopulationScale.Length ? Mathf.Clamp01(earlyPopulationScale[index]) : 1f;
             return Mathf.Min(Mathf.Max(1,maxConcurrentOrdinary),Mathf.Max(1,Mathf.CeilToInt(waveSet.waves[index].aliveTarget*Mathf.Max(0f,spawnCountMultiplier)*ramp)));
         }
-
+                     
+                                                                                                                                                       
+                                                                                                                                                                    
+                                                                                                                                                  
+                                                                                                                                               
+                     
+                      
         public float ExperienceFor(Enemy enemy)
         {
             if (!enemy || !enemy.definition || enemy.IsBoss) return 0f;
@@ -136,6 +152,9 @@ namespace AnomalyArena
             return (body + affix) * Mathf.Max(0f, experienceRateMultiplier) * WaveExperienceScale;
         }
 
+                                                                                                                                        
+                                                                                                                                      
+                                                                                         
         public float WaveExperienceScale => waveSet && waveSet.waves is { Length: > 0 } && WaveIndex >= 0
             ? CombatScale * Mathf.Max(0f, waveSet.waves[Mathf.Min(WaveIndex, waveSet.waves.Length - 1)].experienceScale) : 1f;
         [Header("Player-near batch spawning")]
@@ -148,15 +167,19 @@ namespace AnomalyArena
         public bool TimeExpired { get; private set; }
         public int LivingCount { get { int count = 0; foreach (var enemy in alive) if (enemy && enemy.IsAlive && enemy.gameObject.activeInHierarchy) count++; return count; } }
         public int PendingCount { get { int count = batchSpawnsRemaining + pendingSplits.Count * Mathf.Max(0, splitterMiniCount); if (preparedMarkers != null) foreach (var marker in preparedMarkers) if (marker && marker.gameObject.activeSelf) count++; return count; } }
-
+                                                                                                                                              
+                                                                                                                                      
+                                                  
         public ElementKind[] TyrantImmunities { get; } = (ElementKind[])TyrantImmunityPool.Clone();
         public WavePhase Phase { get; private set; }
         public float TimeLeft { get; private set; }
         public float HpMultiplier => waveSet && WaveIndex >= 0 ? waveSet.waves[Mathf.Min(WaveIndex, waveSet.waves.Length - 1)].hpMultiplier * waveSet.ExtraHp(WaveIndex+1) : 1f;
         public float EnemyDamageFactor => waveSet ? waveSet.DamageFactor(WaveIndex+1) : 1f;
-
+                                                                                                                                                                           
+                                                                                                                                           
         public float CombatScale => waveSet && waveSet.encounterBalance && WaveIndex >= 0 ? waveSet.encounterBalance.DpsAt(Phase == WavePhase.FinalBoss ? WaveCount + 1 : WaveIndex + 1) / waveSet.encounterBalance.DpsAt(1) : 1f;
-
+                                                                                                                                            
+                                                                                                       
         public float FinalBossDamageFactor => waveSet ? waveSet.DamageFactor(WaveCount + 1) : 1f;
         public float EnemySpeedFactor => (waveSet ? waveSet.SpeedFactor(WaveIndex+1) : 1f) * MovementSpeedScale;
         public float BuildTime => waveSet && WaveIndex >= 0 ? waveSet.waves[Mathf.Min(WaveIndex, waveSet.waves.Length - 1)].buildTime : 20f;
@@ -166,10 +189,10 @@ namespace AnomalyArena
         bool trialSuspended;
         bool finalBossPending;
         ElementKind waveAffixA, waveAffixB;
-
+                                                                                                                                                
         public ElementKind WaveAffixA => waveAffixA;
         public ElementKind WaveAffixB => waveAffixB;
-
+                                                                                                                                          
         readonly HashSet<EnemyKind> seenThisWave = new(), unplaceable = new();
         float[] rollWeights;
         bool[] rollListed;
@@ -180,7 +203,7 @@ namespace AnomalyArena
         readonly List<PendingSplit> pendingSplits = new();
 
         public int WaveIndex { get; private set; } = -1;
-
+                                                                                                                  
         public int WaveCount => waveSet ? waveSet.waves.Length : 0;
         public bool BetweenWaves { get; private set; }
         public int Remaining => LivingCount + PendingCount;
@@ -195,7 +218,7 @@ namespace AnomalyArena
 
         void Awake() => ApplyV5Defaults();
         void OnValidate() => ApplyV5Defaults();
-
+                                                                                                                                                                         
         void ApplyV5Defaults()
         {
             if (v5RosterRevision >= 1) return;
@@ -205,6 +228,7 @@ namespace AnomalyArena
             supportFirstWave = 3;
         }
 
+                                                                                                       
         public EnemyDefinition DefinitionOf(EnemyKind kind)
         {
             if (roster == null) return null;
@@ -228,8 +252,29 @@ namespace AnomalyArena
             BeginV2Wave(WaveIndex + 1);
         }
 
+        bool campaignSpawn;
+                                                                                                                                                             
+        public Enemy SpawnCampaign(EnemyKind kind, Vector3 at)
+        {
+            var data = DefinitionOf(kind);
+            if (!data) return null;
+            campaignSpawn = true;
+            try { return SpawnPrepared(data, at, false); }
+            finally { campaignSpawn = false; }
+        }
+
+                                                                                                                                                
+        public void BeginWaveAt(int index)
+        {
+            if (!running) { running = true; pendingSplits.Clear(); Enemy.ClearRadiationZones(); radiationClock = 0f; }
+            BeginV2Wave(Mathf.Clamp(index, 0, WaveCount - 1));
+        }
+
         static float OrdinaryAffixShare(int index) => index < 4 ? 0f : index < 7 ? .1f : index < 10 ? .15f : .25f;
 
+                                                                                                                                               
+                                                                                                                                           
+                                                    
         readonly Dictionary<(EnemyKind kind, bool elite), float> experienceTable = new();
         void BuildExperienceTable()
         {
@@ -263,7 +308,8 @@ namespace AnomalyArena
             BatchIndex = 0; TimeExpired = false; batchSpawnsRemaining = 0;
             spawnSectorCursor = Random.Range(0,8);
             seenThisWave.Clear();
-
+                                                                                                                         
+                                                                                                         
             int available = index < 4 ? 0 : index < 7 ? 3 : index < 10 ? 5 : 7;
             waveAffixA = available > 0 ? (ElementKind)Random.Range(1, available + 1) : ElementKind.None;
             waveAffixB = available > 1 ? (ElementKind)(1 + ((int)waveAffixA - 1 + Random.Range(1, available)) % available) : waveAffixA;
@@ -334,10 +380,11 @@ namespace AnomalyArena
             if (LivingCount == 0 && PendingCount == 0) BeginBatch();
             else if (batchSpawnsRemaining == 0) RefillPopulation();
             if (batchSpawnsRemaining > 0 && spawnTimer <= 0f) IssueBatchMarkers();
-
+                                                                                                                              
             TickPreparedMarkers(dt);
         }
 
+                                                                                                                                                                     
         void TickRadiation(float dt)
         {
             var player = GM ? GM.player : null;
@@ -361,7 +408,7 @@ namespace AnomalyArena
             basicRemaining = Mathf.Clamp(Mathf.RoundToInt(batchSpawnsRemaining * shares.x), 0, batchSpawnsRemaining);
             int eliteWanted = Mathf.Clamp(Mathf.RoundToInt(batchSpawnsRemaining * shares.z), 0, batchSpawnsRemaining - basicRemaining);
             specialRemaining = batchSpawnsRemaining - basicRemaining - eliteWanted;
-
+                                                                                                                                 
             if (specialRemaining == 0 && shares.y > 0f && basicRemaining > 1) { basicRemaining--; specialRemaining++; }
             ReserveFirstAppearances(ref basicRemaining, ref specialRemaining);
             eliteRemaining = Mathf.Min(eliteWanted, Mathf.Max(0, maxConcurrentElites - ActiveEliteCount));
@@ -391,7 +438,8 @@ namespace AnomalyArena
             int specialTarget = Mathf.Max(0, target - basicTarget - eliteTarget);
             int missingBasic = Mathf.Max(0,basicTarget-basic), missingElite = Mathf.Max(0,eliteTarget-elite);
             int missingSpecial = Mathf.Max(0,specialTarget-special);
-
+                                                                                                                                           
+                                                                                                  
             int excess = missingBasic + missingSpecial + missingElite - Mathf.Max(0, target - basic - special - elite);
             if (excess > 0) { int cut = Mathf.Min(excess, missingBasic); missingBasic -= cut; excess -= cut; }
             if (excess > 0) { int cut = Mathf.Min(excess, missingSpecial); missingSpecial -= cut; excess -= cut; }
@@ -399,11 +447,17 @@ namespace AnomalyArena
             int missing = missingBasic+missingSpecial+missingElite;
             if (missing < Mathf.Max(1,Mathf.CeilToInt(target*refillMissingShare))) return;
             ReserveFirstAppearances(ref missingBasic, ref missingSpecial, Mathf.Max(0, special - specialTarget));
-
+                                                                                                       
             basicRemaining = missingBasic; specialRemaining = missingSpecial; eliteRemaining = missingElite;
             batchSpawnsRemaining = missing; BatchIndex++; spawnTimer = 0f;
         }
 
+                     
+                                                                                                                                                   
+                                                                                                                                                    
+                                                                                                                                                     
+                                                                                                           
+                      
         void ReserveFirstAppearances(ref int basics, ref int specials, int surplus = 0)
         {
             int unseen = 0;
@@ -428,14 +482,16 @@ namespace AnomalyArena
                 if (!data) data = DefinitionOf(EnemyKind.Grunt);
                 if (!data) break;
                 bool elite = group == 2;
-
+                                                                                                                                 
+                                                                  
                 var affix = !data.canAffix ? ElementKind.None
                     : elite ? PickEliteAffix()
                     : EnemyRoles.IsSpecial(data.kind) ? ElementKind.None
                     : Random.value < affixShare ? Random.value < .5f ? waveAffixA : waveAffixB : ElementKind.None;
                 if (!PlaceMarker(data, elite, affix))
                 {
-
+                                                                                                                                                   
+                                                                                          
                     if (group < 2 && !seenThisWave.Contains(data.kind) && unplaceable.Add(data.kind)) continue;
                     break;
                 }
@@ -446,7 +502,8 @@ namespace AnomalyArena
         }
 
         bool IsSwarm(EnemyDefinition data) => EnemyRoles.IsMelee(data.kind);
-
+                                                                                                                                                    
+                                                                                                         
         public static bool IsBasic(EnemyKind kind) => EnemyRoles.IsMelee(kind) || kind is EnemyKind.Spitter or EnemyKind.Warden;
         int ShadeCap => WaveIndex + 1 >= shadePairWave ? 2 : 1;
         int ShadeCount()
@@ -456,7 +513,11 @@ namespace AnomalyArena
             if (preparedMarkers != null) foreach (var marker in preparedMarkers) if (marker && marker.gameObject.activeSelf && marker.definition && marker.definition.kind == EnemyKind.Shade) count++;
             return count;
         }
-
+                     
+                                                                                                                                             
+                                                                                                                                                  
+                                                                                                                                                   
+                      
         bool ListedWeight(int wave1, int index, int group, bool constrainActive, out int weight)
         {
             weight = 0;
@@ -474,7 +535,11 @@ namespace AnomalyArena
             weight = TiltedWeight(wave, kind);
             return true;
         }
-
+                     
+                                                                                                                                                
+                                                                                                                                                  
+                                                                                        
+                      
         void FillGroupWeights(int wave1, int group, bool constrainActive, float[] weights, bool[] listed)
         {
             for (int i = 0; i < weights.Length; i++)
@@ -484,7 +549,8 @@ namespace AnomalyArena
             }
             ApplyShareFloor(weights, listed, minKindShare);
         }
-
+                                                                                                                                                  
+                                                                                                                                                                    
         public float[] GroupWeights(int wave, int group)
         {
             var weights = new float[roster != null ? roster.Length : 0];
@@ -492,7 +558,11 @@ namespace AnomalyArena
             FillGroupWeights(wave, group, false, weights, new bool[weights.Length]);
             return weights;
         }
-
+                     
+                                                                                                                                             
+                                                                                                                                                   
+                                                                                                                                    
+                      
         public static void ApplyShareFloor(float[] weights, bool[] listed, float minShare)
         {
             int count = 0;
@@ -504,7 +574,8 @@ namespace AnomalyArena
                 for (int i = 0; i < weights.Length; i++) if (listed[i]) weights[i] = total > 0f ? total / count : 1f;
                 return;
             }
-
+                                                                                                                                                  
+                                                                                                                                 
             float floorTotal = total;
             int raisedBefore = 0;
             for (int pass = 0; pass <= count; pass++)
@@ -537,7 +608,8 @@ namespace AnomalyArena
             if (roster == null) return null;
             if (rollWeights == null || rollWeights.Length != roster.Length) { rollWeights = new float[roster.Length]; rollListed = new bool[roster.Length]; }
             FillGroupWeights(WaveIndex + 1, group, true, rollWeights, rollListed);
-
+                                                                                                                                              
+                                                                                                                                           
             if (group < 2)
             {
                 bool unseen = false;
@@ -568,7 +640,7 @@ namespace AnomalyArena
             for (int i = 0; i < roster.Length; i++) { roll -= SummonWeight(wave, i); if (roll < 0) return roster[i]; }
             return DefinitionOf(EnemyKind.Grunt);
         }
-
+                                                                                                                   
         int SummonWeight(WaveSet.Definition wave, int index) => index < roster.Length && roster[index] && !EnemyRoles.IsSpecial(roster[index].kind)
             && !EnemyRoles.IsBoss(roster[index].kind) ? TiltedWeight(wave, (int)roster[index].kind) : 0;
 
@@ -621,14 +693,16 @@ namespace AnomalyArena
             }
         }
 
+                                                                                                              
+                                                                                                                                         
         Enemy SpawnPrepared(EnemyDefinition data, Vector3 at, bool elite, ElementKind affix = ElementKind.None, bool mini = false, bool ignoreClock = false)
         {
             if (!data || preparedEnemies == null) return null;
-            if (!trialSuspended && (Phase is not (WavePhase.WaveActive or WavePhase.FinalBoss)
+            if (!trialSuspended && !campaignSpawn && (Phase is not (WavePhase.WaveActive or WavePhase.FinalBoss)
                 || !ignoreClock && Phase == WavePhase.WaveActive && (TimeExpired || TimeLeft <= 0f))) return null;
             foreach (var enemy in preparedEnemies)
             {
-
+                                                                                                     
                 if (!enemy || enemy.gameObject.activeSelf || enemy.CorpseActive || alive.Contains(enemy) || enemy.definition != data) continue;
                 enemy.transform.position = new Vector3(at.x, 0f, at.z);
                 enemy.gameObject.SetActive(true);
@@ -664,6 +738,10 @@ namespace AnomalyArena
         }
         public void TrackBoss(Enemy enemy) => Track(enemy);
 
+                     
+                                                                                                                            
+                                                                                                                    
+                      
         public void QueueSplit(Enemy parent)
         {
             if (!parent || !parent.definition || splitterMiniCount <= 0) return;
@@ -671,7 +749,7 @@ namespace AnomalyArena
             if (side.sqrMagnitude < 1e-4f) side = Vector3.right;
             pendingSplits.Add(new PendingSplit { data = parent.definition, at = Query.Flat(parent.Position), side = side.normalized, suppressRewards = parent.SuppressRewards });
         }
-
+                                                                                                                                                                    
         public int SpawnPendingSplits()
         {
             if (pendingSplits.Count == 0) return 0;
@@ -712,7 +790,7 @@ namespace AnomalyArena
                 if (enemy) { enemy.SuppressRewards = bossSummon; enemy.IsTrialSummon = trialSuspended; }
             }
         }
-
+                                                                                                                            
         public void SpawnExtrasAt(EnemyKind kind, IReadOnlyList<Vector3> points, bool bossSummon)
         {
             var data = DefinitionOf(kind);
@@ -724,13 +802,13 @@ namespace AnomalyArena
                 if (enemy) { enemy.SuppressRewards = bossSummon; enemy.IsTrialSummon = trialSuspended; }
             }
         }
-
+                                                                                                                                      
         public WaveSpawnMarker BorrowMarker()
         {
             if (preparedMarkers != null) foreach (var marker in preparedMarkers) if (marker && !marker.gameObject.activeSelf) return marker;
             return null;
         }
-
+                                                                                                                                                                     
         public Enemy SpawnLab(EnemyKind kind, Vector3 at, bool elite, ElementKind affix)
         {
             var data = DefinitionOf(kind);
@@ -738,7 +816,7 @@ namespace AnomalyArena
             bool asElite = elite && data.canElite;
             return SpawnPrepared(data, at, asElite, asElite || data.canAffix ? affix : ElementKind.None);
         }
-
+                                                                                                             
         public Enemy SpawnLabTyrant(Vector3 at)
         {
             if (!tyrant || tyrant.IsAlive) return tyrant;
@@ -751,13 +829,13 @@ namespace AnomalyArena
             Track(tyrant);
             return tyrant;
         }
-
+                                                                                                                                                             
         public void ClearLab()
         {
             foreach (var enemy in alive.ToArray())
                 if (enemy && enemy.IsAlive) { enemy.SuppressRewards = true; enemy.BossSummon = false; enemy.Kill(); }
         }
-
+                                                                                                                                                                  
         public Enemy SpawnIntroFodder(Vector3 at)
         {
             var data = DefinitionOf(EnemyKind.Grunt);
@@ -767,6 +845,12 @@ namespace AnomalyArena
             return enemy;
         }
 
+                     
+                                                                                                                                        
+                                                                                                                                             
+                                                                                                                                               
+                                                                                                           
+                      
         public int SpawnBossWave(int count, Vector3 centre, float ringRadius)
         {
             if (count <= 0 || roster == null || !waveSet || waveSet.waves == null || waveSet.waves.Length == 0) return 0;
@@ -803,7 +887,7 @@ namespace AnomalyArena
             }
             return placed;
         }
-
+                                                                                                                                                    
         EnemyDefinition RollWaveKind(int wave, int group)
         {
             FillGroupWeights(wave, group, true, rollWeights, rollListed);
@@ -821,7 +905,8 @@ namespace AnomalyArena
             }
             return roster[last];                                      
         }
-
+                                                                                                                                                 
+                                                                 
         public void DevourSummon(Enemy summon)
         {
             if (!summon || summon.IsBoss) return;
@@ -841,7 +926,7 @@ namespace AnomalyArena
                 Vector3 at = centre + Quaternion.Euler(0f, 360f * i / count, 0f) * Vector3.forward * 4f;
                 if (WorldMap.Active) at = WorldMap.Active.ClampPoint(at, 1f);
                 if (!ValidSpawnPoint(at, data) && !TryFindV2SpawnPoint(data, out at)) continue;
-
+                                                                                                                  
                 var marker = BorrowMarker();
                 if (marker) { marker.Begin(at, data, false, ElementKind.None, true); continue; }
                 var enemy = SpawnPrepared(data, at, false);
@@ -853,7 +938,7 @@ namespace AnomalyArena
             var bolt = FreeBolt();
             if (bolt) bolt.Launch(owner, at, direction);
         }
-
+                                                                                                                                              
         public bool LaunchBossBolt(Enemy owner, Vector3 at, Vector3 direction, float damage, float knockback, float speed)
         {
             var bolt = FreeBolt();
@@ -868,6 +953,10 @@ namespace AnomalyArena
         }
         public Vector3 FindV2SpawnPoint(EnemyDefinition data) => TryFindV2SpawnPoint(data, out var point) ? point : GM.player.Position;
 
+                     
+                                                                                                                         
+                                                                                                                                            
+                      
         public bool TryFindV2SpawnPoint(EnemyDefinition data, out Vector3 point)
         {
             float minimum = Mathf.Max(nearbySpawnMin, data.kind == EnemyKind.Shade ? 12f : 1f);
@@ -876,7 +965,7 @@ namespace AnomalyArena
             bool stomper = data.kind == EnemyKind.Stomper;
             int wanted = stomper ? Mathf.Clamp(stomperSpawnCandidates, 1, 8) : 1, found = 0, bestCrowd = int.MaxValue, bestSector = 0;
             Vector3 best = Vector3.zero;
-
+                                                                                                                                           
             for (int offset = 0; offset < 8 && found < wanted; offset++)
             {
                 int sector = (spawnSectorCursor + offset) % 8;
@@ -943,11 +1032,12 @@ namespace AnomalyArena
             batchSpawnsRemaining = 0; corpseOrder.Clear(); pendingSplits.Clear();
             Enemy.ClearRadiationZones(); radiationClock = 0f;
             GM.ClearTransients();
-
+                                                                                                              
             WorldMap.Active?.OnWaveEnded(WaveIndex + 1);
             WaveCompleted?.Invoke(WaveIndex + 1);
         }
-
+                                                                                                                                          
+                                                                                                                        
         public bool LaunchTrackingBossBolt(Enemy owner, Vector3 at, Vector3 direction, float damage, float speed, float turnRate, float trackSeconds)
         {
             var bolt = FreeBolt();

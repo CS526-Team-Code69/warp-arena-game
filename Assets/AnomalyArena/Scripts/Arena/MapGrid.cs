@@ -3,6 +3,7 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
+                                                                                                              
     public sealed class MapGrid
     {
         readonly int width, height;
@@ -91,7 +92,7 @@ namespace AnomalyArena
             int first = 0, last = 0;
             field[goal] = 0;
             queue[last++] = goal;
-
+                                                                                                                   
             while (first < last)
             {
                 int at = queue[first++];
@@ -152,6 +153,74 @@ namespace AnomalyArena
                 if (!Open(cell, allowGravity)) return false;
             }
             return true;
+        }
+
+        int[] raidField;
+        bool raidReady;
+
+                                                                                                                                                        
+        public void IntegrateRaid(Rect target)
+        {
+            raidField ??= new int[width * height];
+            Array.Fill(raidField, int.MaxValue);
+            int first = 0, last = 0;
+            for (int i = 0; i < raidField.Length; i++)
+            {
+                if (blocked[i] || gravity[i]) continue;
+                Vector3 c = Centre(i);
+                float dx = Mathf.Max(target.xMin - c.x, Mathf.Max(0f, c.x - target.xMax)), dz = Mathf.Max(target.yMin - c.z, Mathf.Max(0f, c.z - target.yMax));
+                if (Mathf.Max(dx, dz) > 1.6f) continue;
+                raidField[i] = 0; queue[last++] = i;
+            }
+            while (first < last)
+            {
+                int at = queue[first++];
+                int x = at % width, z = at / width;
+                foreach (var delta in offsets)
+                {
+                    int nx = x + delta.x, nz = z + delta.y;
+                    if (nx < 0 || nx >= width || nz < 0 || nz >= height) continue;
+                    int next = nz * width + nx;
+                    if (blocked[next] || gravity[next] || raidField[next] != int.MaxValue) continue;
+                    raidField[next] = raidField[at] + 1;
+                    queue[last++] = next;
+                }
+            }
+            raidReady = true;
+        }
+
+        public Vector3 RaidDirection(Vector3 position, Vector3 spot)
+        {
+            int index = Index(position);
+            if (index < 0 || !raidReady || HasClearPath(position, spot, false)) return Query.Flat(spot - position).normalized;
+            int at = index;
+            Vector3 aim = Vector3.zero;
+            for (int step = 0; step < LookAheadCells; step++)
+            {
+                int next = NextRaidCell(at);
+                if (next == at || step > 0 && !HasClearPath(position, Centre(next), false)) break;
+                at = next;
+                aim = Centre(at);
+            }
+            return at == index ? Query.Flat(spot - position).normalized : Query.Flat(aim - position).normalized;
+        }
+
+        int NextRaidCell(int index)
+        {
+            int x = index % width, z = index / width, best = index, score = raidField[index];
+            for (int dz = -1; dz <= 1; dz++)
+            for (int dx = -1; dx <= 1; dx++)
+            {
+                int nx = x + dx, nz = z + dz;
+                if (nx < 0 || nx >= width || nz < 0 || nz >= height || (dx == 0 && dz == 0)) continue;
+                int next = nz * width + nx;
+                if (blocked[next] || gravity[next]) continue;
+                if (dx != 0 && dz != 0 && (blocked[z * width + nx] || blocked[nz * width + x])) continue;
+                if (raidField[next] >= score) continue;
+                score = raidField[next];
+                best = next;
+            }
+            return best;
         }
 
         bool Inside(int x, int z) => x >= 0 && z >= 0 && x < width && z < height;

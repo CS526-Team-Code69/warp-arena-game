@@ -33,6 +33,10 @@ namespace AnomalyArena
         public int level = 1, maxLevel = 12, wave = 1, maxWaves = 14, kills, bankedDrafts, rerolls = 1;
         public int draftIndex = 1, draftCount;
         public string banner = "";
+                                                                                                                                                
+        public string campaignLabel = "";
+                                                                                                                                                    
+        public bool hideXp;
         public string hint = "";
         public string playerStatuses = "";
         public string bossImmunities = "";

@@ -2,7 +2,10 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+                 
+                                                                                                      
+                                                                                               
+                  
     public class V2Hud : MonoBehaviour
     {
         [Header("Run and independent interstellar art")]
@@ -41,6 +44,7 @@ namespace AnomalyArena
         public Canvas localizedCanvas;
         public UnityEngine.UI.Text[] fontLabels;
 
+                                                                                                                                                                                                    
         [Header("Low Health Warning")]
         [SerializeField, Range(0.01f, 1f)]
         float lowHealthThreshold = 0.50f;
@@ -68,6 +72,8 @@ namespace AnomalyArena
         ArenaUiSnapshot lastSnapshot;
         int seenPick = -1;
 
+                                                                                                                                     
+                                                                                                                                   
         GameObject bootCover;
 
         void Awake()
@@ -94,7 +100,8 @@ namespace AnomalyArena
             V2SlotFeedback.Add(handSlots, V2SlotFeedback.Kind.Hand);
             V2SlotFeedback.Add(autoSlots, V2SlotFeedback.Kind.Auto);
             V2SlotFeedback.Add(skillSlots, V2SlotFeedback.Kind.Skill);
-
+                                                                                                                                       
+                                                                             
             if (screens != null)
                 foreach (var screen in screens)
                 {
@@ -109,6 +116,9 @@ namespace AnomalyArena
         const int WeaponCardTextSize = 24;
         int weaponCardSmallest = 10;
 
+                                                                                                                                         
+                                                                                                                                           
+                                    
         public const string ChineseEditionScene = "ArenaV2_CN";
         static readonly string[] ChineseTitleHidden = { "InterstellarSubtitle", "ToggleArt", "ChineseTeam", "EnglishShowcase" };
 
@@ -128,6 +138,8 @@ namespace AnomalyArena
             }
         }
 
+                                                                                                                                                           
+                                                                                                                                                               
         static readonly string[] UnderTheScreens = { "DamageNumberPool", "PlayerDamageFlash", "SupplyDropOverlay" };
 
         void KeepScreensOverTheRun()
@@ -157,12 +169,12 @@ namespace AnomalyArena
             flash = Mathf.Max(0f, flash - dt * 3f);
             if (damageFlash)
             {
-
+                                                                                                                                         
                 if (!edgeVignette) { edgeVignette = EdgeVignette(); damageFlash.sprite = edgeVignette; damageFlash.type = UnityEngine.UI.Image.Type.Simple; }
                 TickHealthWarning(dt);
             }
             TickDamage(dt);
-
+                                                                                          
             if (lastSnapshot != null && lastSnapshot.cardPickSequence != seenPick) nextRefresh = 0f;
             if (source == null || Time.unscaledTime < nextRefresh) return;
             nextRefresh = Time.unscaledTime + Mathf.Max(.02f, refreshInterval);
@@ -170,7 +182,7 @@ namespace AnomalyArena
             Render(snapshot);
             ShowTutorialOnArrival(snapshot);
         }
-
+                                                                                                                                                                                                    
         void TickHealthWarning(float dt)
         {
             if (!damageFlash) return;
@@ -252,7 +264,8 @@ namespace AnomalyArena
         public void FlashDamage() => flash = 1f;
 
         Sprite edgeVignette;
-
+                                                                                                                                         
+                                                                                                                  
         public static Sprite EdgeVignette()
         {
             const int size = 256;
@@ -307,19 +320,19 @@ namespace AnomalyArena
         {
             if (s == null) return;
             lastSnapshot = s;
-
+                                                                                                
             if (seenPick < 0) seenPick = s.cardPickSequence;
             else if (s.cardPickSequence != seenPick) { seenPick = s.cardPickSequence; PlayCardPick(s); }
-
+                                                                                                                    
             bool gameplay = s.state is ArenaUiState.SupplyDrop or ArenaUiState.WaveIntro or ArenaUiState.WaveActive or ArenaUiState.WaveEnd
-                or ArenaUiState.VoidTrial or ArenaUiState.FinalBoss or ArenaUiState.TrialReturn or ArenaUiState.Cutscene or ArenaUiState.LevelUp || s.buildWalking;
+                or ArenaUiState.VoidTrial or ArenaUiState.FinalBoss or ArenaUiState.TrialReturn or ArenaUiState.Cutscene or ArenaUiState.LevelUp or ArenaUiState.Night || s.buildWalking;
             gameplayRoot.SetActive(gameplay);
             if (waveLabel) waveLabel.gameObject.SetActive(s.state != ArenaUiState.SupplyDrop);
             if (themeBackground) themeBackground.gameObject.SetActive(s.state is ArenaUiState.Title or ArenaUiState.Loadout);
             SetText(hpLabel, ArenaText.Text("ui.hp", Mathf.CeilToInt(s.hp), Mathf.CeilToInt(s.maxHp)));
             SetFill(hpFill, s.hp, s.maxHp);
             shieldRoot.SetActive(s.shield > 0f);
-
+                                                                                                
             SetFill(shieldFill, s.shield, s.maxHp * .6f);
             SetText(staminaLabel, ArenaText.Text("ui.stamina"));
             SetFill(staminaFill, s.stamina, 1f);
@@ -329,8 +342,9 @@ namespace AnomalyArena
             SetFill(energyFill, s.energy, s.maxEnergy);
             energyFill.color = s.voidEnergy ? ElementColors[6] : new Color(.22f, .68f, .93f);
             string level = s.level >= s.maxLevel ? ArenaText.Text("ui.level.max") : s.level.ToString();
-            SetText(xpLabel, ArenaText.Text("ui.xp", level, Mathf.FloorToInt(s.xp), Mathf.CeilToInt(s.xpNeeded), s.bankedDrafts));
-
+            SetText(xpLabel, s.hideXp ? ArenaText.Pair($"LEVEL {level} · PICKS {s.bankedDrafts}",$"LEVEL {level} · PICKS {s.bankedDrafts}")
+                : ArenaText.Text("ui.xp", level, Mathf.FloorToInt(s.xp), Mathf.CeilToInt(s.xpNeeded), s.bankedDrafts));
+                                                                                                                       
             xpLabel.color = s.voidLevel ? ElementColors[6] : Color.white;
             SetFill(xpFill, s.xp, s.xpNeeded);
             if (draftPips != null)
@@ -340,7 +354,8 @@ namespace AnomalyArena
                     bool visible = i < s.bankedDrafts;
                     if (draftPips[i].gameObject.activeSelf != visible) draftPips[i].gameObject.SetActive(visible);
                 }
-            SetText(waveLabel, s.state is ArenaUiState.FinalBoss or ArenaUiState.VoidTrial
+            SetText(waveLabel, !string.IsNullOrEmpty(s.campaignLabel) && s.state is not (ArenaUiState.FinalBoss or ArenaUiState.VoidTrial) ? s.campaignLabel
+                : s.state is ArenaUiState.FinalBoss or ArenaUiState.VoidTrial
                 ? ArenaText.Text("ui.boss.hp", s.state == ArenaUiState.FinalBoss ? ArenaText.Pair("THE TYRANT KING","THE TYRANT KING") : ArenaText.Pair("THE NASH PROPHET","THE NASH PROPHET"), Mathf.CeilToInt(s.bossHp), Mathf.CeilToInt(s.bossMaxHp), Mathf.CeilToInt(s.bossShield))
                 : s.waveTimeExpired ? ArenaText.Pair($"WAVE {s.wave:00} / {s.maxWaves:00} · CLEAR SURVIVORS",$"WAVE {s.wave:00} / {s.maxWaves:00} · CLEAR SURVIVORS")
                 : ArenaText.Text("ui.wave", s.wave.ToString("00"), s.maxWaves.ToString("00"), Mathf.CeilToInt(s.waveTime).ToString("00")));
@@ -374,7 +389,7 @@ namespace AnomalyArena
             RenderSlots(handSlots, s.handSlots); RenderSlots(autoSlots, s.autoSlots); RenderSlots(skillSlots, s.skillSlots);
             foreach (var screen in screens)
             {
-
+                                                                      
                 bool active = (screen.state == s.state || screen.state == ArenaUiState.Draft && s.state == ArenaUiState.LevelUp) && !(s.buildWalking && screen.state is ArenaUiState.Armory or ArenaUiState.Draft or ArenaUiState.Ready);
                 if (screen.gameObject.activeSelf != active) screen.gameObject.SetActive(active);
                 if (active) RenderScreen(screen, s);
@@ -401,7 +416,7 @@ namespace AnomalyArena
             if (views == null || values == null) return;
             for (int i = 0; i < views.Length; i++)
             {
-
+                                                                                                                  
                 bool used = i < values.Length;
                 if (views[i] && views[i].gameObject.activeSelf != used) views[i].gameObject.SetActive(used);
                 if (used && views[i]) views[i].Render(values[i], art);
@@ -427,7 +442,7 @@ namespace AnomalyArena
             switch (s.state)
             {
                 case ArenaUiState.Title:
-
+                                                                                                                     
                     SetText(screen.heading, "WARP ARENA");
                     SetText(screen.body, "");
                     break;
@@ -491,6 +506,12 @@ namespace AnomalyArena
                 screen.choices[i].Render(i < cards.Length ? cards[i] : null, art);
         }
 
+                                                                                                                              
+
+                                                                                                                                                                 
+                                                                                                                                                                     
+                                                                                                                                                              
+                                                                       
         public static (string input, string action, string note)[] ControlRows() => new[]
         {
             ("WASD", ArenaText.Pair("Move","Move"), ""),
@@ -507,6 +528,7 @@ namespace AnomalyArena
             ("Tab", ArenaText.Pair("Put the build panel away in the build phase; press again to bring it back","Put the build panel away in the build phase; press again to bring it back"), ""),
         };
 
+                                                                                                                   
         public const float PauseTableTop = 150f, PauseTableRow = 28f;
         public static float PauseTableBottom => PauseTableTop + ControlRows().Length * PauseTableRow;
         public static readonly string[] PauseButtons = { "ResumeRun", "RestartRun", "HowToPlay", "QuitToTitle" };
@@ -514,6 +536,7 @@ namespace AnomalyArena
         UnityEngine.UI.Text tutorialLabel;
         bool tutorialPending;
 
+                                                                                                                                                     
         void ShowTutorialOnArrival(ArenaUiSnapshot s)
         {
             if (!tutorialPending || s.state != ArenaUiState.SupplyDrop) return;
@@ -537,7 +560,7 @@ namespace AnomalyArena
                 rect.pivot = new Vector2(.5f, 1f);
                 rect.offsetMin = new Vector2(64f, -PauseTableBottom);
                 rect.offsetMax = new Vector2(-64f, -PauseTableTop);
-
+                                                                                                                                          
                 if (screen.body) PlaceTopLeft(screen.body.rectTransform, 44f, 100f, 1012f, 40f);
                 float left = 44f, top = PauseTableBottom + 24f;
                 foreach (var name in PauseButtons)
@@ -549,6 +572,7 @@ namespace AnomalyArena
             }
         }
 
+                                                                                                          
         void AddTutorialButton(Transform content)
         {
             if (content.Find("HowToPlay") || content.Find("RestartRun") is not { } restart) return;
@@ -569,8 +593,11 @@ namespace AnomalyArena
             rect.sizeDelta = new Vector2(width, height);
         }
 
+                                                                                                                                          
         static string WalkHint() => ArenaText.Pair("\nTab puts this panel away so you can walk the empty arena; Tab again brings it back.","\nTab puts this panel away so you can walk the empty arena; Tab again brings it back.");
 
+                                                                                                                                         
+                                              
         static string PortalHint() => WorldMap.Active && WorldMap.Active.HasOpenPortal && !WorldMap.Active.TrialWon
             ? ArenaText.Pair(                "\nPortal open: stand on it and press E for the Void Trial (losing ends the run; entering clears statuses and shield).",                "\nPortal open: stand on it and press E for the Void Trial (losing ends the run; entering clears statuses and shield).") : "";
 

@@ -207423,6 +207423,7 @@ GameObject:
   - component: {fileID: 706927164}
   - component: {fileID: 706927163}
   - component: {fileID: 706927165}
+  - component: {fileID: 706927166}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -208133,6 +208134,21 @@ MonoBehaviour:
   uiOffset: {x: 0, y: 0}
   landingSound: 1
   showUiProjection: 1
+--- !u!114 &706927166
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 706927158}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cb436e38e68790a4ba5c857b397f50f6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: AnomalyArena::AnomalyArena.V2Campaign
+  rules: {fileID: 11400000, guid: 7b822d61777b0084e9c780bceda857c3, type: 2}
+  art: {fileID: 11400000, guid: 43f6f8c9cd671924199ad2be80112d90, type: 2}
+  startButtonOpensCampaign: 1
 --- !u!1001 &707213945
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -212955,6 +212971,7 @@ MonoBehaviour:
     - {fileID: 1835819839}
     - {fileID: 213193979}
     - {fileID: 1149940403}
+  showOrdinaryEnemyNames: 0
   holeLabels:
   - {fileID: 75402048}
   - {fileID: 1008255410}
@@ -212979,6 +212996,7 @@ MonoBehaviour:
   executeBarColor: {r: 1, g: 0.06, b: 0.1, a: 1}
   executeTickColor: {r: 1, g: 1, b: 1, a: 1}
   executeTickWidth: 2
+  modelLabelLift: 18
 --- !u!1 &717777144
 GameObject:
   m_ObjectHideFlags: 0
@@ -358018,6 +358036,32 @@ MonoBehaviour:
   smoothTime: 0.12
   kickReturn: 14
   kickLimit: 0.6
+  cameraView: 2
+  views:
+  - name: Tilt 55, orthographic
+    pitch: 55
+    yaw: 0
+    distance: 30
+    lookHeight: 1
+    orthographic: 1
+    orthographicSize: 12
+    fieldOfView: 40
+  - name: Corner 45, pitch 50, orthographic
+    pitch: 50
+    yaw: 45
+    distance: 30
+    lookHeight: 1
+    orthographic: 1
+    orthographicSize: 10
+    fieldOfView: 40
+  - name: Perspective, pitch 50
+    pitch: 50
+    yaw: 0
+    distance: 31
+    lookHeight: 1
+    orthographic: 0
+    orthographicSize: 12
+    fieldOfView: 35
 --- !u!81 &1207676702
 AudioListener:
   m_ObjectHideFlags: 0
@@ -372200,6 +372244,13 @@ MonoBehaviour:
   - {fileID: 21300000, guid: e80b6ff744c394f448becdb97aa391bf, type: 3}
   - {fileID: 21300000, guid: 55a30b99f9ad72048bfe9062eadfc18f, type: 3}
   length: 2.2
+  holdInHand: 1
+  grip: {x: 0.28, y: 0.4}
+  formGrips: []
+  armHold: 1
+  holdReach: {x: 0.62, y: 0.5, z: 0.12}
+  holdBlendSeconds: 0.15
+  pitchDown: 3
 --- !u!114 &1258361606 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 4434219968426041289, guid: 1a5afe1a5edb76f41baf16a25466d150, type: 3}
@@ -553091,6 +553142,12 @@ MonoBehaviour:
   - {fileID: 1011412975}
   - {fileID: 424084059}
   - {fileID: 1158419657}
+  lowHealthThreshold: 0.5
+  criticalHealthThreshold: 0.5
+  lowHealthMinOpacity: 0.12
+  lowHealthMaxOpacity: 0.35
+  lowHealthFadeSpeed: 0.6
+  criticalPulseFrequency: 1
 --- !u!114 &1874920218
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -46,7 +46,8 @@ namespace AnomalyArena
                 .Where(module => module.GetType().GetProperty("submit") != null).ToArray();
             Assume.That(modules, Is.Not.Empty, "the scene's event system reads an input action asset");
             keyboard = new TestKeyboard();
-            SelectButton(ArenaUiCommand.Start);
+            var start = TitleStart(game);
+            SelectButton(start);
 
             await keyboard.TapFor(.8f, SpaceAndEnter);
 
@@ -67,8 +68,28 @@ namespace AnomalyArena
             }
             Assert.That(game.RunPhase, Is.EqualTo(ArenaUiState.Title));
 
-            await CommandUntil(game, ArenaUiCommand.Start, () => game.RunPhase == ArenaUiState.SupplyDrop);
+            await CommandUntil(game, start, () => start == ArenaUiCommand.StartCampaign ? V2Campaign.Active && V2Campaign.Active.Running : game.RunPhase == ArenaUiState.SupplyDrop);
         }
+
+        [Test, LoadScene(SceneCn), Category("Integration"), Timeout(30000)]
+        public async Task ChineseTitle_TheOnlyStartOpensTheV2Campaign()
+        {
+            var game = await ReadyScene();
+            Assume.That(game.RunPhase, Is.EqualTo(ArenaUiState.Title));
+            await Awaitable.NextFrameAsync();
+
+            var buttons = Object.FindObjectsByType<ArenaUiButton>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+            Assert.That(buttons.Count(b => b.command == ArenaUiCommand.StartCampaign), Is.EqualTo(1), "one Start, and it opens the V2 campaign");
+            Assert.That(buttons.Any(b => b.command == ArenaUiCommand.Start), Is.False, "no button starts the classic 15-wave run");
+            Assert.That(GameObject.Find("V2Canvas/TitleScreen/Content/StartClassic"), Is.Null, "the title has no classic-mode button");
+            await CommandUntil(game, ArenaUiCommand.StartCampaign, () => V2Campaign.Active && V2Campaign.Active.Running);
+            Assert.That(V2Campaign.Active.Day, Is.EqualTo(0), "the campaign opens on day 0");
+            Assert.That(V2Campaign.Active.rules.wavesPerDay, Is.EqualTo(1), "one wave a day");
+        }
+
+        static ArenaUiCommand TitleStart(GameManager game) =>
+            game.TryGetComponent<V2Campaign>(out var campaign) && campaign.isActiveAndEnabled && campaign.rules && campaign.startButtonOpensCampaign
+                ? ArenaUiCommand.StartCampaign : ArenaUiCommand.Start;
 
         [Test, LoadScene(SceneCn), Category("Integration"), Timeout(30000)]
         public async Task ChineseTitle_ShowsOnlyStartAndTheKeyHints()

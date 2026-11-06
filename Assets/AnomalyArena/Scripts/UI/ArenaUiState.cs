@@ -19,11 +19,16 @@ namespace AnomalyArena
         SupplyDrop,
         WeaponIntro,
 
-                                                                                                                    
+                                                                                                                                        
+                                                                   
         TrialReturn,
                                                                                                     
         Cutscene,
                                                                                                                                   
-        LevelUp
+        LevelUp,
+                                                                                                                                              
+        Night,
+        Base,
+        Story
     }
 }

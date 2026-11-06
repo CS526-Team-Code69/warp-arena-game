@@ -4,7 +4,11 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+                 
+                                                                                                                                                                             
+                                                                                                                                                                                                     
+                                                                                                                                                         
+                  
     public partial class Enemy : Combatant
     {
         [Header("Attack")] public float attackDamage = 5f;
@@ -42,18 +46,27 @@ namespace AnomalyArena
         public ElementKind Affix { get; private set; }
         public bool Elite { get; private set; }
 
+                                                                                                                      
         public bool Mini { get; private set; }
 
         public bool IsBoss => definition && EnemyRoles.IsBoss(definition.kind);
         public bool IsBossOrElite => IsBoss || Elite;
-
+                                                                                                                                           
+                                                                                                                                         
         public bool ShowsEliteOutline => Elite && IsAlive && !Cloaked;
 
+                                                                                                                                                          
         public bool IsSpecial => Elite || definition && EnemyRoles.IsSpecial(definition.kind);
 
         public override bool Immovable => IsBoss || definition && definition.kind == EnemyKind.Spire;
         public bool IsTrialSummon { get; set; }
         public bool SuppressRewards { get; set; }
+                                                                                                                                       
+        public bool Raider { get; set; }
+                                                                                                                                                             
+        public static System.Func<Enemy, Vector3?> RaidSpot;
+        public static System.Action<Enemy, float> RaidStrike;
+        public static Vector3 RaidCentre;
         public bool Cloaked => definition && definition.kind == EnemyKind.Shade && revealTimer <= 0f;
 
         float spawnVisible,
@@ -72,21 +85,23 @@ namespace AnomalyArena
 
         public bool BloaterWarningActive => definition && definition.kind == EnemyKind.Bloater &&
                                             (IsAlive && windup || dyingExplosion && explosionTimer > 0f);
-
+                                                                                                                                        
+                                                                                                                                     
         public float Swell { get; private set; } = 1f;
         const float BloaterFuseSwell = .3f;                                                    
 
+                                                                      
         public const int PulseMove = 0, InhaleMove = 1, DoubleShotMove = 2, RingMove = 3, ProphecyMove = 4;
-
+                  
         public const int CleaveMove = 0, SlamMove = 1, ChargeMove = 2, BackSlashMove = 3, LeapMove = 4, RoyalShieldMove = 5;
 
         int bossPhase = 1, bossAttack;
         public int BossPhase => bossPhase;
         public int BossAttackIndex => bossAttack;
         public bool TelegraphActive => (windup || leaping) && telegraph && telegraph.gameObject.activeSelf;
-
+                                                                                                                                                   
         public bool WindupTinted => windup && specialWindup || rushing;
-
+                                                                                       
         public bool Rushing => rushing;
         bool specialWindup;
 
@@ -96,23 +111,27 @@ namespace AnomalyArena
         public bool CleaveTelegraph => definition && definition.kind == EnemyKind.Tyrant &&
                                        bossAttack is CleaveMove or BackSlashMove or TailSweepMove;
 
+                                                                                                                                                     
         public bool CircleTelegraph => IsBoss && (definition.kind == EnemyKind.Hollow && bossAttack == PulseMove ||
                                                   definition.kind == EnemyKind.Tyrant && bossAttack is SlamMove or LeapMove);
 
         static BossTuning Boss => GM && GM.waves && GM.waves.bosses != null ? GM.waves.bosses : BossTuning.Defaults;
 
+                                                                                                                                  
         int forcedMove = -1, followUp = -1, chargesLeft, ringsLeft, ringIndex;
         float ringTimer, volleyTimer, leapTimer;
-
+                                                                                                     
         float ringBaseAngle;
-
+                                                                                                                             
         bool royalCastPending;
         bool leaping, royalShield, openingMove, inhaleHit;
         Vector3 leapFrom, leapTarget;
 
+                                                                                                        
         public bool Leaping => leaping;
         public Vector3 LeapTarget => leapTarget;
 
+                                                                                                                                 
         public struct LandingZone
         {
             public Vector3 centre;
@@ -127,6 +146,7 @@ namespace AnomalyArena
         EnemyKind summonKind;
         float summonWarning;
 
+                                                                                                                              
         public void ForceNextBossMove(int move) => forcedMove = move;
         public float TelegraphRange { get; private set; }
         public Vector3 TelegraphFacing => facing;
@@ -134,37 +154,59 @@ namespace AnomalyArena
         Vector3 savedBodyScale;
         float savedCapsuleRadius = -1f;
 
+                                                     
+                                                                                                                                                 
         public bool LaserLocking => laserTimer > 0f;
 
+                                                                                                                
         public Vector3 LaserDirection { get; private set; } = Vector3.forward;
 
+                                                                                                        
         public float LaserLength { get; private set; }
 
+                                                                                
         public int LaserSequence { get; private set; }
 
+                                                          
+                                                                                                           
+                                                                                                                                        
+                                                                                                                                           
         bool waveOut, waveCaught;
         float waveRadius;
         Vector3 waveCentre;
 
+                                                                                                                                       
+                                                                                                                                         
+                                                                                                                                          
+                                                                             
         public bool LightWaveActive => waveOut && IsAlive && GM && GM.player && GM.player.IsAlive;
 
+                                                                                                                                          
+                                                                        
         public float LightWaveRadius => waveRadius;
 
+                                                                                        
         public Vector3 LightWaveCentre => waveCentre;
 
+                                                                                                                
         public float LightWaveReach => definition ? Mathf.Max(0f, definition.pulseRadius) : 0f;
 
+                                                                                      
         public int LightWaveSequence { get; private set; }
 
+                                                                                                                                               
         public int LightWaveCatches { get; private set; }
 
+                                                      
         float chantStamp = -1f;
         bool chantCached;
 
+                                                                                  
         public static float ChantRadius => GM && GM.waves ? Mathf.Max(0f, GM.waves.chantRadius) : 6f;
 
         static float ChantDamageBonus => GM && GM.waves ? Mathf.Max(0f, GM.waves.chantDamageBonus) : .3f;
 
+                                                                                                                                                       
         public bool Chanted
         {
             get
@@ -180,6 +222,7 @@ namespace AnomalyArena
             }
         }
 
+                                                                                                                          
         public float OutgoingDamageFactor => Chanted ? 1f + ChantDamageBonus : 1f;
 
         bool ScanChanters()
@@ -199,6 +242,8 @@ namespace AnomalyArena
             return false;
         }
 
+                                                           
+                                                                                                                                                            
         [Serializable]
         public struct RadiationZone
         {
@@ -219,6 +264,7 @@ namespace AnomalyArena
                 { position = Query.Flat(at), radius = radius, timeLeft = life, life = life });
         }
 
+                                                                                                                              
         public static bool TickRadiationZones(float dt, Vector3 point)
         {
             bool inside = false;
@@ -241,6 +287,7 @@ namespace AnomalyArena
 
         public static void ClearRadiationZones() => radiationZones.Clear();
 
+                                                                                                                              
         float SpireLaserDelay => definition ? Mathf.Max(.01f, definition.laserDelay) : .6f;
         float SpireLaserLength => definition ? Mathf.Max(0f, definition.laserLength) : 12f;
         float SpireLaserHalfWidth => definition ? Mathf.Max(0f, definition.laserHalfWidth) : .6f;
@@ -253,11 +300,13 @@ namespace AnomalyArena
         static float MiniScale => GM && GM.waves ? Mathf.Clamp(GM.waves.splitterMiniScale, .1f, 1f) : .6f;
         static float MiniDamageShare => GM && GM.waves ? Mathf.Clamp01(GM.waves.splitterMiniDamageShare) : .6f;
 
+                                                                                                                                               
         public void Configure(EnemyDefinition data, float hpMultiplier, bool elite,
             ElementKind affix = ElementKind.None, bool mini = false)
         {
             CorpseActive = CorpseCarried = CorpseFeedConsumed = false;
             corpseSeconds = 0;
+            Raider = false;
             corpseVelocity = Vector3.zero;
             float bodyScale = mini ? MiniScale : 1f;
             var capsule = GetComponent<CapsuleCollider>();
@@ -285,11 +334,11 @@ namespace AnomalyArena
             attackInterval =
                 data.interval * (Affix == ElementKind.Void ? VoidIntervalFactor : 1f);                           
             attackRange = data.reach;
-
+                                                                                                                                               
             var knock = KnockbackRules.Active;
             attackKnockback = !EnemyRoles.KnocksBackPlayer(data.kind) ? 0f
                 : IsBoss ? data.knockback : knock.Distance(KnockbackRules.AttackTier(data.kind));
-
+                                                                                                                                                
             knockbackScale = Immovable ? 0f : knock.ScaleFor(radius, elite);
             large = data.kind == EnemyKind.Stomper || IsBoss;                                                        
             ResetForSpawn();
@@ -313,7 +362,7 @@ namespace AnomalyArena
             leaping = royalShield = inhaleHit = false;
             openingMove = data.kind == EnemyKind.Hollow;
             if (EnemyRoles.IsBoss(data.kind) && !GetComponent<V2BossGroundMarks>()) gameObject.AddComponent<V2BossGroundMarks>();
-
+                                                                                                                                           
             if (data.kind == EnemyKind.Spire && !GetComponent<SpireWavePresentation>()) gameObject.AddComponent<SpireWavePresentation>();
             laserTimer = 0f;
             LaserLength = 0f;
@@ -332,7 +381,7 @@ namespace AnomalyArena
                 statusBoard.ControlThresholdFactor = (large ? 2f : 1f) * (elite ? 2f : 1f);
                 if (data.kind == EnemyKind.Hollow)
                 {
-
+                                                                                                                                           
                     foreach (var element in ElementImmunity.Boss) statusBoard.SetImmunity(element, 1f);
                 }
             }
@@ -362,14 +411,15 @@ namespace AnomalyArena
         {
             if (IsBoss)
             {
-
+                                                                                                                          
                 info.knockDistance = 0f;
             }
             else if (Immovable) info.knockDistance = 0f;
 
             if (TurnedAwayByWard()) return false;                                                                            
             bool accepted = base.ReceiveDamage(info);
-
+                                                                                                                               
+                                                                 
             if (accepted && IsAlive && GM && GM.runWeapons) GM.runWeapons.CheckExecuteMark(this);
             return accepted;
         }
@@ -397,7 +447,7 @@ namespace AnomalyArena
 
         void Update()
         {
-
+                                                                                                                                
             if (telegraph && (leaping || windup && IsBoss && definition.kind == EnemyKind.Tyrant && bossAttack == LeapMove))
                 telegraph.position = leapTarget + Vector3.up * .03f;
             if (!dyingExplosion || !GM.IsCombatActive) return;
@@ -413,14 +463,15 @@ namespace AnomalyArena
 
         public bool IsLarge => large;
         public bool WindingUp => windup;
-
+                                                                                                           
         public bool PushesPlayer => definition && EnemyRoles.KnocksBackPlayer(definition.kind);
         public bool Charging => charging;
         public float CooldownRemaining => Mathf.Max(0f, cooldown);
-
+                                                                                                                
         public void HoldAttacks(float seconds) => cooldown = Mathf.Max(cooldown, seconds);
         public float WindupSecondsRemaining => windup ? Mathf.Max(0f, windupTimer) : 0f;
 
+                                                                                                                    
         public int AttackSequence { get; private set; }
 
         public override Team Team => Team.Enemy;
@@ -441,10 +492,15 @@ namespace AnomalyArena
             {
                 Stop();
                 CancelWindup();
-
+                                                                                                                                      
                 if (p == null || !p.IsAlive) waveOut = false;
                 return;
             }
+
+                                                                                                                                        
+                                                                                                                                       
+                                                                                                    
+            if (Raider && RaidSpot != null && RaidSpot(this) is Vector3 raid) { TickRaid(dt, raid); return; }
 
             if (!IsBoss && WorldMap.Active && WorldMap.Active.PlayerHidden)
             {
@@ -456,7 +512,7 @@ namespace AnomalyArena
 
             if (windup)
             {
-
+                                                                       
                 Stop();
                 if (definition && definition.kind == EnemyKind.Bloater)
                 {
@@ -502,6 +558,7 @@ namespace AnomalyArena
 
         const float SearchTurnDegrees = 90f;
 
+                                                                                                                     
         void SearchForHiddenPlayer(float dt)
         {
             if (windup) CancelWindup();
@@ -521,6 +578,47 @@ namespace AnomalyArena
             facing = Quaternion.Euler(0f, SearchTurnDegrees * dt, 0f) * facing;
         }
 
+                                                                                                                                         
+                                                                              
+        void TickRaid(float dt, Vector3 spot)
+        {
+            Vector3 to = Query.Flat(spot - Position);
+            float dist = to.magnitude;
+            if (windup)
+            {
+                Stop();
+                windupTimer -= dt;
+                if (windupTimer <= 0f)
+                {
+                    AttackSequence++;
+                    V5WeaponAudio.Swing(definition ? definition.kind : EnemyKind.Grunt, Position);
+                    Fx.Telegraph(Position, facing, radius + attackRange, attackArc, new Color(1f, .3f, .2f, .55f));
+                    RaidStrike?.Invoke(this, attackDamage * OutgoingDamageFactor);
+                    CancelWindup();
+                    cooldown = attackInterval;
+                }
+                return;
+            }
+            if (dist <= .6f)
+            {
+                Stop();
+                Vector3 face = Query.Flat(RaidCentre - Position);
+                if (face.sqrMagnitude > .01f) facing = face.normalized;
+                if (cooldown <= 0f)
+                {
+                    windup = true;
+                    windupTimer = windupTime;
+                    V5WeaponAudio.Windup(definition ? definition.kind : EnemyKind.Grunt, Position);
+                    SetLook(true);
+                }
+                return;
+            }
+            Vector3 direction = WorldMap.Active ? WorldMap.Active.GetRaidDirection(Position, spot) : to / Mathf.Max(.01f, dist);
+            if (direction.sqrMagnitude > .0001f) facing = Query.Flat(direction).normalized;
+            Vector3 v = KeepOffEdges(direction * moveSpeed, dt);
+            rb.linearVelocity = new Vector3(v.x, rb.linearVelocity.y, v.z);
+        }
+
         void PerformAttack()
         {
             AttackSequence++;
@@ -528,7 +626,7 @@ namespace AnomalyArena
                     or EnemyKind.Splitter or EnemyKind.Shade)
                 V5WeaponAudio.Swing(definition ? definition.kind : EnemyKind.Grunt, Position);
             if (definition && PerformSpecialAttack()) return;
-
+                                                                                                   
             Color punch = V5Vfx.On && Affix != ElementKind.None ? V5Vfx.ElementTint(Affix) : new Color(1f, 0.3f, 0.2f, 1f);
             Fx.Telegraph(Position, facing, radius + attackRange, attackArc, new Color(punch.r, punch.g, punch.b, 0.55f));
 
@@ -536,7 +634,7 @@ namespace AnomalyArena
             var shield = p.HeldShield;
             if (shield != null && shield != this && InFist(shield))
             {
-
+                                                                                                                     
                 DealHit(shield, attackDamage, shield.Position - Position, 0f);
                 return;
             }
@@ -545,6 +643,10 @@ namespace AnomalyArena
                 DealHit(p, attackDamage, p.Position - Position, attackKnockback);
         }
 
+                     
+                                                                                                                                     
+                                                                                                                                          
+                      
         bool DealHit(Combatant target, float damage, Vector3 direction, float knock)
         {
             var player = target as PlayerController;
@@ -604,7 +706,7 @@ namespace AnomalyArena
                     inhaleLeft -= dt;
                     if (inhaleLeft <= 0f)
                     {
-
+                                                                    
                         bossAttack = PulseMove;
                         BeginWindup(Boss.inhaleFollowWindup, PulseReach, false);
                     }
@@ -639,11 +741,13 @@ namespace AnomalyArena
             bool aiming = laserTimer > 0f;
             if (aiming)
             {
-
+                                                                                                                              
                 laserTimer -= dt;
                 if (laserTimer <= 0f) FireLaser(player);
             }
 
+                                                                                                                                       
+                                                                                                     
             if (waveOut) TickLightWave(dt, player);
             if (aiming || laserTimer > 0f) return true;
 
@@ -661,7 +765,7 @@ namespace AnomalyArena
                     Stop();
                     if (IsBoss)
                     {
-
+                                                                                                          
                         chargesLeft = 0;
                         statusBoard?.SetShield(0f);
                         ReceiveDamage(new DamageInfo
@@ -683,7 +787,7 @@ namespace AnomalyArena
                 chargeLeft -= step;
                 if (InFist(player))
                 {
-
+                                                                                                                                             
                     bool landed = DealHit(player, IsBoss ? attackDamage * Boss.chargeDamage : attackDamage, facing,
                         IsBoss ? Boss.chargePush : attackKnockback);
                     if (landed && !IsBoss && player.IsAlive)
@@ -706,7 +810,7 @@ namespace AnomalyArena
                     cooldown = 1.5f;
                     if (IsBoss && ranOut && --chargesLeft > 0)
                     {
-
+                                                                                           
                         FacePlayer(player);
                         bossAttack = ChargeMove;
                         BeginWindup(Boss.chargeReaim, ChargeLineLength(), false);
@@ -734,7 +838,7 @@ namespace AnomalyArena
                     {
                         bool shieldAdded = false;
                         foreach (var enemy in GM.waves.Alive)
-
+                                                                                                                           
                             if (enemy && enemy != this && !enemy.IsBoss && Query.Flat(enemy.Position - Position).magnitude < 5f)
                             {
                                 var board = ElementStatus.For(enemy);
@@ -759,7 +863,7 @@ namespace AnomalyArena
                     HoldBehindAllies(player, distance, dt);
                     return true;
                 case EnemyKind.Chanter:
-
+                                                                                                            
                     supportTimer -= dt;
                     if (supportTimer <= 0f)
                     {
@@ -771,7 +875,7 @@ namespace AnomalyArena
                     HoldBehindAllies(player, distance, dt);
                     return true;
                 case EnemyKind.Spire:
-
+                                                                                                                         
                     if (cooldown <= 0f && !waveOut) BeginWindup(windupTime, definition.pulseRadius);
                     return true;
                 case EnemyKind.Stomper:
@@ -791,7 +895,8 @@ namespace AnomalyArena
 
                     break;
                 case EnemyKind.Bloater:
-
+                                                                                                                                     
+                                                                                                       
                     if (distance <= radius + player.Radius + definition.reach)
                     {
                         rushing = false;
@@ -829,7 +934,7 @@ namespace AnomalyArena
                     Stop();
                     return true;
                 case EnemyKind.Tyrant:
-
+                                                                                                                    
                     if (cooldown <= 0f)
                     {
                         StartBossMove(ChooseBossMove(distance), player);
@@ -842,6 +947,10 @@ namespace AnomalyArena
             return false;
         }
 
+                                              
+
+                                                                                                                                
+                                                                                                                    
         public static int ProphetMoveFor(int phase, bool close, float roll, BossTuning b)
         {
             if (close) return phase == 2 && roll >= b.phase2ClosePulseShare ? InhaleMove : PulseMove;
@@ -853,6 +962,8 @@ namespace AnomalyArena
                 : roll < b.phase3DoubleShotShare + b.phase3RingShare ? RingMove : ProphecyMove;
         }
 
+                                                                                                                               
+                                                                                                 
         public static int TyrantMoveFor(float distance, bool onScreen, float roll, BossTuning b)
         {
             if (distance > b.tyrantFarRange || !onScreen) return LeapMove;
@@ -871,7 +982,7 @@ namespace AnomalyArena
             {
                 bool close = distance <= (bossPhase == 3 ? Boss.prophetPhase3CloseRange : Boss.prophetCloseRange);
                 move = ProphetMoveFor(bossPhase, close, roll, Boss);
-
+                                                                                             
                 if (openingMove && !close) move = DoubleShotMove;
                 openingMove = false;
             }
@@ -888,6 +999,7 @@ namespace AnomalyArena
 
         float PulseReach => bossPhase == 3 ? Boss.phase3PulseReach : Boss.pulseReach;
 
+                                                                                                                                   
         public float PlatformGoal => bossPhase == 3 ? Boss.prophetPlatformRadii.z
             : bossPhase == 2 ? Boss.prophetPlatformRadii.y : Boss.prophetPlatformRadii.x;
 
@@ -927,7 +1039,7 @@ namespace AnomalyArena
                     BeginWindup(b.chargeWindup, ChargeLineLength());
                     break;
                 case LeapMove:
-
+                                                                                                    
                     leapTarget = LeapLanding(player ? player.Position : Position);
                     BeginWindup(b.leapWindup, b.leapRadius);
                     break;
@@ -935,6 +1047,7 @@ namespace AnomalyArena
             }
         }
 
+                                                                                                                                                
         float ChargeLineLength()
         {
             float length = TyrantChargeDistance;
@@ -952,6 +1065,8 @@ namespace AnomalyArena
             return Mathf.Max(.5f, length);
         }
 
+                                                                                                                                      
+                                                                                                                           
         Vector3 LeapLanding(Vector3 aim)
         {
             aim = Query.Flat(aim);
@@ -1001,6 +1116,7 @@ namespace AnomalyArena
             bossRecovery = Boss.leapRecovery;
         }
 
+                                                                                                                          
         bool PlayerBlast(Vector3 centre, float reach, float damage, float push)
         {
             var player = GM ? GM.player : null;
@@ -1018,14 +1134,14 @@ namespace AnomalyArena
             if (nextPhase <= bossPhase) return;
             bossPhase = nextPhase;
             if (definition.kind != EnemyKind.Tyrant) return;
-
+                                                                                                       
             var balance = GM.waves.waveSet ? GM.waves.waveSet.encounterBalance : null;
             statusBoard?.SetShield(maxHp * (balance ? balance.tyrantPhaseShieldShare : .15f));
             royalShield = true;
             var immunities = GM.waves.TyrantImmunities;
             if (Affix == ElementKind.None && immunities.Length > 0)
                 SetAffix(immunities[UnityEngine.Random.Range(0, immunities.Length)]);
-
+                                                                                                     
             royalCastPending = true;
         }
 
@@ -1048,6 +1164,8 @@ namespace AnomalyArena
             }
         }
 
+                                                                                                                                        
+                                             
         void BeginProphetSummon()
         {
             if (summonPoints.Count > 0 || !GM || !GM.waves) return;
@@ -1086,6 +1204,7 @@ namespace AnomalyArena
             summonPoints.Clear();
         }
 
+                                                                                                                     
         public void ClearBossMarks()
         {
             foreach (var marker in summonMarkers)
@@ -1120,6 +1239,8 @@ namespace AnomalyArena
             }
         }
 
+                                                                                                                                  
+                                                                                                                              
         void FirePredictiveVolley(PlayerController player)
         {
             if (!player || !player.IsAlive) return;
@@ -1137,12 +1258,14 @@ namespace AnomalyArena
             V3WorldAudio.Instance?.Play(ArenaWorldCue.NpcSpit, Position);
         }
 
+                                                                                                                                        
+                                                                         
         void FireRing(PlayerController player)
         {
             var b = Boss;
             int count = Mathf.Max(1, bossPhase == 3 ? b.phase3RingShots : b.ringShots);
             float spacing = 360f / count;
-
+                                                                                                               
             float turn = bossPhase >= 2 ? spacing / Mathf.Max(1, bossPhase == 3 ? b.phase3Rings : b.phase2Rings) : 0f;
             if (ringIndex == 0)
             {
@@ -1151,6 +1274,7 @@ namespace AnomalyArena
                 ringBaseAngle = Mathf.Atan2(aim.x, aim.z) * Mathf.Rad2Deg;
             }
 
+                                                                                                                
             float baseAngle = ringBaseAngle + turn * ringIndex;
             float damage = attackDamage * b.ringDamage;
             for (int i = 0; i < count; i++)
@@ -1173,6 +1297,8 @@ namespace AnomalyArena
             GM.waves.LaunchBossBolt(this, Position + direction * (radius + .3f), direction, damage, 0f, speed);
         }
 
+                                                                                                                                       
+                                                                                      
         void PlaceLandingZones(PlayerController player)
         {
             var world = WorldMap.Active;
@@ -1190,7 +1316,7 @@ namespace AnomalyArena
         void AddLandingZone(Vector3 point, float zone, WorldMap world)
         {
             Vector3 centre = Query.Flat(world.trialPlatform.position);
-
+                                                                                                                                 
             float limit = Mathf.Max(0f, Mathf.Min(world.trialRadius, PlatformGoal) - Boss.prophecyEdgeMargin);
             Vector3 off = point - centre;
             if (off.magnitude > limit) point = centre + off.normalized * limit;
@@ -1213,23 +1339,27 @@ namespace AnomalyArena
                 }
 
                 landingZones.RemoveAt(i);
-
+                                                                                        
                 if (WorldMap.Active) WorldMap.Active.CreateBossHole(zone.centre, zone.radius * 2f, Boss.prophecyHoleLife, this);
             }
         }
 
+                                                                                                                                              
         public void InhaleContact(Combatant body)
         {
             if (!Inhaling || inhaleHit || body is not PlayerController player || !player.IsAlive) return;
             inhaleHit = DealHit(player, attackDamage * Boss.inhaleContactDamage, player.Position - Position, Boss.inhaleContactPush);
         }
 
+                                                                                                                                         
+                                                 
         public void SummonFell()
         {
             if (!IsAlive) return;
             ReceiveDamage(new DamageInfo { amount = maxHp * Boss.summonFallHpShare, source = DamageSource.Wall, kind = HitKind.Slam });
         }
 
+                                                                                                                                                          
         void HoldBehindAllies(PlayerController player, float distance, float dt)
         {
             Enemy nearestGroup = null;
@@ -1255,6 +1385,7 @@ namespace AnomalyArena
 
         void MoveTowards(Vector3 point, float sign, float dt) => MoveAt(point, moveSpeed * sign, dt);
 
+                                                                                  
         void MoveAt(Vector3 point, float speed, float dt)
         {
             Vector3 direction = WorldMap.Active
@@ -1264,6 +1395,7 @@ namespace AnomalyArena
             rb.linearVelocity = new Vector3(v.x, rb.linearVelocity.y, v.z);
         }
 
+                                                                                                                                            
         void BeginWindup(float time, float range, bool scaled = true)
         {
             if (scaled && IsBoss && bossPhase == 3)
@@ -1286,13 +1418,15 @@ namespace AnomalyArena
                 bool line = definition.kind == EnemyKind.Rammer ||
                             definition.kind == EnemyKind.Tyrant && bossAttack == ChargeMove;
                 TelegraphRange = range;
-
+                                                                                                       
                 Vector3 origin = definition.kind == EnemyKind.Tyrant && bossAttack == LeapMove ? leapTarget : Position;
                 telegraph.position = origin + (line ? facing * range * .5f : Vector3.zero) + Vector3.up * .03f;
                 telegraph.rotation = Quaternion.LookRotation(facing);
                 telegraph.localScale =
                     line ? new Vector3(radius * 2f, 0.025f, range) : new Vector3(range * 2f, 0.025f, range * 2f);
-
+                                                                                                                                        
+                                                                                                                                            
+                                 
                 telegraph.gameObject.SetActive(range > 0f &&
                                                (definition.kind == EnemyKind.Spire || line || CleaveTelegraph || CircleTelegraph));
             }
@@ -1323,7 +1457,7 @@ namespace AnomalyArena
                     dyingExplosion = false;
                     return true;
                 case EnemyKind.Spire:
-
+                                                                                                                                    
                     V3WorldAudio.Instance?.Play(ArenaWorldCue.NpcPulse, Position);
                     StartLightWave();
                     return true;
@@ -1385,7 +1519,7 @@ namespace AnomalyArena
                             foreach (var target in Query.InSector(this, Position, facing, tyrant.cleaveRange, tyrant.cleaveArc))
                                 if (target.Team != Team.Enemy)                         
                                     DealHit(target, attackDamage * share, target.Position - Position, tyrant.cleavePush);
-
+                                                                                                                
                             if (bossAttack == CleaveMove && bossPhase >= 2 && OutsideCut(GM.player, tyrant)) followUp = BackSlashMove;
                             break;
                     }
@@ -1396,6 +1530,7 @@ namespace AnomalyArena
             return false;
         }
 
+                                                                                                           
         void StartLightWave()
         {
             waveOut = true;
@@ -1405,6 +1540,10 @@ namespace AnomalyArena
             LightWaveSequence++;
         }
 
+                                                                                                                                      
+                                                                                                                                            
+                                                                                                                                           
+                                                                  
         void TickLightWave(float dt, PlayerController player)
         {
             if (dt <= 0f) return;
@@ -1421,6 +1560,9 @@ namespace AnomalyArena
             if (waveRadius >= reach) waveOut = false;
         }
 
+                                                                                                                                        
+                                                                                                                                         
+                                                                                                                                 
         bool FrontSweepsOver(PlayerController player, float before, float after)
         {
             if (!player || !player.IsAlive) return false;
@@ -1429,6 +1571,8 @@ namespace AnomalyArena
             return !Query.WallBetween(Query.AtCastHeight(waveCentre), Query.AtCastHeight(player.Position), out _);
         }
 
+                                                                                                                                          
+                                       
         void LockLaser(PlayerController player)
         {
             Vector3 to = Query.Flat(player.Position - Position);
@@ -1457,6 +1601,7 @@ namespace AnomalyArena
                 DealHit(player, attackDamage, LaserDirection, 0f);
         }
 
+                                                                                                                         
         bool OutsideCut(PlayerController player, BossTuning b)
         {
             if (!player || !player.IsAlive) return false;
@@ -1467,7 +1612,7 @@ namespace AnomalyArena
 
         void AreaAttack(float reach, float damage, float push)
         {
-
+                                                                                             
             if (V5Vfx.On)
             {
                 Color? tint = Affix != ElementKind.None ? V5Vfx.ElementTint(Affix) : null;
@@ -1480,6 +1625,8 @@ namespace AnomalyArena
                     DealHit(target, damage, target.Position - Position, push);
         }
 
+                                                                                                                           
+                                                                                                           
         void ConeSlam(float reach, float arcDeg, float damage, float push)
         {
             Fx.Sector(Position, facing, reach, arcDeg, definition.colour);
@@ -1488,16 +1635,18 @@ namespace AnomalyArena
                 if (target.IsAlive) DealHit(target, damage, target.Position - Position, push);
         }
 
+                                                                                                             
         void Explode()
         {
             V3WorldAudio.Instance?.Play(ArenaWorldCue.NpcBloaterBlast, Position);
-
+                                                                      
             AreaAttack(definition ? definition.pulseRadius : 3f, attackDamage, KnockbackRules.Active.Distance(KnockbackRules.AttackTier(EnemyKind.Bloater)));
             var waves = GM ? GM.waves : null;
             AddRadiationZone(Position, waves ? waves.radiationRadius : 3f, waves ? waves.radiationLife : 4f);
             V3WorldAudio.Instance?.Play(ArenaWorldCue.NpcRadiation, Position);
         }
 
+                                                                                                                                                                             
         bool InFist(Combatant c)
         {
             Vector3 to = Query.Flat(c.Position - Position);
@@ -1506,11 +1655,21 @@ namespace AnomalyArena
             return d <= radius + c.Radius * 0.5f || Vector3.Angle(facing, to) <= attackArc * 0.5f;
         }
 
+                                                                                                                                             
+                                                                                                                                         
+                                                                                                                           
         public bool FollowsIntoGravity => definition && definition.speed >= gravityFollowSpeed;
 
+                                                                                                                                           
+                                                                                                                                   
         bool FollowingIntoGravity => FollowsIntoGravity && WorldMap.Active &&
                                      WorldMap.Active.GetPull(WorldMap.Active.EnemyTarget).sqrMagnitude > 0.01f;
 
+                     
+                                                                                                             
+                                                                                                                                                                                          
+                                                                                                                            
+                      
         Vector3 KeepOffEdges(Vector3 v, float dt)
         {
             if (!WorldMap.Active) return v;
@@ -1519,6 +1678,8 @@ namespace AnomalyArena
             return WorldMap.Active.IsWalkable(Position + v * dt, radius, FollowingIntoGravity) ? v : Vector3.zero;
         }
 
+                                                                                                                                                 
+                                                                                                                                          
         protected override Vector3 GuardSlide(Vector3 v, float dt)
         {
             if (!WorldMap.Active) return v;
@@ -1526,6 +1687,8 @@ namespace AnomalyArena
             return WorldMap.Active.IsWalkable(Position + v * dt, radius, FollowingIntoGravity) ? v : Vector3.zero;
         }
 
+                                                                                                                                              
+                                                                                                                   
         protected override bool SlipsOnIce => !charging && !rushing;
 
         void Stop()
@@ -1549,6 +1712,8 @@ namespace AnomalyArena
             RefreshBodyTint();
         }
 
+                                                                                                                                         
+                                                                                                            
         public static readonly Color WindupBodyColour = new Color(1f, .85f, .25f);
         static readonly Color ShadeCloakColour = new Color(0.38f, 0.45f, 0.7f, 0.22f);
 
@@ -1611,12 +1776,13 @@ namespace AnomalyArena
             gameObject.SetActive(true);
         }
 
+                                                                                                                                              
         public void KnockCorpse(Vector3 dir, float distance)
         {
             if (!CorpseActive || CorpseCarried || CorpseFeedConsumed) return;
             dir = Query.Flat(dir);
             if (dir.sqrMagnitude < 1e-6f || distance <= 0f) return;
-
+                                                                                                           
             corpseVelocity += dir.normalized * (distance * corpseDamping);
         }
 
@@ -1674,6 +1840,7 @@ namespace AnomalyArena
                 if (definition.kind == EnemyKind.Tyrant) GM.NotifyFinalBossDefeated();
             }
 
+                                                                                                                           
             if (definition && definition.splitsOnDeath && !Mini && !IsTrialSummon &&
                 DeathCause == DeathCause.HpDepleted && GM && GM.waves)
                 GM.waves.QueueSplit(this);

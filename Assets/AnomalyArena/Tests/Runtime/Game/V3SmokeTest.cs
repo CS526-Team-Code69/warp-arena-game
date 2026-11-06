@@ -661,7 +661,10 @@ namespace AnomalyArena
 
         static async Task OpenLoadout(GameManager game)
         {
-            await ClickUntil(game, ArenaUiCommand.Start, () => game.RunPhase == ArenaUiState.SupplyDrop);
+
+            if (game.TryGetComponent<V2Campaign>(out var campaign) && campaign.isActiveAndEnabled && campaign.rules && campaign.startButtonOpensCampaign)
+                await CommandUntil(game, ArenaUiCommand.Start, () => game.RunPhase == ArenaUiState.SupplyDrop);
+            else await ClickUntil(game, ArenaUiCommand.Start, () => game.RunPhase == ArenaUiState.SupplyDrop);
             Assert.That(game.SupplyDropReady, Is.False, "crate falls before it can open");
             await Until(() => game.SupplyDropReady, 4f, "supply crate landing");
             Assert.That(game.RunPhase, Is.EqualTo(ArenaUiState.SupplyDrop), "landing alone does not open selection");

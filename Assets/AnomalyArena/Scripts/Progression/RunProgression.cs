@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+                                                                                                    
     [DisallowMultipleComponent]
     public sealed class RunProgression : MonoBehaviour
     {
@@ -20,7 +20,7 @@ namespace AnomalyArena
         public float Energy { get; private set; }
         public bool EnergyUnlocked { get; private set; }
         public bool VoidEnergy { get; private set; }
-
+                                                                                                                                                  
         public bool VoidBadge { get; private set; }
         public bool MayOfferPenetration { get; set; }
         public bool MustOfferPenetration { get; set; }
@@ -39,9 +39,38 @@ namespace AnomalyArena
         float regenerationClock;
         int statsWithoutHighTier;
         int draftWave;
-
+                                                                                                         
         Func<DraftCard, DraftCard> weaponCardFactory;
         Func<DraftCard, DraftCard> skillCardFactory;
+                                                                                                                           
+        public Func<bool> StatCardsAllowed { get; set; }
+                                                                                                                                         
+        public Func<bool> LevelingAllowed { get; set; }
+                                                                                                                                              
+                                                                                                                                                     
+        public Func<bool> XpIgnored { get; set; }
+                                                                                                                
+        public event Action DraftConsumed;
+
+                                                                                                                                           
+        public void BankPick()
+        {
+            BankDraft(false);
+            OnChanged();
+        }
+        public bool AtMaxLevel => Level >= Rules.maxLevel;
+
+                                                                                                                                           
+                                                                                        
+        public bool BuyLevel()
+        {
+            if (AtMaxLevel) return false;
+            Level++;
+            GrowLevelResources();
+            OnLevelGained(Level);
+            OnChanged();
+            return true;
+        }
 
         public void ResetRun()
         {
@@ -55,9 +84,9 @@ namespace AnomalyArena
 
         public void GainXp(float amount)
         {
-            if (amount <= 0f) return;
+            if (amount <= 0f || XpIgnored != null && XpIgnored()) return;
             Xp += amount;
-            while (Xp >= XpRequired)
+            while (Xp >= XpRequired && (LevelingAllowed == null || LevelingAllowed()))
             {
                 Xp -= XpRequired;
                 bool statOnly = Level >= Rules.maxLevel;
@@ -67,6 +96,11 @@ namespace AnomalyArena
             OnChanged();
         }
 
+                                                                                                                      
+        public void ReleaseHeldLevels() { if (Xp >= XpRequired) GainXp(float.Epsilon); }
+
+                                                                                                                                             
+                                                                                                                                                      
         public void GrantVoidLevel()
         {
             VoidBadge = true;
@@ -86,13 +120,14 @@ namespace AnomalyArena
             LastLevelHpGain = Stats.Add(StatId.MaxHp,Mathf.Max(0f,Rules.maxHpPerLevel));
             float energyStep = Mathf.Max(0f,Rules.maxEnergyPerLevel);
             int energyIndex = (int)StatId.MaxEnergy;
-
+                                                                                                                 
+                                                                                                        
             if (Stats.caps != null && energyIndex < Stats.caps.Length && Stats.caps[energyIndex] >= 0f)
                 Stats.caps[energyIndex] += energyStep;
             LastLevelEnergyGain = Stats.Add(StatId.MaxEnergy,energyStep);
             if (LastLevelHpGain > 0f) OnStatChanged(StatId.MaxHp,LastLevelHpGain);
             if (LastLevelEnergyGain > 0f) OnStatChanged(StatId.MaxEnergy,LastLevelEnergyGain);
-
+                                                                                                                                                
             OnHealingRequested(float.MaxValue);
         }
 
@@ -101,10 +136,13 @@ namespace AnomalyArena
             if (drafts.Count > 0) drafts.Dequeue();
             CurrentCards = Array.Empty<DraftCard>();
             OnChanged();
+            DraftConsumed?.Invoke();
         }
 
+                                                                                                                                                
         public void BeginWave() { RerollsRemaining = 1; OnChanged(); }
 
+                                                                                                    
         public void BeginBuildPhase(int wave, Func<DraftCard, DraftCard> weaponFactory = null, Func<DraftCard, DraftCard> skillFactory = null)
         {
             draftWave = wave;
@@ -112,6 +150,9 @@ namespace AnomalyArena
             OnChanged();
         }
 
+                                                                                                                                         
+                                                                                                                                        
+                                                                             
         public DraftCard[] DrawCards(int wave, Func<DraftCard, DraftCard> weaponFactory = null, Func<DraftCard, DraftCard> skillFactory = null)
         {
             draftWave = wave;
@@ -122,12 +163,16 @@ namespace AnomalyArena
             return CurrentCards = Draw(null);
         }
 
+                                                                                           
         public bool Reroll()
         {
             if (RerollsRemaining <= 0 || BankedDrafts == 0) return false;
             RerollsRemaining--; CurrentCards = Draw(CurrentCards); OnChanged(); return true;
         }
 
+                                                                                                                                          
+                                                                                                                                      
+                                                                                                                         
         DraftCard[] Draw(DraftCard[] before)
         {
             if (BankedDrafts == 0) return Array.Empty<DraftCard>();
@@ -141,11 +186,14 @@ namespace AnomalyArena
                 if (!statOnly && i == 1) cards[i] = weaponCardFactory?.Invoke(old?.Kind == DraftCardKind.Weapon ? old : null);
                 else if (!statOnly && i == 2) cards[i] = skillCardFactory?.Invoke(old?.Kind == DraftCardKind.Skill ? old : null);
                 if (cards[i] != null) continue;
+                if (StatCardsAllowed != null && !StatCardsAllowed()) continue;
                 StatId? replaced = old?.Payload is StatCardOffer oldStat ? oldStat.Stat : null;
                 var offer = RollStatCard(draftStats, shownStats, replaced, forcePenetration: i == 0 && MustOfferPenetration);
                 draftStats.Add(offer.Stat); cards[i] = MakeStat(offer);
             }
             shownStats.Clear();
+                                                                                                                            
+            if (Array.IndexOf(cards, null) >= 0) cards = Array.FindAll(cards, card => card != null);
             return cards;
         }
 
@@ -172,11 +220,13 @@ namespace AnomalyArena
             ConsumeDraft(); return true;
         }
 
+                                                                                                         
         public void ResolvePendingRandom()
         {
             while (BankedDrafts > 0)
             {
                 DrawCards(draftWave);
+                if (CurrentCards.Length == 0) break;                                                 
                 int eligibleCount = 0;
                 foreach (var card in CurrentCards) if (!card.NeedsReplacement) eligibleCount++;
                 int pick = UnityEngine.Random.Range(0, eligibleCount);
@@ -187,7 +237,7 @@ namespace AnomalyArena
                     if (pick-- > 0) continue;
                     applied = ApplyCard(i); break;
                 }
-
+                                                                                                                 
                 if (!applied) ApplyCard(0);
             }
         }
@@ -227,6 +277,8 @@ namespace AnomalyArena
             }
         }
 
+                                                                                                                         
+                                                                                                           
         public void AdjustMaxHp(float delta, float floor)
         {
             float before = Stats.maxHp;
@@ -256,6 +308,8 @@ namespace AnomalyArena
             return RollStatCard(draftStats, shownStats, null, forcePenetration);
         }
 
+                                                                                                                                         
+                                                                                                                        
         StatCardOffer RollStatCard(List<StatId> taken, List<StatId> shown, StatId? replaced, bool forcePenetration)
         {
             if (CollectEligible(stat => taken.Contains(stat) || shown.Contains(stat), forcePenetration) == 0
@@ -263,7 +317,7 @@ namespace AnomalyArena
                 CollectEligible(taken.Contains, forcePenetration);
             if (eligible.Count == 0) return new StatCardOffer(StatId.MaxHp, CardRarity.Common, 12f);
             var picked = eligible[UnityEngine.Random.Range(0, eligible.Count)];
-
+                                                                                                  
             bool pity = statsWithoutHighTier >= Mathf.Max(1, Rules.highTierPity);
             CardRarity rarity = Rules.StatRarity(draftWave, UnityEngine.Random.value * 100f, pity);
             ProgressionRules.RarityBand(draftWave, out _, out var high);

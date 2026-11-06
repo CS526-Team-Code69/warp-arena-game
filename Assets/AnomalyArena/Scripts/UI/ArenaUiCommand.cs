@@ -21,6 +21,8 @@ namespace AnomalyArena
         EnterPortal,
         OpenSupply,
         DismissWeaponIntro,
-        ToggleBuildWalk
+        ToggleBuildWalk,
+
+        StartCampaign
     }
 }

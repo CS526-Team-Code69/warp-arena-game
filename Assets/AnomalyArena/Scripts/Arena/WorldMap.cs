@@ -5,7 +5,7 @@ using UnityEngine.InputSystem;
 
 namespace AnomalyArena
 {
-
+                                                                                                     
     [DefaultExecutionOrder(200)]
     public sealed partial class WorldMap : MonoBehaviour
     {
@@ -43,7 +43,7 @@ namespace AnomalyArena
         public Transform decoy;
         public Transform trialDecoy;
         int TemporaryHoleCount => 1 + (TrialActive ? (trialExtraTemporaryHoles?.Length ?? 0) + bossHoles.Length : extraTemporaryHoles?.Length ?? 0);
-
+                                                                                                   
         int PlayerHoleCount => TemporaryHoleCount - (TrialActive ? bossHoles.Length : 0);
         BlackHole TemporaryHoleAt(int index)
         {
@@ -59,7 +59,8 @@ namespace AnomalyArena
         }
         Transform ActiveDecoy => TrialActive ? trialDecoy : decoy;
         public bool DecoyActive => ActiveDecoy && ActiveDecoy.gameObject.activeSelf;
-
+                                                                                                                                        
+                                                                    
         public Vector3 EnemyTarget => PlayerHidden ? GM.skills.VoidWalkStart : DecoyActive ? ActiveDecoy.position : GM.player.Position;
         public bool PlayerHidden => GM && GM.skills && GM.skills.PlayerUntargetable;
         public float trialRadius = 12f;
@@ -70,7 +71,8 @@ namespace AnomalyArena
         public event Action VoidTrialEntered;
         public event Action VoidTrialWon;
         public event Action<BlackHole> HoleFed;
-
+                                                                                                                                  
+                                                                                                                                      
         enum HoleIntroStage { Idle, Approach, Pull, Hold, Done }
         sealed class IntroFodder { public Enemy body; public float angle, startRadius, radius, fedAt; public bool fed, gone; public Vector3 scale; }
         HoleIntroStage holeIntroStage;
@@ -88,7 +90,7 @@ namespace AnomalyArena
                 return true;
             }
         }
-
+                                                                                                                      
         public bool HasOpenPortal
         {
             get { foreach (var hole in holes) if (hole && hole.Phase == HolePhase.Portal) return true; return false; }
@@ -153,7 +155,9 @@ namespace AnomalyArena
             }
             Grid.Rebuild(this);
             Quicksand.Build(this);
-
+                                                                                                                                           
+                                                                                                                                           
+                                                                                                                  
             if (trialPlatform && trialPlatform.TryGetComponent(out CapsuleCollider capsule))
             {
                 var box = trialPlatform.gameObject.AddComponent<BoxCollider>();
@@ -184,6 +188,8 @@ namespace AnomalyArena
         public Vector3 ClampPoint(Vector3 point, float radius = 0.5f) => new Vector3(Mathf.Clamp(point.x, Bounds.min.x + radius, Bounds.max.x - radius), point.y, Mathf.Clamp(point.z, Bounds.min.z + radius, Bounds.max.z - radius));
         public bool IsWall(Vector3 point, float margin = 0f)
         {
+            foreach (var rect in extraWalls)
+                if (point.x >= rect.xMin - margin && point.x <= rect.xMax + margin && point.z >= rect.yMin - margin && point.z <= rect.yMax + margin) return true;
             if (layout && layout.walls != null)
                 foreach (var rect in layout.walls)
                     if (point.x >= rect.xMin - margin && point.x <= rect.xMax + margin && point.z >= rect.yMin - margin && point.z <= rect.yMax + margin) return true;
@@ -205,7 +211,8 @@ namespace AnomalyArena
             return pull;
         }
         public bool IsWalkable(Vector3 point, float radius = 0.5f, bool allowGravity = false) => Contains(point, radius) && !IsWall(point, radius) && !IsHole(point) && (allowGravity || GetPull(point).sqrMagnitude < 0.01f);
-
+                                                                                                                                           
+                                                                                                                                           
         public Vector3 GetChaseDirection(Vector3 position, Vector3 target, bool followIntoGravity)
         {
             if (TrialActive) return Query.Flat(target - position).normalized;
@@ -218,18 +225,30 @@ namespace AnomalyArena
         public void HoleChanged()
         {
             Grid.Rebuild(this);
+            if (extraWalls.Count > 0) Grid.IntegrateRaid(extraWalls[0]);
             lastCell = -1;
         }
+
+                                                                                                                                          
+                                                                                                                           
+        readonly List<Rect> extraWalls = new();
+        public void SetExtraWalls(IList<Rect> rects)
+        {
+            extraWalls.Clear();
+            if (rects != null) extraWalls.AddRange(rects);
+            HoleChanged();
+        }
+        public Vector3 GetRaidDirection(Vector3 position, Vector3 spot) => Grid.RaidDirection(position, spot);
 
         void Update()
         {
             if (!GM || !GM.player) return;
             TickHoleIntro();
-
+                                                                                                                                      
             if (GM.IsCombatActive || GM.CanPlayerMove || GM.BuildTimeFlows)
             {
                 float dt = GM.WorldDeltaTime;
-
+                                                                                                  
                 if (!TrialActive) foreach (var hole in holes) hole.Tick(dt);
                 for(int i=0;i<TemporaryHoleCount;i++){var hole=TemporaryHoleAt(i);if(hole&&hole.gameObject.activeSelf)hole.Tick(dt);}
                 int index = Grid.Index(GM.player.Position);
@@ -248,6 +267,8 @@ namespace AnomalyArena
 
         const float HoleIntroApproach = .9f, HoleIntroSpiral = 2.4f, HoleIntroStagger = .45f, HoleIntroSink = .6f, HoleIntroHold = 1.6f, HoleIntroZoom = .62f;
 
+                                                                                                                                       
+                                                                                               
         void TickHoleIntro()
         {
             if (holeIntroStage == HoleIntroStage.Done) return;
@@ -301,7 +322,7 @@ namespace AnomalyArena
                     allGone = false;
                     if (f.fed)
                     {
-
+                                                                                                                               
                         float k = Mathf.Clamp01((holeIntroClock - f.fedAt) / HoleIntroSink);
                         f.angle += dt * 5f;
                         MoveBody(f.body, holeIntroHole.Centre + Orbit(f.angle) * (f.radius * (1f - k)) + Vector3.down * (1.2f * k));
@@ -325,6 +346,8 @@ namespace AnomalyArena
 
         static Vector3 Orbit(float angle) => new(Mathf.Sin(angle), 0f, Mathf.Cos(angle));
 
+                                                                                                                                       
+                                                           
         public void SkipHoleIntro()
         {
             if (!HoleIntroPlaying) return;
@@ -367,13 +390,13 @@ namespace AnomalyArena
             if (remaining > 0f) return;
             if (endBlast) foreach (var victim in Query.Characters(visual.position, 3f)) if (victim.Team == Team.Enemy) victim.ReceiveDamage(DamageInfo.Attack(8f, owner, victim.Position - visual.position, 5f, HitKind.Blast));
             visual.gameObject.SetActive(false);
-
+                                                                                                                            
             SkillWorldAPI.DecoyEnded?.Invoke(visual.position);
         }
 
         void FixedUpdate()
         {
-
+                                                                                                                                     
             if (!GM || (!GM.IsCombatActive && !GM.CanPlayerMove && !GM.BuildTimeFlows) || !GM.player) return;
             characters.Clear();
             characters.Add(GM.player);
@@ -387,7 +410,7 @@ namespace AnomalyArena
                     TickTrialBody(combatant);                                                                                     
                     continue;
                 }
-
+                                                                                                         
                 if (MissileHoleProof(combatant)) continue;
                 bool swallowed = false;
                 foreach (var hole in holes)
@@ -399,20 +422,24 @@ namespace AnomalyArena
                     swallowed = true;
                     break;
                 }
-
+                                                                                
                 if (!swallowed && IsTemporaryHole(combatant.Position,combatant) && !(combatant is Enemy { IsBoss: true })) { SwallowIntoVoid(combatant); swallowed = true; }
-
+                                                                                                                                
                 if (!swallowed && !(combatant is Enemy { IsBoss: true })) ApplyHolePull(combatant);
             }
             TickCorpses(GM.WorldFixedDeltaTime);
-
+                                                                                                             
             if (AttackPool.Instance)
                 foreach (var projectile in AttackPool.Instance.actors)
                     if (projectile && projectile.gameObject.activeSelf && projectile.AffectedByHoles && IsHole(projectile.transform.position)) projectile.SwallowedByHole();
         }
 
+                                                                                                                                                
+                                                                                                                          
         static bool MissileHoleProof(Combatant combatant) => combatant == GM.player && GM.runWeapons && GM.runWeapons.MissileHoleProof;
 
+                                                                                                                                                
+                                                                                                                                                          
         public bool DragIntoHole(Vector3 from, Vector3 at, Combatant actor)
         {
             foreach (var hole in holes) if (DragInto(hole, from, at, actor)) return true;
@@ -422,6 +449,7 @@ namespace AnomalyArena
         static bool DragInto(BlackHole hole, Vector3 from, Vector3 at, Combatant actor) => hole.Contains(at, actor) || hole.Pull(at, actor).sqrMagnitude > .01f
             && (hole.Pull(from, actor).sqrMagnitude <= .01f || Query.Flat(at - hole.Centre).sqrMagnitude < Query.Flat(from - hole.Centre).sqrMagnitude);
 
+                                                                                                                                                  
         void SwallowIntoVoid(Combatant combatant)
         {
             if (combatant is Enemy enemy && enemy.IsAlive && !enemy.SuppressRewards && !enemy.IsTrialSummon && GM.progression && GM.waves)
@@ -431,6 +459,9 @@ namespace AnomalyArena
 
         static BossTuning BossNumbers => GM && GM.waves && GM.waves.bosses != null ? GM.waves.bosses : BossTuning.Defaults;
 
+                                                                                                                                            
+                                                                                                                                             
+                                                                                                                                                    
         public float LimitBossKnockback(Vector3 from, Vector3 dir, float distance)
         {
             if (!TrialActive || !trialPlatform || distance <= 0f) return distance;
@@ -453,6 +484,7 @@ namespace AnomalyArena
             return Mathf.Max(0f, distance);
         }
 
+                                                                                                                                                         
         public void CreateBossHole(Vector3 at, float diameter, float life, Combatant owner)
         {
             if (!TrialActive) return;
@@ -475,10 +507,11 @@ namespace AnomalyArena
             var body = combatant.GetComponent<Rigidbody>();
             if (body && !body.isKinematic) body.linearVelocity += pull * (combatant.Team == Team.Player ? 1f : GM.WorldTimeScale);
         }
-
+                                                                                                                                      
+                                                                                                       
         void ApplyHolePull(Combatant combatant)
         {
-
+                                                                                                                                                       
             if (combatant == GM.player && GM.runWeapons && GM.runWeapons.Anchored) return;
             ApplyPull(combatant,GetPull(combatant.Position,combatant));
         }
@@ -504,6 +537,9 @@ namespace AnomalyArena
             if(!hole.Temporary&&CanFeed){hole.Feed(1,GM.waves.WaveIndex+1);HoleFed?.Invoke(hole);}
         }
 
+                                                                                                                                             
+                                                                                                                                            
+                                                                                                 
         public bool TryEnterPortal(PlayerController player)
         {
             if (TrialActive) return TryTakeTrialPortal(player);
@@ -516,7 +552,8 @@ namespace AnomalyArena
             }
             return false;
         }
-
+                                                                                                                                       
+                                                                                                                                                     
         public bool CanEnterPortal(PlayerController player, BlackHole hole)
         {
             if (!player || !hole || hole.Phase != HolePhase.Portal || TrialActive || TrialWon) return false;
@@ -524,7 +561,8 @@ namespace AnomalyArena
             if (!GM.BuildWalking && !GM.BuildCrateWalking && (!GM.IsCombatActive || GM.waves.Phase != WavePhase.WaveActive)) return false;
             return Mathf.Abs(player.Position.x - hole.Centre.x) <= 0.5f && Mathf.Abs(player.Position.z - hole.Centre.z) <= 0.5f;
         }
-
+                                                                                                                                          
+                                                                                                                                                 
         public bool EnterLabTrial(PlayerController player)
         {
             if (!player || TrialActive || TrialWon || !hollow || !trialPlatform || !GM.IsCombatActive || GM.waves.Phase != WavePhase.WaveActive) return false;
@@ -538,7 +576,7 @@ namespace AnomalyArena
             returnPoint = returnTo;
             frozen.Clear();
             foreach (var enemy in GM.waves.Alive) if (enemy && enemy.gameObject.activeSelf) Freeze(enemy.gameObject);
-
+                                                                                                                  
             foreach(var enemy in GM.waves.preparedEnemies)if(enemy&&enemy.gameObject.activeSelf)Freeze(enemy.gameObject);
             if (AttackPool.Instance) foreach (var projectile in AttackPool.Instance.actors) if (projectile && projectile.gameObject.activeSelf) Freeze(projectile.gameObject);
             foreach (var bolt in GM.waves.preparedBolts) if (bolt.gameObject.activeSelf) Freeze(bolt.gameObject);
@@ -550,7 +588,7 @@ namespace AnomalyArena
             trialPlatform.gameObject.SetActive(true);
             trialPlatform.localScale = new Vector3(trialRadius * 2f, trialPlatform.localScale.y, trialRadius * 2f);
             MovePlayer(player, trialPlatform.position + Vector3.back * trialEntryDistance);
-
+                                                                                  
             var status = ElementStatus.For(player);
             if (status) { status.ClearStatuses(); status.SetShield(0f); }
             hollow.gameObject.SetActive(true);
@@ -567,7 +605,8 @@ namespace AnomalyArena
                 ArenaText.Pair(                    "Stand on a black-hole portal and press E to reach a fragment. While its summons live it takes no damage.",                    "Stand on a black-hole portal and press E to reach a fragment. While its summons live it takes no damage."));
             VoidTrialEntered?.Invoke();
         }
-
+                                                                                                                                      
+                                                                                                                                                 
         public void SetBackOnSafeGround(Combatant body)
         {
             Vector3 at = body.Position;
@@ -584,7 +623,7 @@ namespace AnomalyArena
                     if (!hole || hole.Phase == HolePhase.Gone || Query.Flat(at - hole.Centre).magnitude > hole.GravityRadius) continue;
                     Vector3 away = Query.Flat(at - hole.Centre);
                     if (away.sqrMagnitude < .01f) away = Vector3.back;
-
+                                                                                                       
                     for (int step = 0; step < 8; step++)
                     {
                         Vector3 spot = ClampPoint(hole.Centre + Quaternion.Euler(0f, 45f * step, 0f) * away.normalized * (hole.GravityRadius + 1.5f), body.Radius);
@@ -626,7 +665,7 @@ namespace AnomalyArena
             if(trialExtraTemporaryHoles!=null)foreach(var hole in trialExtraTemporaryHoles)if(hole)hole.gameObject.SetActive(false);
             TrialActive = false;
             TrialWon = !labTrial;
-
+                                                                                                                             
             if (GM.waves.preparedBolts != null)
                 foreach (var bolt in GM.waves.preparedBolts)
                     if (bolt && bolt.gameObject.activeSelf && !frozen.Contains(bolt.gameObject)) bolt.gameObject.SetActive(false);
@@ -635,7 +674,8 @@ namespace AnomalyArena
             GM.waves.ResumeAfterTrial();
             MovePlayer(GM.player, returnPoint);
             GM.player.Heal(GM.player.maxHp);
-
+                                                                                                                                         
+                                                                                                                      
             hollow.gameObject.SetActive(false);
             trialPlatform.gameObject.SetActive(false);
             VoidTrialWon?.Invoke();
@@ -654,7 +694,7 @@ namespace AnomalyArena
             if (trialDecoy) trialDecoy.gameObject.SetActive(false);
             HoleChanged();
         }
-
+                                                                                                                                         
         public void RemoveHolesAfterTrial()
         {
             if (!TrialWon) return;
@@ -680,7 +720,8 @@ namespace AnomalyArena
             {
                 if(!enemy)continue;
                 if(enemy.CorpseActive)enemy.DespawnCorpse(enemy.SpawnVersion);
-
+                                                                                             
+                                                                                                 
                 else if(enemy.State is CharacterState.Dead or CharacterState.Falling)enemy.DiscardWithoutReward();
             }
         }
@@ -697,7 +738,9 @@ namespace AnomalyArena
             else { decoyLife = life; decoyBlast = explodeAtEnd; decoyOwner = owner; }
             ActiveDecoy.gameObject.SetActive(true);
         }
-
+                                                                                                                                             
+                                                                                                                                     
+                                                                                                                                  
         public bool SkillObjectStanding(SkillId skill, Combatant owner) => owner && skill switch
         {
             SkillId.Bulwark => WallStanding(owner),
@@ -712,7 +755,8 @@ namespace AnomalyArena
                     if (wall && wall.gameObject.activeSelf && !wall.BattlefieldFrozen && wall.Owner == owner) return true;
             return false;
         }
-
+                                                                                                                                            
+                                                                                                                                   
         public int BreakBulwarks(Func<TemporaryWall, bool> touched)
         {
             int broken = 0;
@@ -728,7 +772,8 @@ namespace AnomalyArena
             if (broken > 0) HoleChanged();
             return broken;
         }
-
+                                                                                                                                                                                                      
+                                              
         public int BreakBulwarksWithin(Vector3 centre, float radius) => BreakBulwarks(wall =>
         {
             Vector3 c = Query.Flat(centre);
@@ -766,7 +811,7 @@ namespace AnomalyArena
         {
             if (TrialActive)
             {
-
+                                                                                                                       
                 if (!OnTrialGround(desired, .5f))
                     desired = trialPlatform.position + Vector3.ClampMagnitude(Query.Flat(desired-trialPlatform.position),Mathf.Max(0f,trialRadius-.5f));
             }
