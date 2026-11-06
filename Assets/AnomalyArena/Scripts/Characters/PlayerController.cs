@@ -15,6 +15,8 @@ namespace AnomalyArena
         Vector3 aimPoint;
         bool hasAimPoint;
         Vector2 moveInput;
+
+        bool moveFollowsScreen;
         float sprintMultiplier = 1f;
         float dustTimer;
 
@@ -37,6 +39,7 @@ namespace AnomalyArena
             var kb = Keyboard.current;
             var mouse = Mouse.current;
             moveInput = Vector2.zero;
+            moveFollowsScreen = false;
             if (playing && kb != null)
             {
                 if (kb.wKey.isPressed) moveInput.y += 1f;
@@ -44,8 +47,9 @@ namespace AnomalyArena
                 if (kb.dKey.isPressed) moveInput.x += 1f;
                 if (kb.aKey.isPressed) moveInput.x -= 1f;
                 if (moveInput.sqrMagnitude > 1f) moveInput.Normalize();
+                moveFollowsScreen = true;
             }
-            if (playing && debugMoveHeld.HasValue) moveInput = Vector2.ClampMagnitude(debugMoveHeld.Value, 1f);
+            if (playing && debugMoveHeld.HasValue) { moveInput = Vector2.ClampMagnitude(debugMoveHeld.Value, 1f); moveFollowsScreen = false; }
 
             TickSprint(playing, kb);
             if (!playing || mouse == null || !GM.CanUseCombatInput) return;
@@ -106,11 +110,19 @@ namespace AnomalyArena
 
         bool WalkHeld => MovementLocked || WorldMap.Active && WorldMap.Active.PortalArrivalHold;
 
+        Vector3 ScreenAxes(Vector3 move)
+        {
+            float yaw = GM.cam && GM.cam.TryGetComponent<CameraRig>(out var rig) ? rig.MoveYaw : 0f;
+            return yaw == 0f ? move : Quaternion.Euler(0f, yaw, 0f) * move;
+        }
+
         protected override void TickNormal(float dt)
         {
             Vector3 v = Vector3.zero;
+            Vector3 move = new Vector3(moveInput.x, 0f, moveInput.y);
+            if (moveFollowsScreen) move = ScreenAxes(move);
             if (!WalkHeld && GM.State == GameState.Playing)
-                v = new Vector3(moveInput.x, 0f, moveInput.y) * (moveSpeed * sprintMultiplier * (GM.runWeapons ? GM.runWeapons.MoveMultiplier : 1f)
+                v = move * (moveSpeed * sprintMultiplier * (GM.runWeapons ? GM.runWeapons.MoveMultiplier : 1f)
                     * (ElementStatus.For(this)?.PlayerChillMultiplier ?? 1f) * (GM.skills ? GM.skills.PlayerMoveMultiplier : 1f));
             v *= Quicksand.SpeedFactor(Position);                                                                        
             rb.linearVelocity = new Vector3(v.x, rb.linearVelocity.y, v.z);

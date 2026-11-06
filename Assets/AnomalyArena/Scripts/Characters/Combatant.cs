@@ -50,7 +50,7 @@ namespace AnomalyArena
         public event Action<Combatant> Eliminated;
                                                                                                              
         public event Action<DamageInfo> AttackReceived;
-        // Any damage that took HP or shield: hits, burn and poison ticks, wall slams. The float is the amount taken.
+                                                                                                                     
         public event Action<DamageInfo, float> DamageTaken;
         public int SpawnVersion { get; private set; }
         protected Vector3 DeathVelocity { get; private set; }
@@ -137,6 +137,32 @@ namespace AnomalyArena
 
                                                                                                                                                            
         public Vector3 HeadPoint(Camera cam) => Position + Vector3.up * (radius * 2f + 0.6f);
+
+        V2ModelPresentation shownModel;
+        bool shownModelLooked;
+
+                                                                                                                                        
+                                                                                                                                         
+                                                                           
+        public bool TryModelTop(Camera cam, out Vector3 point)
+        {
+            point = default;
+            if (!cam) return false;
+            if (!shownModelLooked) { shownModel = GetComponent<V2ModelPresentation>(); shownModelLooked = true; }
+            if (!shownModel || !shownModel.UsingModel || shownModel.modelRenderers == null) return false;
+            bool any = false;
+            Bounds bounds = default;
+            foreach (var shown in shownModel.modelRenderers)
+            {
+                if (!shown || !shown.enabled || !shown.gameObject.activeInHierarchy) continue;
+                if (any) bounds.Encapsulate(shown.bounds);
+                else { bounds = shown.bounds; any = true; }
+            }
+            if (!any) return false;
+            Vector3 up = cam.transform.up, half = bounds.extents;
+            point = bounds.center + up * (Mathf.Abs(up.x) * half.x + Mathf.Abs(up.y) * half.y + Mathf.Abs(up.z) * half.z);
+            return true;
+        }
 
         protected virtual void Start()
         {

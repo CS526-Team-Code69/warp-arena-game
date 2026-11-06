@@ -2,6 +2,7 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
+
     public sealed class V2BossPresentation : MonoBehaviour
     {
         public Enemy enemy;
@@ -20,7 +21,9 @@ namespace AnomalyArena
             if (phaseMark.sprite != sprite) phaseMark.sprite = sprite;
             var camera = GameManager.Instance ? GameManager.Instance.cam : null;
             if (!camera) return;
-            phaseMark.transform.position = enemy.HeadPoint(camera) + camera.transform.up * headOffset;
+
+            Vector3 head = enemy.TryModelTop(camera, out var top) ? top : enemy.HeadPoint(camera);
+            phaseMark.transform.position = head + camera.transform.up * headOffset;
             phaseMark.transform.rotation = camera.transform.rotation;
             phaseMark.transform.localScale = Vector3.one * (markHeight / Mathf.Max(.01f, sprite.bounds.size.y));
         }

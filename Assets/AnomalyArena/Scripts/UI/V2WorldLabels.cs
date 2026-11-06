@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+                                                                                                                         
     public class V2WorldLabels : MonoBehaviour
     {
         [Serializable]
@@ -43,12 +43,15 @@ namespace AnomalyArena
         [Tooltip("Colour of the tick that marks the execute threshold on every non-boss HP bar.")]
         public Color executeTickColor = Color.white;
         [Min(1f), Tooltip("Width of that tick in canvas units.")] public float executeTickWidth = 2f;
+        [Header("Enemy label over a 3D model (2026-11-06)")]
+        [Tooltip("Canvas units an enemy's label is raised above the top of its 3D model. The label is centred on its point and its status icons hang 17 units below it, so 18 keeps them off the model. Whitebox bodies keep the old head point and get no lift.")]
+        public float modelLabelLift = 18f;
         Enemy[] bindings;
         float refresh;
         RectTransform canvasRect;
         readonly List<Vector2> placedEdges = new();
         static readonly Color XpEdgeColor = new(.45f, .8f, 1f);
-
+                                                                                                            
         UnityEngine.UI.Image[] executeTicks;
         Color[] hpColors;
         bool[] executeBelow;
@@ -67,6 +70,7 @@ namespace AnomalyArena
             }
         }
 
+                                                                                                                                
         public bool ShowsExecuteLine(Enemy enemy, out bool belowLine)
         {
             belowLine = false;
@@ -80,6 +84,7 @@ namespace AnomalyArena
             return false;
         }
 
+                                                                                                                                             
         void ShowExecuteLine(int index, Enemy enemy, float threshold)
         {
             var view = enemyLabels[index];
@@ -121,7 +126,12 @@ namespace AnomalyArena
                 var enemy = bindings[i]; var view = enemyLabels[i];
                 bool show = enemy && enemy.IsAlive && enemy.gameObject.activeInHierarchy && !enemy.Cloaked;
                 if (show) NarrowBars(view, enemy);
-                if (show) show = PlaceWorld(view.root, enemy.HeadPoint(gm.cam), gm.cam);
+                if (show)
+                {
+                                                                                                                                     
+                    bool onModel = enemy.TryModelTop(gm.cam, out var top);
+                    show = PlaceWorld(view.root, onModel ? top : enemy.HeadPoint(gm.cam), gm.cam, onModel ? modelLabelLift : 0f);
+                }
                 if (view.root.gameObject.activeSelf != show) view.root.gameObject.SetActive(show);
             }
             int edges = 0;
@@ -135,7 +145,7 @@ namespace AnomalyArena
                     var hole = world.holes[i]; var label = holeLabels[i];
                     bool show = hole && hole.Phase != HolePhase.Gone && !world.TrialActive;
                     if (!show) { label.gameObject.SetActive(false); continue; }
-
+                                                                                                                                
                     bool canEnter = world.CanEnterPortal(gm.player, hole);
                     string text = hole.Phase == HolePhase.Portal ? ArenaText.Text(canEnter ? "ui.hole.enter" : "ui.hole.portal") + "\n" + ArenaText.Text("ui.hole.remaining", hole.WavesLeft)
                         : world.CanFeed && hole.Phase == HolePhase.Active ? $"{hole.Feeds} / {hole.feedsToOpen}" : "";
@@ -152,7 +162,8 @@ namespace AnomalyArena
                     }
                 }
             }
-
+                                                                                            
+                                                                                       
             if (gm.waves.preparedMarkers != null)
                 foreach (var marker in gm.waves.preparedMarkers)
                 {
@@ -160,7 +171,8 @@ namespace AnomalyArena
                         || edges >= edgeLabels.Length || !Offscreen(marker.transform.position, gm.cam)) continue;
                     PlaceEdge(edgeLabels[edges++], marker.transform.position, gm.cam, ArenaText.Text("ui.shade.incoming"), true);
                 }
-
+                                                                                                                                         
+                                                                                                                                     
             var orbs = OrbPool.Instance;
             bool orbLabelOn = false;
             if (orbs && gm.player && gm.IsCombatActive)
@@ -201,6 +213,8 @@ namespace AnomalyArena
             for (int i = edges; i < edgeLabels.Length; i++) edgeLabels[i].gameObject.SetActive(false);
         }
 
+                                                                                                                                              
+                                                                                                                                                     
         void PlaceTrialPortalLabel(WorldMap world, GameManager gm)
         {
             bool on = world.CanTakeTrialPortal(gm.player, out var portal);
@@ -220,6 +234,7 @@ namespace AnomalyArena
             }
         }
 
+                                                                                                                                                                        
         static void NarrowBars(EnemyLabel view, Enemy enemy)
         {
             float width = enemy.IsBoss || enemy.Elite ? 1f : Mathf.Clamp(enemy.radius * .85f, .42f, .78f);
@@ -227,6 +242,7 @@ namespace AnomalyArena
             NarrowBar(view.shield ? view.shield.rectTransform.parent as RectTransform : null, width);
         }
 
+                                                                                     
         static void NarrowBar(RectTransform bar, float width)
         {
             if (!bar || Mathf.Approximately(bar.localScale.x, width)) return;
@@ -257,7 +273,10 @@ namespace AnomalyArena
                 view.hp.fillAmount = enemy.maxHp > 0f ? Mathf.Clamp01(enemy.Hp / enemy.maxHp) : 0f;
                 view.shield.fillAmount = status && enemy.maxHp > 0f ? Mathf.Clamp01(status.Shield / enemy.maxHp) : 0f;
                 view.shield.gameObject.SetActive(status && status.Shield > 0f);
-
+                                                                                                                                               
+                                                                                                                             
+                                                                                                                                      
+                                                                                                                              
                 string kind = enemy.definition ? KindName(enemy.definition.kind) : "";
                 bool named = showOrdinaryEnemyNames || enemy.IsBoss || enemy.IsSpecial;
                 string name = enemy.IsBoss ? enemy.definition.kind == EnemyKind.Hollow ? ArenaText.Pair("THE NASH PROPHET","THE NASH PROPHET") : ArenaText.Pair("THE TYRANT KING","THE TYRANT KING")
@@ -265,16 +284,16 @@ namespace AnomalyArena
                 Color nameColor = enemy.IsBoss || enemy.Elite ? Color.white : CommonNameColor;
                 if (view.name.color != nameColor) view.name.color = nameColor;
                 if (enemy.Chanted) name = (name.Length > 0 ? name + " · " : "") + ArenaText.Pair("CHANTED","CHANTED");
-
+                                                                       
                 if (weapons && weapons.IsExecuteMarked(enemy)) name = (name.Length > 0 ? name + " · " : "") + ArenaText.Pair("MARKED","MARKED");
-
+                                                                                                     
                 if (enemy.ProphetWarded) name += " · " + ArenaText.Pair("INVULNERABLE","INVULNERABLE");
                 if (view.name.text != name) view.name.text = name;
                 V2Hud.SetElementIcon(view.affix, art, (int)enemy.Affix - 1);
                 for (int j = 0; j < 4; j++)
                 {
                     float count = status ? j switch { 0 => status.Fire, 1 => status.Poison, 2 => status.Frost, _ => status.Lightning } : 0f;
-
+                                                                                                                                  
                     bool burning = j == 0 && status && status.Burning;
                     bool on = count >= 1f || burning || (j == 2 && status && status.Frozen) || (j == 3 && status && status.Paralysed);
                     V2Hud.SetElementIcon(view.statusIcons[j], art, on ? j : -1);
@@ -291,6 +310,7 @@ namespace AnomalyArena
         static readonly string[] kindNames = new string[Enum.GetValues(typeof(EnemyKind)).Length];
         static bool kindNamesChinese;
 
+                                                                                                                              
         static string KindName(EnemyKind kind)
         {
             if (kindNamesChinese != ArenaText.IsChinese) { Array.Clear(kindNames, 0, kindNames.Length); kindNamesChinese = ArenaText.IsChinese; }
@@ -299,6 +319,7 @@ namespace AnomalyArena
             return kindNames[i] ??= ArenaText.Text("enemy." + kind);
         }
 
+                                                                                            
         static void AddNameShadow(UnityEngine.UI.Text label)
         {
             var shadow = label.gameObject.AddComponent<UnityEngine.UI.Shadow>();
@@ -306,15 +327,18 @@ namespace AnomalyArena
             shadow.effectDistance = new Vector2(1f, -1f);
         }
 
-        bool PlaceWorld(RectTransform label, Vector3 world, Camera cam)
+                                                                                                                                          
+        bool PlaceWorld(RectTransform label, Vector3 world, Camera cam, float lift = 0f)
         {
             Vector3 screen = cam.WorldToScreenPoint(world);
             if (screen.z <= 0f || screen.x < 0f || screen.y < 0f || screen.x > Screen.width || screen.y > Screen.height) return false;
             RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, screen, null, out var local);
+            local.y += lift;
             label.position = canvasRect.TransformPoint(local);
             return true;
         }
 
+                                                                                                          
         void PlaceHoleEdge(UnityEngine.UI.Text label, Vector3 world, Camera cam, string value)
         {
             PlaceEdge(label, world, cam, value, false);
@@ -333,7 +357,7 @@ namespace AnomalyArena
             float unit = canvasRect.lossyScale.x > 0f ? canvasRect.lossyScale.x : 1f;
             screen.x = Mathf.Clamp(screen.x, 110f * unit, Screen.width - 110f * unit);
             screen.y = Mathf.Clamp(screen.y, edgeBottomInset * unit, Screen.height - edgeTopInset * unit);
-
+                                                                                        
             float step = 30f * unit;
             for (int attempt = 0; attempt < 6; attempt++)
             {
