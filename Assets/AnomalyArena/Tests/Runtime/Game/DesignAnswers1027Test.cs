@@ -13,7 +13,7 @@ namespace AnomalyArena
                                                                                                                                            
                                                
     [TestFixture]
-    public class OwnerAnswers1027Test
+    public class DesignAnswers1027Test
     {
         const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
 
@@ -53,7 +53,7 @@ namespace AnomalyArena
             Assert.That(streamBoard.Fire, Is.EqualTo(3f).Within(.2f), "the Stream at Mk1 burns about 3 a second");
             Assert.That(wildfireBoard.Fire, Is.EqualTo(rules.fireBurnShare * wildfireDps * rules.wildfireFireBurnFactor).Within(.001f),
                 "Wildfire has its own factor");
-            Assert.That(wildfireBoard.Fire, Is.EqualTo(3f).Within(.3f), "the Wildfire at Mk1 burns about 3 a second too (owner 2026-10-27)");
+            Assert.That(wildfireBoard.Fire, Is.EqualTo(3f).Within(.3f), "the Wildfire at Mk1 burns about 3 a second too (2026-10-27)");
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
@@ -71,7 +71,7 @@ namespace AnomalyArena
             board.Tick(.02f);
             float afterFirstTick = targets[0].Hp;
 
-            Assert.That((rules.poisonOnEnemyInterval, rules.poisonOnEnemyDamagePerStack), Is.EqualTo((.5f, .3f)), "the owner's numbers");
+            Assert.That((rules.poisonOnEnemyInterval, rules.poisonOnEnemyDamagePerStack), Is.EqualTo((.5f, .3f)), "the design numbers");
             Assert.That(beforeFirstTick, Is.EqualTo(hp), "nothing before half a second");
             Assert.That(hp - afterFirstTick, Is.EqualTo(Mathf.Floor(rules.poisonOnEnemyCap * .3f * .5f * ElementCombat.WaveScale)).Within(.01f),
                 "ten stacks deal 1.5 (× the wave scale) on the first tick");

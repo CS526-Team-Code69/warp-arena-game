@@ -93,7 +93,7 @@ namespace AnomalyArena
             board.Tick(rules.poisonOnEnemyInterval);
             float expected = 2f * rules.poisonOnEnemyInterval * rules.poisonOnEnemyCap * rules.poisonOnEnemyDamagePerStack * ElementCombat.WaveScale;
 
-            Assert.That(rules.poisonOnEnemyCap, Is.EqualTo(10f), "the owner's cap: ten stacks");
+            Assert.That(rules.poisonOnEnemyCap, Is.EqualTo(10f), "the design cap: ten stacks");
             Assert.That(capped, Is.EqualTo(rules.poisonOnEnemyCap), "more Poison stops at the cap");
 
             Assert.That(hp - sut.Hp, Is.EqualTo(expected).Within(1f), "each stack deals its share a second");

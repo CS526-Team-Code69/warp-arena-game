@@ -28,7 +28,7 @@ namespace AnomalyArena
             + "Stat cards and skill cards are counted apart. Candidate 4.")]
         public int highTierPity = 4;
         [Header("Weapon card direction (wave bands)")]
-        [Tooltip("Owner 2026-10-25 (document 9.6): a weapon card is coloured by its direction: Tame green, Twist blue, Infusion purple. When "
+        [Tooltip("2026-10-25 (document 9.6): a weapon card is coloured by its direction: Tame green, Twist blue, Infusion purple. When "
             + "the weapon on the card has more than one direction open, these weights pick one, so later rows favour blue and purple. Each "
             + "row holds from its wave until a later row starts; a direction that is the only one open is still offered.")]
         public WeaponDirectionBand[] weaponDirectionBands = { new(1, 50f, 30f, 20f), new(3, 40f, 35f, 25f), new(9, 30f, 35f, 35f), new(12, 20f, 40f, 40f) };

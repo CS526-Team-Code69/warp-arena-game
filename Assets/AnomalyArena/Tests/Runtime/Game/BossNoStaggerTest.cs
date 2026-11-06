@@ -43,7 +43,7 @@ namespace AnomalyArena
                 "a boss reaching a Frost or Lightning threshold feeds nothing toward a stun");
             Assert.That(typeof(BossTuning).GetField("prophetStunSeconds"), Is.Null, "the Prophet has no stun of its own any more");
             Assert.That(typeof(BossTuning).GetFields().Select(f => f.Name).Where(n => n.IndexOf("stun", StringComparison.OrdinalIgnoreCase) >= 0),
-                Is.Empty, "no boss stun tuning is left, the Tyrant's wall-crash stun included (owner 2026-10-25: a boss is never stunned)");
+                Is.Empty, "no boss stun tuning is left, the Tyrant's wall-crash stun included (2026-10-25: a boss is never stunned)");
             Assert.That(typeof(Enemy).GetProperty("BossStunned", members), Is.Null, "and no boss stun state");
         }
 

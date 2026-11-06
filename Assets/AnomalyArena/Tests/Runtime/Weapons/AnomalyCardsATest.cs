@@ -527,7 +527,7 @@ namespace AnomalyArena
             while (Time.time < fired + tuning.scatterShellFuse + .3f) await Awaitable.NextFrameAsync();
 
             Assert.That(tuning.scatterShellTameSide, Is.GreaterThan(tuning.scatterShellRadius * tuning.scatterShellTameRadius),
-                "a tamed shell fire does not reach where you stand (owner decision 10-27)");
+                "a tamed shell fire does not reach where you stand (decision of 10-27)");
             Assert.That(blast.reload, Is.GreaterThan(0f), "standing still does not finish the reload");
         }
 

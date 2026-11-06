@@ -17,7 +17,7 @@ namespace AnomalyArena
         [Range(1f, 16f)] public float pixelBlock = 6f;
         public float walkBob = .065f, walkCyclesPerMetre = .7f;
         public float walkTilt = 3f, hitSquash = .24f, hitRecoil = .15f;
-        [Header("Elite outline (owner M116)")]
+        [Header("Elite outline (M116)")]
         [Tooltip("Size of the white silhouette behind an elite's illustration, as a share of the illustration.")]
         public float eliteOutlineScale = 1.12f;
         [Tooltip("Size of the white back-face shell round an elite's whitebox body, as a share of the body.")]

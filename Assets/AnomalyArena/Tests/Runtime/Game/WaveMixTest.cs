@@ -81,7 +81,7 @@ namespace AnomalyArena
             var waves = game.waves;
             var world = WorldMap.Active;
             Assume.That(world && world.biomes != null, Is.True, "the scene keeps its map list");
-            Assert.That(waves.minKindShare, Is.EqualTo(.1f), "owner, 2026-10-23: at least 10% of the kind's own group");
+            Assert.That(waves.minKindShare, Is.EqualTo(.1f), "2026-10-23: at least 10% of the kind's own group");
             var failures = new List<string>();
             var original = world.biome;
             try

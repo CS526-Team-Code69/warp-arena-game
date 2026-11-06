@@ -25,7 +25,7 @@ namespace AnomalyArena
         [Tooltip("One value per level, levels 1 to 5 (stacks, bolts, pull, shield share, HP line or speed, depending on the skill).")]
         public float[] strength = { 0f, 0f, 0f, 0f, 0f };
         [Tooltip("Storm Call direct damage per bolt.")] public float hitDamage = 6f;
-        [Tooltip("Storm Call Lightning stacks per bolt, one value per level, levels 1 to 5 (numbers by audit decision P28, 2026-10-27; document 7.3: stacking skills give "
+        [Tooltip("Storm Call Lightning stacks per bolt, one value per level, levels 1 to 5 (numbers by decision P28, 2026-10-27; document 7.3: stacking skills give "
             + "more stacks per level). Levels 1-4 do not chain; level 5 chains through ElementCombat.ApplyStacks.")]
         public float[] hitStacksByLevel = { 3f, 4f, 4f, 5f, 5f };
         [Tooltip("Gravity Well level 5 ending hit.")] public float endDamage = 10f;
@@ -44,22 +44,22 @@ namespace AnomalyArena
         [Min(1f)] public float overchargeRate = 2f;
         [Tooltip("Overcharge level 5: weapon damage multiplier while active.")]
         [Min(1f)] public float overchargeDamageMultiplier = 1.25f;
-        [Header("Greater Void — latest user revision")]
-        [Tooltip("Gravity ring width around a Pocket Void hole, in grid units. User-specified 1.")]
+        [Header("Greater Void — latest revision")]
+        [Tooltip("Gravity ring width around a Pocket Void hole, in grid units. Set to 1.")]
         [Min(0f)] public float voidGravityWidth = 1f;
         [Tooltip("Void Walk: player move speed multiplier during the void state.")]
         [Min(1f)] public float voidWalkMoveMultiplier = 1.6f;
-        [Min(0f), Tooltip("Void Walk (owner 2026-10-26): when the void state runs out, both hand weapons carry the Void element for this many "
+        [Min(0f), Tooltip("Void Walk (2026-10-26): when the void state runs out, both hand weapons carry the Void element for this many "
             + "seconds (their hits restore Energy, the slots show black), then get their own element back.")]
         public float voidWalkEnchantSeconds = 5f;
-        [Tooltip("Singularity: move speed of the enemies it draws in (owner 2026-10-27: slowed by 70%, so 0.3).")]
+        [Tooltip("Singularity: move speed of the enemies it draws in (2026-10-27: slowed by 70%, so 0.3).")]
         [Range(0f, 1f)]
         public float singularitySlowMultiplier = 0.3f;
         [Tooltip("Candidate Singularity base blast damage, before the run Damage stat.")]
         [Min(0f)] public float singularityBaseDamage = 10f;
         [Tooltip("Candidate extra blast damage per distinct enemy absorbed into the blast radius.")]
         [Min(0f)] public float singularityDamagePerEnemy = 4f;
-        [Tooltip("Singularity: the player's move speed multiplier while it gathers, until the blast (owner 2026-10-26: a heavy slow instead of "
+        [Tooltip("Singularity: the player's move speed multiplier while it gathers, until the blast (2026-10-26: a heavy slow instead of "
             + "the old root; the player can still fire and cast). 0.35 = 35% speed.")]
         [Range(0f, 1f)] public float singularityPlayerMoveMultiplier = 0.35f;
         [Tooltip("Inspector notes per level, levels 1 to 5. The game shows the bilingual description written in code; these are only the fallback for a skill without one.")]
@@ -79,7 +79,7 @@ namespace AnomalyArena
         public float levelDamageGrowth = 1.161895f;
         [Tooltip("Bulwark: Strength is a fraction of max HP given as Shield (0.2 = 20% max HP); off = flat points.")]
         public bool shieldScalesWithMaxHp = true;
-        [Tooltip("Bulwark level 5 (owner 2026-10-26): while any of the Shield it gave is left, a direct hit on the Shield counts this share of "
+        [Tooltip("Bulwark level 5 (2026-10-26): while any of the Shield it gave is left, a direct hit on the Shield counts this share of "
             + "its damage, instead of the 0.7 a normal Shield lets count (Status Rules > shieldDirectFactor). 0.5 = half. The level-5 Shield "
             + "may also stand above the usual Shield cap, up to its own size.")]
         [Range(0f, 1f)] public float bulwarkShieldDirectFactor = 0.5f;

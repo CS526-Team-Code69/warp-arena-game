@@ -367,9 +367,9 @@ namespace AnomalyArena
             Assert.That(en[0], Does.Not.Contain("at most"));
             Assert.That(zh[1], Does.Contain("snow").And.Contain("Frost").And.Not.Contain("move slower"), "Blizzard: snow at your feet chills you; spraying no longer slows you");
             Assert.That(en[1], Does.Contain("snow").And.Contain("Frost").And.Not.Contain("move slower"));
-            Assert.That(zh[2], Does.Contain("drags you").And.Not.Contain("short wait"), "Chain Blade (owner 2026-10-27): the two-way pull is its backfire; the wait is only a cooldown now");
+            Assert.That(zh[2], Does.Contain("drags you").And.Not.Contain("short wait"), "Chain Blade (2026-10-27): the two-way pull is its backfire; the wait is only a cooldown now");
             Assert.That(en[2], Does.Contain("drags you"));
-            Assert.That(zh[3], Does.Contain("force field").And.Contain("Deflect"), "Deflect (owner 2026-10-27): a slowing field that deflects shots");
+            Assert.That(zh[3], Does.Contain("force field").And.Contain("Deflect"), "Deflect (2026-10-27): a slowing field that deflects shots");
             Assert.That(en[3], Does.Contain("force field").And.Contain("deflected"));
             Assert.That(zh[3], Does.Contain("轻伤"), "Deflect (P22): the card states its light hit");
             Assert.That(en[3], Does.Contain("light"));
@@ -424,14 +424,14 @@ namespace AnomalyArena
                 Assert.That(drones.newOnes, Has.Some.Matches<RunWeapon>(w => w.variant == 0).And.Some.Matches<RunWeapon>(w => w.variant == 1),
                     "the Gunner costs no Energy now (Q103), so the drone is a fair coin from the start");
                 Assert.That(drones.versions, Is.Not.Empty.And.All.Matches<RunWeapon>(w => w.variant == 1),
-                    "a stronger version keeps the held drone's anomaly (owner 2026-10-28)");
+                    "a stronger version keeps the held drone's anomaly (2026-10-28)");
 
                 game.progression.UnlockEnergy();                                    
                 var after = DrawAuto(weapons, WeaponForm.ShieldRing, 0);
                 Assert.That(weapons.DrainOfferable, Is.True);
                 Assert.That(after.newOnes, Has.Some.Matches<RunWeapon>(w => w.variant == 1), "with the energy bar the Drain is offered");
                 Assert.That(after.versions, Is.Not.Empty.And.All.Matches<RunWeapon>(w => w.variant == 0),
-                    "a held Deflect's stronger version stays the Deflect (owner 2026-10-28)");
+                    "a held Deflect's stronger version stays the Deflect (2026-10-28)");
             }
             finally { weapons.armoryUpgradeChance = upgradeChance; UnityEngine.Random.state = savedRandom; }
         }
@@ -444,7 +444,7 @@ namespace AnomalyArena
             Assume.That(game.progression.EnergyUnlocked, Is.False, "the sandbox run has learned no skill");
             var gunner = EquipAuto(game, WeaponForm.SentryDrone, 0);
 
-            await Until(() => ActiveBolts(gunner), 2f, "the drone fires without an energy bar (owner 2026-10-27, Q86)");
+            await Until(() => ActiveBolts(gunner), 2f, "the drone fires without an energy bar (2026-10-27, Q86)");
             Assert.That(game.progression.EnergyUnlocked, Is.False, "and does not bring the bar itself");
 
             game.progression.UnlockEnergy();                                    

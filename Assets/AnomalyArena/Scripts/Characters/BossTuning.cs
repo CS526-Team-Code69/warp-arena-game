@@ -8,8 +8,8 @@ namespace AnomalyArena
     public sealed class BossTuning
     {
         [Header("Nash Prophet: platform")]
-        [Tooltip("x: the trial platform's radius, the same in all three phases (owner 2026-10-26: the platform no longer shrinks). y and z, its old phase-2 and phase-3 radii, are no longer used.")] public Vector3 prophetPlatformRadii = new(12f, 10f, 8f);
-        [Min(0f), Tooltip("No longer used (owner 2026-10-26): the platform keeps its size in every phase.")] public float platformShrinkSpeed = .3f;
+        [Tooltip("x: the trial platform's radius, the same in all three phases (2026-10-26: the platform no longer shrinks). y and z, its old phase-2 and phase-3 radii, are no longer used.")] public Vector3 prophetPlatformRadii = new(12f, 10f, 8f);
+        [Min(0f), Tooltip("No longer used (2026-10-26): the platform keeps its size in every phase.")] public float platformShrinkSpeed = .3f;
 
         [Header("Nash Prophet: move choice")]
         [Min(0f), Tooltip("Phases 1-2: closer than this (centre to centre) it only pulses or inhales; farther it fires.")] public float prophetCloseRange = 6.3f;
@@ -85,11 +85,11 @@ namespace AnomalyArena
 
         [Header("Nash Prophet (2026-10-25): repulse pulse and gravity pull")]
         [Min(0f), Tooltip("Wind-up of the repulse pulse; a ground circle shows its reach.")] public float nashPulseWindup = .8f;
-        [Min(0f), Tooltip("Pulse reach from its centre in every phase (the player's body counts); the ground circle shows it. 7.5 reaches a cell past the close range (nashNearRange); the platform runs on past it to its edge, so the player can still step out of the circle. Every Bulwark wall any part of which lies inside it breaks when the pulse goes off (audit decision P29, 2026-10-27).")] public float nashPulseReach = 7.5f;
+        [Min(0f), Tooltip("Pulse reach from its centre in every phase (the player's body counts); the ground circle shows it. 7.5 reaches a cell past the close range (nashNearRange); the platform runs on past it to its edge, so the player can still step out of the circle. Every Bulwark wall any part of which lies inside it breaks when the pulse goes off (decision P29, 2026-10-27).")] public float nashPulseReach = 7.5f;
         [Min(0f), Tooltip("Pulse damage, × its base damage (Hollow asset damage × nashDamageFactor).")] public float nashPulseDamage = 1.5f;
         [Min(0f), Tooltip("Phase 1: cells the pulse pushes the player away from it (the slide runs about 5% longer). It throws off a player hit farther out than the platform radius less the slide: 4.8 on the 12-cell platform spares the whole close range and throws off only from about 7 cells out to the rim of its circle (8 cells: its reach plus the player's body).")] public float nashPulsePush = 4.8f;
-        [Min(0f), Tooltip("Phase 2: cells the pulse pushes the player (owner 2026-10-27: 5.2). 5.2 on the 12-cell platform spares about the whole close range (6.5 cells out); only the outer part of its circle, about 1.5 cells wide, throws the player off. Above about 5.2 the outer end of the close range throws off too.")] public float nashPhase2PulsePush = 5.2f;
-        [Min(0f), Tooltip("Phase 3: cells the pulse pushes the player (owner 2026-10-26). 7 on the 12-cell platform spares only a band a little over two player bodies wide (about 2.3 cells) outside its body, up to about 4.6 cells out; hit farther out, anywhere in its circle, the player goes off. Above about 7.3 that band gets narrower than two player bodies.")] public float nashPhase3PulsePush = 7f;
+        [Min(0f), Tooltip("Phase 2: cells the pulse pushes the player (2026-10-27: 5.2). 5.2 on the 12-cell platform spares about the whole close range (6.5 cells out); only the outer part of its circle, about 1.5 cells wide, throws the player off. Above about 5.2 the outer end of the close range throws off too.")] public float nashPhase2PulsePush = 5.2f;
+        [Min(0f), Tooltip("Phase 3: cells the pulse pushes the player (2026-10-26). 7 on the 12-cell platform spares only a band a little over two player bodies wide (about 2.3 cells) outside its body, up to about 4.6 cells out; hit farther out, anywhere in its circle, the player goes off. Above about 7.3 that band gets narrower than two player bodies.")] public float nashPhase3PulsePush = 7f;
         [Min(0f), Tooltip("Wind-up of the gravity pull.")] public float nashPullWindup = .8f;
         [Min(0f), Tooltip("Seconds the gravity pull draws the player toward the middle. It deals no damage itself; the pillars do the killing.")] public float nashPullSeconds = 2.5f;
         [Min(0f), Tooltip("Cells per second the pull draws the player in, phases 1-2. Keep it under the player's walking speed (6) so walking out against it works.")] public float nashPullSpeed = 3.5f;
@@ -136,7 +136,7 @@ namespace AnomalyArena
         [Min(.5f), Tooltip("Fragment radius: 1.75 is 3.5 cells across, about three player bodies.")] public float nashFragmentRadius = 1.75f;
         [Min(0f), Tooltip("Cells from the platform's middle to each fragment's middle; the platform's edge is at 12 in every phase.")] public float nashFragmentDistance = 15.5f;
         [Tooltip("Direction of the first fragment, degrees clockwise from north (+z); the others are evenly spaced.")] public float nashFragmentAngle = 0f;
-        [Min(0f), Tooltip("Cells from the platform's middle to each portal on it. At 6.5 a portal stands where the repulse pulse throws the player off in phases 2 and 3 (accepted by the owner, 2026-10-26: the portal is the way out of it).")] public float nashPortalRadius = 6.5f;
+        [Min(0f), Tooltip("Cells from the platform's middle to each portal on it. At 6.5 a portal stands where the repulse pulse throws the player off in phases 2 and 3 (2026-10-26: the portal is the way out of it).")] public float nashPortalRadius = 6.5f;
         [Tooltip("Direction of the first platform portal, degrees clockwise from north. Each portal leads to the fragment on the far side, so the player comes out in another direction.")] public float nashPortalAngle = 45f;
         [Min(.1f), Tooltip("The player stands on a portal while their centre is this close to its middle (its swirl is 0.65 in radius); only then, free to act, does E take it. Walking over a portal does nothing.")] public float nashPortalTrigger = .6f;
         [Min(0f), Tooltip("The player arrives this far from a fragment's middle, on its outer side, clear of the way-back portal in its middle.")] public float nashFragmentArrival = 1f;
@@ -144,7 +144,7 @@ namespace AnomalyArena
         [Min(0f), Tooltip("Seconds the player stands still after every portal jump: a move key still held from the way in does not walk them off the small fragment or the platform before they see where they are, and no pull draws them. Shooting and skills still work. Keep it at least nashPortalRearm.")] public float nashPortalArrivalHold = .5f;
 
         [Header("Nash Prophet: knockback guard")]
-        [Min(0f), Tooltip("No longer used (owner 2026-10-25): the trial platform edge does not stop a boss push any more, only an open hole does.")] public float edgeKnockMargin = 2.5f;
+        [Min(0f), Tooltip("No longer used (2026-10-25): the trial platform edge does not stop a boss push any more, only an open hole does.")] public float edgeKnockMargin = 2.5f;
         [Min(0f), Tooltip("A boss hit never pushes the player closer than this to the edge of a void hole on the platform.")] public float holeKnockMargin = 1f;
 
         [Header("Tyrant: move choice")]
@@ -254,7 +254,7 @@ namespace AnomalyArena
         [Tooltip("Knockback tier of the landing slam (document 5.3: fly).")] public KnockTier rushSlamKnock = KnockTier.Fly;
         [Min(0f), Tooltip("Damage when the run itself runs you down (once per charge), × attack damage.")] public float rushRunDamage = .6f;
         [Tooltip("Knockback tier of the run: you are pushed aside out of its lane.")] public KnockTier rushRunKnock = KnockTier.Light;
-        [Min(0f), Tooltip("The run knocks every other enemy its body runs into, its own minions too, out of its lane to the side each one stands on, instead of passing through it (owner 2026-10-26): each slides out until its body is clear of the lane by about this many cells. The shove deals no damage, a wall the enemy slides into does not hurt it either, and nothing slows the run; a Spire, which nothing moves, it still runs through.")] public float rushShoveClearance = .5f;
+        [Min(0f), Tooltip("The run knocks every other enemy its body runs into, its own minions too, out of its lane to the side each one stands on, instead of passing through it (2026-10-26): each slides out until its body is clear of the lane by about this many cells. The shove deals no damage, a wall the enemy slides into does not hurt it either, and nothing slows the run; a Spire, which nothing moves, it still runs through.")] public float rushShoveClearance = .5f;
         [Min(0f), Tooltip("Seconds it stands still after the landing. Shorter while enraged (tyrantEnragedWindupShare).")] public float rushRecovery = 1f;
 
         [Header("Tyrant: Royal Scepter (middle distance, phase 2)")]

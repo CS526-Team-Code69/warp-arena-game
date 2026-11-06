@@ -33,7 +33,7 @@ namespace AnomalyArena
             Assert.That(Query.Flat(game.player.Position - world.trialPlatform.position).magnitude, Is.LessThan(world.trialRadius), "the player stands on the trial platform");
             Assert.That(boss.IsAlive, Is.True);
             await VoidTrialPlatformTest.StandStill(game, 2f);
-            Assert.That(game.player.State, Is.Not.EqualTo(CharacterState.Falling), "standing still, the player does not slide off the platform (user 2026-10-22: died on entering)");
+            Assert.That(game.player.State, Is.Not.EqualTo(CharacterState.Falling), "standing still, the player does not slide off the platform (2026-10-22: died on entering)");
             Assert.That(world.TrialActive, Is.True);
 
             lab.Clear();
@@ -70,7 +70,7 @@ namespace AnomalyArena
             await Awaitable.FixedUpdateAsync();
             await Awaitable.FixedUpdateAsync();
 
-            Assert.That(game.player.IsAlive, Is.True, "the lab player does not die from the fall (user 2026-10-22: every fall restarted the run)");
+            Assert.That(game.player.IsAlive, Is.True, "the lab player does not die from the fall (2026-10-22: every fall restarted the run)");
             Assert.That(game.player.State, Is.Not.EqualTo(CharacterState.Falling));
             Assert.That(world.TrialActive, Is.True, "the trial goes on");
             Assert.That(game.RunPhase, Is.EqualTo(ArenaUiState.VoidTrial));

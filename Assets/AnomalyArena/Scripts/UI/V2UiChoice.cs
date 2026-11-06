@@ -11,7 +11,7 @@ namespace AnomalyArena
         public UnityEngine.UI.Button button;
         [Range(.3f, 1f), Tooltip("Smallest body size, as a share of the saved font size, that a long card text may shrink to so it stays inside its box.")]
         public float minBodyScale = .6f;
-        [Min(8), Tooltip("Largest size of the card text (owner 2026-10-28: the saved size was easy to skip). Long texts still shrink, no smaller than before.")]
+        [Min(8), Tooltip("Largest size of the card text (2026-10-28: the saved size was easy to skip). Long texts still shrink, no smaller than before.")]
         public int bodyFontSize = 19;
 
         [System.NonSerialized] public System.Action<CardRarity> rarityApplied;

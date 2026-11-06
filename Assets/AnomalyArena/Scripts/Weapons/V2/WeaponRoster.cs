@@ -23,7 +23,7 @@ namespace AnomalyArena
         public float[] mkDamage = { 1f, 1.4f, 1.65f, 1.9f, 2.1f, 2.3f };
         [Min(1), Tooltip("Every this many waves, the standard Mk of new weapons rises by one.")]
         public int mkWaveSpacing = 3;
-        [Tooltip("Armory (owner 2026-10-25): chance 0-1 that an offer comes one Mk above its usual tier, one row per band of mkWaveSpacing waves "
+        [Tooltip("Armory (2026-10-25): chance 0-1 that an offer comes one Mk above its usual tier, one row per band of mkWaveSpacing waves "
             + "(row 0 = waves 1-3, row 1 = waves 4-6, ...; the last row holds for every later wave). It applies to new weapons (never above the "
             + "second-highest Mk) and to stronger versions of held weapons.")]
         public float[] mkBonusChance = { 0f, .15f, .25f, .35f, .45f };

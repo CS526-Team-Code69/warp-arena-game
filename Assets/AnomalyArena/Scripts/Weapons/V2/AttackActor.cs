@@ -27,7 +27,7 @@ namespace AnomalyArena
         public ElementKind element;
         [Tooltip("Damage this attack deals to its own shooter when it hurts them; negative means the same as damage. Backfires use the weapon's base value.")]
         public float ownerDamage = -1f;
-        [Tooltip("Scatter Blast shell fire (owner 2026-10-27): it touches its shooter only with the shooter's centre inside it, as if stepped on; others by their edge as usual.")]
+        [Tooltip("Scatter Blast shell fire (2026-10-27): it touches its shooter only with the shooter's centre inside it, as if stepped on; others by their edge as usual.")]
         public bool ownerStepsOn;
 
         float ownerCarry;

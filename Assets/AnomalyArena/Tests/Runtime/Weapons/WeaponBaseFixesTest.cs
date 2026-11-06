@@ -771,7 +771,7 @@ namespace AnomalyArena
             ClearWalls();
             float energy = game.progression.Energy;
             await Until(() => ActiveActors(gunner, AttackMode.Bolt), 2f, "the drone fires once it can see");
-            Assert.That(game.progression.Energy, Is.EqualTo(energy).Within(.01f), "owner 2026-10-27 (Q86): its shots cost no Energy");
+            Assert.That(game.progression.Energy, Is.EqualTo(energy).Within(.01f), "2026-10-27 (Q86): its shots cost no Energy");
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(30000)]
@@ -810,7 +810,7 @@ namespace AnomalyArena
             Assert.That(roster.Get(WeaponForm.Minigun).damageA, Is.EqualTo(2.5f), "Spin-up");
             Assert.That(roster.Get(WeaponForm.RocketLauncher).damageB, Is.EqualTo(7f), "Launch Yourself");
             Assert.That(roster.Get(WeaponForm.SwarmLauncher).rangeB, Is.EqualTo(12.75f), "Bombard range");
-            Assert.That(roster.Get(WeaponForm.ShieldRing).damageA, Is.EqualTo(1f), "Deflect: one light hit (owner 2026-10-27, Q99)");
+            Assert.That(roster.Get(WeaponForm.ShieldRing).damageA, Is.EqualTo(1f), "Deflect: one light hit (2026-10-27, Q99)");
             Assert.That(roster.Get(WeaponForm.ShieldRing).cooldownA, Is.EqualTo(1f), "a second");
             Assert.That(roster.Get(WeaponForm.SentryDrone).damageA, Is.EqualTo(1.5f), "Gunner (Q83)");
             Assert.That(roster.Get(WeaponForm.SentryDrone).cooldownA, Is.EqualTo(.15f), "every 0.15 s");
@@ -823,7 +823,7 @@ namespace AnomalyArena
             spin.heldTime = 3f;
             Assert.That(weapons.GetCooldownDuration(spin), Is.EqualTo(1f / weapons.upgrades.spinUpTopRate).Within(.001f));
             Assert.That(weapons.upgrades.spinUpTopRate, Is.EqualTo(10f));
-            Assert.That(roster.Get(WeaponForm.ShieldRing).damageB, Is.EqualTo(4f), "Drain Infusion: 4 per released hit (audit decision P23, 2026-10-27)");
+            Assert.That(roster.Get(WeaponForm.ShieldRing).damageB, Is.EqualTo(4f), "Drain Infusion: 4 per released hit (decision P23, 2026-10-27)");
         }
     }
 }

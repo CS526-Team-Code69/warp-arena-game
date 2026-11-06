@@ -37,7 +37,7 @@ namespace AnomalyArena
         public float shatterBurstRadius = 2f;
         [Min(0f), Tooltip("Shatter Twist: burst damage to the other enemies, as a share of one shard.")]
         public float shatterSplashShare = .5f;
-        [Min(1), Tooltip("Shatter Tame: ice patches one weapon may keep at once; a new one removes the oldest (owner 2026-10-27: kept, no longer on the card).")]
+        [Min(1), Tooltip("Shatter Tame: ice patches one weapon may keep at once; a new one removes the oldest (2026-10-27: kept, no longer on the card).")]
         public int icePatchTamedCap = 6;
         public float blizzardConeAngle = 50f, blizzardMaxRange = 7f, blizzardFrostPerTick = .8f, blizzardFrozenHold = .6f;
         [Min(0f), Tooltip("Blizzard Twist: on release, damage per second each frozen enemy in the cone has been frozen under this spray (scaled like the weapon).")]
@@ -57,7 +57,7 @@ namespace AnomalyArena
         public float spinUpFreeTurn = 1080f, spinUpFullTurn = 90f;
         [Header("10-21 design alignment — candidate values")]
         [Range(.05f, 1f), Tooltip("Charged Shot Tame: movement multiplier of non-boss enemies on your aim line while you charge "
-                                  + "(0.3 = they move 70% slower; owner 2026-10-27, renamed so this default replaces the scene's 0.5).")]
+                                  + "(0.3 = they move 70% slower; 2026-10-27, renamed so this default replaces the scene's 0.5).")]
         public float chargeLineSlowFactor = .3f;
         [Min(0f), Tooltip("Charged Shot Tame: half width of that aim line in cells; an enemy's own radius is added.")]
         public float chargeLineHalfWidth = .5f;
@@ -114,7 +114,7 @@ namespace AnomalyArena
         public float focusPelletSpeed = 60f;
         [Min(0f), Tooltip("Scatter Focus backfire: cells the recoil pushes you back on an uncharged release.")]
         public float focusRecoilMin = 2f;
-        [Min(0f), Tooltip("Scatter Focus backfire: cells the recoil pushes you back on a full charge. Owner 2026-10-26: a push you keep control through, never a knockback, so a wall behind you does not hurt.")]
+        [Min(0f), Tooltip("Scatter Focus backfire: cells the recoil pushes you back on a full charge. 2026-10-26: a push you keep control through, never a knockback, so a wall behind you does not hurt.")]
         public float focusRecoilMax = 6f;
         [Range(0f, 1f), Tooltip("Scatter Focus Twist: damage share a bolt keeps after piercing its first target.")]
         public float focusPierceRetention = .6f;
@@ -130,7 +130,7 @@ namespace AnomalyArena
         public float needleBurstRadius = 2f;
         [Min(0f), Tooltip("Needler Twist: burst damage as a multiple of one needle.")]
         public float needleBurstShare = 2f;
-        [Range(0f, 1f), Tooltip("Execute: HP share below which a non-boss enemy is executed. Owner 2026-10-27: it no longer grows with kills.")]
+        [Range(0f, 1f), Tooltip("Execute: HP share below which a non-boss enemy is executed. 2026-10-27: it no longer grows with kills.")]
         public float executeThreshold = .4f;
         [Min(0f), Tooltip("Execute Twist: seconds a hit enemy stays marked; any damage that leaves it under the execute line executes it.")]
         public float executeMarkSeconds = 6f;
@@ -142,7 +142,7 @@ namespace AnomalyArena
         public float lanceCrossShare = .6f;
         [Min(0f), Tooltip("Lance Twist: crossing blast radius, cells. Like the slug it skips the Shield's damage cut (the Shield still takes it first) and spares you.")]
         public float lanceCrossRadius = 2.5f;
-        [Min(0f), Tooltip("Lance backfire: cells the recoil pushes you back on open ground. Owner 2026-10-26: a push you keep control through, never a knockback, so a wall behind you does not hurt.")]
+        [Min(0f), Tooltip("Lance backfire: cells the recoil pushes you back on open ground. 2026-10-26: a push you keep control through, never a knockback, so a wall behind you does not hurt.")]
         public float lanceRecoil = 4f;
         [Min(0f), Tooltip("Lance Tame: a wall this close behind you (cells) braces the shot: no recoil and more damage.")]
         public float lanceBraceDistance = 4f;
@@ -280,7 +280,7 @@ namespace AnomalyArena
         [Header("2026-10-27 Scatter Blast shells, Shatter ice, Blizzard snow")]
         [Min(0f), Tooltip("Scatter Blast backfire: cells from your centre, left and right of the aim, where the two hot shells land when a reload starts.")]
         public float scatterShellSide = 1.2f;
-        [Min(0f), Tooltip("Scatter Blast Tame: cells from your centre where the tamed shells land (owner decision 10-27: farther than the tamed fire's "
+        [Min(0f), Tooltip("Scatter Blast Tame: cells from your centre where the tamed shells land (decision of 10-27: farther than the tamed fire's "
             + "radius, so you take a step to stand on one; standing still never finishes the reload by itself).")]
         public float scatterShellTameSide = 1.8f;
         [Min(0f), Tooltip("Scatter Blast backfire: seconds a landed shell lies before it flares up into a small fire.")]
@@ -389,7 +389,7 @@ namespace AnomalyArena
         [Min(0f), Tooltip("Barrage Tame: degrees per second the escorting missiles circle you.")]
         public float barrageEscortSpin = 240f;
 
-        [Header("g5-auto: auto weapons (owner 2026-10-27)")]
+        [Header("g5-auto: auto weapons (2026-10-27)")]
         [Min(0f), Tooltip("Closed Blade: seconds before the blade tips can knock the same pickup or corpse again (they are checked every frame).")]
         public float orbitKnockRepeat = .5f;
         [Min(0f), Tooltip("Closed Blade: cells a corpse the blade tips touch is knocked outward, away from you (pickups use OrbPool.repelDistance).")]
@@ -428,7 +428,7 @@ namespace AnomalyArena
         public float drainShieldWait = 4f;
         [Min(0f), Tooltip("Drain: Energy you gain each time the Energy Shield blocks an attack.")]
         public float drainBlockEnergy = 5f;
-        [Min(0f), Tooltip("Drain Infusion (audit decision P23, 2026-10-27): each block releases one hit of the element on the enemies within this many cells (no wall between), damageB x the weapon's scale.")]
+        [Min(0f), Tooltip("Drain Infusion (decision P23, 2026-10-27): each block releases one hit of the element on the enemies within this many cells (no wall between), damageB x the weapon's scale.")]
         public float drainInfuseRadius = 2.5f;
         [Min(0f), Tooltip("Drain backfire: seconds after the shield breaks during which the next enemy attack costs Energy (once per break).")]
         public float drainOverloadSeconds = 2f;

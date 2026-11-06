@@ -131,12 +131,9 @@ InitTestScene*.unity*
 !/[Aa]ssets/StreamingAssets/
 !/[Aa]ssets/StreamingAssets.meta
 /[Aa]ssets/StreamingAssets/aa*
-/.claude/
 
 # JetBrains Rider IDE settings (any level): personal environment, not committed
 .idea/
-# Personal tool settings (never committed)
-.codex/
 
 !/[Aa]ssets/AddressableAssetsData/
 !/[Aa]ssets/AddressableAssetsData.meta

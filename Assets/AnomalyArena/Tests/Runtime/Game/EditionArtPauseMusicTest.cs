@@ -144,7 +144,7 @@ namespace AnomalyArena
 
             await Until(() => Art.IllustratedOnly, 5f, "the lab starts in the illustrated-only mode");
 
-            Assert.That(Art.Enabled, Is.True, "the enemy lab shows the illustrated art (owner 2026-10-27)");
+            Assert.That(Art.Enabled, Is.True, "the enemy lab shows the illustrated art (2026-10-27)");
             Assert.That(Art.IllustratedOnly, Is.True, "and keeps it");
         }
 
@@ -188,7 +188,7 @@ namespace AnomalyArena
             await Awaitable.NextFrameAsync();
 
             Assert.That(whitebox, Is.True, "whitebox is the default");
-            Assert.That(inWhitebox, Is.True, "the art switch is not about the menus (owner 2026-10-30)");
+            Assert.That(inWhitebox, Is.True, "the art switch is not about the menus (2026-10-30)");
             Assert.That(MenuSkin().Installed, Is.True, "and the art on keeps them");
         }
 

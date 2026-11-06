@@ -89,7 +89,7 @@ namespace AnomalyArena
         public void AstralGuardTuning_EachDevouredMinion_FivePercentHpAndTwoAndAHalfPercentShield_AtMostFour()
         {
             var b = new BossTuning();
-            Assert.That(b.astralHealPerMinion, Is.EqualTo(.05f), "owner 2026-10-25: each minion it devours restores 5% of its max HP");
+            Assert.That(b.astralHealPerMinion, Is.EqualTo(.05f), "2026-10-25: each minion it devours restores 5% of its max HP");
             Assert.That(b.astralShieldPerMinion, Is.EqualTo(.025f), "and adds 2.5% of it as shield");
             Assert.That(b.astralMaxDevour, Is.EqualTo(4), "at most four minions a guard");
         }
@@ -857,7 +857,7 @@ namespace AnomalyArena
             Assert.That(targets[0].CorpseActive || targets[1].CorpseActive, Is.False, "without leaving a corpse");
             Assert.That(targets[2].IsAlive, Is.True, "the one out of reach is not");
             Assert.That(game.waves.Kills, Is.EqualTo(kills), "a devoured minion is no kill");
-            Assert.That(b.astralHealPerMinion, Is.EqualTo(.05f).Within(1e-4f), "the scene keeps the owner's 5% HP per minion (2026-10-25)");
+            Assert.That(b.astralHealPerMinion, Is.EqualTo(.05f).Within(1e-4f), "the scene keeps the designed 5% HP per minion (2026-10-25)");
             Assert.That(b.astralShieldPerMinion, Is.EqualTo(.025f).Within(1e-4f), "and 2.5% shield per minion");
             Assert.That(tyrant.Hp, Is.EqualTo(Mathf.Min(tyrant.maxHp, hp + tyrant.maxHp * b.astralHealPerMinion * 2f)).Within(.5f),
                 "5% of its max HP back for each");
@@ -871,7 +871,7 @@ namespace AnomalyArena
             var (game, targets, tyrant) = await TyrantSandbox(14f);
             var waves = game.waves;
             var b = waves.bosses;
-            Assume.That(b.astralMaxDevour, Is.EqualTo(4), "the owner's limit: four minions a guard (2026-10-25)");
+            Assume.That(b.astralMaxDevour, Is.EqualTo(4), "the design limit: four minions a guard (2026-10-25)");
             var minions = targets.ToList();
             while (minions.Count < b.astralMaxDevour + 1)
             {
