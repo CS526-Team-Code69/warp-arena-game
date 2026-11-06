@@ -38,7 +38,6 @@ The game starts in whitebox; the art button on the title screen switches to the 
 ## More
 
 - [Game design document](Docs/GDD.md)
-- From source: Unity 6000.6.3f1 with Git LFS; open `Assets/AnomalyArena/Scenes/ArenaV2_EN.unity`. See the [developer guide](Assets/AnomalyArena/README.md).
 - The web build reports how each run ends (wave, cause and run time, with random ids only). See [Analytics](Analytics/README.md).
 
 ## Team
