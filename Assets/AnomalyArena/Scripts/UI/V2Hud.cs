@@ -590,7 +590,6 @@ namespace AnomalyArena
             tutorialPending = false;
             V2Tutorial.ShowFirstTime(appliedFont);
         }
-
         void PlaceControlsTables()
         {
             if (screens == null) return;
