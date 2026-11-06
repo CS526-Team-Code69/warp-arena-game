@@ -40,29 +40,24 @@ namespace AnomalyArena
         [Header("Official Localization")]
         public Canvas localizedCanvas;
         public UnityEngine.UI.Text[] fontLabels;
-        Font appliedFont;
-        // Health bar opacity and pulsing when low health; see PlayerController.cs for the health threshold values and use the Unity editor to make adjustments on the V2 canvas object. - H.
+
+        // feature/low hp warning. It will be used to flash the screen when the player's health is low. The thresholds and opacity values can be adjusted in the inspector under the V2 canvas. - H.
         [Header("Low Health Warning")]
         [SerializeField, Range(0.01f, 1f)]
         float lowHealthThreshold = 0.50f;
-
         [SerializeField, Range(0.01f, 1f)]
         float criticalHealthThreshold = 0.50f;
-
         [SerializeField, Range(0f, 1f)]
-        float lowHealthMinOpacity = 0.08f;
-
+        float lowHealthMinOpacity = 0.12f;
         [SerializeField, Range(0f, 1f)]
-        float lowHealthMaxOpacity = 0.25f;
-
+        float lowHealthMaxOpacity = 0.35f;
         [SerializeField, Min(0.01f)]
         float lowHealthFadeSpeed = 0.6f;
-
         [SerializeField, Min(0f)]
-        float criticalPulseFrequency = 0.8f;
-
+        float criticalPulseFrequency = 1f;
         float lowHealthOpacity;
 
+        Font appliedFont;
 
         IArenaUiSource source;
         float nextRefresh, transientTime, flash;
@@ -148,11 +143,6 @@ namespace AnomalyArena
         }
 
         void Update()
-   // Health bar opacity and pulsing when low health; see PlayerController.cs for the health threshold values and make adjustments in the Unity editor on the V2 Canvas object. - H.
-    void Update()
-    {
-        if (localizedCanvas &&
-            localizedCanvas.enabled != ArenaText.Ready)
         {
             if (localizedCanvas && localizedCanvas.enabled != ArenaText.Ready) localizedCanvas.enabled = ArenaText.Ready;
             if (!ArenaText.Ready) return;
@@ -170,7 +160,7 @@ namespace AnomalyArena
             {
 
                 if (!edgeVignette) { edgeVignette = EdgeVignette(); damageFlash.sprite = edgeVignette; damageFlash.type = UnityEngine.UI.Image.Type.Simple; }
-                damageFlash.color = new Color(1f, .1f, .04f, flash * .45f);
+                TickHealthWarning(dt);
             }
             TickDamage(dt);
 
@@ -180,47 +170,70 @@ namespace AnomalyArena
             var snapshot = source.UiSnapshot;
             Render(snapshot);
             ShowTutorialOnArrival(snapshot);
-            localizedCanvas.enabled = ArenaText.Ready;
         }
-
-        if (!ArenaText.Ready) return;
-
-        if (bootCover) Destroy(bootCover);
-
-        if (ArenaText.Font && appliedFont != ArenaText.Font)
+        // feature/low hp warning. It will be used to flash the screen when the player's health is low. The thresholds and opacity values can be adjusted in the inspector under the V2 canvas. - H.
+        void TickHealthWarning(float dt)
         {
-            appliedFont = ArenaText.Font;
+            if (!damageFlash) return;
 
-            if (fontLabels != null)
+            damageFlash.raycastTarget = false;
+
+            var s = lastSnapshot;
+
+            bool showFeedback =
+                source != null &&
+                gameplayRoot &&
+                gameplayRoot.activeInHierarchy &&
+                s != null &&
+                s.maxHp > 0f &&
+                s.hp > 0f;
+
+            if (!showFeedback)
             {
-                foreach (var label in fontLabels)
-                {
-                    if (label) label.font = appliedFont;
-                }
+                lowHealthOpacity = 0f;
+                flash = 0f;
+                damageFlash.color = new Color(1f, .1f, .04f, 0f);
+                return;
             }
 
-            nextRefresh = 0f;
-        }
+            float healthRatio = Mathf.Clamp01(s.hp / s.maxHp);
+            float threshold = Mathf.Clamp(lowHealthThreshold, 0.01f, 1f);
+            float targetOpacity = 0f;
 
-        float dt = Time.unscaledDeltaTime;
+            if (healthRatio <= threshold)
+            {
+                float severity = Mathf.Clamp01(1f - healthRatio / threshold);
 
-        transientTime = Mathf.Max(0f, transientTime - dt);
-        flash = Mathf.Max(0f, flash - dt * 3f);
+                targetOpacity = Mathf.Lerp(
+                    lowHealthMinOpacity,
+                    lowHealthMaxOpacity,
+                    severity);
+            }
 
-        TickDamage(dt);
+            lowHealthOpacity = Mathf.MoveTowards(
+                lowHealthOpacity,
+                targetOpacity,
+                lowHealthFadeSpeed * dt);
 
-        if (lastSnapshot != null &&
-            lastSnapshot.cardPickSequence != seenPick)
-        {
-            nextRefresh = 0f;
-        }
+            float pulse = 0.5f + 0.5f * Mathf.Sin(
+                Time.unscaledTime *
+                criticalPulseFrequency *
+                Mathf.PI * 2f);
 
-        if (source != null && Time.unscaledTime >= nextRefresh)
-        {
-            nextRefresh =
-                Time.unscaledTime + Mathf.Max(.02f, refreshInterval);
+            float criticalThreshold = Mathf.Clamp(
+                criticalHealthThreshold, 0f, threshold);
 
-            Render(source.UiSnapshot);
+            float minimumBrightness =
+                healthRatio <= criticalThreshold ? 0.35f : 0.65f;
+
+            float pulsingOpacity = lowHealthOpacity *
+                Mathf.Lerp(minimumBrightness, 1f, pulse);
+
+            float finalOpacity = Mathf.Max(
+                flash * .45f,
+                pulsingOpacity);
+
+            damageFlash.color =new Color(1f, .1f, .04f, finalOpacity);
         }
 
         public void Dispatch(ArenaUiCommand command, int index = -1)
@@ -229,88 +242,6 @@ namespace AnomalyArena
             source?.ExecuteUiCommand(command, index);
         }
 
-        TickHealthWarning(dt);
-    }
-
-   // Health bar opacity and pulsing when low health; see PlayerController.cs for the health threshold values and make adjustments in the Unity editor on the V2 Canvas object. - H.
-    void TickHealthWarning(float dt)     
-    {     
-    if (!damageFlash) return;     
-        
-    // Reuse the existing transparent-center vignette.     
-    if (!edgeVignette)     
-    {     
-        edgeVignette = EdgeVignette();     
-        damageFlash.sprite = edgeVignette;     
-        damageFlash.type = UnityEngine.UI.Image.Type.Simple;     
-    }     
-    
-        damageFlash.raycastTarget = false;   
-    
-        var s = lastSnapshot;   
-    
-        // Match the HUD's existing gameplay visibility.   
-        bool showFeedback =   
-            source != null &&   
-            gameplayRoot &&   
-            gameplayRoot.activeSelf &&   
-            s != null &&   
-            s.maxHp > 0f &&   
-            s.hp > 0f;   
-    
-        if (!showFeedback)   
-        {   
-            lowHealthOpacity = 0f;   
-            flash = 0f;   
-            damageFlash.color = new Color(1f, .1f, .04f, 0f);   
-            return;   
-        }   
-    
-        float healthRatio = Mathf.Clamp01(s.hp / s.maxHp);   
-        float targetOpacity = 0f;   
-    
-        if (healthRatio <= lowHealthThreshold)   
-    {   
-        float severity = Mathf.Clamp01(   
-            1f - healthRatio / lowHealthThreshold);   
-    
-        targetOpacity = Mathf.Lerp(   
-            lowHealthMinOpacity,   
-            lowHealthMaxOpacity,   
-            severity);   
-    }   
-    
-        lowHealthOpacity = Mathf.MoveTowards(   
-            lowHealthOpacity,   
-            targetOpacity,   
-            lowHealthFadeSpeed * dt);   
-    
-        // Apply the pulse AFTER smoothing so it remains visible.   
-    float pulse = 0.5f + 0.5f * Mathf.Sin(   
-        Time.unscaledTime *   
-        criticalPulseFrequency *   
-        Mathf.PI * 2f);   
-    
-    float criticalThreshold = Mathf.Min(   
-        criticalHealthThreshold,   
-        lowHealthThreshold);   
-    
-    // Critical health produces a deeper pulse.   
-    float minimumBrightness =   
-        healthRatio <= criticalThreshold ? 0.35f : 0.65f;   
-    
-    float pulsingOpacity = lowHealthOpacity *   
-        Mathf.Lerp(minimumBrightness, 1f, pulse);   
-    
-    // Preserve the existing damage flash.   
-    float finalOpacity = Mathf.Max(   
-        flash * .45f,   
-        pulsingOpacity);   
-    
-    damageFlash.color =   
-        new Color(1f, .1f, .04f, finalOpacity);   
-    }   
-        public void Dispatch(ArenaUiCommand command, int index = -1) => source?.ExecuteUiCommand(command, index);
         public void RefreshView(){if(source!=null&&ArenaText.Ready)Render(source.UiSnapshot);}
 
         public void ShowBanner(string message, float seconds = 2.2f)
@@ -590,6 +521,7 @@ namespace AnomalyArena
             tutorialPending = false;
             V2Tutorial.ShowFirstTime(appliedFont);
         }
+
         void PlaceControlsTables()
         {
             if (screens == null) return;
