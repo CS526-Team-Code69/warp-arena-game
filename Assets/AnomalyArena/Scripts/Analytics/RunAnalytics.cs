@@ -40,7 +40,7 @@ namespace AnomalyArena
             public string starting_weapon = "";
         }
 
-        // Beta metrics. Every beta event starts with the same six fields as the "runs" sheet, so its rows join "runs" on run_id.
+                                                                                                                                 
         [Serializable]
         public class BetaEvent
         {
@@ -52,7 +52,7 @@ namespace AnomalyArena
             public string build = "";
         }
 
-        // One card picked from a level-up draft, mid-wave ("levelup") or in the build phase ("build"). Sheet "upgrade_picks".
+                                                                                                                              
         [Serializable]
         public class UpgradePickEvent : BetaEvent
         {
@@ -66,7 +66,7 @@ namespace AnomalyArena
             public bool rerolled;
         }
 
-        // What the player did with one supply drop (the armory's three weapons). Sheet "supply_picks".
+                                                                                                       
         [Serializable]
         public class SupplyPickEvent : BetaEvent
         {
@@ -81,7 +81,7 @@ namespace AnomalyArena
             public int replace_cancels;
         }
 
-        // Damage the player took from one source in one wave and stage. Sheet "damage", one row per entry.
+                                                                                                           
         [Serializable]
         public class DamageRow
         {
@@ -102,7 +102,7 @@ namespace AnomalyArena
 
         public const int DamageRowsPerEvent = 16;
         public const string SupplyTakeFree = "take_free", SupplyMerge = "merge", SupplyReplace = "replace", SupplySkip = "skip", SupplyTimeout = "timeout";
-        const string Edition = "en";
+        static string Edition => "en";
 
         [Serializable]
         class Settings
@@ -116,7 +116,7 @@ namespace AnomalyArena
         static readonly string SessionId = NewId();
         static string runId = "", startingWeapon = "";
         static bool runOpen;
-        static string[] supplyOffers; // the open supply drop's offers, null when none is waiting for a choice
+        static string[] supplyOffers;                                                                         
         static int supplyCancels;
         static readonly Dictionary<(int wave, string stage, string source, bool dot), DamageRow> damage = new();
 
@@ -130,6 +130,7 @@ namespace AnomalyArena
             runOpen = true;
             supplyOffers = null;
             damage.Clear();
+            if (game.CampaignRunning) StartCampaign(game, 0);
             var first = game.runWeapons ? game.runWeapons.Hand[0] : null;
             startingWeapon = first != null ? first.form.ToString() : "";
             Send(Build(game, "run_start", StageOf(game.RunPhase)));
@@ -165,7 +166,9 @@ namespace AnomalyArena
                     player ? player.LastDamageSource : DamageSource.Hit, by && by == player,
                     known ? enemy.definition.kind : (EnemyKind?)null, known && enemy.Elite);
             }
+            if (Campaigning) CampaignRunEnd(game, e);
             Send(e);
+            campaignGame = null;
         }
 
                                                                                                                                      
@@ -189,6 +192,7 @@ namespace AnomalyArena
         {
             ArenaUiState.VoidTrial => "void_trial",
             ArenaUiState.FinalBoss => "final_boss",
+            _ when Campaigning => campaignStage,
             ArenaUiState.WaveIntro or ArenaUiState.WaveActive or ArenaUiState.LevelUp or ArenaUiState.TrialReturn
                 or ArenaUiState.Cutscene or ArenaUiState.WeaponIntro or ArenaUiState.Paused => "wave",
             _ => "build",
@@ -205,7 +209,7 @@ namespace AnomalyArena
                 edition = Edition,
                 build = BuildLabel(),
                 stage = stage,
-                wave = waves ? Mathf.Clamp(waves.WaveIndex + 1, 1, Mathf.Max(1, waves.WaveCount)) : 1,
+                wave = WaveOf(game),
                 run_seconds = Math.Round(game.Elapsed, 1),
                 level = game.progression ? game.progression.Level : 1,
                 kills = waves ? waves.Kills : 0,
@@ -213,9 +217,9 @@ namespace AnomalyArena
             };
         }
 
-        // ---------------------------------------------------------------- Beta metric 1: upgrade picks at level-up
+                                                                                                                    
 
-        // Language-free card id: "Weapon:<form>:<direction>", "Skill:<id>" or "Stat:<stat>".
+                                                                                             
         public static string CardId(DraftCard card)
         {
             if (card == null) return "";
@@ -228,7 +232,7 @@ namespace AnomalyArena
             };
         }
 
-        // The three offered ids, read before the pick changes the draft.
+                                                                         
         public static string[] CardIds(DraftCard[] cards)
         {
             var ids = new string[3];
@@ -255,12 +259,12 @@ namespace AnomalyArena
             Send(JsonUtility.ToJson(e));
         }
 
-        // ---------------------------------------------------------------- Beta metric 2: supply drop choices
+                                                                                                              
 
-        // "<form>" for a new weapon, "<form>:upgrade" for a higher Mk of a weapon the player already has.
+                                                                                                          
         public static string OfferId(RunWeapon w) => w == null ? "" : w.form + (w.upgradeOf != null ? ":upgrade" : "");
 
-        // The armory was rolled for this build phase; remember its offers until the player decides.
+                                                                                                    
         public static void SupplyOpened(RunWeapon[] offers)
         {
             supplyOffers = null;
@@ -281,7 +285,7 @@ namespace AnomalyArena
             if (supplyOffers != null) supplyCancels++;
         }
 
-        // Sends one row for the open supply drop; later calls for the same drop do nothing.
+                                                                                            
         public static void SupplyResolved(GameManager game, string action, RunWeapon picked = null, RunWeapon replaced = null)
         {
             var offers = supplyOffers;
@@ -305,9 +309,9 @@ namespace AnomalyArena
             Send(JsonUtility.ToJson(e));
         }
 
-        // ---------------------------------------------------------------- Beta metric 3: damage sources
+                                                                                                         
 
-        // Burn and poison count for whoever applied them; wall slams are their own source, as in the death causes.
+                                                                                                                   
         public static string DamageSourceOf(DamageSource source, bool bySelf, EnemyKind? byEnemy, bool byElite)
         {
             if (source == DamageSource.Wall) return "wall_slam";
@@ -316,7 +320,7 @@ namespace AnomalyArena
             return "other";
         }
 
-        // Called for every hit, burn or poison tick and wall slam that took HP or shield from the player.
+                                                                                                          
         public static void PlayerDamaged(GameManager game, DamageInfo info, float amount)
         {
             if (!runOpen || !game || amount <= 0f) return;
@@ -328,6 +332,7 @@ namespace AnomalyArena
             bool dot = info.source is DamageSource.Burn or DamageSource.Poison;
             string stage = StageOf(game.RunPhase);
             int wave = WaveOf(game);
+            if (Campaigning) source = CampaignDamageSource(source, info.source, stage);
             var key = (wave, stage, source, dot);
             if (!damage.TryGetValue(key, out var row)) damage[key] = row = new DamageRow { source = source, dot = dot, stage = stage, wave = wave };
             float maxHp = player ? Mathf.Max(1f, player.maxHp) : 1f;
@@ -336,7 +341,7 @@ namespace AnomalyArena
             row.hits++;
         }
 
-        // Sends what was collected since the last flush: at the end of every wave and when the run ends.
+                                                                                                         
         public static void FlushDamage(GameManager game)
         {
             if (damage.Count == 0) return;
@@ -367,8 +372,219 @@ namespace AnomalyArena
 
         static int WaveOf(GameManager game)
         {
+            if (Campaigning && game == campaignGame) return campaignDay;
             var waves = game.waves;
             return waves ? Mathf.Clamp(waves.WaveIndex + 1, 1, Mathf.Max(1, waves.WaveCount)) : 1;
+        }
+
+                                                                                           
+
+                                                                                                                     
+        [Serializable]
+        public class DawnRow
+        {
+            public int day;
+            public int alloy;
+            public int energy;
+            public int dark;
+            public int earned_alloy;
+            public int earned_energy;
+            public int earned_dark;
+        }
+
+                                                                                                                                      
+                                                                                       
+        [Serializable]
+        public class BaseDamageRow
+        {
+            public int day;
+            public string stage = "day";
+            public string side = "";
+            public double damage;
+            public double to_hp;
+            public double damage_pct;
+            public int hits;
+        }
+
+                                                                                                               
+        [Serializable]
+        public class NightDeathRow
+        {
+            public int day;
+            public int lost_alloy;
+            public int lost_energy;
+            public int lost_dark;
+        }
+
+                                                                         
+        [Serializable]
+        public class SpendRow
+        {
+            public int day;
+            public string stage = "";
+            public int alloy;
+            public int energy;
+            public int dark;
+        }
+
+                                                                                                                                   
+                                                                                      
+        [Serializable]
+        public class CampaignLog
+        {
+            public List<DawnRow> dawns = new();
+            public List<BaseDamageRow> base_damage = new();
+            public List<NightDeathRow> night_deaths = new();
+            public List<SpendRow> spent = new();
+            public string ended = "";
+            public int ended_day = -1;
+        }
+
+        public static CampaignLog Campaign { get; private set; } = new();
+
+        const string ShadowSource = "shadow", BaseDestroyedCause = "base_destroyed";
+        static GameManager campaignGame;                                                                                   
+        static int campaignDay;
+        static string campaignStage = "tutorial";
+        static readonly Dictionary<(int day, string stage, string side), BaseDamageRow> baseRows = new();
+
+                                                                                                                                      
+                                                                                           
+        static bool Campaigning => campaignGame != null;
+
+                                                                                                                                      
+                                                                                         
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ListenToCampaign()
+        {
+            campaignGame = null;
+            CampaignEvents.DayStarted -= OnDayStarted;
+            CampaignEvents.DayStarted += OnDayStarted;
+            CampaignEvents.PhaseChanged -= OnPhaseChanged;
+            CampaignEvents.PhaseChanged += OnPhaseChanged;
+            CampaignEvents.BaseDamaged -= OnBaseDamaged;
+            CampaignEvents.BaseDamaged += OnBaseDamaged;
+            CampaignEvents.NightDeath -= OnNightDeath;
+            CampaignEvents.NightDeath += OnNightDeath;
+            CampaignEvents.Spent -= OnSpent;
+            CampaignEvents.Spent += OnSpent;
+            CampaignEvents.Dawn -= OnDawn;
+            CampaignEvents.Dawn += OnDawn;
+            CampaignEvents.Ended -= OnEnded;
+            CampaignEvents.Ended += OnEnded;
+        }
+
+                                                                                                                                         
+                                                                                                 
+        static void StartCampaign(GameManager game, int day)
+        {
+            campaignGame = game;
+            campaignDay = Mathf.Max(0, day);
+            campaignStage = campaignDay == 0 ? "tutorial" : "day";
+            baseRows.Clear();
+            Campaign = new CampaignLog();
+        }
+
+                                                                                                                                            
+        static bool InCampaign(int day)
+        {
+            if (Campaigning) return runOpen;
+            var game = GameManager.Instance;
+            if (!runOpen || !game) return false;
+            StartCampaign(game, day);
+            return true;
+        }
+
+                                                                                                  
+        static void MoveTo(int day, string stage)
+        {
+            day = Mathf.Max(0, day);
+            if (stage == null) stage = campaignStage;
+            if (day != campaignDay || stage != campaignStage) FlushDamage(campaignGame);
+            campaignDay = day;
+            campaignStage = stage;
+        }
+
+        static void OnDayStarted(int day, bool overtime)
+        {
+            if (InCampaign(day)) MoveTo(day, "day");
+        }
+
+        static void OnPhaseChanged(string phase, int day)
+        {
+            if (InCampaign(day)) MoveTo(day, StageName(phase));
+        }
+
+                                                                                                                                       
+                                                                                                 
+        static string StageName(string phase)
+        {
+            if (string.IsNullOrWhiteSpace(phase)) return null;
+            string name = phase.Trim().ToLowerInvariant();
+            return name switch
+            {
+                "lull" => "day",
+                "build" => "dawn",
+                _ => name,
+            };
+        }
+
+                                                                                                                                                     
+        static string CampaignDamageSource(string source, DamageSource kind, string stage) =>
+            source == "other" && kind == DamageSource.Hit && stage == "night" ? ShadowSource : source;
+
+        static void OnBaseDamaged(float amount, float toHp, CampaignRoom room)
+        {
+            if (amount <= 0f || !InCampaign(campaignDay)) return;
+            string side = room.ToString();
+            var key = (campaignDay, campaignStage, side);
+            if (!baseRows.TryGetValue(key, out var row))
+            {
+                baseRows[key] = row = new BaseDamageRow { day = campaignDay, stage = campaignStage, side = side };
+                Campaign.base_damage.Add(row);
+            }
+            float maxHp = V2Campaign.Active ? V2Campaign.Active.BaseMaxHp : 0f;
+            row.damage = Math.Round(row.damage + amount, 1);
+            row.to_hp = Math.Round(row.to_hp + Mathf.Max(0f, toHp), 1);
+            if (maxHp > 0f) row.damage_pct = Math.Round(row.damage_pct + amount / maxHp * 100.0, 1);
+            row.hits++;
+        }
+
+        static void OnNightDeath(CampaignCost lost, int day)
+        {
+            if (!InCampaign(day)) return;
+            Campaign.night_deaths.Add(new NightDeathRow { day = day, lost_alloy = lost.alloy, lost_energy = lost.energy, lost_dark = lost.dark });
+        }
+
+        static void OnSpent(CampaignCost cost)
+        {
+            if (!InCampaign(campaignDay)) return;
+            Campaign.spent.Add(new SpendRow { day = campaignDay, stage = campaignStage, alloy = cost.alloy, energy = cost.energy, dark = cost.dark });
+        }
+
+        static void OnDawn(int day, CampaignCost wallet, CampaignCost earned)
+        {
+            if (!InCampaign(day)) return;
+            Campaign.dawns.Add(new DawnRow { day = day, alloy = wallet.alloy, energy = wallet.energy, dark = wallet.dark,
+                earned_alloy = earned.alloy, earned_energy = earned.energy, earned_dark = earned.dark });
+        }
+
+                                                                                                                                        
+                                                                                    
+        static void OnEnded(string cause, int day)
+        {
+            Campaign.ended = cause ?? "";
+            Campaign.ended_day = day;
+        }
+
+                                                                                                                                          
+                                                                                                                                           
+                                                                      
+        static void CampaignRunEnd(GameManager game, RunEvent e)
+        {
+            if (e.outcome == "victory") e.stage = "ending";
+            else if (e.outcome == "defeat" && game.TryGetComponent(out V2Campaign campaign) && campaign.BaseDestroyed)
+                (e.cause, e.enemy, e.elite) = (BaseDestroyedCause, "", false);
         }
 
         static string BuildLabel()

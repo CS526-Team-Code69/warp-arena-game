@@ -94,7 +94,7 @@ namespace AnomalyArena
             Assert.That(json, Does.Contain("\"event\":\"run_end\""));
         }
 
-        // ---------------------------------------------------------------- Beta metrics
+                                                                                        
 
         [TestCase(DamageSource.Hit, false, EnemyKind.Brute, false, ExpectedResult = "Brute")]
         [TestCase(DamageSource.Hit, false, EnemyKind.Brute, true, ExpectedResult = "Brute_elite")]
@@ -155,13 +155,30 @@ namespace AnomalyArena
                 Assert.That(damage, Does.Contain($"\"{key}\":"), "wave_damage " + key);
             Assert.That(damage, Does.Contain("\"source\":\"Brute_elite\""));
 
-            // A full chunk of damage rows must stay under the endpoint's 4096-character limit.
+                                                                                               
             var rows = new RunAnalytics.DamageRow[RunAnalytics.DamageRowsPerEvent];
             for (int i = 0; i < rows.Length; i++)
                 rows[i] = new RunAnalytics.DamageRow { source = "Splitter_elite", dot = true, stage = "void_trial", wave = 14, damage = 99999.9, damage_pct = 9999.9, hits = 9999 };
             string full = JsonUtility.ToJson(new RunAnalytics.DamageEvent { @event = "wave_damage", run_id = new string('a', 32), session_id = new string('b', 32),
                 edition = "en", build = "1.0.0+3fa2b1c9", rows = rows });
             Assert.That(full.Length, Is.LessThan(4096));
+        }
+
+                                                                                           
+
+        [Test]
+        public void CampaignLog_Json_UsesSheetStyleFieldNames()
+        {
+            var log = new RunAnalytics.CampaignLog();
+            log.dawns.Add(new RunAnalytics.DawnRow { day = 2, alloy = 1 });
+            log.base_damage.Add(new RunAnalytics.BaseDamageRow { day = 2, side = "Armament", damage = 3, to_hp = 1 });
+            log.night_deaths.Add(new RunAnalytics.NightDeathRow { day = 2, lost_dark = 4 });
+            log.spent.Add(new RunAnalytics.SpendRow { day = 2, alloy = 5 });
+            string json = JsonUtility.ToJson(log);
+            foreach (var key in new[] { "dawns", "base_damage", "night_deaths", "spent", "ended", "ended_day", "day", "alloy", "energy", "dark",
+                         "earned_alloy", "earned_energy", "earned_dark", "stage", "side", "damage", "to_hp", "damage_pct", "hits", "lost_alloy",
+                         "lost_energy", "lost_dark" })
+                Assert.That(json, Does.Contain($"\"{key}\":"), "campaign log " + key);
         }
 
         [Test]
@@ -254,9 +271,92 @@ namespace AnomalyArena
             Assert.That(DamageRows().Any(r => r.source == "wall_slam" && r.stage == "void_trial"), "the wall damage is reported as wall_slam in the trial");
         }
 
+                                                                                                                                         
+                                                                                                                                      
+                                                                                                                                      
+                                                                                                        
+        [Test, LoadScene(Scene), Timeout(90000)]
+        public async Task CampaignEvents_RowsCarryTheDayAndItsStage_AndAFallenBaseIsTheCause()
+        {
+            var game = await StartRun();
+            Assume.That(game.TryGetComponent(out V2Campaign campaign), Is.True, "the scene has the V2 campaign");
+            ListenToCampaign();
+            await Until(() => game.RunPhase == ArenaUiState.WaveActive && game.waves.Alive.Any(e => e && e.IsAlive && e.definition), 15f, "an enemy is in the arena");
+            var killer = game.waves.Alive.First(e => e && e.IsAlive && e.definition);
+            RaiseCampaign("RaiseDayStarted", 3, false);
+            RaiseCampaign("RaisePhase", "night", 3);
+            await Until(() => !game.player.Protected, 5f, "the player's hit protection ends");
+            Assert.That(game.player.ReceiveDamage(new DamageInfo { amount = 5f, source = DamageSource.Hit }), Is.True, "a shadow's touch lands");
+            RaiseCampaign("RaisePhase", "dawn", 3);
+            RaiseCampaign("RaiseDawn", 3, new CampaignCost(10, 20, 30), new CampaignCost(100, 200, 300));
+            Assert.That(DamageRows().Any(r => r.source == "shadow" && r.stage == "night" && r.wave == 3 && r.hits >= 1),
+                "the night's damage is the shadows' and leaves at dawn");
+
+            RaiseCampaign("RaiseDayStarted", 4, false);
+            RaiseCampaign("RaiseBaseDamaged", 50f, 20f, CampaignRoom.Armament);
+            RaiseCampaign("RaiseSpent", new CampaignCost(5));
+            var destroyed = typeof(V2Campaign).GetProperty(nameof(V2Campaign.BaseDestroyed));
+            try
+            {
+                destroyed.SetValue(campaign, true);
+                await Until(() => !game.player.Protected, 5f, "the player's hit protection ends");
+                Assert.That(game.player.ReceiveDamage(DamageInfo.Attack(99999f, killer)), Is.True, "the hit lands");
+                await Until(() => game.RunPhase == ArenaUiState.Result, 5f, "the run ends");
+            }
+            finally
+            {
+                destroyed.SetValue(campaign, false);
+            }
+
+            var end = Parse(RunRows()[1]);
+            Assert.That((end.outcome, end.cause, end.enemy, end.stage, end.wave), Is.EqualTo(("defeat", "base_destroyed", "", "day", 4)),
+                "a fallen base is the cause, not the last hit on the player");
+            var log = RunAnalytics.Campaign;
+            Assert.That((log.dawns.Single().day, log.dawns.Single().alloy, log.dawns.Single().earned_dark), Is.EqualTo((3, 10, 300)));
+            var hit = log.base_damage.Single();
+            Assert.That((hit.day, hit.stage, hit.side, hit.damage, hit.to_hp, hit.hits), Is.EqualTo((4, "day", "Armament", 50d, 20d, 1)));
+            Assert.That((log.spent.Single().day, log.spent.Single().stage, log.spent.Single().alloy), Is.EqualTo((4, "day", 5)));
+            var known = new[] { "run_start", "run_end", "upgrade_pick", "supply_pick", "wave_damage" };
+            Assert.That(sent.Select(json => Parse(json).@event).Distinct(), Is.SubsetOf(known), "no event the deployed endpoint does not know");
+            Assert.That(RunAnalytics.StageOf(ArenaUiState.WaveActive), Is.EqualTo("wave"), "the campaign marks end with the run");
+        }
+
+                                                                                                      
+        [Test, LoadScene(Scene), Timeout(90000)]
+        public async Task CampaignRun_StartRow_IsDayZeroOfTheTutorial()
+        {
+            await Awaitable.NextFrameAsync();
+            await Until(() => GameManager.Instance && ArenaText.Ready, 12f, "scene and localization");
+            var game = GameManager.Instance;
+            Assume.That(game.TryGetComponent(out V2Campaign campaign) && campaign.isActiveAndEnabled && campaign.rules, Is.True, "the scene has the V2 campaign");
+            await CommandUntil(game, ArenaUiCommand.StartCampaign, () => game.CampaignRunning);
+                                                                                                                                        
+                                                                                                                                    
+                                                                                            
+            RunAnalytics.RunStarted(game);
+            Assert.That(RunRows(), Is.Not.Empty, "a run-start row was sent");
+            var start = Parse(RunRows()[0]);
+            Assert.That((start.@event, start.stage, start.wave), Is.EqualTo(("run_start", "tutorial", 0)));
+        }
+
+                                                                                                                                      
+        static void RaiseCampaign(string raise, params object[] args)
+        {
+            var method = typeof(CampaignEvents).GetMethod(raise, BindingFlags.NonPublic | BindingFlags.Static);
+            Assume.That(method, Is.Not.Null, "CampaignEvents." + raise);
+            method.Invoke(null, args);
+        }
+
+        static void ListenToCampaign()
+        {
+            var listen = typeof(RunAnalytics).GetMethod("ListenToCampaign", BindingFlags.NonPublic | BindingFlags.Static);
+            Assume.That(listen, Is.Not.Null, "RunAnalytics.ListenToCampaign");
+            listen.Invoke(null, null);
+        }
+
         static RunAnalytics.RunEvent Parse(string json) => JsonUtility.FromJson<RunAnalytics.RunEvent>(json);
 
-        // The "runs" rows only; beta events (damage, picks) are sent alongside them.
+                                                                                     
         List<string> RunRows() => sent.Where(json => Parse(json).@event.StartsWith("run_")).ToList();
 
         List<RunAnalytics.DamageRow> DamageRows() => sent
