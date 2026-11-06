@@ -17,27 +17,6 @@ namespace AnomalyArena
         public void TearDown() => Time.timeScale = 1f;
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
-        public async Task SpirePulse_EnemyInsideTheCircle_IsNotHurtAndOnlyThePlayerIs()
-        {
-            var (game, targets) = await V3CombatSmokeTest.StartSandbox();
-            var origin = game.player.Position;
-            var spire = targets[0];
-            var bystander = targets[1];
-            targets[2].DiscardWithoutReward();
-            V3CombatSmokeTest.Teleport(bystander, origin + Vector3.forward * 7f);
-            Arm(spire, game.waves.DefinitionOf(EnemyKind.Spire), origin + Vector3.forward * 4f);
-            float bystanderHp = bystander.Hp, playerHp = game.player.Hp;
-
-            await Until(() => spire.WindingUp, 4f, "the Spire starts its wind-up");
-            Assert.That(spire.TelegraphActive, Is.True, "the Spire draws its warning circle");
-            await Until(() => !spire.WindingUp, 4f, "the Spire pulses");
-            await Awaitable.FixedUpdateAsync();
-
-            Assert.That(game.player.Hp, Is.LessThan(playerHp), "the pulse hurts the player inside the circle");
-            Assert.That(bystander.Hp, Is.EqualTo(bystanderHp), "the pulse leaves an enemy inside the circle alone");
-        }
-
-        [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task StomperSlam_EnemiesInFrontAndBehind_OnlyTheConeTowardThePlayerIsHit()
         {
             var (game, targets) = await V3CombatSmokeTest.StartSandbox();

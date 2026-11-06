@@ -163,6 +163,7 @@ namespace AnomalyArena
 
                 DrawTracers(gm, time);
                 DrawWeaponMarks(gm, player, time);
+                DrawSpireLasers(gm, time);
                 HideRest();
                 ShowBoltBodies();
                 return;
@@ -174,6 +175,7 @@ namespace AnomalyArena
             DrawBolts(gm);
             DrawRadiation(time);
             DrawSpecialEnemies(gm, time);
+            DrawSpireLasers(gm, time);
             DrawTracers(gm, time);
             DrawWeaponMarks(gm, player, time);
             if (player && player.IsAlive) DrawPlayerBuffs(player, gm, time);
@@ -435,20 +437,27 @@ namespace AnomalyArena
                     Flat(aura, new Vector3(enemy.Position.x, .07f, enemy.Position.z), Enemy.ChantRadius * 2f * (.96f + .04f * pulse),
                         new Color(.8f, .55f, 1f, .22f + .12f * pulse), time * 20f);
                 }
-                else if (enemy.definition.kind == EnemyKind.Spire && prismBeam)
-                {
-                    bool fired = lasers.TryGetValue(enemy, out var last) && last.sequence == enemy.LaserSequence && time - last.at < laserFlashSeconds;
-                    if (!lasers.TryGetValue(enemy, out last) || last.sequence != enemy.LaserSequence)
-                    { lasers[enemy] = (enemy.LaserSequence, time); fired = enemy.LaserSequence > 0; }
-                    if (!enemy.LaserLocking && !fired) continue;
-                    Vector3 direction = Query.Flat(enemy.LaserDirection).sqrMagnitude > .001f ? Query.Flat(enemy.LaserDirection).normalized : Vector3.forward;
-                    float length = Mathf.Max(1f, enemy.LaserLength);
-                    Vector3 from = Query.AtCastHeight(enemy.Position) + direction * enemy.radius;
+            }
+        }
 
-                    float width = fired ? prismBeamWidth : prismBeamWidth * .22f;
-                    Color color = fired ? new Color(1f, .55f, .35f, .85f) : new Color(1f, .3f, .25f, .5f);
-                    PlaceStretched(prismBeam, from + direction * length * .5f, ScreenRoll(direction), length, width, color, v5Textures);
-                }
+        void DrawSpireLasers(GameManager gm, float time)
+        {
+            if (!gm.waves || !prismBeam) return;
+            foreach (var enemy in gm.waves.Alive)
+            {
+                if (!enemy || !enemy.IsAlive || !enemy.gameObject.activeInHierarchy || !enemy.definition || used >= items.Length) continue;
+                if (enemy.definition.kind != EnemyKind.Spire) continue;
+                bool fired = lasers.TryGetValue(enemy, out var last) && last.sequence == enemy.LaserSequence && time - last.at < laserFlashSeconds;
+                if (!lasers.TryGetValue(enemy, out last) || last.sequence != enemy.LaserSequence)
+                { lasers[enemy] = (enemy.LaserSequence, time); fired = enemy.LaserSequence > 0; }
+                if (!enemy.LaserLocking && !fired) continue;
+                Vector3 direction = Query.Flat(enemy.LaserDirection).sqrMagnitude > .001f ? Query.Flat(enemy.LaserDirection).normalized : Vector3.forward;
+                float length = Mathf.Max(1f, enemy.LaserLength);
+                Vector3 from = Query.AtCastHeight(enemy.Position) + direction * enemy.radius;
+
+                float width = fired ? prismBeamWidth : prismBeamWidth * .22f;
+                Color color = fired ? new Color(1f, .55f, .35f, .85f) : new Color(1f, .3f, .25f, .5f);
+                PlaceStretched(prismBeam, from + direction * length * .5f, ScreenRoll(direction), length, width, color, v5Textures);
             }
             if (lasers.Count > 64) lasers.Clear();
         }

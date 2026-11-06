@@ -494,6 +494,11 @@ namespace AnomalyArena
             if (Chance(30f)) smokeLow.Emit(at + back * 1.4f, back * R(1f, 3f), R(.9f, 1.5f), R(.4f, .7f), new Color(.5f, .47f, .45f, .4f), R(0f, 360f));
         }
 
+        public void WaveGlint(Vector3 at, Vector3 outward, Color c)
+        {
+            glint.Emit(new Vector3(at.x, R(.12f, .4f), at.z), FlatDir(outward, Vector3.forward) * R(.3f, 1.2f) + Vector3.up * R(.2f, .6f), R(.16f, .32f), R(.16f, .3f), Bright(c, .45f));
+        }
+
         public void ShotMote(Vector3 at, Color c)
         {
             if (Chance(14f)) ember.Emit(at, Random.insideUnitSphere * .4f, R(.06f, .12f), R(.16f, .3f), c);

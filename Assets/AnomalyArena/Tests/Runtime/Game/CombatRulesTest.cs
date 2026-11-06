@@ -38,7 +38,7 @@ namespace AnomalyArena
             Assert.That(KnockbackRules.AttackTier(EnemyKind.Bloater), Is.EqualTo(KnockTier.Medium), "the Bloater's blast");
             Assert.That(KnockbackRules.AttackTier(EnemyKind.Stomper), Is.EqualTo(KnockTier.Heavy), "the Stomper's slam is heavy, not fly");
             Assert.That(KnockbackRules.AttackTier(EnemyKind.Shade), Is.EqualTo(KnockTier.None), "the Shade's strike pushes nobody");
-            Assert.That(KnockbackRules.AttackTier(EnemyKind.Spire), Is.EqualTo(KnockTier.None), "the Spire's pulse pushes nobody");
+            Assert.That(KnockbackRules.AttackTier(EnemyKind.Spire), Is.EqualTo(KnockTier.None), "the Spire's laser pushes nobody");
             Assert.That(sut.Distance(KnockTier.None), Is.Zero, "no tier, no push");
             Assert.That(sut.Distance(KnockTier.Heavy), Is.LessThan(sut.Distance(KnockTier.Fly)), "the heavy tier stops short of the fly tier");
         }
@@ -131,7 +131,7 @@ namespace AnomalyArena
         public async Task Knockback_SpireWindingUpAndTyrant_NeitherIsKnockedNorLosesItsWindup()
         {
             var (game, targets) = await V3CombatSmokeTest.StartSandbox();
-            game.player.Invulnerable = true;                                                         
+            game.player.Invulnerable = true;                                                                                    
             targets[1].DiscardWithoutReward();
             targets[2].DiscardWithoutReward();
             var spire = targets[0];
@@ -412,7 +412,7 @@ namespace AnomalyArena
 
             Assert.That(immune.Hp, Is.EqualTo(immuneHp), "the bolts deal nothing to the Lightning-immune target");
             Assert.That(immuneBoard.Lightning, Is.Zero, "nor add any Lightning to it");
-            Assert.That(beside.Hp, Is.EqualTo(besideHp), "and the Lightning does not jump on from it (2026-10-25: an immune boss does not conduct)");
+            Assert.That(beside.Hp, Is.EqualTo(besideHp), "and the Lightning does not jump on from it (owner 2026-10-25: an immune boss does not conduct)");
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
