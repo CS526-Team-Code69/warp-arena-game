@@ -15,6 +15,11 @@ MonoBehaviour:
   displayName: "Dunes \xB7 2"
   layout: {fileID: 11400000, guid: 0bd9ceaecdd750e43b547f1b0705ed55, type: 2}
   ambient: {r: 0.3, g: 0.24, b: 0.18, a: 1}
+  daySun: {r: 1, g: 0.95, b: 0.85, a: 1}
+  daySunIntensity: 2.2
+  dayAmbient: {r: 0.65, g: 0.585, b: 0.49, a: 1}
+  nightSun: {r: 0.72, g: 0.84, b: 1, a: 1}
+  nightSunIntensity: 1.2
   floor: {fileID: 2100000, guid: c87d047ae54a8a945978df8671da0906, type: 2}
   wall: {fileID: 2100000, guid: c98c52fef679b9342a3f722e3a2b4335, type: 2}
   mixTilt: 00000000000000000000000000000000000000000a00000000000000000000000a0000000000000000000000i

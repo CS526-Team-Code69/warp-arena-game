@@ -15,7 +15,14 @@ MonoBehaviour:
   displayName: "Rift Zone \xB7 3"
   layout: {fileID: 11400000, guid: 56aba716a1b3099438e7eeede23abc8a, type: 2}
   ambient: {r: 0.2, g: 0.12, b: 0.3, a: 1}
+  daySun: {r: 0.95, g: 0.92, b: 1, a: 1}
+  daySunIntensity: 2.1
+  dayAmbient: {r: 0.52, g: 0.43, b: 0.62, a: 1}
+  nightSun: {r: 0.72, g: 0.84, b: 1, a: 1}
+  nightSunIntensity: 1.2
   floor: {fileID: 2100000, guid: 588af5999a29e274f87d22cc86e0ba4f, type: 2}
   wall: {fileID: 2100000, guid: ca91a0c6c8bd17746a687b687216840b, type: 2}
   mixTilt: 00000000f6ffffff0a0000000000000000000000000000000000000000000000000000000000000000000000i
   inRotation: 0
+  quicksandMaterial: {fileID: 0}
+  quicksandLayers: []

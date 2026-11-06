@@ -15,6 +15,14 @@ MonoBehaviour:
   displayName: "Ruins \xB7 1"
   layout: {fileID: 11400000, guid: 80280fca168f3a147b1e5680f6676d51, type: 2}
   ambient: {r: 0.19, g: 0.24, b: 0.35, a: 1}
+  daySun: {r: 1, g: 0.97, b: 0.92, a: 1}
+  daySunIntensity: 2.2
+  dayAmbient: {r: 0.52, g: 0.57, b: 0.65, a: 1}
+  nightSun: {r: 0.72, g: 0.84, b: 1, a: 1}
+  nightSunIntensity: 1.2
   floor: {fileID: 2100000, guid: 74f2515ed671239498bfb2c7c20ff000, type: 2}
   wall: {fileID: 2100000, guid: 9bbe61e294141684ebc8d7402b63378a, type: 2}
   mixTilt: f6ffffff0000000000000000000000000a000000000000000000000000000000000000000000000000000000i
+  inRotation: 1
+  quicksandMaterial: {fileID: 0}
+  quicksandLayers: []

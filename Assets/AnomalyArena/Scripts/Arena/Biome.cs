@@ -18,7 +18,14 @@ namespace AnomalyArena
 
         public string displayName = "Interstellar Battlefield";
         public MapLayout layout;
+        [Tooltip("Night ambient: the dark look every map had until 2026-11-06, kept for V2's night (not built yet).")]
         public Color ambient = new Color(0.19f, 0.24f, 0.35f);
+        [Header("Lighting (2026-11-06: every map is daytime for now; night comes later)")]
+        [Tooltip("Colour of the arena's directional light by day.")] public Color daySun = new Color(1f, .96f, .88f);
+        [Min(0f), Tooltip("Intensity of the arena's directional light by day.")] public float daySunIntensity = 2.2f;
+        [Tooltip("Flat ambient light by day: how bright and what colour the shaded sides are.")] public Color dayAmbient = new Color(.55f, .57f, .62f);
+        [Tooltip("Directional light at night: the cold blue every map had until 2026-11-06. Not used yet.")] public Color nightSun = new Color(.72f, .84f, 1f);
+        [Min(0f), Tooltip("Intensity of the directional light at night. Not used yet.")] public float nightSunIntensity = 1.2f;
         public Material floor;
         public Material wall;
         [Tooltip("Enemy mix offsets, in EnemyKind order. Only already-unlocked types can be tilted.")]
@@ -31,6 +38,18 @@ namespace AnomalyArena
         public Material quicksandMaterial;
         [Tooltip("Decals drawn on every quicksand pool of the layout, bottom first. Without a material or layers the pools still slow, unseen.")]
         public QuicksandLayer[] quicksandLayers;
+
+        public void ApplyLighting(bool night = false)
+        {
+            RenderSettings.ambientLight = night ? ambient : dayAmbient;
+            var sun = RenderSettings.sun;
+            if (!sun)
+                foreach (var light in FindObjectsByType<Light>(FindObjectsInactive.Exclude))
+                    if (light.type == LightType.Directional && light.enabled) { sun = light; break; }
+            if (!sun) return;
+            sun.color = night ? nightSun : daySun;
+            sun.intensity = night ? nightSunIntensity : daySunIntensity;
+        }
 
         public static int PickForRun(Biome[] biomes)
         {

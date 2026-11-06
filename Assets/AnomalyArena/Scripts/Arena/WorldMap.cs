@@ -119,7 +119,7 @@ namespace AnomalyArena
                 layout = biome.layout;
                 for (int i = 0; i < biomeWallGroups.Length; i++) biomeWallGroups[i].gameObject.SetActive(i == chosen);
                 if (chosen < biomeWallGroups.Length) LayoutWalls.Fill(biomeWallGroups[chosen], layout);                                                     
-                RenderSettings.ambientLight = biome.ambient;
+                biome.ApplyLighting();                                                                     
                 if (floorRenderer && biome.floor)
                 {
                     var surface = floorRenderer.GetComponent<V2SurfaceArt>();
