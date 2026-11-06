@@ -144,3 +144,33 @@ InitTestScene*.unity*
 !/[Aa]ssets/WebGLTemplates/
 !/[Aa]ssets/WebGLTemplates.meta
 !/[Aa]ssets/WebGLTemplates/**
+
+# Only code, project settings and docs are tracked (2026-11-06): everything else under Assets stays on the local machine and
+# reaches the web build from there. Kept: C# scripts, assembly definitions, shaders, the WebGL plugin, link.xml, the web
+# template's HTML and CSS and the font notes, each with its .meta.
+/Assets/**
+!/Assets/**/
+!/Assets/**/*.cs
+!/Assets/**/*.cs.meta
+!/Assets/**/*.asmdef
+!/Assets/**/*.asmdef.meta
+!/Assets/**/*.asmref
+!/Assets/**/*.asmref.meta
+!/Assets/**/*.shader
+!/Assets/**/*.shader.meta
+!/Assets/**/*.hlsl
+!/Assets/**/*.hlsl.meta
+!/Assets/**/*.cginc
+!/Assets/**/*.cginc.meta
+!/Assets/**/*.jslib
+!/Assets/**/*.jslib.meta
+!/Assets/**/link.xml
+!/Assets/**/link.xml.meta
+!/Assets/WebGLTemplates/**/*.html
+!/Assets/WebGLTemplates/**/*.html.meta
+!/Assets/WebGLTemplates/**/*.css
+!/Assets/WebGLTemplates/**/*.css.meta
+!/Assets/AnomalyArena/Fonts/README.md
+!/Assets/AnomalyArena/Fonts/README.md.meta
+!/Assets/AnomalyArena/Fonts/OFL-NotoSansCJK.txt
+!/Assets/AnomalyArena/Fonts/OFL-NotoSansCJK.txt.meta
