@@ -16,6 +16,10 @@ namespace AnomalyArena
             [TextArea] public string backfireA, backfireB;
         }
         public Definition[] definitions;
+        [Tooltip("The V2 campaign's starting Pistol (since 2026-11-06): plain single shots, A and B the same. It is kept out of definitions, so "
+            + "the armory, the air drop and the base research never offer it. It takes no starting-form factor and no Mk; the crowd multiplier "
+            + "still applies. Defaults: see DefaultPistol.")]
+        public Definition pistol = DefaultPistol();
         [field: SerializeField, Min(0f), Tooltip("Uncharged rifle base damage. Full charge uses Rifle.damageA. Candidate 7/3 and full-charge 9 each yield about 10 DPS at the reference cycle.")]
         public float RifleMinimumChargeDamage { get; set; } = 6f;
         [field: SerializeField, HideInInspector] public int StarterBalanceRevision { get; set; }
@@ -34,7 +38,9 @@ namespace AnomalyArena
         public float MkDamage(int mk) => mkDamage == null || mkDamage.Length == 0 ? 1f : mkDamage[Mathf.Clamp(mk - 1, 0, mkDamage.Length - 1)];
 
         public int ParMk(int wave) => Mathf.Clamp(1 + (Mathf.Max(1, wave) - 1) / Mathf.Max(1, mkWaveSpacing), 1, Mathf.Max(1, MaxMk - 1));
-        public Definition Get(WeaponForm form) { foreach(var d in definitions) if(d.form==form) return d; return null; }
+        public Definition Get(WeaponForm form) { foreach(var d in definitions) if(d.form==form) return d; return form==WeaponForm.Pistol?pistol??=DefaultPistol():null; }
+
+        public static Definition DefaultPistol() => new Definition{form=WeaponForm.Pistol,unlockWave=1,damageA=3,damageB=3,cooldownA=.75f,cooldownB=.75f,rangeA=20,rangeB=20};
         public static int DefaultUnlockWave(WeaponForm form) => form switch
         {
             WeaponForm.Rifle or WeaponForm.Knife or WeaponForm.RocketLauncher => 1,
@@ -47,8 +53,8 @@ namespace AnomalyArena
 
         public static bool IsRetired(WeaponForm form) => form is WeaponForm.GravGun or WeaponForm.PhaseDagger or WeaponForm.PlasmaLauncher;
         public static string FormName(WeaponForm f) => f switch { WeaponForm.RocketLauncher=>"Rocket Launcher",WeaponForm.GravGun=>"Grav Gun",WeaponForm.ScatterCannon=>"Scatter Cannon",WeaponForm.PhaseDagger=>"Phase Dagger",WeaponForm.PlasmaLauncher=>"Plasma Launcher",WeaponForm.CryoCannon=>"Cryo Cannon",WeaponForm.ArcCoil=>"Arc Cannon",WeaponForm.SporeLauncher=>"Venom Launcher",WeaponForm.Minigun=>"Gatling",WeaponForm.SwarmLauncher=>"Swarm Launcher",WeaponForm.OrbitBlades=>"Orbit Blades",WeaponForm.SentryDrone=>"Sentry Drone",WeaponForm.ShieldRing=>"Energy Ring",_=>f.ToString()};
-        static readonly string[] Names={"Charged Shot","Reverse Shot","Flying Blade","Chain Blade","Strike","Launch Yourself","Attract","Repel","Blast","Focus","Swap","Recall","Sticky","Bouncy","Stream","Wildfire","Shatter","Blizzard","Arc Jump","Capacitor","Cloud","Needler","Lance","Execute","Spin-up","Meltdown","Barrage","Bombard","Closed Blade","Open Blade","Gunner","Whirl","Deflect","Leech"};
-        public static string AnomalyName(WeaponForm f,int variant)=>Names[(int)f*2+Mathf.Clamp(variant,0,1)];
+        static readonly string[] Names={"Charged Shot","Reverse Shot","Flying Blade","Chain Blade","Strike","Launch Yourself","Attract","Repel","Blast","Focus","Swap","Recall","Sticky","Bouncy","Stream","Wildfire","Shatter","Blizzard","Arc Jump","Capacitor","Cloud","Needler","Lance","Execute","Spin-up","Meltdown","Barrage","Bombard","Closed Blade","Open Blade","Gunner","Whirl","Deflect","Leech","Plain Shot","Plain Shot"};
+        public static string AnomalyName(WeaponForm f,int variant){int i=(int)f*2+Mathf.Clamp(variant,0,1);return i>=0&&i<Names.Length?Names[i]:f.ToString();}
         public void SetDefaults()
         {
             definitions=new Definition[17];
@@ -60,6 +66,7 @@ namespace AnomalyArena
             float[] ra={40,12,20,4,5,12,12,6,14,8,10,30,14,9,2.5f,10,3};
             float[] rb={40,10,15,4,20,12,12,10,10,5,12,20,14,12.75f,2.5f,6,3};
             for(int i=0;i<17;i++) definitions[i]=new Definition{form=(WeaponForm)i,unlockWave=DefaultUnlockWave((WeaponForm)i),retired=IsRetired((WeaponForm)i),damageA=da[i],damageB=db[i],cooldownA=ca[i],cooldownB=cb[i],rangeA=ra[i],rangeB=rb[i]};
+            pistol=DefaultPistol();
             RifleMinimumChargeDamage=7f/3f;StarterBalanceRevision=1;
         }
     }

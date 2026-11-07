@@ -28,6 +28,9 @@ namespace AnomalyArena
         public float startingCycleFactor = .5f;
         [field: SerializeField, HideInInspector, Tooltip("Inactive legacy falloff field. Every target hit by a human rocket receives the same damage.")]
         public float HumanRocketImpactRetention { get; set; } = .5f;
+        [Header("Pistol (V2 campaign, since 2026-11-06)")]
+        [Min(1f), Tooltip("Flight speed of a Pistol round, cells per second (the Rifle's charged round flies 80, a Reverse Shot round 30). Its damage, interval and range are WeaponRoster.pistol.")]
+        public float pistolRoundSpeed = 45f;
         [Header("Knife motion — original behaviour")]
         [Min(.01f)] public float knifeOutboundSpeed = 18f;
         [Tooltip("Speed at which the knife returns to the player (cells per second); 14 -> 9 on 2026-10-21 after playtesting.")] [Min(.01f)] public float knifeReturnSpeed = 9f;
@@ -122,7 +125,8 @@ namespace AnomalyArena
             Hand[0]=CreateWeapon(form,UnityEngine.Random.value<Mathf.Clamp01(chance)?0:1,1);
         }
                                                                                                                                              
-                                                                                                                                                      
+                                                                                                                                              
+                                                                                  
         public RunWeapon GiveToHand(int hand,WeaponForm form)
         {
             if(hand<0||hand>=Hand.Length)return null;
@@ -147,7 +151,10 @@ namespace AnomalyArena
         RunWeapon CreateWeapon(WeaponForm form,int v,int wave)
         {
             if(form==WeaponForm.ShieldRing&&!DrainOfferable)v=0;
-            var w=new RunWeapon{form=form,variant=v,rounds=ClipSize(form,v)};
+                                                                                                                                              
+                                                                    
+            bool plain=!RunWeapon.IsAnomalousForm(form);if(plain)v=0;
+            var w=new RunWeapon{form=form,variant=v,rounds=ClipSize(form,v),revealed=plain};
             w.element=form switch{WeaponForm.Flamethrower=>ElementKind.Fire,WeaponForm.CryoCannon=>ElementKind.Frost,WeaponForm.ArcCoil=>ElementKind.Lightning,WeaponForm.SporeLauncher=>ElementKind.Poison,_=>ElementKind.None};
             w.builtInElement=w.element!=ElementKind.None;if(w.builtInElement)w.axes=UpgradeAxis.Infusion;
                                                                                            
@@ -190,7 +197,7 @@ namespace AnomalyArena
                 if(eligible.Count==0){eligible=ArmoryForms(wave,null);eligible.RemoveAll(offeredForms.Contains);}
                 if(i==0&&wave<=5)
                 {
-                    var newHandForms=eligible.FindAll(form=>(int)form<(int)WeaponForm.OrbitBlades&&form is not (WeaponForm.Rifle or WeaponForm.Knife or WeaponForm.RocketLauncher));
+                    var newHandForms=eligible.FindAll(form=>!RunWeapon.IsAutoForm(form)&&form is not (WeaponForm.Rifle or WeaponForm.Knife or WeaponForm.RocketLauncher));
                     if(newHandForms.Count>0)eligible=newHandForms;
                 }
                 Offers[i]=eligible.Count>0?Roll(eligible[UnityEngine.Random.Range(0,eligible.Count)],wave):null;
@@ -203,7 +210,8 @@ namespace AnomalyArena
         {
             var list=new System.Collections.Generic.List<RunWeapon>();if(!roster)return list;
             int ceiling=Mathf.Min(roster.MaxMk,roster.ParMk(wave)+1);
-            foreach(var slots in new[]{Hand,Auto})foreach(var w in slots)if(w!=null&&w.mk<ceiling)list.Add(w);
+                                                                                                                                             
+            foreach(var slots in new[]{Hand,Auto})foreach(var w in slots)if(w!=null&&w.IsAnomalous&&w.mk<ceiling)list.Add(w);
             return list;
         }
                                                                                                                                                                    
@@ -230,8 +238,9 @@ namespace AnomalyArena
             var forms=new System.Collections.Generic.List<WeaponForm>();
             foreach(var d in roster.definitions)
             {
-                bool isAuto=(int)d.form>=(int)WeaponForm.OrbitBlades;
-                if(d.retired||d.unlockWave>wave||OwnsForm(d.form)||autoKind.HasValue&&autoKind.Value!=isAuto)continue;
+                bool isAuto=RunWeapon.IsAutoForm(d.form);
+                                                                                                                           
+                if(d.retired||!RunWeapon.IsAnomalousForm(d.form)||d.unlockWave>wave||OwnsForm(d.form)||autoKind.HasValue&&autoKind.Value!=isAuto)continue;
                 forms.Add(d.form);
             }
             return forms;
@@ -289,7 +298,8 @@ namespace AnomalyArena
             if(!held&&!pressed||w.cooldown>0||w.reload>0||w.inFlight||w.charging)return;
             bool charge=(w.form==WeaponForm.Rifle&&w.variant==0)||(w.form==WeaponForm.Railgun&&w.variant==0)||(w.form==WeaponForm.ScatterCannon&&w.variant==1);
             if(charge){if(pressed){w.charging=true;w.charge=0;Reveal(w);WeaponSound(w,WeaponAudioPhase.ChargeStart);if(w.form==WeaponForm.ScatterCannon)V3WorldAudio.Instance?.Play(ArenaWorldCue.WeaponFocusCharge,player.Position);}return;}
-            bool repeat=w.form==WeaponForm.Rifle&&w.variant==1||w.form==WeaponForm.Flamethrower&&w.variant==0||w.form==WeaponForm.CryoCannon&&w.variant==1||w.form==WeaponForm.SporeLauncher&&w.variant==1||w.form==WeaponForm.Minigun;
+                                                                                                                 
+            bool repeat=w.form==WeaponForm.Rifle&&w.variant==1||w.form==WeaponForm.Flamethrower&&w.variant==0||w.form==WeaponForm.CryoCannon&&w.variant==1||w.form==WeaponForm.SporeLauncher&&w.variant==1||w.form==WeaponForm.Minigun||w.form==WeaponForm.Pistol;
             if(pressed||repeat&&held)Fire(w,false);
         }
                                                                                                             
@@ -300,7 +310,7 @@ namespace AnomalyArena
                                                                                                                                                                     
         public float TheoreticalDps(RunWeapon w){float cycle=CycleSeconds(w);return cycle>0f?HitDamage(w)/cycle:0f;}
         public float CycleSeconds(RunWeapon w){var d=roster.Get(w.form);return d==null?0f:(w.variant==0?d.cooldownA:d.cooldownB)*CooldownScale(w);}
-        void Reveal(RunWeapon w){if(w.revealed)return;w.revealed=true;PlayerPrefs.SetInt("anomaly."+(int)w.form+"."+w.variant,1);Revealed?.Invoke(w);}
+        void Reveal(RunWeapon w){if(w.revealed)return;w.revealed=true;if(!w.IsAnomalous)return;PlayerPrefs.SetInt("anomaly."+(int)w.form+"."+w.variant,1);Revealed?.Invoke(w);}
         public void Tick(float dt)
         {
             float distance=Query.Flat(player.Position-lastPosition).magnitude;lastPosition=player.Position;
@@ -554,6 +564,8 @@ namespace AnomalyArena
                                                                                                                                               
             else if(w.form==WeaponForm.SwarmLauncher&&w.variant==0)Barrage(w,aim,range,damage,d.damageA);
             else if(w.form==WeaponForm.SwarmLauncher)Bombard(w,aim,range,damage,d.damageB);
+                                                                                                                                     
+            else if(w.form==WeaponForm.Pistol)Bolt(w,aim,damage,0,range,Mathf.Max(1f,pistolRoundSpeed));
         }
                                                                                                                    
         float SpinUpRate(RunWeapon w)=>Mathf.Max(.1f,Mathf.Lerp(upgrades.spinUpStartRate,upgrades.spinUpTopRate,Mathf.Clamp01(w.heldTime/3f)))*(w==Active&&Anchored?1f+Mathf.Max(0f,upgrades.spinBraceRateBonus):1f);
@@ -753,7 +765,7 @@ namespace AnomalyArena
                                                                                                                 
             ElementKind own=OwnElement(weapon),element=upgrade==UpgradeAxis.Infusion?RollElement(own):own;
             string desc=upgrade==UpgradeAxis.Infusion?ArenaText.Pair("Infuse ","Infuse ")+ArenaTerms.Element(element)+(own!=ElementKind.None?ArenaText.Pair(", replaces ",", replaces ")+ArenaTerms.Element(own):""):upgrade switch{UpgradeAxis.Power=>ArenaText.Pair("Damage +40%","Damage +40%"),UpgradeAxis.Tempo=>ArenaText.Pair("Cooldown, charge and reload -30%","Cooldown, charge and reload -30%"),UpgradeAxis.Reach=>ArenaText.Pair("Range, area or targets +40%","Range, area or targets +40%"),UpgradeAxis.Twist=>ArenaText.Pair("Adds a twist to this weapon's attack","Adds a twist to this weapon's attack"),_=>ArenaText.Pair("Improves this pairing's trait","Improves this pairing's trait")};
-            if(upgrade is UpgradeAxis.Twist or UpgradeAxis.Tame)desc=(int)weapon.form<3?CoreAnomalyUpgradeDescription(weapon,upgrade):ArenaTerms.ExpandedUpgradeDescription(weapon.form,weapon.variant,upgrade);
+            if(upgrade is UpgradeAxis.Twist or UpgradeAxis.Tame)desc=weapon.form is WeaponForm.Rifle or WeaponForm.Knife or WeaponForm.RocketLauncher?CoreAnomalyUpgradeDescription(weapon,upgrade):ArenaTerms.ExpandedUpgradeDescription(weapon.form,weapon.variant,upgrade);
                                                                                                                 
             if(upgrade==UpgradeAxis.Infusion){string rule=ArenaTerms.ElementRule(element);if(rule.Length>0)desc+="\n"+rule;}
                                                                                                           
@@ -822,6 +834,8 @@ namespace AnomalyArena
         static System.Collections.Generic.List<UpgradeAxis> AvailableAxes(RunWeapon w)
         {
             var axes=new System.Collections.Generic.List<UpgradeAxis>();
+                                                                                                                         
+            if(!w.IsAnomalous)return axes;
             foreach(var axis in w.IsAuto?AutoDraftAxes:HandDraftAxes)
                 if(!w.Has(axis)&&(axis!=UpgradeAxis.Infusion||!w.builtInElement)&&(AxisAllowed==null||AxisAllowed(axis)))axes.Add(axis);
                                                                                                                                                    

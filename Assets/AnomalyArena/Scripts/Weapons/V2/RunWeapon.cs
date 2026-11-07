@@ -3,7 +3,8 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-    public enum WeaponForm { Rifle, Knife, RocketLauncher, GravGun, ScatterCannon, PhaseDagger, PlasmaLauncher, Flamethrower, CryoCannon, ArcCoil, SporeLauncher, Railgun, Minigun, SwarmLauncher, OrbitBlades, SentryDrone, ShieldRing }
+    public enum WeaponForm { Rifle, Knife, RocketLauncher, GravGun, ScatterCannon, PhaseDagger, PlasmaLauncher, Flamethrower, CryoCannon, ArcCoil, SporeLauncher, Railgun, Minigun, SwarmLauncher, OrbitBlades, SentryDrone, ShieldRing, Pistol }
+
     [Flags] public enum UpgradeAxis { None=0, Infusion=1, Power=2, Tempo=4, Reach=8, Twist=16, Tame=32 }
 
     [Serializable]
@@ -76,7 +77,13 @@ namespace AnomalyArena
 
         [NonSerialized] public float vacuumTimer;
         [NonSerialized] public Vector3 vacuumDirection;
-        public bool IsAuto => (int)form >= (int)WeaponForm.OrbitBlades;
+        public bool IsAuto => IsAutoForm(form);
+
+        public bool IsAnomalous => IsAnomalousForm(form);
+
+        public static bool IsAutoForm(WeaponForm form) => form is WeaponForm.OrbitBlades or WeaponForm.SentryDrone or WeaponForm.ShieldRing;
+
+        public static bool IsAnomalousForm(WeaponForm form) => form != WeaponForm.Pistol;
         public bool Has(UpgradeAxis axis) => (axes & axis) != 0;
         public int Level { get { int n=1; for(int i=0;i<6;i++) if(Has((UpgradeAxis)(1<<i))) n++; return n; } }
         public float Power => Has(UpgradeAxis.Power) ? 1.4f : 1f;
@@ -84,6 +91,7 @@ namespace AnomalyArena
         public float Reach => Has(UpgradeAxis.Reach) ? 1.4f : 1f;
         public string FormName => ArenaTerms.WeaponForm(form);
         public string MkLabel => "Mk "+Mathf.Max(1,mk);
-        public string Label => (revealed ? FormName+" · "+ArenaTerms.WeaponAnomaly(form,variant) : FormName+" ?")+(mk>1?" · "+MkLabel:"");
+
+        public string Label => (!IsAnomalous ? FormName : revealed ? FormName+" · "+ArenaTerms.WeaponAnomaly(form,variant) : FormName+" ?")+(mk>1?" · "+MkLabel:"");
     }
 }

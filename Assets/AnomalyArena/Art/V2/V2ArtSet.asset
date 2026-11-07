@@ -45,6 +45,7 @@ MonoBehaviour:
   - {fileID: 21300000, guid: 6b8f56a9bf5d20a448eff93347fab6bc, type: 3}
   - {fileID: 21300000, guid: e80b6ff744c394f448becdb97aa391bf, type: 3}
   - {fileID: 21300000, guid: 55a30b99f9ad72048bfe9062eadfc18f, type: 3}
+  - {fileID: 21300000, guid: c4b92135eeb9489bb4891c9914d33fc4, type: 3}
   skillIcons:
   - {fileID: 21300000, guid: 8361ef7970cdde74a8b449300bf568f0, type: 3}
   - {fileID: 21300000, guid: 1350c38baefec7a4093c6af10ac79691, type: 3}

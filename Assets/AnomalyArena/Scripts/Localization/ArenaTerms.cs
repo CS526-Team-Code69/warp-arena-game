@@ -4,8 +4,8 @@ namespace AnomalyArena
     public static class ArenaTerms
     {
 
-        static readonly string[] FormZh = { "Rifle", "Knife", "Rocket Launcher", "Grav Gun", "Scatter Cannon", "Phase Dagger", "Plasma Launcher", "Flamethrower", "Cryo Cannon", "Arc Cannon", "Venom Launcher", "Railgun", "Gatling", "Swarm Launcher", "Orbit Blades", "Sentry Drone", "Energy Ring" };
-        static readonly string[] FormEn = { "Rifle", "Knife", "Rocket Launcher", "Grav Gun", "Scatter Cannon", "Phase Dagger", "Plasma Launcher", "Flamethrower", "Cryo Cannon", "Arc Cannon", "Venom Launcher", "Railgun", "Gatling", "Swarm Launcher", "Orbit Blades", "Sentry Drone", "Energy Ring" };
+        static readonly string[] FormZh = { "Rifle", "Knife", "Rocket Launcher", "Grav Gun", "Scatter Cannon", "Phase Dagger", "Plasma Launcher", "Flamethrower", "Cryo Cannon", "Arc Cannon", "Venom Launcher", "Railgun", "Gatling", "Swarm Launcher", "Orbit Blades", "Sentry Drone", "Energy Ring", "Pistol" };
+        static readonly string[] FormEn = { "Rifle", "Knife", "Rocket Launcher", "Grav Gun", "Scatter Cannon", "Phase Dagger", "Plasma Launcher", "Flamethrower", "Cryo Cannon", "Arc Cannon", "Venom Launcher", "Railgun", "Gatling", "Swarm Launcher", "Orbit Blades", "Sentry Drone", "Energy Ring", "Pistol" };
         static readonly string[] AnomalyZh =new string[34];
         static readonly string[] SkillZh = { "Flame Wake", "Contagion", "Frost Nova", "Storm Call", "Bulwark", "Radiance", "Devour", "Blink", "Shockwave", "Gravity Well", "Time Stop", "Mirror Image", "Overcharge", "Pocket Void", "Void Walk", "Singularity" };
         static readonly string[] SkillEn = { "Flame Wake", "Contagion", "Frost Nova", "Storm Call", "Bulwark", "Radiance", "Devour", "Blink", "Shockwave", "Gravity Well", "Time Stop", "Mirror Image", "Overcharge", "Pocket Void", "Void Walk", "Singularity" };

@@ -32,7 +32,7 @@ namespace AnomalyArena
             WeaponForm.RocketLauncher => variant == 1 ? HitFeel.Melee : HitFeel.Area,                                                     
             WeaponForm.Rifle or WeaponForm.Railgun => HitFeel.HeavyShot,
             WeaponForm.CryoCannon => variant == 0 ? HitFeel.HeavyShot : HitFeel.Area,                                  
-            WeaponForm.Minigun or WeaponForm.SentryDrone => HitFeel.LightShot,
+            WeaponForm.Minigun or WeaponForm.SentryDrone or WeaponForm.Pistol => HitFeel.LightShot,                                                                
             WeaponForm.ScatterCannon => variant == 0 ? HitFeel.LightShot : HitFeel.HeavyShot,                              
             WeaponForm.SporeLauncher => variant == 1 ? HitFeel.LightShot : HitFeel.Area,                  
             _ => HitFeel.Area,                                                                    

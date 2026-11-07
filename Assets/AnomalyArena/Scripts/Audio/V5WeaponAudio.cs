@@ -360,6 +360,8 @@ namespace AnomalyArena
                     Play(V5Sfx.RifleShot, Mathf.Lerp(.85f, .75f, c), Mathf.Lerp(1.1f, .88f, c));
                     if (c > .05f) Play(V5Sfx.RifleHeavy, Mathf.Lerp(.12f, 1f, c * c), Mathf.Lerp(1.22f, 1f, c));
                     return true;
+
+                case WeaponForm.Pistol: Play(V5Sfx.RifleShot, .7f, 1.2f); return true;
                 case WeaponForm.ScatterCannon:
                     if (w.variant == 0) { Play(V5Sfx.ScatterBlast); return true; }
 

@@ -36,6 +36,12 @@ namespace AnomalyArena
         bool lastV5;
         const float V5HandShare = .62f;
 
+        const float PistolLengthShare = .8f;
+
+        static readonly Vector2 PistolGrip = new Vector2(.28f, .32f);
+        V2ArtSet artSet;
+        bool artSearched;
+
         V2ModelPresentation model;
         Combatant body;
         Animator boneSource;
@@ -56,7 +62,8 @@ namespace AnomalyArena
         {
             var active = weapons ? weapons.Active : null;
             int form = active != null ? (int)active.form : -1;
-            bool valid = form >= 0 && form < formSprites.Length;
+            Sprite picture = form >= 0 ? SpriteOf(form) : null;
+            bool valid = picture;
             bool daggerAway = active != null && active.form == WeaponForm.PhaseDagger && active.variant == 1
                 && (active.inFlight || active.recallPlanted);
             if (!body) body = GetComponent<Combatant>();
@@ -66,17 +73,17 @@ namespace AnomalyArena
             if (whitebox)
             {
 
-                bool boxOut = valid && !daggerAway && !Art.Enabled && !(body && body.State == CharacterState.Dead);
+                bool boxOut = form >= 0 && !daggerAway && !Art.Enabled && !(body && body.State == CharacterState.Dead);
                 whitebox.enabled = boxOut;
                 PlaceWhitebox(boxOut);
             }
             bool v5 = V5Vfx.On;
             if (valid && illustration && (form != lastForm || v5 != lastV5))
             {
-                lastForm = form; lastV5 = v5; illustration.sprite = formSprites[form];
+                lastForm = form; lastV5 = v5; illustration.sprite = picture;
 
                 if (illustration.sprite)
-                    illustration.transform.localScale = Vector3.one * ((v5 ? length * V5HandShare : length) / Mathf.Max(.01f, illustration.sprite.bounds.size.x));
+                    illustration.transform.localScale = Vector3.one * ((v5 ? length * V5HandShare : length) * LengthShare(form) / Mathf.Max(.01f, illustration.sprite.bounds.size.x));
             }
             if (illustration) Place(inModel && valid && !daggerAway && !dead, form);
         }
@@ -196,8 +203,27 @@ namespace AnomalyArena
         {
             if (formGrips != null && form >= 0 && form < formGrips.Length && formGrips[form] != Vector2.zero) return formGrips[form];
             if (form >= 0 && form < HandleGrips.Length && HandleGrips[form] != Vector2.zero) return HandleGrips[form];
+            if (form == (int)WeaponForm.Pistol) return PistolGrip;
             return grip;
         }
+
+        Sprite SpriteOf(int form)
+        {
+            if (formSprites != null && form < formSprites.Length && formSprites[form]) return formSprites[form];
+            if (!artSearched)
+            {
+                artSearched = true;
+                foreach (var look in GetComponents<V2CharacterIllustration>()) if (look.art) { artSet = look.art; break; }
+                if (!artSet)
+                {
+                    var hud = FindAnyObjectByType<V2Hud>(FindObjectsInactive.Include);
+                    if (hud) artSet = hud.art;
+                }
+            }
+            return artSet && artSet.weaponSprites != null && form < artSet.weaponSprites.Length ? artSet.weaponSprites[form] : null;
+        }
+
+        static float LengthShare(int form) => form == (int)WeaponForm.Pistol ? PistolLengthShare : 1f;
 
         void Reach(Vector3 aim, float weight)
         {
