@@ -101,12 +101,12 @@ namespace AnomalyArena
             var content = GameObject.Find("V2Canvas/TitleScreen/Content");
             Assume.That(content, Is.Not.Null, "the saved title screen");
 
-            foreach (var hidden in new[] { "InterstellarSubtitle", "ToggleArt", "ChineseTeam", "EnglishShowcase" })
+            foreach (var hidden in new[] { "InterstellarSubtitle", "ChineseTeam", "EnglishShowcase" })
             {
                 var element = content.transform.Find(hidden);
                 Assert.That(element == null || !element.gameObject.activeInHierarchy, Is.True, hidden + " is not shown");
             }
-            foreach (var shown in new[] { "StartRun", "Controls" })
+            foreach (var shown in new[] { "StartRun", "Controls", "ToggleArt" })
                 Assert.That(content.transform.Find(shown).gameObject.activeInHierarchy, Is.True, shown + " is shown");
             Assert.That(ArenaText.IsChinese, Is.True, "the Chinese edition starts in Chinese");
         }

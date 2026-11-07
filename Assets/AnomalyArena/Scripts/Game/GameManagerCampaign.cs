@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace AnomalyArena
@@ -42,6 +43,36 @@ namespace AnomalyArena
         }
 
         internal void CampaignWin() => finalWaveCleared = true;
+
+        internal void CampaignStartDay()
+        {
+            if (!CampaignRunning) return;
+            snapshot.earlyStartConfirmation = false; pendingDraft = pendingOffer = -1;
+            player.Heal(player.maxHp); player.stamina.Refill(); player.ClearWaveState(); BeginWaveDrafts();
+            SetPhase(ArenaUiState.WaveIntro);
+            campaign.StartNextWave();
+            V2Audio.Instance?.PlayWave();
+        }
+
+        internal string CampaignApplyUpgrade()
+        {
+            if (!CampaignRunning) return null;
+            UpdatePenetrationEligibility();
+            progression.BankPick();
+            var cards = progression.DrawCards(waves.WaveIndex + 1, WeaponCard, SkillCard);
+            var order = new List<int>(cards.Length);
+            for (int i = 0; i < cards.Length; i++)
+                if (cards[i] != null && !cards[i].NeedsReplacement) order.Insert(Random.Range(0, order.Count + 1), i);
+            foreach (int i in order)
+            {
+                string title = cards[i].Title;
+                if (!progression.ApplyCard(i)) continue;
+                UpdatePenetrationEligibility();
+                return title;
+            }
+            progression.ConsumeDraft();                                                  
+            return null;
+        }
 
         bool CampaignSkipsArmory => CampaignRunning && (!runWeapons.HasOffers || !campaign.ArmoryUpgrades || !campaign.ArmoryRoundActive);
     }

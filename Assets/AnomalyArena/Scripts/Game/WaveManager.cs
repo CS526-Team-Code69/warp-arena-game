@@ -253,6 +253,77 @@ namespace AnomalyArena
         }
 
         bool campaignSpawn;
+                                                                                                                                          
+        public static System.Func<Vector3, Vector3> SpawnPointOverride;
+                                                                                                                                          
+                                                                                                                                           
+                                                                                         
+        bool RimSpawns => SpawnPointOverride != null && !trialSuspended && Phase != WavePhase.FinalBoss;
+                                                                                                                                          
+                                                                                                                                    
+        static bool WalksInFromRim(EnemyDefinition data) => data && data.kind != EnemyKind.Spire && !EnemyRoles.IsBoss(data.kind);
+                                                                                                                                
+        const int RimSettleCells = 8;
+
+                                                                                                                                            
+                                                                                                                                          
+                                                                      
+        bool TryRimSpawnPoint(EnemyDefinition data, out Vector3 point)
+        {
+            Vector3 centre = GM.player.Position;
+            Vector3 seed = TryFindV2SpawnPoint(data, out var near) ? near : centre + Vector3.forward * nearbySpawnMax;
+            for (int attempt = 0; attempt < 4; attempt++)
+            {
+                point = SpawnPointOverride(centre + Quaternion.Euler(0f, 90f * attempt, 0f) * Query.Flat(seed - centre));
+                if (SettleRimPoint(data, ref point, true)) return true;
+            }
+            point = Vector3.zero;
+            return false;
+        }
+
+                                                                                                                                        
+                                                                                                             
+        Vector3 RimBirthPoint(EnemyDefinition data, Vector3 at)
+        {
+            for (int attempt = 0; attempt < 3; attempt++)
+            {
+                Vector3 point = SpawnPointOverride(at);
+                if (SettleRimPoint(data, ref point, false)) return point;
+            }
+            return at;
+        }
+
+                     
+                                                                                                                                      
+                                                                                                                                     
+                                                                                                                                  
+                                 
+                      
+        bool SettleRimPoint(EnemyDefinition data, ref Vector3 point, bool clearOfOthers)
+        {
+            point = new Vector3(point.x, 0f, point.z);
+            var world = WorldMap.Active;
+            if (!world) return true;
+            float body = data.radius + .1f;
+            point = world.ClampPoint(point, body + .15f);
+            Vector3 inward = Query.Flat(world.Bounds.center - point);
+            inward = inward.sqrMagnitude > .01f ? inward.normalized : Vector3.forward;
+            for (int step = 0; step < RimSettleCells && !world.IsWalkable(point, body); step++) point += inward;
+            return world.IsWalkable(point, body) && (!clearOfOthers || !RimCrowded(point, data.radius, null, true));
+        }
+
+                                                                                                                                                
+        bool RimCrowded(Vector3 point, float bodyRadius, WaveSpawnMarker self, bool markers)
+        {
+            if (markers && preparedMarkers != null)
+                foreach (var other in preparedMarkers)
+                    if (other && other != self && other.gameObject.activeSelf && other.definition
+                        && Query.Flat(other.transform.position - point).magnitude < bodyRadius + other.definition.radius + .5f) return true;
+            foreach (var enemy in alive)
+                if (enemy && enemy.IsAlive && Query.Flat(enemy.Position - point).magnitude < bodyRadius + enemy.radius + .5f) return true;
+            return false;
+        }
+
                                                                                                                                                              
         public Enemy SpawnCampaign(EnemyKind kind, Vector3 at)
         {
@@ -662,7 +733,10 @@ namespace AnomalyArena
             foreach (var marker in preparedMarkers)
                 if (!marker.gameObject.activeSelf)
                 {
-                    if (!TryFindV2SpawnPoint(data, out var point)) return false;
+                                                                                                                      
+                    Vector3 point;
+                    if (RimSpawns && WalksInFromRim(data)) { if (!TryRimSpawnPoint(data, out point)) return false; }
+                    else if (!TryFindV2SpawnPoint(data, out point)) return false;
                     marker.Begin(point, data, elite, affix);
                     seenThisWave.Add(data.kind);
                     return true;
@@ -675,14 +749,22 @@ namespace AnomalyArena
             foreach (var marker in preparedMarkers)
             {
                 if (!marker.gameObject.activeSelf) continue;
-                if (!ValidSpawnPoint(marker.transform.position, marker.definition))
+                                                                                                                                              
+                bool rim = RimSpawns && !marker.bossSummon && WalksInFromRim(marker.definition);
+                bool holds = rim ? !WorldMap.Active || WorldMap.Active.IsWalkable(marker.transform.position, marker.definition.radius)
+                    : ValidSpawnPoint(marker.transform.position, marker.definition);
+                if (!holds)
                 {
-                    if (TryFindV2SpawnPoint(marker.definition, out var replacement)) marker.Begin(replacement, marker.definition, marker.elite, marker.affix, marker.bossSummon);
+                    Vector3 replacement;
+                    if (rim ? TryRimSpawnPoint(marker.definition, out replacement) : TryFindV2SpawnPoint(marker.definition, out replacement))
+                        marker.Begin(replacement, marker.definition, marker.elite, marker.affix, marker.bossSummon);
                     continue;
                 }
                 marker.timer -= dt;
                 if (marker.timer > 0f) continue;
-                var spawned = SpawnPrepared(marker.definition, marker.transform.position, marker.elite, marker.affix);
+                                                                                                                                           
+                if (rim && RimCrowded(marker.transform.position, marker.definition.radius, marker, false)) { marker.timer = Mathf.Max(.02f, batchSpawnRetry); continue; }
+                var spawned = SpawnPrepared(marker.definition, marker.transform.position, marker.elite, marker.affix, exactPoint: rim || marker.bossSummon);
                 if (spawned)
                 {
                     if (marker.bossSummon) spawned.SuppressRewards = spawned.BossSummon = true;                                                         
@@ -695,11 +777,17 @@ namespace AnomalyArena
 
                                                                                                               
                                                                                                                                          
-        Enemy SpawnPrepared(EnemyDefinition data, Vector3 at, bool elite, ElementKind affix = ElementKind.None, bool mini = false, bool ignoreClock = false)
+                                                                                                                                      
+                                                                                                            
+        Enemy SpawnPrepared(EnemyDefinition data, Vector3 at, bool elite, ElementKind affix = ElementKind.None, bool mini = false, bool ignoreClock = false, bool exactPoint = false)
         {
             if (!data || preparedEnemies == null) return null;
             if (!trialSuspended && !campaignSpawn && (Phase is not (WavePhase.WaveActive or WavePhase.FinalBoss)
                 || !ignoreClock && Phase == WavePhase.WaveActive && (TimeExpired || TimeLeft <= 0f))) return null;
+                                                                                                                                          
+                                                                                                                                         
+                                                                 
+            if (!exactPoint && !campaignSpawn && !mini && RimSpawns && WalksInFromRim(data)) at = RimBirthPoint(data, at);
             foreach (var enemy in preparedEnemies)
             {
                                                                                                      
@@ -786,7 +874,7 @@ namespace AnomalyArena
                 Vector3 at = centre + Quaternion.Euler(0f, 360f * i / count, 0f) * Vector3.forward * 4f;
                 if (!trialSuspended && WorldMap.Active) at = WorldMap.Active.ClampPoint(at, 1f);
                 if (!trialSuspended && !ValidSpawnPoint(at, data) && !TryFindV2SpawnPoint(data, out at)) continue;
-                var enemy = SpawnPrepared(data, at, false);
+                var enemy = SpawnPrepared(data, at, false, exactPoint: bossSummon);
                 if (enemy) { enemy.SuppressRewards = bossSummon; enemy.IsTrialSummon = trialSuspended; }
             }
         }
@@ -798,7 +886,7 @@ namespace AnomalyArena
             if (!trialSuspended && Phase == WavePhase.WaveActive && (TimeExpired || TimeLeft <= 0f)) return;
             foreach (var at in points)
             {
-                var enemy = SpawnPrepared(data, at, false);
+                var enemy = SpawnPrepared(data, at, false, exactPoint: true);
                 if (enemy) { enemy.SuppressRewards = bossSummon; enemy.IsTrialSummon = trialSuspended; }
             }
         }
@@ -814,7 +902,7 @@ namespace AnomalyArena
             var data = DefinitionOf(kind);
             if (!data) return null;
             bool asElite = elite && data.canElite;
-            return SpawnPrepared(data, at, asElite, asElite || data.canAffix ? affix : ElementKind.None);
+            return SpawnPrepared(data, at, asElite, asElite || data.canAffix ? affix : ElementKind.None, exactPoint: true);
         }
                                                                                                              
         public Enemy SpawnLabTyrant(Vector3 at)
@@ -840,7 +928,7 @@ namespace AnomalyArena
         {
             var data = DefinitionOf(EnemyKind.Grunt);
             if (!data) return null;
-            var enemy = SpawnPrepared(data, at, false);
+            var enemy = SpawnPrepared(data, at, false, exactPoint: true);
             if (enemy) enemy.SuppressRewards = true;
             return enemy;
         }
@@ -929,7 +1017,7 @@ namespace AnomalyArena
                                                                                                                   
                 var marker = BorrowMarker();
                 if (marker) { marker.Begin(at, data, false, ElementKind.None, true); continue; }
-                var enemy = SpawnPrepared(data, at, false);
+                var enemy = SpawnPrepared(data, at, false, exactPoint: true);
                 if (enemy) enemy.SuppressRewards = true;
             }
         }

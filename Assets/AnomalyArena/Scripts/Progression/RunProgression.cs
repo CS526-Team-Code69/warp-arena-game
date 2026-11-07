@@ -49,6 +49,8 @@ namespace AnomalyArena
                                                                                                                                               
                                                                                                                                                      
         public Func<bool> XpIgnored { get; set; }
+                                                                                                                                         
+        public string LastResolvedTitle { get; private set; }
                                                                                                                 
         public event Action DraftConsumed;
 
@@ -223,6 +225,7 @@ namespace AnomalyArena
                                                                                                          
         public void ResolvePendingRandom()
         {
+            LastResolvedTitle = null;
             while (BankedDrafts > 0)
             {
                 DrawCards(draftWave);
@@ -230,15 +233,26 @@ namespace AnomalyArena
                 int eligibleCount = 0;
                 foreach (var card in CurrentCards) if (!card.NeedsReplacement) eligibleCount++;
                 int pick = UnityEngine.Random.Range(0, eligibleCount);
-                bool applied = false;
+                DraftCard applied = null;
                 for (int i = 0; i < CurrentCards.Length; i++)
                 {
                     if (CurrentCards[i].NeedsReplacement) continue;
                     if (pick-- > 0) continue;
-                    applied = ApplyCard(i); break;
+                    var chosen = CurrentCards[i];
+                    if (ApplyCard(i)) applied = chosen;
+                    break;
                 }
                                                                                                                  
-                if (!applied) ApplyCard(0);
+                if (applied == null)
+                {
+                    var first = CurrentCards[0];
+                    if (ApplyCard(0)) applied = first;
+                }
+                if (applied != null) LastResolvedTitle = applied.Title;
+                                                                                                                                     
+                                                                                                                                          
+                                                     
+                else ConsumeDraft();
             }
         }
 

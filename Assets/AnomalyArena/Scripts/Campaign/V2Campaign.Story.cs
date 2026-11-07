@@ -278,7 +278,7 @@ namespace AnomalyArena
             if (rig) rig.ClearFocus(.8f);
             Gain(new CampaignCost(rules.arrivalAlloy, rules.arrivalEnergy));
             Say(Line.B01);
-            OpenBase(false);
+            OpenBase();
         }
 
                                      
@@ -329,57 +329,63 @@ namespace AnomalyArena
 
                                   
 
-        public bool BaseAtDawn { get; private set; }
-        public bool BaseAfterTutorial => Day == 0 && Stage == CampaignStage.Base && !BaseAtDawn && !nightBaseVisit;
-        bool nightBaseVisit;
+                                                                                                                                        
+                                                                               
+        public bool BaseAtDawn => false;
+                                                                                                                                  
+        public bool BaseAfterTutorial => Day == 0 && Stage == CampaignStage.Base && baseVisitFrom == CampaignStage.Story;
+                                                                                                                                      
+                                        
+        public bool BaseFromDusk => Stage == CampaignStage.Base && baseVisitFrom == CampaignStage.Dusk;
+                                                                                                                                         
+                                                     
+        CampaignStage baseVisitFrom = CampaignStage.Off;
+        bool OutdoorVisit => Stage == CampaignStage.Base && baseVisitFrom is (CampaignStage.Dusk or CampaignStage.Night);
 
-                                                                                                                                          
-        void OpenBase(bool dawn)
+                                                                                                                                           
+                                     
+        void OpenBase()
         {
-            nightBaseVisit = !dawn && Stage == CampaignStage.Night;
-            BaseAtDawn = dawn;
-            if (nightBaseVisit) BankHaul();                                                                                                   
+            baseVisitFrom = (Stage is CampaignStage.Dusk or CampaignStage.Night) ? Stage : CampaignStage.Story;
+                                                                                                                                            
+            if (baseVisitFrom == CampaignStage.Night) BankHaul();
             Stage = CampaignStage.Base;
             mining = null; mineProgress = 0f; prompt = "";
             gm.CampaignSetPhase(ArenaUiState.Base);
             ui.ShowBase();
         }
 
-                                                                                                                                        
-                                       
+                                                                                                                                         
+                                                                                                                    
         public void LeaveBase()
         {
+            if (Stage != CampaignStage.Base) return;
             ui.HideBase();
-            if (nightBaseVisit)
-            {
-                nightBaseVisit = false;
-                Stage = CampaignStage.Night;
-                gm.CampaignSetPhase(ArenaUiState.Night);
-                PlacePlayer(DoorPoint);
-                return;
-            }
-            if (!BaseAtDawn && Day == 0) { StartCoroutine(MemoryCg()); return; }
-            if (Day >= rules.days && !Overtime && !CanIgnite)
-            {
-                                                                                                                
-                ui.Flash(ArenaText.Pair("The tank is not full: the ship cannot leave. Hold out another day.","The tank is not full: the ship cannot leave. Hold out another day."), 3.5f);
-            }
-            OpenDawnBuild();
+            var from = baseVisitFrom;
+            baseVisitFrom = CampaignStage.Off;
+            if (Day == 0 && from == CampaignStage.Story) { StartCoroutine(MemoryCg()); return; }
+            Stage = from == CampaignStage.Dusk ? CampaignStage.Dusk : CampaignStage.Night;
+            gm.CampaignSetPhase(ArenaUiState.Night);
+            PlacePlayer(DoorPoint);
         }
 
-                                                                         
+                                                                                                                                            
+                                        
         public void WaitForDawn()
         {
+            if (!OutdoorVisit) return;
             ui.HideBase();
-            nightBaseVisit = false;
-            Stage = CampaignStage.Night;
+            baseVisitFrom = CampaignStage.Off;
+            Stage = CampaignStage.Night;                                                                                
             EndNight(true);
         }
 
+                                                                                                                                         
+                                                                                          
         public bool NightTimeLeft(out float seconds)
         {
             seconds = Mathf.Max(0f, stageLength - stageClock);
-            return nightBaseVisit;
+            return OutdoorVisit;
         }
 
                           
@@ -420,12 +426,14 @@ namespace AnomalyArena
             BeginTutorialNight();
         }
 
-                                                                                                                                       
-                                                       
+                                                                                                                                           
+                                                                                                                                      
         public void Ignite()
         {
             if (!CanIgnite) return;
             ui.HideBase();
+            baseVisitFrom = CampaignStage.Off;
+            nightWhispers = false;
             StartCoroutine(IgnitionSequence());
         }
 

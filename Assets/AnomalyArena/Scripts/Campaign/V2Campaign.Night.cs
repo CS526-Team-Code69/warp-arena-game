@@ -10,6 +10,9 @@ namespace AnomalyArena
                                                                                                                                            
                                                                                                                                           
                                                                                            
+                                                                                                                                        
+                                                                                                                                        
+                                                  
                   
     public sealed partial class V2Campaign
     {
@@ -48,6 +51,7 @@ namespace AnomalyArena
             ClearNight(true);
             regionKills.Clear(); regionShadows.Clear();
             lampStock = 0; nightAlloy = nightDark = 0; knockedOut = false;
+            baseVisitFrom = CampaignStage.Off;
         }
 
         void BuildDarkness()
@@ -109,7 +113,7 @@ namespace AnomalyArena
                                                                                             
             ShowEnhancement();
             Say(Line.D01);
-            Objective(ArenaText.Pair("Dusk: mine alloy ore (hold E) while there is light","Dusk: mine alloy ore (hold E) while there is light"), null);
+            Objective(ArenaText.Pair("Dusk: mine alloy ore (hold E) while there is light; E at the base door to upgrade","Dusk: mine alloy ore (hold E) while there is light; E at the base door to upgrade"), null);
         }
 
         void ShowEnhancement()
@@ -134,6 +138,7 @@ namespace AnomalyArena
             TickPickups(dt);
             TickMining(dt, true);
             TickLampPlacement();
+            if (TickBaseDoor()) return;                              
             if (stageClock >= stageLength) BeginNight();
         }
 
@@ -171,7 +176,7 @@ namespace AnomalyArena
             SpawnDarkClusters();
             Say(Line.S02);
             nightWhispers = true;
-            Objective(ArenaText.Pair("Night: F sets a lamp, hold E in its light for dark matter; E at the base door waits for dawn","Night: F sets a lamp, hold E in its light for dark matter; E at the base door waits for dawn"), null);
+            Objective(ArenaText.Pair("Night: F sets a lamp, hold E in its light for dark matter; E at the base door to repair, upgrade or wait for dawn","Night: F sets a lamp, hold E in its light for dark matter; E at the base door to repair, upgrade or wait for dawn"), null);
         }
 
         void TickNight(float dt)
@@ -184,17 +189,21 @@ namespace AnomalyArena
             TickLamps(dt);
             TickMining(dt, false);
             TickLampPlacement();
-            TickNightDoor();
+            if (TickBaseDoor()) return;                               
             TickWhispers(dt);
             if (Day == 0) TickTutorialNight(dt);
             if (stageClock >= stageLength) EndNight(false);
         }
 
+                                                                                                                                          
+                                                                                                                                          
                                                                                                                                        
-                                                                                             
+                                                         
         public void EndNight(bool waitedAtBase)
         {
             if (Stage != CampaignStage.Night && Stage != CampaignStage.Base) return;
+            if (Stage == CampaignStage.Base) ui.HideBase();
+            baseVisitFrom = CampaignStage.Off;
             CampaignEvents.RaisePhase("dawn", Day);
             CampaignEvents.RaiseDawn(Day, new CampaignCost(alloy, energy, dark), new CampaignCost(EarnedAlloy, EarnedEnergy, EarnedDark));
             ClearNight(false);
@@ -202,7 +211,17 @@ namespace AnomalyArena
             nightWhispers = false;
             Objective("", null);
             PlacePlayer(DoorPoint);
-            OpenBase(true);
+            if (Day >= rules.days && CanIgnite) { Ignite(); return; }
+            if (Day >= rules.days)
+            {
+                                                                                                                                       
+                string missing = !engineFixed ? ArenaText.Pair("The engine is not repaired","The engine is not repaired")
+                    : !armorFixed ? ArenaText.Pair("The armor is not repaired","The armor is not repaired")
+                    : ArenaText.Pair("The tank is not full","The tank is not full");
+                ui.Flash(ArenaText.Pair($"{missing}: the ship cannot leave. Hold out another day.",$"{missing}: the ship cannot leave. Hold out another day."), 3.5f);
+            }
+            Stage = CampaignStage.Build;                                                  
+            gm.CampaignStartDay();
         }
 
         void ClearNight(bool everything)
@@ -218,15 +237,17 @@ namespace AnomalyArena
             if (everything) { ClearPickups(); lampStock = 0; }
         }
 
-        void TickNightDoor()
+                                                                                                                                        
+                                                                                            
+        bool TickBaseDoor()
         {
             var p = gm.player;
-            if (!p) return;
-            if (Query.Flat(p.Position - DoorPoint).magnitude < 3.2f && mining == null)
-            {
-                prompt = ArenaText.Pair("E: enter the base (the night waits)","E: enter the base (the night waits)");
-                if (EPressed) OpenBase(false);
-            }
+            if (!p || mining != null || Query.Flat(p.Position - DoorPoint).magnitude >= 3.2f) return false;
+            prompt = Stage == CampaignStage.Dusk ? ArenaText.Pair("E: enter the base to upgrade or repair (dusk waits)","E: enter the base to upgrade or repair (dusk waits)")
+                : ArenaText.Pair("E: enter the base to upgrade or repair (the night waits)","E: enter the base to upgrade or repair (the night waits)");
+            if (!EPressed) return false;
+            OpenBase();
+            return true;
         }
 
         string NightHint()
@@ -395,7 +416,7 @@ namespace AnomalyArena
             }
             else
             {
-                Box(root, "Rock", new Vector3(0f, .35f, 0f), new Vector3(1.4f, .7f, 1.1f), new Color(.45f, .4f, .36f));
+                Box(root, "Rock", new Vector3(0f, .35f, 0f), new Vector3(1.4f, .7f, 1.1f), kind == NodeKind.Ore ? new Color(.45f, .4f, .36f) : new Color(.16f, .1f, .22f));
                 Box(root, "Crystal", new Vector3(.15f, .9f, 0f), new Vector3(.35f, .9f, .35f), kind == NodeKind.Ore ? new Color(.6f, .75f, .9f) : new Color(.55f, .15f, .85f));
             }
             node.view = root;
@@ -533,15 +554,14 @@ namespace AnomalyArena
             }
             else
             {
-                var body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-                Destroy(body.GetComponent<Collider>());
-                body.transform.SetParent(root, false);
-                body.transform.localPosition = new Vector3(0f, 1f, 0f);
-                body.transform.localScale = new Vector3(.8f, 1f, .8f);
-                var r = body.GetComponent<Renderer>();
-                if (gm.litMaterial) r.sharedMaterial = gm.Mat(new Color(.04f, .03f, .07f));
-                Box(root, "EyeL", new Vector3(-.15f, 1.55f, .36f), new Vector3(.12f, .06f, .05f), new Color(.75f, .3f, 1f));
-                Box(root, "EyeR", new Vector3(.15f, 1.55f, .36f), new Vector3(.12f, .06f, .05f), new Color(.75f, .3f, 1f));
+                                                                                                                                      
+                                                                                                          
+                int lookIndex = Random.Range(0, 3);
+                Vector3 size = lookIndex switch { 0 => new Vector3(.75f, 1.9f, .75f), 1 => new Vector3(1.15f, 1.3f, 1.15f), _ => new Vector3(.6f, 1.2f, .6f) };
+                Color tint = lookIndex switch { 0 => new Color(.04f, .03f, .07f), 1 => new Color(.09f, .03f, .12f), _ => new Color(.02f, .05f, .09f) };
+                var r = Box(root, "Body", new Vector3(0f, size.y * .5f, 0f), size, tint);
+                Box(root, "EyeL", new Vector3(-.15f, size.y - .3f, size.z * .5f + .01f), new Vector3(.12f, .06f, .05f), new Color(.75f, .3f, 1f));
+                Box(root, "EyeR", new Vector3(.15f, size.y - .3f, size.z * .5f + .01f), new Vector3(.12f, .06f, .05f), new Color(.75f, .3f, 1f));
             }
             s.view = root;
             shadows.Add(s);

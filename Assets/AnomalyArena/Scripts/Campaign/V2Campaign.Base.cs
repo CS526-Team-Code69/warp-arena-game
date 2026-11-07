@@ -3,11 +3,15 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
+                                                                                                                                                   
+    public enum CampaignUpgrade { Stat, Skill, Infusion, Tame, Twist }
+
                  
                                                                                                                                          
                                                                                                                                           
                                                                                                                                            
-                                                                                                                                    
+                                                                                                                                        
+                                              
                   
     public sealed partial class V2Campaign
     {
@@ -73,7 +77,8 @@ namespace AnomalyArena
             Durability = 1; ShieldLevel = 0; BaseHp = rules.BaseMaxHp(1); BaseShield = 0f;
             System.Array.Clear(sideDamageToday, 0, 4);
             engineFixed = armorFixed = false; fuel = 0; shieldTopUpAt = 0f;
-            researchBought = armamentPicksBought = energyPicksBought = 0;
+            weaponDamageBought = newWeaponsBought = 0;
+            System.Array.Clear(upgradesBought, 0, upgradesBought.Length);
             raidSpots.Clear();
         }
 
@@ -410,13 +415,16 @@ namespace AnomalyArena
 
                             
 
+                                                                                                                                          
+                                                                                                                                           
+                           
         void OnEnemySpawned(Enemy enemy)
         {
             if (!Running || !enemy || !enemy.definition) return;
             enemy.Raider = false;
             if (Stage is not (CampaignStage.Day or CampaignStage.Lull)) return;
-            if (!EnemyRoles.IsMelee(enemy.definition.kind) || enemy.Elite || enemy.Mini || enemy.IsBoss || enemy.IsTrialSummon) return;
-            enemy.Raider = Random.value < rules.RaiderShare(Day);
+            if (enemy.IsBoss || enemy.IsTrialSummon || enemy.Immovable) return;
+            enemy.Raider = true;
         }
 
                                                                                                                                                     
@@ -504,6 +512,7 @@ namespace AnomalyArena
             var cost = NextLevelCost(room);
             if (cost == null || !ControlWorks || rooms[(int)room].damaged || !TrySpend(cost.Value)) return false;
             rooms[(int)room].level++;
+            Bought("room_upgrade", $"{room} level {rooms[(int)room].level}", room, cost.Value);
             V3WorldAudio.Instance?.Play(ArenaWorldCue.LevelUp, BaseCentre);
             ui.Flash(ArenaText.Pair($"{RoomName(room)} reached level {rooms[(int)room].level}",$"{RoomName(room)} reached level {rooms[(int)room].level}"));
             return true;
@@ -516,8 +525,10 @@ namespace AnomalyArena
         {
             var state = rooms[(int)room];
             if (!state.damaged || room != CampaignRoom.Control && !ControlWorks) return false;
-            if (!TrySpend(new CampaignCost(RepairCost(room)))) return false;
+            var repair = new CampaignCost(RepairCost(room));
+            if (!TrySpend(repair)) return false;
             state.damaged = false;
+            Bought("repair", room.ToString(), room, repair);
             V3WorldAudio.Instance?.Play(ArenaWorldCue.WeaponRepair, BaseCentre);
             Say(Line.S05);
             return true;
@@ -527,47 +538,225 @@ namespace AnomalyArena
                                                                                      
         public CampaignCost? PlayerLevelCost => gm && gm.progression && !gm.progression.AtMaxLevel ? rules.PlayerLevelCost(gm.progression.Level) : null;
 
+                                                                                                                          
         public bool TryBuyPlayerLevel()
         {
             var cost = PlayerLevelCost;
             if (cost == null || !PlayerLevelsForSale || !TrySpend(cost.Value)) return false;
             gm.progression.BuyLevel();
-            ui.Flash(ArenaText.Pair(                $"Player level {gm.progression.Level}: max HP +{Mathf.RoundToInt(gm.progression.LastLevelHpGain)}, max energy +{Mathf.RoundToInt(gm.progression.LastLevelEnergyGain)}",                $"Player level {gm.progression.Level}: max HP +{Mathf.RoundToInt(gm.progression.LastLevelHpGain)}, max energy +{Mathf.RoundToInt(gm.progression.LastLevelEnergyGain)}"));
+            Bought("player_level", $"level {gm.progression.Level}", CampaignRoom.Armament, cost.Value);
+            ui.Flash(ArenaText.Pair(                $"Armor level {gm.progression.Level}: max HP +{Mathf.RoundToInt(gm.progression.LastLevelHpGain)}, max energy +{Mathf.RoundToInt(gm.progression.LastLevelEnergyGain)}",                $"Armor level {gm.progression.Level}: max HP +{Mathf.RoundToInt(gm.progression.LastLevelHpGain)}, max energy +{Mathf.RoundToInt(gm.progression.LastLevelEnergyGain)}"));
             return true;
         }
 
-                                                                                                                   
+                                                                                                                                          
+                                                                                                                                   
 
-        int researchBought, armamentPicksBought, energyPicksBought;
-        public CampaignCost ResearchCost => CampaignRules.Rising(rules.weaponResearchCost, rules.weaponResearchCostPerBuy, researchBought);
-        public CampaignCost CardPickCost(CampaignRoom room) => room == CampaignRoom.Energy
-            ? CampaignRules.Rising(rules.energyCardCost, rules.energyCardCostPerBuy, energyPicksBought)
-            : CampaignRules.Rising(rules.armamentCardCost, rules.armamentCardCostPerBuy, armamentPicksBought);
-        public bool CardPickForSale(CampaignRoom room) => room == CampaignRoom.Energy ? Works(CampaignRoom.Energy, 1) : room == CampaignRoom.Armament && Works(CampaignRoom.Armament, 2);
+        int weaponDamageBought, newWeaponsBought;
+        readonly int[] upgradesBought = new int[5];
 
+        public bool WeaponDamageForSale => Running && Works(CampaignRoom.Armament, 1);
+        public bool NewWeaponForSale => Running && Works(CampaignRoom.Armament, 2);
+        public CampaignCost WeaponDamageCost => CampaignRules.Rising(rules.weaponResearchCost, rules.weaponResearchCostPerBuy, weaponDamageBought);
+        public CampaignCost NewWeaponCost => CampaignRules.Rising(rules.newWeaponCost, rules.newWeaponCostPerBuy, newWeaponsBought);
+                                                                                                       
+        public bool WeaponSlotsFull => gm && gm.runWeapons && !System.Array.Exists(gm.runWeapons.Hand, w => w == null) && !System.Array.Exists(gm.runWeapons.Auto, w => w == null);
+
+        public static CampaignRoom UpgradeRoom(CampaignUpgrade kind) => kind is CampaignUpgrade.Tame or CampaignUpgrade.Twist ? CampaignRoom.Armament : CampaignRoom.Energy;
+        public static int UpgradeLevel(CampaignUpgrade kind) => kind switch
+        {
+            CampaignUpgrade.Stat => 1,
+            CampaignUpgrade.Skill or CampaignUpgrade.Tame => 2,
+            _ => 3                                                   
+        };
+        public bool UpgradeForSale(CampaignUpgrade kind) => Running && Works(UpgradeRoom(kind), UpgradeLevel(kind));
+        public CampaignCost UpgradeCost(CampaignUpgrade kind)
+        {
+            int bought = upgradesBought[(int)kind];
+            return kind switch
+            {
+                CampaignUpgrade.Stat => CampaignRules.Rising(rules.statCost, rules.statCostPerBuy, bought),
+                CampaignUpgrade.Skill => CampaignRules.Rising(rules.skillCost, rules.skillCostPerBuy, bought),
+                CampaignUpgrade.Infusion => CampaignRules.Rising(rules.infusionCost, rules.infusionCostPerBuy, bought),
+                CampaignUpgrade.Tame => CampaignRules.Rising(rules.tameCost, rules.tameCostPerBuy, bought),
+                _ => CampaignRules.Rising(rules.twistCost, rules.twistCostPerBuy, bought)
+            };
+        }
+        public static string UpgradeName(CampaignUpgrade kind) => kind switch
+        {
+            CampaignUpgrade.Stat => ArenaText.Pair("Upgrade the body","Upgrade the body"),
+            CampaignUpgrade.Skill => ArenaText.Pair("Unlock an alien skill","Unlock an alien skill"),
+            CampaignUpgrade.Infusion => ArenaText.Pair("Infuse a weapon","Infuse a weapon"),
+            CampaignUpgrade.Tame => ArenaText.Pair("Tame a weapon","Tame a weapon"),
+            _ => ArenaText.Pair("Twist a weapon","Twist a weapon")
+        };
+
+                                                                                                                                              
                                                                                                                                            
-                                                                          
-        public bool TryBuyWeaponResearch()
+        public bool TryBuyWeaponDamage()
         {
-            var cost = ResearchCost;
-            if (!Works(CampaignRoom.Armament, 1) || !TrySpend(cost)) return false;
-            researchBought++; researchQueued++;
-            ui.Flash(ArenaText.Pair($"Weapon research booked ({researchQueued}): it arrives at the dawn build",$"Weapon research booked ({researchQueued}): it arrives at the dawn build"));
+            var weapons = gm ? gm.runWeapons : null;
+            if (!WeaponDamageForSale || !weapons || !gm.waves) return false;
+            var cost = WeaponDamageCost;
+            if (!CanAfford(cost)) { TrySpend(cost); return false; }                                                       
+            armoryMode = ArmoryMode.UpgradesOnly;
+            try
+            {
+                int index = -1;
+                for (int attempt = 0; attempt < 3; attempt++)
+                {
+                    weapons.RollArmory(gm.waves.WaveIndex + 2);
+                    var offers = weapons.Offers;
+                    int other = -1, active = -1;
+                    for (int i = 0; i < offers.Length; i++)
+                    {
+                        if (offers[i]?.upgradeOf == null) continue;
+                        if (offers[i].upgradeOf == weapons.Active) { active = i; break; }
+                        if (other < 0) other = i;
+                    }
+                    index = active >= 0 ? active : other;
+                                                                                                                                        
+                    if (active >= 0 || index < 0) break;
+                }
+                if (index < 0)
+                {
+                    ui.Flash(ArenaText.Pair("No weapon can be boosted now: every weapon is at today's Mk limit","No weapon can be boosted now: every weapon is at today's Mk limit"));
+                    return false;
+                }
+                var owned = weapons.Offers[index].upgradeOf;
+                string before = owned.MkLabel;
+                if (!TrySpend(cost)) return false;
+                if (!weapons.TakeOffer(index)) { Refund(cost); return false; }
+                weaponDamageBought++;
+                Bought("weapon_damage", $"{owned.form} Mk{owned.mk}", CampaignRoom.Armament, cost);
+                V3WorldAudio.Instance?.Play(ArenaWorldCue.LevelUp, BaseCentre);
+                ui.Flash(ArenaText.Pair($"Weapon damage up: {owned.FormName} {before} → {owned.MkLabel}",$"Weapon damage up: {owned.FormName} {before} → {owned.MkLabel}"));
+                return true;
+            }
+            finally
+            {
+                armoryMode = ArmoryMode.Rooms;
+                weapons.Offers = new RunWeapon[RunWeapons.ArmoryOfferCount];
+            }
+        }
+
+                                                                                                                                              
+                                                                          
+        public bool TryBuyNewWeapon()
+        {
+            var weapons = gm ? gm.runWeapons : null;
+            if (!NewWeaponForSale || !weapons || !gm.waves) return false;
+            if (WeaponSlotsFull) { ui.Flash(ArenaText.Pair("Every weapon slot is taken: no room for a new weapon","Every weapon slot is taken: no room for a new weapon")); return false; }
+            var cost = NewWeaponCost;
+            if (!CanAfford(cost)) { TrySpend(cost); return false; }
+            armoryMode = ArmoryMode.NewWeaponsOnly;
+            try
+            {
+                for (int attempt = 0; attempt < 3; attempt++)
+                {
+                    weapons.RollArmory(gm.waves.WaveIndex + 2);
+                    var offers = weapons.Offers;
+                    for (int i = 0; i < offers.Length; i++)
+                    {
+                        var weapon = offers[i];
+                        if (weapon == null || weapon.upgradeOf != null) continue;
+                        if (!System.Array.Exists(weapon.IsAuto ? weapons.Auto : weapons.Hand, w => w == null)) continue;
+                        if (!TrySpend(cost)) return false;
+                        if (!weapons.TakeOffer(i)) { Refund(cost); return false; }
+                        newWeaponsBought++;
+                        Bought("new_weapon", $"{weapon.form} Mk{weapon.mk} {(weapon.IsAuto ? "auto" : "hand")}", CampaignRoom.Armament, cost);
+                        V3WorldAudio.Instance?.Play(ArenaWorldCue.LevelUp, BaseCentre);
+                        ui.Flash(weapon.IsAuto
+                            ? ArenaText.Pair($"New weapon researched: {weapon.FormName} ({weapon.MkLabel}, auto slot)",$"New weapon researched: {weapon.FormName} ({weapon.MkLabel}, auto slot)")
+                            : ArenaText.Pair($"New weapon researched: {weapon.FormName} ({weapon.MkLabel}, hand slot)",$"New weapon researched: {weapon.FormName} ({weapon.MkLabel}, hand slot)"));
+                        return true;
+                    }
+                }
+                ui.Flash(ArenaText.Pair("No new weapon can be researched right now","No new weapon can be researched right now"));
+                return false;
+            }
+            finally
+            {
+                armoryMode = ArmoryMode.Rooms;
+                weapons.Offers = new RunWeapon[RunWeapons.ArmoryOfferCount];
+            }
+        }
+
+                                                                                                                                            
+                                                                                                                                         
+                                                                                                                                           
+                                                                              
+        public bool TryBuyUpgrade(CampaignUpgrade kind)
+        {
+            if (!UpgradeForSale(kind) || !gm || !gm.progression) return false;
+            var cost = UpgradeCost(kind);
+            if (!CanAfford(cost)) { TrySpend(cost); return false; }
+            int bankedBefore = gm.progression.BankedDrafts;
+            string got = null;
+            activeUpgrade = kind;
+            try
+            {
+                                                                                                                                          
+                                                                                             
+                for (int attempt = 0; attempt < 3 && string.IsNullOrEmpty(got); attempt++)
+                {
+                    got = gm.CampaignApplyUpgrade();
+                                                                                                                                
+                    while (gm.progression.BankedDrafts > bankedBefore) gm.progression.ConsumeDraft();
+                }
+            }
+            finally { activeUpgrade = null; }
+            if (string.IsNullOrEmpty(got))
+            {
+                ui.Flash(ArenaText.Pair($"{UpgradeName(kind)}: nothing can be upgraded right now",$"{UpgradeName(kind)}: nothing can be upgraded right now"));
+                return false;
+            }
+                                                                                                    
+            if (!TrySpend(cost)) return false;
+            upgradesBought[(int)kind]++;
+            Bought(UpgradeItem(kind), got, UpgradeRoom(kind), cost);
+            V3WorldAudio.Instance?.Play(ArenaWorldCue.LevelUp, BaseCentre);
+            ui.Flash(ArenaText.Pair($"{UpgradeName(kind)}: {got}",$"{UpgradeName(kind)}: {got}"));
             return true;
         }
 
-                                                                                                                                         
-                                                                                                         
-        public bool TryBuyCardPick(CampaignRoom room)
+                                                                                                                                          
+
+        public bool RocketForSale => Running && Works(CampaignRoom.Armament, 2) && gm && gm.runWeapons && !gm.runWeapons.OwnsForm(WeaponForm.RocketLauncher);
+        public CampaignCost RocketCost => rules.rocketLauncherCost;
+                                                                                                                                          
+        public RunWeapon RocketReplaces => gm && gm.runWeapons ? gm.runWeapons.Hand[1 - gm.runWeapons.ActiveIndex] : null;
+        public bool TryBuyRocketLauncher()
         {
-            var cost = CardPickCost(room);
-            if (!CardPickForSale(room) || !TrySpend(cost)) return false;
-            if (room == CampaignRoom.Energy) energyPicksBought++; else armamentPicksBought++;
-            pickRooms.Enqueue(room);
-            gm.progression.BankPick();
-            ui.Flash(ArenaText.Pair($"{RoomName(room)}: one card pick (pick one of three at the build)",$"{RoomName(room)}: one card pick (pick one of three at the build)"));
+            var weapons = gm ? gm.runWeapons : null;
+            if (!RocketForSale || !weapons || !TrySpend(RocketCost)) return false;
+            var old = weapons.GiveToHand(1 - weapons.ActiveIndex, WeaponForm.RocketLauncher);
+            Bought("new_weapon", old != null ? $"RocketLauncher Mk1 hand, replaces {old.form}" : "RocketLauncher Mk1 hand", CampaignRoom.Armament, RocketCost);
+            V3WorldAudio.Instance?.Play(ArenaWorldCue.LevelUp, BaseCentre);
+            ui.Flash(old != null ? ArenaText.Pair($"Rocket launcher unlocked (Mk 1): it replaces the {old.FormName}",$"Rocket launcher unlocked (Mk 1): it replaces the {old.FormName}")
+                : ArenaText.Pair("Rocket launcher unlocked (Mk 1)","Rocket launcher unlocked (Mk 1)"));
             return true;
         }
+
+                                                                                                                                   
+        void Bought(string item, string detail, CampaignRoom room, CampaignCost cost) => CampaignEvents.RaisePurchased(item, detail, room, cost, Day);
+        static string UpgradeItem(CampaignUpgrade kind) => kind switch
+        {
+            CampaignUpgrade.Stat => "constitution",
+            CampaignUpgrade.Skill => "unlock_skill",
+            CampaignUpgrade.Infusion => "weapon_infusion",
+            CampaignUpgrade.Tame => "weapon_tame",
+            _ => "weapon_twist"
+        };
+
+                                                                                                                                                     
+        void Refund(CampaignCost cost) { alloy += cost.alloy; energy += cost.energy; dark += cost.dark; }
+
+                                                                                                                                
+                                                                 
+        public int ResearchQueued => 0;
+        public bool TryBuyWeaponResearch() => TryBuyWeaponDamage();
+        public bool TryBuyCardPick(CampaignRoom room) => TryBuyUpgrade(room == CampaignRoom.Energy ? CampaignUpgrade.Stat : CampaignUpgrade.Tame);
 
         public CampaignCost? DurabilityCost => Durability - 1 < rules.durabilityLevels.Length ? rules.durabilityLevels[Durability - 1] : null;
         public bool TryUpgradeDurability()
@@ -576,6 +765,7 @@ namespace AnomalyArena
             if (cost == null || !ControlWorks || !TrySpend(cost.Value)) return false;
             float share = BaseHp / BaseMaxHp;
             Durability++;
+            Bought("room_upgrade", $"durability {Durability}", CampaignRoom.Control, cost.Value);
             BaseHp = Mathf.Max(BaseHp, share * BaseMaxHp);
             BaseShield = Mathf.Min(BaseShield, BaseMaxShield);
             V3WorldAudio.Instance?.Play(ArenaWorldCue.LevelUp, BaseCentre);
@@ -588,6 +778,7 @@ namespace AnomalyArena
             var cost = ShieldCost;
             if (cost == null || !ControlWorks || !TrySpend(cost.Value)) return false;
             ShieldLevel++;
+            Bought("shield", $"level {ShieldLevel}", CampaignRoom.Control, cost.Value);
             BaseShield = BaseMaxShield;                                    
             V3WorldAudio.Instance?.Play(ArenaWorldCue.NpcShield, BaseCentre);
             return true;
@@ -596,8 +787,11 @@ namespace AnomalyArena
         public int HullRepairCost => rules.HullRepairCost(1f - BaseHp / BaseMaxHp, Durability);
         public bool TryRepairHull()
         {
-            if (BaseHp >= BaseMaxHp - .5f || !ControlWorks || !TrySpend(new CampaignCost(HullRepairCost))) return false;
+            if (BaseHp >= BaseMaxHp - .5f || !ControlWorks) return false;
+            var hull = new CampaignCost(HullRepairCost);
+            if (!TrySpend(hull)) return false;
             BaseHp = BaseMaxHp;
+            Bought("repair", "hull", CampaignRoom.Control, hull);
             V3WorldAudio.Instance?.Play(ArenaWorldCue.WeaponRepair, BaseCentre);
             return true;
         }
@@ -611,6 +805,7 @@ namespace AnomalyArena
         {
             if (!CanRepairEngine || !TrySpend(rules.engineRepair)) return false;
             engineFixed = true; RefreshShip(); Say(Line.S08);
+            Bought("ship_part", "engine", CampaignRoom.Ship, rules.engineRepair);
             V3WorldAudio.Instance?.Play(ArenaWorldCue.WeaponRepair, ShipCentre);
             return true;
         }
@@ -619,6 +814,7 @@ namespace AnomalyArena
         {
             if (!CanRepairArmor || !TrySpend(rules.armorRepair)) return false;
             armorFixed = true; RefreshShip(); Say(Line.S09);
+            Bought("ship_part", "armor", CampaignRoom.Ship, rules.armorRepair);
             V3WorldAudio.Instance?.Play(ArenaWorldCue.WeaponRepair, ShipCentre);
             return true;
         }
@@ -627,6 +823,7 @@ namespace AnomalyArena
         {
             if (!CanSynthesiseFuel || !TrySpend(new CampaignCost(0, 0, rules.darkPerFuelUnit))) return false;
             fuel++; RefreshShip();
+            Bought("fuel", $"{fuel}/{rules.fuelUnits}", CampaignRoom.Ship, new CampaignCost(0, 0, rules.darkPerFuelUnit));
             V3WorldAudio.Instance?.Play(ArenaWorldCue.PickupEnergy, ShipCentre, .7f);
             return true;
         }
@@ -637,6 +834,7 @@ namespace AnomalyArena
         {
             if (!LampsCraftable || !TrySpend(new CampaignCost(rules.lampCost))) return false;
             lampStock++;
+            Bought("lamp", $"stock {lampStock}", CampaignRoom.Ship, new CampaignCost(rules.lampCost));
             return true;
         }
 
@@ -646,6 +844,7 @@ namespace AnomalyArena
             if (!CanTopUpShield || !TrySpend(new CampaignCost(0, rules.ShieldTopUpCost(Day)))) return false;
             BaseShield = Mathf.Min(BaseMaxShield, BaseShield + BaseMaxShield * rules.shieldTopUpShare);
             shieldTopUpAt = Time.time + rules.shieldTopUpCooldown;
+            Bought("shield", "top_up", CampaignRoom.Control, new CampaignCost(0, rules.ShieldTopUpCost(Day)));
             V3WorldAudio.Instance?.Play(ArenaWorldCue.NpcShield, BaseCentre);
             Fx.Ring(BaseCentre, BaseHalf + 2f, new Color(.5f, .9f, 1f), .5f);
             return true;

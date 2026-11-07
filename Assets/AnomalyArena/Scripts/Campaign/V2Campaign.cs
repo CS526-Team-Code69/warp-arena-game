@@ -14,7 +14,7 @@ namespace AnomalyArena
                                                                                                    
                                                                                                                                            
                                                                                                                                          
-                                                                                                                                        
+                                                                                                                                                                            
                                                                                                          
                                                                                                                                          
                                                                                                                              
@@ -70,6 +70,8 @@ namespace AnomalyArena
         {
             Enemy.RaidSpot = null;
             Enemy.RaidStrike = null;
+            Enemy.RaidAggroRadius = 0f;
+            WaveManager.SpawnPointOverride = null;
             RunWeapons.AxisAllowed = null;
             RunWeapons.ArmoryRule = null;
         }
@@ -81,7 +83,7 @@ namespace AnomalyArena
         {
             if (Running || !gm || !rules) return;
             Active = this; Running = true; Day = 0; WaveOfDay = 0; Overtime = false; BaseDestroyed = false; EndingDone = false;
-            pickRooms.Clear(); researchQueued = 0; armoryRoundsLeft = 0; ArmoryRoundActive = false;
+            armoryRoundsLeft = 0; ArmoryRoundActive = false; armoryMode = ArmoryMode.Rooms; activeUpgrade = null;
             ResetEconomy(); ResetBase(); ResetNight();
             InstallHooks();
             BuildWorld();
@@ -97,20 +99,29 @@ namespace AnomalyArena
             Enemy.RaidSpot = RaidSpotFor;
             Enemy.RaidCentre = BaseCentre;
             Enemy.RaidStrike = OnRaidStrike;
+                                                                                                                                        
+            Enemy.RaidAggroRadius = rules.raiderAggroRadius;
+                                                                                                            
+            WaveManager.SpawnPointOverride = CampaignSpawnPoint;
             RunWeapons.AxisAllowed = axis => axis switch
             {
                 UpgradeAxis.Tame => TameCards,
                 UpgradeAxis.Twist => TwistCards,
                 UpgradeAxis.Infusion => InfusionCards,
-                _ => PickFrom(CampaignRoom.Armament)                                                           
+                _ => !Running || activeUpgrade == null                                                                         
             };
-            RunWeapons.ArmoryRule = () => (ArmoryNewWeapons, ArmoryUpgrades);
+            RunWeapons.ArmoryRule = () => armoryMode switch
+            {
+                ArmoryMode.UpgradesOnly => (false, true),
+                ArmoryMode.NewWeaponsOnly => (true, false),
+                _ => (ArmoryNewWeapons, ArmoryUpgrades)
+            };
             gm.progression.StatCardsAllowed = () => StatCards;
+                                                                                                                                           
                                                                                                                                          
-                                                                                                 
+                                                          
             gm.progression.LevelingAllowed = null;
             gm.progression.XpIgnored = () => Running;
-            gm.progression.DraftConsumed -= OnPickUsed; gm.progression.DraftConsumed += OnPickUsed;
             gm.waves.EnemySpawned -= OnEnemySpawned; gm.waves.EnemySpawned += OnEnemySpawned;
             gm.waves.EnemyEliminated -= OnEnemyEliminated; gm.waves.EnemyEliminated += OnEnemyEliminated;
         }
@@ -122,26 +133,39 @@ namespace AnomalyArena
             BeginTutorial();
         }
 
+                                                                                                                                           
+                                                                                              
+        void BeginWithStartingWeapons()
+        {
+            Stage = CampaignStage.Loadout;
+            gm.runWeapons.GiveToHand(0, WeaponForm.Knife);
+            gm.runWeapons.GiveToHand(1, WeaponForm.Rifle);
+            AfterLoadout();
+        }
+
                                                                        
 
         bool Works(CampaignRoom room, int level) => rooms[(int)room].level >= level && !rooms[(int)room].damaged;
-                                                                                                                                    
+                                                                                                                                      
+                                          
         public bool PlayerLevelsForSale => Running && Works(CampaignRoom.Armament, 1);
         public bool ArmoryUpgrades => !Running || Works(CampaignRoom.Armament, 1);
         public bool ArmoryNewWeapons => !Running || Works(CampaignRoom.Armament, 2);
-        public bool TameCards => !Running || Works(CampaignRoom.Armament, 2) && PickFrom(CampaignRoom.Armament);
-        public bool TwistCards => !Running || Works(CampaignRoom.Armament, 3) && PickFrom(CampaignRoom.Armament);
-        public bool StatCards => !Running || Works(CampaignRoom.Energy, 1) && PickFrom(CampaignRoom.Energy);
-        public bool SkillCards => !Running || Works(CampaignRoom.Energy, 2) && PickFrom(CampaignRoom.Energy);
-        public bool InfusionCards => !Running || Works(CampaignRoom.Energy, 3) && PickFrom(CampaignRoom.Energy);
+                                                                                                                                        
+                                                                             
+        public bool TameCards => KindOpen(CampaignUpgrade.Tame, CampaignRoom.Armament, 2);
+        public bool TwistCards => KindOpen(CampaignUpgrade.Twist, CampaignRoom.Armament, 3);
+        public bool StatCards => KindOpen(CampaignUpgrade.Stat, CampaignRoom.Energy, 1);
+        public bool SkillCards => KindOpen(CampaignUpgrade.Skill, CampaignRoom.Energy, 2);
+        public bool InfusionCards => KindOpen(CampaignUpgrade.Infusion, CampaignRoom.Energy, 3);
+        bool KindOpen(CampaignUpgrade kind, CampaignRoom room, int level) => !Running || (activeUpgrade.HasValue ? activeUpgrade.Value == kind : Works(room, level));
 
+                                                                                           
+        CampaignUpgrade? activeUpgrade;
                                                                                                                                            
-                                                                                                             
-        readonly Queue<CampaignRoom> pickRooms = new();
-        bool PickFrom(CampaignRoom room) => pickRooms.Count == 0 || pickRooms.Peek() == room;
-        void OnPickUsed() { if (pickRooms.Count > 0) pickRooms.Dequeue(); }
+        enum ArmoryMode { Rooms, UpgradesOnly, NewWeaponsOnly }
+        ArmoryMode armoryMode;
         public bool LampsCraftable => !rooms[(int)CampaignRoom.Ship].damaged;
-        bool AnyCardKind => StatCards || SkillCards || TameCards || TwistCards || InfusionCards;
 
                             
 
@@ -154,7 +178,7 @@ namespace AnomalyArena
             {
                 case CampaignStage.TitleCard:
                     stageClock += unscaled;
-                    if (stageClock >= stageLength) { Stage = CampaignStage.Loadout; gm.CampaignBeginLoadout(); }
+                    if (stageClock >= stageLength) BeginWithStartingWeapons();
                     break;
                 case CampaignStage.Tutorial: TickTutorial(dt); break;
                 case CampaignStage.Day: TickDay(dt); break;
@@ -204,13 +228,10 @@ namespace AnomalyArena
                 Day++; WaveOfDay = 0; Stage = CampaignStage.Day;
                 if (Day > rules.days) Overtime = true;
                 CampaignEvents.RaiseDayStarted(Day, Overtime);
-                                                                                                                                               
-                                                                                             
-                pickRooms.Clear();
                 regionKills.Clear();
                 ApplyDaylight();
                 Say(Line.S07);
-                Objective(ArenaText.Pair("Hold the base: some monsters go straight for it. Stay alive too","Hold the base: some monsters go straight for it. Stay alive too"), null);
+                Objective(ArenaText.Pair("Hold the base: monsters come in from the map's edge for it; those near you attack you first","Hold the base: monsters come in from the map's edge for it; those near you attack you first"), null);
             }
                                                                                                                                         
                                                                                                                                            
@@ -237,8 +258,8 @@ namespace AnomalyArena
             return text.ToString();
         }
 
-                                                                                                                                       
-                                                                  
+                                                                                                                                           
+                                                                                              
         public bool InterceptBuild()
         {
             if (!Running) return false;
@@ -260,20 +281,18 @@ namespace AnomalyArena
         {
             Stage = CampaignStage.Build;
             buildAllowed = true;
-                                                                                                                                           
-            armoryRoundsLeft = researchQueued + rules.armoryRoundsPerDawn;
-            researchQueued = 0;
+                                                                                                                                       
+                                                                                                                                                 
+            armoryRoundsLeft = rules.armoryRoundsPerDawn;
             ArmoryRoundActive = armoryRoundsLeft > 0;
             if (ArmoryRoundActive) armoryRoundsLeft--;
             gm.CampaignOpenBuild();
         }
 
-        int armoryRoundsLeft, researchQueued;
+        int armoryRoundsLeft;
                                                                                                                             
         public bool ArmoryRoundActive { get; private set; }
-                                                                                                                             
-        public int ResearchQueued => researchQueued;
-                                                                                                           
+                                                                                                        
         public bool TakeArmoryRound()
         {
             if (!Running || Stage != CampaignStage.Build || armoryRoundsLeft <= 0 || !ArmoryUpgrades) { ArmoryRoundActive = false; return false; }
@@ -309,7 +328,7 @@ namespace AnomalyArena
                 s.campaignLabel = Dot(dayText, phase, AttackText(WaveOfDay + 1), s.waveTimeExpired ? ArenaText.Pair("CLEAR SURVIVORS","CLEAR SURVIVORS") : $"{Mathf.CeilToInt(left):00}");
             else if (Stage is CampaignStage.Dusk or CampaignStage.Night) s.campaignLabel = $"{dayText} · {phase} · {Mathf.CeilToInt(left):00}";
             else if (Stage == CampaignStage.Tutorial) s.campaignLabel = $"{ArenaText.Pair("DAY 0","DAY 0")} · {phase}";
-            else if (Stage == CampaignStage.Build) s.campaignLabel = Day + 1 > rules.days ? ArenaText.Pair($"DAY {Day + 1} (OVERTIME) · DAWN BUILD",$"DAY {Day + 1} (OVERTIME) · DAWN BUILD") : ArenaText.Pair($"DAY {Day + 1} / {rules.days} · DAWN BUILD",$"DAY {Day + 1} / {rules.days} · DAWN BUILD");
+            else if (Stage == CampaignStage.Build) s.campaignLabel = Day + 1 > rules.days ? ArenaText.Pair($"DAY {Day + 1} (OVERTIME) · DAWN",$"DAY {Day + 1} (OVERTIME) · DAWN") : ArenaText.Pair($"DAY {Day + 1} / {rules.days} · DAWN",$"DAY {Day + 1} / {rules.days} · DAWN");
             else s.campaignLabel = "";
                                                                                                                           
             if (Stage is CampaignStage.Dusk or CampaignStage.Night) s.waveTime = left;
@@ -320,8 +339,6 @@ namespace AnomalyArena
                 s.banner = Overtime ? ArenaText.Pair($"DAY {Day} · OVERTIME",$"DAY {Day} · OVERTIME") : Dot(ArenaText.Pair($"DAY {Day}",$"DAY {Day}"), AttackText(WaveOfDay + 1));
             if (Stage is CampaignStage.Dusk or CampaignStage.Night) s.hint = NightHint();
             else if (Stage == CampaignStage.Tutorial && !string.IsNullOrEmpty(tutorialHint)) s.hint = tutorialHint;
-            else if (Stage is CampaignStage.Day or CampaignStage.Lull && s.bankedDrafts > 0 && !AnyCardKind)
-                s.hint = ArenaText.Pair($"PICKS ×{s.bankedDrafts} · NO CARD KIND UNLOCKED AT THE BASE YET",$"PICKS ×{s.bankedDrafts} · NO CARD KIND UNLOCKED AT THE BASE YET");
             if (gm.State == GameState.Won)
             {
                 s.resultTitle = ArenaText.Pair("EARTH IS WITHIN REACH","EARTH IS WITHIN REACH");
@@ -372,6 +389,44 @@ namespace AnomalyArena
                     if (Ok(p)) return p;
                 }
             return desired;
+        }
+
+        const float SpawnEdgeInset = 2f, SpawnEdgeSpread = 4f, SpawnPlayerClearance = 9f;
+
+                                                                                                                                             
+                                                                                                                                        
+                                                                                                                                          
+                                                                                                                                  
+                                                                  
+        Vector3 CampaignSpawnPoint(Vector3 picked)
+        {
+            var map = WorldMap.Active;
+            if (!Running || !map || map.TrialActive || Stage is not (CampaignStage.Day or CampaignStage.Lull)) return picked;
+            var bounds = map.Bounds;
+            Vector3 centre = new(bounds.center.x, 0f, bounds.center.z);
+            Vector3 d = Query.Flat(picked - centre);
+            if (d.sqrMagnitude < .01f) { float a = Random.value * Mathf.PI * 2f; d = new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)); }
+            float hx = Mathf.Max(1f, bounds.extents.x - SpawnEdgeInset), hz = Mathf.Max(1f, bounds.extents.z - SpawnEdgeInset);
+                                                                                                                                          
+            float tx = Mathf.Abs(d.x) > .001f ? hx / Mathf.Abs(d.x) : float.MaxValue;
+            float tz = Mathf.Abs(d.z) > .001f ? hz / Mathf.Abs(d.z) : float.MaxValue;
+            bool eastWest = tx <= tz;
+            Vector3 onEdge = centre + d * Mathf.Min(tx, tz);
+            Vector3 player = gm && gm.player ? Query.Flat(gm.player.Position) : new Vector3(float.MaxValue, 0f, float.MaxValue);
+            Vector3? best = null; float bestDistance = -1f;
+            for (int attempt = 0; attempt < 4; attempt++)
+            {
+                float along = Random.Range(-SpawnEdgeSpread, SpawnEdgeSpread) + attempt * (attempt % 2 == 0 ? 1f : -1f) * SpawnPlayerClearance;
+                Vector3 p = eastWest
+                    ? new Vector3(centre.x + Mathf.Sign(d.x) * hx, 0f, Mathf.Clamp(onEdge.z + along, centre.z - hz, centre.z + hz))
+                    : new Vector3(Mathf.Clamp(onEdge.x + along, centre.x - hx, centre.x + hx), 0f, centre.z + Mathf.Sign(d.z) * hz);
+                p = FindOpen(p, .6f);
+                if (!map.IsWalkable(p, .6f)) continue;
+                float distance = Query.Flat(p - player).magnitude;
+                if (distance >= SpawnPlayerClearance) return p;
+                if (distance > bestDistance) { bestDistance = distance; best = p; }
+            }
+            return best ?? picked;
         }
 
         float MapHalfWidth => WorldMap.Active ? WorldMap.Active.Bounds.extents.x : 90f;

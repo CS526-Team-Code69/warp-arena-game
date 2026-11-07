@@ -40,12 +40,12 @@ MonoBehaviour:
     elite: 2
   alloyGrowthPerDay: 0.1
   pickupMagnet: 3.5
-  oreNodes: 9
-  oreYield: 4
+  oreNodes: 16
+  oreYield: 3
   oreYieldStep: 2
   oreYieldStepDays: 2
-  darkClusters: 9
-  nodesPerCluster: 3
+  darkClusters: 14
+  nodesPerCluster: 4
   darkPerNode: 1
   mineSeconds: 1.1
   mineRange: 1.9
@@ -74,12 +74,10 @@ MonoBehaviour:
   baseHp: 300
   baseHpGrowth: 1.5
   shieldShare: 0.15
-  nightSelfRepair: 0.2
+  nightSelfRepair: 0.3
   sideBreakShare: 0.25
-  raiderShare: 0.2
-  raiderSharePerDay: 0.025
-  raiderShareMax: 0.4
-  raidDamage: 0.6
+  raiderAggroRadius: 7
+  raidDamage: 0.15
   shieldTopUpCost: 4
   shieldTopUpCostPerDay: 1
   shieldTopUpShare: 0.25
@@ -100,21 +98,57 @@ MonoBehaviour:
     alloy: 1
     energy: 0
     dark: 0
-  armamentCardCost:
+  newWeaponCost:
     alloy: 4
     energy: 0
     dark: 0
-  armamentCardCostPerBuy:
-    alloy: 2
+  newWeaponCostPerBuy:
+    alloy: 4
     energy: 0
     dark: 0
-  energyCardCost:
+  rocketLauncherCost:
+    alloy: 6
+    energy: 0
+    dark: 0
+  tameCost:
+    alloy: 5
+    energy: 0
+    dark: 0
+  tameCostPerBuy:
+    alloy: 3
+    energy: 0
+    dark: 0
+  twistCost:
+    alloy: 8
+    energy: 0
+    dark: 0
+  twistCostPerBuy:
+    alloy: 4
+    energy: 0
+    dark: 0
+  statCost:
     alloy: 0
     energy: 2
     dark: 0
-  energyCardCostPerBuy:
+  statCostPerBuy:
     alloy: 0
     energy: 2
+    dark: 0
+  skillCost:
+    alloy: 0
+    energy: 5
+    dark: 0
+  skillCostPerBuy:
+    alloy: 0
+    energy: 3
+    dark: 0
+  infusionCost:
+    alloy: 0
+    energy: 8
+    dark: 0
+  infusionCostPerBuy:
+    alloy: 0
+    energy: 4
     dark: 0
   armamentLevels:
   - alloy: 8
@@ -190,7 +224,7 @@ MonoBehaviour:
     energy: 0
     dark: 0
   fuelUnits: 6
-  darkPerFuelUnit: 4
+  darkPerFuelUnit: 6
   lampCost: 3
   roomRepair: 2
   roomRepairPerLevel: 2

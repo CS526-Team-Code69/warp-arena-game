@@ -121,6 +121,14 @@ namespace AnomalyArena
             float chance=form switch{WeaponForm.Rifle=>startingRifleVariantAChance,WeaponForm.Knife=>startingKnifeVariantAChance,WeaponForm.RocketLauncher=>startingRocketVariantAChance,_=>.5f};
             Hand[0]=CreateWeapon(form,UnityEngine.Random.value<Mathf.Clamp01(chance)?0:1,1);
         }
+                                                                                                                                             
+                                                                                                                                                      
+        public RunWeapon GiveToHand(int hand,WeaponForm form)
+        {
+            if(hand<0||hand>=Hand.Length)return null;
+            float chance=form switch{WeaponForm.Rifle=>startingRifleVariantAChance,WeaponForm.Knife=>startingKnifeVariantAChance,WeaponForm.RocketLauncher=>startingRocketVariantAChance,_=>.5f};
+            var old=Hand[hand];Hand[hand]=CreateWeapon(form,UnityEngine.Random.value<Mathf.Clamp01(chance)?0:1,1);return old;
+        }
         RunWeapon Roll(WeaponForm form,int wave)
         {
             int v=UnityEngine.Random.Range(0,2);if(Owned(form,v))v=1-v;

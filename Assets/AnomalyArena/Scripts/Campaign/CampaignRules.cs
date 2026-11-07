@@ -45,7 +45,7 @@ namespace AnomalyArena
         [Min(5f), Tooltip("Seconds of night on day 1; the night is longer by nightSecondsPerDay each day.")] public float nightSeconds = 35f;
         [Min(0f)] public float nightSecondsPerDay = 1f;
         [Min(5f), Tooltip("The Day 0 tutorial night.")] public float tutorialNightSeconds = 55f;
-        [Min(0), Tooltip("Free air drops (armory rounds) per dawn: 0 since 2026-11-06, every upgrade is bought in its room as the V2 doc places it (weapon research at the Armament Bay is one round of weapon offers).")]
+        [Min(0), Tooltip("Free air drops (armory rounds) per dawn: 0 since 2026-11-06. Every upgrade is bought in its room as the V2 doc places it and takes effect at once.")]
         public int armoryRoundsPerDawn = 0;
 
         [Header("Kill drops: alien energy (star matter) and alloy shards")]
@@ -58,12 +58,12 @@ namespace AnomalyArena
         [Min(.5f), Tooltip("Cells within which a dropped shard flies to the player.")] public float pickupMagnet = 3.5f;
 
         [Header("Mining (dusk and night)")]
-        [Min(0), Tooltip("Alloy ore nodes that surface at dusk on day 1; one more each later day.")] public int oreNodes = 9;
-        [Min(1), Tooltip("Alloy from one ore node: oreYield on days 1-2, + oreYieldStep every oreYieldStepDays days.")] public int oreYield = 4;
+        [Min(0), Tooltip("Alloy ore nodes that surface at dusk on day 1; one more each later day (16 since 2026-11-06, up from 9).")] public int oreNodes = 16;
+        [Min(1), Tooltip("Alloy from one ore node: oreYield on days 1-2, + oreYieldStep every oreYieldStepDays days.")] public int oreYield = 3;
         [Min(0)] public int oreYieldStep = 2;
         [Min(1)] public int oreYieldStepDays = 2;
-        [Min(0), Tooltip("Dark matter clusters that surface each night, at most one per region.")] public int darkClusters = 9;
-        [Min(1)] public int nodesPerCluster = 3;
+        [Min(0), Tooltip("Dark matter clusters that surface each night, at most one per region (14 since 2026-11-06, up from 9).")] public int darkClusters = 14;
+        [Min(1), Tooltip("Dark matter nodes in one cluster (4 since 2026-11-06, up from 3); the Day 0 night's cluster has as many.")] public int nodesPerCluster = 4;
         [Min(1), Tooltip("Dark matter from one node.")] public int darkPerNode = 1;
         [Min(0f), Tooltip("Seconds of holding E to mine a node.")] public float mineSeconds = 1.1f;
         [Min(.5f), Tooltip("Cells from a node within which E mines it.")] public float mineRange = 1.9f;
@@ -102,32 +102,45 @@ namespace AnomalyArena
         public float baseHp = 300f;
         [Min(1f)] public float baseHpGrowth = 1.5f;
         [Range(0f, 1f), Tooltip("Shield cap per shield level, as a share of the base max HP.")] public float shieldShare = .15f;
-        [Range(0f, 1f), Tooltip("HP the base repairs by itself each night, as a share of its max HP.")] public float nightSelfRepair = .2f;
+        [Range(0f, 1f), Tooltip("HP the base repairs by itself each night, as a share of its max HP.")] public float nightSelfRepair = .3f;
         [Range(.05f, 1f), Tooltip("A side breaks its room once it takes this share of the base max HP in one day.")] public float sideBreakShare = .25f;
-        [Range(0f, 1f), Tooltip("Share of the melee swarm that raids the base on day 1.")] public float raiderShare = .2f;
-        [Range(0f, 1f)] public float raiderSharePerDay = .025f;
-        [Range(0f, 1f)] public float raiderShareMax = .4f;
-        [Min(0f), Tooltip("Base damage per raider strike, as a share of that raider's attack damage. 0.6: a fully undefended day 1 (about 16 raiders, 4 strikes each) costs about 64% of the level-1 base, not the run.")] public float raidDamage = .6f;
+        [Min(0f), Tooltip("Every monster of a day wave raids the base (since 2026-11-06; bosses and monsters that cannot walk excepted). A raider within this many cells of the player fights the player instead; 0 = never.")]
+        public float raiderAggroRadius = 7f;
+        [Min(0f), Tooltip("Base damage per raider strike, as a share of that raider's attack damage. 0.15 since 2026-11-06, when every day monster became a raider (it was 0.6 for a fifth of the melee swarm).")] public float raidDamage = .15f;
         [Min(0), Tooltip("Energy cost of an emergency shield top-up at the base door by day: this + shieldTopUpCostPerDay per day.")] public int shieldTopUpCost = 4;
         [Min(0)] public int shieldTopUpCostPerDay = 1;
         [Range(0f, 1f)] public float shieldTopUpShare = .25f;
         [Min(0f)] public float shieldTopUpCooldown = 15f;
 
         [Header("Player levels (bought at the Armament Bay since 2026-11-06)")]
-        [Tooltip("Price of the player's level 2; each later level costs playerLevelCostPerLevel more. A level gives what an XP level gives in the classic run: max HP and max energy. Kill XP turns into card picks instead.")]
+        [Tooltip("Price of the armor upgrade to level 2 (the player's level); each later level costs playerLevelCostPerLevel more. A level gives what an XP level gives in the classic run: max HP and max energy. Kills give no XP in the campaign.")]
         public CampaignCost playerLevelCost = new(2, 3);
         public CampaignCost playerLevelCostPerLevel = new(0, 1);
 
-        [Header("Upgrades bought in the rooms (since 2026-11-06; each price rises with every purchase of its kind)")]
-        [Tooltip("Armament Bay level 1: one weapon research, offered at the next dawn build as a round of weapon offers (Mk upgrades; new weapons from level 2).")]
-        public CampaignCost weaponResearchCost = new(2);
-        public CampaignCost weaponResearchCostPerBuy = new(1);
-        [Tooltip("Armament Bay level 2: one weapon card pick (Tame cards; Twist cards from level 3).")]
-        public CampaignCost armamentCardCost = new(4);
-        public CampaignCost armamentCardCostPerBuy = new(2);
-        [Tooltip("Energy Lab level 1: one card pick (stat cards; skill cards from level 2, Infusion cards from level 3).")]
-        public CampaignCost energyCardCost = new(0, 2);
-        public CampaignCost energyCardCostPerBuy = new(0, 2);
+        [Header("Upgrades bought in the rooms (since 2026-11-06; each takes effect at once, each price rises with every purchase of its kind)")]
+        [Tooltip("Armament Bay level 1: boost weapon damage. The weapon in hand (or else another held weapon) rises to a higher Mk.")]
+        public CampaignCost weaponResearchCost = new(2, 0, 0);
+        public CampaignCost weaponResearchCostPerBuy = new(1, 0, 0);
+        [Tooltip("Armament Bay level 2: research a new weapon, which goes into a free weapon slot.")]
+        public CampaignCost newWeaponCost = new(4, 0, 0);
+        public CampaignCost newWeaponCostPerBuy = new(4, 0, 0);
+        [Tooltip("Armament Bay level 2: the rocket launcher, bought once at Mk 1. It takes the place of the hand weapon not in use.")]
+        public CampaignCost rocketLauncherCost = new(6);
+        [Tooltip("Armament Bay level 2: tame a weapon (a random held weapon that can take it).")]
+        public CampaignCost tameCost = new(5, 0, 0);
+        public CampaignCost tameCostPerBuy = new(3, 0, 0);
+        [Tooltip("Armament Bay level 3: a weapon twist (a random held weapon that can take it).")]
+        public CampaignCost twistCost = new(8, 0, 0);
+        public CampaignCost twistCostPerBuy = new(4, 0, 0);
+        [Tooltip("Energy Lab level 1: upgrade the body (one random stat rises).")]
+        public CampaignCost statCost = new(0, 2, 0);
+        public CampaignCost statCostPerBuy = new(0, 2, 0);
+        [Tooltip("Energy Lab level 2: unlock an alien skill (a new skill, or a level for one already learned).")]
+        public CampaignCost skillCost = new(0, 5, 0);
+        public CampaignCost skillCostPerBuy = new(0, 3, 0);
+        [Tooltip("Energy Lab level 3: infuse a weapon with an element (a random held weapon that can take it).")]
+        public CampaignCost infusionCost = new(0, 8, 0);
+        public CampaignCost infusionCostPerBuy = new(0, 4, 0);
 
         [Header("Prices (to level 1, 2, 3)")]
         public CampaignCost[] armamentLevels = { new(8), new(4), new(10) };
@@ -138,7 +151,7 @@ namespace AnomalyArena
         public CampaignCost engineRepair = new(6);
         public CampaignCost armorRepair = new(9);
         [Min(1)] public int fuelUnits = 6;
-        [Min(1)] public int darkPerFuelUnit = 4;
+        [Min(1)] public int darkPerFuelUnit = 6;
         [Min(0)] public int lampCost = 3;
         [Min(0), Tooltip("Room repair, alloy: this + roomRepairPerLevel x level + roomRepairPerDay x day.")] public int roomRepair = 2;
         [Min(0)] public int roomRepairPerLevel = 2;
@@ -159,7 +172,6 @@ namespace AnomalyArena
         [Min(0)] public int tutorialNightOreAlloy = 2;
 
         public float NightLength(int day) => day <= 0 ? tutorialNightSeconds : nightSeconds + nightSecondsPerDay * (day - 1);
-        public float RaiderShare(int day) => Mathf.Min(raiderShareMax, raiderShare + raiderSharePerDay * Mathf.Max(0, day - 1));
         public int OreYield(int day) => oreYield + oreYieldStep * ((Mathf.Max(1, day) - 1) / Mathf.Max(1, oreYieldStepDays));
         public int OreNodes(int day) => oreNodes + Mathf.Max(0, day - 1);
         public float BaseMaxHp(int durability) => baseHp * Mathf.Pow(baseHpGrowth, Mathf.Max(0, durability - 1));

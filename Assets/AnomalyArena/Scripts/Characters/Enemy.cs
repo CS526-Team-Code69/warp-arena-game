@@ -67,6 +67,14 @@ namespace AnomalyArena
         public static System.Func<Enemy, Vector3?> RaidSpot;
         public static System.Action<Enemy, float> RaidStrike;
         public static Vector3 RaidCentre;
+                                                                                                                                   
+        public static float RaidAggroRadius;
+                                                                                                                                           
+                                                                                     
+        public const float RaidAggroRelease = 2f;
+                                                                                                                                 
+        public bool RaidTurnedOnPlayer => raidAggro;
+        bool raidAggro, raidWindup;
         public bool Cloaked => definition && definition.kind == EnemyKind.Shade && revealTimer <= 0f;
 
         float spawnVisible,
@@ -307,6 +315,7 @@ namespace AnomalyArena
             CorpseActive = CorpseCarried = CorpseFeedConsumed = false;
             corpseSeconds = 0;
             Raider = false;
+            raidAggro = raidWindup = false;
             corpseVelocity = Vector3.zero;
             float bodyScale = mini ? MiniScale : 1f;
             var capsule = GetComponent<CapsuleCollider>();
@@ -499,8 +508,10 @@ namespace AnomalyArena
 
                                                                                                                                         
                                                                                                                                        
-                                                                                                    
-            if (Raider && RaidSpot != null && RaidSpot(this) is Vector3 raid) { TickRaid(dt, raid); return; }
+                                                                                                                                           
+                                                                                                                                 
+            if (Raider && !Immovable && RaidSpot != null && !RaidTurnsOnPlayer(p) && RaidSpot(this) is Vector3 raid) { TickRaid(dt, raid); return; }
+            if (raidWindup) CancelWindup();                                                                                      
 
             if (!IsBoss && WorldMap.Active && WorldMap.Active.PlayerHidden)
             {
@@ -578,10 +589,53 @@ namespace AnomalyArena
             facing = Quaternion.Euler(0f, SearchTurnDegrees * dt, 0f) * facing;
         }
 
+                     
+                                                                                                                                          
+                                                                                                                                        
+                                                                                                                                            
+                      
+        bool RaidTurnsOnPlayer(PlayerController player)
+        {
+            bool wanted = false;
+            if (RaidAggroRadius > 0f && !(WorldMap.Active && WorldMap.Active.PlayerHidden))
+                wanted = Query.Flat(player.Position - Position).magnitude <= RaidAggroRadius + (raidAggro ? RaidAggroRelease : 0f);
+            if (wanted != raidAggro && !windup && !charging && !rushing) raidAggro = wanted;
+            return raidAggro;
+        }
+
+                     
+                                                                                                                                           
                                                                                                                                          
-                                                                              
+                                                                                                                                       
+                                                                                                                       
+                      
+        bool AgainstRaidWall(Vector3 spot, out Vector3 normal)
+        {
+            Vector3 outward = Query.Flat(spot - RaidCentre);
+            normal = Mathf.Abs(outward.x) > Mathf.Abs(outward.z) ? new Vector3(Mathf.Sign(outward.x), 0f, 0f) : new Vector3(0f, 0f, Mathf.Sign(outward.z));
+            Vector3 along = new Vector3(normal.z, 0f, normal.x);
+            float standOut = Vector3.Dot(outward, normal), depth = Vector3.Dot(Query.Flat(Position - RaidCentre), normal);
+            return depth <= standOut + .6f && depth >= standOut - radius - .5f
+                   && Mathf.Abs(Vector3.Dot(Query.Flat(Position - RaidCentre), along)) <= standOut - radius;
+        }
+
+                                                                                                                                         
+                                                                                                                                          
+                                                                                                                                       
+                                       
         void TickRaid(float dt, Vector3 spot)
         {
+                                                                                                      
+            if (charging || rushing) { charging = rushing = false; RefreshBodyTint(); }
+                                                                                                                                
+            if (definition && definition.kind == EnemyKind.Shade)
+            {
+                revealTimer -= dt;
+                RefreshBodyTint();
+                if (spawnVisible > 0f) { spawnVisible -= dt; Stop(); return; }
+            }
+                                                                                                                       
+            if (windup && !raidWindup) CancelWindup();
             Vector3 to = Query.Flat(spot - Position);
             float dist = to.magnitude;
             if (windup)
@@ -599,16 +653,17 @@ namespace AnomalyArena
                 }
                 return;
             }
-            if (dist <= .6f)
+                                                                                                                                          
+            if (AgainstRaidWall(spot, out var wallNormal) || dist <= .6f)
             {
                 Stop();
-                Vector3 face = Query.Flat(RaidCentre - Position);
-                if (face.sqrMagnitude > .01f) facing = face.normalized;
+                facing = -wallNormal;
                 if (cooldown <= 0f)
                 {
-                    windup = true;
+                    windup = raidWindup = true;
                     windupTimer = windupTime;
                     V5WeaponAudio.Windup(definition ? definition.kind : EnemyKind.Grunt, Position);
+                    if (definition && definition.kind == EnemyKind.Shade) revealTimer = windupTime + 1f;                         
                     SetLook(true);
                 }
                 return;
@@ -1700,6 +1755,7 @@ namespace AnomalyArena
         {
             if (!windup) return;
             windup = false;
+            raidWindup = false;
             specialWindup = false;
             SetLook(false);
             if (telegraph && !leaping) telegraph.gameObject.SetActive(false);                                                    

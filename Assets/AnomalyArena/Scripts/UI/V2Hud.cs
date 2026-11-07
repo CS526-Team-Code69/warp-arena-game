@@ -120,7 +120,8 @@ namespace AnomalyArena
                                                                                                                                            
                                     
         public const string ChineseEditionScene = "ArenaV2_CN";
-        static readonly string[] ChineseTitleHidden = { "InterstellarSubtitle", "ToggleArt", "ChineseTeam", "EnglishShowcase" };
+                                                                                              
+        static readonly string[] ChineseTitleHidden = { "InterstellarSubtitle", "ChineseTeam", "EnglishShowcase" };
 
         void SimplifyChineseTitle()
         {
@@ -342,16 +343,20 @@ namespace AnomalyArena
             SetFill(energyFill, s.energy, s.maxEnergy);
             energyFill.color = s.voidEnergy ? ElementColors[6] : new Color(.22f, .68f, .93f);
             string level = s.level >= s.maxLevel ? ArenaText.Text("ui.level.max") : s.level.ToString();
-            SetText(xpLabel, s.hideXp ? ArenaText.Pair($"LEVEL {level} · PICKS {s.bankedDrafts}",$"LEVEL {level} · PICKS {s.bankedDrafts}")
+                                                                                                                                          
+                                                                                                                            
+            SetText(xpLabel, s.hideXp ? ArenaText.Pair($"LEVEL {level}",$"LEVEL {level}")
                 : ArenaText.Text("ui.xp", level, Mathf.FloorToInt(s.xp), Mathf.CeilToInt(s.xpNeeded), s.bankedDrafts));
                                                                                                                        
             xpLabel.color = s.voidLevel ? ElementColors[6] : Color.white;
             SetFill(xpFill, s.xp, s.xpNeeded);
+            var xpBar = XpBar;
+            if (xpBar && xpBar.activeSelf == s.hideXp) xpBar.SetActive(!s.hideXp);
             if (draftPips != null)
                 for (int i = 0; i < Mathf.Min(10, draftPips.Length); i++)
                 {
                     if (!draftPips[i]) continue;
-                    bool visible = i < s.bankedDrafts;
+                    bool visible = !s.hideXp && i < s.bankedDrafts;
                     if (draftPips[i].gameObject.activeSelf != visible) draftPips[i].gameObject.SetActive(visible);
                 }
             SetText(waveLabel, !string.IsNullOrEmpty(s.campaignLabel) && s.state is not (ArenaUiState.FinalBoss or ArenaUiState.VoidTrial) ? s.campaignLabel
@@ -395,7 +400,22 @@ namespace AnomalyArena
                 if (active) RenderScreen(screen, s);
             }
             earlyStartPrompt.SetActive(s.earlyStartConfirmation);
-            SetText(earlyStartLabel, ArenaText.Text("ui.early.question", s.bankedDrafts));
+            SetText(earlyStartLabel, s.hideXp
+                ? ArenaText.Pair($"Upgrades still unchosen: {s.bankedDrafts}. Pick the rest at random and start?",$"Upgrades still unchosen: {s.bankedDrafts}. Pick the rest at random and start?")
+                : ArenaText.Text("ui.early.question", s.bankedDrafts));
+        }
+
+                                                                                                                                          
+                                                                                           
+        GameObject XpBar
+        {
+            get
+            {
+                if (!xpFill) return null;
+                var parent = xpFill.transform.parent;
+                bool ownBar = parent && (!xpLabel || parent != xpLabel.transform.parent) && (!gameplayRoot || parent != gameplayRoot.transform);
+                return ownBar ? parent.gameObject : xpFill.gameObject;
+            }
         }
 
         void PlayCardPick(ArenaUiSnapshot s)
@@ -448,7 +468,10 @@ namespace AnomalyArena
                     break;
                 case ArenaUiState.Loadout:
                     cards = s.loadoutChoices;
-                    SetBody(screen.body, ArenaText.Pair("Pick one familiar form. Its attack and trait are unknown until you take it; the moment you choose, the game pauses and the weapon card appears.\nAim manually; use the terrain.","Pick one familiar form. Its attack and trait are unknown until you take it; the moment you choose, the game pauses and the weapon card appears.\nAim manually; use the terrain."));
+                                                                                                                  
+                    SetBody(screen.body, s.hideXp
+                        ? ArenaText.Pair("Pick one familiar form. Its attack and trait are unknown until you take it; the moment you choose, the game pauses and shows what the weapon does.\nAim manually; use the terrain.","Pick one familiar form. Its attack and trait are unknown until you take it; the moment you choose, the game pauses and shows what the weapon does.\nAim manually; use the terrain.")
+                        : ArenaText.Pair("Pick one familiar form. Its attack and trait are unknown until you take it; the moment you choose, the game pauses and the weapon card appears.\nAim manually; use the terrain.","Pick one familiar form. Its attack and trait are unknown until you take it; the moment you choose, the game pauses and the weapon card appears.\nAim manually; use the terrain."));
                     break;
                 case ArenaUiState.Armory:
                     cards = s.armoryOffers;
@@ -456,8 +479,11 @@ namespace AnomalyArena
                     break;
                 case ArenaUiState.Draft:
                     cards = s.draftCards;
-                    SetText(screen.heading, s.isGreaterReward ? ArenaText.Text("ui.greater.heading") : ArenaText.Text("ui.draft.counter", s.draftIndex, Mathf.Max(1, s.draftCount)));
+                    SetText(screen.heading, s.isGreaterReward ? ArenaText.Text("ui.greater.heading")
+                        : s.hideXp ? ArenaText.Pair($"UPGRADE {s.draftIndex} / {Mathf.Max(1, s.draftCount)}",$"UPGRADE {s.draftIndex} / {Mathf.Max(1, s.draftCount)}")
+                        : ArenaText.Text("ui.draft.counter", s.draftIndex, Mathf.Max(1, s.draftCount)));
                     SetBody(screen.body, s.isGreaterReward ? ArenaText.Pair("Pick one of three Greater Void skills (or none); they have no further levels. 1 / 2 / 3 select.","Pick one of three Greater Void skills (or none); they have no further levels. 1 / 2 / 3 select.")
+                        : s.hideXp ? ArenaText.Pair("Pick one of three. 1 / 2 / 3 select; R rerolls all three (once per wave).","Pick one of three. 1 / 2 / 3 select; R rerolls all three (once per wave).") + WalkHint()
                         : ArenaText.Pair("Three cards, one of each: a stat card, a weapon card (an upgrade direction a revealed weapon has not taken yet) and a skill card (a new skill, or a higher level for one you own; its colour shows the level it gives). 1 / 2 / 3 select; R rerolls all three (once per wave).","Three cards, one of each: a stat card, a weapon card (an upgrade direction a revealed weapon has not taken yet) and a skill card (a new skill, or a higher level for one you own; its colour shows the level it gives). 1 / 2 / 3 select; R rerolls all three (once per wave).") + WalkHint());
                     if (screen.reroll) screen.reroll.interactable = s.rerolls > 0;
                     SetText(screen.rerollLabel, ArenaText.Text("ui.reroll.counter", s.rerolls));
@@ -475,7 +501,9 @@ namespace AnomalyArena
                     break;
                 case ArenaUiState.ReplaceSkill:
                     RenderReplacement(screen, s.skillSlots, 3);
-                    SetBody(screen.body, ArenaText.Pair("With 3 skills already, taking a new one means replacing an old one; the new skill starts at the level this card gives.","With 3 skills already, taking a new one means replacing an old one; the new skill starts at the level this card gives."));
+                    SetBody(screen.body, s.hideXp
+                        ? ArenaText.Pair("With 3 skills already, taking a new one means replacing an old one; the new skill starts at the level it comes with.","With 3 skills already, taking a new one means replacing an old one; the new skill starts at the level it comes with.")
+                        : ArenaText.Pair("With 3 skills already, taking a new one means replacing an old one; the new skill starts at the level this card gives.","With 3 skills already, taking a new one means replacing an old one; the new skill starts at the level this card gives."));
                     break;
                 case ArenaUiState.Ready:
                     SetBody(screen.body, ArenaText.Pair("Build choices complete. Click START NEXT WAVE to go on.","Build choices complete. Click START NEXT WAVE to go on.") + PortalHint() + WalkHint());
@@ -488,7 +516,9 @@ namespace AnomalyArena
                     if (screen.icon) SetWeaponIcon(screen.icon, art, s.weaponIntroForm);
                     break;
                 case ArenaUiState.Paused:
-                    SetText(screen.body, ArenaText.Pair("The battlefield and the build clock are paused.","The battlefield and the build clock are paused."));
+                                                                                                             
+                    SetText(screen.body, s.hideXp ? ArenaText.Pair("The battlefield is paused.","The battlefield is paused.")
+                        : ArenaText.Pair("The battlefield and the build clock are paused.","The battlefield and the build clock are paused."));
                     if (pauseControls) pauseControls.Fill(screen.body ? screen.body.font : null);
                     if (tutorialLabel)
                     {
@@ -512,7 +542,7 @@ namespace AnomalyArena
                                                                                                                                                                      
                                                                                                                                                               
                                                                        
-        public static (string input, string action, string note)[] ControlRows() => new[]
+        public static (string input, string action, string note)[] ControlRows() => CampaignControls ? CampaignControlRows() : new[]
         {
             ("WASD", ArenaText.Pair("Move","Move"), ""),
             (ArenaText.Pair("Mouse","Mouse"), ArenaText.Pair("Aim","Aim"), ""),
@@ -526,6 +556,28 @@ namespace AnomalyArena
             ("R", ArenaText.Pair("Restart on the result screen; reroll while a card panel is open","Restart on the result screen; reroll while a card panel is open"), ""),
             ("T", ArenaText.Pair("During a wave, open a card pick you kept for later (the screen tells you)","During a wave, open a card pick you kept for later (the screen tells you)"), ""),
             ("Tab", ArenaText.Pair("Put the build panel away in the build phase; press again to bring it back","Put the build panel away in the build phase; press again to bring it back"), ""),
+        };
+
+                                                                                                                                           
+                                                                                                                     
+        internal static bool CampaignControls => V2Campaign.Active && V2Campaign.Active.Running;
+
+                                                                                                                                       
+                                                       
+        static (string input, string action, string note)[] CampaignControlRows() => new[]
+        {
+            ("WASD", ArenaText.Pair("Move","Move"), ""),
+            (ArenaText.Pair("Mouse","Mouse"), ArenaText.Pair("Aim","Aim"), ""),
+            (ArenaText.Pair("Left mouse button","Left mouse button"), ArenaText.Pair("Use the held weapon","Use the held weapon"),
+                ArenaText.Pair("(hold to charge or to keep firing, depending on the weapon)","(hold to charge or to keep firing, depending on the weapon)")),
+            (ArenaText.Pair("Right mouse button","Right mouse button"), ArenaText.Pair("Swap the two hand slots","Swap the two hand slots"), ""),
+            ("Shift", ArenaText.Pair("Sprint","Sprint"), ""),
+            ("1 / 2 / 3", ArenaText.Pair("Cast a skill; pick that option while a panel is open","Cast a skill; pick that option while a panel is open"), ""),
+            (ArenaText.Pair("Hold E","Hold E"), ArenaText.Pair("Mine (at night, only in a lamp's light)","Mine (at night, only in a lamp's light)"), ""),
+            ("E", ArenaText.Pair("At the base door: enter the base at dusk or night; by day, top up its shield with energy","At the base door: enter the base at dusk or night; by day, top up its shield with energy"), ""),
+            ("F", ArenaText.Pair("Set down a mining lamp","Set down a mining lamp"), ""),
+            ("Esc", ArenaText.Pair("Pause / resume","Pause / resume"), ""),
+            ("R", ArenaText.Pair("Restart on the result screen","Restart on the result screen"), ""),
         };
 
                                                                                                                    

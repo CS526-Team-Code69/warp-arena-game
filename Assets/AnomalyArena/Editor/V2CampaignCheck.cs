@@ -2,7 +2,7 @@
                                                                                                                                         
                                                                                                                                       
                                                                                                                                       
-                                                                                       
+                                                                                                                                      
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -19,7 +19,7 @@ public static class V2CampaignCheck
     static string logPath;
     static int step, day, diedAtNight = -1;
     static float wait, startedAt, stepSince, lastAct, nightSince;
-    static bool ended, shotTaken, raidShot, shipTabOpened, sideBroken, darkNodeShot, nightDeathDone, deathWalletCheck, readyConfirm;
+    static bool ended, shotTaken, raidShot, shipTabOpened, sideBroken, darkNodeShot, nightDeathDone, deathWalletCheck, readyConfirm, readyNoted;
     static readonly Dictionary<Enemy, float> raiderSince = new();
     static readonly HashSet<string> shots = new();
     static V2Campaign campaign;
@@ -115,10 +115,12 @@ public static class V2CampaignCheck
             if (c.TryUpgradeDurability()) { Note($"durability {c.Durability} (base max {c.BaseMaxHp:0})"); any = true; }
             if (c.TryUpgradeShield()) { Note($"shield level {c.ShieldLevel} (cap {c.BaseMaxShield:0})"); any = true; }
             if (c.TryBuyPlayerLevel()) { var gm = GameManager.Instance; Note($"bought player level {gm.progression.Level}: max HP {gm.player.maxHp:0}, max energy {gm.progression.Stats.maxEnergy:0} -> wallet {Wallet}"); any = true; }
-                                                                                                                                     
-            if (boughtResearch < 2 && c.TryBuyWeaponResearch()) { boughtResearch++; Note($"bought weapon research (booked {c.ResearchQueued}) -> wallet {Wallet}"); any = true; }
-            if (boughtEnergyPicks < 2 && c.TryBuyCardPick(CampaignRoom.Energy)) { boughtEnergyPicks++; Note($"bought an Energy Lab card pick -> wallet {Wallet}"); any = true; }
-            if (boughtArmamentPicks < 2 && c.TryBuyCardPick(CampaignRoom.Armament)) { boughtArmamentPicks++; Note($"bought an Armament Bay card pick -> wallet {Wallet}"); any = true; }
+                                                                                                                    
+            if (boughtResearch < 2 && c.TryBuyWeaponDamage()) { boughtResearch++; Note($"bought weapon damage (Mk up) -> wallet {Wallet}"); any = true; }
+            if (boughtEnergyPicks < 1 && c.TryBuyNewWeapon()) { boughtEnergyPicks++; Note($"bought a new weapon -> wallet {Wallet}"); any = true; }
+            if (c.RocketForSale && c.TryBuyRocketLauncher()) { var w = GameManager.Instance.runWeapons; Note($"bought the rocket launcher: hands {w.Hand[0]?.Label} / {w.Hand[1]?.Label} -> wallet {Wallet}"); any = true; }
+            foreach (CampaignUpgrade kind in Enum.GetValues(typeof(CampaignUpgrade)))
+                if (boughtArmamentPicks < 6 && c.TryBuyUpgrade(kind)) { boughtArmamentPicks++; Note($"bought upgrade {kind} -> wallet {Wallet}"); any = true; }
         }
         if (c.LampStock < 3 && c.TryCraftLamp()) Note("crafted a lamp");
         if (c.BaseHp < c.BaseMaxHp - 1f && c.TryRepairHull()) Note("repaired the hull");
@@ -165,7 +167,8 @@ public static class V2CampaignCheck
                 if (InStep > 1.2f) { Shot("02-day0-card"); Go(2); }
                 return;
             case 2:
-                if (campaign.Stage == CampaignStage.Tutorial) { Go(3, 1.5f); return; }
+                if (campaign.Stage == CampaignStage.Tutorial) { Note($"start: phase {gm.RunPhase}, hands {gm.runWeapons.Hand[0]?.Label} / {gm.runWeapons.Hand[1]?.Label} (no crate, no loadout)"); Go(3, 1.5f); return; }
+                if (gm.RunPhase is ArenaUiState.Loadout or ArenaUiState.SupplyDrop && !readyNoted) { readyNoted = true; Note($"PROBLEM: {gm.RunPhase} showed at the start"); }
                 if (!act) return;
                 if (gm.RunPhase == ArenaUiState.SupplyDrop && gm.SupplyDropReady) Cmd(gm, ArenaUiCommand.OpenSupply);
                 else if (gm.RunPhase == ArenaUiState.Loadout) Cmd(gm, ArenaUiCommand.ChooseLoadout, 1);
@@ -239,41 +242,39 @@ public static class V2CampaignCheck
                 campaign.debugPressE = true;
                 Go(7, .6f);
                 return;
-            case 7:                                    
-                if (campaign.Stage != CampaignStage.Base) { if (InStep > 8f) { Note($"expected the base, stage {campaign.Stage}"); Go(9); } return; }
-                if (campaign.BaseAtDawn)
+            case 7:                                                                                                                
+                if (campaign.Stage != CampaignStage.Base)
                 {
-                                                                                                                 
-                    if (campaign.Day == 1 && !shipTabOpened)
-                    {
-                        shipTabOpened = true;
-                        campaign.Ui.ShowTab(CampaignRoom.Ship);
-                        wait = Time.realtimeSinceStartup + 1.2f;
-                        return;
-                    }
-                    if (campaign.Day == 1 && shipTabOpened && !shots.Contains("12s-dawn1-ship-live-view"))
-                    {
-                        Note($"ship tab: live view {(campaign.ShipViewTexture ? "drawn" : "missing")}");
-                        Shot("12s-dawn1-ship-live-view");
-                        wait = Time.realtimeSinceStartup + .6f;
-                        return;
-                    }
-                    int last = campaign.rules.days;
-                    if (campaign.Day >= last - 2 && campaign.Day < last)
-                    {
-                        campaign.DebugGrant(400, 400, 60);
-                        Note($"DEBUG GRANT on the dawn after night {campaign.Day}: +400 alloy +400 energy +60 dark matter, so the check reaches the ending on day {last}");
-                    }
-                    Shop();
-                    Shot($"12-dawn{campaign.Day}");
-                    if (campaign.Day >= campaign.rules.days && campaign.CanIgnite) { Note("ignition ready on the last dawn"); campaign.Ignite(); Go(20); return; }
-                    campaign.LeaveBase();
-                    Go(8, .5f);
+                    if (campaign.Stage == CampaignStage.Day) { Go(8); return; }
+                    if (InStep > 8f) { Note($"expected the base, stage {campaign.Stage}"); Go(9); }
                     return;
                 }
-                Shot($"11-base-night{campaign.Day}");
+                                                                                                                      
+                if (campaign.Day == 1 && !shipTabOpened)
+                {
+                    shipTabOpened = true;
+                    campaign.Ui.ShowTab(CampaignRoom.Ship);
+                    wait = Time.realtimeSinceStartup + 1.2f;
+                    return;
+                }
+                if (campaign.Day == 1 && shipTabOpened && !shots.Contains("12s-night1-ship-live-view"))
+                {
+                    Note($"ship tab: live view {(campaign.ShipViewTexture ? "drawn" : "missing")}");
+                    Shot("12s-night1-ship-live-view");
+                    wait = Time.realtimeSinceStartup + .6f;
+                    return;
+                }
+                int lastDay = campaign.rules.days;
+                if (campaign.Day >= lastDay - 2 && campaign.Day < lastDay)
+                {
+                    campaign.DebugGrant(400, 400, 60);
+                    Note($"DEBUG GRANT at the base on night {campaign.Day}: +400 alloy +400 energy +60 dark matter, so the check reaches the ending on day {lastDay}");
+                }
                 Shop();
+                Shot($"11-base-night{campaign.Day}");
+                if (campaign.Day >= campaign.rules.days && campaign.CanIgnite) { Note("ignition ready on the last night"); campaign.Ignite(); Go(20); return; }
                 campaign.WaitForDawn();
+                Go(8, .5f);
                 return;
             case 8:                                       
                 if (campaign.Stage == CampaignStage.Day) { day = campaign.Day; raiderSince.Clear(); raidShot = false; Note($"day {day} begins: level {gm.progression.Level}, banked picks {gm.progression.BankedDrafts}, weapons {gm.runWeapons.Hand[0]?.Label} / {gm.runWeapons.Hand[1]?.Label}"); Go(9); return; }
@@ -292,7 +293,7 @@ public static class V2CampaignCheck
                         Cmd(gm, ArenaUiCommand.ChooseCard, 0); break;
                     case ArenaUiState.ReplaceSkill: Cmd(gm, ArenaUiCommand.ReplaceSkill, 0); break;
                                                                                                                                                        
-                    case ArenaUiState.Ready: readyConfirm = !readyConfirm; Cmd(gm, readyConfirm ? ArenaUiCommand.StartNextWave : ArenaUiCommand.ConfirmEarlyStart); break;
+                    case ArenaUiState.Ready: if (!readyNoted) { readyNoted = true; Note("PROBLEM: the ready panel showed in the campaign"); } readyConfirm = !readyConfirm; Cmd(gm, readyConfirm ? ArenaUiCommand.StartNextWave : ArenaUiCommand.ConfirmEarlyStart); break;
                 }
                 if (InStep > 60f) End($"stuck in the dawn build at {gm.RunPhase}");
                 return;

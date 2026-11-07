@@ -6,12 +6,7 @@ using UnityEngine.UI;
 
 namespace AnomalyArena
 {
-                 
-                                                                                                                                         
-                                                                                                                                        
-                                                                                                                                      
-                                                             
-                  
+
     public sealed class V2CampaignUi : MonoBehaviour
     {
         V2Campaign campaign;
@@ -21,21 +16,23 @@ namespace AnomalyArena
         RectTransform root, hud, baseScreen, titleCard, cgScreen, baseBar;
         Image cgVignette;
         Text currencyText, baseText, objectiveText, promptText, flashText, subtitleSpeaker, subtitleLine, titleText, titleSub, cgSkip, markerText;
-        Image baseHpFill, baseShieldFill, whiteOut, markerIcon, subtitleBack;
+        Image baseHpFill, baseShieldFill, whiteOut, markerIcon, subtitleBack, flashBack;
+
+        Image markerPulse, objectiveBack; RectTransform markerArrow; string objectiveBody;
         readonly Image[] sidePips = new Image[4];
         Image[] currencyIcons;
         Text[] currencyLabels;
         RawImage cgPicture;
         float flashUntil, subtitleUntil, titleUntil, titleLength, whiteOutClock, whiteOutLength, refreshAt;
         Vector3? marker;
-                     
+
         CampaignRoom tab = CampaignRoom.Control;
         Text baseHeading, baseCurrencies, roomTitle, roomBody;
         RawImage roomPicture;
         RectTransform tabColumn, actionColumn, leaveRow;
         readonly List<GameObject> actionButtons = new();
         int panelVersion = -1;
-             
+
         int cgShot; float cgClock, cgLength; Texture cgTexture, cgFrontTexture;
         RawImage cgForeground;
         public bool CgSkipped { get; private set; }
@@ -67,7 +64,7 @@ namespace AnomalyArena
             font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
 
             hud = MakeRect("Hud", root, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
-                                     
+
             var currency = Box("Currencies", hud, new Vector2(1f, 1f), new Vector2(-24f, -20f), new Vector2(430f, 44f), new Vector2(1f, 1f), Panel);
             currencyIcons = new Image[3];
             currencyLabels = new Text[3];
@@ -79,7 +76,7 @@ namespace AnomalyArena
             }
             currencyText = Label("Text", currency, "", 17, Soft, TextAnchor.MiddleCenter);
             Stretch(currencyText.rectTransform, 8f, 4f, 8f, 4f);
-                                                         
+
             var bar = baseBar = Box("BaseBar", hud, new Vector2(.5f, 1f), new Vector2(0f, -112f), new Vector2(480f, 54f), new Vector2(.5f, 1f), Panel);
             baseText = Label("Text", bar, "", 15, Soft, TextAnchor.UpperCenter);
             Stretch(baseText.rectTransform, 8f, 2f, 8f, 26f);
@@ -90,38 +87,54 @@ namespace AnomalyArena
             {
                 sidePips[i] = Box("Side" + i, bar, new Vector2(.5f, 0f), new Vector2(-232f + (i % 2) * 0f, 0f), new Vector2(12f, 12f), new Vector2(.5f, .5f), Color.white).GetComponent<Image>();
             }
-                                                                                                 
+
             Place(sidePips[0].rectTransform, new Vector2(-228f, 40f)); Place(sidePips[2].rectTransform, new Vector2(-228f, 14f));
             Place(sidePips[3].rectTransform, new Vector2(-241f, 27f)); Place(sidePips[1].rectTransform, new Vector2(-215f, 27f));
-                               
-            objectiveText = Label("Objective", hud, "", 18, Accent, TextAnchor.UpperLeft);
-            Anchor(objectiveText.rectTransform, new Vector2(0f, 1f), new Vector2(24f, -210f), new Vector2(520f, 60f), new Vector2(0f, 1f));
+
+            objectiveBack = Box("ObjectiveBack", hud, new Vector2(0f, 1f), new Vector2(14f, -202f), new Vector2(620f, 78f), new Vector2(0f, 1f), new Color(0f, .02f, .06f, .78f)).GetComponent<Image>();
+            Box("ObjectiveBar", objectiveBack.rectTransform, new Vector2(0f, .5f), Vector2.zero, new Vector2(6f, 78f), new Vector2(0f, .5f), Accent);
+            objectiveBack.gameObject.SetActive(false);
+            objectiveText = Label("Objective", hud, "", 24, Color.white, TextAnchor.UpperLeft);
+            objectiveText.fontStyle = FontStyle.Bold;
+            Anchor(objectiveText.rectTransform, new Vector2(0f, 1f), new Vector2(30f, -210f), new Vector2(596f, 66f), new Vector2(0f, 1f));
             Shadow(objectiveText);
-                                                 
+
             promptText = Label("Prompt", hud, "", 20, Color.white, TextAnchor.MiddleCenter);
             Anchor(promptText.rectTransform, new Vector2(.5f, 0f), new Vector2(0f, 214f), new Vector2(900f, 36f), new Vector2(.5f, .5f));
             Shadow(promptText);
-                                                                                      
-            markerIcon = Box("Marker", hud, new Vector2(0f, 0f), Vector2.zero, new Vector2(22f, 22f), new Vector2(.5f, .5f), Accent).GetComponent<Image>();
-            markerIcon.rectTransform.localRotation = Quaternion.Euler(0f, 0f, 45f);
-            markerText = Label("MarkerText", hud, "", 14, Accent, TextAnchor.MiddleCenter);
-            markerText.rectTransform.sizeDelta = new Vector2(120f, 22f);
 
-                                                       
+            markerPulse = Box("MarkerPulse", hud, new Vector2(0f, 0f), Vector2.zero, new Vector2(36f, 36f), new Vector2(.5f, .5f), Accent).GetComponent<Image>();
+            markerPulse.rectTransform.localRotation = Quaternion.Euler(0f, 0f, 45f);
+            markerIcon = Box("Marker", hud, new Vector2(0f, 0f), Vector2.zero, new Vector2(36f, 36f), new Vector2(.5f, .5f), Accent).GetComponent<Image>();
+            markerIcon.rectTransform.localRotation = Quaternion.Euler(0f, 0f, 45f);
+            Box("MarkerCore", markerIcon.rectTransform, new Vector2(.5f, .5f), Vector2.zero, new Vector2(14f, 14f), new Vector2(.5f, .5f), Color.white);
+
+            markerArrow = MakeRect("MarkerArrow", hud, Vector2.zero, Vector2.zero, Vector2.zero, new Vector2(40f, 40f));
+            for (int i = 0; i < 2; i++)
+                Box("ArrowBar" + i, markerArrow, new Vector2(.5f, .5f), new Vector2(14f, 0f), new Vector2(30f, 9f), new Vector2(1f, .5f), Accent).localRotation = Quaternion.Euler(0f, 0f, i == 0 ? -40f : 40f);
+            markerArrow.gameObject.SetActive(false);
+            markerText = Label("MarkerText", hud, "", 20, Color.white, TextAnchor.MiddleCenter);
+            markerText.fontStyle = FontStyle.Bold;
+            markerText.rectTransform.sizeDelta = new Vector2(160f, 28f);
+            Shadow(markerText);
+
             subtitleBack = Box("Subtitle", root, new Vector2(.5f, 0f), new Vector2(0f, 318f), new Vector2(980f, 70f), new Vector2(.5f, .5f), new Color(0f, 0f, 0f, .55f)).GetComponent<Image>();
             subtitleSpeaker = Label("Speaker", subtitleBack.rectTransform, "", 15, SystemColour, TextAnchor.UpperCenter);
             Stretch(subtitleSpeaker.rectTransform, 12f, 4f, 12f, 46f);
             subtitleLine = Label("Line", subtitleBack.rectTransform, "", 21, Color.white, TextAnchor.MiddleCenter);
             Stretch(subtitleLine.rectTransform, 16f, 22f, 16f, 4f);
             subtitleBack.gameObject.SetActive(false);
-                             
-            flashText = Label("Flash", root, "", 22, Color.white, TextAnchor.MiddleCenter);
-            Anchor(flashText.rectTransform, new Vector2(.5f, .5f), new Vector2(0f, 150f), new Vector2(1100f, 70f), new Vector2(.5f, .5f));
+
+            flashBack = Box("Flash", root, new Vector2(.5f, .5f), new Vector2(0f, 150f), new Vector2(1100f, 64f), new Vector2(.5f, .5f), new Color(0f, 0f, 0f, .7f)).GetComponent<Image>();
+            flashText = Label("Text", flashBack.rectTransform, "", 22, Color.white, TextAnchor.MiddleCenter);
+            Stretch(flashText.rectTransform, 18f, 4f, 18f, 4f);
             Shadow(flashText);
+            flashBack.gameObject.SetActive(false);
 
             BuildBasePanel();
 
-                                                  
+            flashBack.transform.SetAsLastSibling();
+
             titleCard = Box("TitleCard", root, Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero, Color.black);
             StretchFull(titleCard);
             titleText = Label("Title", titleCard, "", 64, Color.white, TextAnchor.MiddleCenter);
@@ -141,7 +154,7 @@ namespace AnomalyArena
             Anchor(cgForeground.rectTransform, new Vector2(.5f, .5f), new Vector2(0f, 30f), new Vector2(1080f, 720f), new Vector2(.5f, .5f));
             cgForeground.raycastTarget = false;
             cgForeground.color = new Color(1f, 1f, 1f, 0f);
-                                                                         
+
             cgVignette = new GameObject("Vignette", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
             cgVignette.rectTransform.SetParent(cgScreen, false);
             Stretch(cgVignette.rectTransform, 0f, 0f, 0f, 0f);
@@ -155,7 +168,7 @@ namespace AnomalyArena
             skip.transition = Selectable.Transition.None;
             skip.onClick.AddListener(() => CgSkipped = true);
             cgScreen.gameObject.SetActive(false);
-                                           
+
             subtitleBack.transform.SetAsLastSibling();
 
             whiteOut = Box("WhiteOut", root, Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero, new Color(1f, 1f, 1f, 0f)).GetComponent<Image>();
@@ -164,8 +177,6 @@ namespace AnomalyArena
             HideAll();
         }
 
-                                   
-
         public void HideAll()
         {
             if (hud) hud.gameObject.SetActive(false);
@@ -173,6 +184,7 @@ namespace AnomalyArena
             if (titleCard) titleCard.gameObject.SetActive(false);
             if (cgScreen) cgScreen.gameObject.SetActive(false);
             if (subtitleBack) subtitleBack.gameObject.SetActive(false);
+            if (flashBack) flashBack.gameObject.SetActive(false);
             flashUntil = 0f;
         }
 
@@ -195,10 +207,35 @@ namespace AnomalyArena
 
         public void ClearSubtitle() { subtitleUntil = 0f; if (subtitleBack) subtitleBack.gameObject.SetActive(false); }
 
-        public void Flash(string text, float seconds = 2.4f) { ApplyFont(); flashText.text = text; flashUntil = Time.unscaledTime + seconds; }
+        public void Flash(string text, float seconds = 2.4f)
+        {
+            ApplyFont();
+            flashText.text = text;
+
+            flashBack.rectTransform.sizeDelta = new Vector2(Mathf.Clamp(flashText.preferredWidth + 48f, 320f, 1100f), 64f);
+            flashUntil = Time.unscaledTime + seconds;
+            flashBack.gameObject.SetActive(!string.IsNullOrEmpty(text));
+        }
         public void ClearFlash() => flashUntil = 0f;
 
-        public void SetObjective(string text, Vector3? point) { objectiveText.text = string.IsNullOrEmpty(text) ? "" : ArenaText.Pair("GOAL: ","GOAL: ") + text; marker = point; }
+        public void SetObjective(string text, Vector3? point) { objectiveBody = text; marker = point; WriteObjective(null); }
+
+        void WriteObjective(string way)
+        {
+            bool any = !string.IsNullOrEmpty(objectiveBody);
+            objectiveBack.gameObject.SetActive(any);
+            objectiveText.text = !any ? "" : $"<color=#{ColorUtility.ToHtmlStringRGB(Accent)}>{ArenaText.Pair("GOAL: ","GOAL: ")}</color>{objectiveBody}" + (string.IsNullOrEmpty(way) ? "" : "\n" + way);
+        }
+
+        static string ScreenWay(Vector2 d)
+        {
+            int sector = (int)(Mathf.Repeat(Mathf.Atan2(d.y, d.x) * Mathf.Rad2Deg + 22.5f, 360f) / 45f);
+            return sector switch
+            {
+                0 => ArenaText.Pair("right","right"), 1 => ArenaText.Pair("up-right","up-right"), 2 => ArenaText.Pair("up","up"), 3 => ArenaText.Pair("up-left","up-left"),
+                4 => ArenaText.Pair("left","left"), 5 => ArenaText.Pair("down-left","down-left"), 6 => ArenaText.Pair("down","down"), _ => ArenaText.Pair("down-right","down-right")
+            };
+        }
 
         public void WhiteOut(float seconds) { whiteOutClock = 0f; whiteOutLength = Mathf.Max(.1f, seconds); }
 
@@ -213,8 +250,6 @@ namespace AnomalyArena
         }
         public void CgShot(Texture picture, float seconds, int shot) => CgShot(picture, null, seconds, shot);
 
-                                                                                                                                           
-                                                                                   
         public void CgShot(Texture picture, Texture front, float seconds, int shot)
         {
             cgTexture = picture; cgFrontTexture = picture ? front : null; cgShot = shot; cgClock = 0f; cgLength = Mathf.Max(.1f, seconds);
@@ -228,8 +263,6 @@ namespace AnomalyArena
             cgForeground.color = new Color(1f, 1f, 1f, 0f);
         }
 
-                                                                                                                                              
-                                                                                                               
         public void RouteTitleStart()
         {
             var v2 = gm && gm.hud ? gm.hud.v2Hud : null;
@@ -243,8 +276,6 @@ namespace AnomalyArena
                 return;
             }
         }
-
-                            
 
         void Update()
         {
@@ -265,9 +296,9 @@ namespace AnomalyArena
                 if (left <= 0f) titleCard.gameObject.SetActive(false);
             }
             if (subtitleBack.gameObject.activeSelf && now > subtitleUntil) subtitleBack.gameObject.SetActive(false);
-                                                                                                              
+
             subtitleBack.rectTransform.anchoredPosition = new Vector2(0f, baseScreen.gameObject.activeSelf ? 38f : 318f);
-            flashText.gameObject.SetActive(now < flashUntil);
+            flashBack.gameObject.SetActive(now < flashUntil && !string.IsNullOrEmpty(flashText.text));
             if (whiteOutLength > 0f)
             {
                 whiteOutClock += Time.unscaledDeltaTime;
@@ -282,27 +313,25 @@ namespace AnomalyArena
         {
             cgClock += Time.unscaledDeltaTime;
             float t = Mathf.Clamp01(cgClock / cgLength);
-                                                                                                      
+
             float zoom = Mathf.Lerp(.94f, .82f, t);
             Vector2 from = cgShot % 2 == 0 ? new Vector2(.2f, .5f) : new Vector2(.8f, .3f);
             Vector2 to = cgShot % 2 == 0 ? new Vector2(.7f, .4f) : new Vector2(.3f, .6f);
             Vector2 d = Vector2.Lerp(from, to, t);
             cgPicture.uvRect = new Rect((1f - zoom) * d.x, (1f - zoom) * d.y, zoom, zoom);
             float fade = Mathf.Clamp01(Mathf.Min(cgClock / .6f, (cgLength - cgClock) / .6f));
-                                                                                                                                   
-                                                                           
+
             var tint = new Color(fade, .93f * fade, .82f * fade, 1f);
             if (cgTexture) cgPicture.color = tint;
             if (cgFrontTexture)
             {
-                                                                                                                                
+
                 float zoomFront = Mathf.Lerp(.935f, .76f, t);
                 cgForeground.uvRect = new Rect((1f - zoomFront) * d.x, (1f - zoomFront) * d.y, zoomFront, zoomFront);
                 cgForeground.color = tint;
             }
         }
 
-                                                                                                        
         public void Refresh()
         {
             if (!campaign || !gm) return;
@@ -347,24 +376,43 @@ namespace AnomalyArena
         void PlaceMarker()
         {
             bool show = marker.HasValue && gm.cam && gm.player;
-            markerIcon.gameObject.SetActive(show); markerText.gameObject.SetActive(show);
-            if (!show) return;
+            markerIcon.gameObject.SetActive(show); markerText.gameObject.SetActive(show); markerPulse.gameObject.SetActive(show);
+            if (!show) { markerArrow.gameObject.SetActive(false); return; }
             Vector3 world = marker.Value + Vector3.up * 1.5f;
             Vector3 sp = gm.cam.WorldToScreenPoint(world);
             var rect = root.rect;
             float scale = root.lossyScale.x > 0f ? 1f / root.lossyScale.x : 1f;
             Vector2 p = new(sp.x * scale, sp.y * scale);
             if (sp.z < 0f) p = new Vector2(rect.width - p.x, rect.height - p.y);
-            Vector2 clamped = new(Mathf.Clamp(p.x, 40f, rect.width - 40f), Mathf.Clamp(p.y, 60f, rect.height - 140f));
-            markerIcon.rectTransform.anchoredPosition = clamped;
-            markerText.rectTransform.anchoredPosition = clamped + new Vector2(0f, -22f);
+
+            Vector2 clamped = new(Mathf.Clamp(p.x, 60f, rect.width - 60f), Mathf.Clamp(p.y, rect.height * .19f, rect.height * .8f));
+
+            bool offScreen = (clamped - p).sqrMagnitude > 1f;
+            Vector3 playerPoint = gm.cam.WorldToScreenPoint(gm.player.Position);
+            Vector2 from = new(playerPoint.x * scale, playerPoint.y * scale);
+            Vector2 dir = (p - from).sqrMagnitude > 1f ? (p - from).normalized : Vector2.up;
+            Vector2 icon = clamped;
+            markerArrow.gameObject.SetActive(offScreen);
+            if (offScreen)
+            {
+                Vector2 edge = (p - new Vector2(rect.width * .5f, rect.height * .5f)).normalized;
+                markerArrow.anchoredPosition = clamped;
+                markerArrow.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(edge.y, edge.x) * Mathf.Rad2Deg);
+                icon = clamped - edge * 46f;
+            }
+            markerIcon.rectTransform.anchoredPosition = icon;
+            markerPulse.rectTransform.anchoredPosition = icon;
+            markerText.rectTransform.anchoredPosition = icon + new Vector2(0f, -38f);
             float distance = Query.Flat(marker.Value - gm.player.Position).magnitude;
             markerText.text = $"{distance:0} m";
-            float pulse = .75f + .25f * Mathf.Sin(Time.unscaledTime * 5f);
-            markerIcon.color = new Color(Accent.r, Accent.g, Accent.b, pulse);
+            float wave = Mathf.Sin(Time.unscaledTime * 6f), ring = Mathf.Repeat(Time.unscaledTime * 1.1f, 1f);
+            markerIcon.color = new Color(Accent.r, Accent.g, Accent.b, .85f + .15f * wave);
+            markerIcon.rectTransform.localScale = Vector3.one * (1f + .12f * wave);
+            markerPulse.rectTransform.localScale = Vector3.one * (1f + 1.8f * ring);
+            markerPulse.color = new Color(Accent.r, Accent.g, Accent.b, .7f * (1f - ring));
+            WriteObjective(distance < 3f ? ArenaText.Pair("right here","right here")
+                : ArenaText.Pair($"{distance:0} m to the {ScreenWay(dir)} (follow the blue marker)",$"{distance:0} m to the {ScreenWay(dir)} (follow the blue marker)"));
         }
-
-                                 
 
         void BuildBasePanel()
         {
@@ -404,7 +452,6 @@ namespace AnomalyArena
 
         public void HideBase() { baseScreen.gameObject.SetActive(false); }
 
-                                                                                                                               
         public void ShowTab(CampaignRoom room)
         {
             if (!BaseOpen) return;
@@ -414,7 +461,7 @@ namespace AnomalyArena
 
         void Act(Func<bool> action, string failure)
         {
-            if (!action()) Flash(failure);
+            if (!action() && !string.IsNullOrEmpty(failure)) Flash(failure);
             RefreshBasePanel(true);
         }
 
@@ -429,7 +476,7 @@ namespace AnomalyArena
             int version = Hash(c);
             if (!rebuild && version == panelVersion) return;
             panelVersion = version;
-                   
+
             foreach (Transform child in tabColumn) Destroy(child.gameObject);
             for (int i = 0; i < 4; i++)
             {
@@ -451,13 +498,13 @@ namespace AnomalyArena
                     label.alignment = TextAnchor.MiddleLeft;
                 }
             }
-                               
+
             roomPicture.texture = Picture(tab);
             roomPicture.color = roomPicture.texture ? Color.white : new Color(.12f, .16f, .22f, 1f);
             var current = c.Room(tab);
             roomTitle.text = V2Campaign.RoomName(tab) + (current.damaged ? ArenaText.Pair(" (BROKEN)"," (BROKEN)") : "");
             roomBody.text = RoomText(tab);
-                      
+
             foreach (var go in actionButtons) Destroy(go);
             actionButtons.Clear();
             var actions = new List<(string label, Func<bool> act, string fail, bool enabled)>();
@@ -481,27 +528,49 @@ namespace AnomalyArena
                     break;
                 default:
                     if (c.NextLevelCost(tab) is { } cost) actions.Add((UpgradeLabel(tab, cost), () => c.TryUpgradeRoom(tab), UpgradeFail(tab, cost), c.ControlWorks && !current.damaged));
-                                                                                                                                                 
-                    if (tab == CampaignRoom.Armament && current.level >= 1 && c.PlayerLevelCost is { } lc)
-                        actions.Add((ArenaText.Pair(                                $"Player to level {gm.progression.Level + 1} (max HP +{Mathf.RoundToInt(gm.progression.Rules.maxHpPerLevel)}, max energy +{Mathf.RoundToInt(gm.progression.Rules.maxEnergyPerLevel)}) · {CostText(lc)}",                                $"Player to level {gm.progression.Level + 1} (max HP +{Mathf.RoundToInt(gm.progression.Rules.maxHpPerLevel)}, max energy +{Mathf.RoundToInt(gm.progression.Rules.maxEnergyPerLevel)}) · {CostText(lc)}"),
-                            c.TryBuyPlayerLevel, current.damaged ? ArenaText.Pair("The Armament Bay is broken: repair it first","The Armament Bay is broken: repair it first") : Why(lc), !current.damaged));
+
                     string broken = ArenaText.Pair("This room is broken: repair it first","This room is broken: repair it first");
-                    if (tab == CampaignRoom.Armament && current.level >= 1)
+                    string Short(CampaignCost price) => current.damaged ? broken : c.CanAfford(price) ? null : Why(price);
+                    if (tab == CampaignRoom.Armament)
                     {
-                        var rc = c.ResearchCost;
-                        string brings = current.level >= 2 ? ArenaText.Pair("upgrades or new weapons","upgrades or new weapons") : ArenaText.Pair("upgrades","upgrades");
-                        actions.Add((ArenaText.Pair($"Weapon research ({brings} at dawn, {c.ResearchQueued} booked) · {CostText(rc)}",$"Weapon research ({brings} at dawn, {c.ResearchQueued} booked) · {CostText(rc)}"),
-                            c.TryBuyWeaponResearch, current.damaged ? broken : Why(rc), !current.damaged));
+
+                        if (current.level >= 1 && c.PlayerLevelCost is { } lc)
+                            actions.Add((ArenaText.Pair(                                    $"Armor upgrade to level {gm.progression.Level + 1} (max HP +{Mathf.RoundToInt(gm.progression.Rules.maxHpPerLevel)}, max energy +{Mathf.RoundToInt(gm.progression.Rules.maxEnergyPerLevel)}) · {CostText(lc)}",                                    $"Armor upgrade to level {gm.progression.Level + 1} (max HP +{Mathf.RoundToInt(gm.progression.Rules.maxHpPerLevel)}, max energy +{Mathf.RoundToInt(gm.progression.Rules.maxEnergyPerLevel)}) · {CostText(lc)}"),
+                                c.TryBuyPlayerLevel, current.damaged ? broken : Why(lc), !current.damaged));
+                        if (current.level >= 1)
+                        {
+                            var boostPrice = c.WeaponDamageCost;
+                            actions.Add((ArenaText.Pair($"Boost weapon damage: a higher Mk, the weapon in hand first · {CostText(boostPrice)}",$"Boost weapon damage: a higher Mk, the weapon in hand first · {CostText(boostPrice)}"),
+                                c.TryBuyWeaponDamage, Short(boostPrice), !current.damaged));
+                        }
+                        if (current.level >= 2)
+                        {
+                            var weaponPrice = c.NewWeaponCost;
+                            bool full = c.WeaponSlotsFull;
+                            actions.Add((full ? ArenaText.Pair("Research a new weapon: every slot is taken","Research a new weapon: every slot is taken")
+                                    : ArenaText.Pair($"Research a new weapon for a free slot · {CostText(weaponPrice)}",$"Research a new weapon for a free slot · {CostText(weaponPrice)}"),
+                                c.TryBuyNewWeapon, Short(weaponPrice), !current.damaged && !full));
+                        }
+                        if (current.level >= 2 && c.RocketForSale)
+                        {
+                            var rocketPrice = c.RocketCost;
+                            var gone = c.RocketReplaces;
+                            actions.Add((gone != null
+                                    ? ArenaText.Pair($"Unlock the rocket launcher: it replaces the {gone.FormName} not in hand · {CostText(rocketPrice)}",$"Unlock the rocket launcher: it replaces the {gone.FormName} not in hand · {CostText(rocketPrice)}")
+                                    : ArenaText.Pair($"Unlock the rocket launcher · {CostText(rocketPrice)}",$"Unlock the rocket launcher · {CostText(rocketPrice)}"),
+                                c.TryBuyRocketLauncher, Short(rocketPrice), !current.damaged));
+                        }
                     }
-                    if (c.CardPickForSale(tab) || current.damaged && (tab == CampaignRoom.Energy ? current.level >= 1 : tab == CampaignRoom.Armament && current.level >= 2))
-                    {
-                        var pc = c.CardPickCost(tab);
-                        string kinds = tab == CampaignRoom.Energy
-                            ? current.level >= 3 ? ArenaText.Pair("stat, skill or Infusion","stat, skill or Infusion") : current.level >= 2 ? ArenaText.Pair("stat or skill","stat or skill") : ArenaText.Pair("stat","stat")
-                            : current.level >= 3 ? ArenaText.Pair("Tame or Twist","Tame or Twist") : ArenaText.Pair("Tame","Tame");
-                        actions.Add((ArenaText.Pair($"Buy a card pick ({kinds} cards, one of three) · {CostText(pc)}",$"Buy a card pick ({kinds} cards, one of three) · {CostText(pc)}"),
-                            () => c.TryBuyCardPick(tab), current.damaged ? broken : Why(pc), !current.damaged));
-                    }
+                    else if (tab == CampaignRoom.Energy && current.level >= 1)
+                        actions.Add(UpgradeAction(CampaignUpgrade.Stat, ArenaText.Pair("one random stat rises","one random stat rises"), current, Short));
+                    if (tab == CampaignRoom.Armament && current.level >= 2)
+                        actions.Add(UpgradeAction(CampaignUpgrade.Tame, ArenaText.Pair("a weapon gains its Tame","a weapon gains its Tame"), current, Short));
+                    if (tab == CampaignRoom.Armament && current.level >= 3)
+                        actions.Add(UpgradeAction(CampaignUpgrade.Twist, ArenaText.Pair("a weapon gains its Twist","a weapon gains its Twist"), current, Short));
+                    if (tab == CampaignRoom.Energy && current.level >= 2)
+                        actions.Add(UpgradeAction(CampaignUpgrade.Skill, ArenaText.Pair("a new skill or a skill level","a new skill or a skill level"), current, Short));
+                    if (tab == CampaignRoom.Energy && current.level >= 3)
+                        actions.Add(UpgradeAction(CampaignUpgrade.Infusion, ArenaText.Pair("a weapon takes an element","a weapon takes an element"), current, Short));
                     break;
             }
             for (int i = 0; i < actions.Count; i++)
@@ -513,7 +582,7 @@ namespace AnomalyArena
                 b.interactable = enabled;
                 actionButtons.Add(b.gameObject);
             }
-                        
+
             foreach (Transform child in leaveRow) Destroy(child.gameObject);
             var leaves = new List<(string label, Action act)>();
             if (c.NightTimeLeft(out float seconds))
@@ -523,7 +592,7 @@ namespace AnomalyArena
             }
             else if (c.Day == 0 && !c.BaseAtDawn) leaves.Add((ArenaText.Pair("Head out (night falls)","Head out (night falls)"), c.LeaveBase));
             else if (c.Day >= r.days && c.CanIgnite) leaves.Add((ArenaText.Pair("Start the ignition sequence","Start the ignition sequence"), c.Ignite));
-            else leaves.Add((c.Day >= r.days ? ArenaText.Pair($"Tank not full · start day {c.Day + 1}",$"Tank not full · start day {c.Day + 1}") : ArenaText.Pair("On to the build (air drops and cards)","On to the build (air drops and cards)"), c.LeaveBase));
+            else leaves.Add((c.Day >= r.days ? ArenaText.Pair($"Tank not full · start day {c.Day + 1}",$"Tank not full · start day {c.Day + 1}") : ArenaText.Pair($"Head out: start day {c.Day + 1}",$"Head out: start day {c.Day + 1}"), c.LeaveBase));
             for (int i = 0; i < leaves.Count; i++)
             {
                 var (label, act) = leaves[i];
@@ -531,6 +600,13 @@ namespace AnomalyArena
                 var rect = (RectTransform)b.transform;
                 rect.anchorMin = rect.anchorMax = new Vector2(.5f, 0f); rect.pivot = new Vector2(.5f, 0f);
             }
+        }
+
+        (string label, Func<bool> act, string fail, bool enabled) UpgradeAction(CampaignUpgrade kind, string effect, V2Campaign.RoomState room, Func<CampaignCost, string> shortOf)
+        {
+            var price = campaign.UpgradeCost(kind);
+            string name = V2Campaign.UpgradeName(kind);
+            return (ArenaText.Pair($"{name}: {effect} · {CostText(price)}",$"{name}: {effect} · {CostText(price)}"), () => campaign.TryBuyUpgrade(kind), shortOf(price), !room.damaged);
         }
 
         int Hash(V2Campaign c)
@@ -577,8 +653,6 @@ namespace AnomalyArena
             return room switch { CampaignRoom.Control => art.control, CampaignRoom.Armament => art.armament, CampaignRoom.Energy => art.energyLab, _ => art.shipBay };
         }
 
-                                                                                                                                         
-                                                                                                                                                  
         Texture Picture(CampaignRoom room)
         {
             if (room == CampaignRoom.Ship && campaign.ShipViewTexture) return campaign.ShipViewTexture;
@@ -594,14 +668,12 @@ namespace AnomalyArena
             };
         }
 
-                                                                                                                                                    
         static Texture LevelPicture(Texture2D[] levels, int level, Texture2D first)
         {
             int i = level - 2;
             return levels != null && i >= 0 && i < levels.Length && levels[i] ? levels[i] : first;
         }
 
-                                                                                                                                                 
         string RoomText(CampaignRoom room)
         {
             var c = campaign;
@@ -624,19 +696,19 @@ namespace AnomalyArena
                 case CampaignRoom.Armament:
                     return string.Join("\n", new[]
                     {
-                        lv >= 1 ? Done(true) + ArenaText.Pair("Level 1: buy player levels here with alloy and energy (each adds max HP and max energy); weapon research, delivered at the dawn build as weapon upgrades (Mk)","Level 1: buy player levels here with alloy and energy (each adds max HP and max energy); weapon research, delivered at the dawn build as weapon upgrades (Mk)") : Hidden(1),
-                        lv >= 2 ? Done(true) + ArenaText.Pair("Level 2: weapon research also brings new weapons; Tame weapon cards for sale","Level 2: weapon research also brings new weapons; Tame weapon cards for sale") : Hidden(2),
-                        lv >= 3 ? Done(true) + ArenaText.Pair("Level 3: Twist weapon cards for sale","Level 3: Twist weapon cards for sale") : Hidden(3),
-                        lv >= 1 ? ArenaText.Pair($"\nPlayer level {gm.progression.Level}: max HP {Mathf.RoundToInt(gm.player.maxHp)}, max energy {Mathf.RoundToInt(gm.progression.Stats.maxEnergy)}. Kills drop materials and no XP: levels, weapons and card picks are bought at the base.",$"\nPlayer level {gm.progression.Level}: max HP {Mathf.RoundToInt(gm.player.maxHp)}, max energy {Mathf.RoundToInt(gm.progression.Stats.maxEnergy)}. Kills drop materials and no XP: levels, weapons and card picks are bought at the base.")
-                            : ArenaText.Pair("\nUntil it is built: no player levels and no weapon research.","\nUntil it is built: no player levels and no weapon research.")
+                        lv >= 1 ? Done(true) + ArenaText.Pair("Level 1: armor upgrades (each adds max HP and max energy); weapon damage boosts (a higher Mk)","Level 1: armor upgrades (each adds max HP and max energy); weapon damage boosts (a higher Mk)") : Hidden(1),
+                        lv >= 2 ? Done(true) + ArenaText.Pair("Level 2: research new weapons; tame weapons","Level 2: research new weapons; tame weapons") : Hidden(2),
+                        lv >= 3 ? Done(true) + ArenaText.Pair("Level 3: weapon twists","Level 3: weapon twists") : Hidden(3),
+                        lv >= 1 ? ArenaText.Pair($"\nArmor level {gm.progression.Level}: max HP {Mathf.RoundToInt(gm.player.maxHp)}, max energy {Mathf.RoundToInt(gm.progression.Stats.maxEnergy)}. Kills drop materials and no XP; what you buy here takes effect at once.",$"\nArmor level {gm.progression.Level}: max HP {Mathf.RoundToInt(gm.player.maxHp)}, max energy {Mathf.RoundToInt(gm.progression.Stats.maxEnergy)}. Kills drop materials and no XP; what you buy here takes effect at once.")
+                            : ArenaText.Pair("\nUntil it is built: no armor upgrades and no weapon boosts.","\nUntil it is built: no armor upgrades and no weapon boosts.")
                     });
                 case CampaignRoom.Energy:
                     return string.Join("\n", new[]
                     {
-                        lv >= 1 ? Done(true) + ArenaText.Pair("Level 1: change the body (stat cards)","Level 1: change the body (stat cards)") : Hidden(1),
-                        lv >= 2 ? Done(true) + ArenaText.Pair("Level 2: alien skills (skill cards)","Level 2: alien skills (skill cards)") : Hidden(2),
-                        lv >= 3 ? Done(true) + ArenaText.Pair("Level 3: weapon enchanting (Infusion cards)","Level 3: weapon enchanting (Infusion cards)") : Hidden(3),
-                        ArenaText.Pair("\nCard picks are bought here, one of three each, offering only the kinds this room has unlocked.","\nCard picks are bought here, one of three each, offering only the kinds this room has unlocked.")
+                        lv >= 1 ? Done(true) + ArenaText.Pair("Level 1: upgrade the body (one random stat rises)","Level 1: upgrade the body (one random stat rises)") : Hidden(1),
+                        lv >= 2 ? Done(true) + ArenaText.Pair("Level 2: unlock alien skills (a new skill or a level for one you know)","Level 2: unlock alien skills (a new skill or a level for one you know)") : Hidden(2),
+                        lv >= 3 ? Done(true) + ArenaText.Pair("Level 3: weapon infusion (a weapon takes an element)","Level 3: weapon infusion (a weapon takes an element)") : Hidden(3),
+                        ArenaText.Pair("\nWhat you buy here takes effect at once, one random result each time.","\nWhat you buy here takes effect at once, one random result each time.")
                     });
                 default:
                     return string.Join("\n", new[]
@@ -649,8 +721,6 @@ namespace AnomalyArena
                     });
             }
         }
-
-                                     
 
         void ApplyFont()
         {

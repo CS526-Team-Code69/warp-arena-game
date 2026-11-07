@@ -20,6 +20,7 @@ namespace AnomalyArena
         float keyWidth;
         bool filled;
         Font filledWith;
+        bool filledForCampaign;
 
         public static V2ControlsTable Create(Transform parent, float rowHeight, float keyWidth, int fontSize)
         {
@@ -34,9 +35,12 @@ namespace AnomalyArena
 
         public void Fill(Font font)
         {
-            if (filled && font == filledWith) return;
+
+            bool campaign = V2Hud.CampaignControls;
+            if (filled && font == filledWith && campaign == filledForCampaign) return;
             filled = true;
             filledWith = font;
+            filledForCampaign = campaign;
             var rows = V2Hud.ControlRows();
             for (int i = 0; i < rows.Length; i++)
             {
