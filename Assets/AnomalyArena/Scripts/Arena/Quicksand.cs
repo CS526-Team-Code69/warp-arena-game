@@ -37,10 +37,20 @@ namespace AnomalyArena
             var pools = world && world.layout ? world.layout.quicksand : null;
             if (pools == null || pools.Length == 0) return null;
             drawn = new GameObject("Quicksand").AddComponent<Quicksand>();
-            drawn.biome = world.biome;
+            drawn.biome = world.CampaignMapApplied && !HasLook(world.biome) ? BorrowedLook(world) : world.biome;
             drawn.pools = pools;
             drawn.Draw();
             return drawn;
+        }
+
+        static bool HasLook(Biome look) => look && look.quicksandMaterial && look.quicksandLayers != null && look.quicksandLayers.Length > 0;
+
+        static Biome BorrowedLook(WorldMap world)
+        {
+            if (world.biomes == null) return world.biome;
+            foreach (var other in world.biomes)
+                if (HasLook(other)) return other;
+            return world.biome;
         }
 
         void Draw()

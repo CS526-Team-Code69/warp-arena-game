@@ -21,18 +21,19 @@ namespace AnomalyArena
         public Renderer ground;
         public Style[] styles;
         Biome selected;
-        bool illustrated, trial, initialized;
+
+        bool illustrated, trial, initialized, campaignMap;
         MaterialPropertyBlock block;
         void Start() => Apply();
         void Update()
         {
             if (!world || !ground || !surface) return;
-            if (!initialized || selected != world.biome || illustrated != Art.Enabled || trial != world.TrialActive) Apply();
+            if (!initialized || selected != world.biome || illustrated != Art.Enabled || trial != world.TrialActive || campaignMap != world.CampaignMapApplied) Apply();
         }
         void Apply()
         {
             if (!world || !ground || !surface || styles == null) return;
-            selected = world.biome; illustrated = Art.Enabled; trial = world.TrialActive; initialized = true;
+            selected = world.biome; illustrated = Art.Enabled; trial = world.TrialActive; campaignMap = world.CampaignMapApplied; initialized = true;
             Style active = null;
             foreach (var style in styles)
             {

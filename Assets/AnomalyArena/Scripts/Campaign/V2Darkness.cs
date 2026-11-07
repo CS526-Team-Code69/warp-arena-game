@@ -43,6 +43,16 @@ namespace AnomalyArena
 
         public void SetActive(bool on) { if (gameObject.activeSelf != on) gameObject.SetActive(on); }
 
+        Canvas canvas;
+
+        void LateUpdate()
+        {
+
+            if (!canvas) canvas = GetComponent<Canvas>();
+            bool show = !(WorldMap.Active && WorldMap.Active.TrialActive);
+            if (canvas && canvas.enabled != show) canvas.enabled = show;
+        }
+
         public void BeginFrame(float darkness, float violetPulse)
         {
             level = Mathf.Clamp01(darkness); pulse = Mathf.Clamp01(violetPulse);

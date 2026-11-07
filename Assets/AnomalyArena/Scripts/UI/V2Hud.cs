@@ -95,6 +95,7 @@ namespace AnomalyArena
             for (int i = 0; i < n; i++) { damageAge[i] = 1f; damageLabels[i].gameObject.SetActive(false); }
             if (themeBackground) themeBackground.texture = art ? art.themeBackground : null;
             SimplifyChineseTitle();
+            AddTitleTutorialButton();
             KeepScreensOverTheRun();
             PlaceControlsTables();
             V2SlotFeedback.Add(handSlots, V2SlotFeedback.Kind.Hand);
@@ -138,6 +139,64 @@ namespace AnomalyArena
                 }
             }
         }
+
+                                                                                                                                               
+                                                                                                                                              
+                                                                                                                                                
+                                                                                                                                             
+                                         
+        public const string TitleTutorialButton = "TitleTutorial";
+                                                                                                                               
+        public const float TitleTutorialHeight = 64f;
+        UnityEngine.UI.Text titleTutorialLabel, titleStartLabel;
+
+        void AddTitleTutorialButton()
+        {
+            if (screens == null) return;
+            foreach (var screen in screens)
+            {
+                if (!screen || screen.state != ArenaUiState.Title) continue;
+                if (screen.transform.Find("Content") is not RectTransform content || content.Find(TitleTutorialButton)
+                    || content.Find("StartRun") is not RectTransform start) return;
+                titleStartLabel = start.GetComponentInChildren<UnityEngine.UI.Text>(true);
+                var copy = CopyAsPlainButton(start, TitleTutorialButton, () =>
+                {
+                    V2Audio.Instance?.PlayUI(ArenaUiSound.Select);
+                    V2Tutorial.ShowStory(appliedFont);
+                });
+                copy.transform.SetSiblingIndex(start.GetSiblingIndex() + 1);
+                titleTutorialLabel = copy.GetComponentInChildren<UnityEngine.UI.Text>(true);
+                PlaceUnderStart(start, (RectTransform)copy.transform, content);
+                return;
+            }
+        }
+
+                                                                                                                                             
+                                                                                                                                               
+                                                                          
+        static void PlaceUnderStart(RectTransform start, RectTransform added, Transform content)
+        {
+            const float SavedGap = 22f;
+            float startBottom = Bottom(start), nextTop = float.NegativeInfinity;
+            var below = new System.Collections.Generic.List<RectTransform>();
+            bool pointAnchored = start.anchorMin == start.anchorMax;
+            if (pointAnchored)
+                foreach (Transform child in content)
+                {
+                    if (child == start || child == added || child is not RectTransform part || part.anchorMin != start.anchorMin
+                        || part.anchorMax != start.anchorMax || Top(part) > startBottom + .5f) continue;
+                    below.Add(part);
+                    nextTop = Mathf.Max(nextTop, Top(part));
+                }
+            float gap = below.Count > 0 ? Mathf.Clamp(startBottom - nextTop, 8f, 40f) : SavedGap;
+            added.pivot = start.pivot;
+            added.sizeDelta = new Vector2(start.sizeDelta.x, TitleTutorialHeight);
+            added.anchoredPosition = new Vector2(start.anchoredPosition.x, startBottom - gap - (1f - added.pivot.y) * TitleTutorialHeight);
+            foreach (var part in below) part.anchoredPosition -= new Vector2(0f, TitleTutorialHeight + gap);
+        }
+
+        static float Top(RectTransform rect) => rect.anchoredPosition.y + (1f - rect.pivot.y) * rect.sizeDelta.y;
+        static float Bottom(RectTransform rect) => rect.anchoredPosition.y - rect.pivot.y * rect.sizeDelta.y;
 
                                                                                                                                                            
                                                                                                                                                                
@@ -455,9 +514,11 @@ namespace AnomalyArena
             }
             if (screen.summary) SetText(screen.summary, s.buildSummary);
             if (screen.reroll) screen.reroll.gameObject.SetActive(!s.isGreaterReward);
+                                                                                                                                    
             if (screen.startNext)
                 SetText(screen.startNext.GetComponentInChildren<UnityEngine.UI.Text>(), s.isGreaterReward
-                    ? ArenaText.Text("ui.return.reward") : s.state == ArenaUiState.LevelUp ? ArenaText.Pair("PICK LATER [ESC]","PICK LATER [ESC]") : ArenaText.Text("ui.nextwave"));
+                    ? s.hideXp ? ArenaText.Pair("RETURN / DECLINE SKILL","RETURN / DECLINE SKILL") : ArenaText.Text("ui.return.reward")
+                    : s.state == ArenaUiState.LevelUp ? ArenaText.Pair("PICK LATER [ESC]","PICK LATER [ESC]") : ArenaText.Text("ui.nextwave"));
             ArenaUiCard[] cards = null;
             switch (s.state)
             {
@@ -465,6 +526,13 @@ namespace AnomalyArena
                                                                                                                      
                     SetText(screen.heading, "WARP ARENA");
                     SetText(screen.body, "");
+                                                                                                                                         
+                                    
+                    if (titleTutorialLabel)
+                    {
+                        SetText(titleTutorialLabel, ArenaText.Pair("HOW TO PLAY","HOW TO PLAY"));
+                        if (titleStartLabel && titleTutorialLabel.font != titleStartLabel.font) titleTutorialLabel.font = titleStartLabel.font;
+                    }
                     break;
                 case ArenaUiState.Loadout:
                     cards = s.loadoutChoices;
@@ -542,7 +610,10 @@ namespace AnomalyArena
                                                                                                                                                                      
                                                                                                                                                               
                                                                        
-        public static (string input, string action, string note)[] ControlRows() => CampaignControls ? CampaignControlRows() : new[]
+        public static (string input, string action, string note)[] ControlRows() => CampaignControls ? CampaignControlRows() : ClassicControlRows();
+
+                                                                                                                   
+        public static (string input, string action, string note)[] ClassicControlRows() => new[]
         {
             ("WASD", ArenaText.Pair("Move","Move"), ""),
             (ArenaText.Pair("Mouse","Mouse"), ArenaText.Pair("Aim","Aim"), ""),
@@ -563,8 +634,9 @@ namespace AnomalyArena
         internal static bool CampaignControls => V2Campaign.Active && V2Campaign.Active.Running;
 
                                                                                                                                        
-                                                       
-        static (string input, string action, string note)[] CampaignControlRows() => new[]
+                                                                                                                                       
+                                    
+        internal static (string input, string action, string note)[] CampaignControlRows() => new[]
         {
             ("WASD", ArenaText.Pair("Move","Move"), ""),
             (ArenaText.Pair("Mouse","Mouse"), ArenaText.Pair("Aim","Aim"), ""),
@@ -574,7 +646,9 @@ namespace AnomalyArena
             ("Shift", ArenaText.Pair("Sprint","Sprint"), ""),
             ("1 / 2 / 3", ArenaText.Pair("Cast a skill; pick that option while a panel is open","Cast a skill; pick that option while a panel is open"), ""),
             (ArenaText.Pair("Hold E","Hold E"), ArenaText.Pair("Mine (at night, only in a lamp's light)","Mine (at night, only in a lamp's light)"), ""),
-            ("E", ArenaText.Pair("At the base door: enter the base at dusk or night; by day, top up its shield with energy","At the base door: enter the base at dusk or night; by day, top up its shield with energy"), ""),
+                                                                                                                                            
+                                                                    
+            ("E", ArenaText.Pair("At the base door: enter the base in the afternoon or at night; in the morning, top up its shield with energy","At the base door: enter the base in the afternoon or at night; in the morning, top up its shield with energy"), ""),
             ("F", ArenaText.Pair("Set down a mining lamp","Set down a mining lamp"), ""),
             ("Esc", ArenaText.Pair("Pause / resume","Pause / resume"), ""),
             ("R", ArenaText.Pair("Restart on the result screen","Restart on the result screen"), ""),
@@ -628,14 +702,21 @@ namespace AnomalyArena
         void AddTutorialButton(Transform content)
         {
             if (content.Find("HowToPlay") || content.Find("RestartRun") is not { } restart) return;
-            var copy = Instantiate(restart.gameObject, content);
-            copy.name = "HowToPlay";
+            tutorialLabel = CopyAsPlainButton(restart, "HowToPlay", () => V2Tutorial.Show(appliedFont)).GetComponentInChildren<UnityEngine.UI.Text>();
+        }
+
+                                                                                                                                             
+                                                                                      
+        UnityEngine.UI.Button CopyAsPlainButton(Transform original, string name, System.Action click)
+        {
+            var copy = Instantiate(original.gameObject, original.parent);
+            copy.name = name;
             if (copy.GetComponent<ArenaUiButton>() is { } relay) Destroy(relay);
             foreach (var localizer in copy.GetComponentsInChildren<UnityEngine.Localization.Components.LocalizeStringEvent>(true)) Destroy(localizer);
             var button = copy.GetComponent<UnityEngine.UI.Button>();
             button.onClick = new UnityEngine.UI.Button.ButtonClickedEvent();
-            button.onClick.AddListener(() => V2Tutorial.Show(appliedFont));
-            tutorialLabel = copy.GetComponentInChildren<UnityEngine.UI.Text>();
+            button.onClick.AddListener(() => click());
+            return button;
         }
 
         static void PlaceTopLeft(RectTransform rect, float left, float top, float width, float height)

@@ -31,20 +31,20 @@ MonoBehaviour:
     elite: 2
   energyGrowthPerDay: 0.06
   alloyChance:
-    fodder: 0.04
-    special: 0.15
-    elite: 1
+    fodder: 0
+    special: 0
+    elite: 0
   alloyAmount:
     fodder: 1
     special: 1
     elite: 2
   alloyGrowthPerDay: 0.1
   pickupMagnet: 3.5
-  oreNodes: 16
+  oreNodes: 4
   oreYield: 3
-  oreYieldStep: 2
+  oreYieldStep: 1
   oreYieldStepDays: 2
-  darkClusters: 14
+  darkClusters: 2
   nodesPerCluster: 4
   darkPerNode: 1
   mineSeconds: 1.1
@@ -53,10 +53,11 @@ MonoBehaviour:
   nightDarkness: 0.9
   crowdedDarkness: 0.08
   duskDarkness: 0.55
+  afternoonLight: 0.25
   lampRadius: 6.5
   baseLightRadius: 11
   playerGlowRadius: 2.4
-  freeLampsPerNight: 2
+  freeLampsPerNight: 3
   lampHp: 4
   regions: {x: 6, y: 4}
   killsPerShadow: 4
@@ -77,6 +78,23 @@ MonoBehaviour:
   nightSelfRepair: 0.3
   sideBreakShare: 0.25
   raiderAggroRadius: 7
+  nightOreNodes: 0
+  trailNodes: 10
+  trailReach: 36
+  trailReachPerDay: 25
+  trailShown: 2
+  trailEndGap: 0.5
+  scatterNodes: 2
+  scatterYield: 2
+  scatterReach: 60
+  daySpawnRing: 70
+  holeFeedsToOpen: 20
+  holeQuestSpawnSeconds: 3
+  holeQuestMaxAlive: 5
+  holeQuestSpawnDistance: 12
+  holeQuestRadius: 18
+  holeHumReach: 45
+  holeHumVolume: 0.15
   raidDamage: 0.15
   shieldTopUpCost: 4
   shieldTopUpCostPerDay: 1
@@ -224,7 +242,7 @@ MonoBehaviour:
     energy: 0
     dark: 0
   fuelUnits: 6
-  darkPerFuelUnit: 6
+  darkPerFuelUnit: 5
   lampCost: 3
   roomRepair: 2
   roomRepairPerLevel: 2

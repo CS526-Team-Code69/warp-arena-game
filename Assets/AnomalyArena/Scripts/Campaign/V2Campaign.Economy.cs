@@ -4,10 +4,11 @@ using UnityEngine;
 namespace AnomalyArena
 {
                  
-                                                                                                                                           
+                                                                                                                                            
                                                                                                                                         
-                                                                                                                                         
-                                                                                                               
+                                                                                                                                       
+                                                                                                                                          
+                                                                                                                             
                   
     public sealed partial class V2Campaign
     {
@@ -84,17 +85,14 @@ namespace AnomalyArena
             var tier = TierOf(enemy);
             int day = Mathf.Max(1, Day);
             bool tutorial = Stage == CampaignStage.Tutorial;
-                                                                                                          
-            if (tutorial || Random.value < rules.energyChance.For(tier))
+                                                                                                                                       
+            float chance = rules.energyChance.For(tier);
+            if (tutorial || (chance > 0f && Random.value < chance))
             {
                 int amount = tutorial ? 1 : Roll(rules.energyAmount.For(tier) * (1f + rules.energyGrowthPerDay * (day - 1)));
                 if (amount > 0) SpawnPickup(PickupKind.Energy, amount, enemy.Position);
             }
-            if (!tutorial && Random.value < rules.alloyChance.For(tier))
-            {
-                int amount = Roll(rules.alloyAmount.For(tier) * (1f + rules.alloyGrowthPerDay * (day - 1)));
-                if (amount > 0) SpawnPickup(PickupKind.Alloy, amount, enemy.Position + new Vector3(.4f, 0f, .2f));
-            }
+                                                                                                                                      
         }
 
         void SpawnPickup(PickupKind kind, int amount, Vector3 at)

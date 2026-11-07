@@ -115,7 +115,7 @@ namespace AnomalyArena
                 Elapsed+=Time.deltaTime;progression.Tick(PlayerDeltaTime);ElementStatus.TickAll(WorldDeltaTime,PlayerDeltaTime);SkillLoadout.TickAll(PlayerDeltaTime);runWeapons.Tick(PlayerDeltaTime);orbs?.Tick(WorldDeltaTime);
                 slipLeft=Mathf.Max(0,slipLeft-PlayerDeltaTime);if(eligibilityWave!=waves.WaveIndex)UpdatePenetrationEligibility();
             }
-            else if(RunPhase==ArenaUiState.TrialReturn)TickTrialReturn();
+            else if(RunPhase==ArenaUiState.TrialReturn){TickTrialReturn();if(CampaignRunning)CampaignAfterTrialReturn();}
             else if(RunPhase==ArenaUiState.WaveEnd&&Time.unscaledTime>=waveEndAt)OpenBuild();
             else if(RunPhase is ArenaUiState.Armory or ArenaUiState.Draft or ArenaUiState.Ready or ArenaUiState.ReplaceWeapon or ArenaUiState.ReplaceSkill||BuildCrateWalking)
             {if(BuildTimeFlows)TickBuildPhase();if(!greaterDraft&&selectionTimeLimit>0f){buildTimeLeft=Mathf.Max(0,buildTimeLeft-Time.unscaledDeltaTime);if(buildTimeLeft<=0){RunAnalytics.SupplyResolved(this,RunAnalytics.SupplyTimeout);BeginNextV2Wave(true);}}}
@@ -176,7 +176,7 @@ namespace AnomalyArena
                                                                                                                                      
                                                                                   
         public void EnterVoidTrial(){trialResumePhase=RunPhase==ArenaUiState.SupplyDrop?pendingSupplyChoice:RunPhase;SetPhase(ArenaUiState.VoidTrial);skills.FreezeBattlefieldForTrial(true);runWeapons.FreezeBattlefieldForTrial(true);orbs?.FreezeForTrial(true);}
-        public void CompleteVoidTrial(){if(!player.IsAlive)return;                                                                                     
+        public void CompleteVoidTrial(){if(!player.IsAlive){if(CampaignRunning)CampaignTrialEndsUnrewarded();return;}                                                                                     
             progression.CompleteVoidTrial();
                                                                                                                                       
                                                                                                                                   
@@ -194,7 +194,61 @@ namespace AnomalyArena
             if(trialResumePhase==ArenaUiState.Ready&&progression.BankedDrafts>0){OpenDraft();return;}
             if(trialResumePhase==ArenaUiState.Draft)DrawDraft();
             if(trialResumePhase is ArenaUiState.Armory or ArenaUiState.Draft or ArenaUiState.Ready){SetPhase(trialResumePhase);return;}
+            if(CampaignRunning)CampaignSettleVoidLevel();
             BeginTrialReturn();
+            if(CampaignRunning)CampaignAfterTrialReturn();
+        }
+
+                                                                                                             
+                                                                                                                                            
+                                                                                                                                         
+                                                                                                                      
+
+                                                                                                                                   
+        ArenaUiState CampaignTrialResumePhase=>campaign.Stage switch
+        {
+            CampaignStage.Day or CampaignStage.Lull=>ArenaUiState.WaveActive,
+            CampaignStage.Dusk=>trialResumePhase==ArenaUiState.WaveActive?ArenaUiState.WaveActive:ArenaUiState.Night,
+            _=>ArenaUiState.Night,
+        };
+
+                                                                                                                                                      
+        void CampaignAfterTrialReturn()
+        {
+            if(RunPhase!=ArenaUiState.WaveActive)return;
+            var back=CampaignTrialResumePhase;
+            if(back!=ArenaUiState.WaveActive)SetPhase(back);
+        }
+
+                                                                                                                                         
+                                                                                                                                         
+                                                                                       
+        void CampaignSettleVoidLevel()
+        {
+            if(progression.BankedDrafts<=0)return;
+            DrawDraft();
+            if(progression.CurrentCards.Length==0)progression.ConsumeDraft();
+        }
+
+                                                                                                                                            
+                                                                                                           
+        void CampaignTrialEndsUnrewarded()
+        {
+            skills.FreezeBattlefieldForTrial(false);runWeapons.FreezeBattlefieldForTrial(false);orbs?.FreezeForTrial(false);
+            WorldMap.Active?.RemoveHolesAfterTrial();
+            if(RunPhase==ArenaUiState.VoidTrial)SetPhase(CampaignTrialResumePhase);
+        }
+
+                                                                                                                                      
+                                                                                                                                            
+                                                                                  
+        internal void CampaignAbortVoidTrial()
+        {
+            var world=WorldMap.Active;
+            if(!CampaignRunning||!world||!world.TrialActive)return;
+            world.AbortTrial();
+            skills.FreezeBattlefieldForTrial(false);runWeapons.FreezeBattlefieldForTrial(false);orbs?.FreezeForTrial(false);
+            if(RunPhase==ArenaUiState.VoidTrial)SetPhase(CampaignTrialResumePhase);
         }
                                                                                                                     
         public void NotifyFinalBossDefeated(){if(CampaignRunning){campaign.OnTyrantDefeated(waves.tyrant?waves.tyrant.Position:player.Position);return;}finalWaveCleared=true;}
@@ -219,14 +273,18 @@ namespace AnomalyArena
         {
             var w=introWeapon;if(w==null)return;
             string kind=w.IsAuto?ArenaText.Pair("Auto weapon","Auto weapon"):ArenaText.Pair("Hand weapon","Hand weapon");
-            float damage=runWeapons.HitDamage(w),cycle=runWeapons.CycleSeconds(w);
-            string damageLine=damage>0f?ArenaText.Pair($"{damage:0.#} per hit · {cycle:0.##} s between uses",$"{damage:0.#} per hit · {cycle:0.##} s between uses"):ArenaText.Pair("Deals no direct damage","Deals no direct damage");
-                                                                                                                 
-            if(w.form==WeaponForm.ShieldRing&&w.variant==1){float wait=runWeapons.DrainShieldWait(w);damageLine=ArenaText.Pair($"Energy Shield after {wait:0.#} s without an enemy hit",$"Energy Shield after {wait:0.#} s without an enemy hit");}
+                                                                                                                                          
+                                                                                                                                       
                                                                                                     
             string element=ArenaText.Pair("   Element: ","   Element: ")+ArenaTerms.Element(w.element);
             snapshot.weaponIntroTitle=w.Label;
-            snapshot.weaponIntroBody=$"<color=#9ad8ff>{kind}</color>\n\n<b><color=#ffd36e>{ArenaText.Pair("How it attacks","How it attacks")}</color></b>\n{WeaponGuide.How(w.form,w.variant)}\n\n<b><color=#ffd36e>{ArenaText.Pair("Damage","Damage")}</color></b>\n{damageLine}{element}\n\n<b><color=#ff8a73>{ArenaText.Pair("Trait","Trait")}</color></b>\n{WeaponGuide.Backfire(w.form,w.variant)}";
+                                                                                                                                             
+                                                                         
+            string anomaly=CampaignRunning&&w.IsAnomalous?$"\n<color=#c9a6ff>{ArenaText.Pair("Anomaly weapon: its attack and its trait are out of the ordinary; use it to learn them.","Anomaly weapon: its attack and its trait are out of the ordinary; use it to learn them.")}</color>":"";
+            string trait=w.IsAnomalous?$"\n\n<b><color=#ff8a73>{ArenaText.Pair("Trait","Trait")}</color></b>\n{WeaponGuide.Backfire(w.form,w.variant)}":"";
+            float wait=w.form==WeaponForm.ShieldRing&&w.variant==1?runWeapons.DrainShieldWait(w):0f;
+            string drainWait=wait>0f?"\n"+ArenaText.Pair($"Energy Shield after {wait:0.#} s without an enemy hit",$"Energy Shield after {wait:0.#} s without an enemy hit"):"";
+            snapshot.weaponIntroBody=$"<color=#9ad8ff>{kind}</color>{element}{anomaly}\n\n<b><color=#ffd36e>{ArenaText.Pair("How it attacks","How it attacks")}</color></b>\n{WeaponGuide.How(w.form,w.variant)}{drainWait}{trait}";
             snapshot.weaponIntroHint=ArenaText.Pair("Click anywhere or press Space or Enter to continue","Click anywhere or press Space or Enter to continue");
             snapshot.weaponIntroContinue=ArenaText.Pair("CONTINUE","CONTINUE");
             snapshot.weaponIntroForm=(int)w.form;

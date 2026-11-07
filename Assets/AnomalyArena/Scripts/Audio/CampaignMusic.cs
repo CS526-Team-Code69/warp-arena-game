@@ -137,6 +137,8 @@ namespace AnomalyArena
             var campaign = V2Campaign.Active;
             if (campaign && campaign.Running && game.CampaignRunning)
             {
+
+                if (WorldMap.Active && WorldMap.Active.TrialActive) return Track.Boss;
                 switch (campaign.Stage)
                 {
                     case CampaignStage.Off: return Track.None;

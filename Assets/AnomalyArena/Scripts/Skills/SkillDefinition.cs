@@ -88,6 +88,8 @@ namespace AnomalyArena
             baseDamage * ElementCombat.WaveScale * Mathf.Pow(Mathf.Max(1f, levelDamageGrowth), Mathf.Clamp(level, 1, MaxLevel) - 1) * Mathf.Max(0f, damageMultiplier);
         public float Cooldown(int level) => id == SkillId.Devour && level >= MaxLevel ? advancedCooldown : cooldown;
         public string Description(int level) => ArenaText.Pair(EnglishDescription(level),EnglishDescription(level));
+
+        static bool InCampaign => V2Campaign.Active && V2Campaign.Active.Running;
         string ChineseDescription(int level) =>EnglishDescription(level);
         string EnglishDescription(int level) => id switch
         {
@@ -97,7 +99,7 @@ namespace AnomalyArena
                 + (level >= 2 ? " Lasts longer" + (level >= MaxLevel ? "; at max level it jumps to two enemies, spreading outward" : "") + "." : ""),
             SkillId.FrostNova => $"Frost on the enemies around you; small enemies freeze at once ({Strength(level):0.#} Frost within {Radius(level):0.#})."
                 + (level >= 2 ? " Larger area" + (level >= MaxLevel ? $"; at max level frozen enemies stay frozen at least {freezeHold:0.#} s" : "") + "." : ""),
-            SkillId.StormCall => $"Random lightning near the cursor: damage plus Lightning ({Strength(level):0} bolts within {Radius(level):0.#} over {Duration(level):0.#} s; {ScaledDamage(hitDamage, level):0.#} damage and {HitStacks(level):0.#} Lightning each, damage grows with waves and Damage cards)."
+            SkillId.StormCall => $"Random lightning near the cursor: damage plus Lightning ({Strength(level):0} bolts within {Radius(level):0.#} over {Duration(level):0.#} s; {ScaledDamage(hitDamage, level):0.#} damage and {HitStacks(level):0.#} Lightning each, damage grows with {(InCampaign ? "the days and the Damage bonus" : "waves and Damage cards")})."
                 + (level >= 2 ? " More bolts, wider area" + (level >= MaxLevel ? "; at max level a hit also chains to nearby enemies" : "") + "." : ""),
             SkillId.Bulwark => $"A wall at the cursor knocks back enemies touching it; only a boss can destroy it: the Tyrant King's charge or the Nash Prophet's Repulse Pulse. Plus a Shield (wall {Radius(level):0.#} long, {Duration(level):0.#} s, knockback {ContactKnockback(level):0.#}, "
                 + (shieldScalesWithMaxHp ? $"Shield {Strength(level) * 100f:0}% of max HP)." : $"Shield {Strength(level):0.#}).")

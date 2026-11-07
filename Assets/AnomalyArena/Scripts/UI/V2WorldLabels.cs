@@ -140,21 +140,26 @@ namespace AnomalyArena
             if (world && world.TrialActive) PlaceTrialPortalLabel(world, gm);
             else if (world && world.holes != null)
             {
+                                                                                                                                           
+                                                                                                                               
+                bool campaign = world.CampaignMapApplied;
                 for (int i = 0; i < Mathf.Min(holeLabels.Length, world.holes.Length); i++)
                 {
                     var hole = world.holes[i]; var label = holeLabels[i];
-                                                                                                                                      
-                                                        
-                    bool show = hole && hole.Phase != HolePhase.Gone && !world.TrialActive && !(V2Campaign.Active && V2Campaign.Active.Running);
+                    bool show = hole && hole.Phase != HolePhase.Gone && !world.TrialActive;
                     if (!show) { label.gameObject.SetActive(false); continue; }
                                                                                                                                 
                     bool canEnter = world.CanEnterPortal(gm.player, hole);
-                    string text = hole.Phase == HolePhase.Portal ? ArenaText.Text(canEnter ? "ui.hole.enter" : "ui.hole.portal") + "\n" + ArenaText.Text("ui.hole.remaining", hole.WavesLeft)
+                    string text = campaign ? CampaignHoleText(world, hole, canEnter)
+                        : hole.Phase == HolePhase.Portal ? ArenaText.Text(canEnter ? "ui.hole.enter" : "ui.hole.portal") + "\n" + ArenaText.Text("ui.hole.remaining", hole.WavesLeft)
                         : world.CanFeed && hole.Phase == HolePhase.Active ? $"{hole.Feeds} / {hole.feedsToOpen}" : "";
                     if (label.text != text) label.text = text;
-                    bool visible = PlaceWorld(label.rectTransform, hole.Centre + gm.cam.transform.up * (hole.size * .5f + 1f), gm.cam);
+                                                                                                                                           
+                                                                                        
+                    float lift = campaign && hole.Phase == HolePhase.Portal ? 2.2f : hole.size * .5f + 1f;
+                    bool visible = PlaceWorld(label.rectTransform, hole.Centre + gm.cam.transform.up * lift, gm.cam);
                     label.gameObject.SetActive(visible && text.Length > 0);
-                    if (Offscreen(hole.Centre, gm.cam) && edges < edgeLabels.Length)
+                    if (!campaign && Offscreen(hole.Centre, gm.cam) && edges < edgeLabels.Length)
                     {
                         float distance = gm.player ? Query.Flat(hole.Centre - gm.player.Position).magnitude : 0f;
                         if (hole.Phase == HolePhase.Portal)
@@ -163,6 +168,10 @@ namespace AnomalyArena
                             PlaceHoleEdge(edgeLabels[edges++], hole.Centre, gm.cam, ArenaText.Pair("BLACK HOLE","BLACK HOLE") + $"  {distance:0}m");
                     }
                 }
+                                                                                                              
+                if (campaign)
+                    for (int i = world.holes.Length; i < holeLabels.Length; i++)
+                        if (holeLabels[i] && holeLabels[i].gameObject.activeSelf) holeLabels[i].gameObject.SetActive(false);
             }
                                                                                             
                                                                                        
@@ -214,6 +223,16 @@ namespace AnomalyArena
             if (orbHintLabel && orbHintLabel.gameObject.activeSelf != orbLabelOn) orbHintLabel.gameObject.SetActive(orbLabelOn);
             for (int i = edges; i < edgeLabels.Length; i++) edgeLabels[i].gameObject.SetActive(false);
         }
+
+                                                                                                                                             
+                                                                                              
+        static string CampaignHoleText(WorldMap world, BlackHole hole, bool canEnter) => hole.Phase switch
+        {
+            HolePhase.Active => world.CanFeed ? $"{hole.Feeds} / {hole.feedsToOpen}" : "",
+            HolePhase.Portal => canEnter ? ArenaText.Pair("E · ENTER THE HIDDEN GATE\nCLEARS STATUS & SHIELD","E · ENTER THE HIDDEN GATE\nCLEARS STATUS & SHIELD")
+                : ArenaText.Pair("HIDDEN GATE","HIDDEN GATE"),
+            _ => ""
+        };
 
                                                                                                                                               
                                                                                                                                                      

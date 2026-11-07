@@ -3,6 +3,8 @@
                                                                                                                                       
                                                                                                                                       
                                                                                                                                       
+                                                                                                                                          
+                                                                                                                                             
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -18,8 +20,10 @@ public static class V2CampaignCheck
     public static string Folder;
     static string logPath;
     static int step, day, diedAtNight = -1;
+                                                                                                                                            
+    static int shopDay = -1, grantDay = -1, boughtResearch, boughtNewWeapons, boughtUpgrades;
     static float wait, startedAt, stepSince, lastAct, nightSince;
-    static bool ended, shotTaken, raidShot, shipTabOpened, sideBroken, darkNodeShot, nightDeathDone, deathWalletCheck, readyConfirm, readyNoted;
+    static bool ended, shotTaken, raidShot, shipTabOpened, sideBroken, darkNodeShot, nightDeathDone, deathWalletCheck, readyConfirm, readyNoted, holeNoted;
     static readonly Dictionary<Enemy, float> raiderSince = new();
     static readonly HashSet<string> shots = new();
     static V2Campaign campaign;
@@ -34,7 +38,8 @@ public static class V2CampaignCheck
         logPath = Path.Combine(Folder, "driver-log.txt");
         File.WriteAllText(logPath, "");
         step = 0; day = 0; wait = 0f; ended = false; shots.Clear(); raiderSince.Clear(); raidShot = false; lastStage = CampaignStage.Off; campaign = null;
-        shipTabOpened = sideBroken = darkNodeShot = nightDeathDone = deathWalletCheck = false; diedAtNight = -1;
+        shipTabOpened = sideBroken = darkNodeShot = nightDeathDone = deathWalletCheck = holeNoted = false; diedAtNight = -1;
+        shopDay = grantDay = -1; boughtResearch = boughtNewWeapons = boughtUpgrades = 0;
         startedAt = stepSince = lastAct = Time.realtimeSinceStartup;
         EditorApplication.LockReloadAssemblies();
         EditorApplication.update -= Tick; EditorApplication.update += Tick;
@@ -95,13 +100,22 @@ public static class V2CampaignCheck
     {
         if (campaign.Stage != lastStage) { Note($"stage {lastStage} -> {campaign.Stage} (day {campaign.Day}, phase {gm.RunPhase}, wallet {Wallet}, base {campaign.BaseHp:0}/{campaign.BaseMaxHp:0}, shield {campaign.BaseShield:0})"); lastStage = campaign.Stage; }
         if (gm.RunPhase != lastPhase) { lastPhase = gm.RunPhase; }
+                                                                                                                                           
+                                                                                                                        
+        if (!holeNoted && campaign.HoleSeen)
+        {
+            holeNoted = true;
+            Note($"black hole met on day {campaign.Day} ({campaign.Stage}), map seed {campaign.MapSeed}; shards {campaign.HoleShardCount} shown {campaign.HoleShardsShown}, hum {campaign.HoleHumLevel:0.000}");
+            Shot($"16-black-hole-day{campaign.Day}");
+        }
     }
 
-                                                                                     
-    static void Shop()
+                                                                                                                                       
+                                                                                                                    
+    static bool Shop()
     {
         var c = campaign;
-        int boughtResearch = 0, boughtEnergyPicks = 0, boughtArmamentPicks = 0;
+        if (shopDay != c.Day) { shopDay = c.Day; boughtResearch = boughtNewWeapons = boughtUpgrades = 0; }
         foreach (CampaignRoom room in Enum.GetValues(typeof(CampaignRoom))) if (c.Room(room).damaged && c.TryRepairRoom(room)) Note($"repaired {room}");
         bool any = true; int guard = 0;
         while (any && guard++ < 40)
@@ -117,14 +131,30 @@ public static class V2CampaignCheck
             if (c.TryBuyPlayerLevel()) { var gm = GameManager.Instance; Note($"bought player level {gm.progression.Level}: max HP {gm.player.maxHp:0}, max energy {gm.progression.Stats.maxEnergy:0} -> wallet {Wallet}"); any = true; }
                                                                                                                     
             if (boughtResearch < 2 && c.TryBuyWeaponDamage()) { boughtResearch++; Note($"bought weapon damage (Mk up) -> wallet {Wallet}"); any = true; }
-            if (boughtEnergyPicks < 1 && c.TryBuyNewWeapon()) { boughtEnergyPicks++; Note($"bought a new weapon -> wallet {Wallet}"); any = true; }
-            if (c.RocketForSale && c.TryBuyRocketLauncher()) { var w = GameManager.Instance.runWeapons; Note($"bought the rocket launcher: hands {w.Hand[0]?.Label} / {w.Hand[1]?.Label} -> wallet {Wallet}"); any = true; }
+            if (boughtNewWeapons < 1 && c.TryBuyNewWeapon())
+            {
+                boughtNewWeapons++; var w = GameManager.Instance.runWeapons;
+                Note($"bought a new weapon: hands {w.Hand[0]?.Label} / {w.Hand[1]?.Label} -> wallet {Wallet}");
+                if (WeaponCardOpen) return true;
+                any = true;
+            }
+            if (c.RocketForSale && c.TryBuyRocketLauncher())
+            {
+                var w = GameManager.Instance.runWeapons;
+                Note($"bought the rocket launcher: hands {w.Hand[0]?.Label} / {w.Hand[1]?.Label} -> wallet {Wallet}");
+                if (WeaponCardOpen) return true;
+                any = true;
+            }
             foreach (CampaignUpgrade kind in Enum.GetValues(typeof(CampaignUpgrade)))
-                if (boughtArmamentPicks < 6 && c.TryBuyUpgrade(kind)) { boughtArmamentPicks++; Note($"bought upgrade {kind} -> wallet {Wallet}"); any = true; }
+                if (boughtUpgrades < 6 && c.TryBuyUpgrade(kind)) { boughtUpgrades++; Note($"bought upgrade {kind} -> wallet {Wallet}"); any = true; }
         }
         if (c.LampStock < 3 && c.TryCraftLamp()) Note("crafted a lamp");
         if (c.BaseHp < c.BaseMaxHp - 1f && c.TryRepairHull()) Note("repaired the hull");
+        return false;
     }
+
+                                                                                                                                             
+    static bool WeaponCardOpen => GameManager.Instance && GameManager.Instance.RunPhase == ArenaUiState.WeaponIntro;
 
     static bool MineNearest(GameManager gm, V2Campaign.NodeKind kind)
     {
@@ -249,6 +279,16 @@ public static class V2CampaignCheck
                     if (InStep > 8f) { Note($"expected the base, stage {campaign.Stage}"); Go(9); }
                     return;
                 }
+                                                                                                                                         
+                                                               
+                if (WeaponCardOpen)
+                {
+                    string cardShot = $"11c-night{campaign.Day}-weapon-card";
+                    if (!shots.Contains(cardShot)) { Shot(cardShot); wait = Time.realtimeSinceStartup + .6f; return; }
+                    if (act) Cmd(gm, ArenaUiCommand.DismissWeaponIntro);
+                    return;
+                }
+                if (!campaign.Ui.BaseOpen) { if (InStep > 30f) End("the base panel did not come back after a weapon card"); return; }
                                                                                                                       
                 if (campaign.Day == 1 && !shipTabOpened)
                 {
@@ -265,12 +305,13 @@ public static class V2CampaignCheck
                     return;
                 }
                 int lastDay = campaign.rules.days;
-                if (campaign.Day >= lastDay - 2 && campaign.Day < lastDay)
+                if (campaign.Day >= lastDay - 2 && campaign.Day < lastDay && grantDay != campaign.Day)
                 {
+                    grantDay = campaign.Day;
                     campaign.DebugGrant(400, 400, 60);
                     Note($"DEBUG GRANT at the base on night {campaign.Day}: +400 alloy +400 energy +60 dark matter, so the check reaches the ending on day {lastDay}");
                 }
-                Shop();
+                if (Shop()) return;                                                                          
                 Shot($"11-base-night{campaign.Day}");
                 if (campaign.Day >= campaign.rules.days && campaign.CanIgnite) { Note("ignition ready on the last night"); campaign.Ignite(); Go(20); return; }
                 campaign.WaitForDawn();
@@ -298,6 +339,8 @@ public static class V2CampaignCheck
                 if (InStep > 60f) End($"stuck in the dawn build at {gm.RunPhase}");
                 return;
             case 9:       
+                                                                                                                          
+                if (campaign.Stage == CampaignStage.FinalBoss) { Note($"the ignition began at dawn after the last night (day {campaign.Day}): on to the Tyrant"); Go(20); return; }
                 if (campaign.Stage == CampaignStage.Dusk) { Note($"day {day} over: base {campaign.BaseHp:0}/{campaign.BaseMaxHp:0}, broken {string.Join(",", BrokenRooms())}, wallet {Wallet}, level {gm.progression.Level}, kills {gm.waves.Kills}"); Go(10, 1f); return; }
                 if (gm.State != GameState.Playing) { End($"run ended in the day: {gm.State}, base destroyed {campaign.BaseDestroyed}"); return; }
                 gm.player.Heal(gm.player.maxHp);
@@ -341,11 +384,40 @@ public static class V2CampaignCheck
                 if (sideBroken && day == 2) Shot("13d-day2-east-side-broken");
                 if (InStep > 240f) End("a day never ended");
                 return;
-            case 10:        
+            case 10:                                      
                 Shot($"14-dusk{day}");
                 if (campaign.Stage == CampaignStage.Night) { campaign.debugHoldE = false; nightSince = Time.realtimeSinceStartup; Note($"night {day}: shadows {campaign.ShadowCount}, overrun regions {campaign.OverrunRegions}, dark nodes {campaign.NodesLeft(V2Campaign.NodeKind.Dark)}, ore left {campaign.NodesLeft(V2Campaign.NodeKind.Ore)}"); Go(11, 1f); return; }
-                if (act && campaign.PickupCount > 0) campaign.DebugCollectPickups();
-                if (act) MineNearest(gm, V2Campaign.NodeKind.Ore);
+                                                                                                                                         
+                                                                                             
+                if (campaign.Stage == CampaignStage.Day) { campaign.debugHoldE = false; Note($"afternoon {day} ended in a fall: day {campaign.Day} begins"); Go(8); return; }
+                                                                                                                                            
+                if (campaign.Stage == CampaignStage.Base)
+                {
+                    campaign.debugHoldE = false;
+                    if (!campaign.BaseFromDusk) return;
+                                                                                                                         
+                    string baseShot = $"14b-afternoon{day}-base";
+                    if (!shots.Contains(baseShot)) { Shot(baseShot); wait = Time.realtimeSinceStartup + .6f; return; }
+                    if (act)
+                    {
+                        Note($"afternoon {day}: into the night from the base (ore left today {campaign.NodesLeft(V2Campaign.NodeKind.Ore)}, wallet {Wallet})");
+                        campaign.EnterNight();
+                    }
+                    return;
+                }
+                if (campaign.Stage != CampaignStage.Dusk) { if (InStep > 90f) End($"stuck in the afternoon at {campaign.Stage}"); return; }
+                gm.player.Heal(gm.player.maxHp);
+                if (!act) return;
+                                                                                                                                        
+                foreach (var e in new List<Enemy>(gm.waves.Alive)) if (e && e.IsAlive && !e.IsBoss) e.Kill(gm.player);
+                if (campaign.PickupCount > 0) campaign.DebugCollectPickups();
+                                                                                                                                             
+                                                                                                     
+                if (InStep < 45f && MineNearest(gm, V2Campaign.NodeKind.Ore)) return;
+                if (!campaign.EveningsOpenEnded) return;                                             
+                Teleport(gm, campaign.DoorPoint);
+                campaign.debugPressE = true;
+                if (InStep > 90f) End("the afternoon never went into the night");
                 return;
             case 11:         
                 Shot($"15-night{day}");
@@ -375,7 +447,8 @@ public static class V2CampaignCheck
                 if (Time.realtimeSinceStartup - nightSince > 22f || campaign.NodesLeft(V2Campaign.NodeKind.Dark) == 0)
                 {
                     campaign.debugHoldE = false;
-                    Note($"night {day} haul: wallet {Wallet}, hp {gm.player.Hp:0}/{gm.player.maxHp:0}, lamps left {campaign.LampStock}");
+                                                                                              
+                    Note($"night {day} haul: wallet {Wallet}, hp {gm.player.Hp:0}/{gm.player.maxHp:0}, lamps left {campaign.LampStock}; hole shards shown {campaign.HoleShardsShown}, hum {campaign.HoleHumLevel:0.000}");
                     Teleport(gm, campaign.DoorPoint);
                     campaign.debugPressE = true;
                     return;

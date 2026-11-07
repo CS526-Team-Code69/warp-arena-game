@@ -24,33 +24,68 @@ namespace AnomalyArena
         public static int Page => instance ? instance.page : -1;
         public const int PageCount = 7;
 
-        static (string title, string line, Func<Demo> demo)[] Pages() => new (string, string, Func<Demo>)[]
+        static (string title, string line, Func<Demo> demo)[] Pages() => InCampaign ? StoryPages() : ClassicPages();
+
+        static (string title, string line, Func<Demo> demo)[] ClassicPages() => new (string, string, Func<Demo>)[]
         {
             (ArenaText.Pair("MOVE","MOVE"), ArenaText.Pair("WASD to move.","WASD to move."), () => new MoveDemo()),
-            (ArenaText.Pair("AIM & FIRE","AIM & FIRE"),
-                ArenaText.Pair("Aim with the mouse. Left click uses the held weapon; hold it to charge or keep firing, depending on the weapon.","Aim with the mouse. Left click uses the held weapon; hold it to charge or keep firing, depending on the weapon."),
-                () => new FireDemo()),
+            AimPage(),
             (ArenaText.Pair("SPRINT","SPRINT"), ArenaText.Pair("Hold Shift while moving to sprint. It drains stamina.","Hold Shift while moving to sprint. It drains stamina."), () => new SprintDemo()),
             (ArenaText.Pair("SWAP & SKILLS","SWAP & SKILLS"), ArenaText.Pair("Right click swaps the two hand slots. 1, 2, 3 cast skills.","Right click swaps the two hand slots. 1, 2, 3 cast skills."), () => new SkillDemo()),
             (ArenaText.Pair("USE THE ARENA","USE THE ARENA"), ArenaText.Pair("Knock enemies into walls and black holes.","Knock enemies into walls and black holes."), () => new TerrainDemo()),
-            PanelPage(),
-            (ArenaText.Pair("PAUSE","PAUSE"),
-                ArenaText.Pair("Esc pauses. The pause screen lists the keys and has How to Play, Restart Run and Quit to Title.","Esc pauses. The pause screen lists the keys and has How to Play, Restart Run and Quit to Title."),
-                () => new PauseDemo()),
+            (ArenaText.Pair("PUT THE PANEL AWAY","PUT THE PANEL AWAY"),
+                ArenaText.Pair("Between waves, Tab puts the card panel away so you can walk and reach a portal. Tab again brings it back.","Between waves, Tab puts the card panel away so you can walk and reach a portal. Tab again brings it back."),
+                () => new BuildWalkDemo()),
+            PausePage(),
         };
 
-        static bool InCampaign => V2Campaign.Active && V2Campaign.Active.Running;
+        static (string title, string line, Func<Demo> demo)[] StoryPages()
+        {
+            int days = PlannedDays;
+            return new (string, string, Func<Demo>)[]
+            {
+                (ArenaText.Pair("STRANDED","STRANDED"),
+                    ArenaText.Pair($"Your ship crashed on an alien planet. Spend {days} days repairing it and filling its tank, then escape.",$"Your ship crashed on an alien planet. Spend {days} days repairing it and filling its tank, then escape."),
+                    () => new StrandedDemo(days)),
+                (ArenaText.Pair("MOVE & SPRINT","MOVE & SPRINT"),
+                    ArenaText.Pair("WASD to move. Hold Shift while moving to sprint; it drains stamina.","WASD to move. Hold Shift while moving to sprint; it drains stamina."),
+                    () => new MoveSprintDemo()),
+                AimPage(),
+                (ArenaText.Pair("SWAP & SKILLS","SWAP & SKILLS"),
+                    ArenaText.Pair("Right click swaps the two hand slots. Skills learned at the Energy Lab are cast with 1, 2, 3.","Right click swaps the two hand slots. Skills learned at the Energy Lab are cast with 1, 2, 3."),
+                    () => new SkillDemo()),
+                (ArenaText.Pair("GATHER","GATHER"),
+                    ArenaText.Pair("Afternoon: hold E on alloy ore, no lamp needed. Night: F sets a lamp; hold E in its light on dark matter.","Afternoon: hold E on alloy ore, no lamp needed. Night: F sets a lamp; hold E in its light on dark matter."),
+                    () => new GatherDemo()),
+                (ArenaText.Pair("BASE & UPGRADES","BASE & UPGRADES"),
+                    ArenaText.Pair("Afternoon or night, E at the base door: build rooms, buy upgrades, repair the ship. Each takes effect at once.","Afternoon or night, E at the base door: build rooms, buy upgrades, repair the ship. Each takes effect at once."),
+                    () => new BaseDemo()),
+                PausePage(),
+            };
+        }
 
-        static (string title, string line, Func<Demo> demo) PanelPage() => InCampaign
-            ? (ArenaText.Pair("BASE UPGRADES","BASE UPGRADES"),
-                ArenaText.Pair("Back at the base, buy upgrades in its rooms. They take effect at once.","Back at the base, buy upgrades in its rooms. They take effect at once."),
-                () => new MoveDemo())
-            : (ArenaText.Pair("PUT THE PANEL AWAY","PUT THE PANEL AWAY"),
-                ArenaText.Pair("Between waves, Tab puts the card panel away so you can walk and reach a portal. Tab again brings it back.","Between waves, Tab puts the card panel away so you can walk and reach a portal. Tab again brings it back."),
-                () => new BuildWalkDemo());
+        static (string title, string line, Func<Demo> demo) AimPage() => (ArenaText.Pair("AIM & FIRE","AIM & FIRE"),
+            ArenaText.Pair("Aim with the mouse. Left click uses the held weapon; hold it to charge or keep firing, depending on the weapon.","Aim with the mouse. Left click uses the held weapon; hold it to charge or keep firing, depending on the weapon."),
+            () => new FireDemo());
+
+        static (string title, string line, Func<Demo> demo) PausePage() => (ArenaText.Pair("PAUSE","PAUSE"),
+            ArenaText.Pair("Esc pauses. The pause screen lists the keys and has How to Play, Restart Run and Quit to Title.","Esc pauses. The pause screen lists the keys and has How to Play, Restart Run and Quit to Title."),
+            () => new PauseDemo());
+
+        static bool InCampaign => storyOnly || V2Campaign.Active && V2Campaign.Active.Running;
+        static bool storyOnly;
+
+        static int PlannedDays
+        {
+            get
+            {
+                var campaign = V2Campaign.Active ? V2Campaign.Active : GameManager.Instance ? GameManager.Instance.GetComponent<V2Campaign>() : null;
+                return campaign && campaign.rules ? Mathf.Max(1, campaign.rules.days) : 7;
+            }
+        }
 
         static string Footnote() => InCampaign
-            ? ArenaText.Pair("Other keys are shown on screen when needed.","Other keys are shown on screen when needed.")
+            ? ArenaText.Pair("Read the goal at the top left and follow the blue marker. Other keys show on screen when needed.","Read the goal at the top left and follow the blue marker. Other keys show on screen when needed.")
             : ArenaText.Pair("On a mid-wave card panel, Esc picks later and T opens it again. Other keys are shown on screen when needed.","On a mid-wave card panel, Esc picks later and T opens it again. Other keys are shown on screen when needed.");
 
         Font font;
@@ -68,6 +103,7 @@ namespace AnomalyArena
             instance = null;
             shownOnArrival = false;
             closedFrame = -1;
+            storyOnly = false;
         }
 
         public static void ShowFirstTime(Font font)
@@ -79,8 +115,13 @@ namespace AnomalyArena
 
         public static void ForgetShown() => shownOnArrival = false;
 
-        public static void Show(Font font)
+        public static void Show(Font font) => ShowPages(font, false);
+
+        public static void ShowStory(Font font) => ShowPages(font, true);
+
+        static void ShowPages(Font font, bool story)
         {
+            storyOnly = story;
             if (!instance) instance = Build();
             instance.font = font ? font : Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             foreach (var label in instance.GetComponentsInChildren<Text>(true)) label.font = instance.font;
@@ -304,6 +345,18 @@ namespace AnomalyArena
                 return (left, right);
             }
 
+            protected (RectTransform rect, CanvasGroup fade) Group(Vector2 at)
+            {
+                var group = new GameObject("Group", typeof(RectTransform), typeof(CanvasGroup));
+                var rect = (RectTransform)group.transform;
+                rect.SetParent(window, false);
+                rect.anchoredPosition = at;
+                return (rect, group.GetComponent<CanvasGroup>());
+            }
+
+            protected Text Caption(string value, int size, Color colour, float y) =>
+                Label(value, size, colour, new Vector2(-10f, y), 700f, null, TextAnchor.MiddleLeft);
+
             protected static float Loop(float time, float period) => Mathf.Repeat(time, period);
             protected static float Ease(float from, float to, float time) => Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(from, to, time));
             protected static void Light(Image part, bool on) => part.color = on ? Cyan : KeyIdle;
@@ -459,8 +512,9 @@ namespace AnomalyArena
                 slot2 = NewImage(window, "Hand 2", pill, KeyIdle, Image.Type.Sliced, 2f);
                 slot2.rectTransform.sizeDelta = new Vector2(110f, 34f);
                 slot2.rectTransform.anchoredPosition = new Vector2(90f, -120f);
-                Label(ArenaText.Pair("RIFLE","RIFLE"), 14, Soft, new Vector2(-30f, -120f), 110f);
-                Label(ArenaText.Pair("KNIFE","KNIFE"), 14, Soft, new Vector2(90f, -120f), 110f);
+
+                Label(InCampaign ? ArenaText.Pair("PISTOL","PISTOL") : ArenaText.Pair("RIFLE","RIFLE"), 14, Soft, new Vector2(-30f, -120f), 110f);
+                Label(InCampaign ? ArenaText.Pair("ANOMALY","ANOMALY") : ArenaText.Pair("KNIFE","KNIFE"), 14, Soft, new Vector2(90f, -120f), 110f);
                 (left, right) = Mouse(new Vector2(-320f, -100f));
                 Label(ArenaText.Pair("right click: swap","right click: swap"), 14, Faint, new Vector2(-300f, -146f), 130f);
                 Label(ArenaText.Pair("skill keys","skill keys"), 14, Faint, new Vector2(298f, -146f), 130f);
@@ -617,7 +671,8 @@ namespace AnomalyArena
 
                 (sheet, fade) = Sheet(new Vector2(560f, 300f), Centre);
                 Label(ArenaText.Pair("PAUSED","PAUSED"), 20, Soft, new Vector2(0f, 118f), 300f, sheet);
-                var rows = V2Hud.ControlRows();
+
+                var rows = InCampaign ? V2Hud.CampaignControlRows() : V2Hud.ClassicControlRows();
                 for (int i = 0; i < 5; i++)
                 {
                     float y = 84f - i * 28f;
@@ -657,6 +712,419 @@ namespace AnomalyArena
                     enemies[i].rectTransform.anchoredPosition = Centre + new Vector2(Mathf.Cos(angle) * 180f, Mathf.Sin(angle) * 100f);
                 }
             }
+        }
+
+        sealed class StrandedDemo : Demo
+        {
+            static readonly Vector2 Wreck = new(-150f, -86f), Away = new(560f, 250f);
+
+            static readonly Color Broken = new(.3f, .3f, .32f), EngineColour = new(.45f, .8f, 1f), ArmorColour = new(.92f, .92f, .95f), FuelColour = new(.78f, .3f, 1f);
+
+            const float EngineAt = .28f, ArmorAt = .57f, FuelFrom = .43f;
+
+            const float Mended = 3.85f, Righted = 4.3f, Gone = 6.1f, Length = 7.4f;
+            readonly int days;
+            RectTransform ship;
+            CanvasGroup shipFade, statusFade;
+            Image engine, armor, engineMark, armorMark, fuelFill;
+            Image[] smoke, flames;
+            Text dayLabel, escape, engineDone, armorDone;
+            string[] dayTexts;
+
+            public StrandedDemo(int days) => this.days = Mathf.Max(1, days);
+
+            protected override void Build()
+            {
+
+                Bar(new Color(.2f, .14f, .28f, .9f), new Vector2(WindowW, 40f), new Vector2(0f, 20f - WindowH * .5f));
+                smoke = new Image[3];
+                for (int i = 0; i < smoke.Length; i++) smoke[i] = Dot(Color.clear, 26f, Wreck);
+
+                (ship, shipFade) = Group(Wreck);
+                flames = new Image[3];
+                for (int i = 0; i < flames.Length; i++) flames[i] = Part(ship, circle, Bullet, Vector2.one * (22f - i * 5f), new Vector2(-152f - i * 17f, 0f));
+                Part(ship, null, new Color(.82f, .84f, .86f), new Vector2(220f, 44f), Vector2.zero);
+                Part(ship, null, new Color(.9f, .55f, .2f), new Vector2(40f, 32f), new Vector2(128f, -2f));
+                engine = Part(ship, null, Broken, new Vector2(26f, 40f), new Vector2(-123f, 0f));
+                armor = Part(ship, null, Broken, new Vector2(150f, 8f), new Vector2(0f, 26f));
+
+                RectTransform status;
+                (status, statusFade) = Group(new Vector2(255f, 30f));
+                Label(ArenaText.Pair("SHIP","SHIP"), 15, Faint, new Vector2(0f, 58f), 200f, status);
+                (engineMark, engineDone) = Row(status, ArenaText.Pair("ENGINE","ENGINE"), 26f);
+                (armorMark, armorDone) = Row(status, ArenaText.Pair("ARMOR","ARMOR"), -6f);
+                Part(status, circle, FuelColour, Vector2.one * 16f, new Vector2(-90f, -38f));
+                Label(ArenaText.Pair("FUEL","FUEL"), 16, Soft, new Vector2(-20f, -38f), 110f, status, TextAnchor.MiddleLeft);
+                Part(status, null, new Color(1f, 1f, 1f, .08f), new Vector2(110f, 10f), new Vector2(50f, -38f));
+                fuelFill = Part(status, null, FuelColour, new Vector2(110f, 10f), new Vector2(-5f, -38f));
+                fuelFill.rectTransform.pivot = new Vector2(0f, .5f);
+
+                dayTexts = new string[days];
+                for (int d = 0; d < days; d++) dayTexts[d] = ArenaText.Pair($"DAY {d + 1} / {days}",$"DAY {d + 1} / {days}");
+                dayLabel = Label(dayTexts[0], 22, Soft, new Vector2(-150f, 118f), 260f);
+                escape = Label(ArenaText.Pair("ESCAPE!","ESCAPE!"), 24, Bullet, new Vector2(-150f, 118f), 260f);
+            }
+
+            (Image mark, Text done) Row(RectTransform status, string name, float y)
+            {
+                var mark = Part(status, circle, Broken, Vector2.one * 16f, new Vector2(-90f, y));
+                Label(name, 16, Soft, new Vector2(-20f, y), 110f, status, TextAnchor.MiddleLeft);
+                return (mark, Label("✓", 18, Cyan, new Vector2(8f, y), 40f, status));
+            }
+
+            public override void Tick(float time)
+            {
+                float t = Loop(time, Length);
+                float mending = Mathf.Clamp01(t / Mended);
+                bool engineOn = mending >= EngineAt, armorOn = mending >= ArmorAt;
+                engine.color = engineMark.color = engineOn ? EngineColour : Broken;
+                armor.color = armorMark.color = armorOn ? ArmorColour : Broken;
+                engineDone.enabled = engineOn;
+                armorDone.enabled = armorOn;
+                fuelFill.rectTransform.sizeDelta = new Vector2(110f * Mathf.InverseLerp(FuelFrom, 1f, mending), 10f);
+                dayLabel.text = dayTexts[Mathf.Min(days, 1 + Mathf.FloorToInt(mending * days)) - 1];
+
+                float smoking = 1f - Ease(ArmorAt * Mended, ArmorAt * Mended + .4f, t);
+                for (int i = 0; i < smoke.Length; i++)
+                {
+                    float rise = Mathf.Repeat(time * .7f + i / 3f, 1f);
+                    smoke[i].rectTransform.anchoredPosition = Wreck + new Vector2(-30f + i * 24f + rise * 18f, 20f + rise * 90f);
+                    smoke[i].rectTransform.sizeDelta = Vector2.one * Mathf.Lerp(18f, 44f, rise);
+                    smoke[i].color = new Color(.55f, .55f, .6f, .45f * (1f - rise) * smoking);
+                }
+
+                float lift = Mathf.InverseLerp(Righted, Gone, t);
+                lift *= lift;
+                ship.anchoredPosition = Vector2.Lerp(Wreck, Away, lift);
+                ship.localEulerAngles = new Vector3(0f, 0f, Mathf.Lerp(-9f, 0f, Ease(Mended, Righted, t)) + 14f * lift);
+                shipFade.alpha = Ease(0f, .3f, t);
+                for (int i = 0; i < flames.Length; i++)
+                {
+                    flames[i].enabled = t > Righted && t < Gone;
+                    flames[i].rectTransform.localScale = Vector3.one * (.85f + .25f * Mathf.Sin(time * 40f + i * 2f));
+                }
+                statusFade.alpha = Ease(0f, .3f, t) * (1f - Ease(Righted - .3f, Righted, t));
+                dayLabel.enabled = t < Righted;
+                escape.enabled = !dayLabel.enabled;
+                escape.color = new Color(Bullet.r, Bullet.g, Bullet.b, Ease(Righted, Righted + .3f, t) * (1f - Ease(Length - .5f, Length - .1f, t)));
+            }
+        }
+
+        sealed class MoveSprintDemo : Demo
+        {
+            static readonly Vector2[] Corners = { new(-110f, -10f), new(-110f, 100f), new(250f, 100f), new(250f, -10f) };
+
+            static readonly float[] Sides = { .75f, 1.2f, .75f, 2.4f };
+            const float Rest = .3f;
+            Image player, fill;
+            Image[] trail;
+            Key w, a, s, d, shift;
+
+            protected override void Build()
+            {
+                trail = new Image[4];
+                for (int i = 0; i < trail.Length; i++) trail[i] = Dot(Player, 34f - i * 3f, Corners[0]);
+                player = Dot(Player, 34f, Corners[0]);
+                w = Cap("W", new Vector2(-300f, -52f));
+                a = Cap("A", new Vector2(-348f, -100f));
+                s = Cap("S", new Vector2(-300f, -100f));
+                d = Cap("D", new Vector2(-252f, -100f));
+                Label(ArenaText.Pair("move","move"), 14, Faint, new Vector2(-300f, -146f), 130f);
+                shift = Cap("Shift", new Vector2(-150f, -100f), 84f);
+                Label(ArenaText.Pair("hold to sprint","hold to sprint"), 14, Faint, new Vector2(-150f, -146f), 130f);
+                Bar(new Color(1f, 1f, 1f, .08f), new Vector2(220f, 10f), new Vector2(150f, -120f));
+                fill = Bar(new Color(1f, .82f, .3f), new Vector2(220f, 10f), new Vector2(40f, -120f));
+                fill.rectTransform.pivot = new Vector2(0f, .5f);
+                Label(ArenaText.Pair("STAMINA","STAMINA"), 13, Faint, new Vector2(150f, -100f));
+            }
+
+            public override void Tick(float time)
+            {
+                float length = Rest;
+                foreach (float seconds in Sides) length += seconds;
+                float clock = Loop(time, length) - Rest;
+                int side = -1;
+                float along = 0f;
+                for (int i = 0; i < Sides.Length && clock >= 0f; i++)
+                {
+                    if (clock < Sides[i]) { side = i; along = clock / Sides[i]; break; }
+                    clock -= Sides[i];
+                }
+                Vector2 at = side < 0 ? Corners[0] : Vector2.Lerp(Corners[side], Corners[(side + 1) % 4], along);
+                player.rectTransform.anchoredPosition = at;
+                bool sprint = side == 1;
+                w.Light(side == 0); d.Light(side == 1); s.Light(side == 2); a.Light(side == 3);
+                shift.Light(sprint);
+                for (int i = 0; i < trail.Length; i++)
+                {
+                    trail[i].rectTransform.anchoredPosition = at - new Vector2((i + 1) * 24f, 0f);
+                    trail[i].color = new Color(Player.r, Player.g, Player.b, sprint ? .32f / (i + 1) : 0f);
+                }
+
+                float refill = side == 2 ? along * Sides[2] : side == 3 ? Sides[2] + along * Sides[3] : 0f;
+                float stamina = sprint ? Mathf.Lerp(1f, .12f, along) : side >= 2 ? Mathf.Lerp(.12f, 1f, refill / (Sides[2] + Sides[3])) : 1f;
+                fill.rectTransform.sizeDelta = new Vector2(220f * stamina, 10f);
+
+                fill.color = !sprint && stamina < .3f ? new Color(.6f, .6f, .65f) : new Color(1f, .82f, .3f);
+            }
+        }
+
+        sealed class GatherDemo : Demo
+        {
+            static readonly Vector2 At = new(-70f, -10f), Fallen = new(150f, -10f), Ore = new(40f, -10f), Lamp = new(0f, 26f), Glow = new(0f, 4f);
+
+            static readonly Vector2[] Dark = { new(40f, -10f), new(108f, -4f), new(92f, -50f) };
+
+            static readonly Color EnergyColour = new(.78f, .45f, 1f), AlloyColour = new(.6f, .75f, .9f), DarkColour = new(.55f, .15f, .85f);
+            static readonly Color LampColour = new(1f, .9f, .6f), DarkText = new(.85f, .6f, 1f);
+
+            const float Afternoon = 3.4f, Night = 6.6f, Length = 10f;
+            Image overlay, glow, player, enemy, shard, barBack, barFill;
+            Image[] bullets;
+            RectTransform ore, lamp, shadow;
+            CanvasGroup oreFade, lampFade, shadowFade;
+            RectTransform[] darkNodes;
+            CanvasGroup[] darkFade;
+            Text[] phases, captions, gains;
+            Key e, f;
+
+            protected override void Build()
+            {
+
+                overlay = Bar(Color.clear, new Vector2(WindowW, WindowH), Vector2.zero);
+                glow = Dot(Color.clear, 280f, Glow);
+
+                Bar(new Color(.36f, .42f, .5f), new Vector2(70f, 130f), new Vector2(-352f, 0f));
+                Bar(new Color(.55f, .62f, .7f), new Vector2(6f, 130f), new Vector2(-320f, 0f));
+                Label(ArenaText.Pair("BASE","BASE"), 13, Soft, new Vector2(-350f, 0f), 60f);
+
+                (ore, oreFade) = Group(Ore);
+                Node(ore, new Color(.45f, .4f, .36f), AlloyColour);
+                darkNodes = new RectTransform[Dark.Length];
+                darkFade = new CanvasGroup[Dark.Length];
+                for (int i = 0; i < Dark.Length; i++)
+                {
+                    (darkNodes[i], darkFade[i]) = Group(Dark[i]);
+                    Node(darkNodes[i], new Color(.16f, .1f, .22f), DarkColour);
+                }
+                (lamp, lampFade) = Group(Lamp);
+                Part(lamp, null, new Color(.3f, .3f, .32f), new Vector2(6f, 36f), Vector2.zero);
+                Part(lamp, null, new Color(1f, .9f, .55f), new Vector2(18f, 14f), new Vector2(0f, 22f));
+
+                (shadow, shadowFade) = Group(new Vector2(255f, 64f));
+                Part(shadow, circle, new Color(.06f, .03f, .1f), Vector2.one * 34f, Vector2.zero);
+                Part(shadow, circle, new Color(.75f, .3f, 1f), Vector2.one * 6f, new Vector2(-6f, 5f));
+                Part(shadow, circle, new Color(.75f, .3f, 1f), Vector2.one * 6f, new Vector2(6f, 5f));
+
+                enemy = Dot(Enemy, 30f, new Vector2(400f, At.y));
+                shard = Bar(EnergyColour, Vector2.one * 14f, Fallen);
+                shard.rectTransform.localEulerAngles = new Vector3(0f, 0f, 45f);
+                bullets = new Image[4];
+                for (int i = 0; i < bullets.Length; i++) bullets[i] = Dot(Bullet, 9f, At);
+                player = Dot(Player, 32f, At);
+                barBack = Bar(new Color(1f, 1f, 1f, .12f), new Vector2(64f, 8f), Vector2.zero);
+                barFill = Bar(AlloyColour, new Vector2(64f, 8f), Vector2.zero);
+                barFill.rectTransform.pivot = new Vector2(0f, .5f);
+
+                phases = new[]
+                {
+                    Caption(ArenaText.Pair("MORNING","MORNING"), 20, Soft, 128f),
+                    Caption(ArenaText.Pair("AFTERNOON","AFTERNOON"), 20, Soft, 128f),
+                    Caption(ArenaText.Pair("NIGHT","NIGHT"), 20, Soft, 128f),
+                };
+                captions = new[]
+                {
+                    Caption(ArenaText.Pair("Hold the base; kills drop alien energy","Hold the base; kills drop alien energy"), 14, Faint, 102f),
+                    Caption(ArenaText.Pair("Alloy ore surfaces; it needs no lamp","Alloy ore surfaces; it needs no lamp"), 14, Faint, 102f),
+                    Caption(ArenaText.Pair("Shadows fear the light: mine dark matter in it","Shadows fear the light: mine dark matter in it"), 14, Faint, 102f),
+                };
+                gains = new[]
+                {
+                    Label(ArenaText.Pair("alien energy +1","alien energy +1"), 16, EnergyColour, At, 200f),
+                    Label(ArenaText.Pair("alien alloy +3","alien alloy +3"), 16, AlloyColour, Ore, 200f),
+                    Label(ArenaText.Pair("dark matter +1","dark matter +1"), 16, DarkText, Dark[0], 200f),
+                };
+                e = Cap("E", new Vector2(-300f, -110f));
+                f = Cap("F", new Vector2(-200f, -110f));
+
+                Label(ArenaText.Pair("hold to mine","hold to mine"), 14, Faint, new Vector2(-300f, -146f), 120f);
+                Label(ArenaText.Pair("set a lamp","set a lamp"), 14, Faint, new Vector2(-200f, -146f), 100f);
+            }
+
+            static void Node(RectTransform group, Color rock, Color crystal)
+            {
+                Part(group, null, rock, new Vector2(52f, 24f), new Vector2(0f, -4f));
+                Part(group, null, crystal, new Vector2(14f, 30f), new Vector2(8f, 14f));
+            }
+
+            public override void Tick(float time)
+            {
+                float t = Loop(time, Length);
+                int phase = t < Afternoon ? 0 : t < Night ? 1 : 2;
+                for (int i = 0; i < phases.Length; i++) phases[i].enabled = captions[i].enabled = i == phase;
+
+                float end = 1f - Ease(Length - .3f, Length, t);
+                float nightfall = Ease(Night - .2f, Night + .3f, t) * end;
+                overlay.color = new Color(.01f, .02f, .06f, .15f * Ease(Afternoon - .2f, Afternoon + .2f, t) * end + .57f * nightfall);
+                player.color = new Color(Player.r, Player.g, Player.b, Ease(0f, .25f, t) * end);
+
+                Vector2 foe = Vector2.Lerp(new Vector2(400f, At.y), Fallen, Mathf.InverseLerp(.2f, 1.5f, t));
+                enemy.enabled = t < 1.7f;
+                enemy.rectTransform.anchoredPosition = foe;
+                enemy.rectTransform.localScale = Vector3.one * (1f - Mathf.InverseLerp(1.5f, 1.7f, t));
+                enemy.color = t is > 1.1f and < 1.5f && Mathf.Repeat(t, .12f) < .06f ? Color.white : Enemy;
+                for (int i = 0; i < bullets.Length; i++)
+                {
+                    float flight = (t - .9f - i * .15f) / .2f;
+                    bullets[i].enabled = flight is > 0f and < 1f;
+                    bullets[i].rectTransform.anchoredPosition = Vector2.Lerp(At + new Vector2(20f, 0f), foe, flight);
+                }
+                shard.enabled = t is > 1.6f and < 2.45f;
+                shard.rectTransform.anchoredPosition = Vector2.Lerp(Fallen + new Vector2(0f, 4f * Mathf.Sin(t * 8f)), At, Ease(2.1f, 2.45f, t));
+                Gain(gains[0], At, 2.45f, t);
+
+                bool mineOre = t is > 4.1f and < 5.4f, mineDark = t is > 7.9f and < 9f;
+                oreFade.alpha = phase == 1 ? Ease(Afternoon + .1f, Afternoon + .4f, t) * (1f - Ease(5.4f, 5.6f, t)) : 0f;
+                ore.localScale = Vector3.one * (1f + .3f * Ease(5.4f, 5.6f, t));
+                Gain(gains[1], Ore, 5.5f, t);
+
+                float placed = Ease(7.2f, 7.35f, t), lit = Ease(7.25f, 7.6f, t) * nightfall;
+                lampFade.alpha = placed * nightfall;
+                lamp.anchoredPosition = Lamp + new Vector2(0f, 10f * (1f - placed));
+                glow.color = new Color(LampColour.r, LampColour.g, LampColour.b, .2f * lit);
+                for (int i = 0; i < darkNodes.Length; i++)
+                {
+                    float mined = i == 0 ? Ease(9f, 9.2f, t) : 0f;
+                    darkFade[i].alpha = nightfall * Mathf.Lerp(.35f, 1f, lit) * (1f - mined);
+                    darkNodes[i].localScale = Vector3.one * ((i == 0 ? 1f : .8f) + .3f * mined);
+                }
+                shadowFade.alpha = .9f * nightfall;
+                shadow.anchoredPosition = new Vector2(255f + 34f * Mathf.Sin(time * .9f), 64f + 12f * Mathf.Sin(time * 1.7f));
+                Gain(gains[2], Dark[0] + new Vector2(30f, 0f), 9.1f, t);
+
+                e.Light(mineOre || mineDark);
+                f.Light(t is > 7.1f and < 7.35f);
+                Vector2 node = mineOre ? Ore : Dark[0];
+                barBack.enabled = barFill.enabled = mineOre || mineDark;
+                barBack.rectTransform.anchoredPosition = node + new Vector2(0f, 40f);
+                barFill.rectTransform.anchoredPosition = node + new Vector2(-32f, 40f);
+                barFill.rectTransform.sizeDelta = new Vector2(64f * (mineOre ? Mathf.InverseLerp(4.1f, 5.4f, t) : Mathf.InverseLerp(7.9f, 9f, t)), 8f);
+                barFill.color = mineOre ? AlloyColour : DarkText;
+            }
+
+            static void Gain(Text label, Vector2 from, float at, float t)
+            {
+                float rise = Mathf.InverseLerp(at, at + .8f, t);
+                label.enabled = t > at && rise < 1f;
+                label.rectTransform.anchoredPosition = from + new Vector2(0f, 44f + 22f * rise);
+                var colour = label.color;
+                colour.a = 1f - rise * rise;
+                label.color = colour;
+            }
+        }
+
+        sealed class BaseDemo : Demo
+        {
+            static readonly Vector2 Centre = new(-250f, 10f), Approach = new(-250f, -135f), Door = new(-250f, -74f), SheetAt = new(130f, -2f);
+
+            static readonly CampaignRoom[] Rooms = { CampaignRoom.Control, CampaignRoom.Armament, CampaignRoom.Energy, CampaignRoom.Ship };
+
+            const float Buying = 1.9f, Each = .95f, Morning = 6f, Length = 9f;
+            const float RowTop = 58f, RowStep = 42f;
+            Image overlay, player, shield, cursor, cursorDot;
+            Image[] rows;
+            RectTransform sheet;
+            CanvasGroup fade;
+            Text flash;
+            Text[] phases, captions;
+            Key e;
+
+            protected override void Build()
+            {
+                overlay = Bar(Color.clear, new Vector2(WindowW, WindowH), Vector2.zero);
+                shield = Ring(Color.clear, 160f, Centre);
+
+                Bar(new Color(.36f, .42f, .5f), new Vector2(120f, 120f), Centre);
+                for (int side = 0; side < 4; side++)
+                {
+                    var normal = new Vector2(V2Campaign.SideNormal[side].x, V2Campaign.SideNormal[side].z);
+                    Bar(V2Campaign.RoomColour(V2Campaign.SideRoom[side]), side % 2 == 0 ? new Vector2(120f, 6f) : new Vector2(6f, 120f), Centre + normal * 63f);
+                }
+                Bar(new Color(.15f, .85f, 1f), new Vector2(34f, 14f), Centre + new Vector2(0f, -60f));
+                Label(ArenaText.Pair("BASE","BASE"), 16, Soft, Centre, 100f);
+                player = Dot(Player, 30f, Approach);
+                e = Cap("E", new Vector2(-335f, -100f));
+                Label(ArenaText.Pair("at the door","at the door"), 14, Faint, new Vector2(-335f, -146f), 110f);
+                phases = new[] { Caption(ArenaText.Pair("AFTERNOON OR NIGHT","AFTERNOON OR NIGHT"), 20, Soft, 128f), Caption(ArenaText.Pair("MORNING","MORNING"), 20, Soft, 128f) };
+                captions = new[]
+                {
+                    Caption(ArenaText.Pair("E at the door: enter the base","E at the door: enter the base"), 14, Faint, 102f),
+                    Caption(ArenaText.Pair("Once the shield is unlocked, E at the door tops it up with alien energy","Once the shield is unlocked, E at the door tops it up with alien energy"), 14, Faint, 102f),
+                };
+
+                (sheet, fade) = Sheet(new Vector2(480f, 290f), SheetAt);
+                Label(ArenaText.Pair("BASE","BASE"), 18, Soft, new Vector2(0f, 118f), 300f, sheet);
+                Label(ArenaText.Pair("Paid with alien energy, alien alloy and dark matter","Paid with alien energy, alien alloy and dark matter"), 12, Faint, new Vector2(0f, 94f), 440f, sheet);
+
+                string[] sells =
+                {
+                    ArenaText.Pair("base hull and shield","base hull and shield"),
+                    ArenaText.Pair("armor, weapon boosts, anomaly weapons","armor, weapon boosts, anomaly weapons"),
+                    ArenaText.Pair("body, alien skills, infusions","body, alien skills, infusions"),
+                    ArenaText.Pair("ship repairs, fuel from dark matter, lamps","ship repairs, fuel from dark matter, lamps"),
+                };
+                rows = new Image[Rooms.Length];
+                for (int i = 0; i < Rooms.Length; i++)
+                {
+                    float y = RowTop - i * RowStep;
+                    rows[i] = Part(sheet, pill, KeyIdle, new Vector2(452f, 34f), new Vector2(0f, y));
+                    Part(sheet, circle, V2Campaign.RoomColour(Rooms[i]), Vector2.one * 14f, new Vector2(-206f, y));
+                    Label(V2Campaign.RoomName(Rooms[i]), 14, Soft, new Vector2(-122f, y), 140f, sheet, TextAnchor.MiddleLeft);
+
+                    var sold = Label(sells[i], 13, Faint, new Vector2(78f, y), 290f, sheet, TextAnchor.MiddleLeft);
+                    sold.verticalOverflow = VerticalWrapMode.Truncate;
+                    sold.resizeTextForBestFit = true;
+                    sold.resizeTextMinSize = 10;
+                    sold.resizeTextMaxSize = 13;
+                }
+                flash = Label(ArenaText.Pair("Takes effect at once","Takes effect at once"), 15, Bullet, new Vector2(0f, -112f), 300f, sheet);
+                cursor = Ring(Soft, 24f, SheetAt);
+                cursorDot = Dot(Soft, 6f, SheetAt);
+            }
+
+            public override void Tick(float time)
+            {
+                float t = Loop(time, Length);
+                bool morning = t >= Morning;
+                for (int i = 0; i < phases.Length; i++) phases[i].enabled = captions[i].enabled = (i == 1) == morning;
+                float end = 1f - Ease(Length - .3f, Length, t);
+
+                overlay.color = new Color(.01f, .02f, .06f, .35f * (1f - Ease(Morning - .3f, Morning, t)));
+                player.rectTransform.anchoredPosition = Vector2.Lerp(Approach, Door, Ease(.15f, 1f, t));
+                player.color = new Color(Player.r, Player.g, Player.b, Ease(0f, .15f, t) * end);
+                e.Light(t is > 1.05f and < 1.3f || t is > 6.6f and < 6.85f);
+
+                float closing = Buying + Rooms.Length * Each;
+                float shown = Ease(1.3f, 1.55f, t) * (1f - Ease(closing, closing + .25f, t));
+                fade.alpha = shown;
+                int row = Mathf.FloorToInt((t - Buying) / Each);
+                float local = t - Buying - row * Each;
+                bool buying = row >= 0 && row < Rooms.Length;
+                for (int i = 0; i < rows.Length; i++) rows[i].color = buying && i == row && local < .8f ? Cyan : KeyIdle;
+                flash.color = new Color(Bullet.r, Bullet.g, Bullet.b, buying && local is > .3f and < .85f ? 1f : 0f);
+
+                Vector2 point = row < 0 ? RowPoint(0) : row >= Rooms.Length ? RowPoint(Rooms.Length - 1)
+                    : Vector2.Lerp(RowPoint(Mathf.Max(0, row - 1)), RowPoint(row), Ease(0f, .25f, local));
+                cursor.rectTransform.anchoredPosition = cursorDot.rectTransform.anchoredPosition = point;
+                cursor.rectTransform.localScale = Vector3.one * (buying && local is > .25f and < .4f ? .75f : 1f);
+                cursor.color = cursorDot.color = new Color(Soft.r, Soft.g, Soft.b, shown);
+
+                float ring = Ease(6.7f, 7f, t) * (1f - Ease(8.3f, 8.6f, t));
+                shield.color = new Color(.5f, .9f, 1f, .85f * ring);
+                shield.rectTransform.sizeDelta = Vector2.one * Mathf.Lerp(130f, 160f, ring) * (1f + .03f * Mathf.Sin(time * 6f));
+            }
+
+            static Vector2 RowPoint(int row) => SheetAt + new Vector2(214f, RowTop - row * RowStep);
         }
 
         static RectTransform MakeButton(Transform parent, string name, Sprite sprite, string label, Color colour, Action click)

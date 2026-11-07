@@ -9,13 +9,16 @@ namespace AnomalyArena
     public enum CampaignStage { Off, TitleCard, Loadout, Tutorial, Day, Lull, Dusk, Night, Base, Build, Story, FinalBoss, Core, Ending }
 
                  
-                                                                                                                                       
                                                                                                                                            
-                                                                                                   
-                                                                                                                                           
+                                                                                                                                            
+                                                                                                                                             
                                                                                                                                          
-                                                                                                                                                                            
-                                                                                                         
+                                                                                                                                    
+                                                                                                                                           
+                                                                                                                                             
+                                                                                                                                              
+                                                                                                                                            
+                          
                                                                                                                                          
                                                                                                                              
                   
@@ -39,11 +42,15 @@ namespace AnomalyArena
         public bool EndingDone { get; private set; }
         public string PromptText => prompt;
         public int LampStock => lampStock;
+                                                                                                                                      
+        public bool EveningsOpenEnded => rules && rules.openEndedEvenings;
 
         GameManager gm;
         V2CampaignUi ui;
         float stageClock, stageLength;
         bool buildAllowed;
+                                                                                                       
+        bool mapSetUp;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void Boot() { Active = null; ClearHooks(); }
@@ -62,6 +69,7 @@ namespace AnomalyArena
 
         void OnDestroy()
         {
+            GiveMapBack();
             if (Active == this) { Active = null; ClearHooks(); }
             if (ui) Destroy(ui.gameObject);
         }
@@ -76,9 +84,17 @@ namespace AnomalyArena
             RunWeapons.ArmoryRule = null;
         }
 
+                                                                                                                         
+        void GiveMapBack()
+        {
+            if (!mapSetUp) return;
+            mapSetUp = false;
+            RestoreClassicMap();
+        }
+
                                            
 
-                                                                                                                                                    
+                                                                                                                                                          
         public void Begin()
         {
             if (Running || !gm || !rules) return;
@@ -86,6 +102,10 @@ namespace AnomalyArena
             armoryRoundsLeft = 0; ArmoryRoundActive = false; armoryMode = ArmoryMode.Rooms; activeUpgrade = null;
             ResetEconomy(); ResetBase(); ResetNight();
             InstallHooks();
+                                                                                                                                           
+                                                                  
+            SetupCampaignMap(); mapSetUp = true;
+            trailTarget = HoleCentre;                                                                        
             BuildWorld();
             PlacePlayer(CrashSite);
             Stage = CampaignStage.TitleCard; stageClock = 0f; stageLength = 3.2f;
@@ -101,14 +121,16 @@ namespace AnomalyArena
             Enemy.RaidStrike = OnRaidStrike;
                                                                                                                                         
             Enemy.RaidAggroRadius = rules.raiderAggroRadius;
-                                                                                                            
+                                                                                                                      
             WaveManager.SpawnPointOverride = CampaignSpawnPoint;
             RunWeapons.AxisAllowed = axis => axis switch
             {
                 UpgradeAxis.Tame => TameCards,
                 UpgradeAxis.Twist => TwistCards,
                 UpgradeAxis.Infusion => InfusionCards,
-                _ => !Running || activeUpgrade == null                                                                         
+                                                                                                                                       
+                                                                           
+                _ => !Running || activeUpgrade == null
             };
             RunWeapons.ArmoryRule = () => armoryMode switch
             {
@@ -126,20 +148,19 @@ namespace AnomalyArena
             gm.waves.EnemyEliminated -= OnEnemyEliminated; gm.waves.EnemyEliminated += OnEnemyEliminated;
         }
 
-                                                                                                                                   
+                                                                                                                
         public void AfterLoadout()
         {
             gm.CampaignEnterPlay();
             BeginTutorial();
         }
 
-                                                                                                                                           
-                                                                                              
+                                                                                                                                              
+                                                                                                                                                
         void BeginWithStartingWeapons()
         {
             Stage = CampaignStage.Loadout;
-            gm.runWeapons.GiveToHand(0, WeaponForm.Knife);
-            gm.runWeapons.GiveToHand(1, WeaponForm.Rifle);
+            gm.runWeapons.GiveToHand(0, WeaponForm.Pistol);
             AfterLoadout();
         }
 
@@ -173,6 +194,8 @@ namespace AnomalyArena
         {
             if (!Running || !gm) return;
             if (gm.State is GameState.Won or GameState.Lost) { if (Stage != CampaignStage.Off) Finish(); return; }
+                                                                                                                                     
+            if (ui.ConfirmOpen) { ui.Refresh(); return; }
             float dt = Time.deltaTime, unscaled = Time.unscaledDeltaTime;
             switch (Stage)
             {
@@ -209,9 +232,10 @@ namespace AnomalyArena
             ClearNight(true);
             darkness?.SetActive(false);
             ui.HideAll();
+            GiveMapBack();
         }
 
-                          
+                              
 
         void TickDay(float dt)
         {
@@ -219,7 +243,7 @@ namespace AnomalyArena
             TickDayInteraction(dt);
         }
 
-                                                                                                                                                      
+                                                                                                                                                
         public void StartNextWave()
         {
             var waves = gm.waves;
@@ -231,15 +255,14 @@ namespace AnomalyArena
                 regionKills.Clear();
                 ApplyDaylight();
                 Say(Line.S07);
-                Objective(ArenaText.Pair("Hold the base: monsters come in from the map's edge for it; those near you attack you first","Hold the base: monsters come in from the map's edge for it; those near you attack you first"), null);
+                Objective(ArenaText.Pair("Morning: hold the base. Monsters walk in from all around for it; those near you attack you first","Morning: hold the base. Monsters walk in from all around for it; those near you attack you first"), null);
             }
-                                                                                                                                        
                                                                                                                                            
                                                     
             int index = Mathf.Clamp(rules.WaveNumber(Overtime ? rules.days : Day, WaveOfDay) - 1, 0, waves.WaveCount - 1);
             waves.BeginWaveAt(index);
             string affixes = waves.WaveAffixA != ElementKind.None ? $"{ArenaTerms.Element(waves.WaveAffixA)} · {ArenaTerms.Element(waves.WaveAffixB)}" : ArenaText.Pair("Hold the base and stay alive","Hold the base and stay alive");
-            gm.hud?.Banner(Dot(Overtime ? ArenaText.Pair($"DAY {Day} (OVERTIME)",$"DAY {Day} (OVERTIME)") : ArenaText.Pair($"DAY {Day}",$"DAY {Day}"), AttackText(WaveOfDay + 1)), affixes);
+            gm.hud?.Banner(Dot(Overtime ? ArenaText.Pair($"DAY {Day} (OVERTIME)",$"DAY {Day} (OVERTIME)") : ArenaText.Pair($"DAY {Day}",$"DAY {Day}"), ArenaText.Pair("MORNING","MORNING"), AttackText(WaveOfDay + 1)), affixes);
         }
 
                                                                                                                  
@@ -259,7 +282,7 @@ namespace AnomalyArena
         }
 
                                                                                                                                            
-                                                                                              
+                                                                                                       
         public bool InterceptBuild()
         {
             if (!Running) return false;
@@ -314,30 +337,34 @@ namespace AnomalyArena
         public void FillSnapshot(ArenaUiSnapshot s)
         {
             s.hideXp = Running;
+                                                                                                                            
             string phase = Stage switch
             {
-                CampaignStage.Day or CampaignStage.Lull => ArenaText.Pair("DAY","DAY"),
-                CampaignStage.Dusk => ArenaText.Pair("DUSK","DUSK"),
+                CampaignStage.Day or CampaignStage.Lull => ArenaText.Pair("MORNING","MORNING"),
+                CampaignStage.Dusk => ArenaText.Pair("AFTERNOON","AFTERNOON"),
                 CampaignStage.Night => ArenaText.Pair("NIGHT","NIGHT"),
                 CampaignStage.Tutorial => ArenaText.Pair("AFTER THE FALL","AFTER THE FALL"),
                 _ => ""
             };
             string dayText = Overtime ? ArenaText.Pair($"DAY {Day} (OVERTIME)",$"DAY {Day} (OVERTIME)") : Day == 0 ? ArenaText.Pair("DAY 0","DAY 0") : ArenaText.Pair($"DAY {Day} / {rules.days}",$"DAY {Day} / {rules.days}");
-            float left = Stage is CampaignStage.Dusk or CampaignStage.Night ? Mathf.Max(0f, stageLength - stageClock) : gm.waves ? gm.waves.TimeLeft : 0f;
+            bool evening = Stage is CampaignStage.Dusk or CampaignStage.Night;
+                                                                                         
+            bool eveningClock = evening && !EveningsOpenEnded;
+            float left = eveningClock ? Mathf.Max(0f, stageLength - stageClock) : gm.waves ? gm.waves.TimeLeft : 0f;
             if (Stage is CampaignStage.Day or CampaignStage.Lull)
                 s.campaignLabel = Dot(dayText, phase, AttackText(WaveOfDay + 1), s.waveTimeExpired ? ArenaText.Pair("CLEAR SURVIVORS","CLEAR SURVIVORS") : $"{Mathf.CeilToInt(left):00}");
-            else if (Stage is CampaignStage.Dusk or CampaignStage.Night) s.campaignLabel = $"{dayText} · {phase} · {Mathf.CeilToInt(left):00}";
+            else if (evening) s.campaignLabel = eveningClock ? Dot(dayText, phase, $"{Mathf.CeilToInt(left):00}") : Dot(dayText, phase);
             else if (Stage == CampaignStage.Tutorial) s.campaignLabel = $"{ArenaText.Pair("DAY 0","DAY 0")} · {phase}";
             else if (Stage == CampaignStage.Build) s.campaignLabel = Day + 1 > rules.days ? ArenaText.Pair($"DAY {Day + 1} (OVERTIME) · DAWN",$"DAY {Day + 1} (OVERTIME) · DAWN") : ArenaText.Pair($"DAY {Day + 1} / {rules.days} · DAWN",$"DAY {Day + 1} / {rules.days} · DAWN");
             else s.campaignLabel = "";
-                                                                                                                          
-            if (Stage is CampaignStage.Dusk or CampaignStage.Night) s.waveTime = left;
-            else if (Stage is CampaignStage.Tutorial or CampaignStage.Build or CampaignStage.Lull) s.waveTime = 99f;
+                                                                                                                                      
+            if (eveningClock) s.waveTime = left;
+            else if (evening || Stage is CampaignStage.Tutorial or CampaignStage.Build or CampaignStage.Lull) s.waveTime = 99f;
             if (s.state == ArenaUiState.WaveIntro && Stage is CampaignStage.Lull)
                 s.banner = ArenaText.Pair($"DAY {Day} · ATTACK {WaveOfDay + 2}/{rules.wavesPerDay} INCOMING",$"DAY {Day} · ATTACK {WaveOfDay + 2}/{rules.wavesPerDay} INCOMING");
             else if (s.state == ArenaUiState.WaveIntro && Stage is CampaignStage.Day)
-                s.banner = Overtime ? ArenaText.Pair($"DAY {Day} · OVERTIME",$"DAY {Day} · OVERTIME") : Dot(ArenaText.Pair($"DAY {Day}",$"DAY {Day}"), AttackText(WaveOfDay + 1));
-            if (Stage is CampaignStage.Dusk or CampaignStage.Night) s.hint = NightHint();
+                s.banner = Overtime ? ArenaText.Pair($"DAY {Day} · OVERTIME",$"DAY {Day} · OVERTIME") : Dot(ArenaText.Pair($"DAY {Day}",$"DAY {Day}"), ArenaText.Pair("MORNING","MORNING"), AttackText(WaveOfDay + 1));
+            if (evening) s.hint = NightHint();
             else if (Stage == CampaignStage.Tutorial && !string.IsNullOrEmpty(tutorialHint)) s.hint = tutorialHint;
             if (gm.State == GameState.Won)
             {
@@ -356,9 +383,11 @@ namespace AnomalyArena
         static Keyboard Keys => Keyboard.current;
                                                                                                                              
         [System.NonSerialized] public bool debugHoldE, debugPressE, debugPressF;
-        bool EHeld => debugHoldE || Keys != null && Keys.eKey.isPressed;
-        bool EPressed => Take(ref debugPressE) || Keys != null && Keys.eKey.wasPressedThisFrame;
-        bool FPressed => Take(ref debugPressF) || Keys != null && Keys.fKey.wasPressedThisFrame;
+                                                                                                               
+        bool QuestionOpen => ui && ui.ConfirmOpen;
+        bool EHeld => !QuestionOpen && (debugHoldE || Keys != null && Keys.eKey.isPressed);
+        bool EPressed => !QuestionOpen && (Take(ref debugPressE) || Keys != null && Keys.eKey.wasPressedThisFrame);
+        bool FPressed => !QuestionOpen && (Take(ref debugPressF) || Keys != null && Keys.fKey.wasPressedThisFrame);
         static bool Take(ref bool flag) { bool was = flag; flag = false; return was; }
         public V2CampaignUi Ui => ui;
                                                                                      
@@ -391,36 +420,29 @@ namespace AnomalyArena
             return desired;
         }
 
-        const float SpawnEdgeInset = 2f, SpawnEdgeSpread = 4f, SpawnPlayerClearance = 9f;
+        const float SpawnPlayerClearance = 9f, SpawnRingMapMargin = 3f;
 
-                                                                                                                                             
                                                                                                                                         
-                                                                                                                                          
-                                                                                                                                  
+                                                                                                                                         
+                                                                                                                                        
+                                                                                                                                           
                                                                   
         Vector3 CampaignSpawnPoint(Vector3 picked)
         {
             var map = WorldMap.Active;
             if (!Running || !map || map.TrialActive || Stage is not (CampaignStage.Day or CampaignStage.Lull)) return picked;
-            var bounds = map.Bounds;
-            Vector3 centre = new(bounds.center.x, 0f, bounds.center.z);
-            Vector3 d = Query.Flat(picked - centre);
-            if (d.sqrMagnitude < .01f) { float a = Random.value * Mathf.PI * 2f; d = new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)); }
-            float hx = Mathf.Max(1f, bounds.extents.x - SpawnEdgeInset), hz = Mathf.Max(1f, bounds.extents.z - SpawnEdgeInset);
-                                                                                                                                          
-            float tx = Mathf.Abs(d.x) > .001f ? hx / Mathf.Abs(d.x) : float.MaxValue;
-            float tz = Mathf.Abs(d.z) > .001f ? hz / Mathf.Abs(d.z) : float.MaxValue;
-            bool eastWest = tx <= tz;
-            Vector3 onEdge = centre + d * Mathf.Min(tx, tz);
+            Vector3 d = Query.Flat(picked - BaseCentre);
+            float angle = d.sqrMagnitude > .01f ? Mathf.Atan2(d.z, d.x) : Random.value * Mathf.PI * 2f;
+                                                                          
+            float step = SpawnPlayerClearance * 1.2f / Mathf.Max(4f, rules.daySpawnRing);
             Vector3 player = gm && gm.player ? Query.Flat(gm.player.Position) : new Vector3(float.MaxValue, 0f, float.MaxValue);
             Vector3? best = null; float bestDistance = -1f;
-            for (int attempt = 0; attempt < 4; attempt++)
+            for (int attempt = 0; attempt < 6; attempt++)
             {
-                float along = Random.Range(-SpawnEdgeSpread, SpawnEdgeSpread) + attempt * (attempt % 2 == 0 ? 1f : -1f) * SpawnPlayerClearance;
-                Vector3 p = eastWest
-                    ? new Vector3(centre.x + Mathf.Sign(d.x) * hx, 0f, Mathf.Clamp(onEdge.z + along, centre.z - hz, centre.z + hz))
-                    : new Vector3(Mathf.Clamp(onEdge.x + along, centre.x - hx, centre.x + hx), 0f, centre.z + Mathf.Sign(d.z) * hz);
-                p = FindOpen(p, .6f);
+                                                                                                                                
+                float a = angle + Random.Range(-.06f, .06f) + (attempt + 1) / 2 * (attempt % 2 == 0 ? 1f : -1f) * step;
+                Vector3 dir = new(Mathf.Cos(a), 0f, Mathf.Sin(a));
+                Vector3 p = FindOpen(BaseCentre + dir * SpawnRingRadius(dir), .6f);
                 if (!map.IsWalkable(p, .6f)) continue;
                 float distance = Query.Flat(p - player).magnitude;
                 if (distance >= SpawnPlayerClearance) return p;
@@ -429,7 +451,34 @@ namespace AnomalyArena
             return best ?? picked;
         }
 
-        float MapHalfWidth => WorldMap.Active ? WorldMap.Active.Bounds.extents.x : 90f;
-        Vector3 CrashSite => new(-MapHalfWidth + 9f, 0f, 0f);
+                                                                                                                                              
+        float SpawnRingRadius(Vector3 dir)
+        {
+            Vector2 half = MapHalfSize;
+            float r = Mathf.Max(BaseHalf + 4f, rules.daySpawnRing);
+            if (Mathf.Abs(dir.x) > .001f) r = Mathf.Min(r, Mathf.Max(1f, half.x - SpawnRingMapMargin - Mathf.Abs(BaseCentre.x)) / Mathf.Abs(dir.x));
+            if (Mathf.Abs(dir.z) > .001f) r = Mathf.Min(r, Mathf.Max(1f, half.y - SpawnRingMapMargin - Mathf.Abs(BaseCentre.z)) / Mathf.Abs(dir.z));
+            return r;
+        }
+
+                                                                                                                                             
+                                                                
+        Bounds CampaignBounds
+        {
+            get
+            {
+                Vector2 half = MapHalfSize;
+                return new Bounds(Vector3.zero, new Vector3(Mathf.Max(2f, half.x * 2f), 20f, Mathf.Max(2f, half.y * 2f)));
+            }
+        }
+
+                                                                                                                                           
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                             
+        const float CrashDistance = 81f, TutorialCornerEast = 20f, TutorialCornerSouth = 33f;
+        Vector3 CrashSite => BaseCentre + Vector3.left * Mathf.Min(CrashDistance, Mathf.Max(10f, MapHalfSize.x - 9f));
+                                                                                                                                    
+        Vector3 TutorialCorner => new(CrashSite.x + TutorialCornerEast, 0f, BaseCentre.z - Mathf.Min(TutorialCornerSouth, Mathf.Max(4f, MapHalfSize.y - 6f)));
     }
 }

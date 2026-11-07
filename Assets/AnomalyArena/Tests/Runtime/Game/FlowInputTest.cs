@@ -25,6 +25,7 @@ namespace AnomalyArena
         {
             keyboard?.Dispose();
             keyboard = null;
+            if (V2Tutorial.IsOpen) V2Tutorial.Close();
             if (artWas.HasValue) Art.Enabled = artWas.Value;
             artWas = null;
             if (runtimeWaves)
@@ -106,9 +107,79 @@ namespace AnomalyArena
                 var element = content.transform.Find(hidden);
                 Assert.That(element == null || !element.gameObject.activeInHierarchy, Is.True, hidden + " is not shown");
             }
-            foreach (var shown in new[] { "StartRun", "Controls", "ToggleArt" })
+            foreach (var shown in new[] { "StartRun", V2Hud.TitleTutorialButton, "Controls", "ToggleArt" })
                 Assert.That(content.transform.Find(shown).gameObject.activeInHierarchy, Is.True, shown + " is shown");
             Assert.That(ArenaText.IsChinese, Is.True, "the Chinese edition starts in Chinese");
+        }
+
+        [Test, LoadScene(SceneCn), Category("Integration"), Timeout(60000)]
+        public async Task ChineseTitle_TutorialUnderStart_OpensTheStoryPages_AndClosingThemLeavesTheTitle() => await TitleTutorialOpensTheStoryPages();
+
+        [Test, LoadScene(SceneEn), Category("Integration"), Timeout(60000)]
+        public async Task EnglishTitle_TutorialUnderStart_OpensTheStoryPages_AndClosingThemLeavesTheTitle() => await TitleTutorialOpensTheStoryPages();
+
+        static async Task TitleTutorialOpensTheStoryPages()
+        {
+            var game = await ReadyScene();
+            Assume.That(game.RunPhase, Is.EqualTo(ArenaUiState.Title));
+            Assume.That(V2Campaign.Active && V2Campaign.Active.Running, Is.False, "no campaign runs on the title");
+            var content = GameObject.Find("V2Canvas/TitleScreen/Content").transform;
+            var tutorial = content.Find(V2Hud.TitleTutorialButton) as RectTransform;
+            Assert.That(tutorial && tutorial.gameObject.activeInHierarchy, Is.True, "the title shows the tutorial button");
+            var label = tutorial.GetComponentInChildren<UnityEngine.UI.Text>();
+            await Until(() => label.text == ArenaText.Pair("HOW TO PLAY","HOW TO PLAY"), 3f, "the tutorial button is labelled in the scene's language");
+            Assert.That(tutorial.TryGetComponent<ArenaUiButton>(out _), Is.False, "the tutorial button sends no run command");
+            float titleTime = Time.timeScale;
+
+            Click(tutorial);
+            Assert.That(V2Tutorial.IsOpen && V2Tutorial.HoldsInput, Is.True, "a click opens the pages, which hold the game's keys");
+            Assert.That(Time.timeScale, Is.Zero, "the game holds still under them");
+            await Awaitable.NextFrameAsync();
+            foreach (var name in new[] { "StartRun", V2Hud.TitleTutorialButton, "ToggleArt" })
+            {
+                var hit = TopHit((RectTransform)content.Find(name), out _);
+                Assert.That(hit && hit.GetComponentInParent<V2Tutorial>(), Is.True, $"the pages cover {name}, so a click there stays on them");
+            }
+            var pages = Object.FindAnyObjectByType<V2Tutorial>().transform;
+            var heading = pages.Find("Panel/Heading").GetComponent<UnityEngine.UI.Text>();
+            var line = pages.Find("Panel/Line").GetComponent<UnityEngine.UI.Text>();
+            var shownTexts = new System.Collections.Generic.List<string>();
+            for (int page = 0; page < V2Tutorial.PageCount; page++)
+            {
+                Assert.That(V2Tutorial.Page, Is.EqualTo(page));
+
+                await Awaitable.NextFrameAsync();
+                Canvas.ForceUpdateCanvases();
+                if (page == 0) Assert.That(heading.text, Is.EqualTo(ArenaText.Pair("STRANDED","STRANDED")), "the story pages open on the background");
+                Assert.That(line.text, Is.Not.Empty, $"page {page + 1} has its line");
+                Assert.That(line.cachedTextGenerator.characterCountVisible, Is.GreaterThanOrEqualTo(line.text.Length), $"page {page + 1}: \"{line.text}\" is not cut off");
+
+                shownTexts.AddRange(pages.GetComponentsInChildren<UnityEngine.UI.Text>().Select(text => text.text));
+                if (page < V2Tutorial.PageCount - 1) V2Tutorial.Next();
+            }
+            Assert.That(pages.Find("Panel/Footnote").gameObject.activeInHierarchy, Is.True, "the last page shows the footnote");
+            string card = ArenaText.Pair("card","card");
+            Assert.That(shownTexts.Where(text => text.IndexOf(card, StringComparison.OrdinalIgnoreCase) >= 0), Is.Empty, "the story pages name no card");
+            Assert.That(shownTexts.Where(text => text.Contains("Tab")), Is.Empty, "nor Tab");
+
+            Click((RectTransform)pages.Find("Panel/Skip"));
+            Assert.That(V2Tutorial.IsOpen, Is.False, "Skip closes the pages");
+            Assert.That(Time.timeScale, Is.EqualTo(titleTime), "and gives the title its own time back");
+            await Awaitable.NextFrameAsync();
+            Assert.That(game.RunPhase, Is.EqualTo(ArenaUiState.Title), "the title is still there");
+            Assert.That(tutorial.gameObject.activeInHierarchy, Is.True, "with its tutorial button");
+
+            var hud = Object.FindAnyObjectByType<V2Hud>();
+            ((RectTransform)hud.transform).sizeDelta = hud.GetComponentInParent<UnityEngine.UI.CanvasScaler>().referenceResolution;
+            Rect start = Box(content.Find("StartRun"), hud.transform), help = Box(tutorial, hud.transform), art = Box(content.Find("ToggleArt"), hud.transform);
+            Assert.That(help.yMax, Is.LessThanOrEqualTo(start.yMin), "the tutorial button is under Start");
+            Assert.That(art.yMax, Is.LessThanOrEqualTo(help.yMin), "and over the art switch");
+            Assert.That(help.width, Is.EqualTo(start.width).Within(.5f), "as wide as Start");
+            var shown = content.Cast<Transform>().Where(part => part.gameObject.activeInHierarchy
+                && (part.GetComponent<UnityEngine.UI.Button>() || part.name == "Controls")).ToArray();
+            for (int i = 0; i < shown.Length; i++)
+                for (int j = i + 1; j < shown.Length; j++)
+                    Assert.That(Box(shown[i], hud.transform).Overlaps(Box(shown[j], hud.transform)), Is.False, $"{shown[i].name} overlaps {shown[j].name}");
         }
 
         [Test, LoadScene(SceneCn), Category("Integration"), Timeout(60000)]
@@ -524,6 +595,38 @@ namespace AnomalyArena
         static void SelectButton(ArenaUiCommand command) => Select(Object.FindObjectsByType<ArenaUiButton>(FindObjectsInactive.Exclude)
             .Where(saved => saved.command == command).Select(saved => saved.GetComponent<UnityEngine.UI.Button>())
             .FirstOrDefault(button => button && button.isActiveAndEnabled && button.IsInteractable()));
+
+        static GameObject TopHit(RectTransform rect, out PointerEventData pointer)
+        {
+            Canvas.ForceUpdateCanvases();
+            var canvas = rect.GetComponentInParent<Canvas>();
+            var camera = canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera;
+            pointer = new PointerEventData(EventSystem.current)
+            {
+                position = RectTransformUtility.WorldToScreenPoint(camera, rect.TransformPoint(rect.rect.center)),
+                button = PointerEventData.InputButton.Left,
+            };
+            var hits = new System.Collections.Generic.List<RaycastResult>();
+            EventSystem.current.RaycastAll(pointer, hits);
+            return hits.Count > 0 ? hits[0].gameObject : null;
+        }
+
+        static void Click(RectTransform button)
+        {
+            var hit = TopHit(button, out var pointer);
+            Assert.That(hit, Is.Not.Null, $"{button.name} is under the pointer");
+            var receiver = ExecuteEvents.GetEventHandler<IPointerClickHandler>(hit);
+            Assert.That(receiver, Is.EqualTo(button.gameObject), $"a click on {button.name} reaches it, not {hit.name}");
+            ExecuteEvents.Execute(receiver, pointer, ExecuteEvents.pointerClickHandler);
+        }
+
+        static Rect Box(Transform part, Transform space)
+        {
+            var corners = new Vector3[4];
+            ((RectTransform)part).GetWorldCorners(corners);
+            Vector2 a = space.InverseTransformPoint(corners[0]), b = space.InverseTransformPoint(corners[2]);
+            return Rect.MinMaxRect(Mathf.Min(a.x, b.x), Mathf.Min(a.y, b.y), Mathf.Max(a.x, b.x), Mathf.Max(a.y, b.y));
+        }
 
         static Vector3 Spot(WorldMap world, Vector3 centre, float distance)
         {

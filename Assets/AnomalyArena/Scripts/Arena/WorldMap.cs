@@ -145,14 +145,7 @@ namespace AnomalyArena
                 }
             }
             Grid = new MapGrid(layout ? layout.width : 100, layout ? layout.height : 70);
-            foreach (var hole in holes) hole.ResetHole();
-            if (layout && layout.holeAnchors != null && layout.holeAnchors.Length >= 2)
-            {
-                int first = UnityEngine.Random.Range(0, layout.holeAnchors.Length);
-                int second = (first + 1 + UnityEngine.Random.Range(0, layout.holeAnchors.Length - 1)) % layout.holeAnchors.Length;
-                holes[0].transform.position = new Vector3(layout.holeAnchors[first].x, 0, layout.holeAnchors[first].y);
-                holes[1].transform.position = new Vector3(layout.holeAnchors[second].x, 0, layout.holeAnchors[second].y);
-            }
+            PlaceHolesAtAnchors();
             Grid.Rebuild(this);
             Quicksand.Build(this);
                                                                                                                                            
@@ -179,9 +172,25 @@ namespace AnomalyArena
             SkillWorldAPI.SkillObjectStanding = SkillObjectStanding;
         }
 
+                                                                                                                                         
+                                    
+        void PlaceHolesAtAnchors()
+        {
+                                                                                                                                        
+            foreach (var hole in holes) if (hole) hole.ResetHole();
+            if (layout && layout.holeAnchors != null && layout.holeAnchors.Length >= 2 && holes.Length >= 2 && holes[0] && holes[1])
+            {
+                int first = UnityEngine.Random.Range(0, layout.holeAnchors.Length);
+                int second = (first + 1 + UnityEngine.Random.Range(0, layout.holeAnchors.Length - 1)) % layout.holeAnchors.Length;
+                holes[0].transform.position = new Vector3(layout.holeAnchors[first].x, 0, layout.holeAnchors[first].y);
+                holes[1].transform.position = new Vector3(layout.holeAnchors[second].x, 0, layout.holeAnchors[second].y);
+            }
+        }
+
         void OnDestroy()
         {
             if (Active == this) Active = null;
+            ForgetCampaignMap();                                                                        
         }
 
         public bool Contains(Vector3 point, float margin = 0f) => Mathf.Abs(point.x) <= Bounds.extents.x - margin && Mathf.Abs(point.z) <= Bounds.extents.z - margin;
@@ -244,6 +253,7 @@ namespace AnomalyArena
         {
             if (!GM || !GM.player) return;
             TickHoleIntro();
+            if (CampaignMapApplied) TickCampaignWorld();                                                                                
                                                                                                                                       
             if (GM.IsCombatActive || GM.CanPlayerMove || GM.BuildTimeFlows)
             {
@@ -274,10 +284,13 @@ namespace AnomalyArena
             if (holeIntroStage == HoleIntroStage.Done) return;
             if (holeIntroStage == HoleIntroStage.Idle)
             {
-                if (TrialActive || !GM.IsCombatActive || GM.waves.Phase != WavePhase.WaveActive) return;
+                                                                                                                                          
+                                                                                                                                       
+                if (CampaignMapApplied) { if (TrialActive || campaignHoleIntroAllowed == null || !campaignHoleIntroAllowed()) return; }
+                else if (TrialActive || !GM.IsCombatActive || GM.waves.Phase != WavePhase.WaveActive) return;
                 BlackHole seen = null;
                 foreach (var hole in holes)
-                    if (hole && hole.Phase == HolePhase.Active && hole.Feeds == 0 && (SkillWorldAPI.IsOnScreen?.Invoke(hole.Centre) ?? false)) { seen = hole; break; }
+                    if (hole && hole.Phase == HolePhase.Active && (hole.Feeds == 0 || CampaignMapApplied) && (SkillWorldAPI.IsOnScreen?.Invoke(hole.Centre) ?? false)) { seen = hole; break; }
                 if (!seen) return;
                 holeIntroHole = seen;
                 Vector3 toPlayer = Query.Flat(GM.player.Position - seen.Centre);
@@ -288,7 +301,7 @@ namespace AnomalyArena
                     Vector3 dir = Quaternion.Euler(0f, 70f + 120f * i, 0f) * toPlayer;
                     Vector3 at = seen.Centre + dir * startRadius;
                     if (!Contains(at, .5f) || IsWall(at, .5f)) continue;
-                    var body = GM.waves.SpawnIntroFodder(at);
+                    var body = CampaignMapApplied ? SpawnCampaignIntroFodder(at) : GM.waves.SpawnIntroFodder(at);
                     if (!body) continue;
                     body.enabled = false;                                                               
                     holeIntroFodder.Add(new IntroFodder
@@ -297,7 +310,7 @@ namespace AnomalyArena
                         scale = body.bodyRenderer ? body.bodyRenderer.transform.localScale : Vector3.one,
                     });
                 }
-                if (holeIntroFodder.Count == 0) { holeIntroStage = HoleIntroStage.Done; return; }
+                if (holeIntroFodder.Count == 0) { holeIntroStage = HoleIntroStage.Done; HoleIntroFinished?.Invoke(); return; }
                 holeIntroStage = HoleIntroStage.Approach;
                 holeIntroClock = 0f;
                 GM.BeginCutscene();
@@ -374,6 +387,7 @@ namespace AnomalyArena
             foreach (var f in holeIntroFodder) if (f.body) f.body.enabled = true;                                                     
             holeIntroRig?.ClearFocus(.8f);
             GM.EndCutscene();
+            HoleIntroFinished?.Invoke();
         }
 
         static void MoveBody(Combatant body, Vector3 pos)
@@ -546,6 +560,8 @@ namespace AnomalyArena
             foreach (var hole in holes)
             {
                 if (!CanEnterPortal(player, hole)) continue;
+                                                                                                                                  
+                if (CampaignMapApplied && campaignConfirmPortal != null) { AskCampaignPortal(hole); return true; }
                 enteredHole = hole;
                 BeginTrial(player, hole.Centre, false);
                 return true;
@@ -558,7 +574,9 @@ namespace AnomalyArena
         {
             if (!player || !hole || hole.Phase != HolePhase.Portal || TrialActive || TrialWon) return false;
             if (player.State != CharacterState.Normal || player.ActionsBlocked) return false;
-            if (!GM.BuildWalking && !GM.BuildCrateWalking && (!GM.IsCombatActive || GM.waves.Phase != WavePhase.WaveActive)) return false;
+                                                                                                                             
+            if (CampaignMapApplied) { if (!CampaignPortalOpenNow) return false; }
+            else if (!GM.BuildWalking && !GM.BuildCrateWalking && (!GM.IsCombatActive || GM.waves.Phase != WavePhase.WaveActive)) return false;
             return Mathf.Abs(player.Position.x - hole.Centre.x) <= 0.5f && Mathf.Abs(player.Position.z - hole.Centre.z) <= 0.5f;
         }
                                                                                                                                           
@@ -683,7 +701,8 @@ namespace AnomalyArena
         public void OnWaveEnded(int oneBasedWave)
         {
             ClearSavedDeathEffects();
-            foreach (var hole in holes) hole.WaveEnded(oneBasedWave);
+                                                                                                                                    
+            if (!CampaignMapApplied) foreach (var hole in holes) hole.WaveEnded(oneBasedWave);
             foreach (var wall in temporaryWalls) if (wall) { wall.BattlefieldFrozen = false; wall.gameObject.SetActive(false); }
             if (temporaryHole) temporaryHole.gameObject.SetActive(false);
             if (trialTemporaryHole) trialTemporaryHole.gameObject.SetActive(false);
@@ -699,6 +718,7 @@ namespace AnomalyArena
         {
             if (!TrialWon) return;
             foreach (var hole in holes) if (hole && hole.Phase != HolePhase.Gone) hole.Close();
+            CloseCampaignHoleAfterTrial();                                                                            
         }
         public void ClosePortals() { foreach (var hole in holes) if (hole.Phase == HolePhase.Portal || hole.Phase == HolePhase.Collapsing) hole.Close(); }
         public void ClearTemporaryObjects()

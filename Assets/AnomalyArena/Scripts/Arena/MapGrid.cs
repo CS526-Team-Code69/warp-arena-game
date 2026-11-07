@@ -41,12 +41,16 @@ namespace AnomalyArena
 
         public void Rebuild(WorldMap map)
         {
-            for (int i = 0; i < blocked.Length; i++)
-            {
-                Vector3 point = Centre(i);
-                blocked[i] = !map.Contains(point, 0.5f) || map.IsWall(point, 0.5f) || map.IsHole(point);
-                gravity[i] = map.GetPull(point).sqrMagnitude > 0.01f;
-            }
+                                                                                                                                         
+                                                                                                             
+            if (map.CampaignMapApplied) StampBlocked(map);
+            else
+                for (int i = 0; i < blocked.Length; i++)
+                {
+                    Vector3 point = Centre(i);
+                    blocked[i] = !map.Contains(point, 0.5f) || map.IsWall(point, 0.5f) || map.IsHole(point);
+                    gravity[i] = map.GetPull(point).sqrMagnitude > 0.01f;
+                }
             for (int i = 0; i < blocked.Length; i++)
             {
                 int x = i % width, z = i / width;
@@ -63,6 +67,58 @@ namespace AnomalyArena
                 openFast[i] = !nearBlocked;
                 openSafe[i] = !nearBlocked && !nearGravity;
             }
+        }
+
+                                                                                                                                            
+                                                                                                                                          
+                                                                                      
+        void StampBlocked(WorldMap map)
+        {
+            for (int i = 0; i < blocked.Length; i++)
+            {
+                Vector3 point = Centre(i);
+                blocked[i] = !map.Contains(point, 0.5f) || map.IsHole(point);
+                gravity[i] = map.GetPull(point).sqrMagnitude > 0.01f;
+            }
+            foreach (var rect in map.ExtraWallRects) StampRect(rect, 0.5f);
+            if (map.layout && map.layout.walls != null) foreach (var rect in map.layout.walls) StampRect(rect, 0.5f);
+            if (map.temporaryWalls == null) return;
+            foreach (var wall in map.temporaryWalls)
+            {
+                if (!wall || !wall.gameObject.activeInHierarchy || !wall.TryGetComponent(out Collider body)) continue;
+                Bounds bounds = body.bounds;
+                float y = wall.transform.position.y;
+                Range(bounds.min.x, bounds.max.x, width, origin.x, out int x0, out int x1);
+                Range(bounds.min.z, bounds.max.z, height, origin.y, out int z0, out int z1);
+                for (int z = z0; z <= z1; z++)
+                for (int x = x0; x <= x1; x++)
+                {
+                    int i = z * width + x;
+                    Vector3 point = Centre(i);
+                    if (bounds.Contains(new Vector3(point.x, y, point.z))) blocked[i] = true;
+                }
+            }
+        }
+
+        void StampRect(Rect rect, float margin)
+        {
+            float xMin = rect.xMin - margin, xMax = rect.xMax + margin, zMin = rect.yMin - margin, zMax = rect.yMax + margin;
+            Range(xMin, xMax, width, origin.x, out int x0, out int x1);
+            Range(zMin, zMax, height, origin.y, out int z0, out int z1);
+            for (int z = z0; z <= z1; z++)
+            for (int x = x0; x <= x1; x++)
+            {
+                int i = z * width + x;
+                Vector3 point = Centre(i);
+                if (point.x >= xMin && point.x <= xMax && point.z >= zMin && point.z <= zMax) blocked[i] = true;
+            }
+        }
+
+                                                                                                                                                           
+        static void Range(float lo, float hi, int cells, float start, out int first, out int last)
+        {
+            first = Mathf.Max(0, Mathf.FloorToInt(lo - start - .5f) - 1);
+            last = Mathf.Min(cells - 1, Mathf.CeilToInt(hi - start - .5f) + 1);
         }
 
         public void Integrate(Vector3 target)

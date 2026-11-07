@@ -6,10 +6,12 @@ namespace AnomalyArena
 {
                  
                                                                                                                                              
-                                                                                                                                        
-                                                                                                                                              
                                                                                                                                            
-                                                                                                                          
+                                                                                                                                             
+                                                                                                                                           
+                                                                                                                                   
+                                                                                                                                        
+                                             
                                                                                                                                           
                                                                            
                   
@@ -49,6 +51,7 @@ namespace AnomalyArena
             Line.C03 => (false, ArenaText.Pair("When I woke, I'd crashed on this planet. The ship was wrecked.","When I woke, I'd crashed on this planet. The ship was wrecked.")),
             Line.C04 => (false, ArenaText.Pair("The ship deployed its base system on its own. It was built for accidents like this.","The ship deployed its base system on its own. It was built for accidents like this.")),
             Line.C05 => (false, ArenaText.Pair("It will help me get out of here.","It will help me get out of here.")),
+                                                                                                              
             Line.D01 => (true, ArenaText.Pair("Dusk. Alien power strengthens the monsters at night. Gather what you can before dark.","Dusk. Alien power strengthens the monsters at night. Gather what you can before dark.")),
             Line.K01 => (true, ArenaText.Pair("Vital signs lost. You have been brought back to the base. Tonight's haul is lost.","Vital signs lost. You have been brought back to the base. Tonight's haul is lost.")),
             Line.N01 => (true, ArenaText.Pair("Press F to set down a mining lamp. You can only mine in its light.","Press F to set down a mining lamp. You can only mine in its light.")),
@@ -184,7 +187,7 @@ namespace AnomalyArena
                     if (Query.Flat(pp - tutMarker).magnitude < 3f || pp.x > tutMarker.x)
                     {
                         tut = Tut.Corner;
-                        Vector3 corner = FindOpen(new Vector3(CrashSite.x + 20f, 0f, -WorldMap.Active.Bounds.extents.z * .55f), 1.4f);
+                        Vector3 corner = FindOpen(TutorialCorner, 1.4f);
                         tutOre = AddNode(NodeKind.Ore, corner, rules.tutorialOreAlloy);
                         if (tutOre.view) tutOre.view.localScale *= 1.4f;
                         Objective(ArenaText.Pair("Hold Shift and sprint to the glowing corner","Hold Shift and sprint to the glowing corner"), corner);
@@ -254,9 +257,12 @@ namespace AnomalyArena
             if (Day == 0 && Stage == CampaignStage.Night && kind == NodeKind.Dark && tutNightStep == 1)
             {
                 tutDarkMined++;
-                if (tutDarkMined >= rules.nodesPerCluster) { tutNightStep = 2; Say(Line.N03); Objective(ArenaText.Pair("Return to the base and press E at the door to wait for dawn","Return to the base and press E at the door to wait for dawn"), DoorPoint); }
+                if (tutDarkMined >= rules.nodesPerCluster) { tutNightStep = 2; Say(Line.N03); TutorialDawnObjective(); }
             }
         }
+
+                                                                                                                                          
+        void TutorialDawnObjective() => Objective(ArenaText.Pair("Return to the base, press E at the door and choose Wait for dawn to start day 1","Return to the base, press E at the door and choose Wait for dawn to start day 1"), DoorPoint);
 
         void OnTutorialPickup(bool energyShard)
         {
@@ -325,6 +331,13 @@ namespace AnomalyArena
                 Say(Line.N02);
                 Objective(ArenaText.Pair("Stand in the light and hold E to mine the dark matter","Stand in the light and hold E to mine the dark matter"), null);
             }
+                                                                                                                                         
+                                                                                                                                                
+            if (EveningsOpenEnded && tutNightStep < 2 && stageClock >= rules.tutorialNightSeconds)
+            {
+                tutNightStep = 2;
+                TutorialDawnObjective();
+            }
         }
 
                                   
@@ -334,20 +347,20 @@ namespace AnomalyArena
         public bool BaseAtDawn => false;
                                                                                                                                   
         public bool BaseAfterTutorial => Day == 0 && Stage == CampaignStage.Base && baseVisitFrom == CampaignStage.Story;
-                                                                                                                                      
-                                        
+                                                                                                                                           
+                                                                                
         public bool BaseFromDusk => Stage == CampaignStage.Base && baseVisitFrom == CampaignStage.Dusk;
-                                                                                                                                         
-                                                     
+                                                                                                                                          
+                                                                             
         CampaignStage baseVisitFrom = CampaignStage.Off;
         bool OutdoorVisit => Stage == CampaignStage.Base && baseVisitFrom is (CampaignStage.Dusk or CampaignStage.Night);
 
-                                                                                                                                           
-                                     
+                                                                                                                                            
+                                                                         
         void OpenBase()
         {
             baseVisitFrom = (Stage is CampaignStage.Dusk or CampaignStage.Night) ? Stage : CampaignStage.Story;
-                                                                                                                                            
+                                                                                                                                                     
             if (baseVisitFrom == CampaignStage.Night) BankHaul();
             Stage = CampaignStage.Base;
             mining = null; mineProgress = 0f; prompt = "";
@@ -355,8 +368,8 @@ namespace AnomalyArena
             ui.ShowBase();
         }
 
-                                                                                                                                         
-                                                                                                                    
+                                                                                                                                              
+                                                                              
         public void LeaveBase()
         {
             if (Stage != CampaignStage.Base) return;
@@ -365,26 +378,41 @@ namespace AnomalyArena
             baseVisitFrom = CampaignStage.Off;
             if (Day == 0 && from == CampaignStage.Story) { StartCoroutine(MemoryCg()); return; }
             Stage = from == CampaignStage.Dusk ? CampaignStage.Dusk : CampaignStage.Night;
-            gm.CampaignSetPhase(ArenaUiState.Night);
+            gm.CampaignSetPhase(Stage == CampaignStage.Dusk ? DuskPhase : ArenaUiState.Night);
             PlacePlayer(DoorPoint);
+                                                                                                                          
+            AfternoonObjective();
+            NightObjective();
         }
 
-                                                                                                                                            
-                                        
+                                                                                                                                           
+                                                                                                                                                   
+        public void EnterNight()
+        {
+            if (!BaseFromDusk) return;
+            ui.HideBase();
+            baseVisitFrom = CampaignStage.Off;
+            gm.CampaignSetPhase(ArenaUiState.Night);
+            PlacePlayer(DoorPoint);
+            BeginNight();
+        }
+
+                                                                                                                                               
+                                                                                                                                                   
         public void WaitForDawn()
         {
             if (!OutdoorVisit) return;
             ui.HideBase();
             baseVisitFrom = CampaignStage.Off;
-            Stage = CampaignStage.Night;                                                                                
+            Stage = CampaignStage.Night;                                                                                      
             EndNight(true);
         }
 
-                                                                                                                                         
-                                                                                          
+                                                                                                                                             
+                                                                                                                                      
         public bool NightTimeLeft(out float seconds)
         {
-            seconds = Mathf.Max(0f, stageLength - stageClock);
+            seconds = EveningsOpenEnded ? float.PositiveInfinity : Mathf.Max(0f, stageLength - stageClock);
             return OutdoorVisit;
         }
 

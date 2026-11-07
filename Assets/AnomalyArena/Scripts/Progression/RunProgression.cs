@@ -141,6 +141,25 @@ namespace AnomalyArena
             DraftConsumed?.Invoke();
         }
 
+                                                                                                                                               
+                                                                                                                                           
+                                                                                                                                            
+                                                                                                           
+        public DraftCard[] SetCardsAside()
+        {
+            var held = CurrentCards;
+            CurrentCards = Array.Empty<DraftCard>();
+            return held;
+        }
+
+                                                                                                          
+        public void PutCardsBack(DraftCard[] held)
+        {
+            if (held == null || held.Length == 0 || BankedDrafts == 0) return;
+            CurrentCards = held;
+            OnChanged();
+        }
+
                                                                                                                                                 
         public void BeginWave() { RerollsRemaining = 1; OnChanged(); }
 

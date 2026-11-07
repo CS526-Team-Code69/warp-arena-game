@@ -27,6 +27,30 @@ namespace AnomalyArena
             return added;
         }
 
+        public static Transform Build(Transform templates, int templateCount, MapLayout layout, string name)
+        {
+            if (!templates || !layout || templates.childCount == 0) return null;
+            var group = new GameObject(templates.name + name).transform;
+            group.SetParent(templates.parent, false);
+            group.SetLocalPositionAndRotation(templates.localPosition, templates.localRotation);
+            group.localScale = templates.localScale;
+            int count = Mathf.Clamp(templateCount, 1, templates.childCount);
+            var walls = layout.walls ?? new Rect[0];
+            for (int i = 0; i < walls.Length; i++)
+            {
+                var rect = walls[i];
+                var template = ClosestInSize(templates, count, rect);
+                var wall = Object.Instantiate(template.gameObject, group);
+                wall.name = "CampaignTerrain_" + i.ToString("00");
+                var t = wall.transform;
+                t.localPosition = new Vector3(rect.center.x, template.localPosition.y, rect.center.y);
+                t.localRotation = template.localRotation;
+                t.localScale = new Vector3(rect.width, template.localScale.y, rect.height);
+                wall.SetActive(true);
+            }
+            return group;
+        }
+
         internal static Transform ClosestInSize(Transform group, int count, Rect rect)
         {
             Transform best = group.GetChild(0);

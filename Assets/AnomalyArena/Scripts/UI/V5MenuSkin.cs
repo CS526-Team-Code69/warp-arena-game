@@ -89,6 +89,9 @@ namespace AnomalyArena
             SceneManager.sceneLoaded += OnSceneLoaded;
         }
 
+                                                                                                                                
+                                                                                                                                
+                                                 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void SkinOpenScenes()
         {
@@ -174,11 +177,12 @@ namespace AnomalyArena
             }
         }
 
-                                                                                             
+                                                                                                                                       
+                                                                                                                                        
         void SkinTitle(V2UiScreen screen)
         {
-            var start = screen.transform.Find("Content/StartRun");
-            if (start && start.GetComponent<Button>() is { } button) SkinButton(button, true, 0);
+            foreach (var name in new[] { "StartRun", V2Hud.TitleTutorialButton })
+                if (screen.transform.Find("Content/" + name) is { } part && part.GetComponent<Button>() is { } button) SkinButton(button, true, 0);
         }
 
         void SkinCardScreen(V2UiScreen screen, RectTransform content)
@@ -314,29 +318,37 @@ namespace AnomalyArena
             else Place(choice.contentIcon, (CardW - MainGlyph) * .5f, (ArtH - MainGlyph) * .5f + 4f, MainGlyph, MainGlyph);
         }
 
+                                                                                                                                                   
+                                                                                                                                 
+        public const float WeaponCardArtScale = .5f;
+        const float WeaponCardTop = 112f, WeaponCardTextH = 440f, WeaponCardTextGap = 28f;
+
         void SkinWeaponCard(V2UiScreen screen, RectTransform content)
         {
-            const float w = 1240f, h = 700f;
+            const float w = 1240f, h = 700f, s = WeaponCardArtScale;
             MakePanel(screen.gameObject, content, new Vector2(w, h));
             Backdrop(screen, true);
             Style(screen.heading, Margin, 26f, w - Margin * 2f, 56f, 38, TextAnchor.MiddleCenter);
             Gradient(screen.heading);
             Rule(content, "HeadingRule", 40f, 84f, w - 80f, 14f, AccentCyan);
+            float plateW = 420f * s, plateH = 440f * s, weaponW = 348f * s, weaponH = 174f * s;
             var plate = NewImage(content, "ArtPlate", cardSprite, Color.white, Image.Type.Sliced);
-            Place(plate, Margin, 112f, 420f, 440f);
+            Place(plate, Margin, WeaponCardTop, plateW, plateH);
+                                                                                                                                    
             var cloud = NewImage(plate.transform, "Cloud", cloudSprite, WithAlpha(new Color(.42f, .30f, .95f), .28f), Image.Type.Simple);
-            Place(cloud, 3f, 3f, 414f, 221f);
+            Place(cloud, 3f, 3f, plateW - 6f, 221f * s);
             var radial = NewImage(plate.transform, "Radial", radialSprite, WithAlpha(AccentCyan, .22f), Image.Type.Simple);
-            Place(radial, -20f, -10f, 460f, 460f);
+            Place(radial, -20f * s, -10f * s, 460f * s, 460f * s);
             var line = NewImage(plate.transform, "CardLine", cardLine, WithAlpha(AccentCyan, .9f), Image.Type.Sliced);
             Stretch(line.rectTransform);
             if (screen.icon)
             {
                 screen.icon.preserveAspect = true;
-                Place(screen.icon, Margin + 36f, 245f, 348f, 174f);
+                Place(screen.icon, Margin + (plateW - weaponW) * .5f, WeaponCardTop + (plateH - weaponH) * .5f, weaponW, weaponH);
                 screen.icon.transform.SetAsLastSibling();
             }
-            Style(screen.body, Margin + 448f, 112f, w - Margin * 2f - 448f, 440f, 24, TextAnchor.UpperLeft);
+            float textLeft = Margin + plateW + WeaponCardTextGap;
+            Style(screen.body, textLeft, WeaponCardTop, w - Margin - textLeft, WeaponCardTextH, 24, TextAnchor.UpperLeft);
             if (content.Find("ContinueButton") is RectTransform go && go.GetComponent<Button>() is { } button)
             {
                 SkinButton(button, true, 20);

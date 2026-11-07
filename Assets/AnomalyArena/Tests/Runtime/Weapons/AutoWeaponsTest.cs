@@ -467,7 +467,8 @@ namespace AnomalyArena
                 typeof(GameManager).GetMethod("ShowWeaponIntro", BindingFlags.Instance | BindingFlags.NonPublic)
                     .Invoke(GameManager.Instance, new object[] { drain, null });
                 string body = GameManager.Instance.UiSnapshot.weaponIntroBody;
-                Assert.That(body, Does.Contain($"{weapons.DrainShieldWait(drain):0.#} s without an enemy hit").And.Not.Contain("per hit"));
+                Assert.That(body, Does.Contain($"{weapons.DrainShieldWait(drain):0.#} s without an enemy hit"), "the Drain's card states its shield wait");
+                Assert.That(body, Does.Not.Contain("per hit").And.Not.Contain("between uses"), "no damage section on the card");
                 Assert.That(weapons.DrainShieldWait(drain), Is.LessThan(tuning.drainShieldWait), "Mk3 waits less than the Mk1 wait");
             }
             finally { tuning.gunnerClip = clip; }

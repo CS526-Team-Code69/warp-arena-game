@@ -559,8 +559,30 @@ namespace AnomalyArena
         public bool NewWeaponForSale => Running && Works(CampaignRoom.Armament, 2);
         public CampaignCost WeaponDamageCost => CampaignRules.Rising(rules.weaponResearchCost, rules.weaponResearchCostPerBuy, weaponDamageBought);
         public CampaignCost NewWeaponCost => CampaignRules.Rising(rules.newWeaponCost, rules.newWeaponCostPerBuy, newWeaponsBought);
-                                                                                                       
-        public bool WeaponSlotsFull => gm && gm.runWeapons && !System.Array.Exists(gm.runWeapons.Hand, w => w == null) && !System.Array.Exists(gm.runWeapons.Auto, w => w == null);
+                                                                                                                                            
+                                               
+        public bool WeaponSlotsFull => gm && gm.runWeapons && !System.Array.Exists(gm.runWeapons.Hand, w => w == null || w.form == WeaponForm.Pistol)
+            && !System.Array.Exists(gm.runWeapons.Auto, w => w == null);
+                                                                                                                                                       
+        public bool HoldsAnomalyWeapon
+        {
+            get
+            {
+                var weapons = gm ? gm.runWeapons : null;
+                if (!weapons) return false;
+                foreach (var w in weapons.Hand) if (w != null && w.IsAnomalous) return true;
+                foreach (var w in weapons.Auto) if (w != null && w.IsAnomalous) return true;
+                return false;
+            }
+        }
+                                                                                                                                                 
+        public bool NewWeaponReplacesPistol => gm && gm.runWeapons && PistolHandIfFull(gm.runWeapons) >= 0;
+                                                                                                  
+        static int PistolHandIfFull(RunWeapons weapons)
+        {
+            if (System.Array.Exists(weapons.Hand, w => w == null)) return -1;
+            return System.Array.FindIndex(weapons.Hand, w => w != null && w.form == WeaponForm.Pistol);
+        }
 
         public static CampaignRoom UpgradeRoom(CampaignUpgrade kind) => kind is CampaignUpgrade.Tame or CampaignUpgrade.Twist ? CampaignRoom.Armament : CampaignRoom.Energy;
         public static int UpgradeLevel(CampaignUpgrade kind) => kind switch
@@ -593,13 +615,22 @@ namespace AnomalyArena
 
                                                                                                                                               
                                                                                                                                            
+                                                                                                                                       
         public bool TryBuyWeaponDamage()
         {
             var weapons = gm ? gm.runWeapons : null;
             if (!WeaponDamageForSale || !weapons || !gm.waves) return false;
+            if (!HoldsAnomalyWeapon)
+            {
+                V2Audio.Instance?.PlayUI(ArenaUiSound.Cancel);
+                ui.Flash(ArenaText.Pair("The pistol cannot be boosted: unlock an anomaly weapon at the Armament Bay first","The pistol cannot be boosted: unlock an anomaly weapon at the Armament Bay first"));
+                return false;
+            }
             var cost = WeaponDamageCost;
             if (!CanAfford(cost)) { TrySpend(cost); return false; }                                                       
             armoryMode = ArmoryMode.UpgradesOnly;
+                                                                                                       
+            bool handBoostable = weapons.Active != null && weapons.Active.IsAnomalous;
             try
             {
                 int index = -1;
@@ -610,13 +641,13 @@ namespace AnomalyArena
                     int other = -1, active = -1;
                     for (int i = 0; i < offers.Length; i++)
                     {
-                        if (offers[i]?.upgradeOf == null) continue;
+                        if (offers[i]?.upgradeOf == null || !offers[i].upgradeOf.IsAnomalous) continue;
                         if (offers[i].upgradeOf == weapons.Active) { active = i; break; }
                         if (other < 0) other = i;
                     }
                     index = active >= 0 ? active : other;
                                                                                                                                         
-                    if (active >= 0 || index < 0) break;
+                    if (active >= 0 || index < 0 || !handBoostable) break;
                 }
                 if (index < 0)
                 {
@@ -640,8 +671,9 @@ namespace AnomalyArena
             }
         }
 
-                                                                                                                                              
-                                                                          
+                                                                                                                                             
+                                                                                                                                             
+                                                                                                                       
         public bool TryBuyNewWeapon()
         {
             var weapons = gm ? gm.runWeapons : null;
@@ -649,37 +681,67 @@ namespace AnomalyArena
             if (WeaponSlotsFull) { ui.Flash(ArenaText.Pair("Every weapon slot is taken: no room for a new weapon","Every weapon slot is taken: no room for a new weapon")); return false; }
             var cost = NewWeaponCost;
             if (!CanAfford(cost)) { TrySpend(cost); return false; }
+            RunWeapon got = null;
+            string message = "";
             armoryMode = ArmoryMode.NewWeaponsOnly;
             try
             {
-                for (int attempt = 0; attempt < 3; attempt++)
+                for (int attempt = 0; attempt < 3 && got == null; attempt++)
                 {
                     weapons.RollArmory(gm.waves.WaveIndex + 2);
                     var offers = weapons.Offers;
                     for (int i = 0; i < offers.Length; i++)
                     {
                         var weapon = offers[i];
-                        if (weapon == null || weapon.upgradeOf != null) continue;
-                        if (!System.Array.Exists(weapon.IsAuto ? weapons.Auto : weapons.Hand, w => w == null)) continue;
+                        if (weapon == null || weapon.upgradeOf != null || !weapon.IsAnomalous) continue;
+                        int replace = weapon.IsAuto ? -1 : PistolHandIfFull(weapons);
+                        if (replace < 0 && !System.Array.Exists(weapon.IsAuto ? weapons.Auto : weapons.Hand, w => w == null)) continue;
+                        var pistol = replace >= 0 ? weapons.Hand[replace] : null;
                         if (!TrySpend(cost)) return false;
-                        if (!weapons.TakeOffer(i)) { Refund(cost); return false; }
+                        if (!weapons.TakeOffer(i, replace)) { Refund(cost); return false; }
+                        got = weapon;
                         newWeaponsBought++;
-                        Bought("new_weapon", $"{weapon.form} Mk{weapon.mk} {(weapon.IsAuto ? "auto" : "hand")}", CampaignRoom.Armament, cost);
+                        Bought("new_weapon", $"{weapon.form} Mk{weapon.mk} {(weapon.IsAuto ? "auto" : "hand")}{(pistol != null ? ", replaces Pistol" : "")}", CampaignRoom.Armament, cost);
                         V3WorldAudio.Instance?.Play(ArenaWorldCue.LevelUp, BaseCentre);
-                        ui.Flash(weapon.IsAuto
-                            ? ArenaText.Pair($"New weapon researched: {weapon.FormName} ({weapon.MkLabel}, auto slot)",$"New weapon researched: {weapon.FormName} ({weapon.MkLabel}, auto slot)")
-                            : ArenaText.Pair($"New weapon researched: {weapon.FormName} ({weapon.MkLabel}, hand slot)",$"New weapon researched: {weapon.FormName} ({weapon.MkLabel}, hand slot)"));
-                        return true;
+                        message = weapon.IsAuto
+                            ? ArenaText.Pair($"New anomaly weapon researched: {weapon.FormName} ({weapon.MkLabel}, auto slot)",$"New anomaly weapon researched: {weapon.FormName} ({weapon.MkLabel}, auto slot)")
+                            : pistol != null
+                                ? ArenaText.Pair($"New anomaly weapon researched: {weapon.FormName} ({weapon.MkLabel}); it replaces the {pistol.FormName}",$"New anomaly weapon researched: {weapon.FormName} ({weapon.MkLabel}); it replaces the {pistol.FormName}")
+                                : ArenaText.Pair($"New anomaly weapon researched: {weapon.FormName} ({weapon.MkLabel}, hand slot)",$"New anomaly weapon researched: {weapon.FormName} ({weapon.MkLabel}, hand slot)");
+                        break;
                     }
                 }
-                ui.Flash(ArenaText.Pair("No new weapon can be researched right now","No new weapon can be researched right now"));
-                return false;
             }
             finally
             {
                 armoryMode = ArmoryMode.Rooms;
                 weapons.Offers = new RunWeapon[RunWeapons.ArmoryOfferCount];
             }
+            if (got == null)
+            {
+                ui.Flash(ArenaText.Pair("No new weapon can be researched right now","No new weapon can be researched right now"));
+                return false;
+            }
+            AnnounceWeapon(got, message);
+            return true;
+        }
+
+                                                                                                                                            
+                                                                                                                                          
+                                                                                                                                          
+                                        
+        void AnnounceWeapon(RunWeapon weapon, string message)
+        {
+            if (weapon == null || !ui.BaseOpen || Stage != CampaignStage.Base) { ui.Flash(message, 3.5f); return; }
+            ui.ClearFlash();
+            ui.HideBase();
+            gm.CampaignShowWeaponCard(weapon, () =>
+            {
+                if (!Running || Stage != CampaignStage.Base) return;
+                gm.CampaignSetPhase(ArenaUiState.Base);
+                ui.ResumeBase();
+                ui.Flash(message, 3.5f);
+            });
         }
 
                                                                                                                                             
@@ -720,21 +782,37 @@ namespace AnomalyArena
             return true;
         }
 
-                                                                                                                                          
+                                                                                                                                                     
 
         public bool RocketForSale => Running && Works(CampaignRoom.Armament, 2) && gm && gm.runWeapons && !gm.runWeapons.OwnsForm(WeaponForm.RocketLauncher);
         public CampaignCost RocketCost => rules.rocketLauncherCost;
-                                                                                                                                          
-        public RunWeapon RocketReplaces => gm && gm.runWeapons ? gm.runWeapons.Hand[1 - gm.runWeapons.ActiveIndex] : null;
+                                                                                                                                            
+                                                                                                                                   
+        int RocketHand
+        {
+            get
+            {
+                var weapons = gm ? gm.runWeapons : null;
+                if (!weapons) return 1;
+                int free = System.Array.FindIndex(weapons.Hand, w => w == null);
+                if (free >= 0) return free;
+                int pistol = PistolHandIfFull(weapons);
+                return pistol >= 0 ? pistol : 1 - weapons.ActiveIndex;
+            }
+        }
+                                                                                                                   
+        public RunWeapon RocketReplaces => gm && gm.runWeapons ? gm.runWeapons.Hand[RocketHand] : null;
         public bool TryBuyRocketLauncher()
         {
             var weapons = gm ? gm.runWeapons : null;
             if (!RocketForSale || !weapons || !TrySpend(RocketCost)) return false;
-            var old = weapons.GiveToHand(1 - weapons.ActiveIndex, WeaponForm.RocketLauncher);
+            int hand = RocketHand;
+            var old = weapons.GiveToHand(hand, WeaponForm.RocketLauncher);
+            var rocket = weapons.Hand[hand];
             Bought("new_weapon", old != null ? $"RocketLauncher Mk1 hand, replaces {old.form}" : "RocketLauncher Mk1 hand", CampaignRoom.Armament, RocketCost);
             V3WorldAudio.Instance?.Play(ArenaWorldCue.LevelUp, BaseCentre);
-            ui.Flash(old != null ? ArenaText.Pair($"Rocket launcher unlocked (Mk 1): it replaces the {old.FormName}",$"Rocket launcher unlocked (Mk 1): it replaces the {old.FormName}")
-                : ArenaText.Pair("Rocket launcher unlocked (Mk 1)","Rocket launcher unlocked (Mk 1)"));
+            AnnounceWeapon(rocket, old != null ? ArenaText.Pair($"Rocket launcher unlocked (an anomaly weapon, Mk 1): it replaces the {old.FormName}",$"Rocket launcher unlocked (an anomaly weapon, Mk 1): it replaces the {old.FormName}")
+                : ArenaText.Pair("Rocket launcher unlocked (an anomaly weapon, Mk 1): it goes into the free hand","Rocket launcher unlocked (an anomaly weapon, Mk 1): it goes into the free hand"));
             return true;
         }
 

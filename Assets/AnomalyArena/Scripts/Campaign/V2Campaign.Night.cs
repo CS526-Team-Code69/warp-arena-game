@@ -5,14 +5,19 @@ using UnityEngine;
 namespace AnomalyArena
 {
                  
-                                                                                                                                             
-                                                                                                                                            
-                                                                                                                                           
                                                                                                                                           
-                                                                                           
+                                                                                                                                          
                                                                                                                                         
-                                                                                                                                        
-                                                  
+                                                                                                                                   
+                                                                                                                                             
+                                                                                                                                              
+                                                                                                                                            
+                                                                                                                                     
+                                                                                                                     
+                                                                                                                                         
+                                                                                                                                           
+                                                                                                                                           
+                                 
                   
     public sealed partial class V2Campaign
     {
@@ -21,6 +26,10 @@ namespace AnomalyArena
         sealed class Node
         {
             public NodeKind kind; public Vector3 position; public int amount; public bool mined; public Transform view; public float glint;
+                                                                                                              
+            public bool hidden;
+                                                                                                                                         
+            public int trailIndex = -1;
         }
 
         sealed class Lamp
@@ -60,11 +69,11 @@ namespace AnomalyArena
             darkness.SetActive(false);
         }
 
-                              
+                                                                       
 
         public int RegionOf(Vector3 p)
         {
-            var b = WorldMap.Active ? WorldMap.Active.Bounds : new Bounds(Vector3.zero, new Vector3(180f, 20f, 120f));
+            var b = CampaignBounds;
             int cols = Mathf.Max(1, rules.regions.x), rows = Mathf.Max(1, rules.regions.y);
             int cx = Mathf.Clamp(Mathf.FloorToInt((p.x - b.min.x) / b.size.x * cols), 0, cols - 1);
             int cz = Mathf.Clamp(Mathf.FloorToInt((p.z - b.min.z) / b.size.z * rows), 0, rows - 1);
@@ -73,7 +82,7 @@ namespace AnomalyArena
 
         Vector3 RegionCentre(int region, out Vector2 half)
         {
-            var b = WorldMap.Active ? WorldMap.Active.Bounds : new Bounds(Vector3.zero, new Vector3(180f, 20f, 120f));
+            var b = CampaignBounds;
             int cols = Mathf.Max(1, rules.regions.x), rows = Mathf.Max(1, rules.regions.y);
             float w = b.size.x / cols, h = b.size.z / rows;
             half = new Vector2(w * .5f, h * .5f);
@@ -95,51 +104,109 @@ namespace AnomalyArena
             DropCurrencies(enemy);
         }
 
-                           
+                                
+
+        bool afternoonCombat;
+                                                                                                                                        
+                                                                                                                                           
+                                                                                                                                   
+                                                                                                                                   
+                                                                                                                                       
+        internal bool AfternoonCombat
+        {
+            get => afternoonCombat;
+            set
+            {
+                if (afternoonCombat == value) return;
+                afternoonCombat = value;
+                if (Running && Stage == CampaignStage.Dusk && gm.RunPhase is ArenaUiState.Night or ArenaUiState.WaveActive) gm.CampaignSetPhase(DuskPhase);
+            }
+        }
+        ArenaUiState DuskPhase => afternoonCombat ? ArenaUiState.WaveActive : ArenaUiState.Night;
+
+                                                                                                                                          
+                                                                                                                                             
+        void DismissStragglers()
+        {
+            if (!gm.waves) return;
+            var standing = new List<Enemy>();
+            foreach (var enemy in gm.waves.Alive) if (enemy && enemy.IsAlive && !enemy.IsBoss) standing.Add(enemy);
+            foreach (var enemy in standing)
+            {
+                enemy.SuppressRewards = true;
+                raidSpots.Remove(enemy);
+                enemy.DiscardWithoutReward();
+            }
+        }
 
         void BeginDusk()
         {
             Stage = CampaignStage.Dusk; stageClock = 0f; stageLength = rules.duskSeconds;
             CampaignEvents.RaisePhase("dusk", Day);
+            afternoonCombat = false;
             gm.CampaignSetPhase(ArenaUiState.Night);
             NightlyBaseUpkeep();
             lampStock += rules.freeLampsPerNight;
             nightAlloy = nightDark = 0; knockedOut = false;
             BankHaul();
-            SpawnOreNodes(rules.OreNodes(Day));
+            SpawnAfternoonOre(Day);
             darkness.SetActive(true);
             enhancementPulse = 1.4f;
-                                                                                                                                        
-                                                                                            
+                                                                                                                                          
+                                                                            
             ShowEnhancement();
             Say(Line.D01);
-            Objective(ArenaText.Pair("Dusk: mine alloy ore (hold E) while there is light; E at the base door to upgrade","Dusk: mine alloy ore (hold E) while there is light; E at the base door to upgrade"), null);
+            AfternoonObjective();
         }
 
         void ShowEnhancement()
         {
             var set = gm.waves ? gm.waves.waveSet : null;
-            if (!set || !set.encounterBalance || Day >= rules.days && !Overtime) { gm.hud?.Banner(ArenaText.Pair("DUSK · REST AND MINING","DUSK · REST AND MINING"), ArenaText.Pair("Ore has surfaced. Mine some alloy before dark.","Ore has surfaced. Mine some alloy before dark.")); return; }
+            if (!set || !set.encounterBalance || Day >= rules.days && !Overtime)
+            {
+                gm.hud?.Banner(ArenaText.Pair("AFTERNOON · REST AND MINING","AFTERNOON · REST AND MINING"),
+                    ArenaText.Pair("Today's ore has surfaced. There is only so much; once mined, it is gone.","Today's ore has surfaced. There is only so much; once mined, it is gone."));
+                return;
+            }
             int today = Mathf.Clamp(rules.WaveNumber(Day, rules.wavesPerDay - 1), 1, set.waves.Length), tomorrow = Mathf.Clamp(rules.WaveNumber(Day + 1, rules.wavesPerDay - 1), 1, set.waves.Length);
             float hp = set.encounterBalance.DpsAt(tomorrow) / set.encounterBalance.DpsAt(today) - 1f;
             float damage = set.DamageFactor(tomorrow) / set.DamageFactor(today) - 1f;
-            gm.hud?.Banner(ArenaText.Pair("DUSK · ALIEN POWER STRENGTHENS THE MONSTERS","DUSK · ALIEN POWER STRENGTHENS THE MONSTERS"),
-                ArenaText.Pair(                    $"Tomorrow's monsters: HP +{hp * 100f:0}%, damage +{damage * 100f:0}%. Ore has surfaced; mine alloy before dark.",                    $"Tomorrow's monsters: HP +{hp * 100f:0}%, damage +{damage * 100f:0}%. Ore has surfaced; mine alloy before dark."));
+            gm.hud?.Banner(ArenaText.Pair("AFTERNOON · ALIEN POWER STRENGTHENS THE MONSTERS","AFTERNOON · ALIEN POWER STRENGTHENS THE MONSTERS"),
+                ArenaText.Pair(                    $"Tomorrow's monsters: HP +{hp * 100f:0}%, damage +{damage * 100f:0}%. Today's ore has surfaced; there is only so much.",                    $"Tomorrow's monsters: HP +{hp * 100f:0}%, damage +{damage * 100f:0}%. Today's ore has surfaced; there is only so much."));
+        }
+
+                                                                                                                                              
+                                                                                                                                                        
+        void AfternoonObjective()
+        {
+            if (Stage != CampaignStage.Dusk) return;
+            int left = OreLeftToday;
+            string onward = EveningsOpenEnded ? ArenaText.Pair("E at the base door to upgrade or go into the night","E at the base door to upgrade or go into the night")
+                : ArenaText.Pair("E at the base door to upgrade","E at the base door to upgrade");
+            Vector3? next = TrailFrontier();
+            if (next == null && left > 0 && gm.player && TryNearestNode(NodeKind.Ore, gm.player.Position, out var nearest)) next = nearest;
+            Objective(left > 0 ? ArenaText.Pair($"Afternoon: hold E to mine alloy ore ({left} left today); ",$"Afternoon: hold E to mine alloy ore ({left} left today); ") + onward
+                : ArenaText.Pair("Afternoon: today's ore is mined out; ","Afternoon: today's ore is mined out; ") + onward, next);
         }
 
         void TickDusk(float dt)
         {
             prompt = "";
             if (CaughtNightDeath()) return;
+                                                                                                                          
+            if (!afternoonCombat && gm.RunPhase == ArenaUiState.Night && gm.waves && gm.waves.LivingCount > 0) AfternoonCombat = true;
             stageClock += dt;
-            float t = Mathf.Clamp01(stageClock / Mathf.Max(.1f, stageLength));
+                                                                                                                                    
+                                                                                                                                           
+                                                                      
+            float t = Mathf.Clamp01(stageClock / Mathf.Max(.1f, rules.duskSeconds)) * (EveningsOpenEnded ? rules.afternoonLight : 1f);
             darknessLevel = rules.duskDarkness * t;
             LerpLighting(t);
             TickPickups(dt);
             TickMining(dt, true);
             TickLampPlacement();
-            if (TickBaseDoor()) return;                              
-            if (stageClock >= stageLength) BeginNight();
+            if (TickBaseDoor()) return;                                   
+            if (!EveningsOpenEnded && stageClock >= stageLength) BeginNight();
         }
 
         void LerpLighting(float t)
@@ -168,15 +235,31 @@ namespace AnomalyArena
         void BeginNight()
         {
             Stage = CampaignStage.Night; stageClock = 0f; stageLength = rules.NightLength(Day);
+            afternoonCombat = false;
+            if (gm.RunPhase != ArenaUiState.Night) gm.CampaignSetPhase(ArenaUiState.Night);
             CampaignEvents.RaisePhase("night", Day);
+            DismissStragglers();
             LerpLighting(1f);
             darknessLevel = rules.nightDarkness;
             if (baseLight) baseLight.intensity = 2.2f;
             SpawnShadows();
-            SpawnDarkClusters();
+            SpawnNightOre(Day, SpawnDarkClusters());
             Say(Line.S02);
             nightWhispers = true;
-            Objective(ArenaText.Pair("Night: F sets a lamp, hold E in its light for dark matter; E at the base door to repair, upgrade or wait for dawn","Night: F sets a lamp, hold E in its light for dark matter; E at the base door to repair, upgrade or wait for dawn"), null);
+            NightObjective();
+        }
+
+                                                                                                                                               
+                                                                                                                                    
+        void NightObjective()
+        {
+            if (Stage != CampaignStage.Night || Day <= 0) return;
+            Vector3 from = gm.player ? gm.player.Position : DoorPoint;
+            if (TryNearestNode(NodeKind.Dark, from, out var dark))
+                Objective(ArenaText.Pair("Night: F sets a lamp, hold E in its light for dark matter; E at the base door to repair, upgrade or wait for dawn","Night: F sets a lamp, hold E in its light for dark matter; E at the base door to repair, upgrade or wait for dawn"), dark);
+            else
+                Objective(EveningsOpenEnded ? ArenaText.Pair("Night: tonight's dark matter is mined out; E at the base door, then Wait for dawn starts the next day","Night: tonight's dark matter is mined out; E at the base door, then Wait for dawn starts the next day")
+                    : ArenaText.Pair("Night: tonight's dark matter is mined out; E at the base door to repair, upgrade or wait for dawn","Night: tonight's dark matter is mined out; E at the base door to repair, upgrade or wait for dawn"), DoorPoint);
         }
 
         void TickNight(float dt)
@@ -192,13 +275,13 @@ namespace AnomalyArena
             if (TickBaseDoor()) return;                               
             TickWhispers(dt);
             if (Day == 0) TickTutorialNight(dt);
-            if (stageClock >= stageLength) EndNight(false);
+            if (!EveningsOpenEnded && stageClock >= stageLength) EndNight(false);
         }
 
-                                                                                                                                          
-                                                                                                                                          
-                                                                                                                                       
-                                                         
+                                                                                                                                        
+                                                                                                                                            
+                                                                                                                                             
+                                                                                                                   
         public void EndNight(bool waitedAtBase)
         {
             if (Stage != CampaignStage.Night && Stage != CampaignStage.Base) return;
@@ -207,6 +290,7 @@ namespace AnomalyArena
             CampaignEvents.RaisePhase("dawn", Day);
             CampaignEvents.RaiseDawn(Day, new CampaignCost(alloy, energy, dark), new CampaignCost(EarnedAlloy, EarnedEnergy, EarnedDark));
             ClearNight(false);
+            DismissStragglers();                                                                                       
             ApplyDaylight();
             nightWhispers = false;
             Objective("", null);
@@ -237,14 +321,18 @@ namespace AnomalyArena
             if (everything) { ClearPickups(); lampStock = 0; }
         }
 
-                                                                                                                                        
-                                                                                            
+                                                                                                                                             
+                                                                                                                
         bool TickBaseDoor()
         {
             var p = gm.player;
             if (!p || mining != null || Query.Flat(p.Position - DoorPoint).magnitude >= 3.2f) return false;
-            prompt = Stage == CampaignStage.Dusk ? ArenaText.Pair("E: enter the base to upgrade or repair (dusk waits)","E: enter the base to upgrade or repair (dusk waits)")
-                : ArenaText.Pair("E: enter the base to upgrade or repair (the night waits)","E: enter the base to upgrade or repair (the night waits)");
+            bool afternoon = Stage == CampaignStage.Dusk;
+            prompt = EveningsOpenEnded
+                ? afternoon ? ArenaText.Pair("E: enter the base to upgrade, repair or go into the night","E: enter the base to upgrade, repair or go into the night")
+                    : ArenaText.Pair("E: enter the base to repair, upgrade or wait for dawn","E: enter the base to repair, upgrade or wait for dawn")
+                : afternoon ? ArenaText.Pair("E: enter the base to upgrade or repair (the afternoon waits)","E: enter the base to upgrade or repair (the afternoon waits)")
+                    : ArenaText.Pair("E: enter the base to upgrade or repair (the night waits)","E: enter the base to upgrade or repair (the night waits)");
             if (!EPressed) return false;
             OpenBase();
             return true;
@@ -253,19 +341,27 @@ namespace AnomalyArena
         string NightHint()
         {
             string lampText = ArenaText.Pair($"LAMPS ×{lampStock} (F TO PLACE)",$"LAMPS ×{lampStock} (F TO PLACE)");
-            string haul = ArenaText.Pair($"TONIGHT: ALLOY +{nightAlloy} · DARK MATTER +{nightDark}",$"TONIGHT: ALLOY +{nightAlloy} · DARK MATTER +{nightDark}");
-                                                                                                                                        
+            if (Stage == CampaignStage.Dusk)
+            {
+                int left = OreLeftToday;
+                return Dot(ArenaText.Pair("IN THE AFTERNOON ORE NEEDS NO LAMP","IN THE AFTERNOON ORE NEEDS NO LAMP"),
+                    left > 0 ? ArenaText.Pair($"{left} ORE NODES LEFT TODAY",$"{left} ORE NODES LEFT TODAY") : ArenaText.Pair("TODAY'S ORE IS MINED OUT","TODAY'S ORE IS MINED OUT"),
+                    lampText,
+                    EveningsOpenEnded ? ArenaText.Pair("NO CLOCK · CHOOSE INTO THE NIGHT AT THE BASE DOOR (E)","NO CLOCK · CHOOSE INTO THE NIGHT AT THE BASE DOOR (E)") : ArenaText.Pair($"MINED TODAY: ALLOY +{nightAlloy}",$"MINED TODAY: ALLOY +{nightAlloy}"));
+            }
+                                                                                                                                                 
             var risk = TonightsHaul;
             string atRisk = ArenaText.Pair($"A DEATH LOSES: ALLOY {risk.alloy} · ENERGY {risk.energy} · DARK MATTER {risk.dark} (THE BASE KEEPS IT)",$"A DEATH LOSES: ALLOY {risk.alloy} · ENERGY {risk.energy} · DARK MATTER {risk.dark} (THE BASE KEEPS IT)");
-            return Stage == CampaignStage.Dusk ? $"{ArenaText.Pair("AT DUSK ORE CAN BE MINED WITHOUT A LAMP","AT DUSK ORE CAN BE MINED WITHOUT A LAMP")} · {lampText} · {haul}"
-                : $"{ArenaText.Pair("NO FIGHTING AT NIGHT · HOLD E IN LAMP LIGHT TO MINE","NO FIGHTING AT NIGHT · HOLD E IN LAMP LIGHT TO MINE")} · {lampText} · {haul} · {atRisk}";
+            return Dot(ArenaText.Pair("NO FIGHTING AT NIGHT · HOLD E IN LAMP LIGHT TO MINE","NO FIGHTING AT NIGHT · HOLD E IN LAMP LIGHT TO MINE"), lampText, atRisk,
+                EveningsOpenEnded ? ArenaText.Pair("WAIT FOR DAWN AT THE BASE (E)","WAIT FOR DAWN AT THE BASE (E)")
+                    : ArenaText.Pair($"TONIGHT: ALLOY +{nightAlloy} · DARK MATTER +{nightDark}",$"TONIGHT: ALLOY +{nightAlloy} · DARK MATTER +{nightDark}"));
         }
 
                             
 
         void TickLampPlacement()
         {
-            if (!FPressed) return;
+            if (!FPressed || WorldMap.Active && WorldMap.Active.TrialActive) return;
             var p = gm.player;
             if (!p || !p.IsAlive) return;
             if (lampStock <= 0) { ui.Flash(ArenaText.Pair("No lamps left: craft them with alloy at the Ship Launch Bay","No lamps left: craft them with alloy at the Ship Launch Bay")); return; }
@@ -342,33 +438,178 @@ namespace AnomalyArena
 
                                        
 
-        void SpawnOreNodes(int count)
+                                                                                                                                             
+                                                                                                                                          
+                                                                                                                         
+        const float NodeSpacing = 2.6f, NodeEdgeMargin = 6f, TrailMinSpacing = 5f, TrailBaseGap = 3f, TrailSideSpread = 3.5f, HoleKeepOut = 7f;
+
+                                                                                                                                             
+                                                                                                                                            
+                                                                                                                                          
+                                                                                                                                       
+                                                                                                                                        
+                                                                                                                             
+                                                                                                                                         
+                                      
+        void SpawnAfternoonOre(int day)
         {
-            for (int i = 0; i < count; i++)
+            int total = rules.OreNodes(day), yield = rules.OreYield(day), shown = Mathf.Max(1, rules.trailShown);
+            var trail = PlanTrail(Mathf.Min(rules.trailNodes, total), day);
+            for (int k = 0; k < trail.Count; k++) AddNode(NodeKind.Ore, trail[k], yield, k >= shown).trailIndex = k;
+                                                                                                                                      
+            for (int i = trail.Count; i < total; i++)
+                if (TryNodePoint(out var at)) AddNode(NodeKind.Ore, at, yield);
+            SpawnScatteredOre();
+        }
+
+                                                                                                                                            
+                                                                                                                                              
+        Vector3? trailTarget;
+
+                                                                                                                                           
+                                                                                                                                          
+                                                                                              
+        List<Vector3> PlanTrail(int count, int day)
+        {
+            var points = new List<Vector3>();
+            if (HoleCentre is Vector3 standing) trailTarget = standing;
+            if (count <= 0 || trailTarget is not Vector3 hole) return points;
+            Vector3 toHole = Query.Flat(hole - BaseCentre);
+            float holeDistance = toHole.magnitude;
+            float start = Mathf.Max(rules.nodeBaseClearance, BaseHalf + TrailBaseGap);
+            float reach = Mathf.Min(rules.trailReach + rules.trailReachPerDay * Mathf.Max(0, day - 1), holeDistance - HoleKeepOut);
+            if (holeDistance < 1f || reach < start) return points;
+            Vector3 dir = toHole / holeDistance, side = new(-dir.z, 0f, dir.x);
+                                                                                                                                               
+                                                                                                                                
+            count = Mathf.Min(count, Mathf.FloorToInt((reach - start) / TrailMinSpacing) + 1);
+            float last = float.MinValue;
+            for (int k = 0; k < count; k++)
             {
-                if (!TryNodePoint(out var at, i)) continue;
-                AddNode(NodeKind.Ore, at, rules.OreYield(Mathf.Max(1, Day)));
+                float along = count == 1 ? reach : Mathf.Lerp(start, reach, TrailShare(k, count));
+                Vector3 p = BaseCentre + dir * along + side * ((k % 2 == 0 ? 1f : -1f) * Random.Range(.35f, 1f) * TrailSideSpread);
+                if (!TrailPoint(ref p, dir, side, points)) continue;
+                float progress = Vector3.Dot(p - BaseCentre, dir);
+                if (progress < last + TrailMinSpacing * .5f) continue;
+                last = progress;
+                points.Add(p);
+            }
+            return points;
+        }
+
+                                                                                                                                        
+                                                                                                                                          
+                                                                                                
+        float TrailShare(int k, int count)
+        {
+            int gaps = count - 1;
+            if (gaps <= 0) return 1f;
+            float end = Mathf.Clamp(rules.trailEndGap, .05f, 1f);
+                                                                                                    
+            float Sum(int n) => gaps == 1 ? n : n + (end - 1f) * n * (n - 1) * .5f / (gaps - 1);
+            return Sum(Mathf.Clamp(k, 0, gaps)) / Sum(gaps);
+        }
+
+                                                                                                                                                  
+        bool TrailPoint(ref Vector3 p, Vector3 dir, Vector3 side, List<Vector3> planned)
+        {
+            if (TrailSpotOk(p, planned)) return true;
+            for (float r = 1f; r <= 8f; r += 1f)
+            {
+                if (TrailSpotOk(p + side * r, planned)) { p += side * r; return true; }
+                if (TrailSpotOk(p - side * r, planned)) { p -= side * r; return true; }
+                if (TrailSpotOk(p - dir * r, planned)) { p -= dir * r; return true; }
+            }
+            return false;
+        }
+
+        bool TrailSpotOk(Vector3 at, List<Vector3> planned)
+        {
+            if (!OreSpotOk(at, 1.2f)) return false;
+            foreach (var other in planned) if (Query.Flat(other - at).sqrMagnitude < NodeSpacing * NodeSpacing) return false;
+            return true;
+        }
+
+                                                                                                                                    
+        Vector3? TrailFrontier()
+        {
+            Node best = null;
+            foreach (var node in nodes)
+                if (node.trailIndex >= 0 && !node.hidden && !node.mined && (best == null || node.trailIndex < best.trailIndex)) best = node;
+            return best != null ? best.position : (Vector3?)null;
+        }
+
+                                                                                                                                      
+                                               
+        void SurfaceNextTrailNode(int after)
+        {
+            Node next = null;
+            foreach (var node in nodes)
+                if (node.hidden && node.trailIndex > after && (next == null || node.trailIndex < next.trailIndex)) next = node;
+            if (next == null) return;
+            next.hidden = false;
+            BuildNodeView(next);
+            Fx.Ring(next.position, 2.4f, new Color(.6f, .85f, 1f), .6f);
+            V3WorldAudio.Instance?.Play(ArenaWorldCue.PickupEnergy, next.position, .7f, .7f);
+            ui.Flash(ArenaText.Pair("More ore has surfaced further out","More ore has surfaced further out"), 2f);
+        }
+
+                                                                                                                                   
+        int OreLeftToday { get { int n = 0; foreach (var node in nodes) if (!node.mined && node.kind == NodeKind.Ore) n++; return n; } }
+
+                                                                                                                                           
+        const float NightOreFromCluster = 4f;
+
+                                                                                                                                            
+                                                                                                                                              
+                                                                     
+        void SpawnNightOre(int day, List<Vector3> clusters)
+        {
+            if (day <= 0) return;                                     
+            int yield = rules.OreYield(day);
+            for (int i = 0; i < rules.nightOreNodes; i++)
+            {
+                bool placed = false;
+                if (clusters.Count > 0)
+                {
+                    Vector3 centre = clusters[i % clusters.Count];
+                    float a = Random.value * Mathf.PI * 2f;
+                    for (int attempt = 0; attempt < 8 && !placed; attempt++, a += Mathf.PI / 4f)
+                    {
+                        Vector3 at = centre + new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * NightOreFromCluster;
+                        if (!OreSpotOk(at, 1f)) continue;
+                        AddNode(NodeKind.Ore, at, yield);
+                        placed = true;
+                    }
+                }
+                if (!placed && TryNodePoint(out var free)) AddNode(NodeKind.Ore, free, yield);
             }
         }
 
-        void SpawnDarkClusters()
+                                                                                                                                              
+                                                                                                                                              
+        List<Vector3> SpawnDarkClusters()
         {
-            if (Day == 0) return;                                     
+            var centres = new List<Vector3>();
+            if (Day == 0) return centres;
             var regionsLeft = new List<int>();
-            for (int r = 0; r < RegionCount; r++)
-            {
-                RegionCentre(r, out _);
-                regionsLeft.Add(r);
-            }
-            for (int c = 0; c < rules.darkClusters && regionsLeft.Count > 0; c++)
+            for (int r = 0; r < RegionCount; r++) regionsLeft.Add(r);
+            while (centres.Count < rules.darkClusters && regionsLeft.Count > 0)
             {
                 int pick = Random.Range(0, regionsLeft.Count);
                 int region = regionsLeft[pick]; regionsLeft.RemoveAt(pick);
                 var centre = RegionCentre(region, out var half);
-                Vector3 at = centre + new Vector3(Random.Range(-half.x * .7f, half.x * .7f), 0f, Random.Range(-half.y * .7f, half.y * .7f));
-                if (Query.Flat(at - BaseCentre).magnitude < rules.nodeBaseClearance) { c--; continue; }
-                AddCluster(FindOpen(at, 1.2f));
+                                                                                         
+                for (int attempt = 0; attempt < 8; attempt++)
+                {
+                    Vector3 at = FindOpen(centre + new Vector3(Random.Range(-half.x * .7f, half.x * .7f), 0f, Random.Range(-half.y * .7f, half.y * .7f)), 1.2f, 6f);
+                    if (!OreSpotOk(at, 1.2f)) continue;
+                    AddCluster(at);
+                    centres.Add(at);
+                    break;
+                }
             }
+            return centres;
         }
 
         void AddCluster(Vector3 centre)
@@ -377,30 +618,80 @@ namespace AnomalyArena
             {
                 float a = n * Mathf.PI * 2f / rules.nodesPerCluster + Random.Range(-.3f, .3f);
                 Vector3 at = FindOpen(centre + new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * 2.1f, .8f, 4f);
+                if (WorldMap.Active && !WorldMap.Active.IsWalkable(at, .8f)) at = centre;
                 AddNode(NodeKind.Dark, at, rules.darkPerNode);
             }
         }
 
-        bool TryNodePoint(out Vector3 at, int salt)
+                                                                                                                                  
+        bool TryNodePoint(out Vector3 at)
         {
-            var b = WorldMap.Active ? WorldMap.Active.Bounds : new Bounds(Vector3.zero, new Vector3(180f, 20f, 120f));
-            for (int attempt = 0; attempt < 30; attempt++)
+            Vector2 half = MapHalfSize;
+            float hx = Mathf.Max(1f, half.x - NodeEdgeMargin), hz = Mathf.Max(1f, half.y - NodeEdgeMargin);
+            for (int attempt = 0; attempt < 40; attempt++)
             {
-                at = new Vector3(Random.Range(b.min.x + 6f, b.max.x - 6f), 0f, Random.Range(b.min.z + 6f, b.max.z - 6f));
-                if (Query.Flat(at - BaseCentre).magnitude < rules.nodeBaseClearance) continue;
-                if (WorldMap.Active && (!WorldMap.Active.IsWalkable(at, 1.2f) || Quicksand.SpeedFactor(at) < .99f)) continue;
-                return true;
+                at = new Vector3(Random.Range(-hx, hx), 0f, Random.Range(-hz, hz));
+                if (OreSpotOk(at, 1.2f)) return true;
             }
             at = Vector3.zero;
             return false;
         }
 
-        Node AddNode(NodeKind kind, Vector3 at, int amount)
+                                                                                                                                       
+                                            
+        const float ScatterOffTrailDegrees = 50f;
+
+                                                                                                                                             
+                                                                                                                                              
+                                                                                                                                            
+                                                                                                                                                    
+        void SpawnScatteredOre()
         {
-            var node = new Node { kind = kind, position = at, amount = amount };
+            Vector3 away = trailTarget is Vector3 target ? Query.Flat(target - BaseCentre) : Vector3.zero;
+            away = away.sqrMagnitude > 1f ? away.normalized : Vector3.zero;                                             
+            float near = rules.nodeBaseClearance, far = Mathf.Max(near + 4f, rules.scatterReach);
+            float maxCos = Mathf.Cos(ScatterOffTrailDegrees * Mathf.Deg2Rad);
+            for (int i = 0; i < rules.scatterNodes; i++)
+                for (int attempt = 0; attempt < 40; attempt++)
+                {
+                                                                                                                
+                    float r = Mathf.Sqrt(Random.Range(near * near, far * far)), a = Random.value * Mathf.PI * 2f;
+                    var bearing = new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a));
+                    if (Vector3.Dot(bearing, away) > maxCos) continue;
+                    Vector3 at = BaseCentre + bearing * r;
+                    if (!OreSpotOk(at, 1.2f)) continue;
+                    AddNode(NodeKind.Ore, at, rules.scatterYield);
+                    break;
+                }
+        }
+
+                                                                                                                                             
+                                                                                                
+        bool OreSpotOk(Vector3 at, float radius)
+        {
+            Vector2 half = MapHalfSize;
+            if (Mathf.Abs(at.x) > half.x - 2f || Mathf.Abs(at.z) > half.y - 2f) return false;
+            if (Query.Flat(at - BaseCentre).magnitude < rules.nodeBaseClearance) return false;
+            var map = WorldMap.Active;
+            if (map && (!map.IsWalkable(at, radius) || Quicksand.SpeedFactor(at) < .99f)) return false;
+            foreach (var node in nodes) if (Query.Flat(node.position - at).sqrMagnitude < NodeSpacing * NodeSpacing) return false;
+            return true;
+        }
+
+        Node AddNode(NodeKind kind, Vector3 at, int amount, bool hidden = false)
+        {
+            var node = new Node { kind = kind, position = at, amount = amount, hidden = hidden, glint = Random.value * 6f };
+            nodes.Add(node);
+            if (!hidden) BuildNodeView(node);
+            return node;
+        }
+
+        void BuildNodeView(Node node)
+        {
+            var kind = node.kind;
             var root = new GameObject(kind + "Node").transform;
             root.SetParent(worldRoot, false);
-            root.position = at;
+            root.position = node.position;
             root.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
             var prefab = !art || !Art.Enabled ? null : kind switch { NodeKind.Ore => art.oreNodePrefab, NodeKind.Dark => art.darkNodePrefab, _ => null };
             if (prefab)
@@ -420,9 +711,6 @@ namespace AnomalyArena
                 Box(root, "Crystal", new Vector3(.15f, .9f, 0f), new Vector3(.35f, .9f, .35f), kind == NodeKind.Ore ? new Color(.6f, .75f, .9f) : new Color(.55f, .15f, .85f));
             }
             node.view = root;
-            node.glint = Random.value * 6f;
-            nodes.Add(node);
-            return node;
         }
 
         static void FitHeight(Transform model, float height)
@@ -442,13 +730,22 @@ namespace AnomalyArena
         public int ShadowCount => shadows.Count;
         public int LampCount => lamps.Count;
         public int OverrunRegions { get { int n = 0; foreach (var pair in regionShadows) if (pair.Value >= rules.overrunShadows) n++; return n; } }
-        public int NodesLeft(NodeKind kind) { int n = 0; foreach (var node in nodes) if (!node.mined && node.kind == kind) n++; return n; }
+                                                                                              
+        public int NodesLeft(NodeKind kind) { int n = 0; foreach (var node in nodes) if (!node.mined && !node.hidden && node.kind == kind) n++; return n; }
+                                                                                                                                          
+                                                                                
+        public float MarkerReach(Vector3 marker)
+        {
+            var node = NearestNode(marker, .5f);
+            return node != null && node.kind != NodeKind.Core ? Mathf.Min(3f, rules.mineRange) : 3f;
+        }
+
         public bool TryNearestNode(NodeKind kind, Vector3 from, out Vector3 at)
         {
             at = Vector3.zero; float best = float.MaxValue; bool found = false;
             foreach (var node in nodes)
             {
-                if (node.mined || node.kind != kind) continue;
+                if (node.mined || node.hidden || node.kind != kind) continue;
                 float d = Query.Flat(node.position - from).sqrMagnitude;
                 if (d < best) { best = d; at = node.position; found = true; }
             }
@@ -460,14 +757,14 @@ namespace AnomalyArena
             Node best = null; float bestDistance = range;
             foreach (var node in nodes)
             {
-                if (node.mined) continue;
+                if (node.mined || node.hidden) continue;
                 float d = Query.Flat(node.position - p).magnitude;
                 if (d < bestDistance) { best = node; bestDistance = d; }
             }
             return best;
         }
 
-                                                                                                                                                   
+                                                                                                                                                            
         void TickMining(float dt, bool dusk)
         {
             var p = gm.player;
@@ -500,6 +797,10 @@ namespace AnomalyArena
             V3WorldAudio.Instance?.Play(ArenaWorldCue.PickupEnergy, node.position, node.kind == NodeKind.Ore ? 1.1f : .8f);
             if (node.view) Destroy(node.view.gameObject);
             OnTutorialMined(node.kind);
+            if (node.trailIndex >= 0) SurfaceNextTrailNode(node.trailIndex);
+                                                                                                                
+            AfternoonObjective();
+            NightObjective();
         }
 
                               
@@ -634,8 +935,8 @@ namespace AnomalyArena
             p.ReceiveDamage(new DamageInfo { amount = hit, source = DamageSource.Hit, knockDir = Query.Flat(p.Position - s.position).normalized });
         }
 
-                                                                                                                                       
-                                                                     
+                                                                                                                                                
+                                                                             
         public bool CatchesPlayerDeath() => Running && (knockedOut || Stage is CampaignStage.Dusk or CampaignStage.Night);
 
         bool CaughtNightDeath()
@@ -646,21 +947,35 @@ namespace AnomalyArena
             return true;
         }
 
-                                                                                                                                         
-                                                                                                                                     
+                                                                                                                                        
+                                                                                                                                              
+                                                                                                                                            
+                                                                         
         IEnumerator NightDeath()
         {
             knockedOut = true;
             mining = null; mineProgress = 0f;
+                                                                                                                                    
+                                                                          
             var lost = LoseHaul(rules.nightDeathLoss);
             CampaignEvents.RaiseNightDeath(lost, Day);
-            ui.Flash(ArenaText.Pair(                $"You fell in the dark. Everything mined or picked up tonight is lost: {lost.alloy} alloy, {lost.energy} energy, {lost.dark} dark matter",                $"You fell in the dark. Everything mined or picked up tonight is lost: {lost.alloy} alloy, {lost.energy} energy, {lost.dark} dark matter"), 5f);
-            Say(Line.K01);
+                                                                                                                             
+            bool afternoon = Stage == CampaignStage.Dusk;
+            ui.Flash(afternoon
+                ? ArenaText.Pair(                    "You fell in the afternoon. You wake at the base with nothing lost, and the afternoon goes on.",                    "You fell in the afternoon. You wake at the base with nothing lost, and the afternoon goes on.")
+                : ArenaText.Pair(                    $"You fell in the dark. Everything mined or picked up tonight is lost: {lost.alloy} alloy, {lost.energy} energy, {lost.dark} dark matter",                    $"You fell in the dark. Everything mined or picked up tonight is lost: {lost.alloy} alloy, {lost.energy} energy, {lost.dark} dark matter"), 5f);
+            if (!afternoon) Say(Line.K01);                                                                                   
             float until = Time.realtimeSinceStartup + rules.nightDeathSeconds;
             while (Time.realtimeSinceStartup < until) yield return null;
             var p = gm.player;
             if (p) p.ResetForSpawn();                                                                      
             knockedOut = false;
+            if (afternoon && Stage == CampaignStage.Dusk)
+            {
+                PlacePlayer(DoorPoint);
+                AfternoonObjective();
+                yield break;
+            }
             if (Stage is CampaignStage.Dusk) Stage = CampaignStage.Night;                                    
             EndNight(false);
         }
@@ -668,7 +983,7 @@ namespace AnomalyArena
         float whisperClock;
         void TickWhispers(float dt)
         {
-                                                                                                            
+                                                                                                    
             if (!nightWhispers || shadows.Count == 0) return;
             var p = gm.player;
             float near = 0f;
@@ -681,6 +996,9 @@ namespace AnomalyArena
 
                                            
 
+                                                                                                                                     
+        const float DarknessLightReach = 40f;
+
         void UpdateDarkness()
         {
             if (!darkness) return;
@@ -691,20 +1009,23 @@ namespace AnomalyArena
             darkness.BeginFrame(darknessLevel, Mathf.Clamp01(enhancementPulse) * .35f);
             foreach (var lamp in lamps) darkness.AddLight(lamp.position, rules.lampRadius, Mathf.Clamp01(.55f + .45f * lamp.hp / rules.lampHp));
             darkness.AddLight(BaseCentre, rules.baseLightRadius, 1f);
+            Vector3 eye = gm.player ? Query.Flat(gm.player.Position) : BaseCentre;
             if (gm.player) darkness.AddLight(gm.player.Position, rules.playerGlowRadius, .7f);
             foreach (var node in nodes)
             {
-                if (node.mined) continue;
+                if (node.mined || node.hidden) continue;
                 node.glint += Time.unscaledDeltaTime;
+                if (Query.Flat(node.position - eye).sqrMagnitude > DarknessLightReach * DarknessLightReach) continue;
                 float pulse = .25f + .2f * Mathf.Sin(node.glint * (node.kind == NodeKind.Ore ? 2.3f : 1.6f));
                 darkness.AddLight(node.position, node.kind == NodeKind.Ore ? 1f : 1.4f, node.kind == NodeKind.Core ? .9f : pulse);
             }
                                                            
-            foreach (var s in shadows) darkness.AddLight(s.position, .55f, .28f);
+            foreach (var s in shadows)
+                if (Query.Flat(s.position - eye).sqrMagnitude <= DarknessLightReach * DarknessLightReach) darkness.AddLight(s.position, .55f, .28f);
             if (regionDarkness == null || regionDarkness.Length != RegionCount) regionDarkness = new float[RegionCount];
             var extra = regionDarkness;
             for (int r = 0; r < extra.Length; r++) extra[r] = rules.crowdedDarkness * Mathf.Clamp01(ShadowsIn(r) / (float)rules.overrunShadows);
-            darkness.SetRegions(rules.regions.x, rules.regions.y, extra, WorldMap.Active ? WorldMap.Active.Bounds : new Bounds(Vector3.zero, new Vector3(180f, 20f, 120f)));
+            darkness.SetRegions(rules.regions.x, rules.regions.y, extra, CampaignBounds);
             darkness.EndFrame();
         }
     }

@@ -40,29 +40,29 @@ namespace AnomalyArena
         [Min(1), Tooltip("Waves of the table one day steps over: 2 since 2026-11-06, so the 7 days fight waves 2, 4 ... 14 and the difficulty meets the Tyrant.")]
         public int waveStride = 2;
         [Min(0f), Tooltip("Seconds between the waves of one day.")] public float lullSeconds = 4f;
-        [Min(0f), Tooltip("Dusk after the last wave: rest and mining time, the light fades, ore nodes show, no shadows yet.")]
+        [Min(0f), Tooltip("The afternoon (dusk) after the day's last wave: rest and mining time, the day's ore shows, no shadows yet. The light fades over this many seconds; without openEndedEvenings the afternoon also ends then and the night begins.")]
         public float duskSeconds = 15f;
-        [Min(5f), Tooltip("Seconds of night on day 1; the night is longer by nightSecondsPerDay each day.")] public float nightSeconds = 35f;
+        [Min(5f), Tooltip("Seconds of night on day 1; the night is longer by nightSecondsPerDay each day. Only without openEndedEvenings: with it the night lasts until the player waits for dawn at the base.")] public float nightSeconds = 35f;
         [Min(0f)] public float nightSecondsPerDay = 1f;
-        [Min(5f), Tooltip("The Day 0 tutorial night.")] public float tutorialNightSeconds = 55f;
+        [Min(5f), Tooltip("The Day 0 tutorial night. With openEndedEvenings it has no end of its own: after this many seconds its goal points back to the base door, where waiting for dawn starts day 1.")] public float tutorialNightSeconds = 55f;
         [Min(0), Tooltip("Free air drops (armory rounds) per dawn: 0 since 2026-11-06. Every upgrade is bought in its room as the V2 doc places it and takes effect at once.")]
         public int armoryRoundsPerDawn = 0;
 
-        [Header("Kill drops: alien energy (star matter) and alloy shards")]
-        [Tooltip("Chance a kill drops alien energy, per enemy tier.")] public TierValues energyChance = new(.05f, .30f, 1f);
+        [Header("Kill drops: alien energy (star matter); since 2026-11-06 no alloy")]
+        [Tooltip("Chance a kill drops alien energy, per enemy tier (0 = never). Since 2026-11-06 kills drop nothing else: alloy and dark matter are only mined.")] public TierValues energyChance = new(.05f, .30f, 1f);
         [Tooltip("Alien energy in one drop, per enemy tier; grows by energyGrowthPerDay a day.")] public TierValues energyAmount = new(1f, 2f, 2f);
         [Min(0f)] public float energyGrowthPerDay = .06f;
-        [Tooltip("Chance a kill drops an alloy shard, per enemy tier (most alloy is mined).")] public TierValues alloyChance = new(.04f, .15f, 1f);
-        [Tooltip("Alloy in one shard, per enemy tier; grows by alloyGrowthPerDay a day.")] public TierValues alloyAmount = new(1f, 1f, 2f);
+        [Tooltip("Chance a kill drops an alloy shard, per enemy tier. 0 since 2026-11-06 (big map): all alloy is mined.")] public TierValues alloyChance = new(0f, 0f, 0f);
+        [Tooltip("Alloy in one shard, per enemy tier; grows by alloyGrowthPerDay a day. Not read since 2026-11-06: kills drop no alloy.")] public TierValues alloyAmount = new(1f, 1f, 2f);
         [Min(0f)] public float alloyGrowthPerDay = .10f;
         [Min(.5f), Tooltip("Cells within which a dropped shard flies to the player.")] public float pickupMagnet = 3.5f;
 
-        [Header("Mining (dusk and night)")]
-        [Min(0), Tooltip("Alloy ore nodes that surface at dusk on day 1; one more each later day (16 since 2026-11-06, up from 9).")] public int oreNodes = 16;
+        [Header("Mining (afternoon and night)")]
+        [Min(0), Tooltip("Alloy ore nodes that surface in the afternoon of day 1; one more each later day. Since 2026-11-06 (big map, no clock) every node can be mined, so the nodes are the day's alloy ceiling.")] public int oreNodes = 4;
         [Min(1), Tooltip("Alloy from one ore node: oreYield on days 1-2, + oreYieldStep every oreYieldStepDays days.")] public int oreYield = 3;
-        [Min(0)] public int oreYieldStep = 2;
+        [Min(0)] public int oreYieldStep = 1;
         [Min(1)] public int oreYieldStepDays = 2;
-        [Min(0), Tooltip("Dark matter clusters that surface each night, at most one per region (14 since 2026-11-06, up from 9).")] public int darkClusters = 14;
+        [Min(0), Tooltip("Dark matter clusters that surface each night, at most one per region. Since 2026-11-06 (big map, no clock) every cluster can be mined, so they are the night's dark matter ceiling.")] public int darkClusters = 2;
         [Min(1), Tooltip("Dark matter nodes in one cluster (4 since 2026-11-06, up from 3); the Day 0 night's cluster has as many.")] public int nodesPerCluster = 4;
         [Min(1), Tooltip("Dark matter from one node.")] public int darkPerNode = 1;
         [Min(0f), Tooltip("Seconds of holding E to mine a node.")] public float mineSeconds = 1.1f;
@@ -74,10 +74,12 @@ namespace AnomalyArena
         [Range(0f, 1f), Tooltip("Extra darkness in a region full of shadows; danger shows as darkness and sound, no marks on the ground.")]
         public float crowdedDarkness = .08f;
         [Range(0f, 1f), Tooltip("Darkness at the end of dusk.")] public float duskDarkness = .55f;
+        [Range(0f, 1f), Tooltip("With open-ended evenings, how far the afternoon's light turns toward dusk's end (0 = full daylight, 1 = duskDarkness and the evening light): the afternoon is a rest and mining time in daylight, and the dark comes when the player goes into the night.")]
+        public float afternoonLight = .25f;
         [Min(1f), Tooltip("Radius of a placed mining lamp, in cells.")] public float lampRadius = 6.5f;
         [Min(1f)] public float baseLightRadius = 11f;
         [Min(0f), Tooltip("The player's own faint glow: shows the feet, does not scare shadows, does not allow mining.")] public float playerGlowRadius = 2.4f;
-        [Min(0), Tooltip("Mining lamps the base hands out each night.")] public int freeLampsPerNight = 2;
+        [Min(0), Tooltip("Mining lamps the base hands out each night.")] public int freeLampsPerNight = 3;
         [Min(1f), Tooltip("Seconds a lamp holds out against one shadow in a region overrun by shadows.")] public float lampHp = 4f;
 
         [Header("Night: shadow monsters")]
@@ -106,6 +108,33 @@ namespace AnomalyArena
         [Range(.05f, 1f), Tooltip("A side breaks its room once it takes this share of the base max HP in one day.")] public float sideBreakShare = .25f;
         [Min(0f), Tooltip("Every monster of a day wave raids the base (since 2026-11-06; bosses and monsters that cannot walk excepted). A raider within this many cells of the player fights the player instead; 0 = never.")]
         public float raiderAggroRadius = 7f;
+
+                                                                                                                                 
+                                                                                                                                         
+                                                                                            
+        [Header("Big map, open-ended afternoon and night, mineral trails")]
+        [Tooltip("The campaign map's size in cells (x, z). The classic arena is 180 x 120 (WreckField and DustFlats maps).")] public Vector2Int mapSize = new(200, 140);
+        [Tooltip("No clock in the afternoon (dusk) or at night: the player goes into the night and on to the next day from the base door (its panel's Into the night and Wait for dawn). Off: both run on duskSeconds and NightLength as before.")] public bool openEndedEvenings = true;
+        [Min(0f), Tooltip("Day monsters are born on a ring this many cells from the base centre (not on the far rim of the big map), then walk in. 70 keeps their walk close to the earlier campaign's, whose monsters came from the 180 x 120 map's rim, 79 cells from the base on average; it also stays clear of the black hole (87-95 cells out), so they do not feed it on their own.")] public float daySpawnRing = 70f;
+        [Min(0), Tooltip("Ore nodes among each night's nodes, each beside one of the night's dark matter clusters; the rest of the night's nodes are dark matter. 0 since 2026-11-06 (it was 1): its alloy went to the afternoon's scattered nodes (scatterNodes), and afternoon ore left unmined still lies there at night.")] public int nightOreNodes = 0;
+        [Min(0), Tooltip("How many of each afternoon's ore nodes lie on the trail toward the black hole (newly seen minerals point the way). At least OreNodes(days) puts every afternoon node on the trail (once the hidden boss has turned the hole into ground, the trail still leads to where it stood); the rest lie at random over the map.")] public int trailNodes = 10;
+        [Min(0f), Tooltip("Cells from the base that the trail's farthest node reaches on day 1.")] public float trailReach = 36f;
+        [Min(0f), Tooltip("Cells the trail reaches further each later day, until it ends at the black hole.")] public float trailReachPerDay = 25f;
+        [Min(1), Tooltip("Trail nodes up at once (2 since 2026-11-06): the next one toward the black hole shows while the nearer one is still there, and mining a trail node brings up the next hidden one, always further toward the hole.")] public int trailShown = 2;
+        [Range(.2f, 1f), Tooltip("The trail's last gap (nearest the black hole) as a share of its first (nearest the base); the gaps in between shrink evenly, so the ore lies closer together the nearer the hole. 1 = evenly spaced. Where the nodes lie, not how many: the day's alloy stays the same.")] public float trailEndGap = .5f;
+        [Min(0), Tooltip("Afternoon ore nodes off the trail, in the map's other directions: shown from the start, at random on open ground well off the line from the base to the black hole and within scatterReach cells of the base. They come on top of OreNodes(day) and replace the night's own ore node (nightOreNodes 0), so the day's alloy ceiling stays about where it was.")] public int scatterNodes = 2;
+        [Min(1), Tooltip("Alloy from one scattered node, the same every day (a trail node gives OreYield(day)).")] public int scatterYield = 2;
+        [Min(0f), Tooltip("Cells from the base within which the scattered nodes lie.")] public float scatterReach = 60f;
+        [Header("Black hole side quest")]
+        [Min(1), Tooltip("Monsters fed to the campaign's black hole to open the hidden boss portal; the three of its first sight count.")] public int holeFeedsToOpen = 20;
+        [Min(.5f), Tooltip("Seconds between side-quest monsters while the player is near the black hole and the portal is not open.")] public float holeQuestSpawnSeconds = 3f;
+        [Min(0), Tooltip("Most side-quest monsters alive at once.")] public int holeQuestMaxAlive = 5;
+        [Min(0f), Tooltip("Cells from the player at which side-quest monsters appear.")] public float holeQuestSpawnDistance = 12f;
+        [Min(0f), Tooltip("Cells from the black hole within which the side quest sends monsters.")] public float holeQuestRadius = 18f;
+        [Header("Black hole hum (heard only while the hole is out)")]
+        [Min(1f), Tooltip("Cells from the black hole's centre within which its hum is heard: silent this far out, growing to full at the hole's gravity ring.")] public float holeHumReach = 45f;
+        [Range(0f, 1f), Tooltip("Volume of the hum at the gravity ring, times V3WorldAudio's master gain. The hum is the Nash Prophet's gravity pull loop (Resources/V5/Audio/loop-gravity), which plays at 0.116 during his pull.")] public float holeHumVolume = .15f;
+        [Header("Raids and the shield top-up")]
         [Min(0f), Tooltip("Base damage per raider strike, as a share of that raider's attack damage. 0.15 since 2026-11-06, when every day monster became a raider (it was 0.6 for a fifth of the melee swarm).")] public float raidDamage = .15f;
         [Min(0), Tooltip("Energy cost of an emergency shield top-up at the base door by day: this + shieldTopUpCostPerDay per day.")] public int shieldTopUpCost = 4;
         [Min(0)] public int shieldTopUpCostPerDay = 1;
@@ -151,7 +180,7 @@ namespace AnomalyArena
         public CampaignCost engineRepair = new(6);
         public CampaignCost armorRepair = new(9);
         [Min(1)] public int fuelUnits = 6;
-        [Min(1)] public int darkPerFuelUnit = 6;
+        [Min(1)] public int darkPerFuelUnit = 5;
         [Min(0)] public int lampCost = 3;
         [Min(0), Tooltip("Room repair, alloy: this + roomRepairPerLevel x level + roomRepairPerDay x day.")] public int roomRepair = 2;
         [Min(0)] public int roomRepairPerLevel = 2;

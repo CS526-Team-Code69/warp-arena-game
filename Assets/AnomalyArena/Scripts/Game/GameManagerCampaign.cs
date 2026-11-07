@@ -58,20 +58,31 @@ namespace AnomalyArena
         {
             if (!CampaignRunning) return null;
             UpdatePenetrationEligibility();
-            progression.BankPick();
-            var cards = progression.DrawCards(waves.WaveIndex + 1, WeaponCard, SkillCard);
-            var order = new List<int>(cards.Length);
-            for (int i = 0; i < cards.Length; i++)
-                if (cards[i] != null && !cards[i].NeedsReplacement) order.Insert(Random.Range(0, order.Count + 1), i);
-            foreach (int i in order)
+            var waiting = progression.SetCardsAside();
+            try
             {
-                string title = cards[i].Title;
-                if (!progression.ApplyCard(i)) continue;
-                UpdatePenetrationEligibility();
-                return title;
+                progression.BankPick();
+                var cards = progression.DrawCards(waves.WaveIndex + 1, WeaponCard, SkillCard);
+                var order = new List<int>(cards.Length);
+                for (int i = 0; i < cards.Length; i++)
+                    if (cards[i] != null && !cards[i].NeedsReplacement) order.Insert(Random.Range(0, order.Count + 1), i);
+                foreach (int i in order)
+                {
+                    string title = cards[i].Title;
+                    if (!progression.ApplyCard(i)) continue;
+                    UpdatePenetrationEligibility();
+                    return title;
+                }
+                progression.ConsumeDraft();                                                  
+                return null;
             }
-            progression.ConsumeDraft();                                                  
-            return null;
+            finally { progression.PutCardsBack(waiting); }
+        }
+
+        internal void CampaignShowWeaponCard(RunWeapon weapon, System.Action then)
+        {
+            if (!CampaignRunning || weapon == null) { then?.Invoke(); return; }
+            ShowWeaponIntro(weapon, then);
         }
 
         bool CampaignSkipsArmory => CampaignRunning && (!runWeapons.HasOffers || !campaign.ArmoryUpgrades || !campaign.ArmoryRoundActive);
