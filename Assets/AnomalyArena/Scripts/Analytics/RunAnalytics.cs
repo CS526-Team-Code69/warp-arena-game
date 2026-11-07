@@ -142,6 +142,7 @@ namespace AnomalyArena
         {
             if (!runOpen || !game || game.waves && game.waves.labMode) return;
             FlushDamage(game);
+            if (Campaigning) SendLastDay(game);
             supplyOffers = null;
             runOpen = false;
             var e = Build(game, "run_end", StageOf(phase));
@@ -242,6 +243,7 @@ namespace AnomalyArena
 
         public static void UpgradePicked(GameManager game, bool atLevelUp, string[] offers, int index, bool rerolled)
         {
+            if (Campaigning) return;
             if (!runOpen || !game || offers == null || offers.Length < 3 || index < 0 || index >= offers.Length || string.IsNullOrEmpty(offers[index])) return;
             var e = new UpgradePickEvent
             {
@@ -269,6 +271,7 @@ namespace AnomalyArena
         {
             supplyOffers = null;
             supplyCancels = 0;
+            if (Campaigning) return;
             if (!runOpen || offers == null) return;
             var ids = new string[3];
             bool any = false;
@@ -339,6 +342,7 @@ namespace AnomalyArena
             row.damage += amount;
             row.damage_pct += amount / maxHp * 100.0;
             row.hits++;
+            if (Campaigning) CountPlayerDamage(amount, amount / maxHp * 100.0);
         }
 
                                                                                                          
@@ -379,74 +383,65 @@ namespace AnomalyArena
 
                                                                                            
 
-                                                                                                                     
+                                                                                                                                    
+                                                                                                                                     
+                                                                                                  
         [Serializable]
-        public class DawnRow
+        public class V2DayEvent : BetaEvent
         {
             public int day;
-            public int alloy;
-            public int energy;
-            public int dark;
+            public bool overtime;
+            public bool reached_dawn;
+            public int kills;
+            public double player_damage;
+            public double player_damage_pct;
+            public int player_hits;
+            public double base_damage;
+            public double base_damage_hp;
+            public double base_hp;
+            public double base_shield;
+            public double base_max_hp;
             public int earned_alloy;
             public int earned_energy;
             public int earned_dark;
-        }
-
-                                                                                                                                      
-                                                                                       
-        [Serializable]
-        public class BaseDamageRow
-        {
-            public int day;
-            public string stage = "day";
-            public string side = "";
-            public double damage;
-            public double to_hp;
-            public double damage_pct;
-            public int hits;
-        }
-
-                                                                                                               
-        [Serializable]
-        public class NightDeathRow
-        {
-            public int day;
+            public int spent_alloy;
+            public int spent_energy;
+            public int spent_dark;
+            public int alloy;
+            public int energy;
+            public int dark;
+            public bool night_death;
             public int lost_alloy;
             public int lost_energy;
             public int lost_dark;
+            public int shadows;
+            public int overrun_regions;
+            public int repairs;
         }
 
-                                                                         
+                                                                                                                                           
+                                                                                                                                           
+                                
         [Serializable]
-        public class SpendRow
+        public class V2PurchaseEvent : BetaEvent
         {
             public int day;
             public string stage = "";
+            public string item = "";
+            public string detail = "";
+            public string room = "";
             public int alloy;
             public int energy;
             public int dark;
         }
-
-                                                                                                                                   
-                                                                                      
-        [Serializable]
-        public class CampaignLog
-        {
-            public List<DawnRow> dawns = new();
-            public List<BaseDamageRow> base_damage = new();
-            public List<NightDeathRow> night_deaths = new();
-            public List<SpendRow> spent = new();
-            public string ended = "";
-            public int ended_day = -1;
-        }
-
-        public static CampaignLog Campaign { get; private set; } = new();
 
         const string ShadowSource = "shadow", BaseDestroyedCause = "base_destroyed";
         static GameManager campaignGame;                                                                                   
         static int campaignDay;
         static string campaignStage = "tutorial";
-        static readonly Dictionary<(int day, string stage, string side), BaseDamageRow> baseRows = new();
+        static V2DayEvent today;                                 
+        static int killsBefore;
+        static CampaignCost earnedBefore;
 
                                                                                                                                       
                                                                                            
@@ -466,23 +461,22 @@ namespace AnomalyArena
             CampaignEvents.BaseDamaged += OnBaseDamaged;
             CampaignEvents.NightDeath -= OnNightDeath;
             CampaignEvents.NightDeath += OnNightDeath;
-            CampaignEvents.Spent -= OnSpent;
-            CampaignEvents.Spent += OnSpent;
+            CampaignEvents.Purchased -= OnPurchased;
+            CampaignEvents.Purchased += OnPurchased;
             CampaignEvents.Dawn -= OnDawn;
             CampaignEvents.Dawn += OnDawn;
-            CampaignEvents.Ended -= OnEnded;
-            CampaignEvents.Ended += OnEnded;
         }
 
-                                                                                                                                         
-                                                                                                 
+                                                                                                                                      
+                                                                             
         static void StartCampaign(GameManager game, int day)
         {
             campaignGame = game;
             campaignDay = Mathf.Max(0, day);
             campaignStage = campaignDay == 0 ? "tutorial" : "day";
-            baseRows.Clear();
-            Campaign = new CampaignLog();
+            today = new V2DayEvent { @event = "v2_day", day = campaignDay };
+            killsBefore = game.waves ? game.waves.Kills : 0;
+            earnedBefore = game.TryGetComponent(out V2Campaign campaign) ? new CampaignCost(campaign.EarnedAlloy, campaign.EarnedEnergy, campaign.EarnedDark) : default;
         }
 
                                                                                                                                             
@@ -495,7 +489,7 @@ namespace AnomalyArena
             return true;
         }
 
-                                                                                                  
+                                                                                                             
         static void MoveTo(int day, string stage)
         {
             day = Mathf.Max(0, day);
@@ -507,7 +501,10 @@ namespace AnomalyArena
 
         static void OnDayStarted(int day, bool overtime)
         {
-            if (InCampaign(day)) MoveTo(day, "day");
+            if (!InCampaign(day)) return;
+            MoveTo(day, "day");
+            today.day = day;
+            today.overtime = overtime;
         }
 
         static void OnPhaseChanged(string phase, int day)
@@ -533,48 +530,98 @@ namespace AnomalyArena
         static string CampaignDamageSource(string source, DamageSource kind, string stage) =>
             source == "other" && kind == DamageSource.Hit && stage == "night" ? ShadowSource : source;
 
+                                                                                                  
+        static void CountPlayerDamage(float amount, double pct)
+        {
+            if (today == null) return;
+            today.player_damage += amount;
+            today.player_damage_pct += pct;
+            today.player_hits++;
+        }
+
         static void OnBaseDamaged(float amount, float toHp, CampaignRoom room)
         {
             if (amount <= 0f || !InCampaign(campaignDay)) return;
-            string side = room.ToString();
-            var key = (campaignDay, campaignStage, side);
-            if (!baseRows.TryGetValue(key, out var row))
-            {
-                baseRows[key] = row = new BaseDamageRow { day = campaignDay, stage = campaignStage, side = side };
-                Campaign.base_damage.Add(row);
-            }
-            float maxHp = V2Campaign.Active ? V2Campaign.Active.BaseMaxHp : 0f;
-            row.damage = Math.Round(row.damage + amount, 1);
-            row.to_hp = Math.Round(row.to_hp + Mathf.Max(0f, toHp), 1);
-            if (maxHp > 0f) row.damage_pct = Math.Round(row.damage_pct + amount / maxHp * 100.0, 1);
-            row.hits++;
+            today.base_damage += amount;
+            today.base_damage_hp += Mathf.Max(0f, toHp);
         }
 
         static void OnNightDeath(CampaignCost lost, int day)
         {
             if (!InCampaign(day)) return;
-            Campaign.night_deaths.Add(new NightDeathRow { day = day, lost_alloy = lost.alloy, lost_energy = lost.energy, lost_dark = lost.dark });
+            today.night_death = true;
+            today.lost_alloy += lost.alloy;
+            today.lost_energy += lost.energy;
+            today.lost_dark += lost.dark;
         }
 
-        static void OnSpent(CampaignCost cost)
+                                                                                                                                        
+                                                                                                                                       
+                                                                                                                                      
+                                                                                             
+        static void OnPurchased(string item, string detail, CampaignRoom room, CampaignCost cost, int day)
         {
             if (!InCampaign(campaignDay)) return;
-            Campaign.spent.Add(new SpendRow { day = campaignDay, stage = campaignStage, alloy = cost.alloy, energy = cost.energy, dark = cost.dark });
+            today.spent_alloy += cost.alloy;
+            today.spent_energy += cost.energy;
+            today.spent_dark += cost.dark;
+            if (item == "repair") today.repairs++;
+            var e = new V2PurchaseEvent { @event = "v2_purchase", day = today.day, stage = campaignStage, item = item ?? "", detail = detail ?? "",
+                room = room.ToString(), alloy = cost.alloy, energy = cost.energy, dark = cost.dark };
+            Stamp(e);
+            Send(JsonUtility.ToJson(e));
         }
 
         static void OnDawn(int day, CampaignCost wallet, CampaignCost earned)
         {
             if (!InCampaign(day)) return;
-            Campaign.dawns.Add(new DawnRow { day = day, alloy = wallet.alloy, energy = wallet.energy, dark = wallet.dark,
-                earned_alloy = earned.alloy, earned_energy = earned.energy, earned_dark = earned.dark });
+            today.day = day;
+            SendDay(campaignGame, true, wallet, earned);
+            today = new V2DayEvent { @event = "v2_day", day = day + 1 };
         }
 
-                                                                                                                                        
-                                                                                    
-        static void OnEnded(string cause, int day)
+                                                                                                                                               
+        static void SendLastDay(GameManager game)
         {
-            Campaign.ended = cause ?? "";
-            Campaign.ended_day = day;
+            CampaignCost wallet = default, earned = earnedBefore;
+            if (game.TryGetComponent(out V2Campaign campaign))
+            {
+                wallet = new CampaignCost(campaign.Alloy, campaign.Energy, campaign.Dark);
+                earned = new CampaignCost(campaign.EarnedAlloy, campaign.EarnedEnergy, campaign.EarnedDark);
+            }
+            SendDay(game, false, wallet, earned);
+            today = null;
+        }
+
+        static void SendDay(GameManager game, bool dawn, CampaignCost wallet, CampaignCost earned)
+        {
+            var e = today;
+            if (e == null || !game) return;
+            e.reached_dawn = dawn;
+            int kills = game.waves ? game.waves.Kills : 0;
+            e.kills = Mathf.Max(0, kills - killsBefore);
+            killsBefore = kills;
+            e.earned_alloy = Mathf.Max(0, earned.alloy - earnedBefore.alloy);
+            e.earned_energy = Mathf.Max(0, earned.energy - earnedBefore.energy);
+            e.earned_dark = Mathf.Max(0, earned.dark - earnedBefore.dark);
+            earnedBefore = earned;
+            e.alloy = wallet.alloy;
+            e.energy = wallet.energy;
+            e.dark = wallet.dark;
+            if (game.TryGetComponent(out V2Campaign campaign) && campaign.rules)
+            {
+                e.base_hp = Math.Round(campaign.BaseHp, 1);
+                e.base_shield = Math.Round(campaign.BaseShield, 1);
+                e.base_max_hp = Math.Round(campaign.BaseMaxHp, 1);
+                e.shadows = campaign.ShadowCount;
+                e.overrun_regions = campaign.OverrunRegions;
+            }
+            e.player_damage = Math.Round(e.player_damage, 1);
+            e.player_damage_pct = Math.Round(e.player_damage_pct, 1);
+            e.base_damage = Math.Round(e.base_damage, 1);
+            e.base_damage_hp = Math.Round(e.base_damage_hp, 1);
+            Stamp(e);
+            Send(JsonUtility.ToJson(e));
         }
 
                                                                                                                                           
