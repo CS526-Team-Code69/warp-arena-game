@@ -33,13 +33,25 @@ namespace AnomalyArena
             (ArenaText.Pair("SPRINT","SPRINT"), ArenaText.Pair("Hold Shift while moving to sprint. It drains stamina.","Hold Shift while moving to sprint. It drains stamina."), () => new SprintDemo()),
             (ArenaText.Pair("SWAP & SKILLS","SWAP & SKILLS"), ArenaText.Pair("Right click swaps the two hand slots. 1, 2, 3 cast skills.","Right click swaps the two hand slots. 1, 2, 3 cast skills."), () => new SkillDemo()),
             (ArenaText.Pair("USE THE ARENA","USE THE ARENA"), ArenaText.Pair("Knock enemies into walls and black holes.","Knock enemies into walls and black holes."), () => new TerrainDemo()),
-            (ArenaText.Pair("PUT THE PANEL AWAY","PUT THE PANEL AWAY"),
-                ArenaText.Pair("Between waves, Tab puts the card panel away so you can walk and reach a portal. Tab again brings it back.","Between waves, Tab puts the card panel away so you can walk and reach a portal. Tab again brings it back."),
-                () => new BuildWalkDemo()),
+            PanelPage(),
             (ArenaText.Pair("PAUSE","PAUSE"),
                 ArenaText.Pair("Esc pauses. The pause screen lists the keys and has How to Play, Restart Run and Quit to Title.","Esc pauses. The pause screen lists the keys and has How to Play, Restart Run and Quit to Title."),
                 () => new PauseDemo()),
         };
+
+        static bool InCampaign => V2Campaign.Active && V2Campaign.Active.Running;
+
+        static (string title, string line, Func<Demo> demo) PanelPage() => InCampaign
+            ? (ArenaText.Pair("BASE UPGRADES","BASE UPGRADES"),
+                ArenaText.Pair("Back at the base, buy upgrades in its rooms. They take effect at once.","Back at the base, buy upgrades in its rooms. They take effect at once."),
+                () => new MoveDemo())
+            : (ArenaText.Pair("PUT THE PANEL AWAY","PUT THE PANEL AWAY"),
+                ArenaText.Pair("Between waves, Tab puts the card panel away so you can walk and reach a portal. Tab again brings it back.","Between waves, Tab puts the card panel away so you can walk and reach a portal. Tab again brings it back."),
+                () => new BuildWalkDemo());
+
+        static string Footnote() => InCampaign
+            ? ArenaText.Pair("Other keys are shown on screen when needed.","Other keys are shown on screen when needed.")
+            : ArenaText.Pair("On a mid-wave card panel, Esc picks later and T opens it again. Other keys are shown on screen when needed.","On a mid-wave card panel, Esc picks later and T opens it again. Other keys are shown on screen when needed.");
 
         Font font;
         float heldScale = 1f;
@@ -127,6 +139,7 @@ namespace AnomalyArena
             counter.text = $"{index + 1} / {PageCount}";
             bool last = index == PageCount - 1;
             nextLabel.text = last ? ArenaText.Pair("GOT IT","GOT IT") : ArenaText.Pair("NEXT","NEXT");
+            footnote.text = Footnote();
             footnote.gameObject.SetActive(last);
             for (int i = 0; i < dots.Length; i++) dots[i].color = i == index ? Cyan : KeyIdle;
         }
@@ -180,7 +193,7 @@ namespace AnomalyArena
             tutorial.line.resizeTextMinSize = 14;
             tutorial.line.resizeTextMaxSize = 21;
             tutorial.footnote = NewText(body, "Footnote", 15, Faint, FontStyle.Normal, TextAnchor.MiddleCenter);
-            tutorial.footnote.text = ArenaText.Pair("On a mid-wave card panel, Esc picks later and T opens it again. Other keys are shown on screen when needed.","On a mid-wave card panel, Esc picks later and T opens it again. Other keys are shown on screen when needed.");
+            tutorial.footnote.text = Footnote();
             Place(tutorial.footnote.rectTransform, 48f, 486f, PanelW - 96f, 24f);
 
             tutorial.dots = new Image[PageCount];

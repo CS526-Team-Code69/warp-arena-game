@@ -19,7 +19,7 @@ namespace AnomalyArena
             StatId.Protection => ArenaText.Pair($"Armor +{Value:0}; damage taken drops in proportion (×100/(100+armor))",$"Armor +{Value:0}; damage taken drops in proportion (×100/(100+armor))"),
             StatId.CritChance => ArenaText.Pair($"Crit chance +{Value * 100f:0}%",$"Crit chance +{Value * 100f:0}%"),
             StatId.ElementPenetration => ArenaText.Pair($"Element damage partly gets through to targets immune to it: Damage Penetration +{Value * 100f:0}% (statuses still never land)",$"Element damage partly gets through to targets immune to it: Damage Penetration +{Value * 100f:0}% (statuses still never land)"),
-            StatId.MaxHp => ArenaText.Pair($"Max HP +{Value:0.##}, and heal the same amount when you take the card",$"Max HP +{Value:0.##}, and heal the same amount when you take the card"),
+            StatId.MaxHp => ArenaText.Pair($"Max HP +{Value:0.##}, and heal the same amount when you take it",$"Max HP +{Value:0.##}, and heal the same amount when you take it"),
             StatId.MoveSpeed => ArenaText.Pair($"Move faster: Move Speed +{Value * 100f:0}%",$"Move faster: Move Speed +{Value * 100f:0}%"),
             StatId.MaxEnergy => ArenaText.Pair($"Max Energy +{Value:0.##}",$"Max Energy +{Value:0.##}"),
             StatId.Knockback => $"+{Value * 100f:0}% {Title}",
