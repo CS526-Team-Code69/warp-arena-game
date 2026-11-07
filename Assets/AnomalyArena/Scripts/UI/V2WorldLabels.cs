@@ -143,7 +143,9 @@ namespace AnomalyArena
                 for (int i = 0; i < Mathf.Min(holeLabels.Length, world.holes.Length); i++)
                 {
                     var hole = world.holes[i]; var label = holeLabels[i];
-                    bool show = hole && hole.Phase != HolePhase.Gone && !world.TrialActive;
+                                                                                                                                      
+                                                        
+                    bool show = hole && hole.Phase != HolePhase.Gone && !world.TrialActive && !(V2Campaign.Active && V2Campaign.Active.Running);
                     if (!show) { label.gameObject.SetActive(false); continue; }
                                                                                                                                 
                     bool canEnter = world.CanEnterPortal(gm.player, hole);
