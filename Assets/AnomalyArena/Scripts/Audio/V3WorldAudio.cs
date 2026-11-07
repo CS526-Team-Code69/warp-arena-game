@@ -118,13 +118,16 @@ namespace AnomalyArena
                 ArenaWorldCue cue=selectedTrial?ArenaWorldCue.AmbientRift:name.StartsWith("Dust",StringComparison.OrdinalIgnoreCase)?ArenaWorldCue.AmbientDust:name.StartsWith("Rift",StringComparison.OrdinalIgnoreCase)?ArenaWorldCue.AmbientRift:ArenaWorldCue.AmbientWreck;
                 if(ambienceSource){ambienceSource.Stop();ambienceSource.clip=byCue[(int)cue]?.clip;}
             }
+
+            bool yieldMusic=CampaignMusic.Overrides;
             if(running&&!paused)
             {
                 if(musicSource&&!musicSource.clip)musicSource.clip=byCue[(int)ArenaWorldCue.CombatMusic]?.clip;
-                if(musicSource&&musicSource.clip&&!musicSource.isPlaying)musicSource.Play();
+                if(musicSource&&musicSource.clip&&!musicSource.isPlaying&&!yieldMusic)musicSource.Play();
                 if(ambienceSource&&ambienceSource.clip&&!ambienceSource.isPlaying)ambienceSource.Play();
             }
-            if(musicSource)musicSource.volume=musicGain*backgroundBlend*masterGain;
+            if(yieldMusic&&!paused&&musicSource&&musicSource.isPlaying)musicSource.Stop();
+            if(musicSource)musicSource.volume=yieldMusic?0f:musicGain*backgroundBlend*masterGain;
             if(ambienceSource)ambienceSource.volume=ambienceGain*backgroundBlend*masterGain;
             if(!running&&!paused&&backgroundBlend<=0f){if(musicSource)musicSource.Stop();if(ambienceSource)ambienceSource.Stop();}
         }
