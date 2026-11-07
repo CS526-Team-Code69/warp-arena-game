@@ -46,6 +46,12 @@ namespace AnomalyArena
         bool saved, holding;
         float hold;
 
+        const float WhiteboxInset = .1f;                                                                                     
+        Vector3 savedBoxPosition;
+        Quaternion savedBoxRotation;
+        float boxHeight;
+        bool boxSaved, boxPlaced;
+
         void LateUpdate()
         {
             var active = weapons ? weapons.Active : null;
@@ -53,10 +59,17 @@ namespace AnomalyArena
             bool valid = form >= 0 && form < formSprites.Length;
             bool daggerAway = active != null && active.form == WeaponForm.PhaseDagger && active.variant == 1
                 && (active.inFlight || active.recallPlanted);
+            if (!body) body = GetComponent<Combatant>();
             bool inModel = HeldByModel();
             bool dead = inModel && body && body.State == CharacterState.Dead;                                               
             if (illustration) illustration.enabled = valid && !daggerAway && Art.Enabled && !dead;
-            if (whitebox) whitebox.enabled = valid && !daggerAway && !Art.Enabled;
+            if (whitebox)
+            {
+
+                bool boxOut = valid && !daggerAway && !Art.Enabled && !(body && body.State == CharacterState.Dead);
+                whitebox.enabled = boxOut;
+                PlaceWhitebox(boxOut);
+            }
             bool v5 = V5Vfx.On;
             if (valid && illustration && (form != lastForm || v5 != lastV5))
             {
@@ -154,6 +167,29 @@ namespace AnomalyArena
                 if (flip) gripPoint.y = -gripPoint.y;                                             
             }
             picture.SetPositionAndRotation(hand.position - rotation * (gripPoint * picture.lossyScale.x), rotation);
+        }
+
+        void PlaceWhitebox(bool shown)
+        {
+            var box = whitebox.transform;
+            if (!boxSaved)
+            {
+                boxSaved = true;
+                savedBoxPosition = box.localPosition; savedBoxRotation = box.localRotation;
+                boxHeight = transform.InverseTransformPoint(box.position).y;
+            }
+            if (!shown || !body)
+            {
+                if (boxPlaced) { boxPlaced = false; box.localPosition = savedBoxPosition; box.localRotation = savedBoxRotation; }
+                return;
+            }
+            boxPlaced = true;
+            Vector3 aim = Query.Flat(body.AimDirection);
+            if (aim.sqrMagnitude < 1e-6f) aim = Query.Flat(transform.forward);
+            if (aim.sqrMagnitude < 1e-6f) aim = Vector3.forward;
+            aim.Normalize();
+            float reach = body.radius + box.lossyScale.z * .5f - WhiteboxInset;
+            box.SetPositionAndRotation(transform.position + Vector3.up * boxHeight + aim * reach, Quaternion.LookRotation(aim, Vector3.up));
         }
 
         Vector2 GripOf(int form)

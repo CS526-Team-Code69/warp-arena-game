@@ -135,6 +135,86 @@ namespace AnomalyArena
             outlined = show;
         }
 
+        MeshFilter boxFilter;
+        Mesh savedBodyMesh;
+        Renderer[] boxHidden;
+        bool boxLookedUp, boxShown;
+        static readonly System.Collections.Generic.Dictionary<Mesh, Mesh> boxes = new System.Collections.Generic.Dictionary<Mesh, Mesh>();
+        static readonly Vector3[] BoxFaces = { Vector3.right, Vector3.left, Vector3.up, Vector3.down, Vector3.forward, Vector3.back };
+
+        public bool WhiteboxBoxShown => boxShown;
+
+        void ShowWhiteboxBox(bool show)
+        {
+            if (!boxLookedUp) LookUpWhiteboxBody();
+            if (!boxFilter || !savedBodyMesh) show = false;                                                                      
+            if (show == boxShown) return;
+            boxShown = show;
+            if (boxFilter && savedBodyMesh)
+            {
+                var box = BoxFor(savedBodyMesh);
+                Mesh from = show ? savedBodyMesh : box, to = show ? box : savedBodyMesh;
+
+                foreach (var filter in boxFilter.GetComponentsInChildren<MeshFilter>(true))
+                    if (filter.sharedMesh == from) filter.sharedMesh = to;
+            }
+
+            foreach (var part in boxHidden)
+                if (part) part.forceRenderingOff = show;
+        }
+
+        void LookUpWhiteboxBody()
+        {
+            boxLookedUp = true;
+            var bodyRenderer = body.bodyRenderer;
+            boxFilter = bodyRenderer ? bodyRenderer.GetComponent<MeshFilter>() : null;
+            savedBodyMesh = boxFilter ? boxFilter.sharedMesh : null;
+            var hidden = new System.Collections.Generic.List<Renderer>();
+            foreach (var part in GetComponentsInChildren<Transform>(true))
+                if (part.name == "Facing" && part.TryGetComponent(out Renderer nose) && nose != bodyRenderer) hidden.Add(nose);
+            foreach (var look in GetComponents<V2CharacterIllustration>())
+                if (look.whiteboxRenderers != null)
+                    foreach (var part in look.whiteboxRenderers)
+                        if (part && part != bodyRenderer && !hidden.Contains(part)) hidden.Add(part);
+            boxHidden = hidden.ToArray();
+        }
+
+        static Mesh BoxFor(Mesh source)
+        {
+            if (boxes.TryGetValue(source, out var made) && made) return made;
+            var bounds = source.bounds;
+            var vertices = new Vector3[24];
+            var normals = new Vector3[24];
+            var uvs = new Vector2[24];
+            var triangles = new int[36];
+            for (int face = 0; face < BoxFaces.Length; face++)
+            {
+                Vector3 normal = BoxFaces[face];
+                Vector3 across = Mathf.Abs(normal.y) > .5f ? Vector3.right : Vector3.up;
+                Vector3 up = Vector3.Cross(normal, across);                                                                            
+                for (int corner = 0; corner < 4; corner++)
+                {
+                    float a = corner is 0 or 3 ? -1f : 1f, b = corner < 2 ? -1f : 1f;
+                    int i = face * 4 + corner;
+                    vertices[i] = bounds.center + Vector3.Scale(normal + across * a + up * b, bounds.extents);
+                    normals[i] = normal;
+                    uvs[i] = new Vector2((a + 1f) * .5f, (b + 1f) * .5f);
+                }
+                int first = face * 4, t = face * 6;
+                triangles[t] = first; triangles[t + 1] = first + 1; triangles[t + 2] = first + 2;
+                triangles[t + 3] = first; triangles[t + 4] = first + 2; triangles[t + 5] = first + 3;
+            }
+            var mesh = new Mesh { name = "WhiteboxBox " + source.name, hideFlags = HideFlags.DontSave };
+            mesh.vertices = vertices;
+            mesh.normals = normals;
+            mesh.uv = uvs;
+            mesh.triangles = triangles;
+            mesh.RecalculateBounds();
+            mesh.RecalculateTangents();
+            boxes[source] = mesh;
+            return mesh;
+        }
+
         public void MarkAttack() => requestedAttack++;
 
         void ResetPose()
@@ -186,7 +266,9 @@ namespace AnomalyArena
 
         void LateUpdate()
         {
-            if (!body || !HasAssignedModel) return;
+            if (!body) return;
+            ShowWhiteboxBox(!Art.Enabled);                                         
+            if (!HasAssignedModel) return;
             bool visible = UsingModel;
             if (!modeInitialized || visible != lastMode)
             {

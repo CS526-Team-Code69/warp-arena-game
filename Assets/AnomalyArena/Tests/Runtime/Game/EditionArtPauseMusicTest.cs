@@ -19,28 +19,29 @@ namespace AnomalyArena
         const string SceneLab = "Assets/AnomalyArena/Scenes/EnemyLab.unity";
         static readonly FieldInfo ChoiceInitialized = typeof(Art).GetField("v2ChoiceInitialized", BindingFlags.NonPublic | BindingFlags.Static);
         static readonly FieldInfo ToggleChoice = typeof(Art).GetField("toggleChoice", BindingFlags.NonPublic | BindingFlags.Static);
+        static readonly FieldInfo ChineseInitialized = typeof(Art).GetField("chineseInitialized", BindingFlags.NonPublic | BindingFlags.Static);
+        static readonly FieldInfo ChineseChoice = typeof(Art).GetField("chineseChoice", BindingFlags.NonPublic | BindingFlags.Static);
         static readonly PropertyInfo IllustratedOnly = typeof(Art).GetProperty(nameof(Art.IllustratedOnly), BindingFlags.Public | BindingFlags.Static);
-        bool savedArt, savedInitialized, savedIllustratedOnly;
-        bool? savedToggleChoice;
+
+        static readonly FieldInfo[] ArtState = typeof(Art).GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)
+            .Where(f => !f.IsLiteral && !f.IsInitOnly && f.FieldType != typeof(MaterialPropertyBlock)).ToArray();
+        object[] savedArtState;
         WaveSet originalWaves, runtimeWaves;
 
         [SetUp]
         public void SetUp()
         {
-            Assume.That(ChoiceInitialized != null && ToggleChoice != null && IllustratedOnly != null, Is.True, "Art keeps its edition state");
-            savedArt = Art.Enabled;
-            savedInitialized = (bool)ChoiceInitialized.GetValue(null);
-            savedToggleChoice = (bool?)ToggleChoice.GetValue(null);
-            savedIllustratedOnly = Art.IllustratedOnly;
+            Assume.That(ChoiceInitialized != null && ToggleChoice != null && ChineseInitialized != null && ChineseChoice != null && IllustratedOnly != null,
+                Is.True, "Art keeps each edition's state");
+            savedArtState = ArtState.Select(f => f.GetValue(null)).ToArray();
         }
 
         [TearDown]
         public void TearDown()
         {
-            Art.Enabled = savedArt;
-            ChoiceInitialized?.SetValue(null, savedInitialized);
-            ToggleChoice?.SetValue(null, savedToggleChoice);
-            IllustratedOnly?.SetValue(null, savedIllustratedOnly);
+            if (savedArtState != null)
+                for (int i = 0; i < ArtState.Length; i++) ArtState[i].SetValue(null, savedArtState[i]);
+            savedArtState = null;
             if (runtimeWaves)
             {
                 if (GameManager.Instance && GameManager.Instance.waves) GameManager.Instance.waves.waveSet = originalWaves;
@@ -67,69 +68,85 @@ namespace AnomalyArena
         }
 
         [Test]
-        public void EnsureV2Default_ChineseEdition_TurnsTheArtOnWhateverWasKept_AndToggleCannotTurnItOff()
+        public void EnsureV2Default_ChineseEdition_StartsIllustratedWhateverWasKept_AndItsSwitchTurnsWhiteboxOnAndOff()
         {
-            ChoiceInitialized.SetValue(null, true);
-            ToggleChoice.SetValue(null, null);
-            Art.Enabled = false;                                                                         
+            ChineseInitialized.SetValue(null, false);
+            ChineseChoice.SetValue(null, null);
+            Art.EnsureV2Default();                            
+            Art.Enabled = false;                                                            
 
-            Art.EnsureV2Default(true);
+            Art.EnsureV2Default(Art.IsIllustratedOnlyScene(Art.ChineseEditionScene));
             bool started = Art.Enabled;
             Art.Toggle();
+            bool switched = Art.Enabled;
+            Art.Toggle();
 
-            Assert.That(started, Is.True, "the Chinese edition starts illustrated");
-            Assert.That(Art.IllustratedOnly, Is.True, "it is the illustrated-only edition");
-            Assert.That(Art.Enabled, Is.True, "its switch does nothing");
+            Assert.That(started, Is.True, "the Chinese edition's first run starts illustrated");
+            Assert.That(Art.IllustratedOnly, Is.False, "it is not illustrated-only");
+            Assert.That(switched, Is.False, "its switch turns whitebox on");
+            Assert.That(Art.Enabled, Is.True, "and the illustrated art back on");
         }
 
         [Test]
-        public void EnsureV2Default_EnglishEdition_StartsInWhitebox_AndGetsItsOwnChoiceBackAfterTheChineseEdition()
+        public void EnsureV2Default_EachEditionKeepsItsOwnChoice_TheLabIsOnlyIllustrated()
         {
             ChoiceInitialized.SetValue(null, false);
             ToggleChoice.SetValue(null, null);
+            ChineseInitialized.SetValue(null, false);
+            ChineseChoice.SetValue(null, null);
             Art.Enabled = true;
+            var english = Art.IsIllustratedOnlyScene("ArenaV2_EN");
+            var chinese = Art.IsIllustratedOnlyScene(Art.ChineseEditionScene);
+            var lab = Art.IsIllustratedOnlyScene(Art.EnemyLabScene);
 
-            Art.EnsureV2Default();
-            bool first = Art.Enabled;
-            Art.EnsureV2Default(true);
-            Art.EnsureV2Default(false);
-            bool backFromChinese = Art.Enabled;
+            Art.EnsureV2Default(english);
+            bool englishFirst = Art.Enabled;
+            Art.EnsureV2Default(chinese);
+            bool chineseFirst = Art.Enabled;
+            Art.Toggle();                                            
+            Art.EnsureV2Default(english);
+            bool englishBack = Art.Enabled;
+            Art.Toggle();                                                       
+            Art.EnsureV2Default(chinese);
+            bool chineseBack = Art.Enabled;
+            Art.EnsureV2Default(chinese);                                                      
+            bool chineseAgain = Art.Enabled;
+            Art.EnsureV2Default(lab);
+            bool labStarted = Art.Enabled, labOnly = Art.IllustratedOnly;
             Art.Toggle();
-            bool switched = Art.Enabled;
-            Art.EnsureV2Default(true);
-            Art.EnsureV2Default(false);
+            bool labSwitched = Art.Enabled;
+            Art.EnsureV2Default(english);
 
-            Assert.That(first, Is.False, "the first English run starts in whitebox");
-            Assert.That(backFromChinese, Is.False, "after the Chinese edition the English one is in whitebox again, as it was left");
-            Assert.That(switched, Is.True, "its title switch works");
-            Assert.That(Art.Enabled, Is.True, "and the illustrated choice is kept across another visit to the Chinese edition");
-            Assert.That(Art.IllustratedOnly, Is.False, "the English edition is not illustrated-only");
+            Assert.That(lab && !english && !chinese, Is.True, "only the enemy lab counts as illustrated-only");
+            Assert.That(englishFirst, Is.False, "the first English run starts in whitebox");
+            Assert.That(chineseFirst, Is.True, "the first Chinese run starts illustrated");
+            Assert.That(englishBack, Is.False, "the English edition is back in its own whitebox, not in the Chinese edition's choice");
+            Assert.That(chineseBack, Is.False, "the Chinese edition gets its own whitebox choice back");
+            Assert.That(chineseAgain, Is.False, "and keeps it when its run starts again");
+            Assert.That(labStarted && labOnly && labSwitched, Is.True, "the enemy lab is illustrated and its switch does nothing");
+            Assert.That(Art.Enabled, Is.True, "after the lab the English edition gets its illustrated choice back");
+            Assert.That(Art.IllustratedOnly, Is.False, "with its switch");
         }
 
         [Test, BuildScene(SceneCn), Category("Integration"), Timeout(60000)]
-        public async Task ChineseEdition_WhiteboxLeftByAnEarlierRun_StartsIllustrated_AndTheTitleCannotSwitchIt()
+        public async Task ChineseEdition_FirstRun_StartsIllustratedWhateverWasLeft_AndItsTitleSwitchesWhiteboxOnAndOff()
         {
-            ChoiceInitialized.SetValue(null, true);
+            ChineseInitialized.SetValue(null, false);
+            ChineseChoice.SetValue(null, null);
             Art.Enabled = false;                                                                                  
 
             await SceneManagerHelper.LoadSceneAsync(SceneCn);
             var game = await ReadyScene();
-            bool started = Art.Enabled, shown = game.UiSnapshot.illustrated, everWhitebox = false;
+            bool started = Art.Enabled, shown = game.UiSnapshot.illustrated;
+            await CommandUntil(game, ArenaUiCommand.ToggleArt, () => !Art.Enabled);
+            bool whiteboxShown = !game.UiSnapshot.illustrated;
+            await CommandUntil(game, ArenaUiCommand.ToggleArt, () => Art.Enabled);
 
-            float until = Time.realtimeSinceStartup + .8f;
-            while (Time.realtimeSinceStartup < until)
-            {
-                game.ExecuteUiCommand(ArenaUiCommand.ToggleArt);
-                everWhitebox |= !Art.Enabled;
-                await Awaitable.NextFrameAsync();
-            }
-
-            await CommandUntil(game, ArenaUiCommand.Start, () => game.RunPhase == ArenaUiState.SupplyDrop);
-
-            Assert.That(started, Is.True, "the Chinese edition starts illustrated");
+            Assert.That(started, Is.True, "the Chinese edition's first run starts illustrated");
             Assert.That(shown, Is.True, "and tells the view so");
-            Assert.That(everWhitebox, Is.False, "the art command never switches it to whitebox");
-            Assert.That(Art.Enabled, Is.True, "the run is illustrated");
+            Assert.That(Art.IllustratedOnly, Is.False, "its title has the switch");
+            Assert.That(whiteboxShown, Is.True, "the art command switches it to whitebox");
+            Assert.That(game.UiSnapshot.illustrated, Is.True, "and back to the illustrated art");
         }
 
         [Test, BuildScene(SceneLab), Category("Integration"), Timeout(60000)]
@@ -172,7 +189,7 @@ namespace AnomalyArena
             var game = await ReadyScene();
 
             Assert.That(game.RunPhase, Is.EqualTo(ArenaUiState.Title));
-            Assert.That(MenuSkin().Installed, Is.True, "the Chinese edition has no whitebox to wait for");
+            Assert.That(MenuSkin().Installed, Is.True, "the Chinese edition's title has the menu look from the start");
         }
 
         [Test, BuildScene(SceneEn), Category("Integration"), Timeout(60000)]
