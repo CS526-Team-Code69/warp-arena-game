@@ -9,7 +9,7 @@ namespace AnomalyArena
     /// The game's language in one scene for both languages (2026-11-10). Each scene start asks StartupLanguage which language to open
     /// in, with the player's saved choice and the web page's address read here (English without either); the title's Language option
     /// switches between Chinese and English at once and saves the choice for the next visit. The language does not depend on which
-    /// scene runs, and the first run's art no longer follows it (whitebox in both, Art.EnsureV2Default).
+    /// scene runs. The first run's art follows the language the game opened in (Art.EnsureV2Default, called from GameManager).
     /// </summary>
     public static class ArenaLanguage
     {
@@ -19,6 +19,9 @@ namespace AnomalyArena
 
         /// <summary>The locale code the last scene start chose (ResolveStartup); null before any scene started in this play.</summary>
         public static string StartupCode { get; private set; }
+
+        /// <summary>The last scene start opened in Chinese. The first run's art follows it: illustrated in Chinese, whitebox in English.</summary>
+        public static bool StartedInChinese => StartupCode == StartupLanguage.Chinese;
 
         /// <summary>The player's saved choice, empty when there is none.</summary>
         public static string SavedChoice => PlayerPrefs.GetString(SavedChoiceKey, "");

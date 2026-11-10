@@ -210,7 +210,6 @@ namespace AnomalyArena
             try
             {
                 flag.SetValue(null, false);
-                Art.DefaultForTests = null; // the game's own default, not the test run's (TestStartLanguage)
                 Art.Enabled = true;
                 Art.EnsureV2Default();
                 Assert.That(Art.Enabled, Is.False, "whitebox is the default art mode");
@@ -220,7 +219,6 @@ namespace AnomalyArena
             }
             finally
             {
-                Art.DefaultForTests = TestStartLanguage.RunArt;
                 flag.SetValue(null, savedFlag);
                 Art.Enabled = savedArt;
             }

@@ -75,83 +75,80 @@ namespace AnomalyArena
             finally { Object.DestroyImmediate(sprite.texture); Object.DestroyImmediate(sprite); }
         }
 
-        // ───── The first run's art (no scene) ─────
-        // The whole test run keeps the art the tests were written for (TestStartLanguage); these three test the game's own default, so
-        // each switches that off first and the TearDown puts it back.
+        // ───── The art by the start language (no scene) ─────
 
-        [TestCase(true, TestName = "An illustrated play left behind, the first run is in whitebox")]
-        [TestCase(false, TestName = "A whitebox play left behind, the first run is in whitebox")]
-        public void EnsureV2Default_FirstRun_IsWhiteboxWhateverWasLeft(bool leftIllustrated)
+        [TestCase(true, ExpectedResult = true, TestName = "Opened in Chinese, the first run is illustrated")]
+        [TestCase(false, ExpectedResult = false, TestName = "Opened in English, the first run is in whitebox")]
+        public bool EnsureV2Default_FirstRun_FollowsTheStartLanguageWhateverWasLeft(bool startedInChinese)
         {
-            Art.DefaultForTests = null;
             ChoiceInitialized.SetValue(null, false);
-            Art.Enabled = leftIllustrated; // the statics survive a scene reload
+            Art.Enabled = !startedInChinese; // an earlier play left the other look behind: the statics survive a scene reload
 
-            Art.EnsureV2Default();
+            Art.EnsureV2Default(false, startedInChinese);
 
-            Assert.That(Art.Enabled, Is.False, "whitebox is the default in either language");
+            return Art.Enabled;
         }
 
         [Test]
-        public void EnsureV2Default_PlayerSwitched_LaterRunsKeepTheChoice()
+        public void EnsureV2Default_PlayerSwitched_LaterRunsKeepTheChoiceInEitherLanguage()
         {
-            Art.DefaultForTests = null;
             ChoiceInitialized.SetValue(null, false);
-            Art.EnsureV2Default();
+            Art.EnsureV2Default(false, false);
             bool first = Art.Enabled;
             Art.Toggle(); // the player turns the illustrated art on at the title
 
-            Art.EnsureV2Default(); // a restart reloads the scene
+            Art.EnsureV2Default(false, false); // a restart reloads the scene
             bool restarted = Art.Enabled;
+            Art.EnsureV2Default(false, true); // the player chose Chinese meanwhile; the next run starts in it
+            bool inChinese = Art.Enabled;
             Art.Toggle();
-            Art.EnsureV2Default();
+            Art.EnsureV2Default(false, true);
 
-            Assert.That(first, Is.False, "the first run starts in whitebox");
+            Assert.That(first, Is.False, "the first run opened in English starts in whitebox");
             Assert.That(restarted, Is.True, "the switch is kept when the run starts again");
-            Assert.That(Art.Enabled, Is.False, "and so is a switch back to whitebox");
+            Assert.That(inChinese, Is.True, "and in Chinese");
+            Assert.That(Art.Enabled, Is.False, "a switch back to whitebox is kept in Chinese too");
             Assert.That(Art.IllustratedOnly, Is.False, "the run scene has its switch");
         }
 
         [Test]
         public void EnsureV2Default_TheLab_IsOnlyIllustrated_ThenTheRunsGetTheirChoiceBack()
         {
-            Art.DefaultForTests = null;
             ChoiceInitialized.SetValue(null, false);
-            Art.EnsureV2Default(); // whitebox
+            Art.EnsureV2Default(false, false); // whitebox, opened in English
 
-            Art.EnsureV2Default(Art.IsIllustratedOnlyScene(Art.EnemyLabScene));
+            Art.EnsureV2Default(Art.IsIllustratedOnlyScene(Art.EnemyLabScene), false);
             bool labStarted = Art.Enabled, labOnly = Art.IllustratedOnly;
             Art.Toggle();
             bool labSwitched = Art.Enabled;
-            Art.EnsureV2Default(Art.IsIllustratedOnlyScene("ArenaV2"));
+            Art.EnsureV2Default(Art.IsIllustratedOnlyScene("ArenaV2"), true);
 
             Assert.That(labStarted && labOnly && labSwitched, Is.True, "the enemy lab is illustrated and its switch does nothing");
-            Assert.That(Art.Enabled, Is.False, "after the lab the run gets its whitebox back");
+            Assert.That(Art.Enabled, Is.False, "after the lab the run gets its whitebox back, whatever language it opens in");
             Assert.That(Art.IllustratedOnly, Is.False, "with its switch");
         }
 
-        // ───── The first run's art (the saved scene) ─────
+        // ───── The art by the start language (the saved scene) ─────
 
         [Test, BuildScene(SceneCn), Category("Integration"), Timeout(60000)]
-        public async Task OpenedInChinese_FirstRun_StartsInWhiteboxWhateverWasLeft_AndItsTitleSwitchesTheArtOnAndOff()
+        public async Task OpenedInChinese_FirstRun_StartsIllustratedWhateverWasLeft_AndItsTitleSwitchesWhiteboxOnAndOff()
         {
-            Art.DefaultForTests = null; // the game's own default, not the test run's (TestStartLanguage)
             ChoiceInitialized.SetValue(null, false);
-            Art.Enabled = true; // an earlier play in the editor left the illustrated art behind
+            Art.Enabled = false; // an earlier play in the editor left whitebox behind
             TestStartLanguage.Use(StartupLanguage.Chinese);
 
             await SceneManagerHelper.LoadSceneAsync(SceneCn);
             var game = await ReadyScene();
             bool started = Art.Enabled, shown = game.UiSnapshot.illustrated;
-            await CommandUntil(game, ArenaUiCommand.ToggleArt, () => Art.Enabled);
-            bool illustratedShown = game.UiSnapshot.illustrated;
             await CommandUntil(game, ArenaUiCommand.ToggleArt, () => !Art.Enabled);
+            bool whiteboxShown = !game.UiSnapshot.illustrated;
+            await CommandUntil(game, ArenaUiCommand.ToggleArt, () => Art.Enabled);
 
-            Assert.That(started, Is.False, "opened in Chinese, the first run starts in whitebox too (the default since 2026-11-10)");
-            Assert.That(shown, Is.False, "and tells the view so");
+            Assert.That(started, Is.True, "opened in Chinese, the first run starts illustrated");
+            Assert.That(shown, Is.True, "and tells the view so");
             Assert.That(Art.IllustratedOnly, Is.False, "its title has the switch");
-            Assert.That(illustratedShown, Is.True, "the art command switches the illustrated art on");
-            Assert.That(game.UiSnapshot.illustrated, Is.False, "and back to whitebox");
+            Assert.That(whiteboxShown, Is.True, "the art command switches it to whitebox");
+            Assert.That(game.UiSnapshot.illustrated, Is.True, "and back to the illustrated art");
         }
 
         [Test, BuildScene(SceneLab), Category("Integration"), Timeout(60000)]
@@ -173,7 +170,6 @@ namespace AnomalyArena
         [Test, BuildScene(SceneCn), Category("Integration"), Timeout(60000)]
         public async Task OpenedInEnglish_FirstRun_StartsInWhitebox_AndItsTitleSwitchesTheArt()
         {
-            Art.DefaultForTests = null; // the game's own default
             ChoiceInitialized.SetValue(null, false);
             Art.Enabled = true; // an earlier play in the editor left the illustrated art behind
             TestStartLanguage.Use(StartupLanguage.English);

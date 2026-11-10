@@ -142,7 +142,7 @@ namespace AnomalyArena
             // English and illustrated in Chinese; the enemy lab is illustrated only. SceneLocalePreset (execution order -10000) has decided
             // the language in its Awake. Set here, not in Start, so nothing draws a frame in the other look and whatever reads the art once
             // the scene has woken (a test's set-up after loading the scene) reads the run's own.
-            Art.EnsureV2Default(Art.IsIllustratedOnlyScene(gameObject.scene.name));
+            Art.EnsureV2Default(Art.IsIllustratedOnlyScene(gameObject.scene.name), ArenaLanguage.StartedInChinese);
         }
 
         // ───── Hit feedback: camera push and shake ─────

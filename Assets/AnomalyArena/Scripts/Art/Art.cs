@@ -5,8 +5,8 @@ namespace AnomalyArena
     /// <summary>
     /// Whitebox / illustrated toggle shared by every presentation component, switched on the title (in whitebox the base,
     /// the characters, the monsters and the weapons are boxes, the terrain and the backdrop pictures stay as they are). Since 2026-11-10 one
-    /// scene serves both languages, and the first run's art is whitebox in both (until that afternoon it followed the start language, illustrated in Chinese): whitebox
-    /// is the default (the course staff approved the illustrated art only as an optional mode). Once
+    /// scene serves both languages, and the first run's art follows the language the game opened in (ArenaLanguage): whitebox in English
+    /// (the course staff approved the illustrated art only as an optional mode, with whitebox as the default), illustrated in Chinese. Once
     /// the player switches, their choice is kept from run to run for the rest of the play: static fields survive scene reloads. The enemy
     /// lab shows only the illustrated art. The switch changes the scene, the monsters, the characters and the combat
     /// effects; the menus and icons are the same either way.
@@ -20,8 +20,8 @@ namespace AnomalyArena
         /// <summary>The named scene shows only the illustrated art (the enemy lab).</summary>
         public static bool IsIllustratedOnlyScene(string sceneName) => sceneName == EnemyLabScene;
 
-        /// <summary>The first run's art: whitebox, whatever language the game opened in (2026-11-10).</summary>
-        public const bool DefaultIllustrated = false;
+        /// <summary>The first run's art for the language the game opened in: illustrated in Chinese, whitebox in English.</summary>
+        public static bool DefaultIllustrated(bool startedInChinese) => startedInChinese;
 
         public static bool Enabled;
         /// <summary>The running scene shows only the illustrated art (the enemy lab): Enabled stays on and the title's switch does nothing.</summary>
@@ -40,15 +40,13 @@ namespace AnomalyArena
             Enabled = false;
             IllustratedOnly = false;
             v2ChoiceInitialized = false;
-#if UNITY_INCLUDE_TESTS
-            DefaultForTests = null;
-#endif
             toggleChoice = null;
         }
 
-        /// <summary>Called as each run scene starts (GameManagerV2), with whether the scene shows only the illustrated art. The first run
-        /// of a play takes the default (whitebox); later runs keep the player's choice, and get it back after the enemy lab.</summary>
-        public static void EnsureV2Default(bool illustratedOnly = false)
+        /// <summary>Called as each run scene starts (GameManagerV2), with whether the scene shows only the illustrated art and whether the
+        /// game opened in Chinese. The first run of a play takes the default for that language; later runs keep the player's choice,
+        /// and get it back after the enemy lab. Called with no arguments it follows an English start (whitebox).</summary>
+        public static void EnsureV2Default(bool illustratedOnly = false, bool startedInChinese = false)
         {
             if (illustratedOnly)
             {
@@ -65,21 +63,10 @@ namespace AnomalyArena
             toggleChoice = null;
             if (!v2ChoiceInitialized)
             {
-#if UNITY_INCLUDE_TESTS
-                Enabled = DefaultForTests?.Invoke() ?? DefaultIllustrated;
-#else
-                Enabled = DefaultIllustrated;
-#endif
+                Enabled = DefaultIllustrated(startedInChinese);
                 v2ChoiceInitialized = true;
             }
         }
-
-#if UNITY_INCLUDE_TESTS
-        /// <summary>Tests only: the first run's art in place of the default. TestStartLanguage sets it for the whole test run, so the tests
-        /// keep the start they were written for (illustrated when started in Chinese, whitebox in English); a test of the default itself
-        /// sets it to null. Null outside tests.</summary>
-        public static System.Func<bool> DefaultForTests { get; set; }
-#endif
 
         /// <summary>The title's whitebox / illustrated switch. The enemy lab has none, so it never leaves the illustrated art.</summary>
         public static void Toggle()
