@@ -9,19 +9,19 @@ using Object = UnityEngine.Object;
 
 namespace AnomalyArena
 {
-                                                                                                                                          
-                                                                                                                                            
-                                                                                                                                          
-                                                                                                                                        
-                                                                                                                                              
-                                                                                                                                         
-                                                                                                                                         
-                                                                                                                                        
-                                                                
+    /// <summary>The enemies and the build phase, in the saved Chinese arena. A kind whose authored speed
+    /// reaches Enemy.gravityFollowSpeed (before the scene's global movement multiplier) follows the player into a black hole's gravity ring
+    /// and is swallowed, a slower kind waits at the ring's edge, and with the player outside every ring even a fast kind walks round them
+    /// (document 9.4). The whitebox Bloater is yellow from the start of its rush (document 9.2); an elite in a Chanter's aura shows the
+    /// chant tag after its affix; the Nash Prophet's gravity pull comes only from phase 2 (document 12.1). In the build phase time flows with
+    /// a panel open as in a wave without enemies: timers, statuses, void energy and black holes run, while the player still cannot move,
+    /// fire or cast and no wave clock or spawn runs; the weapon card and the greater void reward keep their freeze (document 2.2). While
+    /// the build phase's supply crate comes down time flows too, and the player walks and may take an open portal; back from that trial
+    /// the crate comes down again.</summary>
     [TestFixture]
     public class BuildTimeAndEnemyRulesTest
     {
-        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
         WaveSet originalWaves, runtimeWaves;
         bool artWas;
 
@@ -43,7 +43,7 @@ namespace AnomalyArena
             Time.timeScale = 1f;
         }
 
-                                                              
+        // ───── The Nash Prophet's far moves (no scene) ─────
 
         [Test]
         public void NashMoveFor_FarInPhaseOne_OnlyTheRing_TheGravityPullComesFromPhaseTwo()
@@ -63,14 +63,14 @@ namespace AnomalyArena
             }
         }
 
-                                                                 
+        // ───── Chasing into a gravity ring (document 9.4) ─────
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(60000)]
         public async Task GravityRing_PlayerStandingInIt_FastKindsFollowAndAreSwallowed_SlowKindsWaitAtItsEdge()
         {
             var (game, targets) = await Sandbox();
             var world = WorldMap.Active;
-                                                                                                                     
+            // Who follows: the authored speed against the tunable threshold, never the scene's slowed walking speed.
             var probe = targets[0];
             var follows = new List<EnemyKind>();
             foreach (EnemyKind kind in Enum.GetValues(typeof(EnemyKind)))
@@ -81,20 +81,20 @@ namespace AnomalyArena
                 if (probe.FollowsIntoGravity) follows.Add(kind);
             }
 
-                                                                                                                        
+            // 2026-10-27 (P35): the threshold rose to 5, so the 4.5-speed Stomper, Warden and Chanter no longer follow.
             Assert.That(probe.gravityFollowSpeed, Is.EqualTo(5f), "the threshold is 5");
             Assert.That(follows, Is.EquivalentTo(new[] { EnemyKind.Grunt, EnemyKind.Skitter, EnemyKind.Splitter, EnemyKind.Shade }),
                 "only the kinds authored at 5 or faster follow; the 4.5 kinds and the slower ones do not");
             foreach (var target in targets) target.DiscardWithoutReward();
 
             var (hole, inside, start) = RingApproach(world);
-            SkillWorldAPI.HoleProtection = body => body == game.player;                                                        
+            SkillWorldAPI.HoleProtection = body => body == game.player; // the player stands in the ring without being drawn in
             V3CombatSmokeTest.Teleport(game.player, inside);
             Physics.SyncTransforms();
             await Awaitable.FixedUpdateAsync();
             Assume.That(hole.InGravity(game.player.Position), Is.True, "the player stands in the gravity ring");
 
-                                                                     
+            // A slow kind walks up to the ring and waits outside it.
             var slow = Spawn(game, EnemyKind.Brute, start);
             Assume.That(slow.FollowsIntoGravity, Is.False, "the Brute is a slow kind");
             bool slowEntered = false;
@@ -105,7 +105,7 @@ namespace AnomalyArena
                 "it has walked up to the ring's edge and waits there");
             slow.DiscardWithoutReward();
 
-                                                                                      
+            // A fast kind follows the player in, and the pull takes it into the hole.
             int feeds = hole.Feeds;
             var fast = Spawn(game, EnemyKind.Grunt, start);
             Assume.That(fast.FollowsIntoGravity, Is.True, "the Grunt is a fast kind");
@@ -146,7 +146,7 @@ namespace AnomalyArena
             Assert.That(entered, Is.False, "round the ring: only a player standing in one draws the fast kinds in");
         }
 
-                                                                      
+        // ───── The Bloater's colour in whitebox (document 9.2) ─────
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task Bloater_Whitebox_YellowFromTheStartOfItsRush_ItsOwnColourWhenTheRushRunsOut_YellowOnItsFuse()
@@ -156,7 +156,7 @@ namespace AnomalyArena
             targets[1].DiscardWithoutReward();
             targets[2].DiscardWithoutReward();
             var bloater = targets[0];
-                                                                                                                          
+            // A copy with a short rush, which runs out before it reaches the player; the saved definition stays as it is.
             var data = Object.Instantiate(game.waves.DefinitionOf(EnemyKind.Bloater));
             data.chargeDistance = 2f;
             try
@@ -172,7 +172,7 @@ namespace AnomalyArena
                 Assert.That(Diff(BodyColour(bloater), data.colour), Is.LessThan(.01f), "its own colour again once the rush has run out");
 
                 await UntilFixed(() => bloater.WindingUp, 5f, "it reaches the player and lights its fuse");
-                await Awaitable.NextFrameAsync();                                                
+                await Awaitable.NextFrameAsync(); // the warning flash is drawn late in the frame
                 var fuse = BodyColour(bloater);
                 Assert.That(fuse.r, Is.GreaterThan(.9f), "the lit fuse keeps the body yellow, flashing toward red");
                 Assert.That(Diff(fuse, data.colour), Is.GreaterThan(.3f), "never its own colour while the fuse burns");
@@ -205,7 +205,7 @@ namespace AnomalyArena
                 float shown = model && model.modelRoot ? model.modelRoot.localScale.y : 0f;
                 Assume.That(bloater.Swell, Is.EqualTo(1f), "it walks in at its own size");
 
-                                                                                                                                        
+                // Document 9.2: once at the player it lights its fuse and swells before it blows (it used to swell only after a death).
                 await UntilFixed(() => bloater.WindingUp, 5f, "it reaches the player and lights its fuse");
                 float fuse = Mathf.Max(.05f, data.windup);
                 await UntilFixed(() => !bloater.WindingUp || bloater.Swell > 1f + .2f, fuse * 3f, "the fuse burns");
@@ -223,7 +223,7 @@ namespace AnomalyArena
             }
         }
 
-                                                                     
+        // ───── The chant tag on an elite's bar (document 9.2) ─────
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task EliteInAChanterAura_ItsHpBarLabel_ShowsTheChantTagAfterItsAffix()
@@ -240,11 +240,11 @@ namespace AnomalyArena
             var chanter = Hold(game.waves.SpawnLab(EnemyKind.Chanter, origin + Vector3.forward * (5f + Enemy.ChantRadius + 4f), false, ElementKind.None));
             Physics.SyncTransforms();
             Assume.That(elite.Elite && elite.Affix == ElementKind.Fire, Is.True, "an elite with the Fire affix");
-                                                                                                                                            
-                                                                                                                                          
+            // An elite names its kind, then the elite tag and its affix. Ordinary enemies (the basics, such as the Grunt)
+            // show only their bar, while specials (the Chanter), elites and bosses keep their name; status words still show on any enemy.
             string eliteTag = ArenaText.Text("enemy." + kind) + " · " + ArenaText.Text("ui.elite") + " · " + ArenaTerms.Element(ElementKind.Fire);
             string grunt = ArenaText.Text("enemy.Grunt");
-            string chant = ArenaText.Pair("CHANTED","CHANTED");
+            string chant = ArenaText.Pair("吟唱强化", "CHANTED");
 
             await Until(() => Texts(labels).Contains(eliteTag), 3f, "outside the aura the elite's bar shows its kind and affix");
             Assert.That(elite.Chanted, Is.False, "outside the aura");
@@ -260,7 +260,7 @@ namespace AnomalyArena
             Assert.That(Texts(labels), Has.Member(chant), "an ordinary enemy shows the chant tag on its own");
         }
 
-                                                             
+        // ───── Time in the build phase (document 2.2) ─────
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(90000)]
         public async Task BuildPanelOpen_TimeFlows_TimersStatusesEnergyAndHolesRun_ThePlayerCannotActAndNoWaveRuns()
@@ -278,7 +278,7 @@ namespace AnomalyArena
             Assert.That(game.BuildTimeFlows, Is.True, "the build phase's clock runs");
             Assert.That(Time.timeScale, Is.EqualTo(1f), "time flows with the panel open");
 
-                                                                                                                                           
+            // Away from every ring: a skill and a weapon cooling down, a burn, void energy below its cap and a black hole fed to the full.
             Vector3 stand = LaneStart(world, Vector3.right, 6f);
             V3CombatSmokeTest.Teleport(player, stand);
             Physics.SyncTransforms();
@@ -287,7 +287,7 @@ namespace AnomalyArena
             slot.CooldownLeft = 5f;
             var weapon = game.runWeapons.Hand[0];
             weapon.cooldown = 5f;
-            game.progression.CompleteVoidTrial();                                     
+            game.progression.CompleteVoidTrial(); // void energy regenerates by itself
             Assume.That(game.progression.TrySpendEnergy(game.progression.Energy * .5f), Is.True, "energy spent below its cap");
             float energy = game.progression.Energy;
             status.Add(ElementKind.Fire, 4f);
@@ -296,7 +296,7 @@ namespace AnomalyArena
             portal.Feed(portal.feedsToOpen, game.waves.WaveIndex + 1);
             Assume.That(portal.Phase, Is.EqualTo(HolePhase.Collapsing), "a black hole fed to the full starts collapsing");
             float waveClock = game.waves.TimeLeft, start = Time.time;
-            player.debugMoveHeld = Vector2.right;                                                   
+            player.debugMoveHeld = Vector2.right; // a held key: the panel keeps the player standing
             try
             {
                 await Until(() => portal.Phase == HolePhase.Portal && Time.time - start >= 1.5f, 8f,
@@ -322,10 +322,10 @@ namespace AnomalyArena
             Assert.That(game.waves.LivingCount + game.waves.PendingCount, Is.Zero, "nothing spawns");
             Assert.That(game.RunPhase, Is.EqualTo(ArenaUiState.Armory), "the panel is still open");
 
-                                                                                                      
+            // The other black hole draws the player in with the panel open, exactly as while walking.
             var hole = world.holes.FirstOrDefault(h => h && h.Phase == HolePhase.Active);
             Assume.That(hole, Is.Not.Null, "a second black hole is still active");
-            player.Invulnerable = true;                                                                                
+            player.Invulnerable = true; // a swallow would set the player back on safe ground instead of ending the run
             try
             {
                 V3CombatSmokeTest.Teleport(player, RingSpot(world, hole));
@@ -342,7 +342,7 @@ namespace AnomalyArena
                 Physics.SyncTransforms();
             }
 
-                                                                                      
+            // Tab puts the panel away: the player walks, and the clock keeps running.
             await keyboard.TapUntil(KeyCode.Tab, () => game.BuildWalking, "Tab puts the panel away");
             weapon.cooldown = 3f;
             player.debugMoveHeld = Vector2.right;
@@ -369,7 +369,7 @@ namespace AnomalyArena
             Assume.That(game.skills.Learn(SkillId.Overcharge), Is.True, "the player learns a skill");
             var slot = game.skills.Slots[0];
 
-                                                                                                                                  
+            // While the build phase's supply crate comes down, time flows and the player walks the empty arena.
             var player = game.player;
             var stand = player.Position;
             slot.CooldownLeft = 5f;
@@ -405,7 +405,7 @@ namespace AnomalyArena
             await ForGameSeconds(.4f, null);
             Assert.That(slot.CooldownLeft, Is.LessThan(ready - .2f), "and the timers run on it");
 
-                                                                                                    
+            // A void trial entered from the build phase: its greater reward still holds everything.
             var portal = world.holes.First(h => h && h.Phase == HolePhase.Active);
             portal.Feed(portal.feedsToOpen, game.waves.WaveIndex + 1);
             await Until(() => portal.Phase == HolePhase.Portal, 4f, "the fed hole collapses into a portal while the build is ready");
@@ -445,7 +445,7 @@ namespace AnomalyArena
             var world = WorldMap.Active;
             Assume.That(game.BuildCrateWalking, Is.True, "the build phase's crate is down and waits to be opened");
 
-                                                                                                            
+            // While the crate waits above the player, an open portal can be taken with E.
             var portal = world.holes.First(h => h && h.Phase == HolePhase.Active);
             portal.Feed(portal.feedsToOpen, game.waves.WaveIndex + 1);
             await Until(() => portal.Phase == HolePhase.Portal, 4f, "the fed hole collapses into a portal while the crate waits");
@@ -466,7 +466,7 @@ namespace AnomalyArena
             Assert.That(game.RunPhase, Is.EqualTo(ArenaUiState.Armory), "and opens the armory the trial interrupted");
         }
 
-                              
+        // ───── Helpers ─────
 
         static Vector3 Flat(Vector3 v) => Query.Flat(v);
 
@@ -477,7 +477,7 @@ namespace AnomalyArena
             return GameManager.Instance;
         }
 
-                                                                                                                                                 
+        /// <summary>The combat sandbox (V3CombatSmokeTest) with every black hole fed once, so no first-sight cutscene stops the clock.</summary>
         static async Task<(GameManager game, Enemy[] targets)> Sandbox()
         {
             var sandbox = await V3CombatSmokeTest.StartSandbox();
@@ -498,9 +498,9 @@ namespace AnomalyArena
             game.waves.waveSet = runtimeWaves;
         }
 
-                                                                                                                                          
-                                                                                                                                       
-                                           
+        /// <summary>Title → supply crate → Rifle → close its card → the first wave's combat (every black hole fed once, so no first-sight
+        /// cutscene stops the clock), then the shortened wave runs out and its survivors fall without rewards, until the build phase's
+        /// supply crate is down.</summary>
         static async Task ReachBuildCrate(GameManager game)
         {
             await CommandUntil(game, ArenaUiCommand.Start, () => game.RunPhase == ArenaUiState.SupplyDrop);
@@ -543,7 +543,7 @@ namespace AnomalyArena
             }
         }
 
-                                                                                                               
+        /// <summary>One enemy of this kind from the saved pool, walking on its own, worth no reward.</summary>
         static Enemy Spawn(GameManager game, EnemyKind kind, Vector3 at)
         {
             var enemy = game.waves.SpawnLab(kind, at, false, ElementKind.None);
@@ -554,7 +554,7 @@ namespace AnomalyArena
             return enemy;
         }
 
-                                                                                                                       
+        /// <summary>A pool enemy that holds still where it was put (its own update is off), worth no reward.</summary>
         static Enemy Hold(Enemy enemy)
         {
             Assume.That(enemy, Is.Not.Null, "the pool has a free body of that kind");
@@ -563,7 +563,7 @@ namespace AnomalyArena
             return enemy;
         }
 
-                                                                                                                      
+        /// <summary>A frozen sandbox target becomes a free-moving live enemy of this definition at a point.</summary>
         static void Release(Enemy enemy, EnemyDefinition data, Vector3 at)
         {
             enemy.Configure(data, 1f, false);
@@ -582,11 +582,11 @@ namespace AnomalyArena
             return block.GetColor("_BaseColor");
         }
 
-                                                                                                                                            
+        /// <summary>Colours read back from a property block can differ in the last float bits, so compare with a small tolerance.</summary>
         static float Diff(Color a, Color b) => Mathf.Abs(a.r - b.r) + Mathf.Abs(a.g - b.g) + Mathf.Abs(a.b - b.b) + Mathf.Abs(a.a - b.a);
 
-                                                                                                                                      
-                                                                                                               
+        /// <summary>An active black hole, a spot halfway across its gravity ring for the player and, three cells outside the ring and
+        /// turned 50 degrees from that spot, an enemy start with open ground on the straight way in.</summary>
         static (BlackHole hole, Vector3 inside, Vector3 start) RingApproach(WorldMap world)
         {
             foreach (var hole in world.holes)
@@ -607,8 +607,8 @@ namespace AnomalyArena
             return default;
         }
 
-                                                                                                                                         
-                                                                                                                                                  
+        /// <summary>An active black hole with open ground on a circle two cells outside its gravity ring: the player's spot on it and an
+        /// enemy start 150 degrees round, so the straight line between them crosses the ring and the open way round is the shorter arc.</summary>
         static (BlackHole hole, Vector3 you, Vector3 start) AcrossRing(WorldMap world)
         {
             foreach (var hole in world.holes)
@@ -635,7 +635,7 @@ namespace AnomalyArena
             return default;
         }
 
-                                                                                                                                                             
+        /// <summary>Open ground from a to b for a body: inside the map, no wall, no hole's core, no quicksand and no gravity ring but this hole's.</summary>
         static bool Open(WorldMap world, Vector3 a, Vector3 b, BlackHole hole)
         {
             for (float t = 0f; t <= 1f; t += .04f)
@@ -648,7 +648,7 @@ namespace AnomalyArena
             return true;
         }
 
-                                                                                                                
+        /// <summary>A spot in the outer part of this black hole's gravity ring with no wall about it.</summary>
         static Vector3 RingSpot(WorldMap world, BlackHole hole)
         {
             float radius = Mathf.Max(hole.KillRadius + .8f, hole.GravityRadius - .6f);
@@ -662,7 +662,7 @@ namespace AnomalyArena
             return Vector3.zero;
         }
 
-                                                                                                                                          
+        /// <summary>Start of a straight lane of the given length along dir with no wall, hole, gravity ring or quicksand on it.</summary>
         static Vector3 LaneStart(WorldMap world, Vector3 dir, float length)
         {
             for (int x = -36; x <= 36; x += 4)
@@ -704,7 +704,7 @@ namespace AnomalyArena
             }
         }
 
-                                                                                                                                 
+        /// <summary>Checks completed after every physics step, so a short state (a rush) is not missed between frames.</summary>
         static async Task UntilFixed(Func<bool> completed, float timeout, string operation)
         {
             float deadline = Time.realtimeSinceStartup + timeout;
@@ -715,8 +715,8 @@ namespace AnomalyArena
             }
         }
 
-                                                                                                                                         
-                                                                    
+        /// <summary>Lets this much game time pass, frame by frame, calling eachStep after every frame. Fails when game time stands still
+        /// (a frozen screen) instead of waiting for ever.</summary>
         static async Task ForGameSeconds(float seconds, Action eachStep)
         {
             float until = Time.time + seconds, deadline = Time.realtimeSinceStartup + seconds + 10f;

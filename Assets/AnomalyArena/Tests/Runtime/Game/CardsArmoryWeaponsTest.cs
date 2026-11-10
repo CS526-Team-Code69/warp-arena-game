@@ -5,25 +5,29 @@ using System.Reflection;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using TestHelper.Attributes;
+using TestHelper.RuntimeInternals;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
 namespace AnomalyArena
 {
-                                                                                                                                           
-                                                                                                                                                                                                           
-                                                                                                                                         
-                                                                                                
+    /// <summary>Cards, the armory and weapons: a weapon card is coloured by its direction (every Infusion
+    /// purple) and a skill card by the level it gives (the HUD help says so), both rolled richer on later waves; a stronger version of a held weapon upgrades that weapon in place, and
+    /// later waves raise the armory's Mk; the tamed Meltdown speeds your weapons up, the Wildfire fence keeps adding Burning, the Launch
+    /// Yourself missile slows down and pushes by its speed; four weapon names change.</summary>
     [TestFixture]
     public class CardsArmoryWeaponsTest
     {
-        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
-        const string SceneEn = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
 
         [TearDown]
-        public void RestoreClock() => Time.timeScale = 1f;
+        public void RestoreClock()
+        {
+            Time.timeScale = 1f;
+            TestStartLanguage.Reset();
+        }
 
-                                                  
+        // ───── Card colours and wave bands ─────
 
         [TestCase(UpgradeAxis.Tame, CardRarity.Rare)]
         [TestCase(UpgradeAxis.Twist, CardRarity.Exceptional)]
@@ -46,7 +50,7 @@ namespace AnomalyArena
             Assert.That(actual, Is.EqualTo(CardRarity.Rare));
         }
 
-                                                                                   
+        // Document 8.6: five skill levels, white 1 to orange 5.
         [TestCase(CardRarity.Common, 1)]
         [TestCase(CardRarity.Rare, 2)]
         [TestCase(CardRarity.Exceptional, 3)]
@@ -60,7 +64,7 @@ namespace AnomalyArena
             Assert.That(actual, Is.EqualTo(expected));
         }
 
-                                                                                                                                    
+        // Document 8.6: a skill card rolls the stat-card tiers of its wave band (25% high tier, pity forces it).
         [TestCase(1, 10f, false, CardRarity.Rare)]
         [TestCase(2, 30f, false, CardRarity.Common)]
         [TestCase(3, 5f, false, CardRarity.Exceptional)]
@@ -122,7 +126,7 @@ namespace AnomalyArena
             finally { Object.DestroyImmediate(roster); }
         }
 
-                                  
+        // ───── Skill cards ─────
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(30000)]
         public async Task Learn_CardLevel_NewSkillStartsThereAndAnOwnedOneRisesAtLeastOneLevel()
@@ -158,7 +162,7 @@ namespace AnomalyArena
             var rules = Object.Instantiate(original);
             try
             {
-                                                                                 
+                // Waves 3-8 offer green and blue; the high tier always comes up.
                 rules.highTierPercent = 100f;
                 game.progression.Rules = rules;
                 var card = skills.RollCard(3);
@@ -185,7 +189,7 @@ namespace AnomalyArena
             var rules = Object.Instantiate(original);
             try
             {
-                                                                                 
+                // Waves 3-8 offer green and blue; the high tier always comes up.
                 rules.highTierPercent = 100f;
                 game.progression.Rules = rules;
                 DraftCard upgrade = null;
@@ -236,14 +240,14 @@ namespace AnomalyArena
                 Object.Destroy(locale.gameObject);
             }
 
-                                                                                                                                    
-            Assert.That(texts["zh-Hans"].draft, Does.Contain("its colour shows the level it gives").And.Not.Contain("one level for a skill"), "Chinese draft help");
-            Assert.That(texts["zh-Hans"].replace, Does.Contain("the level this card gives").And.Not.Contain("starts at level 1"), "Chinese replace-skill help");
+            // A skill card's colour is the level it gives, so neither help text may promise level 1 or one level.
+            Assert.That(texts["zh-Hans"].draft, Does.Contain("卡的颜色代表它给的等级").And.Not.Contain("升一级"), "Chinese draft help");
+            Assert.That(texts["zh-Hans"].replace, Does.Contain("这张卡给的等级").And.Not.Contain("从 1 级开始"), "Chinese replace-skill help");
             Assert.That(texts["en"].draft, Does.Contain("its colour shows the level it gives").And.Not.Contain("one level for a skill"), "English draft help");
             Assert.That(texts["en"].replace, Does.Contain("the level this card gives").And.Not.Contain("starts at level 1"), "English replace-skill help");
         }
 
-                                   
+        // ───── Weapon cards ─────
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(30000)]
         public async Task RollUpgradeCard_WaveBandWeights_PickTheDirectionOfThatWave()
@@ -254,7 +258,7 @@ namespace AnomalyArena
             var rules = Object.Instantiate(original);
             try
             {
-                                                                                                                  
+                // Waves 1-4 weigh only Tame, wave 5 on only Infusion; all three directions of the rifle are open.
                 rules.weaponDirectionBands = new[] { new WeaponDirectionBand(1, 100f, 0f, 0f), new WeaponDirectionBand(5, 0f, 0f, 100f) };
                 game.progression.Rules = rules;
                 weapons.Hand = new[] { new RunWeapon { form = WeaponForm.Rifle, variant = 0, revealed = true }, null };
@@ -285,7 +289,7 @@ namespace AnomalyArena
             {
                 rules.weaponDirectionBands = new[] { new WeaponDirectionBand(1, 0f, 100f, 100f) };
                 game.progression.Rules = rules;
-                                                                                                                                
+                // Infusion (no element left on it, so no change-element card) and Twist taken: Tame is the only open direction.
                 weapons.Hand = new[] { new RunWeapon { form = WeaponForm.Rifle, variant = 0, revealed = true, axes = UpgradeAxis.Infusion | UpgradeAxis.Twist }, null };
                 weapons.Auto = new RunWeapon[RunWeapons.AutoSlotCount];
 
@@ -305,7 +309,7 @@ namespace AnomalyArena
             var rules = Object.Instantiate(original);
             try
             {
-                                                                                                                                 
+                // Only Infusion weighs anything, and the rifle has no element yet: every card infuses one of the seven elements.
                 rules.weaponDirectionBands = new[] { new WeaponDirectionBand(1, 0f, 0f, 100f) };
                 game.progression.Rules = rules;
                 var rifle = new RunWeapon { form = WeaponForm.Rifle, variant = 0, revealed = true };
@@ -328,7 +332,7 @@ namespace AnomalyArena
             finally { game.progression.Rules = original; Object.Destroy(rules); }
         }
 
-                             
+        // ───── Armory ─────
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(30000)]
         public async Task RollArmory_StrongerVersionOfAHeldWeapon_KeepsItsAnomalyUpgradesAndInfusion()
@@ -393,7 +397,7 @@ namespace AnomalyArena
             try
             {
                 weapons.roster = roster;
-                const int wave = 13;                                                                                                
+                const int wave = 13; // the wave's standard Mk is one below the top, so a catching-up version would reach the top Mk
                 var behind = new RunWeapon { form = WeaponForm.Rifle, variant = 0, revealed = true, mk = 1 };
                 HoldFullLoadout(weapons, behind);
                 var fromBehind = DrawOffers(weapons, roster, wave, 1f).Where(w => w.upgradeOf == behind).ToList();
@@ -427,11 +431,11 @@ namespace AnomalyArena
             var card = game.UiSnapshot.armoryOffers[index];
 
             Assert.That(card.body, Does.Contain(rifle.Label), "it names the weapon it upgrades");
-            Assert.That(card.body, Does.Contain("Its attack and trait stay the same").And.Contain("keep"), "it says the pairing stays and the upgrades are kept");
+            Assert.That(card.body, Does.Contain("攻击方式和特性不变").And.Contain("保留"), "it says the pairing stays and the upgrades are kept");
             Assert.That(card.rarity, Is.EqualTo(ArenaRarity.ForWeapon(rifle)), "it is coloured like the held rifle, upgrades included");
         }
 
-                              
+        // ───── Weapons ─────
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task MeltdownTame_HasteRunsOut_WeaponsReturnToTheirOwnPace()
@@ -471,7 +475,7 @@ namespace AnomalyArena
             V3CombatSmokeTest.Teleport(player, origin + Vector3.forward * 4f);
             Physics.SyncTransforms();
             var wildfire = Equip(game, WeaponForm.Flamethrower, 1, UpgradeAxis.Twist);
-                                                                                                                     
+            // Patches 6 apart on the clear lane with you between them, outside both circles: you stand on the fence.
             AttackActor older = null;
             foreach (float z in new[] { 1f, 7f })
             {
@@ -517,12 +521,12 @@ namespace AnomalyArena
             var moving = steps.Where(s => s > .0001f).ToList();
 
             Assume.That(moving.Count, Is.GreaterThanOrEqualTo(4), "the flight spans several physics steps");
-                                                                                                                    
+            // The last step may be a short remainder, so compare full steps: the second against the second to last.
             Assert.That(moving[1], Is.GreaterThan(moving[moving.Count - 2] * 1.2f), "the missile slows down over its flight");
             Assert.That(flight, Is.EqualTo(range / steady).Within(3f * Time.fixedDeltaTime), "a full flight lasts as long as at the old steady speed");
         }
 
-                            
+        // ───── Names ─────
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(30000)]
         public async Task WeaponNames_Chinese_FollowTheRenames()
@@ -530,18 +534,21 @@ namespace AnomalyArena
             await Awaitable.NextFrameAsync();
             await Until(() => GameManager.Instance && ArenaText.Ready && ArenaText.IsChinese, 12f, "the Chinese scene and locale");
 
-            Assert.That(ArenaTerms.WeaponForm(WeaponForm.ArcCoil), Is.EqualTo("Arc Cannon"), "Arc Cannon");
-            Assert.That(ArenaTerms.WeaponAnomaly(WeaponForm.ArcCoil, 0), Is.EqualTo("Arc Jump"), "Arc Jump");
-            Assert.That(ArenaTerms.WeaponAnomaly(WeaponForm.ArcCoil, 1), Is.EqualTo("Capacitor"), "Capacitor keeps its name");
-            Assert.That(ArenaTerms.WeaponForm(WeaponForm.Minigun), Is.EqualTo("Gatling"), "Gatling");
-                                                                                                    
-            Assert.That(ArenaTerms.WeaponAnomaly(WeaponForm.Knife, 0), Is.EqualTo("Flying Blade"), "Flying Blade");
-            Assert.That(ArenaTerms.WeaponAnomaly(WeaponForm.Knife, 1), Is.EqualTo("Chain Blade"), "Chain Blade");
+            Assert.That(ArenaTerms.WeaponForm(WeaponForm.ArcCoil), Is.EqualTo("电弧炮"), "Arc Cannon");
+            Assert.That(ArenaTerms.WeaponAnomaly(WeaponForm.ArcCoil, 0), Is.EqualTo("跳电"), "Arc Jump");
+            Assert.That(ArenaTerms.WeaponAnomaly(WeaponForm.ArcCoil, 1), Is.EqualTo("蓄电"), "Capacitor keeps its name");
+            Assert.That(ArenaTerms.WeaponForm(WeaponForm.Minigun), Is.EqualTo("加特林"), "Gatling");
+            // Document 5.4/5.5, Q24: the knife's two combinations are 飞刃 and 链刃.
+            Assert.That(ArenaTerms.WeaponAnomaly(WeaponForm.Knife, 0), Is.EqualTo("飞刃"), "Flying Blade");
+            Assert.That(ArenaTerms.WeaponAnomaly(WeaponForm.Knife, 1), Is.EqualTo("链刃"), "Chain Blade");
         }
 
-        [Test, LoadScene(SceneEn), Category("Integration"), Timeout(30000)]
+        [Test, BuildScene(Scene), Category("Integration"), Timeout(30000)]
         public async Task WeaponNames_English_FollowTheRenames()
         {
+            // One scene serves both languages since 2026-11-10: the English start is asked for before the scene loads.
+            TestStartLanguage.Use(StartupLanguage.English);
+            await SceneManagerHelper.LoadSceneAsync(Scene);
             await Awaitable.NextFrameAsync();
             await Until(() => GameManager.Instance && ArenaText.Ready && !ArenaText.IsChinese, 12f, "the English scene and locale");
 
@@ -556,8 +563,8 @@ namespace AnomalyArena
         public async Task ExpandedCardTexts_BothLanguages_UseOnlyTheNewWeaponNames()
         {
             await ReadyScene();
-                                                                                                                                    
-            var oldNames = new[] { ("zh-Hans", new[] { "minigun", "Arc Coil", "Chain", "arc coil" }), ("en", new[] { "minigun", "arc coil" }) };
+            // 机枪 also covers 转轮机枪; the core forms' cards are left out, since the Rocket Strike card says 不再连锁 ("no further chain").
+            var oldNames = new[] { ("zh-Hans", new[] { "机枪", "电弧线圈", "连锁", "钩子" }), ("en", new[] { "minigun", "arc coil" }) };
             var stale = new List<string>();
             var spinUpTwist = new Dictionary<string, string>();
             var locale = new GameObject("test locale").AddComponent<ArenaLocaleButton>();
@@ -588,15 +595,15 @@ namespace AnomalyArena
             }
 
             Assert.That(stale, Is.Empty, "no expanded weapon card still uses an old name");
-            Assert.That(spinUpTwist["zh-Hans"], Does.Contain("Gatling"), "the Chinese Spin-up Twist card names the Gatling");
+            Assert.That(spinUpTwist["zh-Hans"], Does.Contain("加特林"), "the Chinese Spin-up Twist card names the Gatling");
             Assert.That(spinUpTwist["en"], Does.Contain("Gatling"), "and so does the English one");
         }
 
-                              
+        // ───── Helpers ─────
 
         static int Level(SkillLoadout skills, SkillId id) => skills.Slots.First(s => !s.Empty && s.Id == id).Level;
 
-                                                                                                                                   
+        /// <summary>Both hand and both auto slots full, so every armory offer after the first may be a stronger version.</summary>
         static void HoldFullLoadout(RunWeapons weapons, RunWeapon rifle)
         {
             weapons.Hand = new[] { rifle, new RunWeapon { form = WeaponForm.Knife, variant = 1, revealed = true } };

@@ -6,7 +6,10 @@ using UnityEngine;
 
 namespace AnomalyArena.EditorTools
 {
-
+    /// <summary>
+    /// Runs the XP pacing driver (XpPacingDriverTest) on its own. The request file is what lets the driver run at all, so the regular
+    /// suite ("4. Run Play Mode Tests") skips it; the driver deletes the file when its fixture finishes and writes Logs/XpPacing-eff*.txt.
+    /// </summary>
     internal static class RunXpPacingDriver
     {
         const string RequestPath = "Logs/xp-pacing.request";

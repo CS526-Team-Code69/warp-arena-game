@@ -9,13 +9,14 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>Wave mix rules (doc 7.6): a map may reweight a wave, but every kind the wave table lists keeps at least
+    /// minKindShare of its batch group and appears in every wave; a wave's two ordinary affixes are different elements; Wardens never carry one.</summary>
     [TestFixture]
     public class WaveMixTest
     {
-        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
         const float Tolerance = 1e-4f;
-        static readonly string[] MapFamilies = { "DustFlats", "WreckField" };                                                                
+        static readonly string[] MapFamilies = { "DustFlats", "WreckField" }; // the Dunes and the Ruins, the two maps in rotation (doc 12.2)
         UnityEngine.Random.State savedRandom;
 
         [SetUp]
@@ -31,6 +32,8 @@ namespace AnomalyArena
             UnityEngine.Random.state = savedRandom;
             Time.timeScale = 1f;
         }
+
+        // ───── Share floor ─────
 
         [Test]
         public void ApplyShareFloor_KindsUnderTheFloor_EndExactlyOnItAndTheRestKeepTheirWeight()
@@ -50,7 +53,7 @@ namespace AnomalyArena
         [Test]
         public void ApplyShareFloor_RaisingGrowsTheTotal_AKindOnceAboveTheFloorIsRaisedToo()
         {
-
+            // Raising the three zeros to 10% of 112 would leave the 12 at 12 / 145.6 = 8.2%: the floor must be solved on the final total.
             var weights = new[] { 100f, 12f, 0f, 0f, 0f };
             var listed = Enumerable.Repeat(true, weights.Length).ToArray();
 
@@ -108,7 +111,7 @@ namespace AnomalyArena
                             }
                             float share = total > 0f ? weights[i] / total : 0f;
                             if (weights[i] <= 0f || share < waves.minKindShare - Tolerance) failures.Add($"{at}: share {share:0.000}");
-
+                            // The floor only lifts kinds under it, and only up to it; every other kind keeps its tilted table weight.
                             int tilted = Tilted(waves.waveSet, biome, wave, data.kind);
                             if (weights[i] != tilted && (weights[i] < tilted || Mathf.Abs(share - waves.minKindShare) > Tolerance))
                                 failures.Add($"{at}: weight {weights[i]:0.00} from tilted {tilted} (share {share:0.000})");
@@ -129,13 +132,13 @@ namespace AnomalyArena
         {
             var game = await ReadyScene();
             var waves = game.waves;
-            const int wave = 13;                                                   
+            const int wave = 13; // Shade is listed and one may be alive or pending
             BeginWave(waves, wave - 1);
             var shade = waves.DefinitionOf(EnemyKind.Shade);
             var marker = waves.BorrowMarker();
             Assume.That(shade && marker, Is.True, "the scene keeps a Shade and a free warning");
             Assume.That(waves.waveSet.AllowsKind(wave, EnemyKind.Shade), Is.True, "wave 13 lists the Shade");
-            marker.Begin(game.player.Position + Vector3.forward * 14f, shade, false, ElementKind.None);                                 
+            marker.Begin(game.player.Position + Vector3.forward * 14f, shade, false, ElementKind.None); // the one Shade the wave allows
 
             var weights = new float[waves.roster.Length];
             var listed = new bool[weights.Length];
@@ -149,6 +152,8 @@ namespace AnomalyArena
             Assert.That(rest.Select(i => weights[i] / total), Has.All.GreaterThanOrEqualTo(waves.minKindShare - Tolerance),
                 "the floor is solved over the kinds that can spawn now");
         }
+
+        // ───── Affixes ─────
 
         [Test, LoadScene(Scene), Timeout(30000)]
         public async Task WaveAffixes_EveryWave_TwoDifferentElementsFromTheOpenTierFromWaveFive()
@@ -177,6 +182,8 @@ namespace AnomalyArena
             Assert.That(failures, Is.Empty, "doc 7.6: each wave brings exactly two affix kinds");
         }
 
+        // ───── Coverage ─────
+
         [TestCase(1, "WreckField"), TestCase(6, "DustFlats"), TestCase(13, "WreckField"), LoadScene(Scene), Category("Integration"), Timeout(60000)]
         public async Task WaveSpawns_MapTiltsAKindDown_EveryKindTheWaveListsStillAppears(int wave, string family)
         {
@@ -184,7 +191,7 @@ namespace AnomalyArena
             var world = WorldMap.Active;
             var biome = world.biomes.FirstOrDefault(b => b && b.name.StartsWith(family, StringComparison.Ordinal));
             Assume.That(biome, Is.Not.Null, family + " is one of the scene's maps");
-            world.biome = biome;                                                                    
+            world.biome = biome; // After the map is built only its mix tilt is read from the biome.
             var listed = game.waves.roster.Where(d => d && !EnemyRoles.IsBoss(d.kind) && game.waves.waveSet.AllowsKind(wave, d.kind))
                 .Select(d => d.kind).ToHashSet();
             var spawned = new List<Enemy>();
@@ -203,7 +210,7 @@ namespace AnomalyArena
                     await Awaitable.NextFrameAsync();
                     if (world.HoleIntroPlaying) { world.SkipHoleIntro(); continue; }
                     if (Time.realtimeSinceStartup < nextCull) continue;
-
+                    // Clearing the field brings the next batch at once, as a player who kills fast would.
                     nextCull = Time.realtimeSinceStartup + 2f;
                     foreach (var enemy in game.waves.Alive.ToArray())
                     {
@@ -229,6 +236,10 @@ namespace AnomalyArena
                 "ordinary affixes come from the wave's pair");
         }
 
+        // ───── Helpers ─────
+
+        /// <summary>The batch groups of WaveManager (doc 11.2): 0 basics (melee kinds, Spitter, Warden), 1 ordinary specials, 2 elites (specials that
+        /// can be elite, from firstEliteWave).</summary>
         static bool InGroup(WaveManager waves, EnemyDefinition data, int wave, int group)
         {
             if (EnemyRoles.IsBoss(data.kind)) return false;
@@ -245,6 +256,7 @@ namespace AnomalyArena
             return Mathf.Max(0, set.Weight(wave, kind) + (tilt != null && index < tilt.Length ? Mathf.Clamp(tilt[index], -10, 10) : 0));
         }
 
+        /// <summary>Starts a 0-based ordinary wave the way the run does (its affix pair, kind memory and banner) without running its clock.</summary>
         static void BeginWave(WaveManager waves, int index) =>
             typeof(WaveManager).GetMethod("BeginV2Wave", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(waves, new object[] { index });
 

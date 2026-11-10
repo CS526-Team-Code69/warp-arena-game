@@ -13,7 +13,7 @@ namespace AnomalyArena
         public float minBodyScale = .6f;
         [Min(8), Tooltip("Largest size of the card text (2026-10-28: the saved size was easy to skip). Long texts still shrink, no smaller than before.")]
         public int bodyFontSize = 19;
-
+        /// <summary>Set by V5MenuSkin: its card frame follows the rarity.</summary>
         [System.NonSerialized] public System.Action<CardRarity> rarityApplied;
         int savedBodySize;
 
@@ -23,6 +23,8 @@ namespace AnomalyArena
             ArenaEmphasis.Style(body);
         }
 
+        // Long texts (English above all) ran past the box into the footer. Card texts now shrink only as far as they must to fit
+        // (ShowBody), from the card size (resizeTextMaxSize) down to the smallest size (resizeTextMinSize).
         public void FitBody()
         {
             if (!body || savedBodySize > 0) return;
@@ -33,12 +35,15 @@ namespace AnomalyArena
             body.resizeTextForBestFit = false;
         }
 
+        /// <summary>Shows a card text as large as the box allows (ArenaTextFit).</summary>
         public void ShowBody(string text)
         {
             FitBody();
             ArenaTextFit.Show(body, text, body.resizeTextMaxSize, body.resizeTextMinSize);
         }
 
+        /// <summary>A larger card text (bodyFontSize), and the box reaches down to just above the badge, where the saved
+        /// layout left a gap.</summary>
         void GrowBody()
         {
             savedBodySize = body.fontSize;

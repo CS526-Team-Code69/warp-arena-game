@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-                                                                                                                                  
+    /// <summary>One value per enemy tier: melee swarm and mini Splitters, ordinary specials, elites (affixed specials).</summary>
     [Serializable]
     public struct TierValues
     {
@@ -14,7 +14,7 @@ namespace AnomalyArena
 
     public enum CampaignDropTier { Fodder, Special, Elite }
 
-                                                              
+    /// <summary>A price in the three V2 currencies.</summary>
     [Serializable]
     public struct CampaignCost
     {
@@ -23,14 +23,14 @@ namespace AnomalyArena
         public bool IsFree => alloy <= 0 && energy <= 0 && dark <= 0;
     }
 
-                 
-                                                                                                                                            
-                                                                                                                                              
-                                                                                                                                             
-                                                                                      
-                  
+    /// <summary>
+    /// Numbers of the V2 day campaign: waves become days with a day and a night, a base with HP, a shield and four rooms, three currencies,
+    /// shadow monsters at night. The defaults equal work/v2-campaign-1106/economy/ledger.py, which checks that a weak, a typical and a strong
+    /// player (kills measured by the XP pacing driver on 2026-10-27) all finish every room, the ship and the fuel by the dawn after the last
+    /// night. Change a price or a drop here and rerun the ledger with the same value.
+    /// </summary>
     [CreateAssetMenu(menuName = "Anomaly Arena/Campaign/Rules")]
-    public sealed class CampaignRules : ScriptableObject
+    public sealed partial class CampaignRules : ScriptableObject
     {
         [Header("Days")]
         [Min(1), Tooltip("Days before the ignition is forced: 7 since 2026-11-06, one wave a day. Day d fights wave d x waveStride of the table, so day 7 is wave 14 and the 15th (the Tyrant) comes after the failed ignition.")]
@@ -109,13 +109,13 @@ namespace AnomalyArena
         [Min(0f), Tooltip("Every monster of a day wave raids the base (since 2026-11-06; bosses and monsters that cannot walk excepted). A raider within this many cells of the player fights the player instead; 0 = never.")]
         public float raiderAggroRadius = 7f;
 
-                                                                                                                                 
-                                                                                                                                         
-                                                                                            
+        // ----- Since 2026-11-06 (values from the economy ledger): the campaign's own large map with terrain, an afternoon and a
+        // night without a clock (the player moves on from the base door), a limited mineral budget each day, mineral trails that lead to
+        // the black hole, and the black hole's side quest that opens the hidden boss. -----
         [Header("Big map, open-ended afternoon and night, mineral trails")]
         [Tooltip("The campaign map's size in cells (x, z). The classic arena is 180 x 120 (WreckField and DustFlats maps).")] public Vector2Int mapSize = new(200, 140);
         [Tooltip("No clock in the afternoon (dusk) or at night: the player goes into the night and on to the next day from the base door (its panel's Into the night and Wait for dawn). Off: both run on duskSeconds and NightLength as before.")] public bool openEndedEvenings = true;
-        [Min(0f), Tooltip("Day monsters are born on a ring this many cells from the base centre (not on the far rim of the big map), then walk in. 70 keeps their walk close to the earlier campaign's, whose monsters came from the 180 x 120 map's rim, 79 cells from the base on average; it also stays clear of the black hole (87-95 cells out), so they do not feed it on their own.")] public float daySpawnRing = 70f;
+        [Min(0f), Tooltip("Day monsters are born on a ring this many cells from the base centre (not on the far rim of the big map), then walk in. 56 sits between 42, which was too near, and 70, which was too far; tune it after a played day.")] public float daySpawnRing = 56f;
         [Min(0), Tooltip("Ore nodes among each night's nodes, each beside one of the night's dark matter clusters; the rest of the night's nodes are dark matter. 0 since 2026-11-06 (it was 1): its alloy went to the afternoon's scattered nodes (scatterNodes), and afternoon ore left unmined still lies there at night.")] public int nightOreNodes = 0;
         [Min(0), Tooltip("How many of each afternoon's ore nodes lie on the trail toward the black hole (newly seen minerals point the way). At least OreNodes(days) puts every afternoon node on the trail (once the hidden boss has turned the hole into ground, the trail still leads to where it stood); the rest lie at random over the map.")] public int trailNodes = 10;
         [Min(0f), Tooltip("Cells from the base that the trail's farthest node reaches on day 1.")] public float trailReach = 36f;
@@ -209,16 +209,16 @@ namespace AnomalyArena
         public int FuelNeed => fuelUnits * darkPerFuelUnit;
         public int RoomRepairCost(int level, int day) => roomRepair + roomRepairPerLevel * level + roomRepairPerDay * Mathf.Max(0, day);
         public int ControlRepairCost(int day) => controlRepair + controlRepairPerDay * Mathf.Max(0, day);
-                                                                                                                                                               
+        /// <summary>The table's wave number (from 1) of a day's k-th wave (k from 0): day d, wave k is ((d - 1) x wavesPerDay + k + 1) x waveStride.</summary>
         public int WaveNumber(int day, int waveOfDay) => ((Mathf.Max(1, day) - 1) * wavesPerDay + waveOfDay + 1) * Mathf.Max(1, waveStride);
         public int ShieldTopUpCost(int day) => shieldTopUpCost + shieldTopUpCostPerDay * Mathf.Max(0, day);
-                                                                                                                                                    
+        /// <summary>A room purchase's price after `bought` earlier purchases of the same kind: the base price plus one step per purchase.</summary>
         public static CampaignCost Rising(CampaignCost price, CampaignCost step, int bought)
         {
             int n = Mathf.Max(0, bought);
             return new CampaignCost(price.alloy + step.alloy * n, price.energy + step.energy * n, price.dark + step.dark * n);
         }
-                                                                                                                
+        /// <summary>The price of the level after `level` (buying level 2 when the player is level 1).</summary>
         public CampaignCost PlayerLevelCost(int level)
         {
             int steps = Mathf.Max(0, level - 1);

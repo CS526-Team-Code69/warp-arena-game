@@ -5,7 +5,7 @@ using UnityEngine.InputSystem;
 
 namespace AnomalyArena
 {
-                                                                                                     
+    /// <summary>Coordinates saved geometry, gravity, portals and the saved trial platform.</summary>
     [DefaultExecutionOrder(200)]
     public sealed partial class WorldMap : MonoBehaviour
     {
@@ -16,8 +16,8 @@ namespace AnomalyArena
         public Transform[] biomeWallGroups;
         public Renderer floorRenderer;
         public BlackHole[] holes;
-        [Header("Add black-hole suction audio.")]
-        [Tooltip("Additional attraction width for permanent map holes; temporary skill holes retain their settings.")] public float mapGravityExtraCells = 1f;
+        [Header("黑洞调整")]
+        [Tooltip("只给固定地图洞增加的引力圈宽度；临时技能洞保留原配置。")] public float mapGravityExtraCells = 1f;
         public float mapHolePullSpeed = 6f;
         [SerializeField] int feedbackPatchRevision;
         public int FeedbackPatchRevision => feedbackPatchRevision;
@@ -43,7 +43,7 @@ namespace AnomalyArena
         public Transform decoy;
         public Transform trialDecoy;
         int TemporaryHoleCount => 1 + (TrialActive ? (trialExtraTemporaryHoles?.Length ?? 0) + bossHoles.Length : extraTemporaryHoles?.Length ?? 0);
-                                                                                                   
+        // The Prophet's slots come last in TemporaryHoleAt; the player's own holes never use them.
         int PlayerHoleCount => TemporaryHoleCount - (TrialActive ? bossHoles.Length : 0);
         BlackHole TemporaryHoleAt(int index)
         {
@@ -59,8 +59,8 @@ namespace AnomalyArena
         }
         Transform ActiveDecoy => TrialActive ? trialDecoy : decoy;
         public bool DecoyActive => ActiveDecoy && ActiveDecoy.gameObject.activeSelf;
-                                                                                                                                        
-                                                                    
+        /// <summary>Where enemies go: while the player cannot be targeted (Void Walk) the place the void state began,
+        /// else a standing Mirror Image, else the player.</summary>
         public Vector3 EnemyTarget => PlayerHidden ? GM.skills.VoidWalkStart : DecoyActive ? ActiveDecoy.position : GM.player.Position;
         public bool PlayerHidden => GM && GM.skills && GM.skills.PlayerUntargetable;
         public float trialRadius = 12f;
@@ -71,8 +71,8 @@ namespace AnomalyArena
         public event Action VoidTrialEntered;
         public event Action VoidTrialWon;
         public event Action<BlackHole> HoleFed;
-                                                                                                                                  
-                                                                                                                                      
+        // Document 12 teaching moment, played as a short cutscene the first time a black hole is in view during a wave: the world
+        // freezes, the view glides onto the hole, three reward-less fodder spiral in and the counter reads 3 / 40, then play resumes.
         enum HoleIntroStage { Idle, Approach, Pull, Hold, Done }
         sealed class IntroFodder { public Enemy body; public float angle, startRadius, radius, fedAt; public bool fed, gone; public Vector3 scale; }
         HoleIntroStage holeIntroStage;
@@ -90,7 +90,7 @@ namespace AnomalyArena
                 return true;
             }
         }
-                                                                                                                      
+        /// <summary>A portal is open somewhere on the map (the build phase may enter the trial through it).</summary>
         public bool HasOpenPortal
         {
             get { foreach (var hole in holes) if (hole && hole.Phase == HolePhase.Portal) return true; return false; }
@@ -111,17 +111,31 @@ namespace AnomalyArena
         readonly List<Combatant> characters = new List<Combatant>();
         static GameManager GM => GameManager.Instance;
 
+        /// <summary>The open mode's map pick for the next scene load (Biome.Dunes or Biome.Ruins; null picks at random as before). The map
+        /// is laid here in Awake, so a pick other than the map already laid reloads the scene (GameManager, ArenaUiCommand.ChooseMap); the
+        /// next Awake takes the pick and clears it.</summary>
+        public static string NextMapFamily { get; set; }
+
+        /// <summary>The laid map's place in biomes, or -1.</summary>
+        public int BiomeIndex => biomes != null && biome ? Array.IndexOf(biomes, biome) : -1;
+
+        // The editor keeps statics from one play to the next (domain reload is off).
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetMapPick() => NextMapFamily = null;
+
         void Awake()
         {
             Active = this;
             if (biomes != null && biomes.Length > 0)
             {
-                int chosen = Biome.PickForRun(biomes);                                                                   
+                // Only the Dunes and the Ruins are in rotation (system doc 12.2); the open mode may ask for one of them.
+                int chosen = Biome.PickForRun(biomes, NextMapFamily);
+                NextMapFamily = null;
                 biome = biomes[chosen];
                 layout = biome.layout;
                 for (int i = 0; i < biomeWallGroups.Length; i++) biomeWallGroups[i].gameObject.SetActive(i == chosen);
-                if (chosen < biomeWallGroups.Length) LayoutWalls.Fill(biomeWallGroups[chosen], layout);                                                     
-                biome.ApplyLighting();                                                                     
+                if (chosen < biomeWallGroups.Length) LayoutWalls.Fill(biomeWallGroups[chosen], layout); // walls the layout gained after the scene was saved
+                biome.ApplyLighting(); // daytime on every map for now; night comes later
                 if (floorRenderer && biome.floor)
                 {
                     var surface = floorRenderer.GetComponent<V2SurfaceArt>();
@@ -148,9 +162,9 @@ namespace AnomalyArena
             PlaceHolesAtAnchors();
             Grid.Rebuild(this);
             Quicksand.Build(this);
-                                                                                                                                           
-                                                                                                                                           
-                                                                                                                  
+            // The trial platform is a cylinder flattened into a disc. Its default CapsuleCollider, scaled that way, turns into a sphere as
+            // wide as the platform: a body set down on the disc starts inside it and is pushed out over the edge, where it falls. The disc
+            // stands on a box of the same size instead; the edge rule in FixedUpdate still decides who falls off.
             if (trialPlatform && trialPlatform.TryGetComponent(out CapsuleCollider capsule))
             {
                 var box = trialPlatform.gameObject.AddComponent<BoxCollider>();
@@ -172,11 +186,11 @@ namespace AnomalyArena
             SkillWorldAPI.SkillObjectStanding = SkillObjectStanding;
         }
 
-                                                                                                                                         
-                                    
+        /// <summary>Both map holes start fresh on two different anchors of the layout, picked at random (Awake; RestoreLayout after a V2
+        /// campaign map).</summary>
         void PlaceHolesAtAnchors()
         {
-                                                                                                                                        
+            // Null-safe since 2026-11-06: RestoreLayout (WorldMap.Campaign.cs) also calls this, possibly while the scene is going away.
             foreach (var hole in holes) if (hole) hole.ResetHole();
             if (layout && layout.holeAnchors != null && layout.holeAnchors.Length >= 2 && holes.Length >= 2 && holes[0] && holes[1])
             {
@@ -190,7 +204,7 @@ namespace AnomalyArena
         void OnDestroy()
         {
             if (Active == this) Active = null;
-            ForgetCampaignMap();                                                                        
+            ForgetCampaignMap(); // V2 day campaign: its runtime layout and hooks (WorldMap.Campaign.cs)
         }
 
         public bool Contains(Vector3 point, float margin = 0f) => Mathf.Abs(point.x) <= Bounds.extents.x - margin && Mathf.Abs(point.z) <= Bounds.extents.z - margin;
@@ -220,14 +234,14 @@ namespace AnomalyArena
             return pull;
         }
         public bool IsWalkable(Vector3 point, float radius = 0.5f, bool allowGravity = false) => Contains(point, radius) && !IsWall(point, radius) && !IsHole(point) && (allowGravity || GetPull(point).sqrMagnitude < 0.01f);
-                                                                                                                                           
-                                                                                                                                           
+        /// <param name="followIntoGravity">Enemy.FollowingIntoGravity (document 9.4): a fast kind while what the enemies chase stands in a
+        /// gravity ring. Then a path to a target inside a ring may cross into it; otherwise it ends at the nearest ground outside.</param>
         public Vector3 GetChaseDirection(Vector3 position, Vector3 target, bool followIntoGravity)
         {
             if (TrialActive) return Query.Flat(target - position).normalized;
             Vector3 pull = GetPull(position);
             if (pull.sqrMagnitude > 0.01f && GetPull(target).sqrMagnitude < 0.01f)
-                return -pull.normalized;                                                                
+                return -pull.normalized; // A displaced enemy chooses the shortest escape from the zone.
             bool allow = followIntoGravity && GetPull(target).sqrMagnitude > 0.01f;
             return Grid.Direction(position, target, allow);
         }
@@ -238,8 +252,8 @@ namespace AnomalyArena
             lastCell = -1;
         }
 
-                                                                                                                                          
-                                                                                                                           
+        /// <summary>V2 day campaign: the base and the ship pad stand as walls (paths, spawns, knockback and line of sight treat them so);
+        /// the first rect is the base, which raiders reach through their own flow field (MapGrid.IntegrateRaid).</summary>
         readonly List<Rect> extraWalls = new();
         public void SetExtraWalls(IList<Rect> rects)
         {
@@ -253,12 +267,12 @@ namespace AnomalyArena
         {
             if (!GM || !GM.player) return;
             TickHoleIntro();
-            if (CampaignMapApplied) TickCampaignWorld();                                                                                
-                                                                                                                                      
+            if (CampaignMapApplied) TickCampaignWorld(); // V2 day campaign: the side quest and a confirmed entry (WorldMap.Campaign.cs)
+            // The build phase turns its holes with the panel open as well (GameManager.BuildTimeFlows); E still needs the panel away.
             if (GM.IsCombatActive || GM.CanPlayerMove || GM.BuildTimeFlows)
             {
                 float dt = GM.WorldDeltaTime;
-                                                                                                  
+                // The original battlefield remains frozen while trial-only effects can still run.
                 if (!TrialActive) foreach (var hole in holes) hole.Tick(dt);
                 for(int i=0;i<TemporaryHoleCount;i++){var hole=TemporaryHoleAt(i);if(hole&&hole.gameObject.activeSelf)hole.Tick(dt);}
                 int index = Grid.Index(GM.player.Position);
@@ -277,15 +291,15 @@ namespace AnomalyArena
 
         const float HoleIntroApproach = .9f, HoleIntroSpiral = 2.4f, HoleIntroStagger = .45f, HoleIntroSink = .6f, HoleIntroHold = 1.6f, HoleIntroZoom = .62f;
 
-                                                                                                                                       
-                                                                                               
+        /// <summary>Cutscene driver on unscaled time: trigger on first sight, glide in, spiral the fodder into the hole, sink each one
+        /// as it is counted, hold on the counter, then hand play back. Once per run.</summary>
         void TickHoleIntro()
         {
             if (holeIntroStage == HoleIntroStage.Done) return;
             if (holeIntroStage == HoleIntroStage.Idle)
             {
-                                                                                                                                          
-                                                                                                                                       
+                // V2 day campaign (since 2026-11-06): the campaign says when its hole may play this (by day or in the afternoon, while it
+                // is out), and the hole's count may already have begun. The classic run keeps its own rule: mid-wave, the first sight.
                 if (CampaignMapApplied) { if (TrialActive || campaignHoleIntroAllowed == null || !campaignHoleIntroAllowed()) return; }
                 else if (TrialActive || !GM.IsCombatActive || GM.waves.Phase != WavePhase.WaveActive) return;
                 BlackHole seen = null;
@@ -303,7 +317,7 @@ namespace AnomalyArena
                     if (!Contains(at, .5f) || IsWall(at, .5f)) continue;
                     var body = CampaignMapApplied ? SpawnCampaignIntroFodder(at) : GM.waves.SpawnIntroFodder(at);
                     if (!body) continue;
-                    body.enabled = false;                                                               
+                    body.enabled = false; // No chase and no escape: the cutscene moves the body itself.
                     holeIntroFodder.Add(new IntroFodder
                     {
                         body = body, angle = Mathf.Atan2(dir.x, dir.z), startRadius = startRadius, radius = startRadius,
@@ -335,7 +349,7 @@ namespace AnomalyArena
                     allGone = false;
                     if (f.fed)
                     {
-                                                                                                                               
+                        // Counted: keep turning while sinking and shrinking, then end the fall so nothing lingers in the hole.
                         float k = Mathf.Clamp01((holeIntroClock - f.fedAt) / HoleIntroSink);
                         f.angle += dt * 5f;
                         MoveBody(f.body, holeIntroHole.Centre + Orbit(f.angle) * (f.radius * (1f - k)) + Vector3.down * (1.2f * k));
@@ -359,8 +373,8 @@ namespace AnomalyArena
 
         static Vector3 Orbit(float angle) => new(Mathf.Sin(angle), 0f, Mathf.Cos(angle));
 
-                                                                                                                                       
-                                                           
+        /// <summary>Ends the cutscene at once, counting what is left (the enemy lab and tests). No player input calls it: the cutscene
+        /// cannot be skipped.</summary>
         public void SkipHoleIntro()
         {
             if (!HoleIntroPlaying) return;
@@ -384,7 +398,7 @@ namespace AnomalyArena
         void FinishHoleIntro()
         {
             holeIntroStage = HoleIntroStage.Done;
-            foreach (var f in holeIntroFodder) if (f.body) f.body.enabled = true;                                                     
+            foreach (var f in holeIntroFodder) if (f.body) f.body.enabled = true; // A fall still running completes under normal time.
             holeIntroRig?.ClearFocus(.8f);
             GM.EndCutscene();
             HoleIntroFinished?.Invoke();
@@ -404,13 +418,13 @@ namespace AnomalyArena
             if (remaining > 0f) return;
             if (endBlast) foreach (var victim in Query.Characters(visual.position, 3f)) if (victim.Team == Team.Enemy) victim.ReceiveDamage(DamageInfo.Attack(8f, owner, victim.Position - visual.position, 5f, HitKind.Blast));
             visual.gameObject.SetActive(false);
-                                                                                                                            
+            // Mirror Image level 3 listens for the natural end of the decoy; wave cleanup deactivates it without this call.
             SkillWorldAPI.DecoyEnded?.Invoke(visual.position);
         }
 
         void FixedUpdate()
         {
-                                                                                                                                     
+            // The build phase pulls and swallows with the panel open as well (GameManager.BuildTimeFlows), exactly as while walking.
             if (!GM || (!GM.IsCombatActive && !GM.CanPlayerMove && !GM.BuildTimeFlows) || !GM.player) return;
             characters.Clear();
             characters.Add(GM.player);
@@ -421,10 +435,10 @@ namespace AnomalyArena
                 if (SkillWorldAPI.HoleProtection != null && SkillWorldAPI.HoleProtection(combatant)) continue;
                 if (TrialActive)
                 {
-                    TickTrialBody(combatant);                                                                                     
+                    TickTrialBody(combatant); // the void, fragments, holes, the Prophet's pull and the portals: WorldMap.Trial.cs
                     continue;
                 }
-                                                                                                         
+                // Launch Yourself Tame: no hole drags or swallows the flying missile.
                 if (MissileHoleProof(combatant)) continue;
                 bool swallowed = false;
                 foreach (var hole in holes)
@@ -436,24 +450,24 @@ namespace AnomalyArena
                     swallowed = true;
                     break;
                 }
-                                                                                
+                // Pocket Void swallows everything except bosses (document 8.4).
                 if (!swallowed && IsTemporaryHole(combatant.Position,combatant) && !(combatant is Enemy { IsBoss: true })) { SwallowIntoVoid(combatant); swallowed = true; }
-                                                                                                                                
+                // Bosses ignore black-hole pull (document 12.3: the Nash Prophet and the Tyrant are never pulled or swallowed).
                 if (!swallowed && !(combatant is Enemy { IsBoss: true })) ApplyHolePull(combatant);
             }
             TickCorpses(GM.WorldFixedDeltaTime);
-                                                                                                             
+            // Existing projectile prefabs remain editable; entering a circular black-hole core loses a shot.
             if (AttackPool.Instance)
                 foreach (var projectile in AttackPool.Instance.actors)
                     if (projectile && projectile.gameObject.activeSelf && projectile.AffectedByHoles && IsHole(projectile.transform.position)) projectile.SwallowedByHole();
         }
 
-                                                                                                                                                
-                                                                                                                          
+        /// <summary>Launch Yourself Tame (Q25): the player flying the tamed missile is out of reach of every black hole (map,
+        /// void-trial and their own Pocket Void); the void off the trial platform and map gaps still take them.</summary>
         static bool MissileHoleProof(Combatant combatant) => combatant == GM.player && GM.runWeapons && GM.runWeapons.MissileHoleProof;
 
-                                                                                                                                                
-                                                                                                                                                          
+        /// <summary>Chain Blade (Q18): a drag from 'from' to 'at' would take the body into a hole's core, into a pull ring it
+        /// is outside of, or nearer the core of a ring it is already in. Each hole is asked on its own, so overlapping pulls cannot cancel out.</summary>
         public bool DragIntoHole(Vector3 from, Vector3 at, Combatant actor)
         {
             foreach (var hole in holes) if (DragInto(hole, from, at, actor)) return true;
@@ -463,7 +477,7 @@ namespace AnomalyArena
         static bool DragInto(BlackHole hole, Vector3 from, Vector3 at, Combatant actor) => hole.Contains(at, actor) || hole.Pull(at, actor).sqrMagnitude > .01f
             && (hole.Pull(from, actor).sqrMagnitude <= .01f || Query.Flat(at - hole.Centre).sqrMagnitude < Query.Flat(from - hole.Centre).sqrMagnitude);
 
-                                                                                                                                                  
+        /// <summary>A temporary (Pocket Void) hole: swallowed enemies still pay their experience straight to the player (document 8.4).</summary>
         void SwallowIntoVoid(Combatant combatant)
         {
             if (combatant is Enemy enemy && enemy.IsAlive && !enemy.SuppressRewards && !enemy.IsTrialSummon && GM.progression && GM.waves)
@@ -473,9 +487,9 @@ namespace AnomalyArena
 
         static BossTuning BossNumbers => GM && GM.waves && GM.waves.bosses != null ? GM.waves.bosses : BossTuning.Defaults;
 
-                                                                                                                                            
-                                                                                                                                             
-                                                                                                                                                    
+        /// <summary>Void trial: a boss hit pushes the player at most to holeKnockMargin from any open hole. The platform edge does not stop
+        /// it in any phase (the doc dropped "its attacks never push you off"), so the repulse pulse throws a player caught
+        /// in the outer part of its circle into the void and only pushes one close to the Prophet (BossTuning). Off the trial, unchanged.</summary>
         public float LimitBossKnockback(Vector3 from, Vector3 dir, float distance)
         {
             if (!TrialActive || !trialPlatform || distance <= 0f) return distance;
@@ -490,15 +504,15 @@ namespace AnomalyArena
                 Vector3 q = Query.Flat(from - hole.Centre);
                 float r = hole.KillRadius + numbers.holeKnockMargin;
                 float hb = Vector3.Dot(q, dir), hc = q.sqrMagnitude - r * r;
-                if (hc <= 0f) { if (hb < 0f) distance = 0f; continue; }                                           
+                if (hc <= 0f) { if (hb < 0f) distance = 0f; continue; } // already within the margin: never closer
                 float disc = hb * hb - hc;
-                if (hb >= 0f || disc < 0f) continue;                                
+                if (hb >= 0f || disc < 0f) continue; // moving away or passing clear
                 distance = Mathf.Min(distance, Mathf.Max(0f, -hb - Mathf.Sqrt(disc)));
             }
             return Mathf.Max(0f, distance);
         }
 
-                                                                                                                                                         
+        /// <summary>Opens a prophecy landing hole in one of the Prophet's own slots (no gravity ring); the oldest is reused when all are open.</summary>
         public void CreateBossHole(Vector3 at, float diameter, float life, Combatant owner)
         {
             if (!TrialActive) return;
@@ -521,11 +535,11 @@ namespace AnomalyArena
             var body = combatant.GetComponent<Rigidbody>();
             if (body && !body.isKinematic) body.linearVelocity += pull * (combatant.Team == Team.Player ? 1f : GM.WorldTimeScale);
         }
-                                                                                                                                      
-                                                                                                       
+        // Design document 4.4: the pull is a plain velocity (8 cells/s on the fixed holes), so walking (6) loses 2 cells/s and only a
+        // sprint (12) gets out at 4 cells/s; there is no extra rule holding a walking player in place.
         void ApplyHolePull(Combatant combatant)
         {
-                                                                                                                                                       
+            // Spin-up Tame: braced against a wall at full spin, the player is not dragged by a black hole (walking into its core still swallows them).
             if (combatant == GM.player && GM.runWeapons && GM.runWeapons.Anchored) return;
             ApplyPull(combatant,GetPull(combatant.Position,combatant));
         }
@@ -551,16 +565,16 @@ namespace AnomalyArena
             if(!hole.Temporary&&CanFeed){hole.Feed(1,GM.waves.WaveIndex+1);HoleFed?.Invoke(hole);}
         }
 
-                                                                                                                                             
-                                                                                                                                            
-                                                                                                 
+        /// <summary>E on an open portal (document 12.5): the player must stand on it in the normal state, during a wave or
+        /// while walking the build phase with the panel put away (Tab). No phase enters a portal from a distance. In the void trial E takes
+        /// the trial portal the player stands on by the same rule (WorldMap.Trial.cs).</summary>
         public bool TryEnterPortal(PlayerController player)
         {
             if (TrialActive) return TryTakeTrialPortal(player);
             foreach (var hole in holes)
             {
                 if (!CanEnterPortal(player, hole)) continue;
-                                                                                                                                  
+                // V2 day campaign (since 2026-11-06): the campaign asks first; a yes enters on a later frame (TickCampaignWorld).
                 if (CampaignMapApplied && campaignConfirmPortal != null) { AskCampaignPortal(hole); return true; }
                 enteredHole = hole;
                 BeginTrial(player, hole.Centre, false);
@@ -568,19 +582,19 @@ namespace AnomalyArena
             }
             return false;
         }
-                                                                                                                                       
-                                                                                                                                                     
+        /// <summary>Whether E takes the player through this hole right now; the portal label offers E only then. The normal state also
+        /// means free to act (document 4.5): not stunned, frozen or caught in a paralysis twitch, so no stun is carried onto the platform.</summary>
         public bool CanEnterPortal(PlayerController player, BlackHole hole)
         {
             if (!player || !hole || hole.Phase != HolePhase.Portal || TrialActive || TrialWon) return false;
             if (player.State != CharacterState.Normal || player.ActionsBlocked) return false;
-                                                                                                                             
+            // V2 day campaign (since 2026-11-06): by day and in the afternoon, as the campaign says (CampaignPortalOpenNow).
             if (CampaignMapApplied) { if (!CampaignPortalOpenNow) return false; }
             else if (!GM.BuildWalking && !GM.BuildCrateWalking && (!GM.IsCombatActive || GM.waves.Phase != WavePhase.WaveActive)) return false;
             return Mathf.Abs(player.Position.x - hole.Centre.x) <= 0.5f && Mathf.Abs(player.Position.z - hole.Centre.z) <= 0.5f;
         }
-                                                                                                                                          
-                                                                                                                                                 
+        /// <summary>Enemy lab: the void trial against the Hollow at once, without feeding a portal open. A win still gives its reward but
+        /// leaves the black holes and the trial itself as they were, so the player returns to where they stood and can fight it again.</summary>
         public bool EnterLabTrial(PlayerController player)
         {
             if (!player || TrialActive || TrialWon || !hollow || !trialPlatform || !GM.IsCombatActive || GM.waves.Phase != WavePhase.WaveActive) return false;
@@ -594,7 +608,7 @@ namespace AnomalyArena
             returnPoint = returnTo;
             frozen.Clear();
             foreach (var enemy in GM.waves.Alive) if (enemy && enemy.gameObject.activeSelf) Freeze(enemy.gameObject);
-                                                                                                                  
+            // Also freeze delayed death effects (Bloater is already removed from Alive before becoming a corpse).
             foreach(var enemy in GM.waves.preparedEnemies)if(enemy&&enemy.gameObject.activeSelf)Freeze(enemy.gameObject);
             if (AttackPool.Instance) foreach (var projectile in AttackPool.Instance.actors) if (projectile && projectile.gameObject.activeSelf) Freeze(projectile.gameObject);
             foreach (var bolt in GM.waves.preparedBolts) if (bolt.gameObject.activeSelf) Freeze(bolt.gameObject);
@@ -606,7 +620,7 @@ namespace AnomalyArena
             trialPlatform.gameObject.SetActive(true);
             trialPlatform.localScale = new Vector3(trialRadius * 2f, trialPlatform.localScale.y, trialRadius * 2f);
             MovePlayer(player, trialPlatform.position + Vector3.back * trialEntryDistance);
-                                                                                  
+            // Document 12.5: entering clears every status and empties the shield.
             var status = ElementStatus.For(player);
             if (status) { status.ClearStatuses(); status.SetShield(0f); }
             hollow.gameObject.SetActive(true);
@@ -617,14 +631,15 @@ namespace AnomalyArena
             hollow.SuppressRewards = true;
             hollow.BeginProphetFight();
             if (!hollow.GetComponent<V2ProphetTrialMarks>()) hollow.gameObject.AddComponent<V2ProphetTrialMarks>();
-            BuildTrialTerrain();                                                                                
+            BuildTrialTerrain(); // the fragments round the platform and the portals to them (WorldMap.Trial.cs)
             GM.waves.TrackBoss(hollow);
-            if (GM.hud) GM.hud.Banner(ArenaText.Pair("THE NASH PROPHET","THE NASH PROPHET"),
-                ArenaText.Pair(                    "Stand on a black-hole portal and press E to reach a fragment. While its summons live it takes no damage.",                    "Stand on a black-hole portal and press E to reach a fragment. While its summons live it takes no damage."));
+            // Since 2026-11-10 the banner does not explain the portals: each shows its own E once the player stands on it.
+            if (GM.hud) GM.hud.Banner(ArenaText.Pair("纳什先知", "THE NASH PROPHET"),
+                ArenaText.Pair("它的召唤物活着时，它不会受伤。", "While its summons live it takes no damage."));
             VoidTrialEntered?.Invoke();
         }
-                                                                                                                                      
-                                                                                                                                                 
+        /// <summary>Enemy lab ("player cannot die"): a fall sets the body back on safe ground instead of ending the run. In the trial
+        /// it lands well inside the edge on the side it went over; on the map, just outside the gravity ring of the hole it fell into.</summary>
         public void SetBackOnSafeGround(Combatant body)
         {
             Vector3 at = body.Position;
@@ -641,7 +656,7 @@ namespace AnomalyArena
                     if (!hole || hole.Phase == HolePhase.Gone || Query.Flat(at - hole.Centre).magnitude > hole.GravityRadius) continue;
                     Vector3 away = Query.Flat(at - hole.Centre);
                     if (away.sqrMagnitude < .01f) away = Vector3.back;
-                                                                                                       
+                    // The side it came from first, then around the ring until a spot is free of walls.
                     for (int step = 0; step < 8; step++)
                     {
                         Vector3 spot = ClampPoint(hole.Centre + Quaternion.Euler(0f, 45f * step, 0f) * away.normalized * (hole.GravityRadius + 1.5f), body.Radius);
@@ -683,7 +698,7 @@ namespace AnomalyArena
             if(trialExtraTemporaryHoles!=null)foreach(var hole in trialExtraTemporaryHoles)if(hole)hole.gameObject.SetActive(false);
             TrialActive = false;
             TrialWon = !labTrial;
-                                                                                                                             
+            // Boss shots still flying over the platform end with it; otherwise they would hold pool slots the Spitters need.
             if (GM.waves.preparedBolts != null)
                 foreach (var bolt in GM.waves.preparedBolts)
                     if (bolt && bolt.gameObject.activeSelf && !frozen.Contains(bolt.gameObject)) bolt.gameObject.SetActive(false);
@@ -692,8 +707,8 @@ namespace AnomalyArena
             GM.waves.ResumeAfterTrial();
             MovePlayer(GM.player, returnPoint);
             GM.player.Heal(GM.player.maxHp);
-                                                                                                                                         
-                                                                                                                      
+            // Document 12.4: winning the trial removes every black hole, but only once the player is back and has watched the void power
+            // being absorbed: GameManager calls RemoveHolesAfterTrial when the return freeze ends.
             hollow.gameObject.SetActive(false);
             trialPlatform.gameObject.SetActive(false);
             VoidTrialWon?.Invoke();
@@ -701,7 +716,7 @@ namespace AnomalyArena
         public void OnWaveEnded(int oneBasedWave)
         {
             ClearSavedDeathEffects();
-                                                                                                                                    
+            // V2 day campaign (since 2026-11-06): the hidden gate stays open until the player goes through, however many days pass.
             if (!CampaignMapApplied) foreach (var hole in holes) hole.WaveEnded(oneBasedWave);
             foreach (var wall in temporaryWalls) if (wall) { wall.BattlefieldFrozen = false; wall.gameObject.SetActive(false); }
             if (temporaryHole) temporaryHole.gameObject.SetActive(false);
@@ -713,12 +728,12 @@ namespace AnomalyArena
             if (trialDecoy) trialDecoy.gameObject.SetActive(false);
             HoleChanged();
         }
-                                                                                                                                         
+        /// <summary>After a won trial: every black hole, the portal included, turns back into ordinary ground (document 12.4).</summary>
         public void RemoveHolesAfterTrial()
         {
             if (!TrialWon) return;
             foreach (var hole in holes) if (hole && hole.Phase != HolePhase.Gone) hole.Close();
-            CloseCampaignHoleAfterTrial();                                                                            
+            CloseCampaignHoleAfterTrial(); // V2 day campaign: its hole closes also while it is put away for the night
         }
         public void ClosePortals() { foreach (var hole in holes) if (hole.Phase == HolePhase.Portal || hole.Phase == HolePhase.Collapsing) hole.Close(); }
         public void ClearTemporaryObjects()
@@ -740,8 +755,8 @@ namespace AnomalyArena
             {
                 if(!enemy)continue;
                 if(enemy.CorpseActive)enemy.DespawnCorpse(enemy.SpawnVersion);
-                                                                                             
-                                                                                                 
+                // A dead Bloater delay or a swallowed falling body is not a surviving enemy.
+                // Stop these saved death effects at settlement without another kill/XP callback.
                 else if(enemy.State is CharacterState.Dead or CharacterState.Falling)enemy.DiscardWithoutReward();
             }
         }
@@ -758,9 +773,9 @@ namespace AnomalyArena
             else { decoyLife = life; decoyBlast = explodeAtEnd; decoyOwner = owner; }
             ActiveDecoy.gameObject.SetActive(true);
         }
-                                                                                                                                             
-                                                                                                                                     
-                                                                                                                                  
+        /// <summary>Whether owner's Bulwark wall still stands, its mirror image is still out or its Pocket Void hole is still open where the
+        /// player is now: on the battlefield, or in the void trial while it runs (battlefield ones held for the trial do not count).
+        /// SkillLoadout asks before a cast: a skill cannot be cast again while its own effect lasts.</summary>
         public bool SkillObjectStanding(SkillId skill, Combatant owner) => owner && skill switch
         {
             SkillId.Bulwark => WallStanding(owner),
@@ -775,8 +790,8 @@ namespace AnomalyArena
                     if (wall && wall.gameObject.activeSelf && !wall.BattlefieldFrozen && wall.Owner == owner) return true;
             return false;
         }
-                                                                                                                                            
-                                                                                                                                   
+        /// <summary>Only a boss breaks a Bulwark wall (document 0262): every standing one touched says yes goes at once, whole, as when its
+        /// time is up, with a puff of rubble. Battlefield walls held for the trial do not count. Returns how many broke.</summary>
         public int BreakBulwarks(Func<TemporaryWall, bool> touched)
         {
             int broken = 0;
@@ -792,8 +807,8 @@ namespace AnomalyArena
             if (broken > 0) HoleChanged();
             return broken;
         }
-                                                                                                                                                                                                      
-                                              
+        /// <summary>The Nash Prophet's repulse pulse (document 7.4: only a boss breaks a Bulwark): every Bulwark wall any part of which lies within radius of centre,
+        /// seen from above, breaks.</summary>
         public int BreakBulwarksWithin(Vector3 centre, float radius) => BreakBulwarks(wall =>
         {
             Vector3 c = Query.Flat(centre);
@@ -831,7 +846,7 @@ namespace AnomalyArena
         {
             if (TrialActive)
             {
-                                                                                                                       
+                // A point on a fragment stays where it is; anything else in the trial is drawn back onto the platform.
                 if (!OnTrialGround(desired, .5f))
                     desired = trialPlatform.position + Vector3.ClampMagnitude(Query.Flat(desired-trialPlatform.position),Mathf.Max(0f,trialRadius-.5f));
             }

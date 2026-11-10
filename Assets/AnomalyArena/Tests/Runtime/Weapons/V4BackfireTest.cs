@@ -6,11 +6,11 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>Weapon backfires as the 10-21 design states them, plus the player-side status rules.</summary>
     [TestFixture]
     public class V4BackfireTest
     {
-        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
 
         [TearDown]
         public void RestoreClock() => Time.timeScale = 1f;
@@ -74,9 +74,10 @@ namespace AnomalyArena
             game.runWeapons.HandleInput(true, true, false);
             await Awaitable.NextFrameAsync();
 
+            // The shards are flying projectiles now; the patches appear where they land.
             Assert.That(AttackPool.Instance.actors.Count(a => a && a.gameObject.activeSelf && a.mode == AttackMode.Shard), Is.EqualTo(3), "three shards are in flight");
             await Until(() => game.runWeapons.Hazards.Count(h => h.kind == GroundHazardKind.IcePatch) == 3, 2f, "the three shards land");
-
+            // 2026-10-23 card redesign: tamed shards still leave patches; they chill enemies instead of you (ElementWeaponCardsTest).
             var tamed = Equip(game, WeaponForm.CryoCannon, 0, UpgradeAxis.Tame);
             game.runWeapons.HandleInput(true, true, false);
             await Until(() => !AttackPool.Instance.actors.Any(a => a && a.gameObject.activeSelf && a.mode == AttackMode.Shard), 2f, "the tamed shards land");
@@ -93,6 +94,7 @@ namespace AnomalyArena
             var rail = Equip(game, WeaponForm.Railgun, 1);
             float cycle = weapons.CycleSeconds(rail);
 
+            // Document 5.5: a miss kills nothing, so the charge comes back into you and the gun cools down long.
             player.DebugSetAim(Vector3.back);
             float hp = player.Hp;
             weapons.HandleInput(true, true, false);
@@ -100,6 +102,7 @@ namespace AnomalyArena
             Assert.That(rail.cooldown, Is.EqualTo(cycle * tuning.executeMissCooldown).Within(.05f), "and forces the long cooldown");
             Assert.That(weapons.GetCooldownDuration(rail), Is.EqualTo(rail.cooldown).Within(.05f), "the slot bar spans the long cooldown");
 
+            // A hit that leaves a non-boss enemy over the line kills nothing either.
             player.DebugSetAim(Vector3.forward);
             rail.cooldown = 0f; rail.holeReturnSpan = 0f;
             hp = player.Hp;
@@ -108,6 +111,7 @@ namespace AnomalyArena
             Assert.That(player.Hp, Is.EqualTo(hp - tuning.executeSelfShock).Within(.01f), "a hit that kills nothing shocks you too");
             Assert.That(rail.cooldown, Is.EqualTo(cycle * tuning.executeMissCooldown).Within(.05f));
 
+            // The shot itself leaves 20% HP: under the 40% line, so the kill comes from the execute.
             var victim = targets[0];
             LeaveHp(victim, weapons.HitDamage(rail) + victim.maxHp * .2f);
             rail.cooldown = 0f; rail.holeReturnSpan = 0f;
@@ -164,16 +168,16 @@ namespace AnomalyArena
             var (game, targets) = await V3CombatSmokeTest.StartSandbox();
             var tuning = game.runWeapons.upgrades;
             var player = game.player;
-
+            // With the Reach card: it grows the blast, not the shell fires (a trait area, like the ice patches).
             var blast = Equip(game, WeaponForm.ScatterCannon, 0, UpgradeAxis.Reach);
-            blast.element = ElementKind.Frost;                                                                      
+            blast.element = ElementKind.Frost; // the shell fire carries the shotgun's own element
             var cycle = game.runWeapons.CycleSeconds(blast) / game.runWeapons.roster.Get(WeaponForm.ScatterCannon).cooldownA;
             float tick = game.runWeapons.HitDamage(blast) * tuning.scatterShellShare;
             Vector3 origin = player.Position, right = Vector3.Cross(Vector3.up, Vector3.forward);
             blast.rounds = 1;
 
             game.runWeapons.HandleInput(true, true, false);
-
+            // The jam is gone: every reload is the plain reload.
             Assert.That(blast.reload, Is.EqualTo(tuning.scatterReload * cycle).Within(.01f), "no repair time is ever added");
             var shells = game.runWeapons.Hazards.Where(h => h.kind == GroundHazardKind.ScatterShell).ToArray();
             Assert.That(shells.Length, Is.EqualTo(2), "two shells land");
@@ -182,6 +186,7 @@ namespace AnomalyArena
                     $"one {tuning.scatterShellSide} cells to the {(side < 0 ? "left" : "right")} of the aim");
             Assert.That(AttackPool.Instance.actors.Any(a => a && a.gameObject.activeSelf && a.weapon == blast), Is.False, "nothing burns before the fuse");
 
+            // An enemy standing on the right shell; you stand still between them.
             var enemy = targets[0];
             targets[1].DiscardWithoutReward(); targets[2].DiscardWithoutReward();
             V3CombatSmokeTest.Teleport(enemy, origin + right * tuning.scatterShellSide);
@@ -198,6 +203,7 @@ namespace AnomalyArena
             Assert.That(frost.Frost > 0f || frost.Frozen, Is.True, "with the shotgun's element");
             Assert.That(player.Hp, Is.EqualTo(hp), "you stood between the shells, off both fires");
 
+            // Step onto the left one: it burns you too, for the flat backfire value (a scaled hit would cost at least 1 a tick).
             V3CombatSmokeTest.Teleport(player, origin - right * tuning.scatterShellSide);
             Physics.SyncTransforms();
             float stepped = Time.time;
@@ -220,6 +226,7 @@ namespace AnomalyArena
             focus.charge = 1f;
             game.runWeapons.HandleInput(false, false, true);
 
+            // Document 4.4: the recoil still pushes you back, but it is never a knockback, so a wall cannot hurt you.
             Assert.That(game.player.State, Is.EqualTo(CharacterState.Normal), "the recoil is a push, not a knockback");
             Assert.That(focus.burstLeft, Is.EqualTo(game.runWeapons.upgrades.focusPellets - 1), "the first bolt leaves at once");
             await Until(() => focus.burstLeft == 0 && !AttackPool.Instance.actors.Any(a => a && a.gameObject.activeSelf && a.weapon == focus), 3f, "the burst lands");
@@ -233,6 +240,8 @@ namespace AnomalyArena
             Assert.That(game.player.State, Is.EqualTo(CharacterState.Normal), "the tamed recoil is a push too");
         }
 
+        // Document 5.5, Q10: a kill no longer cuts the bounce short, and every return (not only a kill's) cuts the
+        // thrower standing on its path, once, for the base value; tamed, it spares them.
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task ThrowingKnife_KillsTarget_BouncesOnAndTheReturnCutsShooterUnlessTamed()
         {
@@ -243,7 +252,7 @@ namespace AnomalyArena
 
             game.runWeapons.HandleInput(true, true, false);
             float cut = AttackPool.Instance.actors.Single(a => a && a.gameObject.activeSelf && a.weapon == knife).ownerDamage
-                * game.runWeapons.StartingFormDamageFactor(WeaponForm.Knife);                                                                                       
+                * game.runWeapons.StartingFormDamageFactor(WeaponForm.Knife); // Q105: a starting form's backfire takes the starting-form factor.
             await Until(() => !knife.inFlight, 4f, "the knife comes back");
 
             Assert.That(targets[0].IsAlive, Is.False, "the knife kills the weak target");
@@ -267,16 +276,17 @@ namespace AnomalyArena
             var player = game.player;
             player.DebugSetAim(Vector3.back);
             ElementStatus.For(player).SetShield(0f);
-
+            // An enemy beside you, inside the mist (the needles fly the other way).
             var beside = targets[0];
             V3CombatSmokeTest.Teleport(beside, player.Position + Vector3.right * (player.radius + beside.radius + .05f));
             Physics.SyncTransforms();
             var gun = Equip(game, WeaponForm.SporeLauncher, 1);
-            gun.element = ElementKind.Poison; gun.builtInElement = true;                          
+            gun.element = ElementKind.Poison; gun.builtInElement = true; // as the armory gives it
             var status = ElementStatus.For(player);
             status.ClearStatuses();
             float hp = player.Hp;
 
+            // Firing alone costs nothing any more (the old HP cost per needle is gone).
             gun.rounds = 3;
             for (int i = 0; i < 2; i++) { gun.cooldown = 0f; game.runWeapons.HandleInput(true, true, false); }
             Assert.That(player.Hp, Is.EqualTo(hp), "needles before the clip runs out cost nothing");
@@ -305,7 +315,8 @@ namespace AnomalyArena
         public async Task ReverseShot_Tamed_StillFiresFromYourBackAtTheTargetBehind()
         {
             var (game, targets) = await V3CombatSmokeTest.StartSandbox();
-
+            // Document 5.8: Tame keeps the backfire. Aiming away from the lane leaves nobody close in front, so the
+            // round leaves from your back into the lane.
             game.player.DebugSetAim(Vector3.back);
             var rifle = Equip(game, WeaponForm.Rifle, 1, UpgradeAxis.Tame);
 

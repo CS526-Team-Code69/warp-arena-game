@@ -1,0 +1,13 @@
+received_at,event,run_id,session_id,edition,build,day,overtime,reached_dawn,end_stage,end_cause,kills,player_damage,player_damage_pct,player_hits,base_damage,base_damage_hp,base_hp,base_shield,base_max_hp,earned_alloy,earned_energy,earned_dark,spent_alloy,spent_energy,spent_dark,alloy,energy,dark,night_death,lost_alloy,lost_energy,lost_dark,shadows,overrun_regions,repairs
+2026-11-10 20:01:00,v2_day,a,s1,en,1.0.0+test,0,FALSE,TRUE,,,4,10,10,2,0,0,1000,0,1000,30,0,0,0,0,0,30,0,0,FALSE,0,0,0,0,0,0
+2026-11-10 20:02:00,v2_day,a,s1,en,1.0.0+test,1,FALSE,TRUE,,,4,10,10,2,0,0,1000,0,1000,30,0,0,0,0,0,30,0,0,FALSE,0,0,0,0,0,0
+2026-11-10 20:03:00,v2_day,a,s1,en,1.0.0+test,2,FALSE,TRUE,,,4,10,10,2,0,0,1000,0,1000,30,0,0,0,0,0,30,0,0,TRUE,0,0,0,0,0,0
+2026-11-10 20:04:00,v2_day,a,s1,en,1.0.0+test,3,FALSE,FALSE,night,base_destroyed,4,10,10,2,0,0,1000,0,1000,30,0,0,0,0,0,30,0,0,FALSE,0,0,0,0,0,0
+2026-11-10 20:05:00,v2_day,b,s2,zh,1.0.0+test,0,FALSE,TRUE,,,4,10,10,2,0,0,1000,0,1000,30,0,0,0,0,0,30,0,0,FALSE,0,0,0,0,0,0
+2026-11-10 20:06:00,v2_day,b,s2,zh,1.0.0+test,1,FALSE,FALSE,day,enemy,4,10,10,2,0,0,1000,0,1000,30,0,0,0,0,0,30,0,0,FALSE,0,0,0,0,0,0
+2026-11-10 20:07:00,v2_day,c,s3,en,1.0.0+test,0,FALSE,FALSE,tutorial,quit_to_title,4,10,10,2,0,0,1000,0,1000,30,0,0,0,0,0,30,0,0,FALSE,0,0,0,0,0,0
+2026-11-10 20:08:00,v2_day,d,s4,test,1.0.0+test,0,FALSE,TRUE,,,4,10,10,2,0,0,1000,0,1000,30,0,0,0,0,0,30,0,0,FALSE,0,0,0,0,0,0
+2026-11-10 20:09:00,v2_day,e,s5,en,1.0.0+test,0,FALSE,TRUE,,,4,10,10,2,0,0,1000,0,1000,30,0,0,0,0,0,30,0,0,FALSE,0,0,0,0,0,0
+2026-11-10 20:10:00,v2_day,e,s5,en,1.0.0+test,1,FALSE,TRUE,,,4,10,10,2,0,0,1000,0,1000,30,0,0,0,0,0,30,0,0,FALSE,0,0,0,0,0,0
+2026-11-10 20:11:00,v2_day,e,s5,en,1.0.0+test,2,FALSE,FALSE,ending,victory,4,10,10,2,0,0,1000,0,1000,30,0,0,0,0,0,30,0,0,FALSE,0,0,0,0,0,0
+2026-11-10 20:12:00,v2_day,f,s6,en,1.0.0+test,1,FALSE,FALSE,lobby,,4,10,10,2,0,0,1000,0,1000,30,0,0,0,0,0,30,0,0,FALSE,0,0,0,0,0,0

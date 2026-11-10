@@ -2,7 +2,8 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>Switches a wall between whitebox and illustrated art. The original wall owns collision and navigation. On the Ruins and the Dunes the illustrated wall is
+    /// the runtime stone (V5TerrainWallArt) that fills the wall's rectangle; a map without stone (the Rift Zone) keeps its saved artwork.</summary>
     [DisallowMultipleComponent]
     public sealed class V2TerrainPresentation : MonoBehaviour
     {
@@ -24,6 +25,7 @@ namespace AnomalyArena
             if (whitebox) whitebox.enabled = !illustrated;
         }
 
+        /// <summary>The wall was just moved or resized (a copy cut from a longer wall): the stone follows at once, before the frame is drawn.</summary>
         public void Refresh()
         {
             if (TryGetComponent(out V5TerrainWallArt art)) art.Refresh();

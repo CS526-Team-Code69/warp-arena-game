@@ -3,13 +3,13 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>Real event subscriptions and state transitions. Gait uses actual travel distance; no drifting step timer.</summary>
     [DefaultExecutionOrder(1300)]
     public sealed class V3FullAudioLifecycle : MonoBehaviour
     {
         public GameManager game;
         public V3WorldAudio audioBank;
-        [Tooltip("Read cycle distance from the saved Run clip and reference speed; positive values override it.")] public float stepDistanceOverride;
+        [Tooltip("0从保存Run片段和参考速度算每半周期距离；正数可手调。")] public float stepDistanceOverride;
         readonly Dictionary<Enemy,int> bossPhases=new();
         HolePhase[] holePhases;
         ArenaUiState previousPhase;
@@ -54,7 +54,7 @@ namespace AnomalyArena
         void OnPlayerEliminated(Combatant player)=>audioBank.OnPlayerDeath(player);
         void OnSkillCast(SkillId id,Vector3 point,float radius,float duration)
         {
-
+            // Accepted casts use already-generated elemental/energy families; no duplicate asset claimed.
             var cue=id switch
             {
                 SkillId.FlameWake=>ArenaSoundCue.Spray,SkillId.Contagion=>ArenaSoundCue.Poison,

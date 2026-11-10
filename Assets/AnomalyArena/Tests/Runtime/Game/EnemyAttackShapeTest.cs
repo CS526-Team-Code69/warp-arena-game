@@ -6,12 +6,14 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>Special-enemy attack shapes: the Stomper slams a small cone toward the player instead of a full circle and
+    /// draws no warning circle; only the Spire does. The Spire's light wave, which replaced its pulse, is
+    /// SpireLightWaveTest's.</summary>
     [TestFixture]
     [Category("V3Smoke")]
     public class EnemyAttackShapeTest
     {
-        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
 
         [TearDown]
         public void TearDown() => Time.timeScale = 1f;
@@ -40,6 +42,7 @@ namespace AnomalyArena
             Assert.That(behind.Hp, Is.EqualTo(behindHp), "an enemy behind the Stomper is not hit");
         }
 
+        /// <summary>Turns a frozen sandbox target into a live enemy of this kind at a point; it keeps still and attacks on its own.</summary>
         static void Arm(Enemy enemy, EnemyDefinition data, Vector3 at)
         {
             enemy.Configure(data, 1f, false);

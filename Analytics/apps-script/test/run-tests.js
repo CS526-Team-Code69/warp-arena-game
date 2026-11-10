@@ -12,19 +12,20 @@ const CODE = fs.readFileSync(path.join(__dirname, '..', 'Code.gs'), 'utf8');
 const HEADER = [
   'received_at', 'event', 'run_id', 'session_id', 'edition', 'build',
   'outcome', 'cause', 'enemy', 'elite', 'stage', 'wave', 'run_seconds',
-  'level', 'kills', 'starting_weapon'
+  'level', 'kills', 'starting_weapon', 'mode'
 ];
 const CAUSES = [
   'enemy', 'tyrant', 'backfire', 'wall_slam', 'status', 'black_hole',
   'void_trial', 'unknown', 'victory', 'restart', 'quit_to_title'
 ];
-const ALL_SHEETS = ['runs', 'Summary', 'upgrade_picks', 'supply_picks', 'damage', 'Upgrade picks', 'Supply picks', 'Damage sources'];
+const ALL_SHEETS = ['runs', 'Summary', 'upgrade_picks', 'supply_picks', 'damage', 'Upgrade picks', 'Supply picks', 'Damage sources',
+  'v2_days', 'v2_purchases', 'v2_events'];
 const UPGRADE_HEADER = ['received_at', 'event', 'run_id', 'session_id', 'edition', 'build',
   'context', 'wave', 'level', 'offer_1', 'offer_2', 'offer_3', 'picked', 'picked_kind', 'weapon_offered', 'rerolled'];
 const SUPPLY_HEADER = ['received_at', 'event', 'run_id', 'session_id', 'edition', 'build',
   'wave', 'level', 'offer_1', 'offer_2', 'offer_3', 'action', 'picked', 'replaced', 'replace_cancels'];
 const DAMAGE_HEADER = ['received_at', 'event', 'run_id', 'session_id', 'edition', 'build',
-  'stage', 'wave', 'bucket', 'source', 'dot', 'damage', 'damage_pct', 'hits'];
+  'stage', 'wave', 'bucket', 'source', 'dot', 'damage', 'damage_pct', 'hits', 'mode'];
 const BUCKETS = ['W1', 'W2', 'W3', 'W4', 'W5', 'W6', 'W7', 'W8', 'W9', 'W10', 'W11', 'W12', 'W13', 'W14', 'Boss'];
 const COL = { received_at: 0 };
 HEADER.forEach((name, i) => { COL[name] = i; });
@@ -417,13 +418,15 @@ function evalCountifs(formula, runs) {
 }
 
 function evalDistinct(formula, runs) {
-  const m = /^=IFERROR\(ROWS\(UNIQUE\(FILTER\(runs!\$C\$2:\$C,runs!\$B\$2:\$B="(\w+)",runs!\$E\$2:\$E<>"test"(?:,COUNTIFS\(runs!\$C\$2:\$C,runs!\$C\$2:\$C,runs!\$B\$2:\$B,"(\w+)"\)=0)?\)\)\),0\)$/.exec(formula);
+  const m = /^=IFERROR\(ROWS\(UNIQUE\(FILTER\(runs!\$C\$2:\$C,runs!\$B\$2:\$B="(\w+)",runs!\$E\$2:\$E<>"test",COUNTIFS\(runs!\$C\$2:\$C,runs!\$C\$2:\$C,runs!\$Q\$2:\$Q,"story"\)=0(?:,COUNTIFS\(runs!\$C\$2:\$C,runs!\$C\$2:\$C,runs!\$B\$2:\$B,"(\w+)"\)=0)?\)\)\),0\)$/.exec(formula);
   if (!m) throw new Error('Unexpected distinct formula: ' + formula);
   const rows = runs.dataRows();
+  // A run_id with any row in the story mode is left out whole.
+  const story = new Set(rows.filter((r) => r[COL.mode] === 'story').map((r) => r[COL.run_id]));
   // The optional COUNTIFS(...)=0 term drops every run_id that has a row with that event, in any edition.
   const excluded = new Set(m[2] ? rows.filter((r) => r[COL.event] === m[2]).map((r) => r[COL.run_id]) : []);
   const ids = new Set(rows
-    .filter((r) => r[COL.event] === m[1] && r[COL.edition] !== 'test' && !excluded.has(r[COL.run_id]))
+    .filter((r) => r[COL.event] === m[1] && r[COL.edition] !== 'test' && !story.has(r[COL.run_id]) && !excluded.has(r[COL.run_id]))
     .map((r) => r[COL.run_id]));
   return ids.size;
 }
@@ -443,12 +446,12 @@ test('valid run_end is appended once, in column order, with sanitized values', (
   const sheet = runsSheet(env);
   assert.strictEqual(sheet.getLastRow(), 2, 'exactly one data row');
   const row = sheet.rowValues(2);
-  assert.strictEqual(row.length, 16);
+  assert.strictEqual(row.length, 17);
   assert.ok(isDate(row[0]), 'received_at is a Date');
   assert.ok(Math.abs(Date.now() - row[0].getTime()) < 5000, 'received_at is server time');
   assert.deepStrictEqual(row.slice(1), [
     'run_end', RUN_ID, SESSION_ID, 'en', '1.0.0+3fa2b1c9', 'defeat', 'enemy', 'Spitter',
-    true, 'wave', 9, 512.3, 7, 183, 'Rifle',
+    true, 'wave', 9, 512.3, 7, 183, 'Rifle', 'open',
   ]);
 });
 
@@ -467,7 +470,7 @@ test('run_start with empty outcome and cause is accepted', () => {
   assert.deepStrictEqual(res.json, { ok: true });
   const row = lastRow(env);
   assert.deepStrictEqual(row.slice(1), [
-    'run_start', RUN_ID, SESSION_ID, 'en', '1.0.0+3fa2b1c9', '', '', '', false, 'wave', 1, 0, 1, 0, 'Knife',
+    'run_start', RUN_ID, SESSION_ID, 'en', '1.0.0+3fa2b1c9', '', '', '', false, 'wave', 1, 0, 1, 0, 'Knife', 'open',
   ]);
 });
 
@@ -600,7 +603,7 @@ test('free text is trimmed, cut to 64 chars and can never become a formula', () 
 });
 
 test('text columns of "runs" are plain text, so number-like text is stored as sent', () => {
-  const TEXT = ['event', 'run_id', 'session_id', 'edition', 'build', 'outcome', 'cause', 'enemy', 'stage', 'starting_weapon'];
+  const TEXT = ['event', 'run_id', 'session_id', 'edition', 'build', 'outcome', 'cause', 'enemy', 'stage', 'starting_weapon', 'mode'];
   const OTHER = ['received_at', 'elite', 'wave', 'run_seconds', 'level', 'kills'];
   const checkFormats = (sheet, label) => {
     for (const name of TEXT) assert.strictEqual(sheet.columnFormats[COL[name] + 1], '@', label + ': ' + name);
@@ -662,6 +665,7 @@ test('doGet reports status and row count', () => {
   assert.strictEqual(json.status, 'WARP ARENA analytics endpoint is running');
   assert.strictEqual(json.rows, 2);
   assert.deepStrictEqual(json.beta_rows, { upgrade_picks: 0, supply_picks: 0, damage: 0 });
+  assert.deepStrictEqual(json.v2_rows, { v2_days: 0, v2_purchases: 0, v2_events: 0 });
 
   const unbound = makeEnv({ bound: false });
   const json2 = JSON.parse(unbound.gs.doGet({}).getContent());
@@ -689,7 +693,7 @@ test('setup creates the header, stores the id, builds the Summary grid and one c
       assert.ok(f.startsWith('=COUNTIFS('), 'formula at ' + label + '/' + cause);
       formulaCount++;
       const crit = criteriaOf(f);
-      const expected = { B: 'run_end', E: '<>test', H: cause };
+      const expected = { B: 'run_end', E: '<>test', Q: '<>story', H: cause };
       if (label === 'Boss') expected.K = 'final_boss';
       else { expected.K = '<>final_boss'; expected.L = i + 1; }
       assert.deepStrictEqual(crit, expected, f);
@@ -708,7 +712,9 @@ test('setup creates the header, stores the id, builds the Summary grid and one c
   assert.ok(ended.indexOf('runs!$B$2:$B="run_end"') > 0, ended);
   for (const f of [started, ended, unfinished]) assert.ok(f.startsWith('=IFERROR('), f);
   assert.strictEqual(unfinished, '=IFERROR(ROWS(UNIQUE(FILTER(runs!$C$2:$C,runs!$B$2:$B="run_start",runs!$E$2:$E<>"test",' +
+    'COUNTIFS(runs!$C$2:$C,runs!$C$2:$C,runs!$Q$2:$Q,"story")=0,' +
     'COUNTIFS(runs!$C$2:$C,runs!$C$2:$C,runs!$B$2:$B,"run_end")=0))),0)');
+  for (const f of [started, ended]) assert.ok(f.indexOf('runs!$Q$2:$Q,"story")=0') > 0, 'story runs left out: ' + f);
   for (const f of [started, ended, unfinished]) assert.ok(f.indexOf('COUNTUNIQUE') < 0, 'COUNTUNIQUE counts an empty FILTER (#N/A) as 1: ' + f);
 
   assert.strictEqual(summary.charts.length, 1);
@@ -900,9 +906,9 @@ test('wave_damage writes one row per source, with the wave bucket and clamped nu
   const sheet = sheetOf(env, 'damage');
   assert.deepStrictEqual(sheet.rowValues(1), DAMAGE_HEADER);
   assert.strictEqual(sheet.getLastRow(), 4);
-  assert.deepStrictEqual(sheet.rowValues(2).slice(6), ['wave', 3, 'W03', 'Brute_elite', false, 12.3, 24.7, 2]);
-  assert.deepStrictEqual(sheet.rowValues(3).slice(6), ['wave', 3, 'W03', 'Spitter', true, 4, 8, 4]);
-  assert.deepStrictEqual(sheet.rowValues(4).slice(6), ['final_boss', 14, 'W15 Boss', 'other', true, 0, 0, 2]);
+  assert.deepStrictEqual(sheet.rowValues(2).slice(6), ['wave', 3, 'W03', 'Brute_elite', false, 12.3, 24.7, 2, 'open']);
+  assert.deepStrictEqual(sheet.rowValues(3).slice(6), ['wave', 3, 'W03', 'Spitter', true, 4, 8, 4, 'open']);
+  assert.deepStrictEqual(sheet.rowValues(4).slice(6), ['final_boss', 14, 'W15 Boss', 'other', true, 0, 0, 2, 'open']);
   assert.ok(env.lock.releases >= 1 && !env.lock.held, 'written under the lock');
 });
 
@@ -957,8 +963,8 @@ test('setup builds the three beta summaries with their charts', () => {
   assert.deepStrictEqual(supply.charts.map((c) => c.spec.type), ['PIE', 'BAR']);
 
   const damage = sheetOf(env, 'Damage sources');
-  assert.ok(damage.getCell(1, 1).formula.startsWith('=IFERROR(QUERY(damage!$A$2:$N,'));
-  assert.ok(damage.getCell(1, 8).formula.indexOf('pivot J') > 0);
+  assert.ok(damage.getCell(1, 1).formula.startsWith('=IFERROR(QUERY(FILTER(damage!$A$2:$O,damage!$O$2:$O<>"story"),'));
+  assert.ok(damage.getCell(1, 8).formula.indexOf('pivot Col10') > 0);
   assert.deepStrictEqual(damage.charts.map((c) => c.spec.type), ['BAR', 'COLUMN']);
   assert.strictEqual(damage.charts[1].spec.options.isStacked, 'percent');
   assert.deepStrictEqual(damage.charts[1].spec.ranges, ['H1:AV16']);
@@ -1001,6 +1007,264 @@ test('beta summary formulas count the right rows', () => {
   const dm = sheetOf(env, 'Damage sources');
   assert.strictEqual(evalBetaFormula(dm.getCell(2, 5).formula.replace(/^=IF\(\$A2="","",(.*)\)$/, '=$1').replace('$A2', '"Spitter"'), env), 10,
     'burn / poison part of Spitter damage');
+});
+
+// ---------------------------------------------------------------------------
+// Story mode (the V2 day campaign)
+// ---------------------------------------------------------------------------
+
+const COMMON = ['received_at', 'event', 'run_id', 'session_id', 'edition', 'build'];
+const V2_DAY_HEADER = COMMON.concat(['day', 'overtime', 'reached_dawn', 'end_stage', 'end_cause', 'kills',
+  'player_damage', 'player_damage_pct', 'player_hits', 'base_damage', 'base_damage_hp', 'base_hp', 'base_shield', 'base_max_hp',
+  'earned_alloy', 'earned_energy', 'earned_dark', 'spent_alloy', 'spent_energy', 'spent_dark', 'alloy', 'energy', 'dark',
+  'night_death', 'lost_alloy', 'lost_energy', 'lost_dark', 'shadows', 'overrun_regions', 'repairs']);
+const V2_PURCHASE_HEADER = COMMON.concat(['day', 'stage', 'item', 'detail', 'room', 'alloy', 'energy', 'dark']);
+const V2_EVENT_HEADER = COMMON.concat(['day', 'stage', 'kind', 'detail', 'value']);
+const V2_SHEETS = ['v2_days', 'v2_purchases', 'v2_events'];
+
+function v2DayEvent(overrides) {
+  return betaBase('v2_day', Object.assign({
+    day: 3, overtime: false, reached_dawn: true, end_stage: '', end_cause: '', kills: 41,
+    player_damage: 120.44, player_damage_pct: 60.22, player_hits: 9,
+    base_damage: 300.06, base_damage_hp: 80.5, base_hp: 920.04, base_shield: 0, base_max_hp: 1000,
+    earned_alloy: 210, earned_energy: 95, earned_dark: 12, spent_alloy: 150, spent_energy: 40, spent_dark: 0,
+    alloy: 60, energy: 55, dark: 12, night_death: false, lost_alloy: 0, lost_energy: 0, lost_dark: 0,
+    shadows: 6, overrun_regions: 1, repairs: 2,
+  }, overrides));
+}
+function v2PurchaseEvent(overrides) {
+  return betaBase('v2_purchase', Object.assign({
+    day: 4, stage: 'dawn', item: 'new_weapon', detail: 'Railgun Mk 2', room: 'Armament', alloy: 120, energy: 30, dark: 0,
+  }, overrides));
+}
+function v2Event(overrides) {
+  return betaBase('v2_event', Object.assign({ day: 2, stage: 'dusk', kind: 'hole_check', detail: 'failed_timeout', value: 0.6349 }, overrides));
+}
+
+test('v2_day is stored in "v2_days"; a day that reached dawn keeps no end, the last day keeps the run\'s', () => {
+  const env = readyEnv();
+  for (const ev of [
+    v2DayEvent({ end_stage: 'night', end_cause: 'enemy' }),
+    v2DayEvent({ day: 250, overtime: 'true', reached_dawn: false, end_stage: 'night', end_cause: 'base_destroyed', kills: -3,
+      alloy: 1e12, night_death: 1, repairs: 2.6 }),
+    v2DayEvent({ reached_dawn: 'false', end_stage: 'lobby', end_cause: 'meteor' }),
+    v2DayEvent({ day: '0', reached_dawn: false, end_stage: 'tutorial', end_cause: '=HYPERLINK("x")' }),
+  ]) assert.deepStrictEqual(post(env, ev).json, { ok: true });
+  const sheet = sheetOf(env, 'v2_days');
+  assert.deepStrictEqual(sheet.rowValues(1), V2_DAY_HEADER);
+  const first = sheet.rowValues(2);
+  assert.ok(isDate(first[0]));
+  assert.deepStrictEqual(first.slice(1), ['v2_day', RUN_ID, SESSION_ID, 'en', '1.0.0+3fa2b1c9', 3, false, true, '', '', 41,
+    120.4, 60.2, 9, 300.1, 80.5, 920, 0, 1000, 210, 95, 12, 150, 40, 0, 60, 55, 12, false, 0, 0, 0, 6, 1, 2]);
+  const last = sheet.rowValues(3);
+  assert.deepStrictEqual(last.slice(6, 12), [100, true, false, 'night', 'base_destroyed', 0], 'day clamped, the run\'s end kept');
+  assert.deepStrictEqual([last[26], last[29], last[35]], [10000000, true, 3], 'wallet clamped, night death, repairs rounded');
+  assert.deepStrictEqual(sheet.rowValues(4).slice(8, 11), [false, 'other', 'unknown'], 'unknown stage and cause');
+  assert.deepStrictEqual(sheet.rowValues(5).slice(6, 11), [0, false, false, 'tutorial', 'unknown'], 'a formula never gets in');
+  assert.strictEqual(runsSheet(env).getLastRow(), 1, 'nothing written to "runs"');
+  assert.ok(env.lock.releases >= 1 && !env.lock.held, 'written under the lock');
+});
+
+test('v2_purchase is stored in "v2_purchases"; an unknown stage is "other" and prices are clamped', () => {
+  const env = readyEnv();
+  assert.deepStrictEqual(post(env, v2PurchaseEvent()).json, { ok: true });
+  assert.deepStrictEqual(post(env, v2PurchaseEvent({ stage: 'Night ', item: ' repair ', detail: '', room: 'Control', alloy: -5, energy: '7', dark: 2.4 })).json, { ok: true });
+  assert.deepStrictEqual(post(env, v2PurchaseEvent({ stage: 'shop', room: 'Hangar' })).json, { ok: true });
+  const sheet = sheetOf(env, 'v2_purchases');
+  assert.deepStrictEqual(sheet.rowValues(1), V2_PURCHASE_HEADER);
+  assert.deepStrictEqual(sheet.rowValues(2).slice(1), ['v2_purchase', RUN_ID, SESSION_ID, 'en', '1.0.0+3fa2b1c9',
+    4, 'dawn', 'new_weapon', 'Railgun Mk 2', 'Armament', 120, 30, 0]);
+  assert.deepStrictEqual(sheet.rowValues(3).slice(6), [4, 'other', 'repair', '', 'Control', 0, 7, 2], 'stage names are not case-folded');
+  assert.deepStrictEqual(sheet.rowValues(4).slice(7, 11), ['other', 'new_weapon', 'Railgun Mk 2', 'Hangar'], 'a new room is kept as sent');
+});
+
+test('v2_event is stored in "v2_events" with its value rounded to 2 decimals and never negative', () => {
+  const env = readyEnv();
+  for (const ev of [
+    v2Event(),
+    v2Event({ day: 0, stage: 'tutorial', kind: 'tutorial_step', detail: 'Move', value: 12.3456 }),
+    v2Event({ kind: 'crate', detail: 'Afternoon:Railgun', value: 2 }),
+    v2Event({ kind: 'crate', detail: 'TutorialSecond:left', value: -1 }),
+    v2Event({ day: 4, stage: 'day', kind: 'prophet', detail: '', value: '4' }),
+    v2Event({ day: 5, stage: 'dawn', kind: 'void_purchase', detail: 'skill:PocketVoid', value: 30 }),
+    v2Event({ day: 0, stage: 'tutorial', kind: 'void_crystal', detail: undefined, value: 'x' }),
+    v2Event({ detail: 'start', value: 1e9 }),
+  ]) assert.deepStrictEqual(post(env, ev).json, { ok: true });
+  const sheet = sheetOf(env, 'v2_events');
+  assert.deepStrictEqual(sheet.rowValues(1), V2_EVENT_HEADER);
+  assert.deepStrictEqual(sheet.rowValues(2).slice(1), ['v2_event', RUN_ID, SESSION_ID, 'en', '1.0.0+3fa2b1c9', 2, 'dusk', 'hole_check', 'failed_timeout', 0.63]);
+  assert.deepStrictEqual(sheet.dataRows().slice(1).map((r) => r.slice(6)), [
+    [0, 'tutorial', 'tutorial_step', 'Move', 12.35],
+    [2, 'dusk', 'crate', 'Afternoon:Railgun', 2],
+    [2, 'dusk', 'crate', 'TutorialSecond:left', 0],
+    [4, 'day', 'prophet', '', 4],
+    [5, 'dawn', 'void_purchase', 'skill:PocketVoid', 30],
+    [0, 'tutorial', 'void_crystal', '', 0],
+    [2, 'dusk', 'hole_check', 'start', 1000000],
+  ]);
+});
+
+test('bad story-mode events are rejected and write nothing', () => {
+  const cases = [
+    [v2DayEvent({ schema: 2 }), 'bad schema'],
+    [v2DayEvent({ run_id: 'nope' }), 'bad run_id'],
+    [v2DayEvent({ edition: 'fr' }), 'bad edition'],
+    [v2DayEvent({ day: undefined }), 'bad day'],
+    [v2DayEvent({ day: 'three' }), 'bad day'],
+    [v2DayEvent({ day: true }), 'bad day'],
+    [v2PurchaseEvent({ day: null }), 'bad day'],
+    [v2PurchaseEvent({ item: '' }), 'bad item'],
+    [v2PurchaseEvent({ item: '%%' }), 'bad item'],
+    [v2Event({ day: '' }), 'bad day'],
+    [v2Event({ kind: 'teleport' }), 'bad kind'],
+    [v2Event({ kind: undefined }), 'bad kind'],
+    [v2Event({ detail: 'failed' }), 'bad detail'],
+    [v2Event({ detail: '' }), 'bad detail'],
+    [v2Event({ kind: 'tutorial_step', detail: '' }), 'bad detail'],
+    [v2Event({ kind: 'crate', detail: undefined }), 'bad detail'],
+    [v2Event({ kind: 'void_purchase', detail: '%%' }), 'bad detail'],
+  ];
+  for (const [body, error] of cases) {
+    const env = readyEnv();
+    const res = post(env, body);
+    assert.strictEqual(res.json.ok, false, error);
+    assert.strictEqual(res.json.error, error, JSON.stringify(body).slice(0, 120));
+    for (const name of ['runs'].concat(V2_SHEETS)) assert.strictEqual(sheetOf(env, name).getLastRow(), 1, name);
+  }
+});
+
+test('a story-mode event creates its sheet with the header when setup has not run; text columns are plain text', () => {
+  const env = makeEnv();
+  assert.deepStrictEqual(post(env, v2Event()).json, { ok: true });
+  assert.deepStrictEqual(post(env, v2DayEvent()).json, { ok: true });
+  const events = sheetOf(env, 'v2_events');
+  assert.deepStrictEqual(events.rowValues(1), V2_EVENT_HEADER);
+  assert.strictEqual(events.getLastRow(), 2);
+  assert.deepStrictEqual([7, 8, 9, 10, 11].map((c) => events.columnFormats[c] || ''), ['', '@', '@', '@', ''], 'stage, kind and detail are text');
+  const days = sheetOf(env, 'v2_days');
+  assert.deepStrictEqual(days.rowValues(1), V2_DAY_HEADER);
+  assert.deepStrictEqual([9, 10, 11, 12].map((c) => days.columnFormats[c] || ''), ['', '@', '@', ''], 'end_stage and end_cause are text');
+  assert.strictEqual(sheetOf(env, 'v2_purchases'), null, 'only the sheets that got a row are made');
+});
+
+test('setup makes the three story-mode sheets, keeps their rows, and doGet counts them', () => {
+  const env = readyEnv();
+  V2_SHEETS.forEach((name, i) => {
+    const sheet = sheetOf(env, name);
+    assert.deepStrictEqual(sheet.rowValues(1), [V2_DAY_HEADER, V2_PURCHASE_HEADER, V2_EVENT_HEADER][i], name);
+    assert.strictEqual(sheet.frozenRows, 1, name);
+    assert.strictEqual(sheet.charts.length, 0, name);
+  });
+  for (const ev of [v2DayEvent(), v2PurchaseEvent(), v2Event(), v2Event({ kind: 'prophet', detail: '' })]) post(env, ev);
+  const before = sheetOf(env, 'v2_events').dataRows().map((r) => r.slice(1));
+  env.gs.setup();
+  assert.deepStrictEqual(env.ss.getSheets().map((s) => s.name), ALL_SHEETS, 'setup twice adds no sheet');
+  assert.deepStrictEqual(sheetOf(env, 'v2_events').dataRows().map((r) => r.slice(1)), before);
+  const json = JSON.parse(env.gs.doGet({}).getContent());
+  assert.deepStrictEqual(json.v2_rows, { v2_days: 1, v2_purchases: 1, v2_events: 2 });
+  assert.deepStrictEqual(json.beta_rows, { upgrade_picks: 0, supply_picks: 0, damage: 0 }, 'story rows are not beta rows');
+});
+
+// ---------------------------------------------------------------------------
+// Mode: story-mode rows in "runs" and "damage"
+// ---------------------------------------------------------------------------
+
+test('mode is "story" only when the game sends exactly "story"; anything else, or nothing, is "open"', () => {
+  const env = readyEnv();
+  const sent = [undefined, 'open', 'story', 'Story', ' story', 'STORY', 1, true, null];
+  sent.forEach((mode, i) => {
+    const ev = endEvent({ run_id: i.toString(16).padStart(32, '0') });
+    if (mode !== undefined) ev.mode = mode;
+    assert.strictEqual(post(env, ev).json.ok, true, String(mode));
+  });
+  assert.deepStrictEqual(runsSheet(env).dataRows().map((r) => r[COL.mode]),
+    ['open', 'open', 'story', 'open', 'open', 'open', 'open', 'open', 'open']);
+  assert.strictEqual(runsSheet(env).columnFormats[COL.mode + 1], '@', 'mode is plain text');
+});
+
+test('a story-mode row in "runs" keeps its own stage, its day (0 to 100) and base_destroyed', () => {
+  const env = readyEnv();
+  const story = (overrides) => endEvent(Object.assign({ mode: 'story', stage: 'night', wave: 3, cause: 'base_destroyed', enemy: '' }, overrides));
+  const cases = [
+    [story(), ['defeat', 'base_destroyed', 'night', 3]],
+    [startEvent({ mode: 'story', stage: 'tutorial', wave: 0 }), ['', '', 'tutorial', 0]],
+    [story({ outcome: 'victory', cause: 'victory', stage: 'ending', wave: 7 }), ['victory', 'victory', 'ending', 7]],
+    [story({ wave: 250, stage: 'lobby' }), ['defeat', 'base_destroyed', 'other', 100]],
+    [story({ wave: undefined, stage: 'dusk', cause: 'status' }), ['defeat', 'status', 'dusk', 0]],
+    [story({ wave: -4 }), ['defeat', 'base_destroyed', 'night', 0]],
+    [story({ outcome: 'abandoned', cause: 'base_destroyed', stage: 'dawn' }), ['abandoned', 'unknown', 'dawn', 3]],
+    [story({ cause: 'restart' }), ['defeat', 'unknown', 'night', 3]],
+    [story({ outcome: 'abandoned', cause: 'quit_to_title', stage: 'void_trial' }), ['abandoned', 'quit_to_title', 'void_trial', 3]],
+    [endEvent({ cause: 'base_destroyed', stage: 'night', wave: 0 }), ['defeat', 'unknown', 'wave', 1]],
+  ];
+  for (const [ev] of cases) assert.strictEqual(post(env, ev).json.ok, true);
+  const rows = runsSheet(env).dataRows();
+  cases.forEach(([ev, expected], i) => {
+    const row = rows[i];
+    assert.deepStrictEqual([row[COL.outcome], row[COL.cause], row[COL.stage], row[COL.wave]], expected, JSON.stringify(ev).slice(0, 140));
+  });
+  assert.deepStrictEqual(rows.map((r) => r[COL.mode]), cases.map((c, i) => (i < cases.length - 1 ? 'story' : 'open')));
+});
+
+test('wave_damage takes the mode of its event; story rows keep their stage and day, in a day bucket', () => {
+  const env = readyEnv();
+  post(env, damageEvent([
+    { source: 'shadow', stage: 'night', wave: 0, damage: 3, damage_pct: 6, hits: 2 },
+    { source: 'Grunt', stage: 'day', wave: 12, damage: 4, damage_pct: 8, hits: 1 },
+    { source: 'Grunt', stage: 'lobby', wave: 250, damage: 1, damage_pct: 2, hits: 1 },
+  ], { mode: 'story' }));
+  post(env, damageEvent([{ source: 'Grunt', stage: 'night', wave: 0, damage: 4, damage_pct: 8, hits: 1 }], { mode: 'Story' }));
+  const sheet = sheetOf(env, 'damage');
+  assert.deepStrictEqual(sheet.rowValues(1), DAMAGE_HEADER);
+  assert.deepStrictEqual(sheet.dataRows().map((r) => [r[6], r[7], r[8], r[9], r[14]]), [
+    ['night', 0, 'D00', 'shadow', 'story'],
+    ['day', 12, 'D12', 'Grunt', 'story'],
+    ['other', 100, 'D100', 'Grunt', 'story'],
+    ['wave', 1, 'W01', 'Grunt', 'open'],
+  ]);
+  assert.strictEqual(sheet.columnFormats[15], '@', 'mode is plain text');
+});
+
+test('the open-mode Summary leaves story runs out, also one whose start went out as open; rows without a mode count as open', () => {
+  const env = readyEnv();
+  const id = (n) => n.toString(16).padStart(32, '0');
+  const story = { mode: 'story' };
+  const events = [
+    startEvent({ run_id: id(1) }), endEvent({ run_id: id(1), wave: 3 }), // open: ends in wave 3
+    startEvent({ run_id: id(2), mode: 'story', stage: 'tutorial', wave: 0 }),
+    endEvent({ run_id: id(2), mode: 'story', stage: 'day', wave: 3 }), // story: day 3 is not wave 3
+    startEvent({ run_id: id(3) }), endEvent(Object.assign({ run_id: id(3), wave: 3 }, story)), // marked as a campaign run late
+    startEvent({ run_id: id(4), mode: 'story' }), // a story run left by closing the tab is not an open unfinished run
+    startEvent({ run_id: id(5) }), // an open run left by closing the tab
+  ];
+  for (const ev of events) assert.strictEqual(post(env, ev).json.ok, true);
+  // A row written before the mode column existed: 16 cells, no mode.
+  const runs = runsSheet(env);
+  runs.appendRow([new Date(), 'run_end', id(6), SESSION_ID, 'en', 'old', 'defeat', 'enemy', 'Grunt', false, 'wave', 3, 100, 2, 10, 'Rifle']);
+  runs.appendRow([new Date(), 'run_start', id(6), SESSION_ID, 'en', 'old', '', '', '', false, 'wave', 1, 0, 1, 0, 'Rifle']);
+
+  const summary = env.ss.getSheetByName('Summary');
+  const enemyCol = CAUSES.indexOf('enemy') + 2;
+  assert.strictEqual(evalCountifs(summary.getCell(4, enemyCol).formula, runs), 2, 'W3 / enemy: runs 1 and 6 only');
+  assert.strictEqual(evalDistinct(summary.getCell(18, 2).formula, runs), 3, 'started: runs 1, 5 and 6');
+  assert.strictEqual(evalDistinct(summary.getCell(19, 2).formula, runs), 2, 'ended: runs 1 and 6');
+  assert.strictEqual(evalDistinct(summary.getCell(20, 2).formula, runs), 1, 'unfinished: run 5');
+  assert.ok(summary.getCell(22, 1).value.indexOf('story') >= 0, 'the note says story runs are left out');
+});
+
+test('the damage summary reads open-mode rows only, and its queries name the right columns', () => {
+  const env = readyEnv();
+  post(env, damageEvent([{ source: 'Spitter', dot: true, wave: 2, damage: 5, damage_pct: 10, hits: 3 }]));
+  post(env, damageEvent([{ source: 'Spitter', dot: true, stage: 'night', wave: 2, damage: 25, damage_pct: 50, hits: 3 }], { mode: 'story' }));
+  const dm = sheetOf(env, 'Damage sources');
+  assert.strictEqual(evalBetaFormula(dm.getCell(2, 5).formula.replace(/^=IF\(\$A2="","",(.*)\)$/, '=$1').replace('$A2', '"Spitter"'), env), 10,
+    'burn / poison part of Spitter damage, story rows left out');
+  for (const [cell, used] of [[dm.getCell(1, 1), ['edition', 'source', 'damage_pct', 'hits']], [dm.getCell(1, 8), ['edition', 'bucket', 'source', 'damage_pct']]]) {
+    const f = cell.formula;
+    assert.ok(f.startsWith('=IFERROR(QUERY(FILTER(damage!$A$2:$O,damage!$O$2:$O<>"story"),"'), f);
+    const names = Array.from(new Set((f.match(/Col\d+/g) || []).map((c) => DAMAGE_HEADER[Number(c.slice(3)) - 1]))).sort();
+    assert.deepStrictEqual(names, used.slice().sort(), f);
+  }
 });
 
 test('appsscript.json is a V8 web app open to anonymous callers', () => {

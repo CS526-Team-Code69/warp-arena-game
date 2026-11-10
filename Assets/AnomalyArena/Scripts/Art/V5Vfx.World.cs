@@ -3,10 +3,12 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>The V5 layer's world pieces: skill casts, the mirror image, the void trial's ground, boss moves and heavy ground hits. Everything reads game state only.</summary>
     public sealed partial class V5Vfx
     {
+        // ───── Skills ─────
 
+        /// <summary>The cast of a skill, at the point SkillLoadout reports.</summary>
         public void SkillCast(SkillId id, Vector3 point, float radius, Vector3 from)
         {
             switch (id)
@@ -32,6 +34,7 @@ namespace AnomalyArena
             }
         }
 
+        /// <summary>Flame Wake: one piece of the burning trail.</summary>
         public void WakeSample(Vector3 at, float radius)
         {
             if (Chance(2.2f))
@@ -43,6 +46,7 @@ namespace AnomalyArena
             if (Chance(.35f)) ember.Emit(new Vector3(at.x, .5f, at.z), new Vector3(R(-.4f, .4f), R(1.5f, 3f), R(-.4f, .4f)), R(.05f, .09f), R(.4f, .8f), FireTint);
         }
 
+        /// <summary>Gravity Well: dust and light falling toward the centre, with the exact reach on the ground.</summary>
         public void GravityWellTick(Vector3 centre, float radius)
         {
             if (Chance(26f))
@@ -58,6 +62,7 @@ namespace AnomalyArena
             if (Chance(6f)) groundGlow.Emit(OnGround(centre), Vector3.zero, radius * 1.5f, .35f, new Color(.32f, .12f, .7f, .4f));
         }
 
+        /// <summary>Storm Call: a dark cloud shadow over the area while lightning falls.</summary>
         public void StormTick(Vector3 centre, float radius)
         {
             if (Chance(5f)) ringLayer.Emit(OnGround(centre, .085f), Vector3.zero, radius * 2f, .5f, new Color(.6f, .78f, 1f, .3f));
@@ -68,6 +73,7 @@ namespace AnomalyArena
             }
         }
 
+        /// <summary>Singularity: the player has become a dark point the world falls into.</summary>
         public void SingularityTick(Vector3 at, float progress)
         {
             VoidSmoke(at + Vector3.up * .7f, .8f + progress);
@@ -80,6 +86,7 @@ namespace AnomalyArena
             if (Chance(5f + 8f * progress)) twirl.Emit(OnGround(at, .1f), Vector3.zero, R(3f, 5f) * Mathf.Lerp(1f, .6f, progress), R(.25f, .4f), WithAlpha(VoidTint, .8f), R(0f, 360f));
         }
 
+        /// <summary>The Singularity going off, or any huge void burst: a dark flash inward, then purple light outward to the exact radius.</summary>
         public void VoidExplosion(Vector3 at, float radius)
         {
             Vector3 air = new(at.x, Query.CastHeight, at.z);
@@ -99,6 +106,9 @@ namespace AnomalyArena
             Scorch(at, radius * .7f, 5f);
         }
 
+        // ───── Heavy ground hits and boss moves ─────
+
+        /// <summary>A heavy body hitting the ground: dust thrown out in a ring, debris, cracks, and the thin ring at the exact reach.</summary>
         public void GroundSlam(Vector3 at, float radius, Color c, bool ring = true)
         {
             Vector3 ground = OnGround(at, .4f);
@@ -115,6 +125,7 @@ namespace AnomalyArena
             }
         }
 
+        /// <summary>Tail Sweep: a burning crescent running along the arc behind the tail tip.</summary>
         public void TailSweepTick(Vector3 centre, Vector3 tailDirection, float reach)
         {
             Vector3 d = FlatDir(tailDirection, Vector3.forward);
@@ -129,6 +140,7 @@ namespace AnomalyArena
             }
         }
 
+        /// <summary>The Tyrant's meteor in flight: fire and smoke pouring off the falling rock.</summary>
         public void MeteorTick(Vector3 at, Vector3 motion, float size)
         {
             Vector3 back = motion.sqrMagnitude > .001f ? -motion.normalized : Vector3.up;
@@ -146,8 +158,10 @@ namespace AnomalyArena
         int meteorFrame;
         Material tailMaterial;
 
+        /// <summary>The burning blade of the Tail Sweep, bright at the tip.</summary>
         public Material TailMaterial => tailMaterial ? tailMaterial : tailMaterial = Mat("tracer", true, 3f, 0f, 0f);
 
+        /// <summary>The falling rock of Star Throw; call it every frame it flies.</summary>
         Material meteorMaterial;
 
         public void MeteorBody(Vector3 at, float size)
@@ -165,6 +179,7 @@ namespace AnomalyArena
             if (meteorRock && meteorRock.activeSelf && Time.frameCount > meteorFrame + 1) meteorRock.SetActive(false);
         }
 
+        /// <summary>A rough rock: an octahedron split twice and pushed in and out at random, with hard facets.</summary>
         GameObject MakeRock()
         {
             var faces = new List<(Vector3 a, Vector3 b, Vector3 c)>();
@@ -187,7 +202,7 @@ namespace AnomalyArena
             int Corner(Vector3 v)
             {
                 if (index.TryGetValue(v, out int i)) return i;
-
+                // Lumps from smooth noise, not a random push per corner, and shared corners so the light rounds over them.
                 float lumps = Mathf.PerlinNoise(v.x * 1.7f + 11f, v.y * 1.7f + v.z * 1.1f + 5f) * .55f + Mathf.PerlinNoise(v.z * 4.1f + 3f, v.x * 3.3f + v.y * 3.7f + 9f) * .2f;
                 vertices.Add(v * (.66f + lumps));
                 index[v] = vertices.Count - 1;
@@ -218,12 +233,14 @@ namespace AnomalyArena
             return go;
         }
 
+        /// <summary>One mote of the void's power flying to the player on the return from the trial.</summary>
         public void AbsorbMote(Vector3 at, Vector3 velocity, float life)
         {
             ember.Emit(at, velocity, R(.09f, .18f), life, new Color(.78f, .52f, 1f));
             if (Random.value < .3f) spark.Emit(at, velocity, R(.05f, .09f), life, VoidTint);
         }
 
+        /// <summary>A hole's matter falling in; the ground near it glows a little.</summary>
         public void HoleTick(Vector3 centre, float gravityRadius, float killRadius, bool active)
         {
             if (!active) return;
@@ -238,6 +255,7 @@ namespace AnomalyArena
             }
         }
 
+        /// <summary>An open portal: light pouring upward, sparks drawn into the gate.</summary>
         public void PortalTick(Vector3 centre, float radius)
         {
             if (Chance(12f))
@@ -248,6 +266,8 @@ namespace AnomalyArena
             if (Chance(3.5f)) ringLayer.Emit(OnGround(centre, .1f), Vector3.zero, radius * 2.5f, .7f, new Color(.55f, .8f, 1f, .4f));
             if (Chance(5f)) groundGlow.Emit(OnGround(centre), Vector3.zero, radius * 4f, .45f, new Color(.32f, .55f, 1f, .4f));
         }
+
+        // ───── The mirror image ─────
 
         readonly Dictionary<Transform, GameObject> mirrors = new();
         Material hologram;
@@ -281,6 +301,7 @@ namespace AnomalyArena
             if (Chance(2.6f)) ringLayer.Emit(OnGround(decoy.position, .09f), Vector3.zero, 2.2f, .5f, new Color(.5f, .85f, 1f, .55f));
         }
 
+        /// <summary>A copy of the player's real model in the hologram material, standing in its idle pose.</summary>
         GameObject MakeMirror()
         {
             var gm = GameManager.Instance;
@@ -307,6 +328,8 @@ namespace AnomalyArena
             return copy;
         }
 
+        // ───── The void trial's ground ─────
+
         GameObject trialBackdrop;
         Material nebula;
         bool platformDressed;
@@ -318,7 +341,7 @@ namespace AnomalyArena
             if (platformDressed == Art.Enabled || !world || !world.trialPlatform) return;
             var body = world.trialPlatform.GetComponent<Renderer>();
             if (!body) return;
-
+            // The English title's switch can turn the art off again before the run starts.
             if (platformDressed)
             {
                 body.sharedMaterial = platformSaved;
@@ -364,7 +387,7 @@ namespace AnomalyArena
                     Vector3 centre = world.trialPlatform.position;
                     trialBackdrop.transform.position = new Vector3(centre.x, centre.y - 26f, centre.z);
                     nebula.SetVector("_Centre", new Vector4(centre.x, 0f, centre.z, 0f));
-
+                    // Dust drifting up past the edge of the ground.
                     if (Chance(9f))
                     {
                         Vector2 o = Random.insideUnitCircle * 26f;
@@ -377,6 +400,7 @@ namespace AnomalyArena
         readonly List<(ExperienceOrb orb, Color colour)> orbs = new();
         readonly HashSet<ExperienceOrb> dressedOrbs = new();
 
+        /// <summary>An orb's body stays; a pulsing glow round it and motes make it a thing of light.</summary>
         public void Orb(ExperienceOrb orb, Color colour)
         {
             if (dressedOrbs.Add(orb)) orbs.Add((orb, colour));
@@ -407,6 +431,7 @@ namespace AnomalyArena
             }
         }
 
+        /// <summary>A standing void pillar: motes rising inside its exact radius.</summary>
         public void PillarTick(Vector3 centre, float radius)
         {
             if (Chance(26f))
@@ -416,10 +441,13 @@ namespace AnomalyArena
             }
         }
 
+        // ───── Flat discs and small ticks of the auto weapons ─────
+
         static Mesh flatQuad;
         static readonly int ColorId = Shader.PropertyToID("_BaseColor"), MapId = Shader.PropertyToID("_BaseMap");
         MaterialPropertyBlock discBlock;
 
+        /// <summary>A flat quad on the ground, one unit wide, that draws a Resources/V5/Fx texture additively.</summary>
         public MeshRenderer MakeFlatDisc(string name, string texture, Transform parent)
         {
             if (!flatQuad)
@@ -446,6 +474,7 @@ namespace AnomalyArena
             return r;
         }
 
+        /// <summary>Puts a flat disc at a world point with a world radius, whatever its parents are scaled by.</summary>
         public static void PlaceDisc(MeshRenderer disc, Vector3 at, float radius, float height, float angle, Color color)
         {
             var t = disc.transform;
@@ -483,6 +512,7 @@ namespace AnomalyArena
             if (Chance(24f)) ember.Emit(Vector3.Lerp(from, to, Random.value), (from - to).normalized * R(3f, 7f), R(.05f, .1f), R(.14f, .26f), new Color(.55f, .95f, 1f));
         }
 
+        /// <summary>The Human Missile: the player flying on a tail of fire.</summary>
         void TickFlight()
         {
             var gm = GameManager.Instance;
@@ -494,11 +524,18 @@ namespace AnomalyArena
             if (Chance(30f)) smokeLow.Emit(at + back * 1.4f, back * R(1f, 3f), R(.9f, 1.5f), R(.4f, .7f), new Color(.5f, .47f, .45f, .4f), R(0f, 360f));
         }
 
+        // ───── Light waves ─────
+
+        /// <summary>One glint where a light wave's front passes (LightWaveRing): it flares, drifts a little outward and up
+        /// and stays behind as the front moves on, so the front leaves a short sparkling wake.</summary>
         public void WaveGlint(Vector3 at, Vector3 outward, Color c)
         {
             glint.Emit(new Vector3(at.x, R(.12f, .4f), at.z), FlatDir(outward, Vector3.forward) * R(.3f, 1.2f) + Vector3.up * R(.2f, .6f), R(.16f, .32f), R(.16f, .3f), Bright(c, .45f));
         }
 
+        // ───── Enemy shots ─────
+
+        /// <summary>What a glowing boss shot leaves behind.</summary>
         public void ShotMote(Vector3 at, Color c)
         {
             if (Chance(14f)) ember.Emit(at, Random.insideUnitSphere * .4f, R(.06f, .12f), R(.16f, .3f), c);

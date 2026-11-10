@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>One saved cosmetic crate, driven only by accepted weapon-choice events. It awards nothing and creates no objects.</summary>
     [DisallowMultipleComponent]
     public sealed class V3SupplyDropPresentation : MonoBehaviour
     {
@@ -17,18 +17,18 @@ namespace AnomalyArena
         public UnityEngine.UI.Text openHint;
         public Canvas overlayCanvas;
         public Camera worldCamera;
-        [Header("Supply-drop presentation.")]
-        [Tooltip("Horizontal offset of the overhead crate; zero is directly above the player.")] public float forwardDistance;
-        [Tooltip("Crate landing height above the player's position.")] public float headHeight = 1.8f;
-        [Tooltip("Starting drop height; no physics collision is used.")] public float dropHeight = 10f;
-        [Tooltip("Descent duration in unscaled seconds.")] public float dropSeconds = .6f;
-        [Tooltip("Seconds to remain visible after landing.")] public float holdSeconds = 2f;
-        [Tooltip("Pooled impact-light size multiplier.")] public float fadeSeconds = .4f;
-        [Tooltip("Vertical menu item offset when expanded.")] public float dustSeconds = .45f;
-        [Tooltip("Impact ring diameter in world units.")] public float dustDiameter = 3.3f;
-        [Tooltip("UI projection offset of the overhead crate; zero aligns with the world crate.")] public Vector2 uiOffset;
-        [Tooltip("Reuses Impact audio once at the landing transition.")] public bool landingSound = true;
-        [Tooltip("Show a UI projection so the crate remains visible under full-screen selection screens.")] public bool showUiProjection = true;
+        [Header("天降军需箱：只控制表现")]
+        [Tooltip("头顶军需箱的水平偏移；0表示正上方。")] public float forwardDistance;
+        [Tooltip("箱体落点相对玩家Position的头顶高度。")] public float headHeight = 1.8f;
+        [Tooltip("下降起始高度；不使用物理碰撞。")] public float dropHeight = 10f;
+        [Tooltip("下降秒数，使用不缩放时间。")] public float dropSeconds = .6f;
+        [Tooltip("落地之后保持可见的秒数。")] public float holdSeconds = 2f;
+        [Tooltip("保持结束后的淡出秒数。")] public float fadeSeconds = .4f;
+        [Tooltip("尘环展开的秒数。")] public float dustSeconds = .45f;
+        [Tooltip("尘环最大直径，世界单位。")] public float dustDiameter = 3.3f;
+        [Tooltip("头顶箱体的UI投影偏移；默认0，与世界箱体重合。")] public Vector2 uiOffset;
+        [Tooltip("复用已有Impact声音，仅实际落地边沿一次。")] public bool landingSound = true;
+        [Tooltip("展示UI投影，使旧全屏选择页覆盖世界时仍能看见箱体。")] public bool showUiProjection = true;
         GameManager subscribedGame;
         MaterialPropertyBlock[] blocks;
         Color[] surfaceColor;
@@ -47,6 +47,16 @@ namespace AnomalyArena
             }
             dustColor = worldDust ? worldDust.color : Color.white; glowColor = worldGlow ? worldGlow.color : Color.white;
             uiDustColor = uiDust ? uiDust.color : Color.white; uiGlowColor = uiGlow ? uiGlow.color : Color.white;
+            savedCrateSprite = uiCrate ? uiCrate.sprite : null;
+        }
+        // 2026-11-10: in whitebox the crate's picture over the screen is the whitebox crate seen from the side (WhiteboxIcons), the saved
+        // picture with the art on; checked at each tick, so the art switch shows at once.
+        Sprite savedCrateSprite;
+        void ShowCratePicture()
+        {
+            if (!uiCrate) return;
+            var sprite = Art.Enabled ? savedCrateSprite : WhiteboxIcons.Look("crate");
+            if (sprite && uiCrate.sprite != sprite) uiCrate.sprite = sprite;
         }
         void OnEnable()
         {
@@ -80,10 +90,10 @@ namespace AnomalyArena
         void LateUpdate()
         {
             if (!active) return;
-
+            // The pause menu (Esc while the build phase's crate comes down) leaves the crate where it is.
             if (game && game.RunPhase == ArenaUiState.Paused) return;
             if (!game || game.RunPhase != ArenaUiState.SupplyDrop) { Hide(); return; }
-
+            // The build phase's player walks while the crate comes down: it stays above their head, always in reach.
             if (game.player) { anchor = AbovePlayer(); dropRoot.position = anchor; }
             Tick(Time.unscaledTime - began);
         }
@@ -107,7 +117,7 @@ namespace AnomalyArena
                 landed = true;
                 game.MarkSupplyLanded();
                 if (V5Vfx.On && game.player) V5Vfx.I.GroundSlam(game.player.Position, 1.8f, new Color(.82f, .76f, .66f), false);
-
+                // Opened by a click only; the button is not selected for a keyboard confirm (Enter and Space do nothing).
                 if (openButton) openButton.interactable = true;
                 if (landingSound) V2Audio.Instance?.PlayWorld(ArenaSoundCue.Impact, anchor);
             }
@@ -120,7 +130,7 @@ namespace AnomalyArena
             if (openHint)
             {
                 if (ArenaText.Font) openHint.font = ArenaText.Font;
-                openHint.text = landed ? ArenaText.Pair("CLICK THE CRATE TO OPEN","CLICK THE CRATE TO OPEN") : ArenaText.Pair("SUPPLY INCOMING…","SUPPLY INCOMING…");
+                openHint.text = landed ? ArenaText.Pair("点击箱子打开", "CLICK THE CRATE TO OPEN") : ArenaText.Pair("军需箱正在落下…", "SUPPLY INCOMING…");
             }
             if (!overlayRoot || !showUiProjection || !worldCamera || !overlayCanvas) return;
             Vector3 cratePoint = worldCamera.WorldToScreenPoint(crateRoot.position + Vector3.up * .55f);
@@ -129,6 +139,7 @@ namespace AnomalyArena
             overlayRoot.gameObject.SetActive(visible);
             if (!visible) return;
             Camera uiCamera = overlayCanvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : overlayCanvas.worldCamera;
+            ShowCratePicture();
             if (uiCrate && RectTransformUtility.ScreenPointToLocalPointInRectangle(overlayRoot, cratePoint, uiCamera, out var crateAt))
             {
                 uiCrate.rectTransform.anchoredPosition = crateAt + uiOffset;

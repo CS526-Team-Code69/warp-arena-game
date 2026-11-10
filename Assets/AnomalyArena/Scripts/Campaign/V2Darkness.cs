@@ -3,7 +3,13 @@ using UnityEngine.UI;
 
 namespace AnomalyArena
 {
-
+    /// <summary>
+    /// The night's darkness: one screen-wide image under the HUD whose alpha is computed on the CPU from the ground point under each
+    /// texel (192 x 108, refreshed 30 times a second, bilinear-scaled to the screen). Light circles (lamps, the base, the player's glow,
+    /// glints of nodes and shadow eyes) cut it away; regions crowded with shadows are a little darker (the danger cue: darkness and
+    /// sound, no marks on the ground). It needs no shader, so it behaves the same in the editor and on the web. The void trial lies off
+    /// the map, where no night falls: while it runs the darkness is not drawn (since 2026-11-06, when the trial opened in the campaign).
+    /// </summary>
     public sealed class V2Darkness : MonoBehaviour
     {
         const int W = 192, H = 108, MaxLights = 96;
@@ -47,7 +53,7 @@ namespace AnomalyArena
 
         void LateUpdate()
         {
-
+            // The void trial (WorldMap.TrialActive) is off the map, where no night falls.
             if (!canvas) canvas = GetComponent<Canvas>();
             bool show = !(WorldMap.Active && WorldMap.Active.TrialActive);
             if (canvas && canvas.enabled != show) canvas.enabled = show;
@@ -92,6 +98,8 @@ namespace AnomalyArena
             texture.Apply(false);
         }
 
+        /// <summary>The ground point (y = 0) under each texel: corner rays interpolated across the screen, exact for both the orthographic
+        /// and the perspective camera views.</summary>
         void GroundPoints(Camera cam)
         {
             Ray r00 = cam.ViewportPointToRay(new Vector3(0f, 0f, 0f)), r10 = cam.ViewportPointToRay(new Vector3(1f, 0f, 0f));
@@ -112,6 +120,7 @@ namespace AnomalyArena
             }
         }
 
+        /// <summary>Adds one light circle to the lit buffer, visiting only the texels its ground bounds cover on screen.</summary>
         void Splat(Camera cam, Vector4 light)
         {
             float lx = light.x, lz = light.y, radius = light.z, intensity = light.w;

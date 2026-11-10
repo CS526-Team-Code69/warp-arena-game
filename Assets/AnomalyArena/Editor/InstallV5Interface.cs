@@ -6,13 +6,17 @@ using UnityEngine;
 
 namespace AnomalyArena.EditorTools
 {
-
+    /// <summary>
+    /// Interface scale pass (2026-10-21). Each scene's HUD gets a V2HudLayout component that owns the canvas reference size and the
+    /// bottom-row layout; its numbers are editable in the Inspector and apply at once. This installer seeds the component with the
+    /// current defaults when it is missing, applies the layout, and never overwrites values that are already in the scene.
+    /// Menu: Anomaly Arena/V5/Install Interface Scale. Safe to run again.
+    /// </summary>
     internal static class InstallV5Interface
     {
         static readonly string[] ScenePaths =
         {
-            "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity",
-            "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity"
+            "Assets/AnomalyArena/Scenes/ArenaV2.unity"
         };
 
         [MenuItem("Anomaly Arena/V5/Install Interface Scale")]
@@ -43,7 +47,7 @@ namespace AnomalyArena.EditorTools
                 layout.hud = hud;
                 EditorUtility.SetDirty(layout);
                 layout.Apply();
-
+                // XP teaching label: a copy of the first hole label that V2WorldLabels moves onto the nearest XP orb.
                 var labels = hud.GetComponentInChildren<V2WorldLabels>(true);
                 if (labels && !labels.orbHintLabel && labels.holeLabels != null && labels.holeLabels.Length > 0 && labels.holeLabels[0])
                 {

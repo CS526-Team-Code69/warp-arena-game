@@ -3,7 +3,10 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>Ground marks of the Nash Prophet's void trial, drawn with flat line renderers so no scene objects are needed: each prophecy
+    /// landing circle with its fill closing from the rim toward the centre. The platform edge carries no mark any more: the push-out band
+    /// went on 2026-10-25, and the dashed new edge went with the platform's shrink on 2026-10-26 (it keeps its size in every phase). Added
+    /// to a boss at runtime; the Tyrant draws nothing here.</summary>
     public sealed class V2BossGroundMarks : MonoBehaviour
     {
         [Tooltip("Rim of a prophecy landing circle, at full size from the start.")]
@@ -35,6 +38,7 @@ namespace AnomalyArena
             foreach (var line in fills) if (line) line.enabled = false;
         }
 
+        /// <summary>The sprite material the enemy's own warning uses: it takes vertex colours, as the Spire circle does.</summary>
         void FindMaterial()
         {
             var telegraph = GetComponent<V2EnemyTelegraphPresentation>();
@@ -42,7 +46,7 @@ namespace AnomalyArena
             if (source == null) return;
             material = source.sharedMaterial;
             sortingLayer = source.sortingLayerID;
-            sortingOrder = source.sortingOrder - 1;                             
+            sortingOrder = source.sortingOrder - 1; // under the attack warnings
         }
 
         void DrawLandingZones(bool show)
@@ -61,7 +65,7 @@ namespace AnomalyArena
                 Circle(rims[i], zone.centre, zone.radius, .055f);
                 rims[i].widthMultiplier = lineWidth;
                 rims[i].startColor = rims[i].endColor = landingRimColor;
-
+                // A band as wide as the filled part, hugging the rim; at full fill it covers the whole disc.
                 float band = Mathf.Max(.02f, zone.radius * zone.Fill01);
                 Circle(fills[i], zone.centre, zone.radius - band * .5f, .05f);
                 fills[i].widthMultiplier = band;
@@ -80,7 +84,7 @@ namespace AnomalyArena
             line.sharedMaterial = material;
             line.sortingLayerID = sortingLayer;
             line.sortingOrder = sortingOrder;
-            line.alignment = LineAlignment.TransformZ;                                                    
+            line.alignment = LineAlignment.TransformZ; // flat on the ground, not turned toward the camera
             line.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             line.receiveShadows = false;
             line.numCapVertices = 0;
@@ -100,6 +104,7 @@ namespace AnomalyArena
             Flatten(line);
         }
 
+        /// <summary>The body turns every frame; keep each ribbon facing straight up.</summary>
         static void Flatten(LineRenderer line) => line.transform.rotation = Quaternion.LookRotation(Vector3.up, Vector3.forward);
     }
 }

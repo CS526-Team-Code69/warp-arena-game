@@ -3,12 +3,16 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>
+    /// Draws the walls onto the ground of the Ruins and the Dunes. The scene's light casts no real shadows, so this keeps one small texture over the whole map, read by
+    /// the ground's shader: R the shadow each wall casts away from the light, from the real height of its stones; G a soft darkening at a wall's foot; B the rubble that
+    /// lies along a wall, which stays when the wall is broken. It is worked out again when a wall appears, goes or is cut (TyrantTerrain, the Bulwark). Illustrated art only.
+    /// </summary>
     [DisallowMultipleComponent]
     [DefaultExecutionOrder(500)]
     public sealed class V5TerrainGround : MonoBehaviour
     {
-
+        // 0.25 of a cell per texel, the same as the walls' height grids; the shader sharpens the edge.
         const int TexelsPerCell = 4;
         const float ShadowSoftness = .4f, ContactReach = .8f, RubbleReach = 1.5f;
         static readonly int MaskId = Shader.PropertyToID("_ShadowMask"), RectId = Shader.PropertyToID("_ShadowRect");
@@ -22,6 +26,7 @@ namespace AnomalyArena
         float originX, originZ;
         MaterialPropertyBlock block;
 
+        /// <summary>Starts the texture for the floor of the world's map, once.</summary>
         public static void Attach(WorldMap world, Renderer floor)
         {
             if (!world || !world.layout || !floor) return;
@@ -75,7 +80,7 @@ namespace AnomalyArena
         void Draw()
         {
             Array.Clear(heights, 0, heights.Length);
-            for (int i = 0; i < pixels.Length; i += 4) pixels[i] = pixels[i + 1] = 0;                         
+            for (int i = 0; i < pixels.Length; i += 4) pixels[i] = pixels[i + 1] = 0; // the rubble in B stays
             foreach (var art in V5TerrainWallArt.Standing)
                 if (art && art.Shape != null) Stamp(art);
             Vector3 toSun = V5TerrainWalls.ToSun;
@@ -85,6 +90,7 @@ namespace AnomalyArena
             mask.Apply(false, false);
         }
 
+        /// <summary>The wall's height into the map's height grid.</summary>
         void Stamp(V5TerrainWallArt art)
         {
             var shape = art.Shape;
@@ -99,6 +105,7 @@ namespace AnomalyArena
             }
         }
 
+        /// <summary>The cast shadow, the contact darkening and the rubble round one wall.</summary>
         void Shade(V5TerrainWallArt art, Vector3 toSun)
         {
             var shape = art.Shape;
@@ -115,6 +122,7 @@ namespace AnomalyArena
                 float along = Mathf.Max(Mathf.Abs(wx * right.x + wz * right.z) - halfW, 0f), across = Mathf.Max(Mathf.Abs(wx * ahead.x + wz * ahead.z) - halfD, 0f);
                 float gap = Mathf.Sqrt(along * along + across * across);
 
+                // Walk toward the light: the tallest thing above the line of sight sets the shadow.
                 float cast = 0f;
                 for (int s = 1; s <= steps; s++)
                 {
@@ -139,6 +147,7 @@ namespace AnomalyArena
             if (packed > pixels[index]) pixels[index] = packed;
         }
 
+        /// <summary>The wall's texels with the margin added all round, and the directions of its rectangle on the ground.</summary>
         void Frame(V5TerrainWallArt art, float margin, out int x0, out int x1, out int z0, out int z1, out Vector3 at, out Vector3 right, out Vector3 ahead)
         {
             var t = art.transform;

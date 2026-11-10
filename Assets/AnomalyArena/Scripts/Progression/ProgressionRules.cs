@@ -47,6 +47,8 @@ namespace AnomalyArena
             new(StatId.CritChance, .1f, StatBonus.CritMultiplier, .15f)
         };
 
+        /// <summary>Decision list §1 #8 and document 8.6: each wave band offers two tiers for stat cards and skill cards, mostly the low one.
+        /// Wave is the 1-based wave just finished: 1–2 white/green, 3–8 green/blue, 9–11 blue/purple, 12+ purple/orange.</summary>
         public static void RarityBand(int wave, out CardRarity low, out CardRarity high)
         {
             if (wave <= 2) { low = CardRarity.Common; high = CardRarity.Rare; }
@@ -55,14 +57,19 @@ namespace AnomalyArena
             else { low = CardRarity.Epic; high = CardRarity.Legendary; }
         }
 
+        /// <summary>percentRoll is in [0, 100). Below highTierPercent, or on pity, the band's high tier; otherwise its low tier.</summary>
         public CardRarity StatRarity(int wave, float percentRoll, bool pity)
         {
             RarityBand(wave, out var low, out var high);
             return pity || percentRoll < Mathf.Clamp(highTierPercent, 0f, 100f) ? high : low;
         }
 
+        /// <summary>Document 8.6: the colour of a skill card drawn on this 1-based wave follows the stat-card rule
+        /// exactly (RarityBand, highTierPercent, pity), so late skill cards are purple or orange. percentRoll is in [0, 100); the caller
+        /// keeps the skill cards' own pity count. The colour is the level the card gives (ArenaRarity.SkillLevel).</summary>
         public CardRarity SkillRarity(int wave, float percentRoll, bool pity) => StatRarity(wave, percentRoll, pity);
 
+        /// <summary>Draw weight of a weapon card direction on this 1-based wave. Only Tame, Twist and Infusion are still drawn.</summary>
         public float DirectionWeight(int wave, UpgradeAxis axis)
         {
             WeaponDirectionBand band = default; int from = int.MinValue;
@@ -73,6 +80,7 @@ namespace AnomalyArena
         }
     }
 
+    /// <summary>One wave band of weapon card direction weights (ProgressionRules.weaponDirectionBands).</summary>
     [System.Serializable]
     public struct WeaponDirectionBand
     {
@@ -91,7 +99,7 @@ namespace AnomalyArena
     [System.Serializable]
     public sealed class StatCardValues
     {
-
+        /// <summary>Placeholder tier factors on the Common value (Common, Rare, Exceptional, Epic, Legendary); the designer retunes the asset.</summary>
         public static readonly float[] PlaceholderTierScale = { 1f, 1.5f, 2.1f, 2.8f, 3.6f };
 
         public StatId stat;
@@ -103,6 +111,7 @@ namespace AnomalyArena
         [Tooltip("Retired rows stay for serialized IDs and old saves but are never offered.")]
         public bool retired;
 
+        /// <summary>Fills the higher tiers from the Common values with PlaceholderTierScale.</summary>
         public StatCardValues(StatId stat, float common, StatBonus bonus = StatBonus.None, float bonusCommon = 0f, bool retired = false)
         {
             this.stat = stat; this.bonus = bonus; this.retired = retired;

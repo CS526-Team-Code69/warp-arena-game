@@ -10,12 +10,20 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>
+    /// Growth-curve driver (system doc §9, decision list §2.5), not a unit test. A bot spends a fixed share of the wave's reference DPS
+    /// in weapon-like hits (four a second), clears the support line (Wardens, Chanters) before the nearest body, and collects every
+    /// orb, so the level reached at the end of each ordinary wave shows what the saved waves really pay. Each row also splits the wave
+    /// into timer and clean-up time and lists kills by kind, so a wave that drags shows why. Survivors still alive StallSeconds after
+    /// the timer expired are discarded without reward and counted as a stall. It prints "[XpPacing]" lines and writes
+    /// Logs/XpPacing-eff*.txt. It only runs while Logs/xp-pacing.request exists (created by "Anomaly Arena/V5/Run XP Pacing Driver");
+    /// the regular suite skips it.
+    /// </summary>
     [TestFixture]
     [Category("Pacing")]
     public class XpPacingDriverTest
     {
-        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
         const float TimeScale = 3f;
         const float WallClockLimit = 1200f;
         const float HitInterval = .25f;
@@ -53,6 +61,7 @@ namespace AnomalyArena
             var balance = game.waves.waveSet ? game.waves.waveSet.encounterBalance : null;
             Assume.That(balance, Is.Not.Null, "saved wave set carries an encounter balance");
 
+            // Every threshold crossed in GainXp enqueues exactly one draft, so draft-count rises reconstruct the XP spent on levels.
             int thresholds = 0, lastBanked = progression.BankedDrafts;
             progression.Changed += () =>
             {
@@ -75,7 +84,7 @@ namespace AnomalyArena
             var causes = new Dictionary<DeathCause, int>();
             var stalledKinds = new Dictionary<string, int>();
             int refused = 0, switched = 0;
-
+            // A target that loses no HP or shield for StuckSeconds is left alone for a while, as a player would switch targets.
             var benched = new Dictionary<Enemy, float>();
             Enemy current = null;
             float currentSince = 0f, currentTotal = 0f;
@@ -84,7 +93,7 @@ namespace AnomalyArena
                 if (!enemy || enemy.SuppressRewards || enemy.IsTrialSummon) return;
                 float reward = game.waves.ExperienceFor(enemy);
                 potentialXp += reward;
-
+                // Fixed rewards (melee swarm, mini Splitters) do not follow the wave's XP scale; the rest does (doc 9.2).
                 if (enemy.Mini || enemy.definition && !enemy.Elite && EnemyRoles.IsMelee(enemy.definition.kind)) fixedXp += reward;
                 kills++;
                 string kind = (enemy.definition ? enemy.definition.kind.ToString() : "?") + (enemy.Elite ? "*" : "") +
@@ -160,7 +169,8 @@ namespace AnomalyArena
                     float dt = game.WorldDeltaTime;
                     bank += efficiency * balance.DpsAt(game.waves.WaveIndex + 1) * dt;
                     hitClock += dt;
-
+                    // Hand over the interval's budget in one hit: ReceiveDamage floors any accepted attack to one HP and rounds shield
+                    // absorption, so per-frame slivers would not behave like weapon hits.
                     if (hitClock >= HitInterval && bank >= 1f)
                     {
                         var target = PickTarget(game, benched);
@@ -205,7 +215,7 @@ namespace AnomalyArena
                 {
                     switch (game.RunPhase)
                     {
-
+                        // Every build phase starts with the supply crate: wait for it to land, then open it like the Space key does.
                         case ArenaUiState.SupplyDrop:
                             if (game.SupplyDropReady) game.ExecuteUiCommand(ArenaUiCommand.OpenSupply);
                             break;
@@ -244,6 +254,8 @@ namespace AnomalyArena
             Assert.That(stop, Is.Null, "the driver reaches the end of the ordinary waves");
         }
 
+        /// <summary>A player clears the support line first: Wardens and Chanters anywhere on the field, then the nearest body; a target
+        /// that refuses hits right now (charging, protected) is taken last, and one benched for losing nothing under fire later still.</summary>
         static Enemy PickTarget(GameManager game, Dictionary<Enemy, float> benched)
         {
             Enemy best = null;

@@ -9,11 +9,12 @@ using UnityEngine.UI;
 
 namespace AnomalyArena
 {
-
+    /// <summary>Every skill and weapon card text stays inside the draft card's body box in both languages: long texts shrink
+    /// (down to the card's minimum size) instead of running into the footer, and nothing is cut off.</summary>
     [TestFixture]
     public class CardTextFitTest
     {
-        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(60000)]
         public async Task DraftCards_EverySkillAndWeaponText_FitsTheBodyBoxInBothLanguages()
@@ -40,7 +41,7 @@ namespace AnomalyArena
                     await Until(() => ArenaText.Ready && ArenaText.IsChinese == chinese, 12f, "locale " + code);
                     if (chinese)
                     {
-
+                        // Unity's best fit put this sentence (no spaces) at the smallest size on one line.
                         choice.ShowBody("拿到之前不知道是哪种攻击方式和特性；选中的那一刻揭晓。");
                         Assert.That(choice.body.fontSize, Is.EqualTo(savedSize), "a short Chinese text keeps the largest size and wraps");
                     }
@@ -77,7 +78,7 @@ namespace AnomalyArena
             foreach (var skill in catalog.skills.Where(s => s))
             for (int level = 1; level <= SkillDefinition.MaxLevel; level++)
                 yield return ($"{skill.id} L{level}",
-                    skill.Description(level) + ArenaText.Pair($"\n{skill.cost:0} Energy",$"\n{skill.cost:0} Energy"));
+                    skill.Description(level) + ArenaText.Pair($"\n消耗 {skill.cost:0} 能量", $"\n{skill.cost:0} Energy"));
             for (int form = (int)WeaponForm.GravGun; form <= (int)WeaponForm.SwarmLauncher; form++)
             for (int variant = 0; variant < 2; variant++)
             foreach (var axis in new[] { UpgradeAxis.Twist, UpgradeAxis.Tame })
@@ -85,6 +86,8 @@ namespace AnomalyArena
             foreach (var card in StartingFormCards()) yield return card;
         }
 
+        /// <summary>The Twist and Tame cards of the Rifle, Knife and Rocket Launcher, rolled from a lone weapon with
+        /// only that direction open; the held weapons are put back afterwards.</summary>
         static List<(string, string)> StartingFormCards()
         {
             var weapons = GameManager.Instance.runWeapons;

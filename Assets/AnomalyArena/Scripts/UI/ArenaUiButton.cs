@@ -3,6 +3,7 @@ using UnityEngine.EventSystems;
 
 namespace AnomalyArena
 {
+    /// <summary>A saved button action. Its command and index are inspectable in the scene.</summary>
     public class ArenaUiButton : MonoBehaviour, IPointerEnterHandler, ISelectHandler
     {
         public V2Hud hud;

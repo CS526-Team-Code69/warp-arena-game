@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>Saved pool. A full pool merges into the nearest same-kind orb instead of creating an object.</summary>
     public sealed class OrbPool : MonoBehaviour
     {
         [field: SerializeField, Tooltip("Preplaced pickups, normally 256. No runtime object creation.")]
@@ -37,9 +37,10 @@ namespace AnomalyArena
         public void MarkPressurePickupApplied() => pressurePickupRevision = 1;
         [field: SerializeField] public float repelDistance { get; set; } = 3f;
         public static OrbPool Instance { get; private set; }
-
+        /// <summary>Teaching state: true until the player has collected any XP in this run (a new run resets level and XP).</summary>
         public bool XpUncollected => progression && progression.Level == 1 && progression.Xp <= 0f;
 
+        /// <summary>The XP orb on the ground nearest to a point (optionally only those a filter accepts), or null.</summary>
         public ExperienceOrb NearestXp(Vector3 from, Func<Vector3, bool> accept = null)
         {
             ExperienceOrb best = null; float distance = float.MaxValue;
@@ -54,6 +55,7 @@ namespace AnomalyArena
             return best;
         }
 
+        /// <summary>How many XP orbs lie on the ground and how much XP they hold together.</summary>
         public int CountXp(out float value)
         {
             int count = 0; value = 0f;
@@ -67,6 +69,7 @@ namespace AnomalyArena
         void Awake() => Instance = this;
         void OnDestroy() { if (Instance == this) Instance = null; }
 
+        /// <summary>Energy orbs only drop once energy is unlocked; before that they would restore nothing.</summary>
         public void Drop(Vector3 position, float xpValue, bool dropHp = false, bool dropEnergy = false)
         {
             if (xpValue > 0f) SpawnOrMerge(position, OrbKind.Xp, xpValue);
@@ -104,7 +107,7 @@ namespace AnomalyArena
             if (game) dt = game.WorldDeltaTime;
             float baseRange = progression.Rules ? progression.Rules.startingStats.pickupRange : 2f;
             float xpRange = Mathf.Max(0f, xpMagnetBaseRadius + progression.Stats.pickupRange - baseRange);
-
+            // HP and energy orbs share the run pickup range; only XP uses the wider XP magnet.
             foreach (var orb in pool) if (orb && orb.InUse) orb.Tick(dt, player, progression, orb.Kind == OrbKind.Xp ? xpRange : progression.Stats.pickupRange, magnetSpeed);
         }
 

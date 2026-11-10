@@ -8,14 +8,14 @@ using Object = UnityEngine.Object;
 
 namespace AnomalyArena
 {
-                                                                                                                                   
-                                                                                                                                      
-                                                                                                                                         
-                                                                                                                                                                                       
+    /// <summary>Void Walk and the Damage card. Void Walk lasts 5 s and the player cannot be
+    /// targeted meanwhile: an ordinary enemy walks to where they vanished and starts no attack, and an enemy shot flies through them.
+    /// When it runs out, both hand weapons carry Void for 5 s and then get their own element back (a wave ending gives it back at once).
+    /// A weapon card drawn during the enchant reads the element the weapon gets back. The Damage card scales direct damage, skills included, and no longer adds crit chance.</summary>
     [TestFixture]
     public class VoidWalkDamageCardTest
     {
-        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task VoidWalk_EnemyNearby_SearchesWhereYouVanishedWithoutAttacking_ForFiveSeconds()
@@ -126,7 +126,7 @@ namespace AnomalyArena
             ElementKind during;
             try
             {
-                                                                            
+                // Every card on the infused rifle is a change-element card.
                 weapons.upgrades.reinfuseChance = 2f;
                 weapons.VoidEnchantHands(5f);
                 card = weapons.RollUpgradeCard();
@@ -143,7 +143,7 @@ namespace AnomalyArena
             var offer = (WeaponUpgradeOffer)card.Payload;
             Assert.That(offer.Axis, Is.EqualTo(UpgradeAxis.Infusion), "a change-element card");
             Assert.That(offer.Element, Is.Not.EqualTo(ElementKind.Fire), "it never rolls the element the rifle already has");
-            Assert.That(card.Description, Does.Contain("replaces Fire"), "it replaces Fire, not the borrowed Void");
+            Assert.That(card.Description, Does.Contain("替换 火焰"), "it replaces Fire, not the borrowed Void");
             Assert.That(applied, Is.True, "the card applies");
             Assert.That(during, Is.EqualTo(ElementKind.Void), "the enchant still shows Void");
             Assert.That(rifle.element, Is.EqualTo(offer.Element), "the new element takes over when the enchant ends");
@@ -159,11 +159,11 @@ namespace AnomalyArena
             var card = new StatCardOffer(StatId.Damage, CardRarity.Common, row.common, row.bonus, row.bonusCommon);
 
             Assert.That(row.bonus, Is.EqualTo(StatBonus.None), "no bonus effect");
-            Assert.That(card.Description, Does.Contain("Direct damage, skills included, scaled up"), "the card says what it scales");
-            Assert.That(card.Description, Does.Not.Contain("Crit"), "and mentions no crit");
+            Assert.That(card.Description, Does.Contain("直接伤害（包括技能伤害）按比例提高"), "the card says what it scales");
+            Assert.That(card.Description, Does.Not.Contain("暴击"), "and mentions no crit");
         }
 
-                              
+        // ───── Helpers ─────
 
         static SkillLoadout Learned(GameManager game)
         {
@@ -191,7 +191,7 @@ namespace AnomalyArena
 
         static int SlotOf(SkillLoadout skills, SkillId id) => Array.FindIndex(skills.Slots, s => !s.Empty && s.Id == id);
 
-                                                                                                               
+        /// <summary>One enemy of this kind from the saved pool, walking on its own, worth no reward.</summary>
         static Enemy Spawn(GameManager game, EnemyKind kind, Vector3 at)
         {
             var enemy = game.waves.SpawnLab(kind, at, false, ElementKind.None);

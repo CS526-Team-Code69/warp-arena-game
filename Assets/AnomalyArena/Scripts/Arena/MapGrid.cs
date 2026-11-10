@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-                                                                                                              
+    /// <summary>One shared integration field per gravity policy; no path allocation for each enemy.</summary>
     public sealed class MapGrid
     {
         readonly int width, height;
@@ -41,8 +41,8 @@ namespace AnomalyArena
 
         public void Rebuild(WorldMap map)
         {
-                                                                                                                                         
-                                                                                                             
+            // V2 day campaign (since 2026-11-06): its larger map with many terrain walls stamps each wall once (StampBlocked) instead of
+            // testing every wall at every cell; the cells come out the same. The classic maps keep the loop.
             if (map.CampaignMapApplied) StampBlocked(map);
             else
                 for (int i = 0; i < blocked.Length; i++)
@@ -69,9 +69,9 @@ namespace AnomalyArena
             }
         }
 
-                                                                                                                                            
-                                                                                                                                          
-                                                                                      
+        /// <summary>The V2 campaign's Rebuild: the same blocked and gravity cells as the per-cell loop (WorldMap.Contains with 0.5, IsHole,
+        /// GetPull, and IsWall with 0.5, whose rect test includes the edges and whose temporary walls test their collider's bounds at the
+        /// wall's height), with each wall visiting only the cells round it.</summary>
         void StampBlocked(WorldMap map)
         {
             for (int i = 0; i < blocked.Length; i++)
@@ -114,7 +114,7 @@ namespace AnomalyArena
             }
         }
 
-                                                                                                                                                           
+        /// <summary>The cells whose centres may lie between lo and hi along one axis, a cell more each way for rounding; the exact test follows.</summary>
         static void Range(float lo, float hi, int cells, float start, out int first, out int last)
         {
             first = Mathf.Max(0, Mathf.FloorToInt(lo - start - .5f) - 1);
@@ -148,7 +148,7 @@ namespace AnomalyArena
             int first = 0, last = 0;
             field[goal] = 0;
             queue[last++] = goal;
-                                                                                                                   
+            // A target inside gravity is a valid seed: safe enemies stop at its rim rather than freeze everywhere.
             while (first < last)
             {
                 int at = queue[first++];
@@ -214,7 +214,7 @@ namespace AnomalyArena
         int[] raidField;
         bool raidReady;
 
-                                                                                                                                                        
+        /// <summary>V2 day campaign raiders: one flow field toward the open ground ringing a rect (the base), so they walk round walls to it.</summary>
         public void IntegrateRaid(Rect target)
         {
             raidField ??= new int[width * height];

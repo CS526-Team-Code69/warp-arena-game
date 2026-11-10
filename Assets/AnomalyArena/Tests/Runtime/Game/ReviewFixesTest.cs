@@ -9,15 +9,20 @@ using Object = UnityEngine.Object;
 
 namespace AnomalyArena
 {
-
+    /// <summary>Fixes after the 2026-10-23 weapon, card and boss review: weapon lines drawn in whitebox, a hook that catches an enemy
+    /// touching you, Blizzard Twist shattering only on a real release, base self-damage for the knife's kill return, card numbers read
+    /// from the tuning, the Prophet's own hole slots and boss shots ending with the trial. (The Tyrant's moves of 2026-10-25, its charge's
+    /// landing out of gravity rings included, are tested in TyrantRedesignTest.)</summary>
     [TestFixture]
     public class ReviewFixesTest
     {
-        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
         const string LabScene = "Assets/AnomalyArena/Scenes/EnemyLab.unity";
 
         [TearDown]
         public void RestoreClock() => Time.timeScale = 1f;
+
+        // ───── Weapons ─────
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task Whitebox_ExecuteShot_StillDrawsItsTracer()
@@ -31,7 +36,7 @@ namespace AnomalyArena
             try
             {
                 Art.Enabled = false;
-                tuning.executeTracerSeconds = 1f;                                           
+                tuning.executeTracerSeconds = 1f; // long enough to be seen on a later frame
                 Equip(game, WeaponForm.Railgun, 1);
                 await Awaitable.NextFrameAsync();
                 await Awaitable.NextFrameAsync();
@@ -55,7 +60,7 @@ namespace AnomalyArena
         {
             var (game, targets) = await V3CombatSmokeTest.StartSandbox();
             var near = targets[0];
-
+            // Touching the player: the hook head (0.7 from your centre, radius 0.18) starts inside it.
             Place(near, game.player.Position + Vector3.forward * (game.player.radius + near.radius + .05f));
             var hook = Equip(game, WeaponForm.Knife, 1);
 
@@ -88,7 +93,7 @@ namespace AnomalyArena
             float before = enemy.Hp;
             try
             {
-
+                // A stun (like a knockback or a paralysis twitch) cancels the spray without a release.
                 game.player.Stun(5f);
                 await Awaitable.NextFrameAsync();
                 await Awaitable.NextFrameAsync();
@@ -109,7 +114,7 @@ namespace AnomalyArena
             var knife = Equip(game, WeaponForm.Knife, 0, mk: 3);
             var victim = targets[0];
             victim.ReceiveDamage(new DamageInfo { amount = victim.Hp - 1f, source = DamageSource.Poison, ignoreShield = true });
-
+            // Rule R6, Q105: a starting form's backfire also takes the starting-form factor (6.1 -> about 3), never the Mk or cards.
             float baseCut = game.runWeapons.roster.Get(WeaponForm.Knife).damageA * game.runWeapons.StartingFormDamageFactor(WeaponForm.Knife);
             Assume.That(Mathf.Abs(game.runWeapons.HitDamage(knife) - baseCut), Is.GreaterThan(.5f), "Mk 3 scales the hit away from the base value");
             float hp = player.Hp;
@@ -140,7 +145,7 @@ namespace AnomalyArena
                 tuning.wildfireFenceRange = 7.5f;
                 tuning.shatterTameSpeed = 1.45f;
                 Assert.That(ArenaTerms.ExpandedUpgradeDescription(WeaponForm.Flamethrower, 1, UpgradeAxis.Twist), Does.Contain("7.5"), "a retuned fence range shows");
-
+                // The patch cap stays in the game but is no longer on the card; the speed on your own ice is.
                 Assert.That(ArenaTerms.ExpandedUpgradeDescription(WeaponForm.CryoCannon, 0, UpgradeAxis.Tame), Does.Contain("1.45"), "a retuned ice speed shows");
             }
             finally
@@ -149,6 +154,8 @@ namespace AnomalyArena
                 tuning.shatterTameSpeed = iceSpeed;
             }
         }
+
+        // ───── Bosses ─────
 
         [Test, LoadScene(LabScene), Category("Integration"), Timeout(60000)]
         public async Task VoidTrial_Ending_ClearsTheBossShotsStillInFlight()
@@ -166,6 +173,8 @@ namespace AnomalyArena
             }
             finally { game.player.Invulnerable = false; }
         }
+
+        // ───── Helpers ─────
 
         static RunWeapon Equip(GameManager game, WeaponForm form, int variant, UpgradeAxis axes = UpgradeAxis.None, int mk = 1)
         {

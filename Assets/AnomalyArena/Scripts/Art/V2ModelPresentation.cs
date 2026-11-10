@@ -2,7 +2,11 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>
+    /// Plays saved model clips from real gameplay state. This component never moves
+    /// a Combatant, deals damage, creates objects or uses animation events for combat.
+    /// With the art off the model is hidden and WhiteboxCharacter, which this adds, draws the character's whitebox look instead.
+    /// </summary>
     [DefaultExecutionOrder(1100)]
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Combatant))]
@@ -86,7 +90,7 @@ namespace AnomalyArena
         float twist;
         static readonly int EmissionId = Shader.PropertyToID("_EmissionColor");
         static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
-
+        /// <summary>Multiplies the model's texture; the V5 art deepens the player's pale armour with it.</summary>
         [System.NonSerialized] public Color baseTint = Color.white;
 
         public bool HasAssignedModel => modelRoot && animator && animator.runtimeAnimatorController && idleClip && runClip && attackClip && modelRenderers != null && modelRenderers.Length > 0;
@@ -97,14 +101,17 @@ namespace AnomalyArena
             body = GetComponent<Combatant>(); enemy = body as Enemy;
             motion = GetComponent<Rigidbody>(); block = new MaterialPropertyBlock();
             if (animator) animator.applyRootMotion = false;
+            if (!GetComponent<WhiteboxCharacter>()) gameObject.AddComponent<WhiteboxCharacter>();
         }
         void OnEnable() { modeInitialized = false; stateHash = 0; winding = corpse = false; lookedUp = false; }
         void OnDisable() { if (animator) animator.speed = 0f; ShowEliteOutline(false); }
 
+        // M116: an elite wears a bright white outline. With the saved model showing, the EliteOutline shader
+        // (Resources) is one more material on each model renderer; it comes off when the body stops being a living, visible elite.
         static Material eliteOutlineMaterial;
         Material[][] withoutOutline;
         bool outlined;
-
+        /// <summary>Whether the elite outline material is on this model now.</summary>
         public bool EliteOutlined => outlined;
         void ShowEliteOutline(bool show)
         {
@@ -135,86 +142,12 @@ namespace AnomalyArena
             outlined = show;
         }
 
-        MeshFilter boxFilter;
-        Mesh savedBodyMesh;
-        Renderer[] boxHidden;
-        bool boxLookedUp, boxShown;
-        static readonly System.Collections.Generic.Dictionary<Mesh, Mesh> boxes = new System.Collections.Generic.Dictionary<Mesh, Mesh>();
-        static readonly Vector3[] BoxFaces = { Vector3.right, Vector3.left, Vector3.up, Vector3.down, Vector3.forward, Vector3.back };
+        // ───── Whitebox (2026-11-10) ─────
+        // With the art off every character shows its own look from the whitebox table (WhiteboxCharacter, added in Awake): polyhedra in
+        // the kind's colours, following the body's scale from the feet, with its state colours and an elite's shell. The model stays
+        // hidden; the illustrated art never sees the whitebox look.
 
-        public bool WhiteboxBoxShown => boxShown;
-
-        void ShowWhiteboxBox(bool show)
-        {
-            if (!boxLookedUp) LookUpWhiteboxBody();
-            if (!boxFilter || !savedBodyMesh) show = false;                                                                      
-            if (show == boxShown) return;
-            boxShown = show;
-            if (boxFilter && savedBodyMesh)
-            {
-                var box = BoxFor(savedBodyMesh);
-                Mesh from = show ? savedBodyMesh : box, to = show ? box : savedBodyMesh;
-
-                foreach (var filter in boxFilter.GetComponentsInChildren<MeshFilter>(true))
-                    if (filter.sharedMesh == from) filter.sharedMesh = to;
-            }
-
-            foreach (var part in boxHidden)
-                if (part) part.forceRenderingOff = show;
-        }
-
-        void LookUpWhiteboxBody()
-        {
-            boxLookedUp = true;
-            var bodyRenderer = body.bodyRenderer;
-            boxFilter = bodyRenderer ? bodyRenderer.GetComponent<MeshFilter>() : null;
-            savedBodyMesh = boxFilter ? boxFilter.sharedMesh : null;
-            var hidden = new System.Collections.Generic.List<Renderer>();
-            foreach (var part in GetComponentsInChildren<Transform>(true))
-                if (part.name == "Facing" && part.TryGetComponent(out Renderer nose) && nose != bodyRenderer) hidden.Add(nose);
-            foreach (var look in GetComponents<V2CharacterIllustration>())
-                if (look.whiteboxRenderers != null)
-                    foreach (var part in look.whiteboxRenderers)
-                        if (part && part != bodyRenderer && !hidden.Contains(part)) hidden.Add(part);
-            boxHidden = hidden.ToArray();
-        }
-
-        static Mesh BoxFor(Mesh source)
-        {
-            if (boxes.TryGetValue(source, out var made) && made) return made;
-            var bounds = source.bounds;
-            var vertices = new Vector3[24];
-            var normals = new Vector3[24];
-            var uvs = new Vector2[24];
-            var triangles = new int[36];
-            for (int face = 0; face < BoxFaces.Length; face++)
-            {
-                Vector3 normal = BoxFaces[face];
-                Vector3 across = Mathf.Abs(normal.y) > .5f ? Vector3.right : Vector3.up;
-                Vector3 up = Vector3.Cross(normal, across);                                                                            
-                for (int corner = 0; corner < 4; corner++)
-                {
-                    float a = corner is 0 or 3 ? -1f : 1f, b = corner < 2 ? -1f : 1f;
-                    int i = face * 4 + corner;
-                    vertices[i] = bounds.center + Vector3.Scale(normal + across * a + up * b, bounds.extents);
-                    normals[i] = normal;
-                    uvs[i] = new Vector2((a + 1f) * .5f, (b + 1f) * .5f);
-                }
-                int first = face * 4, t = face * 6;
-                triangles[t] = first; triangles[t + 1] = first + 1; triangles[t + 2] = first + 2;
-                triangles[t + 3] = first; triangles[t + 4] = first + 2; triangles[t + 5] = first + 3;
-            }
-            var mesh = new Mesh { name = "WhiteboxBox " + source.name, hideFlags = HideFlags.DontSave };
-            mesh.vertices = vertices;
-            mesh.normals = normals;
-            mesh.uv = uvs;
-            mesh.triangles = triangles;
-            mesh.RecalculateBounds();
-            mesh.RecalculateTangents();
-            boxes[source] = mesh;
-            return mesh;
-        }
-
+        /// <summary>Called only when an actual hand attack has been accepted; audio mute/throttling has no effect.</summary>
         public void MarkAttack() => requestedAttack++;
 
         void ResetPose()
@@ -229,6 +162,7 @@ namespace AnomalyArena
             twist = 0f;
         }
 
+        /// <summary>Whether this is the player's model with legs and chest apart: legsFollowMovement and a controller with a RunSpeed parameter.</summary>
         bool PlayerLegs
         {
             get
@@ -251,12 +185,12 @@ namespace AnomalyArena
             hasKnocked = animator.HasState(0, KnockedHash);
             hasFall = animator.HasState(0, FallHash);
             hasDeath = animator.HasState(0, DeathHash);
-
+            // The first spine bone above the hips: the turn toward the aim goes on it after the animation has posed it.
             Transform spine = null;
             foreach (var bone in animator.GetComponentsInChildren<Transform>(true))
                 if (bone.name.ToLowerInvariant().Contains("spine")) { spine = bone; break; }
             chest = new AnimatedBone(spine);
-
+            // States are named like their clips (the installer builds them so): the lengths keep the stride's phase across Walk, Run and Sprint.
             clipLengths.Clear();
             if (animator.runtimeAnimatorController)
                 foreach (var clip in animator.runtimeAnimatorController.animationClips)
@@ -266,9 +200,7 @@ namespace AnomalyArena
 
         void LateUpdate()
         {
-            if (!body) return;
-            ShowWhiteboxBox(!Art.Enabled);                                         
-            if (!HasAssignedModel) return;
+            if (!body || !HasAssignedModel) return;
             bool visible = UsingModel;
             if (!modeInitialized || visible != lastMode)
             {
@@ -292,7 +224,7 @@ namespace AnomalyArena
             {
                 if (PlayerLegs && hasDeath)
                 {
-
+                    // The player's own Death clip plays once and holds its last pose; the model is not laid down by hand.
                     if (stateHash != DeathHash) { animator.CrossFadeInFixedTime(DeathHash, blendSeconds, 0, 0f); stateHash = DeathHash; }
                     animator.speed = clockScale;
                     twist = 0f; TurnChest();
@@ -309,11 +241,11 @@ namespace AnomalyArena
                         modelRoot.position += Vector3.up * Mathf.Max(0f, body.Position.y + corpseGroundClearance - bottom);
                 }
                 animator.speed = 0f;
-                if (enemy && enemy.Swell > 1f) modelRoot.localScale = authoredScale * SizeNow;                                         
+                if (enemy && enemy.Swell > 1f) modelRoot.localScale = authoredScale * SizeNow; // a dead Bloater swells before it blows
                 ApplyHitFeedback();
                 return;
             }
-
+            // Local hit-stop: only this model holds its pose; the rest of the battlefield keeps moving.
             frozen |= body.PoseHeld;
             animator.speed = frozen ? 0f : clockScale;
             if (dt <= 0f || frozen)
@@ -321,7 +253,7 @@ namespace AnomalyArena
                 float held = SizeNow;
                 float heldSquash = body.HitSquash01 * hitSquash;
                 modelRoot.localScale = Vector3.Scale(authoredScale * held, new Vector3(1f + heldSquash, 1f - heldSquash, 1f + heldSquash));
-                if (PlayerLegs) TurnChest();                                                                                 
+                if (PlayerLegs) TurnChest(); // paused or held: the chest keeps its turn instead of snapping back to the legs
                 ApplyHitFeedback(); return;
             }
             sinceAttack += dt;
@@ -343,7 +275,7 @@ namespace AnomalyArena
                         windupLength = Mathf.Max(.01f, enemy.WindupSecondsRemaining);
                     }
                     float anticipation = 1f - Mathf.Clamp01(enemy.WindupSecondsRemaining / windupLength);
-
+                    // Explicit sampling follows the real windup, including cancellation or slowdown.
                     animator.Play(AttackHash, 0, anticipation * attackContactNormalized);
                     animator.Update(0f); stateHash = AttackHash;
                 }
@@ -355,7 +287,7 @@ namespace AnomalyArena
             else if (requestedAttack != consumedAttack)
             {
                 consumedAttack = requestedAttack;
-
+                // The player plays no attack motion unless playerAttackMotion is on (never with the legs apart).
                 if (playerAttackMotion && !PlayerLegs && attackRemaining <= 0f && sinceAttack >= minimumAttackVisualInterval) BeginAttack(0f);
             }
 
@@ -377,12 +309,18 @@ namespace AnomalyArena
             if (!attacking)
             {
                 SwitchState(walking ? RunHash : IdleHash);
-
+                // Enemy rigidbody velocity already contains WorldTimeScale. Do not scale Run twice.
                 animator.speed = walking ? velocity.magnitude / Mathf.Max(.01f, runReferenceSpeed) : clockScale;
             }
             ApplyHitFeedback();
         }
 
+        /// <summary>
+        /// The player with legs and chest apart (legsFollowMovement). Free to act: the legs idle, walk, run or sprint (Shift) the way the body
+        /// moves, backwards when the aim is behind it, at the movement speed through RunSpeed, and the chest turns toward the aim after the
+        /// animation. The slide (Dashing), knockback, throws and hooks (Knocked) and falls play the controller's clip once when it has one,
+        /// facing the slide, against the push, or as it was. Presentation only: nothing here moves the body.
+        /// </summary>
         void PlayerMotion(Vector3 velocity, bool walking, float clockScale, float dt)
         {
             Vector3 aim = Query.Flat(body.AimDirection);
@@ -399,7 +337,7 @@ namespace AnomalyArena
                     break;
                 case CharacterState.Knocked or CharacterState.Thrown or CharacterState.Hooked when hasKnocked:
                     next = KnockedHash;
-                    if (velocity.sqrMagnitude > .01f) face = -velocity;                                                     
+                    if (velocity.sqrMagnitude > .01f) face = -velocity; // pushed backwards: the body faces against the push
                     break;
                 case CharacterState.Falling when hasFall:
                     next = FallHash;
@@ -430,13 +368,16 @@ namespace AnomalyArena
             PlayState(next);
             animator.SetFloat(RunSpeedId, runSpeed);
 
+            // After the animation has posed the spine: turn the chest toward the aim, eased so a quick flick does not snap the body.
             float wanted = turnChest ? Mathf.Clamp(Vector3.SignedAngle(LegsForward, aim, Vector3.up), -maxUpperBodyTwist, maxUpperBodyTwist) : 0f;
             twist = Mathf.MoveTowardsAngle(twist, wanted, 720f * dt);
             TurnChest();
         }
 
+        /// <summary>Where the legs face now: the model's forward without the rotation offset.</summary>
         Vector3 LegsForward => Query.Flat(modelRoot.rotation * Quaternion.Inverse(Quaternion.Euler(rotationOffsetEuler)) * Vector3.forward);
 
+        /// <summary>Puts the chest's turn toward the aim on the spine, once per frame, never on top of last frame's (AnimatedBone).</summary>
         void TurnChest()
         {
             if (!chest.bone) return;
@@ -445,6 +386,7 @@ namespace AnomalyArena
             chest.End();
         }
 
+        /// <summary>Cross-fades to a state of the player's base layer. Between Walk, Run and Sprint the stride keeps its phase, so the feet do not skip.</summary>
         void PlayState(int next)
         {
             if (stateHash == next) return;
@@ -471,12 +413,12 @@ namespace AnomalyArena
             if (stateHash == next) return;
             animator.CrossFadeInFixedTime(next, blendSeconds, 0, 0f); stateHash = next;
         }
-
+        /// <summary>The model's size now: body radius, presentation scale and a Bloater's swell before it blows (Enemy.Swell).</summary>
         float SizeNow => (scaleWithBodyRadius ? body.radius / Mathf.Max(.01f, referenceBodyRadius) : 1f) * PresentationScale * (enemy ? enemy.Swell : 1f);
         float PresentationScale => presentationScale > 0f ? presentationScale : enemy ? (enemy.IsBoss ? 1.1f : 1.35f) : 1.3f;
         void ApplyHitFeedback()
         {
-
+            // Hit jolt and firing recoil move the model only, never the body.
             if (body.IsAlive) modelRoot.localPosition = authoredPosition + (modelRoot.parent ? modelRoot.parent.InverseTransformVector(body.VisualOffset) : body.VisualOffset);
             Color glow = body.IsAlive ? idleEmission + (body.LastHitCritical ? critFlashEmission : flashEmission) * body.HitFlash01 + (enemy && enemy.WindingUp ? windupEmission : Color.black) + StatusGlow() : Color.black;
             Color tint = baseTint * modelBrightness;
@@ -490,7 +432,7 @@ namespace AnomalyArena
                 renderer.SetPropertyBlock(block);
             }
         }
-
+        /// <summary>Element states tint the model itself so a status is readable even inside a crowd.</summary>
         Color StatusGlow()
         {
             var status = ElementStatus.For(body);
@@ -503,7 +445,7 @@ namespace AnomalyArena
             if (status.Poison > .5f) glow += new Color(.14f, .32f, .04f);
             if (status.Twitching) glow += new Color(.8f, .68f, .16f);
             else if (status.Paralysed) glow += new Color(.22f, .19f, .04f) * flicker;
-
+            // Weapon card states: an enemy slowed by the charging aim line (Charged Shot Tame), the player's recoil guard (Focus Tame).
             var weapons = GameManager.Instance ? GameManager.Instance.runWeapons : null;
             if (weapons && enemy && weapons.IsChargeSlowed(body)) glow += new Color(.12f, .3f, .55f);
             if (weapons && !enemy && body is PlayerController && weapons.FocusGuardActive) glow += new Color(.7f, .7f, .75f);
@@ -511,6 +453,11 @@ namespace AnomalyArena
         }
     }
 
+    /// <summary>
+    /// A bone that presentation code turns after the Animator has posed it (the player's chest toward the aim, the arm holding the weapon).
+    /// When the Animator did not write the bone this frame (paused, culled or disabled), last frame's turn is still on it: Begin puts the
+    /// animated pose back first, so a turn is never added on top of itself.
+    /// </summary>
     public struct AnimatedBone
     {
         public readonly Transform bone;
@@ -524,14 +471,16 @@ namespace AnomalyArena
             wrote = false;
         }
 
+        /// <summary>Call before turning the bone this frame.</summary>
         public void Begin()
         {
             if (!bone) return;
             var now = bone.localRotation;
-            if (wrote && now == written) bone.localRotation = animated;                                                
+            if (wrote && now == written) bone.localRotation = animated; // the Animator left last frame's turn in place
             else animated = now;
         }
 
+        /// <summary>Call after turning the bone (also when it was not turned this frame).</summary>
         public void End()
         {
             if (!bone) return;

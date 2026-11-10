@@ -53,7 +53,7 @@ namespace AnomalyArena
         [Min(0f), Tooltip("Cloud Tame: a spore pod you step on is kicked this far away from you and bursts where it lands.")]
         public float sporeKickDistance = 5f;
         public float sporePodRadius = .7f, sporePodLife = 12f, sporeBurstRadius = 1.8f, sporeBurstLife = 3f;
-
+        // The 10-27 doc (document 0155, P20): the spin slows your aim, not your feet; the old spinUpMoveFloor is gone.
         public float spinUpFreeTurn = 1080f, spinUpFullTurn = 90f;
         [Header("10-21 design alignment — candidate values")]
         [Range(.05f, 1f), Tooltip("Charged Shot Tame: movement multiplier of non-boss enemies on your aim line while you charge "
@@ -244,7 +244,7 @@ namespace AnomalyArena
         public float reinfuseChance = .15f;
         [Min(0f), Tooltip("Hook: gap kept between a held enemy and a wall in front of you, cells.")]
         public float hookWallGap = .05f;
-
+        // ───── g1-starting: Rifle, Knife and Rocket Launcher (document 5.5 / 5.8, questions Q1-Q26) ─────
         [Min(1f), Tooltip("Charged Shot backfire: enemy attacks (punches, projectiles, charges) that hit you while you charge deal this many times "
                           + "their damage (1.5 = +50%). Burn and Poison ticks and wall hits are not changed.")]
         public float chargeDamageTaken = 1.5f;
@@ -276,11 +276,11 @@ namespace AnomalyArena
         [Min(0f), Tooltip("Chain Blade Tame: knockback of that shockwave in cells (scaled by knockback stats and body size; bosses and Spires "
                           + "are not moved).")]
         public float hookShockPush = 4f;
-
+        // Package g2-shot-fire-cryo (weapon section 5): Scatter Blast shells, Shatter ice, Blizzard snow.
         [Header("2026-10-27 Scatter Blast shells, Shatter ice, Blizzard snow")]
         [Min(0f), Tooltip("Scatter Blast backfire: cells from your centre, left and right of the aim, where the two hot shells land when a reload starts.")]
         public float scatterShellSide = 1.2f;
-        [Min(0f), Tooltip("Scatter Blast Tame: cells from your centre where the tamed shells land (decision of 10-27: farther than the tamed fire's "
+        [Min(0f), Tooltip("Scatter Blast Tame: cells from your centre where the tamed shells land (farther than the tamed fire's "
             + "radius, so you take a step to stand on one; standing still never finishes the reload by itself).")]
         public float scatterShellTameSide = 1.8f;
         [Min(0f), Tooltip("Scatter Blast backfire: seconds a landed shell lies before it flares up into a small fire.")]
@@ -319,7 +319,7 @@ namespace AnomalyArena
         public float snowTameSlow = .6f;
         [Min(0f), Tooltip("Blizzard Tame: extra Frost stacks per second enemies standing in your snow gain.")]
         public float snowTameFrostPerSecond = 2f;
-
+        // ── Package g3-arc-spore-rail (weapon section 5): Arc Cannon, Venom Launcher, Railgun ──
         [Header("2026-10-27 Arc Cannon, Venom Launcher, Railgun")]
         [Min(.1f), Tooltip("Arc Jump Tame: your movement multiplier while the Arc Cannon is in your hand and holds stored jumps (1.1 = 10% faster).")]
         public float chainTameMoveSpeed = 1.1f;
@@ -361,7 +361,7 @@ namespace AnomalyArena
         public float executeAuraInterval = .5f;
         [Min(0f), Tooltip("Execute Tame: each shock of the arc shield deals this share of the shot's damage. It blocks no damage.")]
         public float executeAuraShare = .15f;
-
+        // Package g4-gatling-swarm: Spin-up retreat and wall brace, Meltdown Tame push and speed, homing Barrage.
         [Min(0f), Tooltip("Spin-up backfire: cells per second the spin pushes you back against your aim while you hold fire, growing with the spin from 0 at the first shot to this at full spin (3 s). A push you keep control through, never a knockback: a wall behind you stops it without hurting you.")]
         public float spinUpRetreatSpeed = 1f;
         [Min(0f), Tooltip("Spin-up Tame: a wall (map bound or Bulwark) this close behind your body (cells, against the aim) braces you once you have held fire spinAnchorSpinSeconds.")]
@@ -388,7 +388,7 @@ namespace AnomalyArena
         public float barrageEscortRadius = 1.5f;
         [Min(0f), Tooltip("Barrage Tame: degrees per second the escorting missiles circle you.")]
         public float barrageEscortSpin = 240f;
-
+        // ───── g5-auto: Orbit Blades, Sentry Drone and Energy Ring (document 5.5) ─────
         [Header("g5-auto: auto weapons (2026-10-27)")]
         [Min(0f), Tooltip("Closed Blade: seconds before the blade tips can knock the same pickup or corpse again (they are checked every frame).")]
         public float orbitKnockRepeat = .5f;
@@ -428,19 +428,21 @@ namespace AnomalyArena
         public float drainShieldWait = 4f;
         [Min(0f), Tooltip("Drain: Energy you gain each time the Energy Shield blocks an attack.")]
         public float drainBlockEnergy = 5f;
-        [Min(0f), Tooltip("Drain Infusion (decision P23, 2026-10-27): each block releases one hit of the element on the enemies within this many cells (no wall between), damageB x the weapon's scale.")]
+        [Min(0f), Tooltip("Drain Infusion: each block releases one hit of the element on the enemies within this many cells (no wall between), damageB x the weapon's scale.")]
         public float drainInfuseRadius = 2.5f;
         [Min(0f), Tooltip("Drain backfire: seconds after the shield breaks during which the next enemy attack costs Energy (once per break).")]
         public float drainOverloadSeconds = 2f;
         [Min(0f), Tooltip("Drain backfire: Energy that attack costs.")]
         public float drainOverloadEnergy = 20f;
-
+        // ── g6-rules (document 5.4): switching away never clears a trait's built-up state; it wears off while stowed. ──
         [Min(.01f), Tooltip("Capacitor, stowed (document 5.4): seconds a stowed Capacitor takes to lose a full charge; it drains evenly (10 s = 3 charge a second at the default max of 30). While stowed its full-charge timer also runs back one second a second, so it never discharges while stowed and a quick switch out and back does not reset the timer.")]
         public float capacitorStowedDrainSeconds = 10f;
     }
 
     public enum GroundHazardKind { IcePatch, SporePod, ScatterShell, Snow }
 
+    /// <summary>A backfire left on the ground by a weapon; RunWeapons ticks it and V4CombatVfx draws it. A Scatter Blast shell waits
+    /// here for its fuse (radius is the fire it flares up into); Blizzard snow lies here for its life.</summary>
     public struct GroundHazard
     {
         public GroundHazardKind kind;
@@ -449,26 +451,28 @@ namespace AnomalyArena
         public RunWeapon weapon;
     }
 
+    /// <summary>A short line drawn for a shot with no projectile (Execute tracer, Chain arc); V4CombatVfx draws it until unscaled time 'until'.</summary>
     public struct WeaponTracer
     {
         public Vector3 from, to;
         public float width, until;
-
+        /// <summary>The V5 art drew this one as a real bolt; the beam renderer leaves it out.</summary>
         public bool drawnByV5;
         public Color color;
     }
 
+    /// <summary>Approved anomaly upgrades. Uses the saved actor pool; secondary hits never recast their weapon.</summary>
     public sealed partial class RunWeapons
     {
         [Header("Approved anomaly upgrades — tuning")]
         public WeaponUpgradeTuning upgrades = new();
         readonly HashSet<Combatant> upgradeHits = new();
-
+        // Element weapon cards (Flamethrower, Cryo Cannon, Arc Coil, Venom Launcher): runtime state, cleared with the wave.
         struct IceStone { public Combatant body; public int version; public float hit; public Vector3 direction; public RunWeapon weapon; }
         readonly List<IceStone> iceStones = new();
         readonly Dictionary<Combatant, float> wildfireFenceHitAt = new();
         readonly Dictionary<Combatant, float> blizzardFrozenSince = new();
-
+        // Blizzard: the key its own Frost dose takes its turns under as a continuous source (its hits take theirs under the weapon).
         readonly object blizzardDose = new();
         readonly Dictionary<(Combatant body, int version), (int count, float last)> needleHits = new();
         readonly List<Combatant> elementTargets = new();
@@ -491,16 +495,18 @@ namespace AnomalyArena
         void StopTrigger(RunWeapon w)
         {
             if(w==null)return;
-
+            // Blizzard Twist: the spray ended; a real release has already shattered (HandleInput), a forced stop only forgets the marks.
             if(w.form==WeaponForm.CryoCannon&&w.variant==1)blizzardFrozenSince.Clear();
             w.heldTime=0;
             if(player)player.RemoveMovementModifier(w);
             ReleaseChannel(w);
         }
 
+        /// <summary>Scatter Blast: a short cone that hits harder up close; two shots per clip. Backfire (no more jams): the
+        /// reload throws two hot shells to your sides that flare up a moment later (DropShells).</summary>
         void ScatterBlast(RunWeapon w,float range,float hit)
         {
-
+            // Twist: the clip's second round pulls the crowd in first; the blast follows after a short delay (TickScatterVacuum).
             if(w.Has(UpgradeAxis.Twist)&&w.rounds==1)ScatterVacuum(w);
             else
             {
@@ -518,6 +524,7 @@ namespace AnomalyArena
             if(SpendRound(w,upgrades.scatterReload))DropShells(w);
         }
 
+        /// <summary>Scatter Focus: the charged shell leaves as a burst of bolts down the aim line. Backfire: the recoil pushes you a long way back.</summary>
         void Focus(RunWeapon w,Vector3 aim,float damage)
         {
             float charge=Mathf.Clamp01(w.charge);
@@ -525,12 +532,14 @@ namespace AnomalyArena
             w.burstLeft=pellets;w.burstTimer=0f;w.burstDirection=aim;
             V5WeaponAudio.FocusRelease(charge,player.Position);
             w.burstDamage=damage/pellets*Mathf.Lerp(upgrades.focusMinChargeDamage,1f,charge);
-
+            // Document 4.4: the recoil is a push you keep control through, never a knockback, so a wall behind you
+            // does not hurt. Tame halves the push and adds a short guard against attacks.
             player.Push(-aim,FocusRecoil(w,charge));
             if(w.Has(UpgradeAxis.Tame))GuardFor(Mathf.Lerp(upgrades.focusGuardMin,upgrades.focusGuardMax,charge));
             TickBurst(w,0f);
         }
 
+        /// <summary>Fires the bolts of a released Focus burst that are due; it keeps firing while you are knocked back or switch weapons.</summary>
         void TickBurst(RunWeapon w,float dt)
         {
             if(!player||!player.IsAlive||!roster){w.burstLeft=0;return;}
@@ -541,11 +550,16 @@ namespace AnomalyArena
             {
                 w.burstLeft--;w.burstTimer+=upgrades.focusBurstInterval;
                 var a=Bolt(w,w.burstDirection,w.burstDamage,0,range,upgrades.focusPelletSpeed,twist);
-
+                // Twist: each bolt pierces its first target and keeps part of its damage.
                 if(a&&twist){a.piercesLeft=1;a.pierceDamageRetention=upgrades.focusPierceRetention;}
             }
         }
 
+        /// <summary>Barrage (document 5.5): micro-missiles home in on nearby enemies, one missile per visible enemy within
+        /// the range, nearest first (AttackActor steers them). Backfire: of the missiles left without an enemy, up to barrageSelfLockMax
+        /// lock onto you, fly out and turn back to blast you for the base damage; the rest fly straight on and burst on what they meet.
+        /// Only a missile locked onto you hurts you. Tame: the spares take turns on the locked enemies; with none in range they lock the
+        /// nearest visible enemy anywhere; with none at all they escort you for barrageEscortSeconds.</summary>
         void Barrage(RunWeapon w,Vector3 aim,float range,float damage,float selfDamage)
         {
             int n=w.Has(UpgradeAxis.Reach)?11:8;bool tame=w.Has(UpgradeAxis.Tame);
@@ -557,7 +571,7 @@ namespace AnomalyArena
                 Combatant target=i<locks.Count?locks[i]:tame&&locks.Count>0?locks[i%locks.Count]:null;
                 bool self=!tame&&!target&&selfLocks<upgrades.barrageSelfLockMax;
                 if(self){target=player;selfLocks++;}
-
+                // An even fan across the spread: around the way to its enemy for a locked missile, around the aim for the others.
                 float slot=n>1?i/(n-1f)*2f-1f:0f;
                 Vector3 toward=target&&target!=player?Query.Flat(target.Position-player.Position):forward;
                 if(toward.sqrMagnitude<1e-4f)toward=forward;
@@ -565,7 +579,7 @@ namespace AnomalyArena
                 a.mode=AttackMode.Swarm;a.radius=1.5f;a.hurtOwner=self;a.ownerDamage=selfDamage;
                 if(tame&&locks.Count==0)a.EscortOwner(upgrades.barrageEscortSeconds,i*360f/n);
                 else a.HomeOn(target,self?upgrades.barrageSelfLockDelay:0f);
-
+                // Readable locks: a ring on each enemy as it is locked; a red missile and a red ring on you for each one locked onto you.
                 if(self){if(a.visual)a.visual.sharedMaterial=GameManager.Instance.Mat(BarrageSelfLockColor);Fx.Ring(player.Position,player.radius+.45f,BarrageSelfLockColor,.4f);}
                 else if(target&&i<locks.Count)Fx.Ring(target.Position,target.radius+.35f,new Color(1f,.7f,.3f,.85f),.3f);
             }
@@ -573,6 +587,7 @@ namespace AnomalyArena
         static readonly Color BarrageSelfLockColor=new(1f,.25f,.2f,.95f);
         readonly List<Combatant> barrageLocks=new();
 
+        /// <summary>Barrage: the living enemies within radius of you that you can see (no wall between, like the Sentry Drone's), nearest first.</summary>
         List<Combatant> BarrageTargets(float radius)
         {
             barrageLocks.Clear();
@@ -583,6 +598,8 @@ namespace AnomalyArena
             return barrageLocks;
         }
 
+        /// <summary>Barrage: the living enemy nearest from (within radius, no wall between); a missile whose target died picks this one at any
+        /// distance, and a tamed volley with nobody in range locks it from where you stand. Null if none.</summary>
         public Combatant BarrageNearest(Vector3 from,float radius)
         {
             Combatant best=null;float nearest=radius*radius;
@@ -596,6 +613,8 @@ namespace AnomalyArena
             return best;
         }
 
+        /// <summary>Barrage Tame escort: the visible enemy within radius of you that the fewest of w's missiles are locked on (the nearer
+        /// on a tie), so the escort spreads over the enemies that come in range; null while none is in range.</summary>
         public Combatant BarrageEscortTarget(RunWeapon w,float radius)
         {
             Combatant best=null;int fewest=int.MaxValue;
@@ -608,17 +627,21 @@ namespace AnomalyArena
             return best;
         }
 
+        /// <summary>Needler backfire (document 5.5): as a reload starts, the spent venom sac bursts into a small mist where
+        /// you stand. It stays there; enemies in it take its ticks scaled like the weapon and are poisoned, you take the flat base value
+        /// without poison (rule R6). Tame: it spares you and lasts longer (and speeds your reload while you touch it, TickNeedlerMists).</summary>
         void NeedlerReloadMist(RunWeapon w)
         {
             var mist=player&&AttackPool.Instance?AttackPool.Instance.Acquire():null;if(!mist)return;
             bool tame=w.Has(UpgradeAxis.Tame);
             float life=Mathf.Max(0f,upgrades.needlerMistSeconds)*(tame?Mathf.Max(1f,upgrades.needlerMistTameLength):1f);
-
+            // Exactly its life: 2 s at a 0.5 s tick is 4 ticks (about 4 HP standing in it for the whole reload).
             mist.Configure(AttackMode.Field,player,w,player.Position,player.AimDirection,upgrades.needlerMistDamage*DamageScale(w),0,0,0,upgrades.needlerMistRadius,life);
             mist.tickInterval=Mathf.Max(.05f,upgrades.needlerMistTick);mist.hurtOwner=!tame;mist.ownerDamage=upgrades.needlerMistDamage;
             WeaponSound(w,WeaponAudioPhase.Impact);
         }
 
+        /// <summary>True while your body touches one of this Needler's reload mists.</summary>
         public bool InNeedlerMist(RunWeapon w)
         {
             if(w==null||!player||!AttackPool.Instance)return false;
@@ -628,6 +651,8 @@ namespace AnomalyArena
             return false;
         }
 
+        /// <summary>Needler Tame: while your body touches one of its mists the reload runs needlerMistTameReload times as fast (Tick has
+        /// already run it once at the normal rate); stepping out restores the normal rate at once. A stowed Needler reloads too.</summary>
         void TickNeedlerMists(float dt)
         {
             if(!player)return;
@@ -637,6 +662,8 @@ namespace AnomalyArena
                     w.reload=Mathf.Max(0f,w.reload-dt*chill*(Mathf.Max(1f,upgrades.needlerMistTameReload)-1f));
         }
 
+        /// <summary>Needler Twist: every needle that lands counts on its enemy; the needleBurstCount-th within the window bursts
+        /// on it and hits the enemies around it (not the enemy itself, so a single target or a boss takes no extra damage).</summary>
         public void NeedleLanded(AttackActor needle,Combatant body)
         {
             var w=needle.weapon;
@@ -657,6 +684,8 @@ namespace AnomalyArena
             Fx.Ring(at,upgrades.needleBurstRadius,ElementCombat.ColorFor(ElementKind.Poison));
         }
 
+        /// <summary>Blizzard Twist: releasing after a long enough spray shatters every frozen enemy in the cone. Each takes damage for
+        /// the seconds it has been frozen under this spray (capped) while still frozen, then thaws and cannot freeze again for a while.</summary>
         void BlizzardShatter(RunWeapon w)
         {
             if(w.heldTime<upgrades.blizzardShatterMinHold||!roster||!player){blizzardFrozenSince.Clear();return;}
@@ -688,7 +717,7 @@ namespace AnomalyArena
             foreach(var body in Combatant.All)
             {
                 if(body==player||!body.IsAlive)continue;
-
+                // Walls shield bodies behind them from either blast.
                 bool destination=Query.Flat(body.Position-to).magnitude<=area+body.radius&&!WallBlocks(to,body.Position);
                 bool departure=w.Has(UpgradeAxis.Twist)&&Query.Flat(body.Position-from).magnitude<=area+body.radius&&!WallBlocks(from,body.Position);
                 if((destination||departure)&&upgradeHits.Add(body))Damage(w,body,hit,5,Query.Flat(body.Position-(destination?to:from)).normalized);
@@ -708,6 +737,8 @@ namespace AnomalyArena
             if(w.Has(UpgradeAxis.Twist))BurnEnemyShots(origin,dir,first);
         }
 
+        /// <summary>Stream Twist: the flame burns every hostile projectile inside the same cone it burns enemies in
+        /// (cut at the first wall on the aim line, never through a wall). It adds no damage.</summary>
         void BurnEnemyShots(Vector3 origin,Vector3 dir,float range)
         {
             var bolts=GameManager.Instance&&GameManager.Instance.waves?GameManager.Instance.waves.preparedBolts:null;
@@ -740,10 +771,12 @@ namespace AnomalyArena
             WeaponSound(w,WeaponAudioPhase.Fire,true);
             var status=ElementStatus.For(first);
             bool frozen=status&&status.Frozen;
-
+            // Twist: a body frozen before this shard is knocked away like a curling stone; it takes the shard when it stops.
+            // Bosses, the Spire and hooked bodies cannot be thrown, and a stone already sliding is hit as usual.
             if(w.Has(UpgradeAxis.Twist)&&frozen&&first is not Enemy{Immovable:true}&&first.State!=CharacterState.Hooked&&!IsIceStone(first))
             {
-
+                // Its crash carries the weapon's Frost, as a hook's fling carries its weapon's element: a Frost-immune body it hits takes
+                // nothing (document 9.5).
                 first.Throw(dir,upgrades.shatterThrowDistance,new ThrowImpact{dealer=player,damage=0f,sizeExponent=0f,radius=0f,knockback=0f,element=w.element});
                 if(first.State==CharacterState.Thrown)
                 {
@@ -756,6 +789,8 @@ namespace AnomalyArena
 
         bool IsIceStone(Combatant body){foreach(var stone in iceStones)if(stone.body==body&&stone.version==body.SpawnVersion)return true;return false;}
 
+        /// <summary>Shatter Twist: a thrown frozen body bursts once it stops (hit another body, a wall or slid out). One that died or fell
+        /// on the way is dropped without a burst; one suspended by the void trial waits.</summary>
         void TickIceStones()
         {
             for(int i=iceStones.Count-1;i>=0;i--)
@@ -778,20 +813,24 @@ namespace AnomalyArena
             foreach(var c in Combatant.All)
                 if(c!=player&&c!=body&&c.IsAlive&&c.Team!=Team.Player&&Query.Flat(c.Position-at).magnitude<=upgrades.shatterBurstRadius+c.radius&&!WallBlocks(at,c.Position))elementTargets.Add(c);
             WeaponSound(w,WeaponAudioPhase.Explosion);
-
+            // The stone takes the shard it was owed (the frozen bonus, and the global frozen bonus if it is still frozen).
             Damage(w,body,stone.hit*upgrades.shatterFrozenBonus,0,stone.direction);
             foreach(var c in elementTargets)Damage(w,c,stone.hit*upgrades.shatterSplashShare,0,Query.Flat(c.Position-at).normalized);
             Fx.Ring(at,upgrades.shatterBurstRadius,ElementCombat.ColorFor(ElementKind.Frost));
         }
 
+        /// <summary>Execute threshold: a fixed HP share (kills no longer raise it).</summary>
         public float ExecuteThreshold(RunWeapon w)=>upgrades.executeThreshold;
 
+        /// <summary>Execute (document 5.5): a shot that kills or executes gives back part of its cooldown and arms the next
+        /// shot; a shot that kills nothing shocks you and forces a long cooldown (Tame: the arc shield instead). A boss it hits but does not
+        /// kill counts neither way; an enemy a mark executes later is no kill of the shot.</summary>
         void Execute(RunWeapon w,float range,float hit)
         {
-
+            // The bonus a kill armed goes with this shot, whatever it hits.
             hit*=1f+Mathf.Max(0f,w.executeNextShot);w.executeNextShot=0f;
             var target=RayTarget(player.AimDirection,range);
-
+            // Every shot shows where it went and sounds, a miss included.
             WeaponSound(w);
             Vector3 muzzle=Muzzle(player.AimDirection),end;
             if(target)end=Query.AtCastHeight(target.Position);
@@ -804,13 +843,13 @@ namespace AnomalyArena
             bool killed=false;
             if(target)
             {
-
+                // The shot settles its own execution, so a mark already on this target must not fire inside the hit.
                 Unmark(target as Enemy);
                 Damage(w,target,hit,0,player.AimDirection);
-
+                // Any non-boss enemy left under the threshold is executed, elites included.
                 if(target.IsAlive&&target is Enemy{IsBoss:false} low&&target.Hp/target.maxHp<ExecuteThreshold(w))ExecuteKill(w,low);
                 killed=!target.IsAlive;
-
+                // Twist: a non-boss that lives on is marked; any later damage that drops it under the line executes it.
                 if(target.IsAlive&&w.Has(UpgradeAxis.Twist)&&target is Enemy{IsBoss:false} survivor)MarkForExecute(w,survivor);
             }
             if(killed)
@@ -822,22 +861,27 @@ namespace AnomalyArena
             else if(target is not Enemy{IsBoss:true})ExecuteBackflow(w,hit);
         }
 
+        /// <summary>Execute backfire: the shot killed nothing (a miss included), so the surplus charge shocks you for the flat base value
+        /// (rule R6) and the gun goes on executeMissCooldown times its cooldown; the slot bar spans that long cooldown (the same field a knife
+        /// lost to a black hole uses). Tame: no shock and the usual cooldown; the arc shield circles you instead.</summary>
         void ExecuteBackflow(RunWeapon w,float hit)
         {
             Color arc=ElementCombat.ColorFor(ElementKind.Lightning);
             if(w.Has(UpgradeAxis.Tame))
             {
-
+                // Another shot that kills nothing restarts the shield at this shot's strength; shields never stack.
                 if(w.executeAuraLeft<=0f)w.executeAuraClock=0f;
                 w.executeAuraLeft=Mathf.Max(0f,upgrades.executeAuraSeconds);w.executeAuraDamage=hit*Mathf.Max(0f,upgrades.executeAuraShare);
                 Fx.Ring(player.Position,upgrades.executeAuraRadius,arc);
                 return;
             }
-            if(upgrades.executeSelfShock>0f)player.ReceiveDamage(DamageInfo.Attack(upgrades.executeSelfShock,player));                                                
+            if(upgrades.executeSelfShock>0f)player.ReceiveDamage(DamageInfo.Attack(upgrades.executeSelfShock,player)); // dealer: a death here is reported as backfire
             w.cooldown=Mathf.Max(w.cooldown,CycleSeconds(w)*Mathf.Max(1f,upgrades.executeMissCooldown));w.holeReturnSpan=w.cooldown;
             Fx.Ring(player.Position,.9f,arc);Fx.Burst(Query.AtCastHeight(player.Position),Vector3.zero,arc,6,4f,360f,.2f);
         }
 
+        /// <summary>Execute Tame: the arc shield follows you and shocks every enemy within its radius (not behind a wall) every
+        /// executeAuraInterval; it runs whichever weapon is in hand and ends with the wave or the battlefield (ResetPlacedShots).</summary>
         void TickExecuteAura(RunWeapon w,float dt)
         {
             if(w.executeAuraLeft<=0f)return;
@@ -845,12 +889,12 @@ namespace AnomalyArena
             w.executeAuraLeft=Mathf.Max(0f,w.executeAuraLeft-dt);
             if(w.executeAuraLeft<=0f)return;
             float radius=upgrades.executeAuraRadius;Vector3 at=player.Position;
-
+            // A ring every few frames keeps the shield visible where you are.
             if(Mathf.Floor((w.executeAuraLeft+dt)*8f)!=Mathf.Floor(w.executeAuraLeft*8f))Fx.Ring(at,radius,ElementCombat.ColorFor(ElementKind.Lightning),.15f);
             w.executeAuraClock-=dt;
             if(w.executeAuraClock>0f)return;
             w.executeAuraClock+=Mathf.Max(.05f,upgrades.executeAuraInterval);
-
+            // Collected first: a kill can wake a pooled enemy, which joins Combatant.All.
             auraTargets.Clear();
             foreach(var c in Combatant.All)
                 if(c!=player&&c.IsAlive&&c.Team!=Team.Player&&Query.Flat(c.Position-at).magnitude<=radius+c.radius&&!WallBlocks(at,c.Position))auraTargets.Add(c);
@@ -859,6 +903,7 @@ namespace AnomalyArena
         }
         readonly List<Combatant> auraTargets = new();
 
+        /// <summary>An execution by this weapon: the kill and its flash. It no longer changes max HP or the threshold.</summary>
         void ExecuteKill(RunWeapon w,Enemy target)
         {
             Vector3 at=target.Position;
@@ -871,6 +916,7 @@ namespace AnomalyArena
         readonly List<ExecuteMark> executeMarks = new();
         readonly List<ExecuteMark> frozenExecuteMarks = new();
 
+        /// <summary>Execute Twist: marks a hit enemy for a few seconds; at most executeMarkMax at once, a new one replaces the oldest.</summary>
         void MarkForExecute(RunWeapon w,Enemy enemy)
         {
             Unmark(enemy);
@@ -880,12 +926,15 @@ namespace AnomalyArena
 
         void Unmark(Enemy enemy){if(!enemy)return;for(int i=executeMarks.Count-1;i>=0;i--)if(executeMarks[i].enemy==enemy)executeMarks.RemoveAt(i);}
 
+        /// <summary>True while this enemy carries a live Execute mark (its world label shows it).</summary>
         public bool IsExecuteMarked(Enemy enemy)
         {
             foreach(var m in executeMarks)if(m.enemy==enemy&&enemy&&m.spawnVersion==enemy.SpawnVersion&&m.left>0f)return true;
             return false;
         }
 
+        /// <summary>Enemy.ReceiveDamage calls this after every accepted hit, from any source: a marked enemy now under its marker's
+        /// execute line is executed. It runs after the hit has fully resolved, so no stacks land on a dead body.</summary>
         public void CheckExecuteMark(Enemy enemy)
         {
             if(executeMarks.Count==0||!enemy||!enemy.IsAlive||enemy.IsBoss)return;
@@ -893,7 +942,7 @@ namespace AnomalyArena
             {
                 var m=executeMarks[i];
                 if(m.enemy!=enemy)continue;
-
+                // A respawned body, an expired mark or a marker no longer in hand does not count.
                 if(m.spawnVersion!=enemy.SpawnVersion||m.left<=0f||Array.IndexOf(Hand,m.weapon)<0){executeMarks.RemoveAt(i);return;}
                 if(enemy.maxHp<=0f||enemy.Hp/enemy.maxHp>=ExecuteThreshold(m.weapon))return;
                 executeMarks.RemoveAt(i);
@@ -912,26 +961,31 @@ namespace AnomalyArena
             }
         }
 
+        /// <summary>Entering the void trial keeps the battlefield marks aside; leaving it brings them back.</summary>
         void FreezeExecuteMarks(bool freeze)
         {
             if(freeze){frozenExecuteMarks.Clear();frozenExecuteMarks.AddRange(executeMarks);executeMarks.Clear();}
             else{executeMarks.Clear();executeMarks.AddRange(frozenExecuteMarks);frozenExecuteMarks.Clear();}
         }
 
+        /// <summary>Chain backfire: each jump that finds no enemy comes back through you (1 Lightning each). The 10-27 doc (document
+        /// 0149, P21): a pure cost, it no longer shocks the enemies around you; the ring only shows the current coming back.</summary>
         void ReturnCurrent(RunWeapon w,int jumps)
         {
             if(jumps<=0)return;
-
+            // Tame: the current stays in the coil instead and adds to the next discharge's jumps (capped).
             if(w.Has(UpgradeAxis.Tame)){w.chainStoredJumps=Mathf.Clamp(w.chainStoredJumps+jumps,0,Mathf.Max(0,upgrades.chainStoreMax));return;}
             ElementStatus.For(player)?.Add(ElementKind.Lightning,jumps,player);
             Fx.Ring(player.Position,upgrades.chainReturnRadius,ElementCombat.ColorFor(ElementKind.Lightning));
         }
 
+        /// <summary>Shatter: three flying ice shards in a fan. Each stops on the first body or wall, or at the end of its range, and
+        /// breaks into a small ice patch there (ShardStruck / ShardLanded, called by the shard).</summary>
         void ShatterFan(RunWeapon w,Vector3 aim,float range,float hit)
         {
             WeaponSound(w);
             float speed=Mathf.Max(1f,upgrades.shardSpeed);
-
+            // One shot hits each enemy with one shard at most: a shard passes through a body another shard of the same shot hit.
             var shot=new HashSet<Combatant>();
             foreach(float angle in new[]{-upgrades.shatterSpread,0f,upgrades.shatterSpread})
             {
@@ -941,6 +995,7 @@ namespace AnomalyArena
             }
         }
 
+        /// <summary>A Shatter shard hit a body: the shard's damage (bonus on a frozen body; Twist throws it instead), then its ice patch.</summary>
         public void ShardStruck(AttackActor shard,Combatant body)
         {
             if(shard.weapon==null)return;
@@ -949,6 +1004,9 @@ namespace AnomalyArena
             ShardLanded(shard,at);
         }
 
+        /// <summary>Where a Shatter shard ends (body, wall or range): a frost ring and an ice patch. Any patch makes you
+        /// and ordinary enemies slip (IceGrip); tamed it also chills enemies, you keep your footing on it and move faster, and one weapon
+        /// keeps icePatchTamedCap patches at most.</summary>
         public void ShardLanded(AttackActor shard,Vector3 end)
         {
             if(shard.weapon==null)return;
@@ -963,6 +1021,7 @@ namespace AnomalyArena
             AddHazard(GroundHazardKind.IcePatch,end,upgrades.iceRadius,upgrades.iceLife,shard.weapon);
         }
 
+        /// <summary>Blizzard: a forward snow spray that freezes fast and keeps frozen bodies frozen.</summary>
         void BlizzardSpray(RunWeapon w,float range,float hit)
         {
             float reach=Mathf.Min(range,upgrades.blizzardMaxRange*w.Reach);
@@ -973,10 +1032,11 @@ namespace AnomalyArena
                 if(body==player||!body.IsAlive||!InCone(body,reach,upgrades.blizzardConeAngle))continue;
                 if(Physics.Linecast(Query.AtCastHeight(player.Position),Query.AtCastHeight(body.Position),GameManager.WallMask))continue;
                 var status=ElementStatus.For(body);
-
+                // Only the global frozen bonus applies: Blizzard keeps bodies frozen rather than hitting them harder. The spray is
+                // continuous: its hit stacks and its own Frost dose each come at most once per interval on a body; the hold is every tick.
                 Damage(w,body,hit,0,player.AimDirection,continuous:true);
                 if(status){ElementCombat.ApplyContinuousStacks(blizzardDose,body,ElementKind.Frost,upgrades.blizzardFrostPerTick,player);status.ExtendFreeze(upgrades.blizzardFrozenHold);}
-
+                // Twist: when this spray first sees a body frozen, so the release knows how long it has been held frozen.
                 if(w.Has(UpgradeAxis.Twist)&&status&&status.Frozen&&!blizzardFrozenSince.ContainsKey(body))blizzardFrozenSince[body]=autoClock;
                 any=true;
             }
@@ -987,6 +1047,7 @@ namespace AnomalyArena
             foreach(var body in elementPruned)blizzardFrozenSince.Remove(body);
         }
 
+        /// <summary>Flame Stream fuel tank: a hit taken while spraying bursts the tank into a ring of fire, you included.</summary>
         void WatchPlayerHits()
         {
             if(watchedPlayer==player)return;
@@ -999,11 +1060,11 @@ namespace AnomalyArena
         {
             var w=Active;
             if(w==null||w.form!=WeaponForm.Flamethrower||w.variant!=0||!player||!player.IsAlive)return;
-
+            // The tank bursts only while you are spraying: trigger held on the active Stream.
             if(!inputHeld||w.heldTime<=0f||Time.time<w.tankReadyAt)return;
             w.tankReadyAt=Time.time+upgrades.fuelTankCooldown;
             WeaponSound(w,WeaponAudioPhase.Explosion);
-
+            // Tame: the burst spares you and throws the enemies in its ring back instead (a real knockback; bosses are not knocked back).
             Area(w,player.Position,upgrades.fuelTankRadius,upgrades.fuelTankDamage*DamageScale(w),w.Has(UpgradeAxis.Tame)?upgrades.fuelTankTamePush:0,false);
             if(!w.Has(UpgradeAxis.Tame))ElementStatus.For(player)?.Add(ElementKind.Fire,upgrades.fuelTankSelfFire,player);
             if(V5Vfx.On){V5Vfx.I.Explosion(player.Position,upgrades.fuelTankRadius);return;}
@@ -1017,9 +1078,10 @@ namespace AnomalyArena
         }
 
         void TrackSporeCloud(AttackActor actor,RunWeapon w)=>sporeClouds.Add(new TrackedCloud{actor=actor,sequence=actor.Sequence,weapon=w});
-
+        /// <summary>A cloud thrown by the Cloud launcher itself; the small mists from spore pods are not.</summary>
         public bool IsMainCloud(AttackActor actor){foreach(var cloud in sporeClouds)if(cloud.actor==actor&&cloud.sequence==actor.Sequence)return true;return false;}
 
+        /// <summary>Cloud backfire: a cloud that runs out drops spore pods that burst under anyone who steps on them.</summary>
         void TickSporeClouds()
         {
             for(int i=sporeClouds.Count-1;i>=0;i--)
@@ -1041,6 +1103,9 @@ namespace AnomalyArena
             }
         }
 
+        /// <summary>Cloud Twist (document 5.8): a spore pod that bursts inside one of its weapon's landed clouds (stepped on by
+        /// an enemy or by you, or kicked by the Tame and landed) detonates that whole cloud and starts its time again. Every pod that bursts
+        /// inside sets it off again; the pod's own small mist still appears.</summary>
         void SporePodBurst(RunWeapon w,Vector3 at)
         {
             if(w==null||w.form!=WeaponForm.SporeLauncher||w.variant!=0||!w.Has(UpgradeAxis.Twist)||!player)return;
@@ -1052,11 +1117,13 @@ namespace AnomalyArena
             }
         }
 
+        /// <summary>Cloud Twist detonation: enemies within cloudBlastRadiusShare times the cloud's radius, not behind a wall, take cloudBlastTicks
+        /// of its tick damage and their Poison fills to its cap; it spares you. The cloud lasts cloudSeconds again.</summary>
         void DetonateCloud(RunWeapon w,AttackActor cloud)
         {
             Vector3 centre=Query.Flat(cloud.point);
             float radius=cloud.radius*Mathf.Max(0f,upgrades.cloudBlastRadiusShare),hit=cloud.damage*Mathf.Max(0f,upgrades.cloudBlastTicks);
-
+            // Collected first: a kill can wake a pooled enemy, which joins Combatant.All.
             cloudBlastTargets.Clear();
             foreach(var c in Combatant.All)
                 if(c!=player&&c.IsAlive&&c.Team!=Team.Player&&Query.Flat(c.Position-centre).magnitude<=radius+c.radius&&!WallBlocks(centre,c.Position))cloudBlastTargets.Add(c);
@@ -1074,6 +1141,7 @@ namespace AnomalyArena
 
         readonly List<Combatant> cloudBlastTargets = new();
 
+        /// <summary>A Cloud lob landed (AttackActor.Land): a pod the Tame kicked bursts where it lands, which can set off the Twist.</summary>
         public void SporeLobLanded(AttackActor lob)
         {
             if(lob&&lob.weapon!=null&&!IsMainCloud(lob))SporePodBurst(lob.weapon,lob.point);
@@ -1086,14 +1154,15 @@ namespace AnomalyArena
             for(int i=hazards.Count-1;i>=0;i--)
             {
                 var h=hazards[i];h.timeLeft-=dt;
-
+                // Scatter Blast: a shell whose fuse ran out flares up.
                 if(h.timeLeft<=0f){if(h.kind==GroundHazardKind.ScatterShell)IgniteShell(h);hazards.RemoveAt(i);continue;}
                 hazards[i]=h;
-
+                // A shell only waits for its fuse; snow works through TickSnow.
                 if(h.kind is GroundHazardKind.ScatterShell or GroundHazardKind.Snow)continue;
                 if(h.kind==GroundHazardKind.IcePatch)
                 {
-
+                    // Shatter Tame: the patch chills the enemies standing on it (it can freeze them). No patch chills you any
+                    // more; every patch makes you and ordinary enemies slip instead (IceGrip).
                     if(h.weapon!=null&&h.weapon.Has(UpgradeAxis.Tame))
                     {
                         foreach(var body in Combatant.All)
@@ -1103,7 +1172,8 @@ namespace AnomalyArena
                     continue;
                 }
                 bool tame=h.weapon!=null&&h.weapon.Has(UpgradeAxis.Tame);
-
+                // Cloud Tame: you do not step a pod off, you kick it away; it bursts where it lands.
+                // With no free actor the pod stays where it is and is kicked on a later frame.
                 if(tame&&player&&player.IsAlive&&Query.Flat(player.Position-h.position).magnitude<=h.radius+player.radius)
                 {if(KickSporePod(h))hazards.RemoveAt(i);continue;}
                 foreach(var body in Combatant.All)
@@ -1119,6 +1189,8 @@ namespace AnomalyArena
             }
         }
 
+        /// <summary>Cloud Tame: the pod flies sporeKickDistance away from you (along your aim if you stand right on it) and bursts into the
+        /// usual small mist where it lands. A wall stops it in front of the wall; a black hole swallows it; it never drops new pods.</summary>
         bool KickSporePod(GroundHazard h)
         {
             var pool=AttackPool.Instance;if(!pool||!WorldMap.Active||h.weapon==null)return false;
@@ -1128,13 +1200,14 @@ namespace AnomalyArena
             var def=roster.Get(WeaponForm.SporeLauncher);float podDamage=def!=null?def.damageA:1f;
             var pod=pool.Acquire();if(!pod)return false;
             pod.Configure(AttackMode.Lob,player,h.weapon,h.position,dir,podDamage*DamageScale(h.weapon),0,0,Mathf.Max(1f,LobSpeed),upgrades.sporeBurstRadius,float.PositiveInfinity);
-
+            // Configure resets the tick to 0.25 s; the pod mist ticks like a stepped-on pod.
             pod.tickInterval=.5f;pod.hurtOwner=false;pod.ownerDamage=podDamage;
             pod.StartArc(landing,1.5f,upgrades.sporeBurstLife);
             WeaponSound(h.weapon,WeaponAudioPhase.Impact);
             return true;
         }
 
+        /// <summary>Wildfire Tame: while your centre is inside one of your own fire patches you move faster; leaving restores it at once.</summary>
         void WildfireTameStride()
         {
             if(!player)return;
@@ -1150,6 +1223,10 @@ namespace AnomalyArena
             }
         }
 
+        /// <summary>Wildfire Twist: called on every tick of a patch. It joins this patch to each newer patch of the same weapon within
+        /// range and with no wall between by a fire fence. A body touching a fence burns instead of taking direct hits, one
+        /// dose per patch tick however many fences it touches: an enemy burns at wildfireFenceFirePerSecond (Fire on enemies is a burn since
+        /// 2026-10-26), you get Burning stacks at your own rate unless tamed.</summary>
         public void WildfireFence(AttackActor field)
         {
             var w=field.weapon;if(w==null||!player||!AttackPool.Instance)return;
@@ -1165,7 +1242,7 @@ namespace AnomalyArena
                 {
                     if(!body.IsAlive||body==player&&(w.Has(UpgradeAxis.Tame)||!field.hurtOwner))continue;
                     if(Query.Flat(body.Position-ClosestOnSegment(body.Position,a,b)).magnitude>upgrades.wildfireFenceHalfWidth+body.radius)continue;
-
+                    // One dose per patch tick: a body on two fences is not dosed twice.
                     if(wildfireFenceHitAt.TryGetValue(body,out float ready)&&ready>autoClock)continue;
                     elementTargets.Add(body);
                 }
@@ -1186,7 +1263,8 @@ namespace AnomalyArena
         }
 
         float CapacitorMax=>Mathf.Max(1f,upgrades.capacitorMax);
-
+        /// <summary>Capacitor: walking charges it, fast only with an enemy close by. Called for the held Capacitor only; stowed it drains
+        /// instead (DrainStowedCapacitor). Held full for 4 s it discharges by itself: on you too, or (Tame) as a normal full discharge.</summary>
         void TickCapacitor(RunWeapon w,float distance,float dt)
         {
             if(player.State==CharacterState.Normal&&distance>0)w.charge=Mathf.Min(CapacitorMax,w.charge+distance*(EnemyWithin(upgrades.capacitorNearRadius)?upgrades.capacitorChargeNear:upgrades.capacitorChargeFar));
@@ -1198,13 +1276,17 @@ namespace AnomalyArena
                 else{WeaponSound(w,WeaponAudioPhase.Explosion);Area(w,player.Position,5,upgrades.capacitorSelfBlast*DamageScale(w),0,true,upgrades.capacitorSelfBlast);w.charge=0;w.chargeFullTime=0;}
             }
         }
-
+        /// <summary>Document 5.4: a stowed Capacitor keeps what it stored but loses it evenly (a full charge in
+        /// capacitorStowedDrainSeconds), and its full-charge timer runs back one second a second. It never discharges while stowed; back in
+        /// hand the timer goes on from what is left once the Capacitor is full again, so a quick switch out and back does not clear it.</summary>
         void DrainStowedCapacitor(RunWeapon w,float dt)
         {
             w.charge=Mathf.Max(0f,w.charge-dt*CapacitorMax/Mathf.Max(.01f,upgrades.capacitorStowedDrainSeconds));
             w.chargeFullTime=Mathf.Max(0f,w.chargeFullTime-dt);
         }
 
+        /// <summary>Capacitor discharge around you: the stored share of damageB (a full Capacitor hits harder). Twist also strikes along the
+        /// path you walked in the last capacitorTrailSeconds; each enemy is hit once either way. It never hurts you.</summary>
         void CapacitorDischarge(RunWeapon w,float range,float damage)
         {
             float hit=damage*Mathf.Clamp01(w.charge/CapacitorMax)*(w.charge>=CapacitorMax?upgrades.capacitorFullBonus:1f);
@@ -1220,7 +1302,7 @@ namespace AnomalyArena
                 Vector3 previous=default;bool joined=false;
                 for(int k=0;k<=w.trailCount;k++)
                 {
-
+                    // Oldest recorded point first; the walk ends where you stand now.
                     Vector3 point;
                     if(k<w.trailCount)
                     {
@@ -1249,16 +1331,20 @@ namespace AnomalyArena
             w.charge=0;w.chargeFullTime=0;
         }
 
+        /// <summary>Capacitor Twist: remembers where you walked, one point every capacitorTrailSample seconds while it is in your hand.</summary>
         void RecordCapacitorTrail(RunWeapon w)
         {
             int size=Mathf.Clamp(Mathf.CeilToInt(upgrades.capacitorTrailSeconds/Mathf.Max(.01f,upgrades.capacitorTrailSample)),1,256);
             if(w.trailPoints==null||w.trailPoints.Length!=size){w.trailPoints=new Vector3[size];w.trailTimes=new float[size];w.trailCount=w.trailHead=0;}
-
+            // Game time, so the seconds spent stowed age the old points out.
             if(w.trailCount>0&&Time.time-w.trailTimes[(w.trailHead-1+size)%size]<upgrades.capacitorTrailSample)return;
             w.trailPoints[w.trailHead]=Query.Flat(player.Position);w.trailTimes[w.trailHead]=Time.time;
             w.trailHead=(w.trailHead+1)%size;w.trailCount=Mathf.Min(size,w.trailCount+1);
         }
 
+        /// <summary>Wave end: drops the element weapons' card state (ice stones, fence timers, Blizzard marks and snow slow,
+        /// needle counts, stored Chain jumps, Capacitor paths) and gives back every movement change they made. The Meltdown Tame
+        /// attack speed bonus ends with the wave too.</summary>
         void ClearElementWeapons()
         {
             iceStones.Clear();wildfireFenceHitAt.Clear();needleHits.Clear();meltdownHasteLeft=0f;
@@ -1266,6 +1352,7 @@ namespace AnomalyArena
             foreach(var w in Hand)if(w!=null)w.chainStoredJumps=0;
         }
 
+        /// <summary>Void trial (and wave end): the Blizzard marks, its snow slow and the Capacitor paths belong to the battlefield.</summary>
         void FreezeElementWeaponsForTrial()
         {
             blizzardFrozenSince.Clear();
@@ -1284,6 +1371,9 @@ namespace AnomalyArena
             return false;
         }
 
+        /// <summary>Meltdown: enemies take the blast scaled by Mk and cards; the wielder always takes the flat base value.
+        /// Tame: the blast spares you and knocks the enemies around you back (meltdownTamePush), then every
+        /// weapon you carry fires faster and your feet move faster for a while, whichever weapon is in hand; the 3 s lockout stays.</summary>
         void Meltdown(RunWeapon w)
         {
             WeaponSound(w,WeaponAudioPhase.Explosion);
@@ -1299,14 +1389,15 @@ namespace AnomalyArena
         }
 
         float meltdownHasteLeft;
-
+        /// <summary>Meltdown Tame: seconds left of the attack speed bonus (shown on the Meltdown slot).</summary>
         public float MeltdownHasteLeft=>meltdownHasteLeft;
-
+        /// <summary>Meltdown Tame: while the bonus lasts, every weapon's cooldowns, charges and reloads are divided by this, like an Attack Speed card.</summary>
         public float MeltdownHaste=>meltdownHasteLeft>0f?1f+Mathf.Max(0f,upgrades.meltdownTameHaste):1f;
-
+        /// <summary>The bonus runs on your own clock, so Time Stop does not stretch it.</summary>
         void TickMeltdownHaste(float dt){meltdownHasteLeft=Mathf.Max(0f,meltdownHasteLeft-dt);SyncMeltdownMove();}
         static readonly object MeltdownMoveKey=new();
-
+        /// <summary>Meltdown Tame: while the bonus lasts your feet move meltdownTameMoveBonus faster, as a movement
+        /// modifier on you, so it holds on any weapon you switch to; the wave end clears it with your other modifiers.</summary>
         void SyncMeltdownMove()
         {
             if(!player)return;
@@ -1314,13 +1405,15 @@ namespace AnomalyArena
             else player.RemoveMovementModifier(MeltdownMoveKey);
         }
 
+        /// <summary>Meltdown: one warning when the heat climbs past meltdownWarnShare of full, so the meltdown never comes unannounced.</summary>
         void MeltdownWarning(RunWeapon w,float before)
         {
             float warn=4f*upgrades.meltdownWarnShare;
-
+            // The weapon's own charge cue: a rising sound from the gun, not an enemy cue.
             if(upgrades.meltdownWarnShare>0f&&before<warn&&w.heat>=warn)WeaponSound(w,WeaponAudioPhase.ChargeStart);
         }
 
+        /// <summary>Meltdown Twist: a bullet kill cools the gun; an elite kill clears the heat. Bosses do not count.</summary>
         public void MeltdownKillVent(RunWeapon w,Combatant body)
         {
             if(w==null||body is not Enemy{IsBoss:false} enemy)return;
@@ -1333,10 +1426,16 @@ namespace AnomalyArena
             else w.heat=Mathf.Max(0f,w.heat-upgrades.meltdownKillVent);
         }
 
+        /// <summary>Lance backfire on open ground: the cells the recoil pushes you back. The 10-27 doc (document 0198, P17): the Tame
+        /// keeps the whole push; only a wall close behind braces the shot.</summary>
         public float LanceRecoil(RunWeapon w)=>Mathf.Max(0f,upgrades.lanceRecoil);
 
+        /// <summary>Scatter Focus backfire: the cells a release at this charge (0-1) pushes you back. The 10-27 doc (document 0189,
+        /// P18): the Tame keeps the whole push and adds only the short guard against attacks.</summary>
         public float FocusRecoil(RunWeapon w,float charge)=>Mathf.Lerp(upgrades.focusRecoilMin,upgrades.focusRecoilMax,Mathf.Clamp01(charge));
 
+        /// <summary>Lance Tame: a wall (map bound or Bulwark) within lanceBraceDistance behind you braces the shot.
+        /// The cast starts a little ahead so a wall you already touch is still found.</summary>
         bool LanceBraced(Vector3 aim,out Vector3 wallPoint)
         {
             aim=Query.Flat(aim).normalized;wallPoint=player.Position;
@@ -1346,6 +1445,7 @@ namespace AnomalyArena
             return true;
         }
 
+        /// <summary>Lance Twist: a released slug leaves its real path on the ground for a few seconds; it replaces the previous one.</summary>
         public void LanceTrail(RunWeapon w,Vector3 from,Vector3 to)
         {
             if(w==null)return;
@@ -1362,6 +1462,7 @@ namespace AnomalyArena
             for(int i=tracers.Count-1;i>=0;i--)if(tracers[i].from==from&&tracers[i].to==to)tracers.RemoveAt(i);
         }
 
+        /// <summary>The trail runs on game time and fades as it runs out (the tracer it draws with uses real time).</summary>
         void TickLanceTrail(RunWeapon w,float dt)
         {
             if(w.lanceTrailLeft<=0f)return;
@@ -1374,10 +1475,12 @@ namespace AnomalyArena
                 if(tracers[i].from!=from||tracers[i].to!=to)continue;
                 var line=tracers[i];line.until=Time.unscaledTime+.1f;line.color=color;tracers[i]=line;return;
             }
-
+            // Pruned during a pause or pushed out by other lines: draw it again.
             AddTracer(from,to,.12f,.1f,color);
         }
 
+        /// <summary>Lance Twist: the slug crossed the previous trail. A blast at the crossing: a share of the base hit that skips the
+        /// Shield's damage cut like the slug, no knockback, spares you. No fire feedback, as nothing was fired.</summary>
         public void LanceCross(AttackActor slug,Vector3 at)
         {
             var w=slug?slug.weapon:null;if(w==null||!AttackPool.Instance||!player)return;
@@ -1386,6 +1489,8 @@ namespace AnomalyArena
             a.ignoreShieldReduction=true;a.hurtOwner=false;
         }
 
+        // Lance rail beam (document 5.5 "轨道射线"): the slug stays a fast projectile and its hits do not change; a beam is
+        // drawn from where it left along its real path, growing with it and ending where it really stops (a wall, the range, a black hole).
         struct LanceBeam { public AttackActor slug; public int sequence; public Vector3 from, to; }
         readonly List<LanceBeam> lanceBeams = new();
         static readonly Color LanceBeamColor = new(.8f,.95f,1f,.95f);
@@ -1396,19 +1501,22 @@ namespace AnomalyArena
             lanceBeams.Add(new LanceBeam{slug=slug,sequence=slug.Sequence,from=at,to=at});
         }
 
+        /// <summary>Grows each beam to its slug; once the slug has stopped, the beam stays lanceBeamSeconds where it ended.</summary>
         void TickLanceBeams()
         {
             for(int i=lanceBeams.Count-1;i>=0;i--)
             {
                 var beam=lanceBeams[i];
                 bool same=beam.slug&&beam.slug.Sequence==beam.sequence,flying=same&&beam.slug.gameObject.activeSelf&&!BattlefieldFrozen(beam.slug.gameObject);
-
+                // A stopped slug keeps its last position until the pool hands it out again.
                 if(same)beam.to=beam.slug.transform.position;
                 SetLanceBeamTracer(beam,flying?Time.unscaledTime+.1f:Time.unscaledTime+Mathf.Max(0f,upgrades.lanceBeamSeconds));
                 if(flying)lanceBeams[i]=beam;else lanceBeams.RemoveAt(i);
             }
         }
 
+        /// <summary>AttackActor.Release: the slug stopped (a wall, its range, a black hole). Its beam ends exactly there, before the pool
+        /// can hand the actor out again.</summary>
         public void LanceSlugStopped(AttackActor slug)
         {
             for(int i=lanceBeams.Count-1;i>=0;i--)
@@ -1431,12 +1539,14 @@ namespace AnomalyArena
             AddTracer(beam.from,beam.to,upgrades.lanceBeamWidth,until-Time.unscaledTime,LanceBeamColor);
         }
 
+        /// <summary>Railgun effects that run on your clock whichever weapon is in hand: the Lance rail beams and the Execute Tame arc shield.</summary>
         void TickRailgunEffects(float dt)
         {
             TickLanceBeams();
             foreach(var w in Hand)if(w!=null)TickExecuteAura(w,dt);
         }
 
+        /// <summary>Bombard Tame: touching one of your own blasts spares you, and the first touch of a shot cuts part of its full cooldown.</summary>
         public void BombardSelfTouch(RunWeapon w)
         {
             if(w==null||w.bombardRefunded)return;
@@ -1445,6 +1555,8 @@ namespace AnomalyArena
             if(player)Fx.Ring(player.Position,.8f,new Color(1f,.75f,.35f,.9f));
         }
 
+        /// <summary>Bombard Twist: one blast every bombardStep, each at the k-th distance from where you fired along the aim of that moment,
+        /// after the usual fuse with its landing marker. It keeps going if you switch weapons; a wall along that aim drops that blast only.</summary>
         void TickBombard(RunWeapon w,float dt)
         {
             if(!player||!player.IsAlive||!roster||!AttackPool.Instance){w.bombardLeft=0;return;}
@@ -1467,6 +1579,8 @@ namespace AnomalyArena
             }
         }
 
+        /// <summary>Spin-up Twist: you switched away at full spin with the trigger held, so the minigun stays where you stood and keeps
+        /// firing along that aim at its top rate for turretSeconds.</summary>
         void DeployTurret(RunWeapon w)
         {
             if(w==null||w.form!=WeaponForm.Minigun||w.variant!=0||!w.Has(UpgradeAxis.Twist)||!inputHeld||w.heldTime<upgrades.turretSpinSeconds||!player)return;
@@ -1475,6 +1589,7 @@ namespace AnomalyArena
             Fx.Ring(w.turretPoint,.9f,new Color(1f,.8f,.4f,.9f));
         }
 
+        /// <summary>The deployed minigun fires from its own spot, without your recoil or camera push. Taking it back in hand recalls it.</summary>
         void TickTurret(RunWeapon w,float dt)
         {
             if(w.turretLeft<=0f)return;
@@ -1489,7 +1604,7 @@ namespace AnomalyArena
                 w.turretClock+=interval;
             }
             w.turretLeft-=dt;
-
+            // A ring every half second shows where it stands.
             if(Mathf.Floor(before*2f)!=Mathf.Floor(Mathf.Max(0f,w.turretLeft)*2f))Fx.Ring(w.turretPoint,.7f,new Color(1f,.8f,.4f,.7f));
             if(w.turretLeft<=0f)EndTurret(w);
         }
@@ -1508,9 +1623,13 @@ namespace AnomalyArena
             else if(pool&&pool.muzzleFlash)pool.EmitDirectional(pool.muzzleFlash,from+dir*.6f,dir,.6f,.07f,new Color(1f,.88f,.6f));
         }
 
+        /// <summary>Spin-up Tame (document 5.8): at full spin, backing into a wall braces you: the retreat stops, knockback
+        /// on you drops to spinAnchorKnockFactor (Combatant.Knockback), black holes cannot drag you (WorldMap) and the fire rate rises by
+        /// spinBraceRateBonus (SpinUpRate). On open ground the tamed spin still pushes you back; it only frees your turning.</summary>
         public bool Anchored=>SpinBraceReady(Active)&&SpinWallBehind();
         bool SpinBraceReady(RunWeapon w)=>w!=null&&w.form==WeaponForm.Minigun&&w.variant==0&&w.Has(UpgradeAxis.Tame)&&inputHeld&&w.heldTime>=upgrades.spinAnchorSpinSeconds&&player&&player.IsAlive;
-
+        /// <summary>A wall (map bound or Bulwark) touching your back, against the aim. The cast starts a little ahead so a wall you already
+        /// touch is still found.</summary>
         bool SpinWallBehind()
         {
             Vector3 aim=Query.Flat(player.AimDirection);if(aim.sqrMagnitude<1e-4f)return false;aim.Normalize();
@@ -1518,7 +1637,9 @@ namespace AnomalyArena
             return Physics.SphereCast(Query.AtCastHeight(player.Position+aim*lead),player.radius*.9f,-aim,out _,upgrades.spinBraceWallGap+lead,GameManager.WallMask,QueryTriggerInteraction.Ignore);
         }
         float anchorRingClock;
-
+        /// <summary>Spin-up backfire (document 5.5): while you hold fire the spin pushes you slowly back against the aim, from
+        /// nothing at the first shot to spinUpRetreatSpeed at full spin. A push you keep control through, never a knockback, so a wall stops
+        /// it without hurting you. A tamed gun braced against a wall stops backing off and shows a ring.</summary>
         void TickAnchor(float dt)
         {
             var w=Active;

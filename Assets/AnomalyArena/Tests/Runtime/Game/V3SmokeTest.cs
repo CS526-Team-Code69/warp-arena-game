@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using TestHelper.Attributes;
+using TestHelper.RuntimeInternals;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -12,13 +13,13 @@ using Object = UnityEngine.Object;
 
 namespace AnomalyArena
 {
-
+    /// <summary>Bounded regressions against the authored V3 scene, using real component wiring.</summary>
     [TestFixture]
     [Category("V3Smoke")]
     public class V3SmokeTest
     {
-        const string SceneCn = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
-        const string SceneEn = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        // Since 2026-11-10 one scene serves both languages; the English cases load it with an English start (TestStartLanguage).
+        const string SceneCn = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
         WaveSet originalWaves, runtimeWaves;
         UnityEngine.Random.State savedRandom;
 
@@ -40,6 +41,7 @@ namespace AnomalyArena
                 Object.Destroy(runtimeWaves);
             }
             originalWaves = runtimeWaves = null;
+            TestStartLanguage.Reset();
             Time.timeScale = 1f;
         }
 
@@ -88,9 +90,11 @@ namespace AnomalyArena
             Assert.That(game.RunPhase, Is.EqualTo(ArenaUiState.Ready), "manual next wave confirmation remains");
         }
 
-        [Test, LoadScene(SceneEn), FocusGameView, Category("Integration"), Category("Acceptance"), Timeout(25000)]
+        [Test, BuildScene(SceneCn), FocusGameView, Category("Integration"), Category("Acceptance"), Timeout(25000)]
         public async Task EnglishRun_ClickedCrate_ReachesThreeStartingWeaponChoices()
         {
+            TestStartLanguage.Use(StartupLanguage.English);
+            await SceneManagerHelper.LoadSceneAsync(SceneCn);
             var game = await ReadyScene();
 
             await OpenLoadout(game);
@@ -100,9 +104,15 @@ namespace AnomalyArena
             Assert.That(game.UiSnapshot.selectionUnlimited, Is.True, "English choice has no countdown");
         }
 
-        [Test, LoadScene(SceneEn), Category("Integration"), Timeout(25000)]
-        public async Task BottomRow_SlotTexts_StayInsideTheirOwnBoxes()
+        // The row is laid out for 16:9, the only shape the web page gives the game, and any 16:9 window makes a canvas of the reference size. A batch run's
+        // window is 640x480, or 321x531 once a test has opened a Game view, and there the hand slots do run into the auto slots, so this measures the row on
+        // the reference canvas. Asking the Game view for 16:9 instead would leave that size on every later test in the run.
+        // Since 2026-11-10 the English slot texts are in the one scene's slots, which V2HudLayout lays out the same way in both languages.
+        [Test, BuildScene(SceneCn), Category("Integration"), Timeout(25000)]
+        public async Task BottomRow_EnglishSlotTexts_StayInsideTheirOwnBoxes()
         {
+            TestStartLanguage.Use(StartupLanguage.English);
+            await SceneManagerHelper.LoadSceneAsync(SceneCn);
             await ReadyScene();
             var hud = Object.FindAnyObjectByType<V2Hud>(FindObjectsInactive.Include);
             ((RectTransform)hud.transform).sizeDelta = hud.GetComponentInParent<CanvasScaler>().referenceResolution;
@@ -127,16 +137,18 @@ namespace AnomalyArena
             foreach (var slot in hud.handSlots.Concat(hud.autoSlots).Concat(hud.skillSlots)) AssertPartsKeepToTheirBoxes(slot, hud);
         }
 
+        // These check the Chinese names and details; since 2026-11-10 the language, not the scene, decides which ones show.
         static void AssumeChineseEdition() =>
-            Assume.That(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name, Is.EqualTo(V2Hud.ChineseEditionScene), "the Chinese edition's boxes");
+            Assume.That(ArenaText.IsChinese, Is.True, "the Chinese names show");
 
+        // The Chinese title boxes used to be 14 wide in auto slots and 84 in hand slots, so "空栏位" showed as "空" and a weapon as "步枪 ·".
         [Test, LoadScene(SceneCn), Category("Integration"), Timeout(25000)]
         public async Task BottomRow_ChineseNames_ShowInFullInEverySlot()
         {
             await ReadyScene();
             AssumeChineseEdition();
             var hud = Object.FindAnyObjectByType<V2Hud>(FindObjectsInactive.Include);
-            string empty = ArenaText.Pair("Empty slot","Empty slot");
+            string empty = ArenaText.Pair("空栏位", "Empty slot");
             var weapons = new List<(string name, bool inHand, bool inAuto)> { (empty, true, true) };
             foreach (WeaponForm form in Enum.GetValues(typeof(WeaponForm)))
                 foreach (int mk in new[] { 1, 6 })
@@ -145,7 +157,7 @@ namespace AnomalyArena
                     weapons.Add((new RunWeapon { form = form, mk = mk }.Label, !auto, auto));
                     for (int variant = 0; variant < 2; variant++) weapons.Add((new RunWeapon { form = form, variant = variant, revealed = true, mk = mk }.Label, !auto, auto));
                 }
-            var skills = new List<string> { ArenaText.Pair("Empty","Empty") };
+            var skills = new List<string> { ArenaText.Pair("空槽", "Empty") };
             foreach (SkillId id in Enum.GetValues(typeof(SkillId))) skills.Add(ArenaTerms.Skill(id));
 
             var cutOff = new List<string>();
@@ -154,6 +166,7 @@ namespace AnomalyArena
             foreach (var view in hud.skillSlots) foreach (var name in skills) CollectCutOffName(hud, view, name, true, cutOff);
             Assert.That(cutOff, Is.Empty, $"{cutOff.Count} names are cut off, first ones: {string.Join("; ", cutOff.Take(12))}");
 
+            // The check itself notices each way a name can go wrong.
             var noticed = new List<string>();
             CollectCutOffName(hud, hud.autoSlots[0], new string('M', 60), false, noticed);
             Assert.That(noticed, Is.Not.Empty, "a name too long for the box counts as cut off");
@@ -168,6 +181,8 @@ namespace AnomalyArena
             Assert.That(noticed, Is.Empty, "a name from another slot kind may wrap at a space, as long as it shows in full");
         }
 
+        // The dots between the parts of a detail line are a full character wide, so an 86-wide slot showed "普通 · 等级 1 ·" and lost the
+        // energy cost or the element. Every line the game can show stays whole in its own slot kind, and what is happening now stays in it.
         [Test, LoadScene(SceneCn), Category("Integration"), Timeout(25000)]
         public async Task BottomRow_ChineseDetails_ShowInFullInEverySlot()
         {
@@ -203,19 +218,21 @@ namespace AnomalyArena
                     Assume.That(game.skills.Learn(id, -1, level), Is.True, "the skill can be learned");
                     var value = game.UiSnapshot.skillSlots[0];
                     CollectCutOffDetail(hud, hud.skillSlots[0], value, cutOff);
-                    if (!hud.skillSlots[0].detail.text.Contains(ArenaText.Pair("Energy","Energy"))) cutOff.Add($"{id} level {level} lost its cost: {hud.skillSlots[0].detail.text}");
+                    if (!hud.skillSlots[0].detail.text.Contains(ArenaText.Pair("能量", "Energy"))) cutOff.Add($"{id} level {level} lost its cost: {hud.skillSlots[0].detail.text}");
                 }
             Assert.That(cutOff, Is.Empty, $"{cutOff.Count} detail lines are cut off, first ones: {string.Join("; ", cutOff.Take(12))}");
 
+            // A weapon with nothing going on keeps its rarity, level and element, in each slot kind.
             weapons.Hand[1] = new RunWeapon { form = WeaponForm.Rifle, revealed = true };
             weapons.Auto[1] = new RunWeapon { form = WeaponForm.OrbitBlades, revealed = true };
             var plain = game.UiSnapshot;
             hud.handSlots[1].Render(plain.handSlots[1], hud.art);
             hud.autoSlots[1].Render(plain.autoSlots[1], hud.art);
-            string whole = ArenaText.Pair("Common Lv 1 None","Common Lv 1 None");
+            string whole = ArenaText.Pair("普通 等级1 无属性", "Common Lv 1 None");
             Assert.That(hud.handSlots[1].detail.text, Is.EqualTo(whole), "a hand slot shows all three");
             Assert.That(hud.autoSlots[1].detail.text, Is.EqualTo(whole), "an auto slot shows all three");
 
+            // The level and the energy cost do not run together into one number.
             game.skills.ResetRun();
             Assume.That(game.skills.Learn(SkillId.GravityWell), Is.True, "a skill with a level");
             hud.skillSlots[0].Render(game.UiSnapshot.skillSlots[0], hud.art);
@@ -236,6 +253,7 @@ namespace AnomalyArena
             }
         }
 
+        // Canvas scales from a small browser window to a large screen; font sizes round to whole pixels, so a name can fit at one and not another.
         static readonly float[] CanvasScales = Enumerable.Range(0, 31).Select(step => .5f + step * .05f).ToArray();
 
         static TextGenerator Generate(Text label, float scale)
@@ -247,6 +265,8 @@ namespace AnomalyArena
             return generator;
         }
 
+        // Every name shows in full in every slot: two lines at most, nothing dropped, and a line only starts after the slot's own break or a
+        // space, never inside a word. A name the slot kind can really hold (auto slots only hold auto forms) also keeps to the lines the slot asks for.
         static void CollectCutOffName(V2Hud hud, V2UiSlot view, string name, bool holdsThisName, List<string> cutOff)
         {
             view.Render(new ArenaUiSlot { title = name }, hud.art);
@@ -295,6 +315,7 @@ namespace AnomalyArena
             var progression = game.progression;
             game.player.ReceiveDamage(new DamageInfo { amount = 5f, source = DamageSource.Poison, ignoreShield = true });
 
+            // Level 2 costs 15 XP (driver-measured guaranteed income of wave 1); each level adds 5 HP and 6 energy.
             progression.GainXp(progression.Rules.levelCosts[0]);
 
             Assert.That(progression.Level, Is.EqualTo(2), "level two");
@@ -307,7 +328,7 @@ namespace AnomalyArena
             progression.ApplyStat(new StatCardOffer(StatId.MaxEnergy, CardRarity.Common, 1000f));
             Assert.That(progression.TrySpendEnergy(40f), Is.True, "spend some Energy before levelling");
             game.player.ReceiveDamage(new DamageInfo { amount = 10f, source = DamageSource.Poison, ignoreShield = true });
-
+            // The remaining cost to level 12, from the saved level curve.
             progression.GainXp(progression.Rules.levelCosts.Skip(1).Sum());
             Assert.That(progression.Level, Is.EqualTo(12), "level cap");
             Assert.That(game.player.maxHp, Is.EqualTo(80f), "max-level HP without HP cards");
@@ -381,6 +402,8 @@ namespace AnomalyArena
             Assert.That(upgradesSeen, Is.GreaterThan(0), "held weapons do appear as upgrades");
         }
 
+        // A stronger version of a held weapon upgrades that weapon itself: only its Mk rises; its pairing, upgrades and
+        // infusion stay (on 10-25 it had been a new weapon with a fresh pairing).
         [Test, LoadScene(SceneCn), Timeout(20000)]
         public async Task TakeOffer_HeldWeaponVersion_UpgradesTheHeldWeaponInPlace()
         {
@@ -543,6 +566,7 @@ namespace AnomalyArena
                 return enemy;
             }
 
+            // System doc §5.2 / §2.1: a non-boss hit only gives feedback (flash, camera, flinch, sound): no hit stun and no push.
             var grunt = Attacker(EnemyKind.Grunt, false);
             Assert.That(player.ReceiveDamage(DamageInfo.Attack(1f, grunt, Vector3.right, 6f)), Is.True, "the basic hit lands");
             Assert.That(Time.timeScale, Is.EqualTo(1f), "a hit on the player never slows the game");
@@ -555,6 +579,7 @@ namespace AnomalyArena
             Assert.That(player.State, Is.EqualTo(CharacterState.Normal), "elites do not knock the player back either");
             Assert.That(player.Stunned, Is.False, "an elite's plain hit does not stun either (only a Rammer charge stuns, in Enemy)");
 
+            // The Stomper slam throws the player far and the Rammer charge pushes a little (then stuns, in Enemy).
             foreach (var kind in new[] { EnemyKind.Stomper, EnemyKind.Rammer })
             {
                 player.ClearWaveState();
@@ -571,7 +596,7 @@ namespace AnomalyArena
             Assert.That(Time.timeScale, Is.EqualTo(1f), "a boss hit does not slow the game either");
 
             player.ClearWaveState();
-
+            // Menu input opens 0.4 s after a phase change; the hits above took no game time, so wait for the menu to accept the command.
             await CommandUntil(game, ArenaUiCommand.Pause, () => game.RunPhase == ArenaUiState.Paused);
             Assert.That(game.RunPhase, Is.EqualTo(ArenaUiState.Paused), "pause menu is accepted after a hit");
             Assert.That(Time.timeScale, Is.Zero, "menu has fully paused time");
@@ -590,7 +615,7 @@ namespace AnomalyArena
             target.Configure(target.definition, 1f, false);
             target.maxHp = 100000f;
             target.Heal(100000f);
-
+            // Pooled enemies wait below the arena; on the ground beside the player it stays in its normal state.
             var spot = new[] { Vector3.right, Vector3.left, Vector3.forward, Vector3.back }
                 .Select(d => game.player.Position + d * 3f)
                 .FirstOrDefault(p => !WorldMap.Active || WorldMap.Active.IsWalkable(p, target.radius));
@@ -642,6 +667,8 @@ namespace AnomalyArena
             game.waves.waveSet = runtimeWaves;
         }
 
+        /// <summary>Kills every survivor without reward until nobody is alive or queued, so an expired wave can end. A full Splitter killed by HP
+        /// leaves two minis on the next wave tick, even after the timer ran out (waves 1 and 2 list the Splitter), so one sweep is not enough.</summary>
         internal static async Task ClearSurvivors(GameManager game, float timeout = 15f)
         {
             float deadline = Time.realtimeSinceStartup + timeout;
@@ -661,7 +688,8 @@ namespace AnomalyArena
 
         static async Task OpenLoadout(GameManager game)
         {
-
+            // Since 2026-11-06 the title's only Start opens the V2 day campaign wherever the scene has one, and no button starts the classic
+            // run these smoke tests walk through: it starts from the controller there (FlowInputTest checks the title button itself).
             if (game.TryGetComponent<V2Campaign>(out var campaign) && campaign.isActiveAndEnabled && campaign.rules && campaign.startButtonOpensCampaign)
                 await CommandUntil(game, ArenaUiCommand.Start, () => game.RunPhase == ArenaUiState.SupplyDrop);
             else await ClickUntil(game, ArenaUiCommand.Start, () => game.RunPhase == ArenaUiState.SupplyDrop);
@@ -673,7 +701,7 @@ namespace AnomalyArena
 
         static async Task BeginCombat(GameManager game, int wave = 1)
         {
-
+            // Menu command tests use the public controller API; the dedicated crate tests exercise raycasts.
             await CommandUntil(game, ArenaUiCommand.Start, () => game.RunPhase == ArenaUiState.SupplyDrop);
             await Until(() => game.SupplyDropReady, 4f, "supply crate landing");
             await CommandUntil(game, ArenaUiCommand.OpenSupply, () => game.RunPhase == ArenaUiState.Loadout);
@@ -697,13 +725,14 @@ namespace AnomalyArena
 
         static async Task ClickUntil(GameManager game, ArenaUiCommand command, Func<bool> completed, int index = -1)
         {
-
+            // TestHelper.UI is not installed. This fallback verifies the top EventSystem raycast and
+            // sends a real pointer event to its handler instead of invoking Button.onClick directly.
             float deadline = Time.realtimeSinceStartup + 5f;
             string blocker = "no active command button";
             while (!completed())
             {
                 if (Time.realtimeSinceStartup > deadline) Assert.Fail($"Button {command}[{index}] unreachable or rejected: {blocker}; phase={game.RunPhase}");
-
+                // A player closes the tutorial that opens as the first run enters the arena.
                 if (V2Tutorial.IsOpen) { V2Tutorial.Close(); blocker = "tutorial"; }
                 Canvas.ForceUpdateCanvases();
                 await Awaitable.NextFrameAsync();

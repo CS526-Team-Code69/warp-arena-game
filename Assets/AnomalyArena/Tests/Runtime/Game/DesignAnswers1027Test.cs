@@ -7,15 +7,15 @@ using Object = UnityEngine.Object;
 
 namespace AnomalyArena
 {
-                                                                                                                                    
-                                                                                                                                      
-                                                                                                                                      
-                                                                                                                                           
-                                               
+    /// <summary>A weapon's Fire burns a quarter of the weapon's DPS a second
+    /// (its card's hit damage over its cycle), one burn that each hit renews; a built-in Fire burns that times its own factor, so the
+    /// Flamethrower Stream burns about 3 a second at Mk1. Poison on an enemy ticks every 0.5 s and each stack deals 0.3 a second. The
+    /// Singularity runs on the player's own clock (Time Stop does not stretch it) and slows the enemies it draws in by 70%. The HUD Shield
+    /// bar is full at 60% of max HP.</summary>
     [TestFixture]
     public class DesignAnswers1027Test
     {
-        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task WeaponFireHit_BurnsAQuarterOfTheWeaponsDps_ABuiltInFireTimesItsFactor_AboutThreeForTheStream()
@@ -77,8 +77,8 @@ namespace AnomalyArena
                 "ten stacks deal 1.5 (× the wave scale) on the first tick");
         }
 
-                                                                                                                                                  
-                                                                                                                          
+        /// <summary>Poison on the player follows the enemy rules, at most 10 stacks, a tick every 0.5 s at 0.3 a
+        /// stack a second, held for the 3 s window and gone within the 1 s drain; it is not scaled by the wave.</summary>
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task PoisonOnThePlayer_FollowsTheEnemyRules_TenStacksThreeASecond_GoneAfterTheWindowAndDrain()
         {
@@ -104,7 +104,7 @@ namespace AnomalyArena
                 Assert.That(dealt, Is.EqualTo(3f).Within(.01f), "ten stacks deal 3 a second");
                 for (int i = 0; i < 39; i++) board.Tick(.05f);
                 Assert.That(board.Poison, Is.EqualTo(rules.poisonOnEnemyCap).Within(.001f), "the stacks hold while the window lasts");
-                                                                                                                                                   
+                // Ticks at 0.5 to 2.5 s have earned 7.5, paid in whole points; the tick at 3 s brings the window to about 9 (old rules: about 30).
                 Assert.That(dealt, Is.EqualTo(7f).Within(.01f), "five ticks of 1.5 by 2.95 s");
 
                 board.Add(ElementKind.Poison, 1f, targets[0]);
@@ -126,7 +126,7 @@ namespace AnomalyArena
             Assume.That(skills.Learn(SkillId.Singularity), Is.True, "the Singularity is learned");
             game.progression.GainEnergy(1000f);
             var definition = skills.Catalog.Find(SkillId.Singularity);
-                                                                                                                                         
+            // The sandbox switches its targets off to hold them; one switched back on (it still cannot move) is a live enemy to draw in.
             targets[0].enabled = true;
             await Until(() => SkillWorldAPI.IsOnScreen == null || SkillWorldAPI.IsOnScreen(targets[0].Position), 4f, "the camera shows the target");
             try
@@ -159,13 +159,13 @@ namespace AnomalyArena
             var board = ElementStatus.For(game.player);
             board.enabled = false;
             board.SetShield(game.player.maxHp * .3f);
-                                                               
+            // The HUD redraws ten times a second; draw it now.
             hud.RefreshView();
 
             Assert.That(hud.shieldFill.fillAmount, Is.EqualTo(.5f).Within(.02f), "30% of max HP fills half the bar");
         }
 
-                              
+        // ───── Helpers ─────
 
         static DamageInfo WeaponHit(GameManager game, RunWeapon weapon, float amount)
         {
@@ -176,7 +176,7 @@ namespace AnomalyArena
             return info;
         }
 
-                                                                                      
+        /// <summary>The body's status board with no Shield and no statuses.</summary>
         static ElementStatus Bare(Combatant body)
         {
             var board = ElementStatus.For(body);

@@ -3,11 +3,11 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>Editable world geometry. Coordinates are centred on the player's starting point.</summary>
     [CreateAssetMenu(menuName = "Anomaly Arena/World/Map Layout")]
     public sealed class MapLayout : ScriptableObject
     {
-
+        /// <summary>A round quicksand pool: centre (x, z) and radius, in cells.</summary>
         [Serializable]
         public struct SandPool
         {

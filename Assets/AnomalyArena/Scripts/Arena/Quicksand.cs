@@ -4,12 +4,17 @@ using UnityEngine.Rendering;
 
 namespace AnomalyArena
 {
-
+    /// <summary>
+    /// Dunes quicksand (system doc 12.1): round pools from the map layout that slow everyone walking through them, the player and every enemy but
+    /// the bosses, to the layout's quicksandSpeed. Pools never block movement, paths or shots and enemies do not route around them; the void
+    /// trial has none. Gameplay reads the layout directly; this object only draws the pools, built once when the map is chosen.
+    /// </summary>
     public sealed class Quicksand : MonoBehaviour
     {
-
+        // Above the floor top (y = 0) and its detail patches, below every effect drawn on the ground; one small step per decal layer.
         const float DecalHeight = .02f, LayerStep = .004f;
-
+        // Floor detail patches draw at -4, the black-hole rings from -3 up (no pool touches a hole) and effects at 0 or above, so the pools sit
+        // on the floor art and under every telegraph.
         const int SortingOrder = -3;
         static readonly int ColorId = Shader.PropertyToID("_BaseColor"), TextureId = Shader.PropertyToID("_BaseMap");
         static Mesh quad;
@@ -19,6 +24,7 @@ namespace AnomalyArena
         MapLayout.SandPool[] pools;
         bool illustrated;
 
+        /// <summary>Whether the point is in one of the current map's quicksand pools; never during the void trial.</summary>
         public static bool IsQuicksand(Vector3 point)
         {
             var world = WorldMap.Active;
@@ -28,8 +34,11 @@ namespace AnomalyArena
             return false;
         }
 
+        /// <summary>Walking speed share at a point: the layout's quicksandSpeed inside a pool, 1 elsewhere.</summary>
         public static float SpeedFactor(Vector3 point) => IsQuicksand(point) ? Mathf.Clamp(WorldMap.Active.layout.quicksandSpeed, .05f, 1f) : 1f;
 
+        /// <summary>Draws the pools of the world's current layout, replacing earlier decals: sunken pits with the illustrated art, the biome's
+        /// quicksand decals in whitebox. Returns the decal root, or null when the layout has no pools.</summary>
         public static Quicksand Build(WorldMap world)
         {
             if (drawn) Destroy(drawn.gameObject);
@@ -45,6 +54,9 @@ namespace AnomalyArena
 
         static bool HasLook(Biome look) => look && look.quicksandMaterial && look.quicksandLayers != null && look.quicksandLayers.Length > 0;
 
+        /// <summary>V2 day campaign (since 2026-11-06): its map has pools on every biome, and a biome without a quicksand look of its own (the
+        /// Ruins) draws them in whitebox with the first of the world's biomes that has one (the Dunes). Only the campaign's map asks; a
+        /// classic map keeps its own biome's look. The map's own biome when none has a look.</summary>
         static Biome BorrowedLook(WorldMap world)
         {
             if (world.biomes == null) return world.biome;
@@ -75,7 +87,7 @@ namespace AnomalyArena
                 if (!layer.texture) continue;
                 var decal = new GameObject($"Pool{p}_{l}").transform;
                 decal.SetParent(transform, false);
-
+                // A fixed turn per pool and layer keeps neighbouring pools from looking stamped.
                 decal.SetPositionAndRotation(new Vector3(pools[p].centre.x, DecalHeight + l * LayerStep, pools[p].centre.y), Quaternion.Euler(0f, (p * 67f + l * 41f) % 360f, 0f));
                 float size = pools[p].radius * 2f * Mathf.Max(.1f, layer.size);
                 decal.localScale = new Vector3(size, 1f, size);
@@ -106,6 +118,7 @@ namespace AnomalyArena
             if (drawn == this) drawn = null;
         }
 
+        /// <summary>A unit quad lying flat on the ground (XZ plane), facing up.</summary>
         static Mesh BuildQuad()
         {
             var mesh = new Mesh { name = "QuicksandQuad" };

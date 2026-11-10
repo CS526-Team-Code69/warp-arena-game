@@ -4,17 +4,20 @@ using System.Linq;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using TestHelper.Attributes;
+using TestHelper.RuntimeInternals;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
 namespace AnomalyArena
 {
-
+    /// <summary>Screenshots for the course GDD, taken in English with the HUD: loadout, weapon card, a wave in combat,
+    /// a mid-wave card pick, the black-hole cutscene and the post-wave Armory. Saved to Logs/gdd-*.png; nothing is asserted beyond
+    /// the flow reaching each screen.</summary>
     [TestFixture]
     [Category("VisualVerification")]
     public class GddCaptureTest
     {
-        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
         bool savedArt;
 
         [SetUp]
@@ -25,12 +28,16 @@ namespace AnomalyArena
         {
             Art.Enabled = savedArt;
             Time.timeScale = 1f;
+            TestStartLanguage.Reset();
         }
 
-        [Test, LoadScene(Scene), Timeout(180000)]
+        [Test, BuildScene(Scene), Timeout(180000)]
         [Description("GDD screenshots with the HUD: loadout, weapon card, combat, level-up pick, black-hole cutscene, Armory.")]
         public async Task Capture_GddScreens()
         {
+            // One scene serves both languages since 2026-11-10: the English start is asked for before the scene loads.
+            TestStartLanguage.Use(StartupLanguage.English);
+            await SceneManagerHelper.LoadSceneAsync(Scene);
             await Awaitable.NextFrameAsync();
             await Until(() => GameManager.Instance && ArenaText.Ready && WorldMap.Active, 12f, "scene, localization and map");
             var game = GameManager.Instance;
@@ -46,7 +53,7 @@ namespace AnomalyArena
             Capture(cam, "gdd-loadout");
 
             await CommandUntil(game, ArenaUiCommand.ChooseLoadout, () => game.RunPhase == ArenaUiState.WeaponIntro, 1);
-            await Seconds(2.5f);                                                                          
+            await Seconds(2.5f); // let the card-pick flourish finish so it does not cover the weapon card
             Capture(cam, "gdd-weapon-card");
             await CommandUntil(game, ArenaUiCommand.DismissWeaponIntro, () => game.RunPhase != ArenaUiState.WeaponIntro);
             game.player.ProtectFor(600f);
@@ -58,7 +65,7 @@ namespace AnomalyArena
             await Seconds(2f);
             if (game.RunPhase == ArenaUiState.WaveActive)
             {
-                Art.Enabled = true;                                                                           
+                Art.Enabled = true; // whitebox is the default now; this shot is the optional illustrated mode
                 await Frames(3);
                 Capture(cam, "gdd-combat");
                 Art.Enabled = false;
@@ -93,7 +100,7 @@ namespace AnomalyArena
 
             await Until(() => game.RunPhase == ArenaUiState.WaveActive, 15f, "play resumes");
             await Until(() => game.waves.TimeExpired, 40f, "the wave timer runs out");
-            await V3SmokeTest.ClearSurvivors(game);                                                                        
+            await V3SmokeTest.ClearSurvivors(game); // Splitters leave minis, so the field is cleared until nothing is left
             await Until(() => game.RunPhase == ArenaUiState.SupplyDrop && game.SupplyDropReady, 8f, "the post-wave crate lands");
             await CommandUntil(game, ArenaUiCommand.OpenSupply, () => game.RunPhase == ArenaUiState.Armory);
             await Frames(10);
@@ -108,6 +115,7 @@ namespace AnomalyArena
             return true;
         }
 
+        /// <summary>Renders the game camera with the HUD into a 1920x1080 image: overlay canvases are drawn by the camera for this frame.</summary>
         static void Capture(Camera cam, string name)
         {
             const int width = 1920, height = 1080;

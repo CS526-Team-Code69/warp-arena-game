@@ -5,6 +5,7 @@ using UnityEngine.EventSystems;
 
 namespace AnomalyArena
 {
+    /// <summary>A saved button that selects an official Locale; it stores no parallel language state.</summary>
     public sealed class ArenaLocaleButton : MonoBehaviour, IPointerEnterHandler, ISelectHandler
     {
         public string localeCode = "zh-Hans";

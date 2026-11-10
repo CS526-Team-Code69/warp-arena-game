@@ -12,6 +12,7 @@ namespace AnomalyArena
         Lost
     }
 
+    /// <summary>Controls a run: start, win / lose, wave cleanup and the shared hit feedback (pause and screen shake). The run flow lives in GameManagerV2.cs.</summary>
     [DefaultExecutionOrder(-100)]
     public partial class GameManager : MonoBehaviour
     {
@@ -31,6 +32,10 @@ namespace AnomalyArena
             public KnockbackRules knockback = new();
         }
 
+
+        /// <summary>
+        /// Hit feel. Nothing here slows the whole game: holds are local to the bodies involved, and the camera is only pushed.
+        /// </summary>
         [Serializable]
         public class Feedback
         {
@@ -131,25 +136,36 @@ namespace AnomalyArena
             WallMask = 1 << WallLayer;
             CharacterMask = 1 << CharacterLayer;
             if (!cam) cam = Camera.main;
-
+            // timeScale is global and is not restored when the scene reloads; a reload mid pause would leave everything in slow motion
             Time.timeScale = 1f;
+            // Since 2026-11-10 one scene serves both languages: the first run's art follows the language the game opened in, whitebox in
+            // English and illustrated in Chinese; the enemy lab is illustrated only. SceneLocalePreset (execution order -10000) has decided
+            // the language in its Awake. Set here, not in Start, so nothing draws a frame in the other look and whatever reads the art once
+            // the scene has woken (a test's set-up after loading the scene) reads the run's own.
+            Art.EnsureV2Default(Art.IsIllustratedOnlyScene(gameObject.scene.name));
         }
 
+        // ───── Hit feedback: camera push and shake ─────
+
+        /// <summary>Screen shake through the camera rig. Overlapping requests take the largest, they do not add up.</summary>
         public void Shake(float amount)
         {
             if (cam && cam.TryGetComponent<CameraRig>(out var rig)) rig.Shake(amount);
         }
 
+        /// <summary>A very short closing-in of the view; it springs back by itself.</summary>
         public void Punch(float amount)
         {
             if (cam && cam.TryGetComponent<CameraRig>(out var rig)) rig.Punch(amount);
         }
 
+        /// <summary>Pushes the camera along dir; it springs back by itself.</summary>
         public void Kick(Vector3 dir, float amount)
         {
             if (amount > 0f && cam && cam.TryGetComponent<CameraRig>(out var rig)) rig.Kick(dir, amount);
         }
 
+        /// <summary>Camera push for a hit the player lands, spaced by hitKickInterval so a crowd never blurs the screen.</summary>
         public void HitKick(Vector3 dir, float amount)
         {
             if (amount <= 0f || Time.unscaledTime < nextHitKickAt) return;
@@ -159,19 +175,24 @@ namespace AnomalyArena
 
         void Start() => V2Start();
 
+        /// <summary>START on the title screen.</summary>
         public void BeginPlaying() => ExecuteUiCommand(ArenaUiCommand.Start);
 
+        /// <summary>Whitebox / illustrated switch on the title screen, in both languages; the enemy lab stays illustrated (Art.Toggle).</summary>
         public void ToggleArt() => Art.Toggle();
 
         void Update() => V2Update();
 
         void LateUpdate() => V2LateUpdate();
 
+        /// <summary>On wave change or player death: end weapon effects and remove temporary world objects.</summary>
         public void ClearTransients()
         {
             if (runWeapons) runWeapons.ClearWaveEffects();
             WorldMap.Active?.ClearTemporaryObjects();
         }
+
+        // ───── Materials ─────
 
         public Material Mat(Color c)
         {

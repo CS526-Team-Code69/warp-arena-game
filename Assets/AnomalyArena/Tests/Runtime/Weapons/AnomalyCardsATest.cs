@@ -8,12 +8,12 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-                                                                                                                           
-                                                                                                                 
+    /// <summary>Twist and Tame cards of the Rifle, Knife, Rocket Launcher and Scatter Cannon after the 10-23 card redesign
+    /// (redesign/spec-cards-A): each card's new behaviour, plus the card text reading the live tuning.</summary>
     [TestFixture]
     public class AnomalyCardsATest
     {
-        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
         const float TargetHp = 100f;
 
         [TearDown]
@@ -37,7 +37,7 @@ namespace AnomalyArena
         static void LeaveHp(Combatant body, float hp) =>
             body.ReceiveDamage(new DamageInfo { amount = body.Hp - hp, source = DamageSource.Poison, ignoreShield = true });
 
-                                                                                                                 
+        /// <summary>A Bulwark wall across the aim, centred this far ahead of the player (1 cell deep).</summary>
         static void WallAhead(GameManager game, float distance, float width = 6f)
         {
             WorldMap.Active.CreateWall(game.player.Position + Query.Flat(game.player.AimDirection).normalized * distance, width, 60f, 0f, game.player);
@@ -63,10 +63,10 @@ namespace AnomalyArena
         static IEnumerable<AttackActor> Actors(RunWeapon w, AttackMode mode) =>
             AttackPool.Instance.actors.Where(a => a && a.gameObject.activeSelf && a.weapon == w && a.mode == mode);
 
-                                           
+        // ───── Rifle · Charged Shot ─────
 
-                                                                                                                                          
-                                                                                                                                  
+        // Document 5.8, Q2/Q3: a full-charge release also blasts the close cone ahead (a knockback, no damage) and its
+        // round deals +20% of its first hit for every enemy it has passed through (at most +100%); a partial charge does neither.
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task ChargedShotTwist_FullChargeRelease_BlastsTheConeAndTheRoundGrowsPerEnemyPierced()
         {
@@ -82,7 +82,7 @@ namespace AnomalyArena
             rifle.charge = 1f;
             game.runWeapons.HandleInput(false, false, true);
             Assert.That(Actors(rifle, AttackMode.Bolt).Count(), Is.EqualTo(1), "one round, none out of your back any more");
-                                                                                                                       
+            // Before the round arrives: the blast has already thrown the enemy 3 cells ahead back, without hurting it.
             Assert.That(targets[0].State, Is.EqualTo(CharacterState.Knocked), "the muzzle blast knocks the close enemy back");
             Assert.That(targets[0].Hp, Is.EqualTo(TargetHp), "the blast deals no damage");
             Assert.That(targets[1].State, Is.EqualTo(CharacterState.Normal), "the blast is short: 6 cells ahead is out of it");
@@ -92,7 +92,7 @@ namespace AnomalyArena
                 Assert.That(targets[i].Hp, Is.EqualTo(TargetHp - hit * (1f + Mathf.Min(tuning.chargedPierceGrowthCap, tuning.chargedPierceGrowth * i))).Within(.01f),
                     $"enemy {i + 1} on the line takes the first hit plus {i} x the growth");
 
-                                                        
+            // A partial charge: no blast and no growth.
             var targetHp = targets.Select(t => t.Hp).ToArray();
             foreach (var t in targets) t.SetState(CharacterState.Normal);
             rifle.cooldown = 0f;
@@ -145,7 +145,7 @@ namespace AnomalyArena
                 Assert.That(targets[i].ExternalMoveMultiplier, Is.EqualTo(before[i]).Within(.001f), "releasing the charge lifts the slow");
         }
 
-                                           
+        // ───── Rifle · Reverse Shot ─────
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task ReverseShotTwist_FirstWallBounce_SplitsIntoTwoRoundsAtTheSplitShare()
@@ -153,7 +153,7 @@ namespace AnomalyArena
             var (game, targets) = await V3CombatSmokeTest.StartSandbox();
             foreach (var t in targets) t.DiscardWithoutReward();
             WallAhead(game, 10f);
-                                                                                                                     
+            // The backfire sends the round out of your back: aim back so it flies down the clear lane into the wall.
             game.player.DebugSetAim(Vector3.back);
             var rifle = Equip(game, WeaponForm.Rifle, 1, UpgradeAxis.Twist);
             var tuning = game.runWeapons.upgrades;
@@ -174,15 +174,15 @@ namespace AnomalyArena
             Assert.That(Vector3.Angle(split[0].direction, split[1].direction), Is.EqualTo(tuning.reverseSplitAngle * 2f).Within(1f), "either side of the bounce");
         }
 
-                                                                                                                                                
-                                                                                                                                   
+        // Document 5.8, Q7-Q9: the tamed rounds still leave from your back; while an enemy is close in front (120°, 3 cells,
+        // no wall) the 1st and 3rd round of a clip go for it instead, and every round's recoil pushes you 0.7 cells along the aim.
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task ReverseShotTame_EnemyCloseInFront_EveryOtherRoundGoesForItAndTheRecoilPushesYouForward()
         {
             var (game, targets) = await V3CombatSmokeTest.StartSandbox();
             var tuning = game.runWeapons.upgrades;
             Assert.That((tuning.reverseGuardRange, tuning.reverseGuardAngle, tuning.reverseTameRecoil), Is.EqualTo((3f, 120f, .7f)), "Q9 A and Q7 A numbers");
-                                                                                                
+            // Aiming forward: the lane target at 3 is inside the guarded range in front of you.
             var rifle = Equip(game, WeaponForm.Rifle, 1, UpgradeAxis.Tame);
             var directions = new List<Vector3>();
             for (int shot = 0; shot < 3; shot++)
@@ -196,18 +196,18 @@ namespace AnomalyArena
             Assert.That(Vector3.Dot(directions[2], Vector3.forward), Is.GreaterThan(.99f), "the 3rd goes for it again");
             await Until(() => targets[0].Hp < TargetHp, 2f, "a forward round hits the enemy in front");
 
-                                                                        
+            // Nobody close in front: every round leaves from your back.
             Place(targets[0], targets[0].Position + Vector3.forward * 8f);
             rifle.cooldown = rifle.reload = 0f; rifle.rounds = game.runWeapons.ClipSize(WeaponForm.Rifle, 1);
             game.runWeapons.HandleInput(true, true, false);
             var plain = Actors(rifle, AttackMode.Bolt).OrderByDescending(a => a.Sequence).First();
             Assert.That(Vector3.Dot(plain.direction, Vector3.back), Is.GreaterThan(.99f), "with nobody close in front the round leaves from your back");
 
-                                                                                                               
+            // The recoil: each round pushes you along the aim and a burst stacks; a push, so you keep control.
             foreach (var t in targets) t.DiscardWithoutReward();
             var player = game.player;
-            player.CancelDisplacement();                                                                                  
-            player.enabled = true;                      
+            player.CancelDisplacement(); // the pushes of the rounds above never played out (the sandbox player is paused)
+            player.enabled = true; // the push plays out
             Vector3 start = player.Position;
             float hp = player.Hp;
             rifle.rounds = game.runWeapons.ClipSize(WeaponForm.Rifle, 1);
@@ -221,7 +221,7 @@ namespace AnomalyArena
             Assert.That(player.Hp, Is.EqualTo(hp));
         }
 
-                                             
+        // ───── Knife · Throwing Knife ─────
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task ThrowingKnifeTwist_KnifeComesHome_SpinsAndCutsEnemiesAroundTheThrowPoint()
@@ -229,8 +229,8 @@ namespace AnomalyArena
             var (game, targets) = await V3CombatSmokeTest.StartSandbox();
             Vector3 home = game.player.Position;
             targets[1].DiscardWithoutReward(); targets[2].DiscardWithoutReward();
-                                                                                                                                          
-                                                                       
+            // The knife goes out of your back; the enemy waits in the clear lane ahead of the throw point, past the reach of the return's
+            // own sweep but inside the spin: only the spin can cut it.
             game.player.DebugSetAim(Vector3.back);
             Place(targets[0], home + Vector3.forward * (.6f + targets[0].radius));
             float playerHp = game.player.Hp;
@@ -239,12 +239,12 @@ namespace AnomalyArena
 
             game.runWeapons.HandleInput(true, true, false);
             var actor = Actors(knife, AttackMode.Knife).Single();
-            float cut = actor.ownerDamage * game.runWeapons.StartingFormDamageFactor(WeaponForm.Knife);                                                                                       
+            float cut = actor.ownerDamage * game.runWeapons.StartingFormDamageFactor(WeaponForm.Knife); // Q105: a starting form's backfire takes the starting-form factor.
             Assert.That(Query.Flat(actor.KnifeHomePoint - home).magnitude, Is.LessThan(.05f), "the throw point is known before the return (marker)");
             await Until(() => !knife.inFlight, 4f, "the knife comes home");
 
             Assert.That(targets[0].Hp, Is.EqualTo(TargetHp - spin).Within(.01f), "the spin cuts once at its share");
-                                                                                                                                         
+            // Document 5.5: every return cuts its thrower standing on its path; the spin itself still never cuts you.
             Assert.That(playerHp - game.player.Hp, Is.EqualTo(cut).Within(.01f), "only the return's own cut, nothing from the spin");
 
             float after = targets[0].Hp;
@@ -254,8 +254,8 @@ namespace AnomalyArena
             Assert.That(targets[0].Hp, Is.EqualTo(after), "without Twist there is no spin");
         }
 
-                                                                                                                                              
-                                                                                                                                           
+        // Document 5.8, Q13/Q14: a return that sweeps through you is caught: it is back in your hand at once with half the
+        // usual cooldown, and the next throw bounces to more enemies and flies (out and back) 30% faster. The tamed return never cuts you.
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task ThrowingKnifeTame_ReturnThroughYou_IsCaughtWithHalfTheCooldownAndANextThrowThatBouncesMoreAndFliesFaster()
         {
@@ -292,7 +292,7 @@ namespace AnomalyArena
             Assert.That(knife.knifeCaught, Is.False, "the bonus is used up by one throw");
         }
 
-                                   
+        // ───── Knife · Hook ─────
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task HookTwist_FlungEnemyCrashesIntoAnother_HooksItOncePerManualHook()
@@ -312,7 +312,7 @@ namespace AnomalyArena
 
             Assert.That(targets[1].Hp, Is.LessThan(TargetHp), "the crash still deals its damage first");
             Assert.That(hook.hookChainUsed, Is.True);
-                                                                                                                        
+            // Q21: the chained hook pulls both ways too, so it drags you toward the enemy it caught.
             Assert.That(Vector3.Dot(game.player.Position - beforeChain, Vector3.forward), Is.GreaterThan(.5f), "the chained pull drags you as well");
 
             game.runWeapons.HandleInput(true, true, false);
@@ -325,8 +325,8 @@ namespace AnomalyArena
             Assert.That(hook.hookChainUsed, Is.False, "a manual hook resets the chain");
         }
 
-                                                                                                                                           
-                                                                       
+        // Q19: the hook going out and coming back no longer holds you still, tamed or not (only the two-way pull does);
+        // the tamed empty hook that hits a wall still pulls you to it.
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task HookTame_EmptyHookOnAWall_PullsYouToItAndNoHookInFlightHoldsYouStill()
         {
@@ -343,7 +343,7 @@ namespace AnomalyArena
             Vector3 start = player.Position;
             float hp = player.Hp;
             WallAhead(game, 6f);
-            player.enabled = true;                      
+            player.enabled = true; // the push plays out
             var tamed = Equip(game, WeaponForm.Knife, 1, UpgradeAxis.Tame);
             game.runWeapons.HandleInput(true, true, false);
             Assert.That(game.runWeapons.HandHookBusy, Is.True);
@@ -351,14 +351,14 @@ namespace AnomalyArena
 
             await Until(() => Vector3.Dot(player.Position - start, Vector3.forward) > 2f, 2f, "the wall hit pulls you forward");
             await Seconds(.8f);
-                                                                                       
+            // Wall face at 5.5: the pull stops one cell short of it (body radius 0.5).
             float moved = Vector3.Dot(player.Position - start, Vector3.forward);
             Assert.That(moved, Is.LessThan(5.5f - player.radius - game.runWeapons.upgrades.hookTameWallGap + .4f), "you stop short of the wall");
             Assert.That(player.Hp, Is.EqualTo(hp), "a push never deals wall damage");
             Assert.That(player.State, Is.EqualTo(CharacterState.Normal), "you keep control");
         }
 
-                                               
+        // ───── Rocket Launcher · Strike ─────
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task StrikeTwist_StrikeKillsAnEnemy_ItBlastsAgainAtItsShareWhereItStood()
@@ -366,7 +366,7 @@ namespace AnomalyArena
             var (game, targets) = await V3CombatSmokeTest.StartSandbox();
             Vector3 origin = game.player.Position;
             var tuning = game.runWeapons.upgrades;
-                                                                                                                              
+            // Strike centre 6 ahead (radius 3): the weak enemy at 8.8 is inside, the one at 10.8 only inside its small blast.
             Place(targets[0], origin + Vector3.forward * 8.8f);
             Place(targets[1], origin + Vector3.forward * 10.8f);
             Place(targets[2], origin + Vector3.forward * 16f);
@@ -383,7 +383,7 @@ namespace AnomalyArena
             Assert.That(targets[1].Hp, Is.EqualTo(TargetHp - chain).Within(.01f), "one small blast at its share");
             Assert.That(targets[2].Hp, Is.EqualTo(TargetHp), "the small blast is short");
 
-                                                     
+            // Without Twist a kill sets nothing off.
             Place(targets[2], origin + Vector3.forward * 8.8f);
             LeaveHp(targets[2], 1f);
             float outer = targets[1].Hp;
@@ -401,10 +401,10 @@ namespace AnomalyArena
             var (game, targets) = await V3CombatSmokeTest.StartSandbox();
             foreach (var t in targets) t.DiscardWithoutReward();
             var player = game.player;
-            player.enabled = true;                      
+            player.enabled = true; // the push plays out
             Vector3 start = player.Position;
             float hp = player.Hp;
-                                                                                                       
+            // The strike lands one cell behind you, so the push sends you forward down the clear lane.
             player.DebugSetAimPoint(start + Vector3.back);
             Equip(game, WeaponForm.RocketLauncher, 0, UpgradeAxis.Tame);
 
@@ -425,9 +425,9 @@ namespace AnomalyArena
             Assert.That(Vector3.Dot(player.Position - start, Vector3.forward), Is.LessThan(game.runWeapons.upgrades.strikeJumpDistance + .5f), "about the jump distance");
         }
 
-                                                        
+        // ───── Rocket Launcher · Launch Yourself ─────
 
-                                                                                                                                      
+        // The missile slows down over its flight, and the faster it still flies at a contact, the farther the push.
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task LaunchYourselfTwist_EnemiesHit_AreKnockedBackFartherTheFasterTheMissileStillFlies()
         {
@@ -440,7 +440,7 @@ namespace AnomalyArena
             foreach (var t in targets.Take(2)) { var body = t; body.AttackReceived += info => knocks[body] = info.knockDistance; }
             var rocket = Equip(game, WeaponForm.RocketLauncher, 1, UpgradeAxis.Twist);
             float range = game.runWeapons.roster.Get(WeaponForm.RocketLauncher).rangeB * rocket.Reach;
-                                                                                                                                                
+            // The missile slows evenly from its launch speed to rocketEndSpeedShare of it; a contact comes both radii plus 0.3 before the body.
             float Expected(Enemy target)
             {
                 float flown = Vector3.Dot(target.Position - origin, Vector3.forward) - (target.radius + game.player.radius + .3f);
@@ -487,7 +487,7 @@ namespace AnomalyArena
             Assert.That(tamed.cooldown, Is.Zero, "and refunds the flight at once");
         }
 
-                                             
+        // ───── Scatter Cannon · Blast ─────
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task ScatterBlastTwist_SecondRound_PullsTheConeInThenBlastsWithoutFalloff()
@@ -495,11 +495,11 @@ namespace AnomalyArena
             var (game, targets) = await V3CombatSmokeTest.StartSandbox();
             var tuning = game.runWeapons.upgrades;
             foreach (var t in targets) Place(t, t.Position, movable: true);
-                                                                                                                              
+            // The sandbox draws Grunts, Skitters or Brutes (radius .4-1): keep the far enemy past the pull whatever its size.
             Place(targets[2], game.player.Position + Vector3.forward * (tuning.scatterVacuumRange + targets[2].radius + 1f), movable: true);
-            foreach (var t in targets.Take(2)) t.enabled = true;                                 
+            foreach (var t in targets.Take(2)) t.enabled = true; // knockback slows down and ends
             var blast = Equip(game, WeaponForm.ScatterCannon, 0, UpgradeAxis.Twist);
-            blast.rounds = 1;                           
+            blast.rounds = 1; // the clip's second round
             float expected = game.runWeapons.HitDamage(blast) * tuning.scatterVacuumShare;
 
             game.runWeapons.HandleInput(true, true, false);
@@ -527,7 +527,7 @@ namespace AnomalyArena
             while (Time.time < fired + tuning.scatterShellFuse + .3f) await Awaitable.NextFrameAsync();
 
             Assert.That(tuning.scatterShellTameSide, Is.GreaterThan(tuning.scatterShellRadius * tuning.scatterShellTameRadius),
-                "a tamed shell fire does not reach where you stand (decision of 10-27)");
+                "a tamed shell fire does not reach where you stand");
             Assert.That(blast.reload, Is.GreaterThan(0f), "standing still does not finish the reload");
         }
 
@@ -546,7 +546,7 @@ namespace AnomalyArena
             Assert.That(blast.reload, Is.GreaterThan(0f), "the clip ran dry");
             Assert.That(game.runWeapons.Charge01, Is.Zero, "the charge bar no longer shows the reload");
             Assert.That(game.runWeapons.Hazards.Count(h => h.kind == GroundHazardKind.ScatterShell), Is.EqualTo(2), "the tamed shells still land");
-                                                                                                                    
+            // Standing on a shell before it flares up does nothing (only a burning shell counts).
             V3CombatSmokeTest.Teleport(player, origin - right * tuning.scatterShellTameSide);
             Physics.SyncTransforms();
             float fired = Time.time;
@@ -563,7 +563,7 @@ namespace AnomalyArena
             var fire = AttackPool.Instance.actors.First(a => a && a.gameObject.activeSelf && a.weapon == blast && a.mode == AttackMode.Field);
             Assert.That(fire.radius, Is.EqualTo(tuning.scatterShellRadius * tuning.scatterShellTameRadius).Within(.001f), "the tamed fire is wider");
 
-                                                                                                                             
+            // Still on the fire, but the reload is done: nothing more until the next reload. The tamed fire never burns you.
             await Seconds(.5f);
             Assert.That(game.runWeapons.ShellStrideLeft, Is.LessThan(tuning.scatterShellTameSpeedSeconds - .3f), "once per reload");
             Assert.That(player.Hp, Is.EqualTo(hp), "the tamed shell never burns you");
@@ -588,7 +588,7 @@ namespace AnomalyArena
             await Until(() => player.Hp < hp, 2f, "the untamed shell burns you");
             try
             {
-                                                                                                                                         
+                // The card comes between two frames: the fire's own ticks must stop the burn, so the game's per-frame update waits here.
                 game.enabled = false;
                 blast.axes |= UpgradeAxis.Tame;
                 hp = player.Hp;
@@ -598,7 +598,7 @@ namespace AnomalyArena
             finally { game.enabled = true; }
         }
 
-                                             
+        // ───── Scatter Cannon · Focus ─────
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task ScatterFocusTame_Release_GuardsAgainstAttacksForTheChargedTimeButNotTicks()
@@ -606,9 +606,9 @@ namespace AnomalyArena
             var (game, targets) = await V3CombatSmokeTest.StartSandbox();
             var player = game.player;
             var tuning = game.runWeapons.upgrades;
-            player.enabled = true;                          
-            player.ClearWaveState();                                      
-            player.DebugSetAim(Vector3.back);                                                  
+            player.enabled = true; // protection counts down
+            player.ClearWaveState(); // drop the sandbox's long protection
+            player.DebugSetAim(Vector3.back); // the recoil then pushes you down the clear lane
             var focus = Equip(game, WeaponForm.ScatterCannon, 1, UpgradeAxis.Tame);
 
             game.runWeapons.HandleInput(true, true, false);
@@ -626,7 +626,7 @@ namespace AnomalyArena
             Assert.That(Time.time - guarded, Is.EqualTo(tuning.focusGuardMax).Within(.1f), "a full charge guards for the longest time");
         }
 
-                                
+        // ───── Card text ─────
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(30000)]
         public async Task CardText_TwistAndTameOfTheseWeapons_ReadTheLiveTuning()
@@ -654,7 +654,7 @@ namespace AnomalyArena
                 };
                 foreach (var (form, variant, axis, number) in expected)
                 {
-                                                                         
+                    // Only this axis is open, so the roll must offer it.
                     var open = UpgradeAxis.Infusion | (axis == UpgradeAxis.Twist ? UpgradeAxis.Tame : UpgradeAxis.Twist);
                     weapons.Hand = new[] { new RunWeapon { form = form, variant = variant, revealed = true, axes = open }, null };
                     weapons.Auto = new RunWeapon[RunWeapons.AutoSlotCount];

@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>Saved sprite/trail/corpse layers following the real pooled attack and locked return point.</summary>
     public sealed class V2AttackPresentation : MonoBehaviour
     {
         public AttackActor actor;
@@ -77,6 +77,7 @@ namespace AnomalyArena
             RenderKnifeCorpse(knife);
         }
 
+        /// <summary>V5 art: tracers, blades, shards and spores for what flies; real fire, gas and snow with a faint edge at the exact radius for what lies on the ground.</summary>
         void DrawV5(bool fresh)
         {
             var fx = V5Vfx.I;
@@ -93,7 +94,7 @@ namespace AnomalyArena
             }
             if (actor.mode == AttackMode.Blast)
             {
-
+                // A blast waits out its fuse under a warning ring its weapon drew; the burst itself comes from AttackActor.Explode.
                 illustration.enabled = false;
                 if (shortTrail) { shortTrail.emitting = false; shortTrail.enabled = false; }
                 return;
@@ -130,6 +131,7 @@ namespace AnomalyArena
             fx.ProjectileTick(actor);
         }
 
+        /// <summary>The Chain Blade: a chain from the thrower to the hook.</summary>
         void DrawChain(V5Vfx fx)
         {
             if (!hookChain)
@@ -171,7 +173,7 @@ namespace AnomalyArena
                     case ElementKind.Frost: fx.FrostField(centre, actor.radius); if (fresh) fx.FrostMark(centre, actor.radius, Mathf.Max(1f, actor.remaining), .55f); break;
                     default: fx.BuffMotes(centre, actor.radius, V5Vfx.ElementTint(kind), 12f); break;
                 }
-
+            // A faint edge keeps the true reach readable, as the old circle did.
             var edge = fx.Sprite("ring");
             illustration.enabled = edge;
             if (!edge) return;
@@ -185,6 +187,7 @@ namespace AnomalyArena
             Scale(illustration.transform, actor.radius * 2f, actor.radius * 2f, edge, true);
         }
 
+        /// <summary>Back to the saved materials when the art mode switches to whitebox.</summary>
         void RestoreMaterials()
         {
             if (!wasV5) return;
@@ -223,7 +226,8 @@ namespace AnomalyArena
                 }
             }
             if (!knifeReturnMarker) return;
-
+            // Document 5.5: every return flies straight back cutting what it sweeps; the marker shows where it will land.
+            // Flying Blade Twist: the knife spins where it comes home, so the throw point stays marked for the whole flight.
             bool spinHome = knife && actor.weapon != null && actor.weapon.Has(UpgradeAxis.Twist);
             knifeReturnMarker.enabled = knife && (spinHome || actor.KnifeReturning);
             if (!knifeReturnMarker.enabled || !knifeReturnMarker.sprite) return;
@@ -248,7 +252,7 @@ namespace AnomalyArena
             {
                 WeaponForm.PhaseDagger => art.phaseDagger,
                 WeaponForm.PlasmaLauncher => art.plasmaBlob,
-                WeaponForm.ScatterCannon => field ? art.flameField : null,                                                                    
+                WeaponForm.ScatterCannon => field ? art.flameField : null, // the shells' fires; the Focus bolts stay plain
                 WeaponForm.Flamethrower => field ? art.flameField : art.fireball,
                 WeaponForm.CryoCannon => field ? art.blizzardField : art.frostShard,
                 WeaponForm.SporeLauncher => field ? art.poisonField : art.sporePod,

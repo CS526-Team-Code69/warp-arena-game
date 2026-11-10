@@ -4,27 +4,27 @@ using UnityEngine.UI;
 
 namespace AnomalyArena
 {
-                 
-                                                                                                                                   
-                                                                                                                                
-                                                                                                                            
-                        
-                  
+    /// <summary>
+    /// Scene-authored HUD layout knobs: overall scale, the top XP header, the resource panel, the wave texts and the bottom row of
+    /// weapon and skill slots (each group on its own). Change the numbers in the Inspector and they apply at once in the editor
+    /// (or use "Apply Layout"); the values live in the scene, so the V5 installer only seeds them once and never overwrites
+    /// hand-tuned ones.
+    /// </summary>
     [DisallowMultipleComponent]
     public sealed class V2HudLayout : MonoBehaviour
     {
-                                                                                                                                           
+        /// <summary>One group of bottom-row slots (auto, hand or skill): where it sits, how big it is and how its text is sized.</summary>
         [Serializable]
         public sealed class SlotGroup
         {
-            [Tooltip("Slot width and height.")] public Vector2 size = new(150f, 104f);
-            [Tooltip("Distance from the bottom of the screen.")] public float bottom = 20f;
-            [Tooltip("Auto slots: distance from the screen's left edge; skill slots: from the right edge; hand slots: offset of the pair's centre line from the screen's centre line (positive is right).")] public float edge = 20f;
-            [Tooltip("Gap between neighbouring slots of the same group.")] public float gap = 8f;
-            [Tooltip("Key row font size (min – max).")] public Vector2Int keyFont = new(11, 13);
-            [Tooltip("Name font size (min – max).")] public Vector2Int titleFont = new(13, 17);
-            [Tooltip("Detail row font size (min – max).")] public Vector2Int detailFont = new(11, 13);
-            [Tooltip("Key row text colour.")] public Color keyColor = Color.white;
+            [Tooltip("格子的宽和高。")] public Vector2 size = new(150f, 104f);
+            [Tooltip("离屏幕底边的距离。")] public float bottom = 20f;
+            [Tooltip("自动格：离屏幕左边；技能格：离屏幕右边；手持格：两个格子的中线离屏幕中线的偏移（正数向右）。")] public float edge = 20f;
+            [Tooltip("同一组里相邻格子之间的空隙。")] public float gap = 8f;
+            [Tooltip("按键行字号（最小 – 最大）。")] public Vector2Int keyFont = new(11, 13);
+            [Tooltip("名称字号（最小 – 最大）。")] public Vector2Int titleFont = new(13, 17);
+            [Tooltip("细节行字号（最小 – 最大）。")] public Vector2Int detailFont = new(11, 13);
+            [Tooltip("按键行文字颜色。")] public Color keyColor = Color.white;
 
             public SlotGroup(Vector2 size, float edge, Vector2Int keyFont, Vector2Int titleFont, Vector2Int detailFont, Color keyColor)
             {
@@ -32,62 +32,62 @@ namespace AnomalyArena
             }
         }
 
-                                                                                                                        
+        /// <summary>Canvas reference size at overallScale 1; the whole interface grows as overallScale rises.</summary>
         public static readonly Vector2 BaseReference = new(1440f, 810f);
 
         public V2Hud hud;
 
-        [Header("Overall")]
-        [Tooltip("Scale of the whole interface: 1 = current size, 1.2 = everything 20% larger, 0.9 = 10% smaller.")]
+        [Header("整体")]
+        [Tooltip("整个界面的放大倍率：1 = 现在的大小，1.2 = 全部放大 20%，0.9 = 缩小 10%。")]
         [Range(.6f, 1.8f)] public float overallScale = 1f;
-        [Tooltip("Canvas reference resolution derived from the overall scale; no need to edit.")]
+        [Tooltip("由整体放大倍率算出的画布参考分辨率，不用手改。")]
         public Vector2 referenceResolution = new(1440f, 810f);
-        [Tooltip("Wide / narrow screen match: 0 scales by width only, 1 by height only, 0.5 half each.")]
+        [Tooltip("宽屏/窄屏适配：0 只按宽度缩放，1 只按高度缩放，0.5 各一半。")]
         [Range(0f, 1f)] public float matchWidthOrHeight = .5f;
 
-        [Header("Top XP header")]
-        [Tooltip("Height of the whole XP header.")] public float xpHeaderHeight = 48f;
-        [Tooltip("Total margin between the XP header and the screen edges on both sides.")] public float xpHeaderMargin = 40f;
-        [Tooltip("Font size of \"Level 1 · XP 0 / 15\".")] public int xpFont = 18;
-        [Tooltip("Thickness of the progress bar.")] public float xpBarHeight = 8f;
-        [Tooltip("Side length of the pending-card pips.")] public float xpPipSize = 14f;
+        [Header("顶部经验条")]
+        [Tooltip("经验条整条的高度。")] public float xpHeaderHeight = 48f;
+        [Tooltip("经验条左右两边离屏幕边缘的留白总和。")] public float xpHeaderMargin = 40f;
+        [Tooltip("\"等级 1 · 经验 0 / 15\" 的字号。")] public int xpFont = 18;
+        [Tooltip("进度条的粗细。")] public float xpBarHeight = 8f;
+        [Tooltip("待选卡组小方块的边长。")] public float xpPipSize = 14f;
 
-        [Header("Top-left resource bars (health/stamina)")]
-        [Tooltip("Scale of the whole block; 1 = original size.")] [Range(.3f, 2f)] public float resourcePanelScale = 1.15f;
-        [Tooltip("Distance from the left of the screen.")] public float resourcePanelLeft = 24f;
-        [Tooltip("Distance from the top of the screen; the XP header is about 48 tall, so smaller values overlap it.")] public float resourcePanelTop = 64f;
-        [Tooltip("Whether the dark backdrop behind the health and stamina bars is shown; off leaves only the two bars.")] public bool resourcePanelBackground;
+        [Header("左上角资源条（生命/体力）")]
+        [Tooltip("整块的放大倍率，1 = 原大小。")] [Range(.3f, 2f)] public float resourcePanelScale = 1.15f;
+        [Tooltip("离屏幕左边的距离。")] public float resourcePanelLeft = 24f;
+        [Tooltip("离屏幕顶边的距离；顶部经验条高约 48，小于它会重叠。")] public float resourcePanelTop = 64f;
+        [Tooltip("是否显示生命/体力条后面的深色底板；关掉就只剩两条。")] public bool resourcePanelBackground;
 
-        [Header("Wave texts at the top centre")]
-        [Tooltip("Font size of \"Wave 01 / 14 · 18 s\".")] public int waveClockFont = 26;
-        [Tooltip("Font size of \"Batch 1 · 10 alive · 0 pending\".")] public int batchFont = 18;
-        [Tooltip("Font size of the wave banner (large text).")] public int bannerFont = 28;
+        [Header("顶部中间的波次文字")]
+        [Tooltip("\"第 01 / 14 波 · 18 秒\" 的字号。")] public int waveClockFont = 26;
+        [Tooltip("\"第 1 批 · 活敌 10 · 待生成 0\" 的字号。")] public int batchFont = 18;
+        [Tooltip("波次横幅（大字）的字号。")] public int bannerFont = 28;
 
-        [Header("Bottom row: auto weapon slots (bottom left)")]
+        [Header("底栏：自动武器格（左下）")]
         public SlotGroup auto = new(new Vector2(170f, 112f), 20f, new Vector2Int(11, 13), new Vector2Int(13, 17), new Vector2Int(11, 13), new Color(.62f, .86f, .92f));
-        [Header("Bottom row: hand weapon slots (centre)")]
+        [Header("底栏：手持武器格（中间）")]
         public SlotGroup hand = new(new Vector2(256f, 116f), -70f, new Vector2Int(11, 13), new Vector2Int(14, 19), new Vector2Int(12, 14), new Color(.93f, .97f, 1f));
-        [Header("Bottom row: skill slots (bottom right)")]
+        [Header("底栏：技能格（右下）")]
         public SlotGroup skill = new(new Vector2(138f, 112f), 20f, new Vector2Int(11, 13), new Vector2Int(13, 17), new Vector2Int(11, 13), new Color(.82f, .74f, 1f));
 
-        [Header("Layout inside a slot")]
-        [Tooltip("Distance between the text and the slot's side frame (the frame itself is about 14 wide).")] public float padding = 22f;
-        [Tooltip("Key row distance from the slot's top edge.")] public float keyTop = 14f;
-        [Tooltip("Name row distance from the slot's top edge.")] public float titleTop = 40f;
-        [Tooltip("Detail row distance from the slot's bottom edge (too small overlaps the frame).")] public float detailBottom = 32f;
+        [Header("格子内部的排版")]
+        [Tooltip("文字离格子左右边框的距离（边框本身约 14）。")] public float padding = 22f;
+        [Tooltip("按键行离格子顶部。")] public float keyTop = 14f;
+        [Tooltip("名称行离格子顶部。")] public float titleTop = 40f;
+        [Tooltip("细节行离格子底部（太小会压到边框）。")] public float detailBottom = 32f;
         public float detailHeight = 18f;
-        [Tooltip("Cooldown bar distance from the slot's bottom edge.")] public float cooldownBottom = 9f;
+        [Tooltip("冷却条离格子底部。")] public float cooldownBottom = 9f;
         public float cooldownHeight = 4f;
-        [Tooltip("Width and height of the weapon icon on the right.")] public Vector2 weaponIconSize = new(64f, 36f);
-        [Tooltip("Side length of the skill icon at the right of a skill slot.")] public float skillIconSize = 32f;
-        [Tooltip("Side length of the small element icon.")] public float elementIconSize = 26f;
+        [Tooltip("右侧武器图标的宽和高。")] public Vector2 weaponIconSize = new(64f, 36f);
+        [Tooltip("技能格右侧技能图标的边长。")] public float skillIconSize = 32f;
+        [Tooltip("元素小图标的边长。")] public float elementIconSize = 26f;
 
-        [Header("Above the bottom row (the charge bar and the hint follow the centre of the hand slot group)")]
-        [Tooltip("Height of the charge bar above the hand slots' top edge.")] public float chargeBarAboveRow = 14f;
-        [Tooltip("Horizontal offset of the charge bar's centre from the centre of the hand slot group; positive is right.")] public float chargeBarOffsetX;
-        [Tooltip("Charge bar width; 0 = keep the width saved in the scene.")] public float chargeBarWidth;
-        [Tooltip("Height of the hint above the hand slots' top edge.")] public float hintAboveRow = 28f;
-        [Tooltip("Horizontal offset of the hint's centre from the centre of the hand slot group; positive is right.")] public float hintOffsetX;
+        [Header("底栏上方（蓄力条和提示文字都跟着手持格整组的中心走）")]
+        [Tooltip("蓄力条离手持格顶部的高度。")] public float chargeBarAboveRow = 14f;
+        [Tooltip("蓄力条中心相对手持格整组中心的左右偏移，正数向右。")] public float chargeBarOffsetX;
+        [Tooltip("蓄力条宽度；0 = 保持场景里的宽度。")] public float chargeBarWidth;
+        [Tooltip("提示文字离手持格顶部的高度。")] public float hintAboveRow = 28f;
+        [Tooltip("提示文字中心相对手持格整组中心的左右偏移，正数向右。")] public float hintOffsetX;
         public int hintFontSize = 18;
 
         [ContextMenu("Apply Layout")]
@@ -117,13 +117,13 @@ namespace AnomalyArena
 #endif
         }
 
-                                                                                                                            
-                                                                                                                                
+        // The values as they were when the layout was last applied. OnValidate also fires on scene load and on every domain
+        // reload; re-applying then dirtied the scene each time, which is what raised the "save scene?" dialog before test runs.
         [SerializeField, HideInInspector] string appliedState;
 
-                                                                                                                                       
-                                                                                                                                  
-                                                                                                                                       
+        // Serialized without the two fields that are not layout values: the saved state itself and the HUD reference (an instance id).
+        // They used to be cut out of the JSON text up to the next comma, but the saved state is JSON full of commas, so each save
+        // nested the previous one with doubled escapes; by 2026-10-22 the lab scene held a 412 MB string and the editor crashed on it.
         string CurrentState()
         {
             string saved = appliedState;
@@ -170,7 +170,7 @@ namespace AnomalyArena
         {
             var panel = FindRect("ResourcePanel");
             if (!panel) return;
-                                                                                   
+            // Top-left corner, below the XP header; the dark backdrop is optional.
             panel.anchorMin = panel.anchorMax = new Vector2(0f, 1f);
             panel.pivot = new Vector2(0f, 1f);
             panel.anchoredPosition = new Vector2(resourcePanelLeft, -resourcePanelTop);
@@ -245,14 +245,14 @@ namespace AnomalyArena
             rect.sizeDelta = group.size;
             Dirty(rect);
             float w = group.size.x, h = group.size.y;
-                                                                                                                                 
-                                                 
+            // Key row: key label on the left, element icon at the right. Title row: the weapon or skill glyph sits at the right,
+            // so the title text stops before it.
             float glyphRight = w - padding;
-                                                                                                              
+            // Weapon slots keep room for the wide weapon glyph; skill slots only for the smaller skill glyph.
             float iconW = isSkill ? skillIconSize : weaponIconSize.x, iconH = isSkill ? skillIconSize : weaponIconSize.y;
             float elementX = glyphRight - elementIconSize;
             Place(slot.icon, elementX, keyTop - 2f, elementIconSize, elementIconSize);
-                                                                                                                            
+            // Both glyph images share one rectangle per slot kind (only one of them is ever shown), kept below the key row.
             float iconTop = Mathf.Max(titleTop - 2f, keyTop + 24f);
             Place(slot.weaponIcon, glyphRight - iconW, iconTop, iconW, iconH);
             Place(slot.contentIcon, glyphRight - iconW, iconTop, iconW, iconH);
@@ -274,29 +274,28 @@ namespace AnomalyArena
             }
         }
 
-                                                                                                                                        
-                                                                        
+        // Run time only, so the boxes saved in the scenes stay as they are.
         void Awake()
         {
             if (hud) FitChineseNames();
         }
 
-                                                                                                                                        
-                                                                                                                                        
+        // Longest names at a group's smallest title size: a hand weapon's second line ("蓄力射击 · Mk 6", the dot is a full character wide)
+        // and a four-character skill. Auto slots only hold forms with two-character anomalies, which fit their narrower box at size 14.
         const float WeaponNameEms = 7.7f, SkillNameEms = 4.2f;
         const float NameGap = 4f, SmallestSideGlyph = 24f, FrameEdge = 16f, KeyRowElement = 20f, KeyRowGlyphWidth = 30f, KeyRowGap = 2f, KeyRowHeight = 20f;
-                                                                                                                                               
+        // The font's first line takes its full height (about 1.44 × size) and later lines that × the spacing, so two lines of size 14 need 36.
         const float DetailDrop = 2f, ChineseLineSpacing = .8f, OneLineNameHeight = 25f;
         const int TitleShrink = 2, SmallestDetail = 8;
 
-                                                                                                                                        
-                                                                                                                                    
-                                                                                                                                          
-                                                                                                             
-                                                                                                    
+        /// <summary>LayOutSlot gives the title only what the glyph leaves: 14 wide in an auto slot, so "空栏位" showed as "空", and 84 in a
+        /// hand slot, so "步枪 · 蓄力射击" showed as "步枪 ·". Here the title gets two lines and the room for the longest Chinese name; the
+        /// glyph takes what is left beside it, or moves up to the key row where nothing useful is left. The detail line runs to the frame and
+        /// tightens its text (V2UiSlot.DetailLine). Until 2026-11-10 only the Chinese scene did this and the English scene kept the boxes its
+        /// publication step fitted (EnglishPublication.FitEnglishText); one scene now serves both languages, so every scene lays its slots
+        /// out this way, in either language. Whether every English name keeps to these boxes still has to be looked at in the editor.</summary>
         void FitChineseNames()
         {
-            if (gameObject.scene.name != V2Hud.ChineseEditionScene) return;
             if (hud.handSlots != null) foreach (var slot in hud.handSlots) FitChineseSlot(slot, hand, WeaponNameEms, weaponIconSize, false);
             if (hud.autoSlots != null) foreach (var slot in hud.autoSlots) FitChineseSlot(slot, auto, WeaponNameEms, weaponIconSize, false);
             if (hud.skillSlots != null) foreach (var slot in hud.skillSlots) FitChineseSlot(slot, skill, SkillNameEms, Vector2.one * skillIconSize, true);
@@ -306,7 +305,7 @@ namespace AnomalyArena
         {
             if (!slot) return;
             float w = group.size.x, top = keyTop + KeyRowHeight, normalDetailTop = group.size.y - detailBottom + DetailDrop, detailEnd = normalDetailTop + detailHeight;
-                                                                                                                         
+            // A skill's name takes one line, which leaves its detail two: the energy cost and Blink's charges need them.
             float height = oneLineName ? OneLineNameHeight : normalDetailTop - top, detailTop = top + height;
             float room = w - padding * 2f - nameEms * group.titleFont.x - NameGap;
             float keyRight;
@@ -334,8 +333,8 @@ namespace AnomalyArena
             var keyTransform = slot.transform.Find("SlotKey");
             if (keyTransform) Place(keyTransform.GetComponent<Text>(), padding, keyTop, keyRight - padding, KeyRowHeight);
             Place(slot.detail, padding, detailTop, w - padding - FrameEdge, detailEnd - detailTop);
-                                                                                                                                           
-                                                                       
+            // A line that does not fit is dropped whole, and font sizes round to whole pixels at some canvas scales, so these texts may go
+            // below the group's smallest size rather than lose a line.
             Fit(slot.title, new Vector2Int(group.titleFont.x - TitleShrink, group.titleFont.y), TextAnchor.MiddleLeft);
             Fit(slot.detail, new Vector2Int(SmallestDetail, group.detailFont.y), oneLineName ? TextAnchor.LowerLeft : TextAnchor.MiddleLeft);
             if (slot.title) slot.title.lineSpacing = ChineseLineSpacing;
@@ -367,7 +366,7 @@ namespace AnomalyArena
                 Dirty(hint);
                 Dirty(hud.hintLabel);
             }
-                                                                                        
+            // Off-screen enemy and hole markers stay above the bottom row and its hint.
             float markerInset = rowTop + hintAboveRow + hintFontSize + 12f;
             var directions = hud.GetComponentInChildren<V2EnemyDirections>(true);
             if (directions) { directions.bottomInset = markerInset; Dirty(directions); }

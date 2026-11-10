@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>Authored encounter budgets by wave, never scaled against the player's live build.</summary>
     [CreateAssetMenu(menuName = "Anomaly Arena/Waves/TTK Balance")]
     public sealed class EncounterBalance : ScriptableObject
     {
@@ -49,7 +49,7 @@ namespace AnomalyArena
         {
             if (EnemyRoles.IsBoss(enemy.kind)) return Mathf.Max(1f, bossSeconds);
             if (!elite && EnemyRoles.IsMelee(enemy.kind))
-                return Mathf.Max(.1f, fodderSeconds);                                               
+                return Mathf.Max(.1f, fodderSeconds); // All melee variants share the fodder budget.
             var values = elite ? eliteSeconds : functionSeconds;
             return values != null && (int)enemy.kind < values.Length ? Mathf.Max(.1f, values[(int)enemy.kind]) :
                 elite ? 7.5f : 2f;
@@ -59,10 +59,13 @@ namespace AnomalyArena
             enemy.canAffix && affix == ElementKind.Earth ? .5f : enemy.startShieldShare;
 
         public float ShieldBudgetShare(EnemyDefinition enemy, ElementKind affix) => InitialShieldShare(enemy, affix)
-            + (enemy.kind == EnemyKind.Tyrant ? (Enemy.TyrantPhaseCount - 1) * tyrantPhaseShieldShare : 0f);                               
+            + (enemy.kind == EnemyKind.Tyrant ? (Enemy.TyrantPhaseCount - 1) * tyrantPhaseShieldShare : 0f); // one refill per phase change
 
+        /// <summary>HP share of the full body budget: splitterMiniHpShare for a mini Splitter, 1 otherwise.</summary>
         public float MiniShare(bool mini) => mini ? Mathf.Clamp01(splitterMiniHpShare) : 1f;
 
+        /// <summary>Boss HP never grows with the wave: the final boss is budgeted against the last reference value (the boss wave 15),
+        /// the Nash Prophet against prophetBudgetWave, whichever wave the run is on.</summary>
         public int BudgetWave(EnemyDefinition enemy, int wave) => enemy.kind switch
         {
             EnemyKind.Tyrant when referenceDps is { Length: > 0 } => referenceDps.Length,

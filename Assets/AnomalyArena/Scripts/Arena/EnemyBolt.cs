@@ -9,28 +9,28 @@ namespace AnomalyArena
         Combatant dealer;
         Team targetTeam = Team.Player;
         float life, damageFactor = 1f;
-                                                                                                              
+        // A boss shot carries its own numbers instead of reading the owner's definition (negative = not set).
         float shotDamage = -1f, shotKnockback = -1f, shotSpeed = -1f;
-                                                                                                                       
+        // A tracking boss shot turns at most trackTurn degrees a second toward the player, for trackLeft more seconds.
         float trackTurn, trackLeft;
         public Vector3 Direction => direction;
-                                                                                                                                        
+        /// <summary>Counts launches, so a pooled shot fired again reads as a new shot (the Deflect ring rolls once per shot).</summary>
         public int Launches { get; private set; }
-                                                                                                                                  
+        /// <summary>Cells per second, from the owner's definition (design document 10.2); the enemy lab tunes it there.</summary>
         float Speed => shotSpeed > 0f ? shotSpeed : owner && owner.definition ? Mathf.Max(.1f, owner.definition.projectileSpeed) : 7f;
-                                                                                                                         
+        /// <summary>Fired by a boss (Nash Prophet): drawn in its own pale violet so it reads against the void.</summary>
         public bool IsBossShot => shotSpeed > 0f;
-                                                                                                         
+        /// <summary>Still flying at the player's side (a reflected shot is no longer hostile).</summary>
         public bool Hostile => targetTeam == Team.Player;
-                                                                            
+        /// <summary>Radius of the shot when it sweeps for bodies.</summary>
         public const float HitRadius = .2f;
         static readonly Color BossShotColour = new(.93f, .82f, 1f);
         bool tinted;
 
-                                                                                                                                 
-                                                                                                    
+        /// <summary>The element this shot carries from its owner (the V5 art colours it).</summary>
         public ElementKind Affix => owner ? owner.Affix : ElementKind.None;
 
+        /// <summary>Fired by an enemy whose spikes poison; the art draws it as a thorn instead of the plain spit ball.</summary>
         public bool IsPoisonSpike => !IsBossShot && owner && owner.definition && owner.definition.spikePoisonStacks > 0f;
 
         public void Launch(Enemy enemy, Vector3 at, Vector3 dir)
@@ -41,18 +41,18 @@ namespace AnomalyArena
             LaunchFrom(enemy, at, dir, true);
         }
 
-                                                                                  
+        /// <summary>A boss shot: damage, push and speed given directly.</summary>
         public void Launch(Enemy enemy, Vector3 at, Vector3 dir, float damage, float knockback, float speed)
         {
             shotDamage = Mathf.Max(0f, damage);
             shotKnockback = Mathf.Max(0f, knockback);
             shotSpeed = Mathf.Max(.1f, speed);
             if (TryGetComponent(out Renderer body)) { Art.Tint(body, BossShotColour); tinted = true; }
-            LaunchFrom(enemy, at, dir, false);                                                       
+            LaunchFrom(enemy, at, dir, false); // the boss plays one cue per volley, not one per shot
         }
 
-                                                                                                                             
-                                                                                                       
+        /// <summary>After a boss Launch: for seconds the shot turns toward where the player will be when it arrives, at most
+        /// turnDegreesPerSecond (the Nash Prophet's predictive volley). Zero flies straight.</summary>
         public void Track(float turnDegreesPerSecond, float seconds)
         {
             trackTurn = Mathf.Max(0f, turnDegreesPerSecond);
@@ -68,7 +68,7 @@ namespace AnomalyArena
             damageFactor =
                 enemy
                     ? enemy.OutgoingDamageFactor
-                    : 1f;                                                                  
+                    : 1f; // A spike fired inside a Chanter aura keeps the bonus in flight.
             transform.position = Query.AtCastHeight(at);
             direction = Query.Flat(dir).normalized;
             life = 6f;
@@ -77,7 +77,7 @@ namespace AnomalyArena
             if (sound) V3WorldAudio.Instance?.Play(ArenaWorldCue.NpcSpit, at);
         }
 
-                                                                                                              
+        /// <summary>Destroyed by a player effect (Flamethrower Stream Twist): gone at once, no hit.</summary>
         public void Burn() => gameObject.SetActive(false);
 
         public void Reflect(Combatant newOwner)
@@ -92,12 +92,12 @@ namespace AnomalyArena
         void FixedUpdate()
         {
             if (!GameManager.Instance.IsCombatActive) return;
-                                                                                                                                      
+            // Deflect: the player's Energy Ring judges the shot before it moves, so it never hits before its roll.
             var weapons = GameManager.Instance.runWeapons;
             if (Hostile && weapons && weapons.DeflectsShot(this)) return;
             float dt = GameManager.Instance.WorldFixedDeltaTime;
             Vector3 from = transform.position;
-                                                                                                                                
+            // A tracking shot (the Nash Prophet's predictive volley) steers toward where the player will be when it gets there.
             if (trackLeft > 0f)
             {
                 trackLeft -= dt;
@@ -117,7 +117,7 @@ namespace AnomalyArena
                 return;
             }
 
-                                                                                                                                
+            // In the void trial a shot past the platform and its fragments is gone, so three rings never use up the saved pool.
             var world = WorldMap.Active;
             if (world && world.TrialActive && world.trialPlatform &&
                 Query.Flat(to - world.trialPlatform.position).magnitude > world.TrialGroundReach + 2f)
@@ -126,8 +126,8 @@ namespace AnomalyArena
                 return;
             }
 
-                                                                                                                                              
-                                                                         
+            // Chain Blade (document 5.5, Q15): the enemy you hold in front of you is a shield; a hostile shot that meets it
+            // first hits it instead of you, like a punch does (no push).
             var player = GameManager.Instance.player;
             var shield = targetTeam == Team.Player && player && !(world && world.PlayerHidden) ? player.HeldShield : null;
             foreach (var character in Query.CharactersAlong(from, to, HitRadius))
@@ -146,13 +146,13 @@ namespace AnomalyArena
                     return;
                 }
                 if (character.Team != targetTeam || !character.IsAlive) continue;
-                                                                                                  
+                // Void Walk: the player cannot be targeted, so a hostile shot flies through them.
                 if (targetTeam == Team.Player && world && world.PlayerHidden) continue;
                 float beforeHp = character.Hp;
                 var board = ElementStatus.For(character);
                 float beforeShield = board ? board.Shield : 0f;
                 bool atPlayer = targetTeam == Team.Player;
-                                                                                                                                   
+                // Poison spike: no push on the player (owner's knockback is 0 for basics); a reflected spike still shoves enemies.
                 float damage = shotDamage >= 0f ? shotDamage : owner ? owner.attackDamage : 6f;
                 float push = shotKnockback >= 0f ? shotKnockback : owner ? owner.attackKnockback : 0f;
                 var hit = DamageInfo.Attack(damage * (atPlayer ? damageFactor : 1f), dealer, direction, atPlayer ? push : 3f,

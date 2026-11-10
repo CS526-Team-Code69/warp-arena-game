@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>Damage chains multiplicatively, Attack Speed and Armor divide, everything else adds. Weapon Mk multiplies afterwards.</summary>
     [Serializable]
     public sealed class RunStats
     {
@@ -58,6 +58,7 @@ namespace AnomalyArena
             return copy;
         }
 
+        /// <summary>Returns the actual increment after the cap, for card feedback and Max HP healing.</summary>
         public float Add(StatId stat, float amount)
         {
             float before = Value(stat);
@@ -81,6 +82,7 @@ namespace AnomalyArena
             return Value(stat) - before;
         }
 
+        /// <summary>Applies the second effect of a merged card and returns the actual increment.</summary>
         public float AddBonus(StatBonus bonus, float amount)
         {
             switch (bonus)

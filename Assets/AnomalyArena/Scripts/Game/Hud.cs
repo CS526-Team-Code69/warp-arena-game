@@ -2,12 +2,16 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>
+    /// Combat feedback entry point used by gameplay code (banners, toasts, damage flash, damage numbers).
+    /// Everything is drawn by the scene's retained V2 Canvas; this component only forwards to it.
+    /// </summary>
     public class Hud : MonoBehaviour
     {
         [Tooltip("The scene's retained Canvas HUD that draws all feedback.")]
         public V2Hud v2Hud;
 
+        /// <summary>A short line of hint text.</summary>
         public void Toast(string text, Color c, float life = 2.2f)
         {
             if (v2Hud) v2Hud.ShowBanner(text, life);
@@ -23,6 +27,7 @@ namespace AnomalyArena
             if (v2Hud) v2Hud.FlashDamage();
         }
 
+        /// <summary>Pops a damage number at world; larger when heavy.</summary>
         public void DamageNumber(Vector3 world, float amount, Color c, bool heavy)
         {
             if (amount <= 0f || !v2Hud) return;

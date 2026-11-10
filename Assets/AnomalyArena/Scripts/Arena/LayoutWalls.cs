@@ -2,10 +2,15 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>
+    /// Keeps a map's wall objects in step with its layout. The scene saves one wall object per layout rect, in order (collider on the Wall layer
+    /// plus artwork). Rects the layout gained later, such as the L and ] walls of the Ruins (system doc 12.2), get a copy of the saved wall nearest
+    /// in size, moved and scaled onto the rect, so collisions, bounces and the art match what paths and spawns read from the layout. Saved walls
+    /// past the end of the layout are switched off.
+    /// </summary>
     public static class LayoutWalls
     {
-
+        /// <summary>Adds the missing wall objects of a layout to its wall group; returns how many were added. Calling it again adds nothing.</summary>
         public static int Fill(Transform group, MapLayout layout)
         {
             if (!group || !layout || layout.walls == null || group.childCount == 0) return 0;
@@ -27,6 +32,12 @@ namespace AnomalyArena
             return added;
         }
 
+        /// <summary>
+        /// V2 day campaign (since 2026-11-06): a new wall group beside templates (the map's saved wall group) holding one wall object per
+        /// rect of layout, each a copy of the first templateCount saved walls nearest it in size, moved and scaled onto its rect as Fill
+        /// places the walls a layout gained. The group's name is the template group's with name added, so the stone style that follows
+        /// from the group's name (V5TerrainWalls.StyleOfGroup) stays the same. Returns the group, or null without templates.
+        /// </summary>
         public static Transform Build(Transform templates, int templateCount, MapLayout layout, string name)
         {
             if (!templates || !layout || templates.childCount == 0) return null;
@@ -51,6 +62,8 @@ namespace AnomalyArena
             return group;
         }
 
+        /// <summary>The saved wall whose footprint is closest to the rect in proportion, so its artwork stretches the least. TyrantTerrain
+        /// copies it for the Tyrant's meteor fragments too.</summary>
         internal static Transform ClosestInSize(Transform group, int count, Rect rect)
         {
             Transform best = group.GetChild(0);

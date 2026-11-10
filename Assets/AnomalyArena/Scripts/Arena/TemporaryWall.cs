@@ -3,7 +3,8 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>Bulwark wall: only a Boss breaks it (document 7.4) — the Tyrant's Rampage Charge (TyrantTerrain) and the Nash Prophet's
+    /// Repulse Pulse — and enemies that touch it are knocked away from its face.</summary>
     public sealed class TemporaryWall : MonoBehaviour
     {
         [Tooltip("Minimum seconds between two contact knockbacks on the same enemy.")] [Min(0f)]
@@ -12,7 +13,7 @@ namespace AnomalyArena
         float life, push, age;
         readonly Dictionary<Combatant, float> nextPush = new();
         public bool BattlefieldFrozen { get; set; }
-
+        /// <summary>Who raised this wall (WorldMap.SkillObjectStanding: no second Bulwark while it stands).</summary>
         public Combatant Owner { get; private set; }
 
         public void Deploy(Vector3 at, float width, float duration, float contactKnockback, Combatant user)
@@ -26,7 +27,7 @@ namespace AnomalyArena
             transform.rotation = Quaternion.LookRotation(Query.Flat(user.AimDirection));
             transform.localScale = new Vector3(width, 2f, 1f);
             gameObject.SetActive(true);
-
+            // The illustrated art raises earth out of the ground; the box keeps the collider only.
             bool earth = Art.Enabled && V5EarthWall.Raise(gameObject, width, 1f);
             if (TryGetComponent(out Renderer block)) block.enabled = !earth;
             if (earth && V5Vfx.On) V5Vfx.I.EarthRise(at, transform.rotation, width);
@@ -51,6 +52,7 @@ namespace AnomalyArena
             WorldMap.Active.HoleChanged();
         }
 
+        /// <summary>The wall goes: its time is up, or a boss broke it. The caller tells the map (HoleChanged).</summary>
         public void Fall()
         {
             if (V5Vfx.On) V5Vfx.I.EarthCrumble(transform.position, transform.rotation, transform.localScale.x);
@@ -61,6 +63,7 @@ namespace AnomalyArena
         void OnCollisionEnter(Collision collision) => KnockAway(collision);
         void OnCollisionStay(Collision collision) => KnockAway(collision);
 
+        /// <summary>An enemy in Normal state touching the wall is knocked straight away from the wall plane, at most once per body per interval.</summary>
         void KnockAway(Collision collision)
         {
             if (push <= 0f || BattlefieldFrozen) return;

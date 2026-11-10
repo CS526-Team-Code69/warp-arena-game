@@ -3,9 +3,11 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>Which stone a wall is built from.</summary>
     public enum V5WallStyle { Ruins, Dunes, Meteor }
 
+    /// <summary>One built wall: its mesh, centred on the rect with its foot at height 0, and the height of its top at every spot (V5TerrainGround casts the shadow from
+    /// that, and the stones shade each other with it).</summary>
     public sealed class V5WallShape
     {
         public const float GridCell = .25f;
@@ -15,6 +17,7 @@ namespace AnomalyArena
         public float[] heights;
         public float tallest;
 
+        /// <summary>Top height at a point given relative to the wall's centre; 0 outside the wall.</summary>
         public float HeightAt(float x, float z)
         {
             int ix = Mathf.FloorToInt((x + width * .5f) / GridCell), iz = Mathf.FloorToInt((z + depth * .5f) / GridCell);
@@ -22,6 +25,13 @@ namespace AnomalyArena
         }
     }
 
+    /// <summary>
+    /// Builds a stone wall's mesh for any rectangle, so what is drawn fills exactly what blocks (system doc 11.2): the foot of the wall lies on the rectangle's edges and
+    /// the stones never reach past them. The stones are laid out on a lattice in the rectangle's own coordinates, so for a map wall (world coordinates) two touching
+    /// walls keep their courses and a piece cut from a wall (TyrantTerrain) keeps the same stones in the same places; only the top course varies, from a noise field, and
+    /// the bottom stays whole. Only the faces the fixed game camera can see are built.
+    /// Colours go in the vertices: RGB the stone's tint, A how much light reaches that corner.
+    /// </summary>
     public static class V5TerrainWalls
     {
         sealed class Look
@@ -38,6 +48,7 @@ namespace AnomalyArena
             public float stainChance, valueJitter, lowDark, midDark, shade, uvTile;
         }
 
+        // A dressed limestone wall in ruin: thin courses, tight joints, a broken top.
         static readonly Look Ruins = new()
         {
             material = "V5/Terrain/V5WallRuins",
@@ -51,6 +62,7 @@ namespace AnomalyArena
             stainChance = .16f, valueJitter = .13f, lowDark = .76f, midDark = .89f, shade = .62f, uvTile = 7f,
         };
 
+        // Wind-worn sandstone: big rounded blocks with broad, chipped edges and thin strata on the sides.
         static readonly Look Dunes = new()
         {
             material = "V5/Terrain/V5WallDunes",
@@ -64,6 +76,7 @@ namespace AnomalyArena
             stainChance = .2f, valueJitter = .11f, lowDark = .82f, midDark = .92f, shade = .6f, uvTile = 8f,
         };
 
+        // A charred lump of the Tyrant's star: one rough dark rock, no courses.
         static readonly Look Meteor = new()
         {
             material = "V5/Terrain/V5WallMeteor",
@@ -83,6 +96,7 @@ namespace AnomalyArena
             public int level;
         }
 
+        // Toward the light in the scene (ArenaV2 scenes, "Directional Light"); used until a scene's own light is read.
         static readonly Vector3 DefaultSun = new(.2868f, .8192f, -.4967f);
         static readonly List<Vector3> Points = new(8192), Normals = new(8192);
         static readonly List<Color32> Colors = new(8192);
@@ -97,6 +111,7 @@ namespace AnomalyArena
         static Vector3 sun = DefaultSun;
         static bool sunRead;
 
+        /// <summary>The direction toward the scene's main light. The light never moves, so it is read once.</summary>
         public static Vector3 ToSun
         {
             get
@@ -120,6 +135,7 @@ namespace AnomalyArena
             Materials.Clear();
         }
 
+        /// <summary>The stone of a map's wall group, by the group's name in the scenes; false for a map that keeps its saved art (the Rift Zone, not in rotation).</summary>
         public static bool StyleOfGroup(Transform group, out V5WallStyle style)
         {
             style = V5WallStyle.Ruins;
@@ -139,6 +155,10 @@ namespace AnomalyArena
 
         static Look LookOf(V5WallStyle style) => style switch { V5WallStyle.Dunes => Dunes, V5WallStyle.Meteor => Meteor, _ => Ruins };
 
+        /// <summary>
+        /// Builds a wall over rect. rect's position only picks the stones (map walls pass their world rect), the mesh is always centred on it. axis 0 runs the courses
+        /// along x, 1 along z.
+        /// </summary>
         public static V5WallShape Build(V5WallStyle style, Rect rect, int axis)
         {
             var look = LookOf(style);
@@ -162,6 +182,7 @@ namespace AnomalyArena
             return shape;
         }
 
+        /// <summary>Stones in rows along the wall. Row and stone edges come from a lattice in rect's coordinates, slivers join their neighbours.</summary>
         static void LayOut(Look look, Rect rect, int axis)
         {
             float a0 = axis == 0 ? rect.xMin : rect.yMin, a1 = axis == 0 ? rect.xMax : rect.yMax;
@@ -197,6 +218,7 @@ namespace AnomalyArena
             return level;
         }
 
+        /// <summary>Edges between lo and hi on a lattice of the given size; a piece shorter than half the size joins the one before it.</summary>
         static void Lattice(float lo, float hi, float size, float jitter, float phase, int seed, List<float> edges)
         {
             edges.Clear();
@@ -224,6 +246,7 @@ namespace AnomalyArena
             shape.tallest = Mathf.Max(shape.tallest, stone.top);
         }
 
+        /// <summary>The dark bed under the stones, the rectangle itself. It shows only where a stone's corner is chipped away.</summary>
         static void Plinth(Look look, Rect rect, Vector2 c)
         {
             var dark = look.bed;
@@ -231,6 +254,7 @@ namespace AnomalyArena
             Quad(new Vector3(x0, y, z0), new Vector3(x0, y, z1), new Vector3(x1, y, z1), new Vector3(x1, y, z0), dark, dark, dark, dark, Vector2.zero, 0);
         }
 
+        /// <summary>The top of one stone: a flat middle and sloped edges, with a chipped corner now and then. The joints between stones are the outer edges, kept dark.</summary>
         static void Top(Look look, in Stone s, Rect rect, Vector2 c, V5WallShape shape)
         {
             float w = s.x1 - s.x0, d = s.z1 - s.z0, small = Mathf.Min(w, d);
@@ -242,11 +266,11 @@ namespace AnomalyArena
             for (int corner = 0; corner < 4; corner++)
             {
                 float cut = Hash(seed, 20 + corner) < look.chipChance ? Mathf.Min(look.chipSize * Mathf.Lerp(.45f, 1f, Hash(seed, 30 + corner)), small * .36f) : 0f;
-
+                // Corners run clockwise seen from above; into is the direction from the corner into the stone.
                 float x = corner < 2 ? s.x0 : s.x1, z = corner is 0 or 3 ? s.z0 : s.z1;
                 float intoX = corner < 2 ? 1f : -1f, intoZ = corner is 0 or 3 ? 1f : -1f;
                 if (cut <= 0f) { Ring(ref n, look, rect, c, shape, x, z, intoX, intoZ, bevel, outerY, innerY); continue; }
-
+                // Going clockwise a corner is reached along x on corners 0 and 2, along z on 1 and 3.
                 bool alongXFirst = corner is 0 or 2;
                 Ring(ref n, look, rect, c, shape, alongXFirst ? x + intoX * cut : x, alongXFirst ? z : z + intoZ * cut, intoX, intoZ, bevel, outerY, innerY);
                 Ring(ref n, look, rect, c, shape, alongXFirst ? x : x + intoX * cut, alongXFirst ? z + intoZ * cut : z, intoX, intoZ, bevel, outerY, innerY);
@@ -263,7 +287,7 @@ namespace AnomalyArena
 
             if (look.dome > 0f)
             {
-
+                // Worn stone: the middle rises to a blunt point, each facet with its own light.
                 Vector3 peak = Vector3.zero;
                 for (int i = 0; i < n; i++) peak += InnerRing[i];
                 peak = peak / n + new Vector3((Hash(seed, 44) - .5f) * small * .3f, look.dome * Mathf.Lerp(.6f, 1.3f, Hash(seed, 45)), (Hash(seed, 46) - .5f) * small * .3f);
@@ -276,6 +300,7 @@ namespace AnomalyArena
                 return;
             }
 
+            // The flat middle leans a little, so neighbouring stones catch the light differently.
             var lean = new Vector3((Hash(seed, 42) - .5f) * look.tilt * 2f, 1f, (Hash(seed, 43) - .5f) * look.tilt * 2f).normalized;
             for (int i = 1; i + 1 < n; i++)
                 Triangle(InnerRing[0], InnerRing[i], InnerRing[i + 1], lean, With(tint, InnerLight[0]), With(tint, InnerLight[i]), With(tint, InnerLight[i + 1]), uv, look.uvTile);
@@ -293,6 +318,7 @@ namespace AnomalyArena
             n++;
         }
 
+        /// <summary>The shadow a taller part of the same wall casts on a lower stone.</summary>
         static float SelfShade(Look look, V5WallShape shape, float x, float z, float y)
         {
             Vector3 toSun = ToSun;
@@ -304,6 +330,7 @@ namespace AnomalyArena
             return 1f;
         }
 
+        /// <summary>The outer faces of the wall. Each side's height follows the stones on that edge, in runs of one height.</summary>
         static void Sides(Look look, Rect rect, Vector2 c)
         {
             OuterFace(look, Vector3.right, rect.yMin, c, 0);
@@ -335,6 +362,7 @@ namespace AnomalyArena
             }
         }
 
+        /// <summary>Faces where a stone stands taller than its neighbour on the side the camera sees, so the broken top reads as steps.</summary>
         static void Risers(Look look, Vector2 c)
         {
             for (int a = 0; a < Stones.Count; a++)
@@ -357,11 +385,12 @@ namespace AnomalyArena
             return to - from > .01f;
         }
 
+        /// <summary>A vertical stretch of masonry from s0 to s1 along the side and y0 to y1 up it, laid in courses. s is the rect's coordinate along the direction along.</summary>
         static void Face(Look look, Vector3 along, float plane, Vector2 c, int side, float s0, float s1, float y0, float y1)
         {
             if (y1 - y0 < .04f || s1 - s0 < .02f) return;
             Vector3 outward = Vector3.Cross(Vector3.up, along);
-
+            // Where s = 0, y = 0 lies on the plane, in the mesh's coordinates.
             Vector3 origin = side < 2 ? new Vector3(-c.x, 0f, plane - c.y) : new Vector3(plane - c.x, 0f, -c.y);
             Lattice(y0, y1, look.courseHeight, look.courseJitter, 0f, 211 + side, Courses);
             for (int k = 0; k + 1 < Courses.Count; k++)
@@ -428,6 +457,7 @@ namespace AnomalyArena
         static Vector2 TopUv(Vector3 p, Vector2 offset, float tile) => tile > 0f ? new Vector2(p.x / tile + offset.x, p.z / tile + offset.y) : Vector2.zero;
         static Vector2 FaceUv(Vector3 p, Vector3 along, Vector2 offset, float tile) => new(Vector3.Dot(p, along) / tile + offset.x, p.y / tile + offset.y);
 
+        /// <summary>A flat quad seen from above, its corners clockwise from the side it faces.</summary>
         static void Quad(Vector3 a, Vector3 b, Vector3 c, Vector3 d, Color32 ca, Color32 cb, Color32 cc, Color32 cd, Vector2 uv, float tile)
         {
             Vector3 n = Vector3.Cross(b - a, c - a);
@@ -441,6 +471,7 @@ namespace AnomalyArena
             Triangles.Add(first); Triangles.Add(first + 2); Triangles.Add(first + 3);
         }
 
+        /// <summary>The same for a quad on a vertical face; its texture runs along the face.</summary>
         static void QuadFlat(Vector3 a, Vector3 b, Vector3 c, Vector3 d, Color32 ca, Color32 cb, Color32 cc, Color32 cd, Vector2 uv, float tile, Vector3 along)
         {
             Vector3 n = Vector3.Cross(b - a, c - a);

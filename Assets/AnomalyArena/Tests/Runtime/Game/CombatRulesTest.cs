@@ -8,14 +8,21 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>Combat rules of 2026-10-25 (system doc 5.3, 6.7, 7.6, 9.5, 10.6). Knockback: the bigger the body, the shorter the slide,
+    /// an elite slides less than its kind, bosses and the Spire are never moved, and the hook's fling and the Scatter Blast pull ignore size;
+    /// the Rammer's charge is the light tier and the Stomper's slam the heavy one. Immunity: both bosses ignore Frost and Lightning; a body
+    /// immune to an element takes none of its damage and none of its statuses, a Lightning-immune body does not pass Lightning on, and Damage Penetration
+    /// lets that share of the damage through but never a status. Its card follows the bosses' fixed immunities and may come once a boss is
+    /// ahead: from the Tyrant's wave, or in any wave while a void portal is open.</summary>
     [TestFixture]
     public class CombatRulesTest
     {
-        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
 
         [TearDown]
         public void TearDown() => Time.timeScale = 1f;
+
+        // ───── Knockback ─────
 
         [Test]
         public void ScaleFor_BiggerBodiesAndElites_SlideShorterWithinTheLimits()
@@ -80,7 +87,7 @@ namespace AnomalyArena
             grunt.Knockback(Vector3.forward, distance, KnockKind.Hit);
             brute.Knockback(Vector3.forward, distance, KnockKind.Hit);
             flung.Throw(Vector3.forward, distance, new ThrowImpact { dealer = game.player });
-
+            // The sandbox bodies' own updates are off, so a slide is not damped: read the launch, not where it stops.
             await Awaitable.FixedUpdateAsync();
             await Awaitable.FixedUpdateAsync();
 
@@ -97,7 +104,7 @@ namespace AnomalyArena
         {
             var (game, targets) = await V3CombatSmokeTest.StartSandbox();
             Vector3 origin = game.player.Position;
-
+            // Apart from each other inside the 60° cone ahead: a wide Brute, an elite Rammer and a small mini Splitter.
             var bodies = new[]
             {
                 Ready(targets[0], game, EnemyKind.Brute, origin + new Vector3(0f, 0f, 7f)),
@@ -109,16 +116,16 @@ namespace AnomalyArena
             Assume.That(bodies[2].knockbackScale, Is.GreaterThan(1f), "and carry the mini Splitter too far");
             var tuning = game.runWeapons.upgrades;
             game.runWeapons.ClearWaveEffects();
-
+            // The clip's second round of a Scatter Blast with its Twist pulls first.
             game.runWeapons.Hand[game.runWeapons.ActiveIndex] =
                 new RunWeapon { form = WeaponForm.ScatterCannon, variant = 0, revealed = true, axes = UpgradeAxis.Twist, rounds = 1 };
-
+            // The slide that stops each body just in front of you starts at that many cells × damping, toward you.
             var toward = bodies.Select(b => -Query.Flat(b.Position - origin).normalized).ToArray();
             var expected = bodies.Select(b => (Query.Flat(b.Position - origin).magnitude - b.radius - game.player.radius - tuning.scatterVacuumGap)
                 * game.rules.knockDamping).ToArray();
 
             game.runWeapons.HandleInput(true, true, false);
-
+            // The sandbox bodies' own updates are off, so a slide is not damped: read the launch, not where it stops.
             await Awaitable.FixedUpdateAsync();
             await Awaitable.FixedUpdateAsync();
 
@@ -131,7 +138,7 @@ namespace AnomalyArena
         public async Task Knockback_SpireWindingUpAndTyrant_NeitherIsKnockedNorLosesItsWindup()
         {
             var (game, targets) = await V3CombatSmokeTest.StartSandbox();
-            game.player.Invulnerable = true;                                                                                    
+            game.player.Invulnerable = true; // the Spire's light wave finds the player and its laser lands while the test waits
             targets[1].DiscardWithoutReward();
             targets[2].DiscardWithoutReward();
             var spire = targets[0];
@@ -193,6 +200,8 @@ namespace AnomalyArena
             Assert.That(push, Is.EqualTo(KnockbackRules.Active.light), "the charge pushes the player by the light tier");
             Assert.That(game.player.Stunned, Is.True, "and stuns");
         }
+
+        // ───── Element immunity and Damage Penetration ─────
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task Tyrant_InTheRun_IgnoresFrostAndLightningButTakesFireAndPoison()
@@ -319,7 +328,7 @@ namespace AnomalyArena
             var beyond = targets[2];
             float jump = ElementStatus.For(struck).Rules.lightningJumpRadius;
             Vector3 at = game.player.Position + Vector3.forward * 5f;
-
+            // The enemy beyond is within one jump of the immune enemy only, never of the struck one.
             Place(struck, at);
             Place(immune, at + Vector3.forward * (jump - 1f));
             Place(beyond, immune.Position + Vector3.forward * (jump - 1f));
@@ -386,7 +395,8 @@ namespace AnomalyArena
             targets[2].DiscardWithoutReward();
             var immune = targets[0];
             var beside = targets[1];
-
+            // The bolts fall on enemies within the skill's radius of the cursor; the enemy beside stands beyond that radius but within one
+            // Lightning jump of the immune target, so only a jump from it can reach the enemy beside.
             var def = game.skills.Catalog.Find(SkillId.StormCall);
             float radius = def.Radius(SkillDefinition.MaxLevel);
             Vector3 cursor = game.player.Position + Vector3.forward * 3f;
@@ -421,7 +431,7 @@ namespace AnomalyArena
             var (game, targets) = await V3CombatSmokeTest.StartSandbox();
             targets[2].DiscardWithoutReward();
             var stone = targets[0];
-            var immune = targets[1];                                                                     
+            var immune = targets[1]; // held in place 3 cells behind the stone: the stone crashes into it
             Place(stone, game.player.Position + Vector3.forward * 3f);
             stone.GetComponent<Rigidbody>().constraints = RigidbodyConstraints.FreezeRotation | RigidbodyConstraints.FreezePositionY;
             var immuneBoard = Bare(immune);
@@ -429,7 +439,7 @@ namespace AnomalyArena
             Freeze(stone, game);
             var tuning = game.runWeapons.upgrades;
             game.runWeapons.ClearWaveEffects();
-
+            // A real Cryo Cannon: Frost is built in.
             var shatter = new RunWeapon { form = WeaponForm.CryoCannon, variant = 0, revealed = true, axes = UpgradeAxis.Twist,
                 element = ElementKind.Frost, builtInElement = true, rounds = game.runWeapons.ClipSize(WeaponForm.CryoCannon, 0) };
             game.runWeapons.Hand[game.runWeapons.ActiveIndex] = shatter;
@@ -516,11 +526,14 @@ namespace AnomalyArena
             var sut = new StatCardOffer(StatId.ElementPenetration, CardRarity.Common, .2f);
             var english = (string[])typeof(ArenaTerms).GetField("StatEn", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null);
 
-            Assert.That(sut.Title, Is.EqualTo("Damage Penetration"), "card title");
-            Assert.That(sut.Description, Does.Contain("Damage Penetration +20%").And.Contain("status"), "card text: a damage share, never a status");
+            Assert.That(sut.Title, Is.EqualTo("伤害穿透"), "card title");
+            Assert.That(sut.Description, Does.Contain("伤害穿透 +20%").And.Contain("状态"), "card text: a damage share, never a status");
             Assert.That(english[(int)StatId.ElementPenetration], Is.EqualTo("Damage Penetration"), "English name");
         }
 
+        // ───── Helpers ─────
+
+        /// <summary>A player hit of this element, as a weapon carrying it lands one.</summary>
         static DamageInfo Hit(GameManager game, float amount, ElementKind element)
         {
             var info = DamageInfo.Attack(amount, game.player);
@@ -528,6 +541,7 @@ namespace AnomalyArena
             return info;
         }
 
+        /// <summary>The body's status board with no Shield and no statuses, so a hit's damage reads straight off its HP.</summary>
         static ElementStatus Bare(Combatant body)
         {
             var board = ElementStatus.For(body);
@@ -551,6 +565,7 @@ namespace AnomalyArena
             return enemy.knockbackScale;
         }
 
+        /// <summary>A sandbox target turned into this kind at a point, at rest, free to slide on the ground and with its own update off.</summary>
         static Enemy Ready(Enemy enemy, GameManager game, EnemyKind kind, Vector3 at, bool elite = false, bool mini = false)
         {
             enemy.Configure(game.waves.DefinitionOf(kind), 1f, elite, ElementKind.None, mini);
@@ -560,6 +575,7 @@ namespace AnomalyArena
             return enemy;
         }
 
+        /// <summary>Turns a frozen sandbox target into a live enemy of this kind at a point; it keeps still and attacks on its own.</summary>
         static void Arm(Enemy enemy, GameManager game, EnemyKind kind, Vector3 at)
         {
             enemy.Configure(game.waves.DefinitionOf(kind), 1f, false);
@@ -583,6 +599,7 @@ namespace AnomalyArena
         static void Hold(GameManager game, WeaponForm form, ElementKind element) =>
             game.runWeapons.Hand = new[] { new RunWeapon { form = form, revealed = true, element = element, builtInElement = element != ElementKind.None }, null };
 
+        /// <summary>Runs the card's offer check now; the game itself runs it at each wave change and each build-phase step.</summary>
         static void RefreshPenetrationOffer(GameManager game) =>
             typeof(GameManager).GetMethod("UpdatePenetrationEligibility", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(game, null);
 

@@ -3,13 +3,15 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>Continuous effects of the V5 layer: element states on bodies, fire, gas and snow on the ground, projectile looks and the player's buffs.
+    /// The rates are per second, so they hold at any frame rate.</summary>
     public sealed partial class V5Vfx
     {
         static readonly Color FireTint = new(1f, .62f, .24f), PoisonTint = new(.52f, .95f, .25f), FrostTint = new(.68f, .9f, 1f), ArcTint = new(1f, .88f, .42f), VoidTint = new(.72f, .42f, 1f), LightTint = new(1f, .93f, .62f), EarthTint = new(.86f, .72f, .52f);
 
+        /// <summary>Flat quads the older pools draw through: same shader, property blocks set the texture and colour.</summary>
         public Material QuadAdditive { get; private set; }
-
+        /// <summary>The same for a SpriteRenderer, which hands its sprite over as _MainTex.</summary>
         public Material SpriteAdditive { get; private set; }
         Material trailMaterial;
         readonly Dictionary<string, Sprite> sprites = new();
@@ -24,6 +26,7 @@ namespace AnomalyArena
 
         public Material TrailMaterial => trailMaterial;
 
+        /// <summary>A sprite made once from a texture in Resources/V5/Fx.</summary>
         public Sprite Sprite(string name, float pixelsPerUnit = 100f)
         {
             if (sprites.TryGetValue(name, out var s)) return s;
@@ -35,6 +38,7 @@ namespace AnomalyArena
 
         static bool Chance(float perSecond) => Random.value < perSecond * Time.deltaTime * Quality;
 
+        /// <summary>The look of a weapon's element on screen.</summary>
         public static Color ElementTint(ElementKind element) => element switch
         {
             ElementKind.Fire => FireTint,
@@ -46,6 +50,8 @@ namespace AnomalyArena
             ElementKind.Void => VoidTint,
             _ => new Color(1f, .9f, .68f)
         };
+
+        // ───── Element states on a body ─────
 
         public void Status(Combatant body, ElementStatus status, float r, Vector3 chest)
         {
@@ -90,6 +96,9 @@ namespace AnomalyArena
             }
         }
 
+        // ───── Fields on the ground ─────
+
+        /// <summary>Burning ground (Wildfire, shell fires, flame wake): real flames over the exact area and their light on the ground.</summary>
         public void FireField(Vector3 centre, float radius, float strength = 1f)
         {
             float rate = Mathf.Clamp(radius * radius * 4.6f, 9f, 34f) * strength;
@@ -99,7 +108,7 @@ namespace AnomalyArena
                 emitted++;
                 Vector2 o = Random.insideUnitCircle * radius * .92f;
                 float size = R(.85f, 1.6f) * Mathf.Clamp(radius * .55f, .7f, 1.3f);
-
+                // Each tongue its own shade, from yellow to deep red, so a burning area never reads as one flat colour.
                 flame.Emit(new Vector3(centre.x + o.x, size * .3f, centre.z + o.y), Vector3.up * R(.1f, .4f), size, R(.5f, .85f), new Color(1f, R(.62f, 1f), R(.45f, .9f), R(.75f, 1f)));
             }
             if (Chance(rate * .22f)) ember.Emit(new Vector3(centre.x, .6f, centre.z) + new Vector3(R(-radius, radius), 0f, R(-radius, radius)) * .8f, new Vector3(R(-.5f, .5f), R(2f, 4f), R(-.5f, .5f)), R(.05f, .11f), R(.5f, 1f), FireTint);
@@ -107,6 +116,7 @@ namespace AnomalyArena
             if (Chance(5f)) groundGlow.Emit(OnGround(centre), Vector3.zero, radius * 2.9f, .34f, new Color(1f, .46f, .13f, .32f * strength));
         }
 
+        /// <summary>A gas cloud (poison cloud, needle mist): thick slow puffs over the exact area, with bubbles.</summary>
         public void PoisonField(Vector3 centre, float radius, float strength = 1f)
         {
             float rate = Mathf.Clamp(radius * radius * 1.8f, 4f, 13f) * strength;
@@ -125,6 +135,7 @@ namespace AnomalyArena
             if (Chance(4f)) groundGlow.Emit(OnGround(centre), Vector3.zero, radius * 2.6f, .4f, new Color(.28f, .8f, .1f, .24f * strength));
         }
 
+        /// <summary>Snow and frost over the exact area (Blizzard's field, tamed snow).</summary>
         public void FrostField(Vector3 centre, float radius, float strength = 1f)
         {
             float rate = Mathf.Clamp(radius * radius * 2f, 4f, 16f) * strength;
@@ -140,11 +151,13 @@ namespace AnomalyArena
             }
         }
 
+        /// <summary>A frost mark on the ground; it stays for life seconds.</summary>
         public void FrostMark(Vector3 at, float radius, float life, float alpha = .8f)
         {
             frostDecal.Emit(OnGround(at, .05f), Vector3.zero, radius * 2.2f, life, new Color(.74f, .93f, 1f, alpha), R(0f, 360f));
         }
 
+        /// <summary>Bloater radiation (document 10.2): sickly glowing haze over the exact area.</summary>
         public void Radiation(Vector3 centre, float radius, float fade)
         {
             float rate = Mathf.Clamp(radius * radius * 1.7f, 4f, 12f);
@@ -161,6 +174,7 @@ namespace AnomalyArena
             if (Chance(5f)) groundGlow.Emit(OnGround(centre), Vector3.zero, radius * 2.6f, .34f, new Color(.6f, .85f, .1f, .24f * fade));
         }
 
+        /// <summary>Chanter aura: runes drifting up inside the reach of the chant.</summary>
         public void ChantMotes(Vector3 centre, float radius)
         {
             if (!Chance(Mathf.Clamp(radius * 1.6f, 3f, 10f))) return;
@@ -168,12 +182,15 @@ namespace AnomalyArena
             glint.Emit(new Vector3(centre.x + o.x, .3f, centre.z + o.y), Vector3.up * R(.8f, 1.6f), R(.14f, .3f), R(.6f, 1.1f), new Color(.8f, .58f, 1f));
         }
 
+        /// <summary>A scatter shell glowing where it landed, about to flare up.</summary>
         public void HotShell(Vector3 at, float heat)
         {
             if (Chance(8f + 14f * heat)) ember.Emit(new Vector3(at.x, .35f, at.z), new Vector3(R(-.5f, .5f), R(1f, 2.4f), R(-.5f, .5f)), R(.05f, .09f), R(.25f, .5f), FireTint);
             if (Chance(2f + 8f * heat)) smallFlame.Emit(new Vector3(at.x, .45f, at.z), Vector3.up * .3f, R(.9f, 1.4f) * (.7f + heat * .6f), R(.3f, .45f), Color.white);
             if (Chance(6f)) groundGlow.Emit(OnGround(at), Vector3.zero, 1.8f + heat * 1.4f, .22f, new Color(1f, .45f, .12f, .25f + .3f * heat));
         }
+
+        // ───── Weapon looks ─────
 
         public struct ProjectileLook
         {
@@ -184,6 +201,7 @@ namespace AnomalyArena
             public float trailWidth, trailTime;
         }
 
+        /// <summary>How a flying attack looks. The real hit shape stays with the attack; this is only what is drawn over it.</summary>
         public static ProjectileLook LookOf(AttackActor a)
         {
             var w = a.weapon;
@@ -225,6 +243,7 @@ namespace AnomalyArena
             }
         }
 
+        /// <summary>What a flying attack leaves behind it each frame, beyond its trail.</summary>
         public void ProjectileTick(AttackActor a)
         {
             var w = a.weapon;
@@ -247,6 +266,8 @@ namespace AnomalyArena
                     break;
             }
         }
+
+        // ───── The player's buffs ─────
 
         public void BuffMotes(Vector3 feet, float radius, Color c, float perSecond, float rise = 1.4f, float size = .22f)
         {
@@ -357,6 +378,7 @@ namespace AnomalyArena
             }
         }
 
+        /// <summary>An enemy going down: dark ichor and a few sparks, no white blob.</summary>
         public void Death(Vector3 at, float radius, Color body)
         {
             Color c = Color.Lerp(body, new Color(.45f, .1f, .12f), .5f);
@@ -368,7 +390,7 @@ namespace AnomalyArena
                 smokeLow.Emit(at + d * radius * .3f, d * R(1.2f, 3.2f) + Vector3.up * R(0f, 1f), radius * R(1.1f, 1.9f), R(.28f, .55f), new Color(c.r * .55f, c.g * .5f, c.b * .55f, .55f), R(0f, 360f));
                 spark.Emit(at, (d + Vector3.up * R(.2f, .9f)) * R(5f, 12f), R(.08f, .14f), R(.14f, .34f), Bright(c, .4f));
             }
-
+            // It comes apart: pieces and what was inside, and a stain that stays a moment.
             int bits = Count(Mathf.Clamp(radius * 7f, 6f, 16f));
             for (int i = 0; i < bits; i++)
             {
@@ -381,6 +403,7 @@ namespace AnomalyArena
             if (gm) gm.Shake(Mathf.Clamp(radius * .07f, .04f, .16f));
         }
 
+        /// <summary>A body swallowed: dark smoke falling in on the point, a purple flash and motes.</summary>
         public void Swallow(Vector3 at, float size)
         {
             Vector3 air = new(at.x, Query.CastHeight, at.z);

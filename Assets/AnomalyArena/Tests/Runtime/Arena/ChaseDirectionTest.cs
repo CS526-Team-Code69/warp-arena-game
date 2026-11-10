@@ -9,7 +9,7 @@ namespace AnomalyArena
     [TestFixture]
     public class ChaseDirectionTest
     {
-        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
         UnityEngine.Random.State savedRandom;
 
         [SetUp]

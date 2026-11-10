@@ -11,8 +11,7 @@ namespace AnomalyArena
     [TestFixture, Category("SkillVfx")]
     public class SkillVfxTest
     {
-        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
-        const string SceneEn = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
 
         [TearDown]
         public void TearDown() => Time.timeScale = 1f;
@@ -53,7 +52,7 @@ namespace AnomalyArena
             Assert.That(view.VisibleFlameCount,Is.Zero,"cleanup removes persistent fire");
         }
 
-        [Test, LoadScene(SceneEn), Timeout(40000)]
+        [Test, LoadScene(Scene), Timeout(40000)]
         public async Task FlameWake_InWhitebox_ShowsTheSavedSceneFire()
         {
             var sandbox = await V3CombatSmokeTest.StartSandbox();
@@ -102,7 +101,7 @@ namespace AnomalyArena
             var view=Object.FindAnyObjectByType<SkillGroundPresentation>();
             Assert.That(view.VisibleAreaCount,Is.EqualTo(1));
             var samples=new List<SkillGroundVisual>();game.skills.CopyGroundVisuals(samples);
-
+            // The illustrated art draws the area at its sample: in the trial, not on the distant main map.
             Assert.That(Query.Flat(samples[0].Position-world.trialPlatform.position).magnitude,Is.LessThan(world.trialRadius));
             game.skills.ClearWaveEffects();await Awaitable.NextFrameAsync();await Awaitable.NextFrameAsync();
             Assert.That(view.VisibleAreaCount,Is.Zero);

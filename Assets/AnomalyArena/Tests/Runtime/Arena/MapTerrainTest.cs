@@ -10,11 +10,13 @@ using Object = UnityEngine.Object;
 
 namespace AnomalyArena
 {
-
+    /// <summary>Maps (system doc 12.1-12.2): a run starts on the Dunes or the Ruins, never on a Rift Zone. The Ruins have more
+    /// walls, L and ] shapes among them, each with a real wall collider, and more Rammers; the Dunes have quicksand pools that slow walking and
+    /// block nothing, and more Bloaters and Spires.</summary>
     [TestFixture]
     public class MapTerrainTest
     {
-        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
         const string Dunes = "DustFlats", Ruins = "WreckField", Rift = "RiftZone";
         UnityEngine.Random.State savedRandom;
 
@@ -27,6 +29,8 @@ namespace AnomalyArena
 
         [TearDown]
         public void TearDown() => UnityEngine.Random.state = savedRandom;
+
+        // ───── Rotation ─────
 
         [Test]
         public void PickForRun_MapsOutOfRotation_AreNeverPickedUnlessNoMapIsIn()
@@ -59,13 +63,15 @@ namespace AnomalyArena
             Assert.That(families, Is.EquivalentTo(new[] { Dunes, Ruins }), "runs start on both the Dunes and the Ruins");
         }
 
+        // ───── Enemy mix ─────
+
         [Test, LoadScene(Scene), Timeout(30000)]
         public async Task MapMixTilts_DunesRaiseBloatersAndSpiresRuinsRaiseRammers_InTheWeightsTheWavesRoll()
         {
             var world = await LoadedMap();
             var waves = GameManager.Instance.waves;
-            const int wave = 14;                                                            
-            var untilted = ScriptableObject.CreateInstance<Biome>();                      
+            const int wave = 14; // lists all six specials, as ordinary spawns and as elites
+            var untilted = ScriptableObject.CreateInstance<Biome>(); // a map with no tilt
             var runMap = world.biome;
             var failures = new List<string>();
             try
@@ -76,7 +82,7 @@ namespace AnomalyArena
                 {
                     var raised = Family(biome) == Dunes ? new[] { EnemyKind.Bloater, EnemyKind.Spire }
                         : Family(biome) == Ruins ? new[] { EnemyKind.Rammer } : Array.Empty<EnemyKind>();
-                    world.biome = biome;                                                        
+                    world.biome = biome; // TiltedWeight reads the tilt of the map the run is on
                     for (int group = 1; group <= 2; group++)
                     {
                         var shares = Shares(waves, wave, group);
@@ -94,6 +100,8 @@ namespace AnomalyArena
 
             Assert.That(failures, Is.Empty, "doc 12.1-12.2: the Dunes bring more Bloaters and Spires, the Ruins more Rammers");
         }
+
+        // ───── Ruins walls ─────
 
         [Test, LoadScene(Scene), Timeout(30000)]
         public async Task RuinsLayouts_MoreWallsWithLAndBracketShapes_AllClearOfHoleGravityAndTheStart()
@@ -155,7 +163,7 @@ namespace AnomalyArena
                         var footprint = new Rect(wall.position.x - wall.lossyScale.x * .5f, wall.position.z - wall.lossyScale.z * .5f, wall.lossyScale.x, wall.lossyScale.z);
                         if (Vector2.Distance(footprint.min, rect.min) > .01f || Vector2.Distance(footprint.max, rect.max) > .01f)
                             failures.Add($"{biome.name} wall {w}: footprint {footprint} for rect {rect}");
-
+                        // Another map's walls may be active too (the run's own map), so only colliders of this group count.
                         var inside = new Vector3(rect.center.x, 1f, rect.center.y);
                         var half = new Vector3(rect.width * .5f - .1f, .3f, rect.height * .5f - .1f);
                         var hits = Physics.OverlapBox(inside, half, Quaternion.identity, GameManager.WallMask, QueryTriggerInteraction.Ignore);
@@ -171,6 +179,8 @@ namespace AnomalyArena
 
             Assert.That(failures, Is.Empty, "collision, bounces and art follow the layout's walls");
         }
+
+        // ───── Dunes quicksand ─────
 
         [Test, LoadScene(Scene), Timeout(30000)]
         public async Task DunesLayouts_QuicksandPools_StayOffWallsHoleGravityAndTheStart()
@@ -256,7 +266,7 @@ namespace AnomalyArena
 
             var original = world.layout;
             var sandy = Object.Instantiate(original);
-            sandy.quicksand = Array.Empty<MapLayout.SandPool>();                                                                 
+            sandy.quicksand = Array.Empty<MapLayout.SandPool>(); // on the Dunes the run's own pools could reach the sandbox lane
             world.layout = sandy;
             try
             {
@@ -283,16 +293,16 @@ namespace AnomalyArena
             var world = WorldMap.Active;
             targets[1].DiscardWithoutReward();
             targets[2].DiscardWithoutReward();
-            var walker = targets[0];                        
-            walker.Configure(walker.definition, 1f, false);                                                        
-            V3CombatSmokeTest.Teleport(walker, game.player.Position + Vector3.forward * 14f);                                           
+            var walker = targets[0]; // a wave 1 melee enemy
+            walker.Configure(walker.definition, 1f, false); // its own walking speed again (the sandbox stopped it)
+            V3CombatSmokeTest.Teleport(walker, game.player.Position + Vector3.forward * 14f); // the far end of the sandbox's clear lane
             walker.GetComponent<Rigidbody>().constraints = RigidbodyConstraints.FreezeRotation | RigidbodyConstraints.FreezePositionY;
             walker.enabled = true;
             Physics.SyncTransforms();
 
             var original = world.layout;
             var sandy = Object.Instantiate(original);
-            sandy.quicksand = Array.Empty<MapLayout.SandPool>();                                                                 
+            sandy.quicksand = Array.Empty<MapLayout.SandPool>(); // on the Dunes the run's own pools could reach the sandbox lane
             world.layout = sandy;
             try
             {
@@ -311,6 +321,8 @@ namespace AnomalyArena
             }
         }
 
+        // ───── Helpers ─────
+
         static async Task<float> WalkSpeed(Combatant body)
         {
             for (int i = 0; i < 3; i++) await Awaitable.FixedUpdateAsync();
@@ -324,6 +336,7 @@ namespace AnomalyArena
 
         static int Tilt(Biome biome, EnemyKind kind) => biome.mixTilt != null && (int)kind < biome.mixTilt.Length ? biome.mixTilt[(int)kind] : 0;
 
+        /// <summary>Each roster kind's share of a spawn group's weights on the current map, after its tilt and the 10% floor (0 when not listed).</summary>
         static Dictionary<EnemyKind, float> Shares(WaveManager waves, int wave, int group)
         {
             var weights = waves.GroupWeights(wave, group);
@@ -343,6 +356,7 @@ namespace AnomalyArena
 
         static bool Across(Rect a, Rect b) => a.width > a.height != b.width > b.height;
 
+        /// <summary>The layout's walls grouped into shapes: walls that touch belong to one shape.</summary>
         static List<List<Rect>> Joined(Rect[] walls)
         {
             var shapes = new List<List<Rect>>();
@@ -361,6 +375,7 @@ namespace AnomalyArena
 
         static bool IsL(List<Rect> shape) => shape.Count == 2 && Across(shape[0], shape[1]);
 
+        /// <summary>A ] in any turn: a spine touching two arms across it that do not touch each other.</summary>
         static bool IsBracket(List<Rect> shape)
         {
             if (shape.Count != 3) return false;

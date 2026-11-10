@@ -1,18 +1,12 @@
-# UI font
+# Packaged Chinese and English UI font
 
-`NotoSansCJKsc-Regular.otf` is the static Simplified Chinese regular weight of Noto Sans CJK, taken unmodified from the official notofonts/noto-cjk repository. It is 16,437,364 bytes, SHA-256 `2c76254f6fc379fddfce0a7e84fb5385bb135d3e399294f6eeb6680d0365b74b`.
+`NotoSansCJKsc-Regular.otf` is the unmodified static Simplified Chinese regular font from the official notofonts/noto-cjk repository. It is 16,437,364 bytes. The original copyright notice and SIL Open Font License 1.1 are included in `OFL-NotoSansCJK.txt`; source URLs and SHA-256 are in `source-receipt.json`.
 
-## Licence
+Both Chinese-team and English-showcase locales use this packaged Font asset. English uses its Latin glyphs. It is an asset reference, not a lookup for a font installed on the player's operating system.
 
-The font is distributed under the SIL Open Font License 1.1. The original copyright notice and the full licence text are in `OFL-NotoSansCJK.txt`, which must stay next to the font. Source URLs, byte sizes and SHA-256 checksums for both files are recorded in the JSON file in this folder.
+This project keeps the full font, unmodified. The published web builds ship a subset with only the characters the game uses, cut with fontTools in a separate copy of the project at build time, so this file never changes.
 
-## How the game uses it
-
-- Both the English and the Chinese locale use this one packaged Font asset; English text uses its Latin glyphs.
-- It is referenced as a project asset. The game does not look up a font installed on the player's operating system.
-- This project keeps the full font, unmodified. The published web builds ship a subset with only the characters the game uses, cut with fontTools in a separate copy of the project at build time, so this file never changes.
-
-## Sources
+Official sources:
 
 - Font: https://github.com/notofonts/noto-cjk/blob/main/Sans/OTF/SimplifiedChinese/NotoSansCJKsc-Regular.otf
-- Licence: https://github.com/notofonts/noto-cjk/blob/main/Sans/LICENSE
+- License: https://github.com/notofonts/noto-cjk/blob/main/Sans/LICENSE

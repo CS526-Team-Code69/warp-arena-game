@@ -7,15 +7,17 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>Twist and Tame cards of the element weapons (2026-10-23 card redesign, batch B): Flamethrower Stream / Wildfire,
+    /// Cryo Cannon Shatter / Blizzard, Arc Coil Chain / Capacitor, Venom Launcher Cloud / Needler.</summary>
     [TestFixture]
     public class ElementWeaponCardsTest
     {
-        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
 
         [TearDown]
         public void RestoreClock() => Time.timeScale = 1f;
 
+        /// <summary>A hand weapon in the active slot. No element unless asked, so the numbers are not blurred by element payoffs.</summary>
         static RunWeapon Equip(GameManager game, WeaponForm form, int variant, UpgradeAxis axes = UpgradeAxis.None)
         {
             game.runWeapons.ClearWaveEffects();
@@ -65,6 +67,8 @@ namespace AnomalyArena
             return bolt;
         }
 
+        // ───── Flamethrower ─────
+
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task StreamTwist_EnemyShotInTheCone_IsBurnedButNotOneBehindYou()
         {
@@ -108,13 +112,14 @@ namespace AnomalyArena
             Assert.That(status.Fire, Is.Zero, "the tamed burst does not set you alight");
             Assert.That(near.Hp, Is.LessThan(near.maxHp), "it still burns the enemy in the ring");
             Assert.That(near.State, Is.EqualTo(CharacterState.Knocked), "and knocks it back for real");
-
+            // The sandbox enemy's own update is off, so its slide is not damped: check the launch, not where it stops.
             await Awaitable.FixedUpdateAsync(); await Awaitable.FixedUpdateAsync();
             float launch = Vector3.Dot(Query.Flat(near.GetComponent<Rigidbody>().linearVelocity), away);
             float expected = game.runWeapons.upgrades.fuelTankTamePush * game.runWeapons.UpgradePushScale * near.knockbackScale * game.rules.knockDamping;
             Assert.That(launch, Is.EqualTo(expected).Within(expected * .2f), "launched away from you for a 4-cell knockback");
         }
 
+        // Touching a fire fence burns instead of a hit; Fire on an enemy is a burn at the fence's rate.
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task WildfireTwist_TwoPatchesInRange_FenceKeepsABodyOnTheLineBurningWithoutAHit()
         {
@@ -127,7 +132,7 @@ namespace AnomalyArena
             Vector3 origin = game.player.Position;
             var wildfire = Equip(game, WeaponForm.Flamethrower, 1, UpgradeAxis.Twist);
             const float tick = 2f;
-
+            // The two patches stand 8 apart on the lane; the enemy sits on the line between them, outside both circles.
             AttackActor older = null;
             foreach (float z in new[] { 2f, 10f })
             {
@@ -167,6 +172,8 @@ namespace AnomalyArena
             Assert.That(player.ExternalMoveMultiplier, Is.EqualTo(1f).Within(.001f), "back to normal outside it");
         }
 
+        // ───── Cryo Cannon ─────
+
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task ShatterTwist_FrozenEnemy_IsThrownAndBurstsWhenItStopsHittingItsNeighbour()
         {
@@ -187,7 +194,7 @@ namespace AnomalyArena
             await Until(() => stone.Hp < stone.maxHp, 3f, "the stone stops and bursts");
             Assert.That(Query.Flat(stone.Position - start).magnitude, Is.GreaterThan(1f), "it slid away first");
             float taken = stone.maxHp - stone.Hp;
-
+            // The crash into the neighbour adds a floor hit of 1 to both bodies.
             Assert.That(taken, Is.GreaterThanOrEqualTo(hit * tuning.shatterFrozenBonus - .01f).And.LessThanOrEqualTo(hit * tuning.shatterFrozenBonus * 1.3f + 2.5f), "the stone takes the shard with its frozen bonus");
             Assert.That(neighbour.maxHp - neighbour.Hp, Is.GreaterThanOrEqualTo(hit * tuning.shatterSplashShare - .01f), "the burst hits the enemy beside it");
         }
@@ -200,7 +207,7 @@ namespace AnomalyArena
             targets[1].DiscardWithoutReward(); targets[2].DiscardWithoutReward();
             var enemy = targets[0];
             var player = game.player;
-
+            // Close enough that the patch under it also covers you.
             Place(enemy, player.Position + Vector3.forward * 1.3f);
             var shatter = Equip(game, WeaponForm.CryoCannon, 0, UpgradeAxis.Tame);
             var mine = ElementStatus.For(player); var theirs = ElementStatus.For(enemy);
@@ -210,7 +217,7 @@ namespace AnomalyArena
             await Until(() => game.runWeapons.Hazards.Any(h => h.kind == GroundHazardKind.IcePatch
                 && Query.Flat(h.position - player.Position).magnitude <= h.radius + player.radius), 1f, "a patch under you and the enemy");
             await Awaitable.NextFrameAsync();
-
+            // You no longer slip on your own ice and move faster on it; the enemy still slips.
             Assert.That(game.runWeapons.IceGrip(player), Is.Zero, "you keep your footing on your own ice");
             Assert.That(player.ExternalMoveMultiplier, Is.EqualTo(tuning.shatterTameSpeed).Within(.001f), "and move faster on it");
             Assert.That(game.runWeapons.IceGrip(enemy), Is.GreaterThan(0f), "the enemy on it slips");
@@ -223,7 +230,7 @@ namespace AnomalyArena
             }
             Assert.That(froze, Is.True, "4 Frost a second freezes the enemy standing on it");
             Vector3 stand = player.Position;
-            V3CombatSmokeTest.Teleport(player, stand + Vector3.forward * 12f);                                         
+            V3CombatSmokeTest.Teleport(player, stand + Vector3.forward * 12f); // down the clear lane, far from the ice
             await Awaitable.NextFrameAsync(); await Awaitable.NextFrameAsync();
             Assert.That(player.ExternalMoveMultiplier, Is.EqualTo(1f).Within(.001f), "off the ice your speed is back at once");
             V3CombatSmokeTest.Teleport(player, stand);
@@ -237,7 +244,7 @@ namespace AnomalyArena
                 game.runWeapons.HandleInput(true, true, false);
             }
             await Until(() => !ActiveActors(shatter, AttackMode.Shard), 2f, "the last shards land");
-
+            // The cap stays, it is only no longer on the card.
             Assert.That(game.runWeapons.Hazards.Count(h => h.kind == GroundHazardKind.IcePatch && h.weapon == shatter),
                 Is.EqualTo(game.runWeapons.upgrades.icePatchTamedCap), "nine shards, six patches kept");
         }
@@ -281,6 +288,7 @@ namespace AnomalyArena
             Assert.That(status.Frozen, Is.False, "and it cannot freeze again for a while");
         }
 
+        /// <summary>Holds the Blizzard's trigger for this long, as a held mouse button would.</summary>
         static async Task Spray(GameManager game, float seconds)
         {
             game.runWeapons.HandleInput(true, true, false);
@@ -297,9 +305,9 @@ namespace AnomalyArena
             var (game, targets) = await V3CombatSmokeTest.StartSandbox();
             var tuning = game.runWeapons.upgrades;
             var player = game.player;
-            foreach (var t in targets) t.DiscardWithoutReward();                             
+            foreach (var t in targets) t.DiscardWithoutReward(); // a clear lane to walk down
             Equip(game, WeaponForm.CryoCannon, 1);
-            player.DebugSetAim(Vector3.back);                       
+            player.DebugSetAim(Vector3.back); // nothing in the cone
             var status = ElementStatus.For(player);
             status.ClearStatuses();
             Vector3 start = player.Position;
@@ -309,13 +317,14 @@ namespace AnomalyArena
             Assert.That(SnowAt(game, start), Is.True, "snow under your feet");
             Assert.That(game.runWeapons.Hazards.Count(h => h.kind == GroundHazardKind.Snow), Is.InRange(2, 3), $"a patch every {tuning.snowInterval} s");
             Assert.That(status.Frost, Is.GreaterThan(0f), "standing in it chills you");
-
+            // Walking on while spraying leaves a trail.
             V3CombatSmokeTest.Teleport(player, start + Vector3.forward * 3f);
             Physics.SyncTransforms();
             game.runWeapons.HandleInput(false, true, false);
             await Until(() => SnowAt(game, start + Vector3.forward * 3f), 1f, "snow where you stand now");
             Assert.That(SnowAt(game, start), Is.True, "and the old snow stays");
 
+            // It builds Frost on you up to the cap and never freezes you.
             status.ClearStatuses();
             status.Add(ElementKind.Frost, tuning.snowFrostCap - .3f, player);
             float most = 0f, until = Time.time + 1.5f;
@@ -338,10 +347,10 @@ namespace AnomalyArena
             var player = game.player;
             targets[2].DiscardWithoutReward();
             var near = targets[0];
-
+            // Inside the snow at your feet; the second enemy stays 6 cells away.
             Place(near, player.Position + Vector3.forward * (tuning.snowRadius + near.radius * .5f));
             Equip(game, WeaponForm.CryoCannon, 1, UpgradeAxis.Tame);
-            player.DebugSetAim(Vector3.back);                                
+            player.DebugSetAim(Vector3.back); // the spray itself hits nobody
             var mine = ElementStatus.For(player); var theirs = ElementStatus.For(near);
             mine.ClearStatuses(); theirs.ClearStatuses();
             Assume.That(mine.Shield, Is.Zero, "no Shield to soak the test hit");
@@ -356,6 +365,7 @@ namespace AnomalyArena
             player.ReceiveDamage(new DamageInfo { amount = 10f, source = DamageSource.Wall });
             Assert.That(hp - player.Hp, Is.EqualTo(10f * game.progression.Stats.DamageTakenMultiplier * tuning.snowTameDamageTaken).Within(.01f), "and take less damage");
 
+            // The snow stays after you let go: the enemy is still slowed until it leaves it.
             game.runWeapons.HandleInput(false, false, true);
             await Awaitable.NextFrameAsync(); await Awaitable.NextFrameAsync();
             Assert.That(near.ExternalMoveMultiplier, Is.EqualTo(tuning.snowTameSlow).Within(.001f), "the snow outlasts the spray");
@@ -367,12 +377,14 @@ namespace AnomalyArena
             Assert.That(game.runWeapons.SnowGuardActive, Is.False, "and so do you take full damage");
         }
 
+        // ───── Arc Coil ─────
+
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task ChainTwist_SecondJump_GoesToTheEnemyNearestTheAimPoint()
         {
             var (game, targets) = await V3CombatSmokeTest.StartSandbox();
             Vector3 origin = game.player.Position;
-
+            // First target ahead; behind it one enemy close to it (off the cone) and one further on, near the aim point.
             Place(targets[0], origin + Vector3.forward * 3f);
             Place(targets[1], origin + new Vector3(1f, 0f, 1f));
             Place(targets[2], origin + Vector3.forward * 6.5f);
@@ -404,7 +416,7 @@ namespace AnomalyArena
             Assert.That(targets[0].Hp, Is.EqualTo(targets[0].maxHp - hit).Within(.01f), "no shock around you, only the arc");
             Assert.That(chain.chainStoredJumps, Is.EqualTo(2), "five jumps, three targets: two stored");
             Assert.That(game.UiSnapshot.handSlots[game.runWeapons.ActiveIndex].detail, Does.Contain("+2"), "the slot shows them");
-
+            // Document 5.8: while jumps are stored and the Arc Cannon is in your hand, you move a little faster.
             Assert.That(game.runWeapons.MoveMultiplier, Is.EqualTo(tuning.chainTameMoveSpeed).Within(.0001f), "stored jumps in hand speed you up");
             int hand = game.runWeapons.ActiveIndex;
             game.runWeapons.Hand[1 - hand] = new RunWeapon { form = WeaponForm.Rifle, variant = 1, revealed = true, rounds = 3 };
@@ -419,7 +431,7 @@ namespace AnomalyArena
                 tuning.chainStoreMax = 10;
                 chain.cooldown = 0f;
                 game.runWeapons.HandleInput(true, true, false);
-
+                // 5 + 2 stored = 7 jumps on three targets: 4 unused. Had the stored 2 not been spent, 6 would be stored now.
                 Assert.That(chain.chainStoredJumps, Is.EqualTo(4), "the stored jumps were spent on this discharge");
             }
             finally { tuning.chainStoreMax = cap; }
@@ -427,6 +439,7 @@ namespace AnomalyArena
             game.runWeapons.HandleInput(true, true, false);
             Assert.That(chain.chainStoredJumps, Is.EqualTo(cap), "at most +3 are kept");
 
+            // The wave end drops the stored jumps, and the speed-up with them.
             game.runWeapons.ClearWaveEffects();
             Assert.That(chain.chainStoredJumps, Is.Zero);
             Assert.That(game.runWeapons.MoveMultiplier, Is.EqualTo(1f), "nothing stored, no speed-up");
@@ -442,6 +455,7 @@ namespace AnomalyArena
             var capacitor = Equip(game, WeaponForm.ArcCoil, 1, UpgradeAxis.Twist);
             float hit = weapons.HitDamage(capacitor);
 
+            // Walk back down the lane past all three enemies in about a second.
             float start = Time.time;
             while (Time.time - start < 1.2f)
             {
@@ -470,16 +484,17 @@ namespace AnomalyArena
             int hand = weapons.ActiveIndex;
             weapons.Hand[1 - hand] = new RunWeapon { form = WeaponForm.Rifle, variant = 0, revealed = true };
             float hit = weapons.HitDamage(capacitor), hp = game.player.Hp;
-
+            // The sandbox draws Grunts, Skitters or Brutes (radius .4-1): keep the second enemy clear of the discharge whatever its size.
             float reach = weapons.roster.Get(WeaponForm.ArcCoil).rangeB * capacitor.Reach;
             Place(targets[1], game.player.Position + Vector3.forward * (reach + targets[1].radius + 1f));
 
+            // Document 5.4: stowed it never discharges; it drains and its full timer runs back (WeaponGeneralRulesTest).
             weapons.Switch();
             capacitor.charge = tuning.capacitorMax; capacitor.chargeFullTime = 3.98f;
             await Seconds(.3f);
             Assert.That(targets[0].Hp, Is.EqualTo(targets[0].maxHp), "a stowed Capacitor never discharges");
             weapons.Switch();
-
+            // Back in hand and full again (walking would refill it), the timer goes on from what the short stow left of it.
             capacitor.charge = tuning.capacitorMax;
 
             await Until(() => targets[0].Hp < targets[0].maxHp, 1f, "the full Capacitor discharges by itself");
@@ -489,6 +504,8 @@ namespace AnomalyArena
             Assert.That(capacitor.charge, Is.Zero);
         }
 
+        // ───── Venom Launcher ─────
+
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task CloudTwist_SporePodBurstingInsideALandedCloud_DetonatesItAndRestartsItsTime()
         {
@@ -496,8 +513,8 @@ namespace AnomalyArena
             var player = game.player; var tuning = game.runWeapons.upgrades;
             Vector3 origin = player.Position, at = origin + Vector3.forward * 8f;
             var cloud = Equip(game, WeaponForm.SporeLauncher, 0, UpgradeAxis.Twist);
-            cloud.element = ElementKind.Poison; cloud.builtInElement = true;                          
-
+            cloud.element = ElementKind.Poison; cloud.builtInElement = true; // as the armory gives it
+            // Outside the cloud itself, inside the detonation (cloud radius 3.5, x1.5); the stepper waits clear of both, near you.
             var watched = targets[0];
             Place(watched, at + Vector3.forward * (watched.radius + 4.4f));
             targets[1].DiscardWithoutReward();
@@ -505,9 +522,10 @@ namespace AnomalyArena
             Place(stepper, origin + Vector3.forward * 2f);
             player.DebugSetAimPoint(at);
             float playerHp = player.Hp;
-
+            // Pods lie at random: every pod the stepper touches bursts, and each one inside the cloud sets it off.
             int Touched(Vector3 spot) => game.runWeapons.Hazards.Count(h => h.kind == GroundHazardKind.SporePod && Query.Flat(h.position - spot).magnitude <= h.radius + stepper.radius);
 
+            // Two clouds on the same spot: the first one's pods drop inside the second.
             game.runWeapons.HandleInput(true, true, false);
             await Until(() => ActiveActors(cloud, AttackMode.Field), 2f, "the first cloud lands");
             var first = AttackPool.Instance.actors.First(a => a && a.gameObject.activeSelf && a.weapon == cloud && a.mode == AttackMode.Field);
@@ -524,12 +542,13 @@ namespace AnomalyArena
             Assume.That(left, Is.LessThan(tuning.cloudSeconds - .4f));
             float blast = second.damage * tuning.cloudBlastTicks;
 
+            // An enemy steps on a pod inside the second cloud.
             var pod = game.runWeapons.Hazards.First(h => h.kind == GroundHazardKind.SporePod);
             int bursts = Touched(pod.position);
             Place(stepper, pod.position);
             await Until(() => watched.Hp < watched.maxHp, 2f, "the pod sets the cloud off");
             float lost = watched.maxHp - watched.Hp;
-
+            // A poison tick may land in the same frame as the blast.
             Assert.That(lost, Is.GreaterThanOrEqualTo(blast * bursts - .01f).And.LessThan(blast * bursts + 2f), "each detonation deals the cloud's ticks at once");
             var status = ElementStatus.For(watched);
             Assert.That(status.Poison, Is.GreaterThanOrEqualTo(status.Rules.poisonOnEnemyCap - .01f), "and fills its Poison");
@@ -537,6 +556,7 @@ namespace AnomalyArena
             Assert.That(AttackPool.Instance.actors.Any(a => a && a.gameObject.activeSelf && a.weapon == cloud && a.mode == AttackMode.Field
                 && Mathf.Approximately(a.radius, tuning.sporeBurstRadius)), Is.True, "the pod's own mist still appears");
 
+            // Every pod that bursts inside sets it off again.
             if (game.runWeapons.Hazards.Any(h => h.kind == GroundHazardKind.SporePod))
             {
                 await Seconds(.3f);
@@ -648,6 +668,7 @@ namespace AnomalyArena
             Assert.That(player.Hp, Is.EqualTo(hp), "the tamed mist never hurts you");
             Assert.That(status.Poison, Is.Zero);
 
+            // A mist an untamed Needler left spares you as soon as the card is taken.
             var plain = Equip(game, WeaponForm.SporeLauncher, 1);
             plain.element = ElementKind.Poison; plain.builtInElement = true;
             plain.rounds = 1;

@@ -8,11 +8,13 @@ using Object = UnityEngine.Object;
 
 namespace AnomalyArena
 {
-
+    /// <summary>The V2 campaign's starting Pistol (since 2026-11-06): a hand weapon with plain shots only, known from the start, weaker than
+    /// the Rifle, never in the classic opening pick, the air drop or the armory, and never upgraded (no Mk, Infusion, Twist or Tame). Every
+    /// weapon form, the Pistol included, has a name, an attack name and an icon, and the hand holds the Pistol's picture or the whitebox box.</summary>
     [TestFixture]
     public class PistolTest
     {
-        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
         const float TargetHp = 100f;
         bool savedArt;
 
@@ -25,6 +27,8 @@ namespace AnomalyArena
             Art.Enabled = savedArt;
             Time.timeScale = 1f;
         }
+
+        // ───── Without a scene ─────
 
         [Test]
         public void PistolForm_IsAHandWeaponWithoutAnomaly_AndTheRosterKeepsItOutOfItsList()
@@ -53,6 +57,8 @@ namespace AnomalyArena
             finally { Object.DestroyImmediate(roster); }
         }
 
+        // ───── In the Chinese scene ─────
+
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task Pistol_PressAndHold_FiresPlainRoundsAtItsInterval_EachStoppingAtTheFirstEnemy()
         {
@@ -71,7 +77,7 @@ namespace AnomalyArena
                 Assert.That(pistol.Label, Is.EqualTo(ArenaTerms.WeaponForm(WeaponForm.Pistol)).And.Not.Contain("?"), "its name alone");
                 var definition = weapons.roster.Get(WeaponForm.Pistol);
                 Assert.That(definition, Is.Not.Null, "the saved roster gives the Pistol its numbers");
-                float hit = definition.damageA * weapons.crowdDamageMultiplier;                                     
+                float hit = definition.damageA * weapons.crowdDamageMultiplier; // no starting-form factor and no Mk
 
                 weapons.HandleInput(true, true, false);
                 var round = AttackPool.Instance.actors.FirstOrDefault(a => a && a.gameObject.activeSelf && a.weapon == pistol);
@@ -88,6 +94,7 @@ namespace AnomalyArena
                 Assert.That(targets[0].Hp, Is.EqualTo(TargetHp - hit).Within(.001f), "one plain hit");
                 Assert.That(targets[1].Hp, Is.EqualTo(TargetHp), "the enemy behind it is untouched");
 
+                // Held down, it waits for its interval, then fires again without a new press.
                 pistol.cooldown = 1f;
                 weapons.HandleInput(false, true, false);
                 Assert.That(Rounds(pistol), Is.Zero, "nothing while the interval runs");
@@ -97,8 +104,9 @@ namespace AnomalyArena
                 Assert.That(pistol.reload, Is.Zero, "no clip to reload");
                 Assert.That(reveals, Is.Zero, "no reveal toast");
 
+                // Weaker than the Rifle: a smaller hit and less damage a second than a full Charged Shot with its charge.
                 var rifle = new RunWeapon { form = WeaponForm.Rifle, variant = 0, revealed = true };
-                float rifleCycle = weapons.CycleSeconds(rifle) + weapons.StartingFormCycleFactor(WeaponForm.Rifle);                                          
+                float rifleCycle = weapons.CycleSeconds(rifle) + weapons.StartingFormCycleFactor(WeaponForm.Rifle); // a 1 s charge, scaled like the cooldown
                 Assert.That(weapons.HitDamage(pistol), Is.LessThan(weapons.HitDamage(rifle)), "a smaller hit than a full Charged Shot");
                 Assert.That(weapons.TheoreticalDps(pistol), Is.LessThan(weapons.HitDamage(rifle) / rifleCycle), "and less damage a second");
             }
@@ -146,7 +154,7 @@ namespace AnomalyArena
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
-        public async Task EveryWeaponForm_HasAnIconAndNames_AndTheHandHoldsThePistolsPictureOrTheBox()
+        public async Task EveryWeaponForm_HasAnIconAndNames_AndTheHandHoldsThePistolsPictureOrItsWhiteboxShape()
         {
             var (game, _) = await V3CombatSmokeTest.StartSandbox();
             var hud = Object.FindAnyObjectByType<V2Hud>(FindObjectsInactive.Include);
@@ -160,11 +168,11 @@ namespace AnomalyArena
                 for (int variant = 0; variant < 2; variant++)
                     Assert.That(ArenaTerms.WeaponAnomaly(form, variant), Is.Not.Empty, $"{form} {variant}: an attack name");
             }
-            Assert.That(ArenaTerms.WeaponForm(WeaponForm.Pistol), Is.EqualTo(ArenaText.Pair("Pistol","Pistol")));
+            Assert.That(ArenaTerms.WeaponForm(WeaponForm.Pistol), Is.EqualTo(ArenaText.Pair("小手枪", "Pistol")));
             for (int variant = 0; variant < 2; variant++)
             {
-                Assert.That(WeaponGuide.How(WeaponForm.Pistol, variant), Does.Contain(ArenaText.Pair("Plain shots","Plain shots")), "how it attacks");
-                Assert.That(WeaponGuide.Backfire(WeaponForm.Pistol, variant), Does.StartWith(ArenaText.Pair("None","None")), "the trait line says there is none instead of staying empty");
+                Assert.That(WeaponGuide.How(WeaponForm.Pistol, variant), Does.Contain(ArenaText.Pair("普通射击", "Plain shots")), "how it attacks");
+                Assert.That(WeaponGuide.Backfire(WeaponForm.Pistol, variant), Does.StartWith(ArenaText.Pair("无", "None")), "the trait line says there is none instead of staying empty");
             }
 
             var weapons = game.runWeapons;
@@ -178,7 +186,11 @@ namespace AnomalyArena
             Assert.That(held.illustration.enabled, Is.True, "and shows it");
             Art.Enabled = false;
             await Frames(2);
-            Assert.That(held.whitebox.enabled, Is.True, "the whitebox hand holds the box");
+            // Since 2026-11-10 every form in use has its own whitebox shape from the table of looks; the saved box is only for the
+            // retired forms.
+            var shape = held.transform.Find("Whitebox " + WeaponForm.Pistol);
+            Assert.That(shape && shape.GetComponent<WhiteboxLook>().Visible, Is.True, "the whitebox hand holds the Pistol's own whitebox shape");
+            Assert.That(held.whitebox.enabled, Is.False, "in place of the saved box");
             Assert.That(held.illustration.enabled, Is.False, "and no picture");
         }
 

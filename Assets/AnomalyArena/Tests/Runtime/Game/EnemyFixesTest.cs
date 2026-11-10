@@ -6,14 +6,14 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-                                                                                                                                    
-                                                                                                                                                                        
-                                                                                                                        
+    /// <summary>Enemy fixes: the Bloater rushes the player from a distance and blows up soon after reaching them;
+    /// a Warden never shields a boss. An elite wears a pure white outline in every look (its 3D model, its illustration, whitebox), gone when its body comes back as an
+    /// ordinary enemy (M116). (The Tyrant's charge line of 2026-10-25 is tested in TyrantRedesignTest.)</summary>
     [TestFixture]
     [Category("V3Smoke")]
     public class EnemyFixesTest
     {
-        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
 
         [TearDown]
         public void TearDown() => Time.timeScale = 1f;
@@ -36,7 +36,7 @@ namespace AnomalyArena
             float seconds = Time.time - start;
 
             Assert.That(game.player.Hp, Is.LessThan(playerHp), "the blast hurts the player");
-                                                                                                                       
+            // Walking (speed x 0.5) would need over 2 s for this gap; the rush plus the short fuse is well under that.
             Assert.That(seconds, Is.LessThan(1.5f), "rush and fuse are quick");
         }
 
@@ -101,7 +101,7 @@ namespace AnomalyArena
                 enemy.Configure(data, 1f, true);
                 Assert.That(enemy.ShowsEliteOutline, Is.True, "a living elite shows the outline");
 
-                                                                                                                                          
+                // Illustrated style, a kind with a saved model (every kind but the Chanter): the EliteOutline material goes on the model.
                 Art.Enabled = true;
                 await Frames(3);
                 Assume.That(model.UsingModel, Is.True, "the illustrated style shows the model");
@@ -114,19 +114,26 @@ namespace AnomalyArena
                 }
                 CaptureCloseUp(game.cam, enemy.Position, "elite-outline-model");
 
-                                                                              
+                // Whitebox: no model; the table's elite instead (2026-11-10): a white shell round the whitebox look and a white tip over it.
                 Art.Enabled = false;
                 await Frames(3);
                 Assert.That(model.EliteOutlined, Is.False, "whitebox: the model and its outline are hidden");
-                var shell = look.EliteShell;
-                Assert.That(shell && shell.enabled, Is.True, "whitebox: the white shell is on");
-                Assert.That(shell.bounds.size.y, Is.GreaterThan(enemy.bodyRenderer.bounds.size.y), "the shell stands round the body");
-                Assert.That(shell.sharedMaterial.GetColor("_BaseColor"), Is.EqualTo(Color.white), "pure white");
+                var whitebox = enemy.GetComponent<WhiteboxCharacter>();
+                Assume.That(whitebox && whitebox.Shown, Is.True, "whitebox: the table's look shows");
+                var shell = whitebox.EliteShell;
+                Assert.That(shell && shell.gameObject.activeInHierarchy, Is.True, "whitebox: the white shell is on");
+                var bodyRenderer = whitebox.Look.PartRenderer(whitebox.Look.MainPart);
+                var shellRenderer = shell.PartRenderer(shell.MainPart);
+                Assert.That(shellRenderer.bounds.size.y, Is.GreaterThan(bodyRenderer.bounds.size.y), "the shell stands round the body");
+                var white = shell.ShownColour(shell.MainPart);
+                Assert.That(white.r == white.g && white.g == white.b && white.r > .9f, Is.True, "white");
+                Assert.That(whitebox.EliteTip && whitebox.EliteTip.gameObject.activeInHierarchy, Is.True, "whitebox: the white tip is over it");
 
-                                                                           
+                // Reused as an ordinary enemy: no outline in either style.
                 enemy.Configure(data, 1f, false);
                 await Frames(3);
-                Assert.That(shell.enabled, Is.False, "reused as an ordinary enemy: no shell");
+                Assert.That(shell.gameObject.activeInHierarchy, Is.False, "reused as an ordinary enemy: no shell");
+                Assert.That(whitebox.EliteTip.gameObject.activeInHierarchy, Is.False, "nor the tip");
                 Art.Enabled = true;
                 await Frames(3);
                 Assert.That(model.EliteOutlined, Is.False, "nor the outline material on the model");
@@ -134,8 +141,8 @@ namespace AnomalyArena
                     if (renderer) Assert.That(renderer.sharedMaterials[^1].shader.name, Is.Not.EqualTo("AnomalyArena/EliteOutline"), "its own materials are back");
                 CaptureCloseUp(game.cam, enemy.Position, "elite-outline-none");
 
-                                                                                                                              
-                                                                                                     
+                // An elite spawned the usual way (here a Chanter) wears it too, on whichever look it shows: its model, or its
+                // illustration (a white silhouette just behind it) for a kind without a saved model.
                 chanter = game.waves.SpawnLab(EnemyKind.Chanter, enemy.Position + Vector3.right * 3f, true, ElementKind.None);
                 Assume.That(chanter, Is.Not.Null, "the pool has a free Chanter");
                 chanter.SuppressRewards = true;
@@ -162,7 +169,7 @@ namespace AnomalyArena
             }
         }
 
-                                                                                                                                            
+        /// <summary>The game camera, kept at its angle, centred on a point and zoomed in (orthographic size 2.5) for one capture.</summary>
         static void CaptureCloseUp(Camera cam, Vector3 at, string name)
         {
             var t = cam.transform;
@@ -174,7 +181,7 @@ namespace AnomalyArena
             finally { t.position = position; cam.orthographicSize = size; }
         }
 
-                                                                                                                                     
+        /// <summary>Renders the game camera into a 1280x720 image under the project's Logs folder, to look at the outline.</summary>
         static void CaptureView(Camera cam, string name)
         {
             const int width = 1280, height = 720;
@@ -202,7 +209,7 @@ namespace AnomalyArena
             for (int i = 0; i < count; i++) await Awaitable.NextFrameAsync();
         }
 
-                                                                                                                
+        /// <summary>A frozen sandbox target becomes a free-moving live enemy of this kind at a point.</summary>
         static void Release(Enemy enemy, EnemyDefinition data, Vector3 at)
         {
             enemy.Configure(data, 1f, false);

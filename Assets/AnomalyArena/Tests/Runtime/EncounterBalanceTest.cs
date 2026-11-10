@@ -12,7 +12,7 @@ namespace AnomalyArena
     [TestFixture, Category("TtkBalance")]
     public class EncounterBalanceTest
     {
-        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
 
         [TearDown]
         public void TearDown() => Time.timeScale = 1f;
@@ -54,10 +54,10 @@ namespace AnomalyArena
             File.AppendAllText("work/authoring-receipts/ttk-runtime.csv",
                 FormattableString.Invariant($"{form},{variant},{target.maxHp},{seconds}\n"));
             Assert.That(target.maxHp, Is.EqualTo(5f));
-
+            // Launch Yourself (damageB 7 since 2026-10-23) kills a wave-1 Grunt in one flight, before a second launch is possible.
             if (form == WeaponForm.RocketLauncher && variant == 1)
                 Assert.That(seconds, Is.LessThan(game.runWeapons.CycleSeconds(weapon)), "one flight kills the target");
-
+            // Frame/physics tolerance is separate from the requested .5-.8 s design range.
             else Assert.That(seconds, Is.InRange(.4f, .95f), "input-to-death with one saved target six units away");
         }
 
@@ -74,7 +74,7 @@ namespace AnomalyArena
             {
                 waveField.SetValue(game.waves, wave - 1);
                 foreach (var data in game.waves.roster.Where(d => d))
-
+                    // V5: specials spawn as ordinary enemies; from wave 6 they also appear as elites (affixed specials).
                 foreach (bool elite in EnemyRoles.IsSpecial(data.kind) && data.canElite &&
                                        wave >= game.waves.firstEliteWave
                              ? new[] { false, true }
@@ -83,11 +83,11 @@ namespace AnomalyArena
                     target.Configure(data, game.waves.HpMultiplier, elite);
                     target.enabled = false;
                     float actualShield = ElementStatus.For(target).Shield;
-
+                    // The Tyrant's shield is refilled once a fight, when it enters its second and last phase (system doc 13.2).
                     float phases = data.kind == EnemyKind.Tyrant
                         ? target.maxHp * balance.tyrantPhaseShieldShare * (Enemy.TyrantPhaseCount - 1)
                         : 0f;
-
+                    // Boss HP is fixed: the Tyrant uses the boss wave 15's reference DPS, the Prophet prophetBudgetWave's, on every wave.
                     float dps = balance.DpsAt(balance.BudgetWave(data, wave));
                     if (data.kind == EnemyKind.Hollow)
                         Assert.That(target.maxHp, Is.EqualTo(Mathf.Round(balance.DpsAt(balance.prophetBudgetWave) * balance.bossSeconds
@@ -100,7 +100,8 @@ namespace AnomalyArena
                         Assert.That(modeled, Is.InRange(.5f, .8f),
                             data.kind + " melee variants share the fodder budget");
                     else Assert.That(modeled, Is.InRange(1f, 3.5f), data.kind + " ordinary function/special budget");
-
+                    // §9.2: fixed swarm XP; every other non-boss enemy earns the same XP per second of its TTK budget (no affix here),
+                    // times this wave's XP scale (the difficulty curve: a share of enemy HP pays the same XP on every wave).
                     float xp = game.waves.ExperienceFor(target);
                     if (target.IsBoss) Assert.That(xp, Is.Zero, data.kind + " boss gives no XP");
                     else if (!elite && EnemyRoles.IsMelee(data.kind))

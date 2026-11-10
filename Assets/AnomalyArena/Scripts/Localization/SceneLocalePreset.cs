@@ -1,22 +1,23 @@
 using System;
 using UnityEngine;
-using UnityEngine.Localization;
 
 namespace AnomalyArena
 {
+    /// <summary>Starts the official Localization in the language the game opens in (ArenaLanguage: the player's saved choice, the web
+    /// page's address, or the system language). Until 2026-11-10 each scene carried its own starting Locale and the scene decided the
+    /// language; one scene now serves both languages, and the field that held the Locale is gone (the saved scenes still list it, and
+    /// Unity skips it when they load).</summary>
     [DefaultExecutionOrder(-10000)]
     [DisallowMultipleComponent]
     public sealed class SceneLocalePreset : MonoBehaviour
     {
-        [field: SerializeField, Tooltip("Official Locale asset selected before showing this scene's UI.")]
-        public Locale StartingLocale { get; set; }
+        // Decided in Awake, before any Start reads the language.
+        void Awake() => _ = PrepareAsync(ArenaLanguage.ResolveStartup(gameObject.scene.name));
 
-        void Awake() => _ = PrepareAsync();
-
-        async Awaitable PrepareAsync()
+        async Awaitable PrepareAsync(string startingCode)
         {
-            try { await ArenaText.InitializeAsync(StartingLocale, destroyCancellationToken); }
-            catch (OperationCanceledException) {                                                           }
+            try { await ArenaText.InitializeAsync(startingCode, destroyCancellationToken); }
+            catch (OperationCanceledException) { /* Scene unloading cancels its initialization request. */ }
         }
     }
 }

@@ -5,6 +5,9 @@
 
 Needs matplotlib for the chart. Parsing and aggregation use only the standard
 library, so load_rows(), parse_csv_text() and aggregate() can be used on their own.
+
+Only the open mode is counted: a run with any row whose mode is "story" (the V2 day campaign) is left
+out whole, and a CSV without the mode column is all open mode. plot_story_metrics.py charts the story mode.
 """
 
 import argparse
@@ -69,8 +72,9 @@ AXIS = "#c3c2b7"
 BOM = "\ufeff"  # byte order mark some spreadsheet exports put before the header
 TRUE_TEXT = {"true", "1", "yes", "y", "t"}
 TEXT_FIELDS = ("event", "run_id", "session_id", "edition", "build", "outcome", "cause",
-               "enemy", "stage", "starting_weapon")
-LOWER_FIELDS = ("event", "run_id", "session_id", "edition", "outcome", "cause", "stage")
+               "enemy", "stage", "starting_weapon", "mode")
+LOWER_FIELDS = ("event", "run_id", "session_id", "edition", "outcome", "cause", "stage", "mode")
+MODE_STORY = "story"
 
 
 # ---------------------------------------------------------------- parsing
@@ -162,6 +166,16 @@ def cause_of(row):
     return row["cause"] if row["cause"] in CAUSES else "unknown"
 
 
+def story_run_ids(rows):
+    """run_ids with any row in the story mode, in any edition. Such a run is left out whole, also when its
+    run_start went out as the open mode because the game marked the run as a campaign run only later."""
+    return {row["run_id"] for row in rows if row.get("mode", "") == MODE_STORY and row["run_id"]}
+
+
+def is_story(row, story_ids):
+    return row.get("mode", "") == MODE_STORY or row["run_id"] in story_ids
+
+
 def keep_row(row, include_test=False, edition=None):
     if edition:
         return row["edition"] == edition.lower()
@@ -179,17 +193,23 @@ def aggregate(rows, include_test=False, edition=None):
       started       distinct run_id with a run_start row
       ended         run endings counted (one per run_id)
       unfinished    distinct run_id with a run_start row and no run_end row
+      story_runs    distinct run_id left out as the story mode
     """
     counts = {b: {c: 0 for c in CAUSES} for b in BUCKETS}
     enemies = {}
     started_ids = set()
     ended_ids = set()
     ended = 0
+    story_ids = story_run_ids(rows)
+    story_left_out = set()
 
     for row in rows:
         if not keep_row(row, include_test, edition):
             continue
         run_id = row["run_id"]
+        if is_story(row, story_ids):
+            story_left_out.add(run_id)
+            continue
         if row["event"] == "run_start":
             if run_id:
                 started_ids.add(run_id)
@@ -220,6 +240,7 @@ def aggregate(rows, include_test=False, edition=None):
         "started": len(started_ids),
         "ended": ended,
         "unfinished": len(started_ids - ended_ids),
+        "story_runs": len(story_left_out),
     }
 
 
@@ -267,6 +288,8 @@ def format_summary(agg):
     lines.append("")
     lines.append("Runs started: %d   ended: %d   unfinished (closed tab): %d"
                  % (agg["started"], agg["ended"], agg["unfinished"]))
+    if agg.get("story_runs"):
+        lines.append("Story-mode runs left out: %d (plot_story_metrics.py charts them)" % agg["story_runs"])
 
     kinds = enemies_sorted(agg)
     if kinds:

@@ -6,7 +6,9 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>Winning the void trial is one forced extra level: Max HP and Max Energy grow and Energy refills as on a
+    /// level-up and one card pick is banked, while XP, the level number and the next level's cost stay. Document 9.4: a reroll swaps all
+    /// three cards for different ones, once per wave, and a draft put off comes back with the cards it showed.</summary>
     [TestFixture]
     public class RunProgressionDraftTest
     {
@@ -45,6 +47,7 @@ namespace AnomalyArena
             return new DraftCard(DraftCardKind.Skill, "skill", "", _ => true);
         }
 
+        /// <summary>Level 12 with the eleven level drafts taken, then one full XP bar: a stat-only draft is banked.</summary>
         RunProgression CreateAtMaxLevel(bool bankStatDraft)
         {
             var sut = CreateSystemUnderTest();

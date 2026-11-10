@@ -2,6 +2,7 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
+    /// <summary>A value copied from a real active skill; the renderer cannot change the skill.</summary>
     public readonly struct SkillGroundVisual
     {
         public readonly SkillId Id;

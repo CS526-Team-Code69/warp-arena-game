@@ -3,7 +3,7 @@ using NUnit.Framework;
 
 namespace AnomalyArena
 {
-
+    /// <summary>Card and help texts make their key words stand out (ArenaEmphasis).</summary>
     [TestFixture]
     public class ArenaEmphasisTest
     {

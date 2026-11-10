@@ -6,12 +6,26 @@ using UnityEngine.Networking;
 
 namespace AnomalyArena
 {
-
+    /// <summary>
+    /// Music by stage for the title screen and the V2 day campaign (2026-11-06): each part of the run has its own track instead of the
+    /// one combat track. title on the title screen; day for the day, its title cards, the loadout, the Day 0 tutorial, the lull and the
+    /// build phase; dusk for the dusk; night for the night (and the base visited at night); boss for the Tyrant fight and its core, and
+    /// (since 2026-11-06) for the void trial behind the black hole's hidden gate, by day or in the afternoon;
+    /// ending, played once, for the ending and the result screen of a campaign run. A story scene keeps what is playing.
+    /// The tracks are mp3 files in StreamingAssets/Music, loaded at run time, so on the web they are separate files and not part of the
+    /// data file. Until dusk.mp3 and ending.mp3 exist, the dusk borrows night.mp3 and the ending title.mp3; once the files are there
+    /// they are used at the next start, with no change here. A track with no file at all leaves V3WorldAudio's music as it was,
+    /// without an error. A classic run keeps V3WorldAudio's combat music.
+    /// Changes cross-fade over fadeSeconds of real time. A looping track plays from its file's head trim to its tail trim and
+    /// cross-fades into its own start over loopFadeSeconds, so a file that fades in and out does not dip at the seam. The volume follows
+    /// V3WorldAudio's musicGain and masterGain; the pause menu holds the music where it is.
+    /// </summary>
     public sealed class CampaignMusic : MonoBehaviour
     {
         public enum Track { None, Title, Day, Dusk, Night, Boss, Ending }
         static readonly string[] Files = { null, "title", "day", "dusk", "night", "boss", "ending" };
 
+        /// <summary>Seconds cut from the start and the end of a file when it loops (its own fade-in and fade-out).</summary>
         [Serializable] public struct Trim
         {
             public string file;
@@ -19,11 +33,11 @@ namespace AnomalyArena
         }
 
         public static CampaignMusic Instance { get; private set; }
-
+        /// <summary>True while one of these tracks plays in place of V3WorldAudio's music, which stays silent meanwhile.</summary>
         public static bool Overrides => Instance && Instance.current != Track.None;
-
+        /// <summary>The track playing now (None: V3WorldAudio's music has the channel).</summary>
         public Track Current => current;
-
+        /// <summary>True once the track can play: its own file, or the one it borrows (dusk: night, ending: title), has been loaded.</summary>
         public bool Loaded(Track track) => ClipFor(track);
 
         [Min(.1f), Tooltip("Seconds of real time a change of track takes to cross-fade.")] public float fadeSeconds = 1.5f;
@@ -88,7 +102,7 @@ namespace AnomalyArena
             var source = gameObject.AddComponent<AudioSource>();
             source.playOnAwake = false;
             source.spatialBlend = 0f;
-            source.loop = false;                                                       
+            source.loop = false; // looping is done here, with a cross-fade at the seam
             source.volume = 0f;
             return source;
         }
@@ -96,12 +110,12 @@ namespace AnomalyArena
         IEnumerator Load(Track track)
         {
             string path = Path.Combine(Application.streamingAssetsPath, folder, Files[(int)track] + ".mp3");
-
+            // On the web the path is already a URL; in the Editor and a desktop build it is a file path.
             string uri = path.Contains("://") ? path : "file:///" + path.Replace('\\', '/').TrimStart('/');
             using (var request = UnityWebRequestMultimedia.GetAudioClip(uri, AudioType.MPEG))
             {
                 yield return request.SendWebRequest();
-                if (request.result != UnityWebRequest.Result.Success) yield break;                                                        
+                if (request.result != UnityWebRequest.Result.Success) yield break; // not there: the old music, or a borrowed track, stays
                 var clip = DownloadHandlerAudioClip.GetContent(request);
                 if (!clip) yield break;
                 clip.name = Files[(int)track];
@@ -109,6 +123,7 @@ namespace AnomalyArena
             }
         }
 
+        /// <summary>The clip a track plays: its own file, else the borrowed one (dusk: night, ending: title), else none.</summary>
         AudioClip ClipFor(Track track)
         {
             if (track == Track.None) return null;
@@ -128,6 +143,7 @@ namespace AnomalyArena
             return default;
         }
 
+        /// <summary>The track this moment of the game asks for; None hands the music back to V3WorldAudio.</summary>
         Track Wanted()
         {
             var game = GameManager.Instance;
@@ -137,23 +153,27 @@ namespace AnomalyArena
             var campaign = V2Campaign.Active;
             if (campaign && campaign.Running && game.CampaignRunning)
             {
-
+                // The run is over: V2Campaign.Finish raises CampaignEvents.Ended and then turns the stage Off, while Running stays true
+                // until the scene reloads. Its result screen plays the ending once, whether the run was won, the player died by day or the
+                // base fell (2026-11-10: before this, Off handed the music back to the combat track, so a lost run's result screen was
+                // silent). Checked before the void trial, which can still be on after a death in there.
+                if (campaign.Stage == CampaignStage.Off) return campaignOver ? Track.Ending : Track.None;
+                // The Nash Prophet's fight in the void trial is a boss fight whatever the time of day.
                 if (WorldMap.Active && WorldMap.Active.TrialActive) return Track.Boss;
                 switch (campaign.Stage)
                 {
-                    case CampaignStage.Off: return Track.None;
-                    case CampaignStage.Story: return current;                                       
+                    case CampaignStage.Story: return current; // a story scene keeps what is playing
                     case CampaignStage.Dusk: return Track.Dusk;
                     case CampaignStage.Night: return Track.Night;
                     case CampaignStage.FinalBoss:
                     case CampaignStage.Core: return Track.Boss;
                     case CampaignStage.Ending: return Track.Ending;
                     case CampaignStage.Base: return nightTime ? Track.Night : duskTime ? Track.Dusk : Track.Day;
-                    default: return Track.Day;                                                                 
+                    default: return Track.Day; // the title cards, loadout, tutorial, day, lull and build phase
                 }
             }
             if (campaignOver && (phase == ArenaUiState.Result || current == Track.Ending)) return Track.Ending;
-            return Track.None;                                              
+            return Track.None; // a classic run: V3WorldAudio's combat music
         }
 
         void Update()
@@ -169,10 +189,10 @@ namespace AnomalyArena
             if (paused) return;
 
             var wanted = Wanted();
-            if (wanted != Track.None && !ClipFor(wanted)) wanted = Track.None;                                                
+            if (wanted != Track.None && !ClipFor(wanted)) wanted = Track.None; // nothing loaded (yet): leave the old music be
             if (wanted != current)
             {
-
+                // A track that borrows the clip already playing (dusk on night.mp3 into the night) goes on without a restart.
                 if (current != Track.None && wanted != Track.None && ClipFor(wanted) == ClipFor(current) && Loops(wanted) == Loops(current))
                     current = wanted;
                 else Switch(wanted, fadeSeconds);
@@ -180,7 +200,7 @@ namespace AnomalyArena
             else if (current != Track.None && Loops(current) && playing.isPlaying)
             {
                 position += Time.unscaledDeltaTime;
-                if (position >= loopEnd - loopFadeSeconds) Switch(current, loopFadeSeconds);                                           
+                if (position >= loopEnd - loopFadeSeconds) Switch(current, loopFadeSeconds); // the seam: cross-fade into its own start
             }
 
             var audio = V3WorldAudio.Instance;
@@ -193,11 +213,12 @@ namespace AnomalyArena
             if (blend >= 1f && fading.isPlaying) fading.Stop();
         }
 
+        /// <summary>The playing source becomes the fading one and the track starts on the other, after its head trim when it loops.</summary>
         void Switch(Track next, float seconds)
         {
             bool restart = next == current;
             (playing, fading) = (fading, playing);
-            fadeFrom = fading.isPlaying ? fading.volume : 0f;                                                                       
+            fadeFrom = fading.isPlaying ? fading.volume : 0f; // the old sound fades out from the level it had when the change began
             blend = 0f;
             fadeLength = seconds;
             current = next;

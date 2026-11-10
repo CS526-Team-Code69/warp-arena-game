@@ -7,77 +7,78 @@ using UnityEngine;
 
 namespace AnomalyArena.EditorTools
 {
-                 
-                                                                                                                                         
-                                                                                                                                           
-                                                                                                                                    
-                                                                                                                 
-                                                                                                                                         
-                                                                                                                                          
-                                                                                                                                     
-                                                                                               
-                                                                                                                 
-                                                                                                                                  
-                                                                                                                             
-                  
+    /// <summary>
+    /// Installs the V2 day campaign into the arena scene. Where work/ holds the prepared art (this edition only) it first copies it into
+    /// Art/Campaign: icons sliced from the V2 icon sheets, the ship pictures, the decimated V2 props, the room backgrounds (levels 1 to 3)
+    /// and memory CG layers from prepare_pictures_1106.py, each voice line's default take and the memory CG sounds. Without it (the
+    /// English edition: sync_en.py brings Art/Campaign over with its .meta files, never work/) it uses the files
+    /// already in Art/Campaign. Either way it sets their import settings, builds URP Lit materials and prefabs for the props, writes the
+    /// CampaignRules and CampaignArt assets and puts a V2Campaign on the scene's GameManager. Every missing file is skipped (the campaign
+    /// then draws its whitebox stand-in) and named again in the closing line. Safe to run again: it replaces what it made before and
+    /// keeps the rules asset's numbers once it exists (they are tuned in the Inspector). The campaign's sound effects of 2026-11-10
+    /// come from Audio/Campaign (InstallCampaignAudio); the voice lines recorded that day (E00, D01, K01, N01 to N03, B01) sit in
+    /// Art/Campaign/Voice under their line ids like the others (copied there by work/v2-doc-1110/tools/copy_audio_picks.py, not
+    /// listed in the voice manifest), so FillVoices takes them as it takes every file there.
+    /// Menu: Anomaly Arena/V2 Campaign/Install, and Install (use files in place), which skips the copy here too.
+    /// Batch: -executeMethod AnomalyArena.EditorTools.InstallV2Campaign.InstallBatch [-filesInPlace]. The log ends with one line,
+    /// "[V2Campaign] INSTALL OK: ..." or "[V2Campaign] INSTALL FAILED: ...", and Unity exits with 0 or 1 (see InstallBatch).
+    /// </summary>
     public static class InstallV2Campaign
     {
         const string ArtRoot = "Assets/AnomalyArena/Art/Campaign/";
         const string DataRoot = "Assets/AnomalyArena/Data/Campaign/";
         const string RulesPath = DataRoot + "V2CampaignRules.asset";
         const string ArtPath = DataRoot + "V2CampaignArt.asset";
-                                                                                                                                      
-                                                                                                                                    
-                                                                                                                                      
-        static readonly string[] Scenes = { "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity", "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity" };
+        // The scene that gets the component (one scene serves both languages since 2026-11-10).
+        static readonly string[] Scenes = { "Assets/AnomalyArena/Scenes/ArenaV2.unity" };
         const string LitShader = "Universal Render Pipeline/Lit";
         const string UnlitShader = "Universal Render Pipeline/Unlit";
-                                                                                                                                      
-                                                                                                                           
-                                                                                                                          
-                                                                                                                             
+        // Read/Write stays on for the base mesh alone (the damaged base is only a material on this same mesh, see Reuses): V2Campaign
+        // splits it at run time into four submeshes, one per side, so a broken side alone takes the damaged material (D3-A).
+        // A player build, the web one included, keeps a mesh's vertices for scripts
+        // only when Read/Write is on; the editor always keeps them, so without this the split would fail in the build alone.
         const string BaseMesh = ArtRoot + "Models/Base/Base.fbx";
 
-                                                                                                                          
-                                                                                                                                        
-                                                                                                                                        
-                         
-                                                                                                                                          
-                                                                                                                                       
-                                                                                              
-                                                                                                                                          
-                                                                                                                                       
-                                                                                                                                      
-                                                                                                                                        
-                                                                        
-                                                                                                                                           
+        // Dark matter node. It reuses the alloy ore's mesh (Reuses), so
+        // its colour is what tells the two apart, and the V2 palette keeps purple for dark matter alone. Before, its colour map went in
+        // untinted with a glow of (.8, .35, 1) x .9: the map's slate-blue body (sRGB about .11/.16/.21) read as a blue-grey rock beside
+        // the brown ore.
+        // DarkNodeTint (sRGB, multiplies the colour map): the body turns purple-black, about .09/.04/.13 (hue 274; the dark matter icon's
+        //   body is .11/.07/.16), at a quarter of its old luminance and 7 % of the alloy ore's. Green is cut hardest because the map's
+        //   body is green-blue; red stays high so the hue lands on violet rather than indigo.
+        // DarkNodeGlow (linear HDR, multiplies the same colour map): the body glows a dim violet (hue about 269), so the node still reads
+        //   purple in shadow and from afar, and the magenta cracks reach about .60/.02/.78 sRGB, twice their old glow. Red sits higher
+        //   against blue than in the icon's violet (.43/.18/.64) to make up for the map's blue. The cracks' glow peaks near .6 linear
+        //   (under .8 with full light on them), below the bloom threshold of the illustrated look (V5Look, 1.05; its soft knee passes a
+        //   few per cent at most): the node glows without a bloom halo.
+        // Worked out from DarkMatterNode_BaseColor.png with sRGB/linear arithmetic, before lights and post effects; the game view decides.
         static readonly Color DarkNodeTint = new(.85f, .40f, .70f);
         static readonly Color DarkNodeGlow = new(1.15f, .07f, 1.30f);
 
         static readonly string[] Icons = { "energy", "alloy", "dark", "control", "ship-bay", "armament", "energy-lab", "shield", "durability", "engine", "armor", "fuel", "lamp", "skill", "locked", "repair", "night-lock" };
-                                                                                                
-                                                                                                                                
+        // Picture name in Art/Campaign/Pictures -> its source under work/art-plans/v2-1104/gen.
+        // These keep the 1024 rule (SetupPicture). cg-base is no longer in the art asset since the memory CG has its own shots.
         static readonly Dictionary<string, string> Pictures = new()
         {
             ["ship-wreck"] = "ship-wreck/ship-wreck.png",
             ["ship-intact"] = "ship-intact/ship-intact.png",
             ["cg-base"] = "base-exterior/base-exterior.png",
         };
-                                                                                                                                      
-                                                                                                                                       
+        // Room backgrounds, levels 1 to 3, and the memory CG layers come ready-sized from PreparedPictures (prepare_pictures_1106.py:
+        // rooms 1080x720, CG 1280x720, both sides a multiple of 4 so DXT takes them as they are) and import at full size (SetupLayer).
         static readonly string[] Rooms = { "room-control", "room-armament", "room-energy", "room-armament-2", "room-armament-3", "room-energy-2", "room-energy-3" };
         static readonly int[] Shots = { 2, 3, 4, 5, 6 };
         static string ShotName(int shot, bool front) => $"cg01-s{shot}-{(front ? "fg" : "bg")}";
-                                                              
+        // Memory CG sounds, in the order of art.memorySounds.
         static readonly string[] Sounds = { "SFX-memory-cg-transition", "SFX-wormhole-turbulence", "SFX-ship-crash", "SFX-base-deploy" };
-                                                                                                                             
+        // The base system line voiced once per room (Voice/S04-<CampaignRoom>.mp3); every other line is Voice/<line id>.mp3.
         const string RoomOfflineLine = "S04";
-                                                                                                                      
+        // Vorbis quality 0.5, mono, compressed in memory: the voice and CG sounds should add little to the web build.
         const float AudioQuality = .5f;
         static readonly string[] Models = { "Base", "BaseDamaged", "ShipWreck", "ShipIntact", "MiningLamp", "OreAlloy", "DarkMatterNode", "ShadowA", "ShadowB", "ShadowC" };
         static readonly Dictionary<string, string> Reuses = new() { ["DarkMatterNode"] = "OreAlloy", ["BaseDamaged"] = "Base" };
 
-                                                                                                                    
+        // The parts of work/art-plans/v2-1104/voice/manifest.json the installer reads (JsonUtility skips the rest).
         [System.Serializable] class VoiceManifest { public VoiceLine[] lines; }
         [System.Serializable] class VoiceLine { public string id; public int default_take; public VoiceTake[] takes; public VoiceVariant[] variants; }
         [System.Serializable] class VoiceVariant { public string room; public int default_take; public VoiceTake[] takes; }
@@ -86,10 +87,10 @@ namespace AnomalyArena.EditorTools
         static readonly StringBuilder log = new();
         static readonly List<string> problems = new();
         static void Log(string line) { log.AppendLine(line); Debug.Log("[V2Campaign] " + line); }
-                                                                                                                                   
+        /// <summary>Something the install should have made and did not: logged now and listed again in the closing line.</summary>
         static void Problem(string line) { problems.Add(line); Log(line); }
 
-                                                                                      
+        /// <summary>What the last run left out; empty when it was complete.</summary>
         public static IReadOnlyList<string> Problems => problems;
 
         static string Project => Path.GetDirectoryName(Application.dataPath).Replace('\\', '/') + "/";
@@ -106,16 +107,16 @@ namespace AnomalyArena.EditorTools
         [MenuItem("Anomaly Arena/V2 Campaign/Install")]
         public static void InstallMenu() => Install(true);
 
-                                                                                                                                    
+        /// <summary>The install the English edition runs (nothing copied from work/), to check that path in this project.</summary>
         [MenuItem("Anomaly Arena/V2 Campaign/Install (use files in place)")]
         public static void InstallInPlaceMenu() => Install(true, filesInPlace: true);
 
-                     
-                                                                                                                                           
-                                                                                                                                         
-                                                                                                                                 
-                                                                                                
-                      
+        /// <summary>
+        /// Batch entry; -filesInPlace skips the copy even where work/ exists. It exits by itself: with -quit alone a returning method ends
+        /// with 0 even after a failed install (logged errors do not change the code; only an exception escaping the method gives 1), and
+        /// without -quit the batch editor would stay open. So: 0 when the closing line is INSTALL OK, 1 for INSTALL FAILED or an
+        /// exception (caught to print the FAILED line). -quit on the command line does no harm.
+        /// </summary>
         public static void InstallBatch()
         {
             int code = 1;
@@ -128,9 +129,9 @@ namespace AnomalyArena.EditorTools
             if (Application.isBatchMode) EditorApplication.Exit(code);
         }
 
-                                                                                                                                         
-                                                                                                                                          
-                                                                                                                                              
+        /// <summary>Returns the log. addToScene: put the V2Campaign on the GameManager of the arena scene (Scenes; opened in batch mode)
+        /// and save it. includeModels false leaves the prop models out (while they are still being prepared); the art asset keeps what it
+        /// had. filesInPlace: use what is in Art/Campaign without copying from work/, as happens anyway where work/ has no sources.</summary>
         public static string Install(bool addToScene, bool includeModels = true, bool filesInPlace = false)
         {
             log.Clear();
@@ -147,7 +148,7 @@ namespace AnomalyArena.EditorTools
             Directory.CreateDirectory(Project + DataRoot);
             var models = includeModels ? Models : new string[0];
 
-                                                                               
+            // 1. Copy the prepared files into the project (this edition only).
             if (copy)
             {
                 foreach (var icon in Icons) CopyIn(IconSource + icon + ".png", ArtRoot + "Icons/" + icon + ".png");
@@ -160,14 +161,14 @@ namespace AnomalyArena.EditorTools
                     foreach (var file in Directory.GetFiles(from))
                     {
                         string ext = Path.GetExtension(file).ToLowerInvariant(), name = Path.GetFileNameWithoutExtension(file);
-                                                                                                                          
+                        // Only what the materials use: the colour and normal maps (metallic and roughness stay in work/).
                         bool used = ext == ".fbx" || ext == ".png" && (name.EndsWith("_BaseColor") || name.EndsWith("_Normal"));
                         string target = ArtRoot + "Models/" + model + "/" + Path.GetFileName(file);
                         if (used) CopyIn(file.Replace('\\', '/'), target);
                         else if (File.Exists(Project + target)) AssetDatabase.DeleteAsset(target);
                     }
                 }
-                                                                                                                                          
+                // Rooms, memory CG, voice and CG sounds: a source that is not here is skipped with one line; what Art/Campaign has stays.
                 if (Directory.Exists(PreparedPictures))
                 {
                     foreach (var room in Rooms) CopyIn(PreparedPictures + room + ".png", ArtRoot + "Pictures/" + room + ".png");
@@ -182,8 +183,8 @@ namespace AnomalyArena.EditorTools
             }
             AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
 
-                                                                                                                                    
-                                                                        
+            // 2. Import settings, in place as well: a synced copy carries this edition's .meta files, so setting them again changes
+            // nothing there, and it repairs any that did not come over.
             foreach (var icon in Icons) SetupSprite(ArtRoot + "Icons/" + icon + ".png");
             foreach (var key in Pictures.Keys) SetupPicture(ArtRoot + "Pictures/" + key + ".png");
             foreach (var room in Rooms) SetupLayer(ArtRoot + "Pictures/" + room + ".png", false);
@@ -195,7 +196,7 @@ namespace AnomalyArena.EditorTools
             foreach (var path in AudioIn("Voice")) SetupAudio(path);
             foreach (var path in AudioIn("Audio")) SetupAudio(path);
 
-                                        
+            // 3. Materials and prefabs.
             var prefabs = new Dictionary<string, GameObject>();
             Material baseDamaged = null;
             int materials = 0;
@@ -207,7 +208,7 @@ namespace AnomalyArena.EditorTools
                 var material = BuildMaterial(model, dir);
                 if (material) materials++;
                 if (model == "BaseDamaged") { baseDamaged = material; if (fbx == null) continue; }
-                                                                                                                                     
+                // A retexture keeps its partner's mesh (same vertices and UVs, checked in Blender): only its textures were prepared.
                 if (fbx == null && Reuses.TryGetValue(model, out var partner)) fbx = FindFile(ArtRoot + "Models/" + partner + "/", ".fbx");
                 if (fbx == null) { Problem($"{model}: no FBX in {dir}"); continue; }
                 SetupModel(fbx, string.Equals(fbx, BaseMesh, System.StringComparison.OrdinalIgnoreCase));
@@ -215,7 +216,7 @@ namespace AnomalyArena.EditorTools
                 if (prefab) prefabs[model] = prefab;
             }
 
-                              
+            // 4. Data assets.
             var rules = AssetDatabase.LoadAssetAtPath<CampaignRules>(RulesPath);
             if (!rules) { rules = ScriptableObject.CreateInstance<CampaignRules>(); AssetDatabase.CreateAsset(rules, RulesPath); Log($"created {RulesPath} with the ledger defaults"); }
             else Log($"kept {RulesPath} (its numbers are tuned in the Inspector)");
@@ -243,15 +244,18 @@ namespace AnomalyArena.EditorTools
             art.fuel = IconAt("fuel"); art.lamp = IconAt("lamp"); art.skill = IconAt("skill"); art.locked = IconAt("locked"); art.repair = IconAt("repair");
             art.nightLock = IconAt("night-lock");
             art.roomControl = Picture("room-control"); art.roomArmament = Picture("room-armament"); art.roomEnergy = Picture("room-energy");
-                                                                                
+            // Levels 2 and 3; an empty entry falls back to level 1 in the game.
             art.roomArmamentLevels = new[] { Picture("room-armament-2"), Picture("room-armament-3") };
             art.roomEnergyLevels = new[] { Picture("room-energy-2"), Picture("room-energy-3") };
             art.shipWreckPicture = Picture("ship-wreck"); art.shipIntactPicture = Picture("ship-intact");
-                                                                                                    
+            // CG01 shots 2 to 6, one background and one transparent foreground each, in shot order.
             art.memoryShots = System.Array.ConvertAll(Shots, shot => AssetDatabase.LoadAssetAtPath<Texture2D>(CgPath(shot, false)));
             art.memoryForegrounds = System.Array.ConvertAll(Shots, shot => AssetDatabase.LoadAssetAtPath<Texture2D>(CgPath(shot, true)));
             FillVoices(art);
             art.memorySounds = System.Array.ConvertAll(Sounds, sound => AssetDatabase.LoadAssetAtPath<AudioClip>(ArtRoot + "Audio/" + sound + ".mp3"));
+            // The 2026-11-10 sound effects from Audio/Campaign (also on their own: Anomaly Arena/V2 Campaign/Install Sounds). Missing
+            // files leave silent entries, counted in the closing line, not a problem.
+            string effects = InstallCampaignAudio.Fill(art);
             EditorUtility.SetDirty(art);
             AssetDatabase.SaveAssets();
             int icons = CountSprites(art), pictures = 0;
@@ -259,14 +263,14 @@ namespace AnomalyArena.EditorTools
             foreach (var icon in Icons) if (!IconAt(icon)) Problem($"icon {ArtRoot}Icons/{icon}.png missing");
             foreach (var key in Pictures.Keys) if (Picture(key)) pictures++; else Problem($"picture {ArtRoot}Pictures/{key}.png missing");
             foreach (var room in new[] { "room-control", "room-armament", "room-energy" }) if (Picture(room)) pictures++; else Problem($"picture {ArtRoot}Pictures/{room}.png missing");
-                                                                                                                                             
+            // The newer media (room levels 2 and 3, memory CG, voice, CG sounds) may be missing: counted in the closing line, not a problem.
             int levels = Count(art.roomArmamentLevels) + Count(art.roomEnergyLevels), layers = Count(art.memoryShots) + Count(art.memoryForegrounds);
             int voices = 0, roomVoices = Count(art.roomOfflineVoices), sounds = Count(art.memorySounds);
             foreach (var v in art.voices) if (v.clip) voices++;
-            string media = $"{levels} room level pictures, {layers} memory CG layers, {voices} voices, {roomVoices} room voices, {sounds} memory sounds";
+            string media = $"{levels} room level pictures, {layers} memory CG layers, {voices} voices, {roomVoices} room voices, {sounds} memory sounds, {effects}";
             Log("media: " + media);
 
-                                      
+            // 5. The scene component.
             string where = addToScene ? AttachToScene(rules, art) : null;
             string scene = !addToScene ? "scene not touched" : where != null ? $"V2Campaign on {where}, scene saved" : "scene not done";
             return Finish($"files {(copy ? "copied from work/" : "used in place")}, {prefabs.Count} prefabs, {materials} materials, {icons} icons, {pictures} pictures, {media}, {scene}");
@@ -281,7 +285,7 @@ namespace AnomalyArena.EditorTools
             return n;
         }
 
-                                                                                          
+        /// <summary>The .mp3 assets in one Art/Campaign folder, sorted by path.</summary>
         static List<string> AudioIn(string folder)
         {
             var paths = new List<string>();
@@ -295,8 +299,8 @@ namespace AnomalyArena.EditorTools
             return paths;
         }
 
-                                                                                                                                            
-                                                
+        /// <summary>Copies each line's default take from the voice manifest: Voice/&lt;line&gt;.mp3, and Voice/S04-&lt;room&gt;.mp3 for the
+        /// line voiced once per room.</summary>
         static void CopyVoices()
         {
             string manifestPath = VoiceSource + "manifest.json";
@@ -327,7 +331,7 @@ namespace AnomalyArena.EditorTools
             return false;
         }
 
-                                                                                                                                             
+        /// <summary>art.voices from Art/Campaign/Voice (line id = file name, sorted), and the per-room line in CampaignRoom order.</summary>
         static void FillVoices(CampaignArt art)
         {
             var rooms = System.Enum.GetNames(typeof(CampaignRoom));
@@ -342,8 +346,8 @@ namespace AnomalyArena.EditorTools
             art.roomOfflineVoices = System.Array.ConvertAll(rooms, room => AssetDatabase.LoadAssetAtPath<AudioClip>($"{ArtRoot}Voice/{RoomOfflineLine}-{room}.mp3"));
         }
 
-                                                                                                                                          
-                                                                            
+        /// <summary>Rooms and memory CG layers: kept at their prepared size (2048 cap), crunched, no mipmaps, clamped. Without alpha they
+        /// compress to DXT1, the transparent foregrounds to DXT5.</summary>
         static void SetupLayer(string path, bool alpha)
         {
             if (AssetImporter.GetAtPath(path) is not TextureImporter importer) return;
@@ -364,7 +368,7 @@ namespace AnomalyArena.EditorTools
             importer.SaveAndReimport();
         }
 
-                                                                                                                  
+        /// <summary>Voice and CG sounds: mono, Vorbis at AudioQuality, compressed in memory, preloaded.</summary>
         static void SetupAudio(string path)
         {
             if (AssetImporter.GetAtPath(path) is not AudioImporter importer) return;
@@ -380,7 +384,7 @@ namespace AnomalyArena.EditorTools
             importer.SaveAndReimport();
         }
 
-                                                                                      
+        /// <summary>The closing line the batch run and its caller look for.</summary>
         static string Finish(string summary)
         {
             if (problems.Count == 0) { Log("INSTALL OK: " + summary); return log.ToString(); }
@@ -433,7 +437,7 @@ namespace AnomalyArena.EditorTools
             importer.SaveAndReimport();
         }
 
-                                                                                                                                                    
+        /// <summary>Room and CG pictures: at most 1024 px, compressed, no mipmaps (the asset plan's rule for CG layers in the web build).</summary>
         static void SetupPicture(string path)
         {
             if (AssetImporter.GetAtPath(path) is not TextureImporter importer) return;
@@ -447,7 +451,7 @@ namespace AnomalyArena.EditorTools
             importer.SaveAndReimport();
         }
 
-                                                                                                                                           
+        /// <param name="readable">turn Read/Write on (the base mesh, see BaseMesh); false leaves the model's own setting as it is.</param>
         static void SetupModel(string path, bool readable)
         {
             if (AssetImporter.GetAtPath(path) is not ModelImporter importer) return;
@@ -476,7 +480,7 @@ namespace AnomalyArena.EditorTools
             if (AssetImporter.GetAtPath(path) is TextureImporter importer)
             {
                 var type = normal ? TextureImporterType.NormalMap : TextureImporterType.Default;
-                                                                                                                                         
+                // 1024 in the game: two 2048 maps per big model would add about 40 MB to the web build (the sources in work/ stay 2048).
                 if (importer.textureType != type || importer.sRGBTexture == normal || importer.maxTextureSize != 1024)
                 {
                     importer.textureType = type;
@@ -507,20 +511,20 @@ namespace AnomalyArena.EditorTools
             if (material.HasProperty("_MainTex")) material.SetTexture("_MainTex", baseMap);
             if (normalMap) { material.SetTexture("_BumpMap", normalMap); material.EnableKeyword("_NORMALMAP"); }
             bool darkMatter = model == "DarkMatterNode";
-                                                                                                                                                   
+            // The colour map as it is, except on the dark matter node (DarkNodeTint); set every run so the result does not depend on the last one.
             var tint = darkMatter ? DarkNodeTint : Color.white;
             material.SetColor("_BaseColor", tint);
             if (material.HasProperty("_Color")) material.SetColor("_Color", tint);
             material.SetFloat("_Metallic", model.StartsWith("Shadow") ? 0f : .25f);
             material.SetFloat("_Smoothness", model.StartsWith("Shadow") ? .15f : .35f);
-                                                                                                                     
+            // Glow where the design glows: the lamp's glass and the dark matter's cracks, from their own colour map.
             if (model == "MiningLamp" || darkMatter)
             {
                 material.EnableKeyword("_EMISSION");
                 material.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
                 material.SetTexture("_EmissionMap", baseMap);
-                                                                                                                                      
-                                                                        
+                // SetColor takes sRGB values and this linear-space project converts them on the way to the shader, so the dark node's
+                // glow, chosen in linear terms, goes in through .gamma.
                 material.SetColor("_EmissionColor", darkMatter ? DarkNodeGlow.gamma : new Color(.6f, .9f, .9f) * .6f);
             }
             else
@@ -560,7 +564,7 @@ namespace AnomalyArena.EditorTools
             var shader = Shader.Find(UnlitShader);
             if (!shader) return null;
             if (!material) { material = new Material(shader) { name = "Shard" }; AssetDatabase.CreateAsset(material, path); }
-                                                                                  
+            // Additive: the icons are drawn on near-black, which then disappears.
             material.SetFloat("_Surface", 1f);
             material.SetFloat("_Blend", 2f);
             material.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.One);
@@ -576,7 +580,7 @@ namespace AnomalyArena.EditorTools
         static Sprite IconAt(string name) => AssetDatabase.LoadAssetAtPath<Sprite>(ArtRoot + "Icons/" + name + ".png");
         static Texture2D Picture(string name) => AssetDatabase.LoadAssetAtPath<Texture2D>(ArtRoot + "Pictures/" + name + ".png");
 
-                                                                                                                                                     
+        /// <summary>Puts the V2Campaign on the first scene in Scenes that exists; returns "GameManager in scene", or null after a problem.</summary>
         static string AttachToScene(CampaignRules rules, CampaignArt art)
         {
             string path = null;

@@ -6,13 +6,13 @@ using Random = UnityEngine.Random;
 namespace AnomalyArena
 {
     public enum WavePhase { Idle, WaveIntro, WaveActive, WaitingBuild, FinalBoss }
-                 
-                                                                                               
-                                                                                              
-                                                                                    
-                                                                                                                       
-                                                                                   
-                  
+    /// <summary>
+    /// V2: one numbered wave owns a clock; clearing each batch schedules the next saved batch.
+    /// Timer expiry stops births, then living survivors must be cleared before WaveCompleted.
+    /// Scene-authored warning markers and prepared enemies provide all V2 spawning.
+    /// V5 (system doc §10–11): 14 ordinary waves whose weights list the allowed kinds, then the final boss as wave 15.
+    /// No far-enemy recycling: survivors stay where they are (§10.4 abolished it).
+    /// </summary>
     [DefaultExecutionOrder(100)]
     public class WaveManager : MonoBehaviour
     {
@@ -24,9 +24,9 @@ namespace AnomalyArena
         public WaveSpawnMarker[] preparedMarkers;
         public EnemyBolt[] preparedBolts;
         public Enemy tyrant;
-        [Header("Spawn counts and movement tuning.")]
-        [Min(0f), Tooltip("Multiply regular, elite and summoned enemy counts, then round up. Standalone bosses remain singular.")] public float spawnCountMultiplier = 1f;
-        [Min(0f), Tooltip("Chase and fixed charge-speed multiplier; attack intervals, projectiles and knockback are unchanged.")] public float movementSpeedMultiplier = 1f;
+        [Header("生成量和移动调节")]
+        [Min(0f), Tooltip("普通批次、精英和召唤数量乘此值后向上取整；独立首领仍仅一个。")] public float spawnCountMultiplier = 1f;
+        [Min(0f), Tooltip("追逐和固定冲撞速度倍率；攻击间隔、弹速、击退不变。")] public float movementSpeedMultiplier = 1f;
         [SerializeField] int pressurePickupRevision;
         public int PressurePickupRevision => pressurePickupRevision;
         public void MarkPressurePickupApplied() => pressurePickupRevision = 1;
@@ -83,11 +83,11 @@ namespace AnomalyArena
         [Header("Bosses (system doc §13)")]
         [Tooltip("Move numbers of the Nash Prophet (void trial) and the Tyrant (final boss).")] public BossTuning bosses = new();
         static readonly ElementKind[] EliteElements = { ElementKind.Fire, ElementKind.Poison, ElementKind.Frost, ElementKind.Lightning, ElementKind.Earth, ElementKind.Light, ElementKind.Void };
-                                                                                                                                      
+        // §7.6, §13.2: the Tyrant ignores the same two elements as the Nash Prophet, fixed for every run (no draw).
         static readonly ElementKind[] TyrantImmunityPool = new List<ElementKind>(ElementImmunity.Boss).ToArray();
-                                                                                       
+        /// <summary>Elites alive plus elite warnings still waiting to spawn.</summary>
         public int ActiveEliteCount { get { int count = 0; foreach (var enemy in alive) if (enemy && enemy.IsAlive && enemy.Elite) count++; if (preparedMarkers != null) foreach (var marker in preparedMarkers) if (marker && marker.gameObject.activeSelf && marker.elite) count++; return count; } }
-                                                                                                                     
+        /// <summary>A random element not carried by any alive or pending elite (all seven are candidates).</summary>
         public ElementKind PickEliteAffix()
         {
             var free = new List<ElementKind>(EliteElements);
@@ -97,16 +97,16 @@ namespace AnomalyArena
         }
         [Range(.05f,.5f)] public float refillMissingShare = .2f;
         [SerializeField] int continuousCrowdRevision;
-        [Tooltip("First five waves as a fraction of full density; later waves use full density.")] public float[] earlyPopulationScale = { .3f,.4f,.5f,.65f,.8f };
+        [Tooltip("前五关数量占最终密度的比例；之后使用完整密度。")] public float[] earlyPopulationScale = { .3f,.4f,.5f,.65f,.8f };
         [SerializeField] int quickFeedbackRevision;
         int spawnSectorCursor;
-                     
-                                                                                                                                                 
-                                                                                                                                                    
-                                                                                                                              
-                      
+        /// <summary>
+        /// Batch shares of the three spawn groups this wave (system doc 11.2): x = basics (melee kinds, Spitter, Warden), y = ordinary specials,
+        /// z = elites. Specials ramp in from the first wave whose table lists one and reach specialShare specialRampWaves waves later; elites start
+        /// at firstEliteWave and grow at waves 8 and 10. Basics fill the rest, so the late waves settle on fixed proportions.
+        /// </summary>
         public Vector3 ActiveRoleShares => RoleShares(WaveIndex + 1);
-                                                                                                                                           
+        /// <summary>The same shares for any 1-based ordinary wave (the Tyrant's Royal Scepter calls a crowd mixed like wave 14).</summary>
         public Vector3 RoleShares(int wave)
         {
             int first = FirstSpecialWave();
@@ -114,7 +114,7 @@ namespace AnomalyArena
             float elite = wave < firstEliteWave ? 0f : eliteShare * (wave < 8 ? .25f : wave < 10 ? .5f : 1f);
             return new Vector3(Mathf.Max(0f,1f-special-elite),special,elite);
         }
-                                                                                                                       
+        /// <summary>The first 1-based ordinary wave whose table lists an ordinary special; 0 when none does.</summary>
         int FirstSpecialWave()
         {
             if (!waveSet || waveSet.waves == null) return 0;
@@ -132,13 +132,13 @@ namespace AnomalyArena
             float ramp = earlyPopulationScale != null && index < earlyPopulationScale.Length ? Mathf.Clamp01(earlyPopulationScale[index]) : 1f;
             return Mathf.Min(Mathf.Max(1,maxConcurrentOrdinary),Mathf.Max(1,Mathf.CeilToInt(waveSet.waves[index].aliveTarget*Mathf.Max(0f,spawnCountMultiplier)*ramp)));
         }
-                     
-                                                                                                                                                       
-                                                                                                                                                                    
-                                                                                                                                                  
-                                                                                                                                               
-                     
-                      
+        /// <summary>
+        /// System doc §9.2: melee swarm gives a fixed swarmExperienceReward and a mini Splitter miniExperienceReward. Every other non-boss enemy gives
+        /// xpPerReferenceSecond × its TTK budget in seconds (EncounterBalance.TargetSeconds) plus affixExperienceBonus when affixed, times experienceRateMultiplier
+        /// and this wave's WaveExperienceScale. Inside a wave each kind pays the same XP per share of its HP, and the wave scale follows enemy HP
+        /// up the difficulty curve, so a share of enemy HP pays about the same XP on every wave. Bosses give none (the fight ends the trial or
+        /// the run).
+        /// </summary>
         public float ExperienceFor(Enemy enemy)
         {
             if (!enemy || !enemy.definition || enemy.IsBoss) return 0f;
@@ -147,39 +147,53 @@ namespace AnomalyArena
             var balance = waveSet ? waveSet.encounterBalance : null;
             float body = experienceTable.TryGetValue((enemy.definition.kind, enemy.Elite), out float tabled) ? tabled
                 : balance ? Mathf.Max(0f, xpPerReferenceSecond) * balance.TargetSeconds(enemy.definition, enemy.Elite)
-                : enemy.definition.xp * (enemy.Elite ? 5f : 1f);                                                   
+                : enemy.definition.xp * (enemy.Elite ? 5f : 1f); // Legacy fallback when no TTK budget is assigned.
             float affix = enemy.Affix != ElementKind.None ? Mathf.Max(0f, affixExperienceBonus) : 0f;
             return (body + affix) * Mathf.Max(0f, experienceRateMultiplier) * WaveExperienceScale;
         }
 
-                                                                                                                                        
-                                                                                                                                      
-                                                                                         
+        /// <summary>Design document 9.2: this wave's multiplier on the XP of special minions and elites. Their HP grows with the wave's
+        /// difficulty (CombatScale, the reference DPS against wave 1's), and so does their XP; the wave's experienceScale is an extra
+        /// per-wave factor on top (1 keeps the curve). 1 without a wave table.</summary>
         public float WaveExperienceScale => waveSet && waveSet.waves is { Length: > 0 } && WaveIndex >= 0
             ? CombatScale * Mathf.Max(0f, waveSet.waves[Mathf.Min(WaveIndex, waveSet.waves.Length - 1)].experienceScale) : 1f;
         [Header("Player-near batch spawning")]
-        [Tooltip("Inner radius of the regular spawn ring; does not change per-wave stat growth.")] public float nearbySpawnMin = 8f;
-        [Tooltip("Spawn candidates stay within this player-relative distance; distant map anchors are excluded.")] public float nearbySpawnMax = 18f;
-        [Tooltip("Minimum safe distance for onscreen spawns when an offscreen point cannot be found.")] public float visibleSpawnSafety = 10f;
-        [Tooltip("Maximum random candidates per spawn-location search.")] public int spawnPointCandidates = 80;
-        [Tooltip("Retry interval when valid spawn locations or pooled enemies are unavailable.")] public float batchSpawnRetry = .1f;
+        [Tooltip("普通出生环内半径；不改变每关属性成长。")] public float nearbySpawnMin = 8f;
+        [Tooltip("出生点离玩家的最大距离；旧远处固定点不参与。")] public float nearbySpawnMax = 18f;
+        [Tooltip("找不到屏外点时，镜头内出生必须保持的安全距离。")] public float visibleSpawnSafety = 10f;
+        [Tooltip("一次出生点搜索的随机候选上限。")] public int spawnPointCandidates = 80;
+        [Tooltip("合法点或保存对象池暂不足时，重试预告的间隔。")] public float batchSpawnRetry = .1f;
         public int BatchIndex { get; private set; }
         public bool TimeExpired { get; private set; }
         public int LivingCount { get { int count = 0; foreach (var enemy in alive) if (enemy && enemy.IsAlive && enemy.gameObject.activeInHierarchy) count++; return count; } }
         public int PendingCount { get { int count = batchSpawnsRemaining + pendingSplits.Count * Mathf.Max(0, splitterMiniCount); if (preparedMarkers != null) foreach (var marker in preparedMarkers) if (marker && marker.gameObject.activeSelf) count++; return count; } }
-                                                                                                                                              
-                                                                                                                                      
-                                                  
+        /// <summary>The two elements the Tyrant ignores (system doc §7.6, §13.2): always Frost and Lightning (ElementImmunity.Boss), the same
+        /// in every run; nothing is drawn and no wave announces them. Only the player's Damage Penetration share of their damage gets
+        /// through, and never a status.</summary>
         public ElementKind[] TyrantImmunities { get; } = (ElementKind[])TyrantImmunityPool.Clone();
         public WavePhase Phase { get; private set; }
         public float TimeLeft { get; private set; }
         public float HpMultiplier => waveSet && WaveIndex >= 0 ? waveSet.waves[Mathf.Min(WaveIndex, waveSet.waves.Length - 1)].hpMultiplier * waveSet.ExtraHp(WaveIndex+1) : 1f;
         public float EnemyDamageFactor => waveSet ? waveSet.DamageFactor(WaveIndex+1) : 1f;
-                                                                                                                                                                           
-                                                                                                                                           
-        public float CombatScale => waveSet && waveSet.encounterBalance && WaveIndex >= 0 ? waveSet.encounterBalance.DpsAt(Phase == WavePhase.FinalBoss ? WaveCount + 1 : WaveIndex + 1) / waveSet.encounterBalance.DpsAt(1) : 1f;
-                                                                                                                                            
-                                                                                                       
+        /// <summary>R(w): this wave's reference DPS over wave 1's, i.e. how much fodder EHP has grown. Status stacks, damage over time and skill hits follow it.</summary>
+        /// The final boss fight counts as wave 15 here (number table row 59): WaveIndex stays on the last ordinary wave.
+        public float CombatScale
+        {
+            get
+            {
+                float campaign = CombatScaleRule?.Invoke() ?? 0f; // the V2 day campaign's scale by day (since 2026-11-10)
+                if (campaign > 0f) return campaign;
+                return waveSet && waveSet.encounterBalance && WaveIndex >= 0 ? waveSet.encounterBalance.DpsAt(Phase == WavePhase.FinalBoss ? WaveCount + 1 : WaveIndex + 1) / waveSet.encounterBalance.DpsAt(1) : 1f;
+            }
+        }
+        /// <summary>V2 day campaign (since 2026-11-10): CombatScale by the campaign's day instead of the wave; null, or 0 or less, keeps
+        /// the classic R(w).</summary>
+        public static Func<float> CombatScaleRule;
+        /// <summary>V2 day campaign (since 2026-11-10): a batch kind's weight by the campaign's day, given its wave table weight (0 when the
+        /// table does not list it); 0 or less keeps the kind out of the wave. Null in the classic run: the table alone decides.</summary>
+        public static Func<EnemyKind, int, int> KindWeightRule;
+        /// <summary>The Tyrant's own damage growth, that of the final boss wave (wave 15). Its scepter's summons keep the
+        /// last ordinary wave's (EnemyDamageFactor), as document 12.2 sizes them on wave 14.</summary>
         public float FinalBossDamageFactor => waveSet ? waveSet.DamageFactor(WaveCount + 1) : 1f;
         public float EnemySpeedFactor => (waveSet ? waveSet.SpeedFactor(WaveIndex+1) : 1f) * MovementSpeedScale;
         public float BuildTime => waveSet && WaveIndex >= 0 ? waveSet.waves[Mathf.Min(WaveIndex, waveSet.waves.Length - 1)].buildTime : 20f;
@@ -189,10 +203,10 @@ namespace AnomalyArena
         bool trialSuspended;
         bool finalBossPending;
         ElementKind waveAffixA, waveAffixB;
-                                                                                                                                                
+        /// <summary>The two elements ordinary enemies of this wave may carry (doc 7.6), shown on the wave banner; None before wave 5.</summary>
         public ElementKind WaveAffixA => waveAffixA;
         public ElementKind WaveAffixB => waveAffixB;
-                                                                                                                                          
+        // Kinds whose warning was placed this wave (elites included), and kinds whose warning found no ground in the current marker pass.
         readonly HashSet<EnemyKind> seenThisWave = new(), unplaceable = new();
         float[] rollWeights;
         bool[] rollListed;
@@ -203,7 +217,7 @@ namespace AnomalyArena
         readonly List<PendingSplit> pendingSplits = new();
 
         public int WaveIndex { get; private set; } = -1;
-                                                                                                                  
+        /// <summary>Ordinary waves in the saved set (14); the final boss follows as wave WaveCount + 1.</summary>
         public int WaveCount => waveSet ? waveSet.waves.Length : 0;
         public bool BetweenWaves { get; private set; }
         public int Remaining => LivingCount + PendingCount;
@@ -218,7 +232,7 @@ namespace AnomalyArena
 
         void Awake() => ApplyV5Defaults();
         void OnValidate() => ApplyV5Defaults();
-                                                                                                                                                                         
+        /// <summary>One-time move of scene values saved before the V5 roster (swarm XP 0.1, Spitter from wave 3, Warden from wave 5) to the system doc values.</summary>
         void ApplyV5Defaults()
         {
             if (v5RosterRevision >= 1) return;
@@ -228,7 +242,7 @@ namespace AnomalyArena
             supportFirstWave = 3;
         }
 
-                                                                                                       
+        /// <summary>Saved definition of a kind; null when the roster has no slot for it yet.</summary>
         public EnemyDefinition DefinitionOf(EnemyKind kind)
         {
             if (roster == null) return null;
@@ -253,21 +267,21 @@ namespace AnomalyArena
         }
 
         bool campaignSpawn;
-                                                                                                                                          
+        /// <summary>V2 day campaign: where a wave enemy is born instead of the point the wave picked (null in the classic run).</summary>
         public static System.Func<Vector3, Vector3> SpawnPointOverride;
-                                                                                                                                          
-                                                                                                                                           
-                                                                                         
+        /// <summary>V2 day campaign: ordinary wave enemies are warned of and born where SpawnPointOverride puts them (the rim of the map)
+        /// instead of on the ring round the player, and walk in from there. Off in the classic run (no override), in the void trial and in
+        /// the final boss fight, whose summons keep their ring round the boss.</summary>
         bool RimSpawns => SpawnPointOverride != null && !trialSuspended && Phase != WavePhase.FinalBoss;
-                                                                                                                                          
-                                                                                                                                    
+        /// <summary>Kinds that walk in from the rim. The Spire cannot walk: born on the rim it would never reach the fight and would hold
+        /// the wave open (a wave ends only when every enemy is dead), so it keeps its birth on the ring round the player.</summary>
         static bool WalksInFromRim(EnemyDefinition data) => data && data.kind != EnemyKind.Spire && !EnemyRoles.IsBoss(data.kind);
-                                                                                                                                
+        /// <summary>Cells a rim point may be pulled in toward the map's centre to find ground the body can walk from.</summary>
         const int RimSettleCells = 8;
 
-                                                                                                                                            
-                                                                                                                                          
-                                                                      
+        /// <summary>V2 day campaign: a warning point on the rim for a wave enemy. SpawnPointOverride is asked with the wave's own pick near
+        /// the player; later tries turn that pick round the player, so the override can answer with other ground. False when no try gives
+        /// open ground clear of other warnings and enemies.</summary>
         bool TryRimSpawnPoint(EnemyDefinition data, out Vector3 point)
         {
             Vector3 centre = GM.player.Position;
@@ -281,8 +295,8 @@ namespace AnomalyArena
             return false;
         }
 
-                                                                                                                                        
-                                                                                                             
+        /// <summary>V2 day campaign: the birth point SpawnPointOverride gives for a wave enemy that reaches SpawnPrepared without a rim
+        /// warning; the wave's own point when the override finds no ground the body can walk from.</summary>
         Vector3 RimBirthPoint(EnemyDefinition data, Vector3 at)
         {
             for (int attempt = 0; attempt < 3; attempt++)
@@ -293,12 +307,12 @@ namespace AnomalyArena
             return at;
         }
 
-                     
-                                                                                                                                      
-                                                                                                                                     
-                                                                                                                                  
-                                 
-                      
+        /// <summary>
+        /// Pulls a rim point inside the map and then toward its centre, a cell at a time, until the body stands on walkable ground: a
+        /// body born where its own walking is refused never moves (Enemy.KeepOffEdges refuses every step that is not walkable). With
+        /// clearOfOthers the point must also keep clear of other warnings and living enemies. False when no such ground is within
+        /// RimSettleCells cells.
+        /// </summary>
         bool SettleRimPoint(EnemyDefinition data, ref Vector3 point, bool clearOfOthers)
         {
             point = new Vector3(point.x, 0f, point.z);
@@ -312,7 +326,7 @@ namespace AnomalyArena
             return world.IsWalkable(point, body) && (!clearOfOthers || !RimCrowded(point, data.radius, null, true));
         }
 
-                                                                                                                                                
+        /// <summary>Whether a body of this radius at the point would overlap a living enemy or, with markers, another active warning.</summary>
         bool RimCrowded(Vector3 point, float bodyRadius, WaveSpawnMarker self, bool markers)
         {
             if (markers && preparedMarkers != null)
@@ -324,7 +338,7 @@ namespace AnomalyArena
             return false;
         }
 
-                                                                                                                                                             
+        /// <summary>V2 day campaign: one enemy at an exact point outside any wave (the Day 0 tutorial's first monsters); it gives the usual drops.</summary>
         public Enemy SpawnCampaign(EnemyKind kind, Vector3 at)
         {
             var data = DefinitionOf(kind);
@@ -334,7 +348,7 @@ namespace AnomalyArena
             finally { campaignSpawn = false; }
         }
 
-                                                                                                                                                
+        /// <summary>V2 day campaign: starts the wave of this 0-based index (a day holds two; the overtime days repeat the last ones).</summary>
         public void BeginWaveAt(int index)
         {
             if (!running) { running = true; pendingSplits.Clear(); Enemy.ClearRadiationZones(); radiationClock = 0f; }
@@ -343,9 +357,9 @@ namespace AnomalyArena
 
         static float OrdinaryAffixShare(int index) => index < 4 ? 0f : index < 7 ? .1f : index < 10 ? .15f : .25f;
 
-                                                                                                                                               
-                                                                                                                                           
-                                                    
+        // Design document 9.2: at the start of each wave the experience of every non-swarm kind (plain and elite) is fixed from its HP budget,
+        // so inside the wave each kind pays the same experience per share of its HP; ExperienceFor applies the wave's scale on top. Swarm,
+        // minis and bosses keep their fixed values.
         readonly Dictionary<(EnemyKind kind, bool elite), float> experienceTable = new();
         void BuildExperienceTable()
         {
@@ -355,7 +369,7 @@ namespace AnomalyArena
             var rows = new List<string>();
             foreach (var data in roster)
             {
-                if (!data || IsSwarm(data) || data.kind is EnemyKind.Hollow or EnemyKind.Tyrant) continue;                             
+                if (!data || IsSwarm(data) || data.kind is EnemyKind.Hollow or EnemyKind.Tyrant) continue; // bosses give no experience
                 for (int e = 0; e < 2; e++)
                 {
                     bool elite = e == 1;
@@ -379,12 +393,12 @@ namespace AnomalyArena
             BatchIndex = 0; TimeExpired = false; batchSpawnsRemaining = 0;
             spawnSectorCursor = Random.Range(0,8);
             seenThisWave.Clear();
-                                                                                                                         
-                                                                                                         
+            // Two wave affixes: none before wave 5, three elements for waves 5-7, five for 8-10, all seven from wave 11.
+            // Doc 7.6: a wave brings two affix kinds, so B is drawn from the open elements other than A.
             int available = index < 4 ? 0 : index < 7 ? 3 : index < 10 ? 5 : 7;
             waveAffixA = available > 0 ? (ElementKind)Random.Range(1, available + 1) : ElementKind.None;
             waveAffixB = available > 1 ? (ElementKind)(1 + ((int)waveAffixA - 1 + Random.Range(1, available)) % available) : waveAffixA;
-            if (GM.hud) GM.hud.Banner(ArenaText.Pair($"Wave {index + 1} / {WaveCount}",$"Wave {index + 1} / {WaveCount}"), available > 0 ? $"{ArenaTerms.Element(waveAffixA)} · {ArenaTerms.Element(waveAffixB)}" : ArenaText.Pair("Interstellar Battlefield","Interstellar Battlefield"));
+            if (GM.hud) GM.hud.Banner(ArenaText.Pair($"第 {index + 1} / {WaveCount} 波", $"Wave {index + 1} / {WaveCount}"), available > 0 ? $"{ArenaTerms.Element(waveAffixA)} · {ArenaTerms.Element(waveAffixB)}" : ArenaText.Pair("星际战场", "Interstellar Battlefield"));
         }
 
         public void BeginFinalBoss()
@@ -407,10 +421,10 @@ namespace AnomalyArena
             tyrant.Configure(tyrant.definition, waveSet ? Mathf.Max(1f,waveSet.finalBossHpFactor) : 1f, false);
             var board = ElementStatus.For(tyrant);
             foreach (var element in TyrantImmunities) board?.SetImmunity(element, 1f);
-            tyrant.HoldAttacks(bosses.tyrantOpeningGrace);                                  
+            tyrant.HoldAttacks(bosses.tyrantOpeningGrace); // no move while the banner is up
             Track(tyrant);
             finalBossPending = false;
-            if (GM.hud) GM.hud.Banner(ArenaText.Pair("THE TYRANT KING","THE TYRANT KING"), ArenaText.Pair("Break its Shield. Its charge smashes through walls and Bulwarks.","Break its Shield. Its charge smashes through walls and Bulwarks."));
+            if (GM.hud) GM.hud.Banner(ArenaText.Pair("暴虐君王", "THE TYRANT KING"), ArenaText.Pair("击破护盾。它的冲锋会撞碎墙体和壁垒。", "Break its Shield. Its charge smashes through walls and Bulwarks."));
         }
 
         void TickV2(float dt)
@@ -445,17 +459,17 @@ namespace AnomalyArena
                     foreach (var marker in preparedMarkers) if (marker) marker.gameObject.SetActive(false);
                 }
                 if (LivingCount == 0) EndV2Wave();
-                return;                                                                            
+                return; // Keep WaveActive and all combat input/enemy actions alive during cleanup.
             }
             spawnTimer -= dt;
             if (LivingCount == 0 && PendingCount == 0) BeginBatch();
             else if (batchSpawnsRemaining == 0) RefillPopulation();
             if (batchSpawnsRemaining > 0 && spawnTimer <= 0f) IssueBatchMarkers();
-                                                                                                                              
+            // Elites and specials are included in the batch, so timed additions cannot exceed the basic/special/elite shares.
             TickPreparedMarkers(dt);
         }
 
-                                                                                                                                                                     
+        /// <summary>Ages Bloater radiation zones; while the player stands inside any, every radiationTickSeconds of exposure costs radiationTickDamage HP.</summary>
         void TickRadiation(float dt)
         {
             var player = GM ? GM.player : null;
@@ -479,7 +493,7 @@ namespace AnomalyArena
             basicRemaining = Mathf.Clamp(Mathf.RoundToInt(batchSpawnsRemaining * shares.x), 0, batchSpawnsRemaining);
             int eliteWanted = Mathf.Clamp(Mathf.RoundToInt(batchSpawnsRemaining * shares.z), 0, batchSpawnsRemaining - basicRemaining);
             specialRemaining = batchSpawnsRemaining - basicRemaining - eliteWanted;
-                                                                                                                                 
+            // A small batch would round its special share to zero; keep one slot so the specials of an early wave really appear.
             if (specialRemaining == 0 && shares.y > 0f && basicRemaining > 1) { basicRemaining--; specialRemaining++; }
             ReserveFirstAppearances(ref basicRemaining, ref specialRemaining);
             eliteRemaining = Mathf.Min(eliteWanted, Mathf.Max(0, maxConcurrentElites - ActiveEliteCount));
@@ -505,12 +519,12 @@ namespace AnomalyArena
             var shares = ActiveRoleShares;
             int eliteShareCount = Mathf.RoundToInt(target * shares.z), eliteTarget = Mathf.Min(eliteShareCount, Mathf.Max(0, maxConcurrentElites));
             int basicTarget = Mathf.RoundToInt(target * shares.x) + eliteShareCount - eliteTarget;
-            if (shares.y > 0f && target - basicTarget - eliteTarget <= 0 && basicTarget > 1) basicTarget--;                                      
+            if (shares.y > 0f && target - basicTarget - eliteTarget <= 0 && basicTarget > 1) basicTarget--; // Same one-slot floor as BeginBatch.
             int specialTarget = Mathf.Max(0, target - basicTarget - eliteTarget);
             int missingBasic = Mathf.Max(0,basicTarget-basic), missingElite = Mathf.Max(0,eliteTarget-elite);
             int missingSpecial = Mathf.Max(0,specialTarget-special);
-                                                                                                                                           
-                                                                                                  
+            // A group above its share (specials reserved for a first appearance, a slot that fell back to a basic) still holds its places:
+            // queue only the free places of the population, taking the cut from the basics first.
             int excess = missingBasic + missingSpecial + missingElite - Mathf.Max(0, target - basic - special - elite);
             if (excess > 0) { int cut = Mathf.Min(excess, missingBasic); missingBasic -= cut; excess -= cut; }
             if (excess > 0) { int cut = Mathf.Min(excess, missingSpecial); missingSpecial -= cut; excess -= cut; }
@@ -518,17 +532,17 @@ namespace AnomalyArena
             int missing = missingBasic+missingSpecial+missingElite;
             if (missing < Mathf.Max(1,Mathf.CeilToInt(target*refillMissingShare))) return;
             ReserveFirstAppearances(ref missingBasic, ref missingSpecial, Mathf.Max(0, special - specialTarget));
-                                                                                                       
+            // Count warnings as incoming bodies, so repeated ticks never queue the same deficit twice.
             basicRemaining = missingBasic; specialRemaining = missingSpecial; eliteRemaining = missingElite;
             batchSpawnsRemaining = missing; BatchIndex++; spawnTimer = 0f;
         }
 
-                     
-                                                                                                                                                   
-                                                                                                                                                    
-                                                                                                                                                     
-                                                                                                           
-                      
+        /// <summary>
+        /// Doc 11.2: every kind the wave lists appears in it. Each special the wave lists that has not appeared yet this wave takes a special slot
+        /// from the basics of the batch, so a wave whose special share rounds to one slot still brings all of its specials. Specials already on the
+        /// field above their share (<paramref name="surplus"/>: a reserved slot another special took while the unseen kind found no ground) count as
+        /// reserved, so the specials never exceed their share by more than one body per kind still unseen.
+        /// </summary>
         void ReserveFirstAppearances(ref int basics, ref int specials, int surplus = 0)
         {
             int unseen = 0;
@@ -547,22 +561,22 @@ namespace AnomalyArena
             {
                 int roll = Random.Range(0, batchSpawnsRemaining);
                 int quota = roll < basicRemaining ? 0 : roll < basicRemaining + specialRemaining ? 1 : 2;
-                int group = quota == 2 && ActiveEliteCount >= maxConcurrentElites ? 0 : quota;                                                
+                int group = quota == 2 && ActiveEliteCount >= maxConcurrentElites ? 0 : quota; // Elite cap reached: this slot becomes fodder.
                 var data = RollBatchEnemy(group);
-                if (!data && group > 0) data = RollBatchEnemy(group = 0);                                                                       
+                if (!data && group > 0) data = RollBatchEnemy(group = 0); // Nothing eligible (not in this wave or pool empty): a basic instead.
                 if (!data) data = DefinitionOf(EnemyKind.Grunt);
                 if (!data) break;
                 bool elite = group == 2;
-                                                                                                                                 
-                                                                  
+                // An elite is a special with an element no other alive/pending elite carries; ordinary specials never carry one,
+                // and ordinary basics roll the wave's affix pair.
                 var affix = !data.canAffix ? ElementKind.None
                     : elite ? PickEliteAffix()
                     : EnemyRoles.IsSpecial(data.kind) ? ElementKind.None
                     : Random.value < affixShare ? Random.value < .5f ? waveAffixA : waveAffixB : ElementKind.None;
                 if (!PlaceMarker(data, elite, affix))
                 {
-                                                                                                                                                   
-                                                                                          
+                    // A kind drawn first only because it has not appeared this wave (a Spire with no open ground near the player) must not hold up
+                    // the batch: it waits for the next pass and this slot is drawn again.
                     if (group < 2 && !seenThisWave.Contains(data.kind) && unplaceable.Add(data.kind)) continue;
                     break;
                 }
@@ -573,8 +587,8 @@ namespace AnomalyArena
         }
 
         bool IsSwarm(EnemyDefinition data) => EnemyRoles.IsMelee(data.kind);
-                                                                                                                                                    
-                                                                                                         
+        /// <summary>Spawn group 0 of system doc 11.2, the basic enemies: the melee kinds plus the ranged Spitter and the support Warden (doc 10.2).
+        /// Experience still follows IsSwarm: only the melee kinds give the fixed swarm reward.</summary>
         public static bool IsBasic(EnemyKind kind) => EnemyRoles.IsMelee(kind) || kind is EnemyKind.Spitter or EnemyKind.Warden;
         int ShadeCap => WaveIndex + 1 >= shadePairWave ? 2 : 1;
         int ShadeCount()
@@ -584,11 +598,11 @@ namespace AnomalyArena
             if (preparedMarkers != null) foreach (var marker in preparedMarkers) if (marker && marker.gameObject.activeSelf && marker.definition && marker.definition.kind == EnemyKind.Shade) count++;
             return count;
         }
-                     
-                                                                                                                                             
-                                                                                                                                                  
-                                                                                                                                                   
-                      
+        /// <summary>
+        /// Group 0 = basics (melee kinds, Spitter, Warden), 1 = ordinary specials, 2 = elites (specials with an affix, from firstEliteWave).
+        /// A kind is listed only when the 1-based wave's saved weight is above zero (system doc §11.2); with constrainActive it must also be able
+        /// to spawn now (Shade cap, a free pool slot). The weight is the map-tilted one and may be zero for a listed kind (a tilt of -10 on a 10).
+        /// </summary>
         bool ListedWeight(int wave1, int index, int group, bool constrainActive, out int weight)
         {
             weight = 0;
@@ -600,17 +614,19 @@ namespace AnomalyArena
                 || group == 2 && wave1 < firstEliteWave) return false;
             var wave = waveSet.waves[Mathf.Clamp(wave1 - 1, 0, waveSet.waves.Length - 1)];
             int kind = (int)data.kind;
-            if (wave.weights == null || kind >= wave.weights.Length || wave.weights[kind] <= 0) return false;
+            int saved = wave.weights != null && kind < wave.weights.Length ? wave.weights[kind] : 0;
+            int listed = KindWeightRule != null ? KindWeightRule(data.kind, saved) : saved;
+            if (listed <= 0) return false;
             if (constrainActive && data.kind == EnemyKind.Shade && ShadeCount() >= ShadeCap) return false;
             if (constrainActive && !HasSpawnCapacity(data)) return false;
-            weight = TiltedWeight(wave, kind);
+            weight = TiltedWeight(listed, kind);
             return true;
         }
-                     
-                                                                                                                                                
-                                                                                                                                                  
-                                                                                        
-                      
+        /// <summary>
+        /// One weight per roster slot for a batch group: the map-tilted weight of every listed kind, raised so each keeps at least minKindShare
+        /// of the group total (a map may reweight the mix but no kind the table lists may vanish). Slots not listed, or unable
+        /// to spawn now under constrainActive, stay zero and are left out of the floor.
+        /// </summary>
         void FillGroupWeights(int wave1, int group, bool constrainActive, float[] weights, bool[] listed)
         {
             for (int i = 0; i < weights.Length; i++)
@@ -620,8 +636,8 @@ namespace AnomalyArena
             }
             ApplyShareFloor(weights, listed, minKindShare);
         }
-                                                                                                                                                  
-                                                                                                                                                                    
+        /// <summary>Spawn weights per roster slot of one batch group (0 basic, 1 special, 2 elite) in a 1-based ordinary wave on the current map,
+        /// after the map tilt and the minKindShare floor, as at the start of the wave (the live Shade cap and pool are not applied). For tools and tests.</summary>
         public float[] GroupWeights(int wave, int group)
         {
             var weights = new float[roster != null ? roster.Length : 0];
@@ -629,11 +645,11 @@ namespace AnomalyArena
             FillGroupWeights(wave, group, false, weights, new bool[weights.Length]);
             return weights;
         }
-                     
-                                                                                                                                             
-                                                                                                                                                   
-                                                                                                                                    
-                      
+        /// <summary>
+        /// Raises every listed weight under minShare of the listed total to exactly minShare of the new total; the others keep their weight.
+        /// Raising grows the total, so the floor line is recomputed until no kept kind falls under it. When the floor cannot hold for every listed
+        /// kind (minShare times their count reaches 1) or the listed weights are all zero, the listed kinds split the group evenly.
+        /// </summary>
         public static void ApplyShareFloor(float[] weights, bool[] listed, float minShare)
         {
             int count = 0;
@@ -645,8 +661,8 @@ namespace AnomalyArena
                 for (int i = 0; i < weights.Length; i++) if (listed[i]) weights[i] = total > 0f ? total / count : 1f;
                 return;
             }
-                                                                                                                                                  
-                                                                                                                                 
+            // The raised set is every kind under minShare of the final total. Each pass adds the kinds under the current line and grows the total
+            // to what the kept weights need (kept / (1 - raised * minShare)); a pass that adds nobody has found the final total.
             float floorTotal = total;
             int raisedBefore = 0;
             for (int pass = 0; pass <= count; pass++)
@@ -679,8 +695,8 @@ namespace AnomalyArena
             if (roster == null) return null;
             if (rollWeights == null || rollWeights.Length != roster.Length) { rollWeights = new float[roster.Length]; rollListed = new bool[roster.Length]; }
             FillGroupWeights(WaveIndex + 1, group, true, rollWeights, rollListed);
-                                                                                                                                              
-                                                                                                                                           
+            // Every kind the wave table lists appears in the wave. Basic and special rolls take a listed kind that has not
+            // appeared yet first (elites count as appeared); a kind whose warning found no ground in this pass goes back to the plain mix.
             if (group < 2)
             {
                 bool unseen = false;
@@ -699,7 +715,7 @@ namespace AnomalyArena
                 roll -= rollWeights[i];
                 if (roll < 0f) return roster[i];
             }
-            return roster[last];                                      
+            return roster[last]; // Random.value can return exactly 1.
         }
         bool FirstAppearance(EnemyKind kind) => !seenThisWave.Contains(kind) && !unplaceable.Contains(kind);
 
@@ -711,15 +727,22 @@ namespace AnomalyArena
             for (int i = 0; i < roster.Length; i++) { roll -= SummonWeight(wave, i); if (roll < 0) return roster[i]; }
             return DefinitionOf(EnemyKind.Grunt);
         }
-                                                                                                                   
+        /// <summary>Tyrant summons: the basic crowd of the last ordinary wave, never specials or bosses.</summary>
         int SummonWeight(WaveSet.Definition wave, int index) => index < roster.Length && roster[index] && !EnemyRoles.IsSpecial(roster[index].kind)
             && !EnemyRoles.IsBoss(roster[index].kind) ? TiltedWeight(wave, (int)roster[index].kind) : 0;
 
         int TiltedWeight(WaveSet.Definition wave, int kindIndex)
         {
             if (wave.weights == null || kindIndex < 0 || kindIndex >= wave.weights.Length || wave.weights[kindIndex] <= 0) return 0;
+            return TiltedWeight(wave.weights[kindIndex], kindIndex);
+        }
+
+        /// <summary>A listed weight after the map's tilt of that kind.</summary>
+        static int TiltedWeight(int listed, int kindIndex)
+        {
+            if (listed <= 0) return 0;
             var tilt = WorldMap.Active && WorldMap.Active.biome ? WorldMap.Active.biome.mixTilt : null;
-            return Mathf.Max(0, wave.weights[kindIndex] + (tilt != null && kindIndex < tilt.Length ? Mathf.Clamp(tilt[kindIndex], -10, 10) : 0));
+            return Mathf.Max(0, listed + (tilt != null && kindIndex >= 0 && kindIndex < tilt.Length ? Mathf.Clamp(tilt[kindIndex], -10, 10) : 0));
         }
 
         bool PlaceMarker(EnemyDefinition data, bool elite, ElementKind affix)
@@ -733,7 +756,7 @@ namespace AnomalyArena
             foreach (var marker in preparedMarkers)
                 if (!marker.gameObject.activeSelf)
                 {
-                                                                                                                      
+                    // V2 day campaign: the warning stands where the enemy will really be born, on the rim of the map.
                     Vector3 point;
                     if (RimSpawns && WalksInFromRim(data)) { if (!TryRimSpawnPoint(data, out point)) return false; }
                     else if (!TryFindV2SpawnPoint(data, out point)) return false;
@@ -749,7 +772,7 @@ namespace AnomalyArena
             foreach (var marker in preparedMarkers)
             {
                 if (!marker.gameObject.activeSelf) continue;
-                                                                                                                                              
+                // V2 day campaign: a warning on the rim only needs its ground to stay walkable; the ring rules round the player do not apply.
                 bool rim = RimSpawns && !marker.bossSummon && WalksInFromRim(marker.definition);
                 bool holds = rim ? !WorldMap.Active || WorldMap.Active.IsWalkable(marker.transform.position, marker.definition.radius)
                     : ValidSpawnPoint(marker.transform.position, marker.definition);
@@ -762,35 +785,35 @@ namespace AnomalyArena
                 }
                 marker.timer -= dt;
                 if (marker.timer > 0f) continue;
-                                                                                                                                           
+                // An enemy still standing on a rim warning holds the birth back: two bodies born into each other can push one off the map.
                 if (rim && RimCrowded(marker.transform.position, marker.definition.radius, marker, false)) { marker.timer = Mathf.Max(.02f, batchSpawnRetry); continue; }
                 var spawned = SpawnPrepared(marker.definition, marker.transform.position, marker.elite, marker.affix, exactPoint: rim || marker.bossSummon);
                 if (spawned)
                 {
-                    if (marker.bossSummon) spawned.SuppressRewards = spawned.BossSummon = true;                                                         
+                    if (marker.bossSummon) spawned.SuppressRewards = spawned.BossSummon = true; // boss summons give no experience but die as their kind
                     marker.gameObject.SetActive(false);
                 }
-                else if (marker.bossSummon) marker.gameObject.SetActive(false);                                              
-                else marker.timer = Mathf.Max(.02f, batchSpawnRetry);                                                           
+                else if (marker.bossSummon) marker.gameObject.SetActive(false); // a summon the pool cannot supply is dropped
+                else marker.timer = Mathf.Max(.02f, batchSpawnRetry); // Pool pressure does not silently erase a pending member.
             }
         }
 
-                                                                                                              
-                                                                                                                                         
-                                                                                                                                      
-                                                                                                            
+        /// <param name="mini">Configure as a mini Splitter (smaller, weaker, fixed XP, never splits).</param>
+        /// <param name="ignoreClock">Also spawn after the wave timer expired (minis are part of a dying enemy, not a new birth).</param>
+        /// <param name="exactPoint">Born exactly at <paramref name="at"/> even while SpawnPointOverride is set: a rim warning already
+        /// stands there, or the point belongs to a boss summon, the enemy lab or a teaching moment.</param>
         Enemy SpawnPrepared(EnemyDefinition data, Vector3 at, bool elite, ElementKind affix = ElementKind.None, bool mini = false, bool ignoreClock = false, bool exactPoint = false)
         {
             if (!data || preparedEnemies == null) return null;
             if (!trialSuspended && !campaignSpawn && (Phase is not (WavePhase.WaveActive or WavePhase.FinalBoss)
                 || !ignoreClock && Phase == WavePhase.WaveActive && (TimeExpired || TimeLeft <= 0f))) return null;
-                                                                                                                                          
-                                                                                                                                         
-                                                                 
+            // V2 day campaign: a wave enemy is born where the campaign puts it (the rim of the map) and walks in, not next to the player.
+            // The Day 0 tutorial's monsters (campaignSpawn), a dead Splitter's minis, the void trial, the final boss fight and the Spire
+            // keep their own points (RimSpawns, WalksInFromRim).
             if (!exactPoint && !campaignSpawn && !mini && RimSpawns && WalksInFromRim(data)) at = RimBirthPoint(data, at);
             foreach (var enemy in preparedEnemies)
             {
-                                                                                                     
+                // Frozen battlefield actors stay registered: they are reserved, not free pool slots.
                 if (!enemy || enemy.gameObject.activeSelf || enemy.CorpseActive || alive.Contains(enemy) || enemy.definition != data) continue;
                 enemy.transform.position = new Vector3(at.x, 0f, at.z);
                 enemy.gameObject.SetActive(true);
@@ -826,10 +849,10 @@ namespace AnomalyArena
         }
         public void TrackBoss(Enemy enemy) => Track(enemy);
 
-                     
-                                                                                                                            
-                                                                                                                    
-                      
+        /// <summary>
+        /// Queues the minis of a Splitter killed by HP. They hatch at the start of the next wave tick (SpawnPendingSplits),
+        /// so a kill inside a weapon's damage loop never wakes pooled bodies while Combatant.All is being iterated.
+        /// </summary>
         public void QueueSplit(Enemy parent)
         {
             if (!parent || !parent.definition || splitterMiniCount <= 0) return;
@@ -837,7 +860,7 @@ namespace AnomalyArena
             if (side.sqrMagnitude < 1e-4f) side = Vector3.right;
             pendingSplits.Add(new PendingSplit { data = parent.definition, at = Query.Flat(parent.Position), side = side.normalized, suppressRewards = parent.SuppressRewards });
         }
-                                                                                                                                                                    
+        /// <summary>Hatches queued mini Splitters through the prepared pool at ±splitterMiniOffset across the parent's facing; returns how many appeared.</summary>
         public int SpawnPendingSplits()
         {
             if (pendingSplits.Count == 0) return 0;
@@ -853,7 +876,7 @@ namespace AnomalyArena
                     var world = WorldMap.Active;
                     if (world && !world.TrialActive) { at = world.ClampPoint(at, body); if (!world.IsWalkable(at, body, true)) at = split.at; }
                     var mini = SpawnPrepared(split.data, at, false, ElementKind.None, true, true);
-                    if (!mini) continue;                                                                                                      
+                    if (!mini) continue; // Pool exhausted (no free or recyclable Splitter body): the mini is lost rather than queued forever.
                     mini.SuppressRewards = split.suppressRewards;
                     mini.IsTrialSummon = false;
                     spawned++;
@@ -878,7 +901,7 @@ namespace AnomalyArena
                 if (enemy) { enemy.SuppressRewards = bossSummon; enemy.IsTrialSummon = trialSuspended; }
             }
         }
-                                                                                                                            
+        /// <summary>Boss summons at exact points (the Nash Prophet places its own warnings first); no experience.</summary>
         public void SpawnExtrasAt(EnemyKind kind, IReadOnlyList<Vector3> points, bool bossSummon)
         {
             var data = DefinitionOf(kind);
@@ -890,13 +913,13 @@ namespace AnomalyArena
                 if (enemy) { enemy.SuppressRewards = bossSummon; enemy.IsTrialSummon = trialSuspended; }
             }
         }
-                                                                                                                                      
+        /// <summary>A saved warning marker not in use, for a boss that shows its own summon points; null when all are busy.</summary>
         public WaveSpawnMarker BorrowMarker()
         {
             if (preparedMarkers != null) foreach (var marker in preparedMarkers) if (marker && !marker.gameObject.activeSelf) return marker;
             return null;
         }
-                                                                                                                                                                     
+        /// <summary>Enemy lab: one enemy of this kind at a point, an elite with the affix when asked and the kind allows it. The boss uses SpawnLabTyrant.</summary>
         public Enemy SpawnLab(EnemyKind kind, Vector3 at, bool elite, ElementKind affix)
         {
             var data = DefinitionOf(kind);
@@ -904,7 +927,7 @@ namespace AnomalyArena
             bool asElite = elite && data.canElite;
             return SpawnPrepared(data, at, asElite, asElite || data.canAffix ? affix : ElementKind.None, exactPoint: true);
         }
-                                                                                                             
+        /// <summary>Enemy lab: the final boss at a point, with its usual HP factor and immunities.</summary>
         public Enemy SpawnLabTyrant(Vector3 at)
         {
             if (!tyrant || tyrant.IsAlive) return tyrant;
@@ -917,13 +940,13 @@ namespace AnomalyArena
             Track(tyrant);
             return tyrant;
         }
-                                                                                                                                                             
+        /// <summary>Enemy lab: removes every living enemy without rewards or death blasts (no Bloater lights its fuse, a Tyrant's summon neither).</summary>
         public void ClearLab()
         {
             foreach (var enemy in alive.ToArray())
                 if (enemy && enemy.IsAlive) { enemy.SuppressRewards = true; enemy.BossSummon = false; enemy.Kill(); }
         }
-                                                                                                                                                                  
+        /// <summary>Document 12 teaching moment: one basic fodder spawned at an exact point, worth no reward, for the black-hole feeding demonstration.</summary>
         public Enemy SpawnIntroFodder(Vector3 at)
         {
             var data = DefinitionOf(EnemyKind.Grunt);
@@ -933,12 +956,12 @@ namespace AnomalyArena
             return enemy;
         }
 
-                     
-                                                                                                                                        
-                                                                                                                                             
-                                                                                                                                               
-                                                                                                           
-                      
+        /// <summary>
+        /// The Tyrant's Royal Scepter (system doc 13.2): one crowd mixed like the last ordinary wave of the table (wave 14): its basic,
+        /// special and elite shares and listed kinds, the elite and Shade caps, the pool and its affixes. Each body shows a red cross first,
+        /// on a ring of ringRadius around centre (or on the usual spawn ring around the player where that ground is taken), and, as every boss
+        /// summon, gives no experience (WaveSpawnMarker.bossSummon). Returns how many crosses were placed.
+        /// </summary>
         public int SpawnBossWave(int count, Vector3 centre, float ringRadius)
         {
             if (count <= 0 || roster == null || !waveSet || waveSet.waves == null || waveSet.waves.Length == 0) return 0;
@@ -948,7 +971,7 @@ namespace AnomalyArena
             int eliteWanted = Mathf.Clamp(Mathf.RoundToInt(count * shares.z), 0, count - basic);
             int special = count - basic - eliteWanted;
             int elite = Mathf.Min(eliteWanted, Mathf.Max(0, maxConcurrentElites - ActiveEliteCount));
-            basic += eliteWanted - elite;                                                   
+            basic += eliteWanted - elite; // capped elite slots become basics, as in a batch
             if (rollWeights == null || rollWeights.Length != roster.Length) { rollWeights = new float[roster.Length]; rollListed = new bool[roster.Length]; }
             float affixShare = OrdinaryAffixShare(wave - 1), turn = Random.Range(0f, 360f);
             int placed = 0;
@@ -969,13 +992,13 @@ namespace AnomalyArena
                 if (WorldMap.Active) at = WorldMap.Active.ClampPoint(at, data.radius);
                 if (!ValidSpawnPoint(at, data) && !TryFindV2SpawnPoint(data, out at)) continue;
                 var marker = BorrowMarker();
-                if (!marker) break;                                                               
+                if (!marker) break; // every warning is busy: the rest of this crowd is not called
                 marker.Begin(at, data, isElite, affix, true);
                 placed++;
             }
             return placed;
         }
-                                                                                                                                                    
+        /// <summary>A kind of this batch group, weighted as the 1-based wave lists it and able to spawn now (caps, pool); null when none.</summary>
         EnemyDefinition RollWaveKind(int wave, int group)
         {
             FillGroupWeights(wave, group, true, rollWeights, rollListed);
@@ -991,10 +1014,10 @@ namespace AnomalyArena
                 roll -= rollWeights[i];
                 if (roll < 0f) return roster[i];
             }
-            return roster[last];                                      
+            return roster[last]; // Random.value can return exactly 1.
         }
-                                                                                                                                                 
-                                                                 
+        /// <summary>The Tyrant's Astral Guard (system doc 13.2) swallows a minion: it vanishes without dying, so there is no kill, corpse, split
+        /// or reward, and its pool body is free again.</summary>
         public void DevourSummon(Enemy summon)
         {
             if (!summon || summon.IsBoss) return;
@@ -1009,12 +1032,12 @@ namespace AnomalyArena
             var mix = waveSet.waves[waveSet.waves.Length - 1];
             for (int i = 0; i < count; i++)
             {
-                var data = RollEnemy(mix);                                                                            
+                var data = RollEnemy(mix); // The last ordinary wave's basic crowd; specials stay out of boss summons.
                 if (!data) continue;
                 Vector3 at = centre + Quaternion.Euler(0f, 360f * i / count, 0f) * Vector3.forward * 4f;
                 if (WorldMap.Active) at = WorldMap.Active.ClampPoint(at, 1f);
                 if (!ValidSpawnPoint(at, data) && !TryFindV2SpawnPoint(data, out at)) continue;
-                                                                                                                  
+                // A red cross first (the marker's own one-second delay); the body it becomes gives no experience.
                 var marker = BorrowMarker();
                 if (marker) { marker.Begin(at, data, false, ElementKind.None, true); continue; }
                 var enemy = SpawnPrepared(data, at, false, exactPoint: true);
@@ -1026,7 +1049,7 @@ namespace AnomalyArena
             var bolt = FreeBolt();
             if (bolt) bolt.Launch(owner, at, direction);
         }
-                                                                                                                                              
+        /// <summary>A boss shot with its own damage, push and speed (not the owner's definition); false when no saved bolt is free.</summary>
         public bool LaunchBossBolt(Enemy owner, Vector3 at, Vector3 direction, float damage, float knockback, float speed)
         {
             var bolt = FreeBolt();
@@ -1041,10 +1064,10 @@ namespace AnomalyArena
         }
         public Vector3 FindV2SpawnPoint(EnemyDefinition data) => TryFindV2SpawnPoint(data, out var point) ? point : GM.player.Position;
 
-                     
-                                                                                                                         
-                                                                                                                                            
-                      
+        /// <summary>
+        /// Visits the eight ring sectors round-robin and returns the first valid point. A Stomper instead compares up to
+        /// stomperSpawnCandidates valid points (one per sector) and takes the one with the fewest living enemies within stomperCrowdRadius.
+        /// </summary>
         public bool TryFindV2SpawnPoint(EnemyDefinition data, out Vector3 point)
         {
             float minimum = Mathf.Max(nearbySpawnMin, data.kind == EnemyKind.Shade ? 12f : 1f);
@@ -1053,7 +1076,7 @@ namespace AnomalyArena
             bool stomper = data.kind == EnemyKind.Stomper;
             int wanted = stomper ? Mathf.Clamp(stomperSpawnCandidates, 1, 8) : 1, found = 0, bestCrowd = int.MaxValue, bestSector = 0;
             Vector3 best = Vector3.zero;
-                                                                                                                                           
+            // Visit sectors in round-robin order so every direction is used; inside a sector off-screen points come first (document 11.2).
             for (int offset = 0; offset < 8 && found < wanted; offset++)
             {
                 int sector = (spawnSectorCursor + offset) % 8;
@@ -1065,12 +1088,12 @@ namespace AnomalyArena
                         float angle = sector * 45f + (attempt < perSector ? Random.Range(-18f,18f) : 0f);
                         float distance = attempt < perSector ? Random.Range(minimum,maximum) : Mathf.Lerp(minimum,maximum,(attempt-perSector+.5f)/4f);
                         Vector3 candidate = GM.player.Position + Quaternion.Euler(0f,angle,0f) * Vector3.forward * distance;
-                        if (pass == 0 && !OffscreenSpawn(candidate)) continue;                               
+                        if (pass == 0 && !OffscreenSpawn(candidate)) continue; // first pass: off-screen only
                         if (!ValidSpawnPoint(candidate, data)) continue;
                         int crowd = stomper ? CrowdAround(candidate, stomperCrowdRadius) : 0;
                         if (crowd < bestCrowd) { bestCrowd = crowd; best = candidate; bestSector = sector; }
                         found++;
-                        taken = true;                                                                              
+                        taken = true; // One candidate per sector keeps a Stomper's choices spread around the ring.
                     }
                     if (taken) break;
                 }
@@ -1120,12 +1143,12 @@ namespace AnomalyArena
             batchSpawnsRemaining = 0; corpseOrder.Clear(); pendingSplits.Clear();
             Enemy.ClearRadiationZones(); radiationClock = 0f;
             GM.ClearTransients();
-                                                                                                              
+            // WorldMap owns saved corpse/delayed-death cleanup; no additional kill or reward is emitted here.
             WorldMap.Active?.OnWaveEnded(WaveIndex + 1);
             WaveCompleted?.Invoke(WaveIndex + 1);
         }
-                                                                                                                                          
-                                                                                                                        
+        /// <summary>A boss shot that steers toward where the player will be for trackSeconds at up to turnRate degrees a second (the Nash
+        /// Prophet's predictive volley; 0 flies straight); it never pushes. False when no saved bolt is free.</summary>
         public bool LaunchTrackingBossBolt(Enemy owner, Vector3 at, Vector3 direction, float damage, float speed, float turnRate, float trackSeconds)
         {
             var bolt = FreeBolt();

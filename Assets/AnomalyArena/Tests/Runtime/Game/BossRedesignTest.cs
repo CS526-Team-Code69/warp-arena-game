@@ -9,21 +9,21 @@ using Object = UnityEngine.Object;
 
 namespace AnomalyArena
 {
-                                                                                                                                         
-                                                                                                                                      
-                                                                                                                                        
-                                                                                                            
+    /// <summary>Boss redesign. Nash Prophet: moves chosen by distance, predictive shots and rings that never
+    /// push, a pulse and an inhale that spare its own summons, a boss knockback that stops short of the edge and of holes, a fixed 4%
+    /// cost for every summon that falls, red crosses before summons and prophecy circles that turn into holes. Both bosses: no hit-stop
+    /// and no black-hole pull. The Tyrant's moves of 2026-10-25 are tested in TyrantRedesignTest.</summary>
     [TestFixture]
     [Category("V3Smoke")]
     public class BossRedesignTest
     {
         const string LabScene = "Assets/AnomalyArena/Scenes/EnemyLab.unity";
-        const string ArenaScene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        const string ArenaScene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
 
         [TearDown]
         public void TearDown() => Time.timeScale = 1f;
 
-                                                  
+        // ───── Both bosses (arena sandbox) ─────
 
         [Test, LoadScene(ArenaScene), Category("Integration"), Timeout(60000)]
         public async Task Bosses_TakeNoHitStop_AndIgnoreBlackHolePull()
@@ -49,7 +49,7 @@ namespace AnomalyArena
             {
                 Vector3 dir = Quaternion.Euler(0f, a, 0f) * Vector3.forward;
                 bossSpot = Flat(hole.Centre + dir * ring);
-                                                                                                                
+                // A quarter turn round the ring, so the grunt's fall through the core never runs into the boss.
                 gruntSpot = Flat(hole.Centre + Quaternion.Euler(0f, 90f, 0f) * dir * ring);
                 found = world.Contains(bossSpot, 2.5f) && !world.IsWall(bossSpot, 2.5f) && world.Contains(gruntSpot, 1f) &&
                         !world.IsWall(gruntSpot, 1f);
@@ -60,7 +60,7 @@ namespace AnomalyArena
             V3CombatSmokeTest.Teleport(grunt, gruntSpot);
             grunt.GetComponent<Rigidbody>().constraints = RigidbodyConstraints.FreezeRotation | RigidbodyConstraints.FreezePositionY;
             Physics.SyncTransforms();
-                                                                                                                          
+            // A few steps first, so any push-out from overlapping scenery is over; the pull is a steady drift after that.
             for (int i = 0; i < 5; i++) await Awaitable.FixedUpdateAsync();
             Vector3 bossSettled = tyrant.Position, gruntSettled = grunt.Position;
             for (int i = 0; i < 20; i++) await Awaitable.FixedUpdateAsync();
@@ -69,14 +69,14 @@ namespace AnomalyArena
                 $"the boss is not pulled (set at {bossSpot}, after 5 steps {bossSettled}, after 25 {tyrant.Position}, hole {hole.Centre})");
         }
 
-                              
+        // ───── Helpers ─────
 
         static Vector3 Flat(Vector3 v) => Query.Flat(v);
 
         static void SetPrivate(Enemy enemy, string field, float value) =>
             typeof(Enemy).GetField(field, BindingFlags.Instance | BindingFlags.NonPublic).SetValue(enemy, value);
 
-                                                                                                             
+        /// <summary>Puts a body at a point at rest (no knockback carried over, no hit protection).</summary>
         static void Place(Combatant body, Vector3 at)
         {
             body.ClearWaveState();
@@ -97,7 +97,7 @@ namespace AnomalyArena
             game.waves.SpawnExtrasAt(EnemyKind.Grunt, new[] { at }, true);
             var summon = game.waves.Alive.FirstOrDefault(e => e && e != hollow && e.IsAlive && !before.Contains(e));
             Assume.That(summon, Is.Not.Null, "the pool has a free Grunt");
-            summon.enabled = false;                                
+            summon.enabled = false; // holds still where it was put
             return summon;
         }
 

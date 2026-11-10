@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>Author editable data assets in the editor; never reset an existing tuned asset.</summary>
     public static class ProgressionDataSetup
     {
         public const string DataFolder = "Assets/AnomalyArena/Data";
@@ -16,7 +16,7 @@ namespace AnomalyArena
             EnsureFolder(DataFolder);
             GetOrCreate<ProgressionRules>(ProgressionPath);
             GetOrCreate<StatusRules>(StatusPath);
-            EnsureFolder(DataFolder + "/Skills"); EnsureFolder(DataFolder + "/Elements");
+            EnsureFolder(DataFolder + "/Skills");
             var skills = new SkillDefinition[16];
             for (int i = 0; i < skills.Length; i++)
             {
@@ -33,20 +33,10 @@ namespace AnomalyArena
                 catalog = ScriptableObject.CreateInstance<SkillCatalog>();
                 catalog.skills = skills; AssetDatabase.CreateAsset(catalog, CatalogPath);
             }
-            for (int i = 1; i <= 7; i++)
-            {
-                var element = (ElementKind)i;
-                string path = DataFolder + "/Elements/" + element + ".asset";
-                if (AssetDatabase.LoadAssetAtPath<ElementDefinition>(path)) continue;
-                var definition = ScriptableObject.CreateInstance<ElementDefinition>();
-                definition.element = element; definition.displayName = element.ToString();
-                definition.colour = ElementCombat.ColorFor(element);
-                definition.paysWielder = element is ElementKind.Earth or ElementKind.Light or ElementKind.Void;
-                AssetDatabase.CreateAsset(definition, path);
-            }
             AssetDatabase.SaveAssets();
         }
 
+        /// <summary>Explicitly migrate only the three Greater Void definitions to the latest approved rules.</summary>
         public static void ApplyLatestVoidSkills()
         {
             CreateAssets();
@@ -59,6 +49,10 @@ namespace AnomalyArena
             AssetDatabase.SaveAssets();
         }
 
+        /// <summary>
+        /// Explicitly rewrite all 16 skill definitions from SetDefaults (system doc 10-21 alignment, including draft categories).
+        /// Fields SetDefaults does not assign keep their current values. Run only when the saved assets should match the code defaults.
+        /// </summary>
         public static void ApplyDocumentSkillDefaults()
         {
             CreateAssets();

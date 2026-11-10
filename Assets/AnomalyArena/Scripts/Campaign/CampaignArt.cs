@@ -2,7 +2,10 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>
+    /// Art of the V2 day campaign, filled by the editor installer (Anomaly Arena/V2 Campaign/Install). Every entry may be empty: the campaign
+    /// then draws its whitebox stand-in (boxes, capsules and coloured lights), so the loop plays before any art is in.
+    /// </summary>
     [CreateAssetMenu(menuName = "Anomaly Arena/Campaign/Art")]
     public sealed class CampaignArt : ScriptableObject
     {
@@ -59,10 +62,24 @@ namespace AnomalyArena
         public CampaignVoice[] voices;
         [Tooltip("Base system line S04 by room, in CampaignRoom order (Control, Armament, Energy, Ship): its subtitle names the broken room.")]
         public AudioClip[] roomOfflineVoices;
-        [Tooltip("Memory CG sounds in order: the fade into the memory, the wormhole turbulence, the crash, the base deploying.")]
+        [Tooltip("Memory CG sounds in order: the fade into the memory, the wormhole turbulence, the crash, the base deploying. The 2026-11-10 takes of the same four in sounds play instead when they are there.")]
         public AudioClip[] memorySounds;
+
+        [Header("Sound effects (the 2026-11-10 set, played by CampaignAudio)")]
+        [Tooltip("One entry per CampaignSfx, filled from Audio/Campaign by file name (Anomaly Arena/V2 Campaign/Install Sounds). An entry without a clip stays silent. Gain is the sound's own level; running the install again keeps it.")]
+        public CampaignSound[] sounds;
     }
 
+    /// <summary>One campaign sound effect: which one, its clip and its own level (times CampaignAudio's effects or loops gain).</summary>
+    [System.Serializable]
+    public struct CampaignSound
+    {
+        public CampaignSfx sound;
+        public AudioClip clip;
+        [Range(0f, 1f)] public float gain;
+    }
+
+    /// <summary>One voiced subtitle line: the line id (the name of V2Campaign's Line) and its clip.</summary>
     [System.Serializable]
     public struct CampaignVoice
     {

@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>One scene-authored menu panel; layout can be edited in Unity without rewriting logic.</summary>
     public class V2UiScreen : MonoBehaviour
     {
         public ArenaUiState state;

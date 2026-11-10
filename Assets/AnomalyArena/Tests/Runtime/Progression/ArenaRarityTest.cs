@@ -14,6 +14,7 @@ namespace AnomalyArena
             var card = new DraftCard(DraftCardKind.Weapon, "Infusion", "Void", _ => true,
                 payload: new WeaponUpgradeOffer(weapon, UpgradeAxis.Infusion, ElementKind.Void));
 
+            // Every Infusion card is purple, a Void one included.
             Assert.That(card.Rarity, Is.EqualTo(CardRarity.Epic), "card colour");
             Assert.That(weapon.element, Is.EqualTo(ElementKind.Fire), "current weapon element");
         }
@@ -28,6 +29,7 @@ namespace AnomalyArena
             Assert.That(actual, Is.EqualTo(CardRarity.Rare));
         }
 
+        // Design document 6.7 (2026-10-23): 0 white, 1 green, 2 blue, 3 orange.
         [TestCase(UpgradeAxis.None, CardRarity.Common)]
         [TestCase(UpgradeAxis.Infusion, CardRarity.Rare)]
         [TestCase(UpgradeAxis.Infusion | UpgradeAxis.Twist, CardRarity.Exceptional)]
@@ -62,7 +64,7 @@ namespace AnomalyArena
                 payload: new WeaponUpgradeOffer(weapon, UpgradeAxis.Tame, ElementKind.None));
 
             Assert.That(ArenaRarity.ForWeapon(weapon), Is.EqualTo(expected), "slot colour");
-
+            // A draft card shows its direction's colour, Tame green, whatever the weapon has taken.
             Assert.That(card.Rarity, Is.EqualTo(CardRarity.Rare), "card colour");
         }
 
@@ -76,7 +78,7 @@ namespace AnomalyArena
                 payload: new WeaponUpgradeOffer(weapon, UpgradeAxis.Twist, ElementKind.None));
 
             Assert.That(ArenaRarity.ForWeapon(weapon), Is.EqualTo(expected), "slot colour");
-
+            // A draft card shows its direction's colour, Twist blue, whatever the weapon's Mk or upgrades.
             Assert.That(card.Rarity, Is.EqualTo(CardRarity.Exceptional), "card colour");
         }
 
@@ -114,7 +116,7 @@ namespace AnomalyArena
             var definition = ScriptableObject.CreateInstance<SkillDefinition>();
             try
             {
-                definition.element = ElementKind.Void;                         
+                definition.element = ElementKind.Void; // Devour (document 8.6)
 
                 var actual = ArenaRarity.ForSkill(definition, level);
 

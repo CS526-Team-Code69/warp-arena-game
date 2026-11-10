@@ -10,16 +10,16 @@ using Object = UnityEngine.Object;
 
 namespace AnomalyArena
 {
-                                                                                                                                           
-                                                                                                                                            
-                                                                                                                                              
-                                                                                                                                         
-                                                                                                                                               
-                                                                                                                                                                                                                       
-                                                                                                                                           
-                                                                                                                                            
-                                                                                                                                              
-                                                                                         
+    /// <summary>The Nash Prophet and its void trial as redesigned (system doc 12.5, §13.1). The arena: broken
+    /// fragments round the platform, each reached through its own black-hole portal and left through the portal in its middle, every portal
+    /// taken only with E while standing on it free to act (its label offers E then), the player standing still a moment after every jump so a
+    /// key still held from the way in does not walk them off, with the void between them killing at once; the platform keeps its size in
+    /// every phase. The boss: moves by distance (pulse, summon and ring close; ring, volley, pillars and pull far, document
+    /// 10-27), a pulse that breaks the Bulwark walls in its circle, Wardens then Shades that keep it invulnerable, pillars that warn and then kill, a pull that draws only the player, rings that reach the fragments,
+    /// tracking volley shots, a fixed damage factor, and a summon over the void that costs it nothing. A boss push still stops short of an
+    /// open hole but never at the platform edge: in every phase the pulse only pushes a player close to it and throws one in the outer part
+    /// of its circle off, pushing harder each phase, so phase 1 spares the whole close range, phase 2 about the whole close range and phase 3
+    /// only a band two player bodies wide; the opening hold stays from before.</summary>
     [TestFixture]
     [Category("V3Smoke")]
     public class NashProphetTest
@@ -29,7 +29,7 @@ namespace AnomalyArena
         [TearDown]
         public void TearDown() => Time.timeScale = 1f;
 
-                                                        
+        // ───── Move choice and tuning (no scene) ─────
 
         [Test]
         public void NashMoveFor_ByPhaseAndDistance_PicksOnlyThatBandsMoves()
@@ -37,7 +37,7 @@ namespace AnomalyArena
             var b = new BossTuning();
             for (int phase = 1; phase <= 3; phase++)
             {
-                                                                                                      
+                // Document 10-27: the pillars moved to the far band and the ring comes in both bands.
                 var close = new[] { Enemy.PulseMove, Enemy.VoidSummonMove, Enemy.RingMove };
                 var far = phase == 1 ? new[] { Enemy.RingMove }
                     : new[] { Enemy.RingMove, Enemy.PredictiveVolleyMove, Enemy.VoidPillarMove, Enemy.GravityPullMove };
@@ -63,10 +63,10 @@ namespace AnomalyArena
             var b = new BossTuning();
             int Count(int phase, bool near, bool canSummon, bool pillars, int move) =>
                 Enumerable.Range(0, 1000).Count(i => Enemy.NashMoveFor(phase, near, canSummon, pillars, i / 1000f, b) == move);
-                                                                                                                        
+            // Close, with a summon ready: pulse 1, summon 1.5, ring 1; with none ready the ring and the pulse share it.
             Assert.That(Count(1, true, true, false, Enemy.RingMove), Is.EqualTo(Count(1, true, true, false, Enemy.PulseMove)).Within(2), "close: the ring as likely as the pulse");
             Assert.That(Count(1, true, false, false, Enemy.RingMove), Is.EqualTo(500).Within(2), "no summon ready: ring or pulse, half and half");
-                                                                                                   
+            // Far from phase 2: ring 1, volley 1, pillars 1, pull 0.8 (× 2.5 while pillars stand).
             Assert.That(Count(2, false, true, false, Enemy.VoidPillarMove), Is.EqualTo(1000 / 3.8f).Within(3), "far: the pillars weigh 1 of 3.8");
             Assert.That(Count(3, false, true, true, Enemy.GravityPullMove), Is.EqualTo(1000 * 2f / 5f).Within(3), "pillars up: the pull weighs 2 of 5");
             b.nashNearRingWeight = 0f;
@@ -78,7 +78,7 @@ namespace AnomalyArena
         {
             var b = new BossTuning();
             Assert.That(b.nashPhase2HpShare, Is.GreaterThan(b.nashPhase3HpShare).And.LessThan(1f), "three phases by HP share");
-                                                                                                                                            
+            // How far out a pulse hit still leaves the player on the platform: the platform radius, the same in every phase, less the push.
             float platform = b.prophetPlatformRadii.x;
             float spared1 = platform - Enemy.NashPulsePush(1, b), spared2 = platform - Enemy.NashPulsePush(2, b);
             float spared3 = platform - Enemy.NashPulsePush(3, b);
@@ -103,13 +103,13 @@ namespace AnomalyArena
             Assert.That(Enemy.VolleyLeadPoint(from, target, Vector3.zero, speed), Is.EqualTo(target), "a target standing still is aimed at directly");
         }
 
-                                                  
+        // ───── The arena (enemy lab trial) ─────
 
         [Test, LoadScene(LabScene), Category("Integration"), Timeout(90000)]
         public async Task TrialTerrain_EachPortalLeadsToItsOwnFragmentInAnotherDirection_AndBack()
         {
             var (game, world, hollow) = await StartTrial();
-            hollow.enabled = false;                                                 
+            hollow.enabled = false; // holds still: only the portals move the player
             var b = game.waves.bosses;
             var player = game.player;
             Vector3 centre = Flat(world.trialPlatform.position);
@@ -154,13 +154,13 @@ namespace AnomalyArena
         public async Task TrialPortal_StandingOnItDoesNothing_EOnItTakesThePlayerThereAndBack_EOffEveryPortalDoesNothing()
         {
             var (game, world, hollow) = await StartTrial();
-            hollow.enabled = false;                                                 
+            hollow.enabled = false; // holds still: only the portals move the player
             var b = game.waves.bosses;
             var player = game.player;
             using var keyboard = new TestKeyboard();
             Vector3 portal = world.TrialPortalCentre(0), middle = world.TrialFragmentCentre(world.TrialPortalFragment(0));
 
-                                                                           
+            // Set down on entry between the portals: E there does nothing.
             Vector3 entry = Flat(player.Position);
             Assume.That(world.CanTakeTrialPortal(player, out _), Is.False, "set down off every portal");
             await keyboard.Tap(KeyCode.E);
@@ -170,21 +170,21 @@ namespace AnomalyArena
             await keyboard.Tap(KeyCode.E);
             Assert.That(Flat(player.Position - beside).magnitude, Is.LessThan(.1f), "beside a portal, E takes the player nowhere either");
 
-                                                                                                   
+            // On a platform portal: nothing happens without E; E takes the player to its fragment.
             Place(player, portal);
             await StandFor(1f);
             Assert.That(Flat(player.Position - portal).magnitude, Is.LessThan(.1f), "standing on a portal takes the player nowhere by itself");
             await keyboard.Tap(KeyCode.E);
             Assert.That(Flat(player.Position - middle).magnitude, Is.LessThanOrEqualTo(b.nashFragmentRadius), "E on it takes them to its fragment");
 
-                                        
+            // The way back needs E too.
             Place(player, middle);
             await StandFor(1f);
             Assert.That(Flat(player.Position - middle).magnitude, Is.LessThan(.1f), "standing on the fragment's portal takes the player nowhere by itself");
             Assert.That(PressE(), Is.True, "E on the fragment's portal");
             Assert.That(Flat(player.Position - portal).magnitude, Is.LessThan(.1f), "brings them back out of the portal they took");
 
-                                                                                                                                              
+            // Right after the jump the portals still sleep (nashPortalRearm); then E takes the portal they came out of again, like any other.
             Assert.That(PressE(), Is.False, "E straight after a jump does nothing");
             await StandFor(b.nashPortalRearm + .05f);
             await keyboard.Tap(KeyCode.E);
@@ -204,9 +204,9 @@ namespace AnomalyArena
             var labels = Object.FindAnyObjectByType<V2WorldLabels>();
             Assume.That(labels && labels.holeLabels.Length > 0 && labels.holeLabels[0], Is.True, "the scene has its saved portal labels");
             var label = labels.holeLabels[0];
-            string offer = ArenaText.Pair("E · TRAVEL","E · TRAVEL");
+            string offer = ArenaText.Pair("E · 传送", "E · TRAVEL");
 
-                                                                                 
+            // Knocked: a short slide across the portal, E pressed while it runs.
             Vector3 across = Flat(portal - world.trialPlatform.position).normalized;
             Place(player, portal - across * .15f);
             player.Knockback(across, .3f, KnockKind.Hit);
@@ -217,7 +217,7 @@ namespace AnomalyArena
             Assert.That(Flat(player.Position - middle).magnitude, Is.GreaterThan(b.nashFragmentRadius), "knocked, E does not take the portal");
             await Settle(player);
 
-                             
+            // Stunned on it.
             Place(player, portal);
             player.Stun(.6f);
             Assume.That(player.State == CharacterState.Normal && player.Stunned, Is.True, "in the normal state, only stunned");
@@ -227,7 +227,7 @@ namespace AnomalyArena
 
             await Until(() => !player.Stunned, 3f, "the stun wears off");
 
-                            
+            // Frozen on it.
             var status = ElementStatus.For(player);
             Place(player, portal);
             status.Add(ElementKind.Frost, 999f);
@@ -248,7 +248,7 @@ namespace AnomalyArena
         public async Task PortalJump_AKeyStillHeldFromTheWayIn_LeavesThePlayerStandingAMoment_OffNeitherTheFragmentNorThePlatform()
         {
             var (game, world, hollow) = await StartTrial();
-            hollow.enabled = false;                                                                 
+            hollow.enabled = false; // holds still: only the player's keys and the portals move them
             var player = await Mortal(game);
             var b = game.waves.bosses;
             Assert.That(b.nashPortalArrivalHold, Is.GreaterThan(Reaction), "the player stands still longer than a quick reaction takes");
@@ -261,7 +261,7 @@ namespace AnomalyArena
                     {
                         string how = (sprint ? "sprinting" : "walking") + " through portal " + i;
                         Vector3 portal = world.TrialPortalCentre(i), middle = world.TrialFragmentCentre(world.TrialPortalFragment(i));
-                                                                                                         
+                        // Kept down after the jump, this key points straight off the fragment's far rim.
                         Vector3 key = (middle - centre).normalized;
                         Place(player, portal - key * 1.2f);
                         Vector3 landed = await GoThrough(player, key, sprint, () => Flat(player.Position - middle).magnitude <= b.nashFragmentRadius, how);
@@ -269,7 +269,7 @@ namespace AnomalyArena
                         Assert.That(player.IsAlive && Flat(player.Position - middle).magnitude <= b.nashFragmentRadius, Is.True,
                             how + ": still on the fragment a second later");
 
-                                                                                                                               
+                        // Back through the fragment's portal: kept down, the key that led to it heads for the platform's edge.
                         landed = await GoThrough(player, -key, sprint, () => Flat(player.Position - portal).magnitude < .1f, how + ", and back");
                         Assert.That(await ReactAndLetGo(player, landed), Is.LessThan(.15f), how + ", and back: the held key does not walk the player on at once");
                         Assert.That(player.IsAlive && Flat(player.Position - centre).magnitude <= world.trialRadius, Is.True,
@@ -297,8 +297,8 @@ namespace AnomalyArena
                     {
                         string how = (sprint ? "sprinting" : "walking") + " through portal " + i;
                         Vector3 portal = world.TrialPortalCentre(i), middle = world.TrialFragmentCentre(world.TrialPortalFragment(i));
-                                                                                                                                             
-                                                                                                                                  
+                        // Kept down after the jump, this key points across the fragment, through its portal, toward the platform: the player
+                        // comes out on the far side of the way back, so they cross it before they reach the fragment's inner rim.
                         Vector3 key = (centre - middle).normalized;
                         Place(player, portal - key * 1.2f);
                         await GoThrough(player, key, sprint, () => Flat(player.Position - middle).magnitude <= b.nashFragmentRadius, how);
@@ -349,7 +349,7 @@ namespace AnomalyArena
             Assume.That(world.OnTrialGround(centre + outward * gap), Is.False, "the middle of the gap is void");
 
             Place(player, centre + outward * gap);
-                                                                                                                                  
+            // A fall ends the run and its result screen stops the clock, so no physics step comes after it: none is awaited then.
             for (int step = 0; step < 2 && player.IsAlive; step++) await Awaitable.FixedUpdateAsync();
             Assert.That(player.IsAlive, Is.False, "a player over the void falls at once");
             Assert.That(player.DeathCause, Is.EqualTo(DeathCause.FellIntoGap));
@@ -362,7 +362,7 @@ namespace AnomalyArena
             hollow.enabled = false;
             float hp = hollow.Hp;
             Vector3 centre = Flat(world.trialPlatform.position);
-                                                                                    
+            // Half-way between two fragments, just past the edge: nothing but void.
             Vector3 at = centre + Quaternion.Euler(0f, game.waves.bosses.nashPortalAngle, 0f) * Vector3.forward * (world.trialRadius + 1f);
             Assume.That(world.OnTrialGround(at), Is.False);
             var summon = SpawnSummon(game, hollow, EnemyKind.Grunt, at);
@@ -376,12 +376,12 @@ namespace AnomalyArena
         {
             var (game, world, hollow) = await StartTrial();
             var b = game.waves.bosses;
-            hollow.HoldAttacks(60f);                                    
+            hollow.HoldAttacks(60f); // no moves: only the phase changes
             float start = world.trialRadius;
             Assume.That(start, Is.EqualTo(b.prophetPlatformRadii.x).Within(.01f), "the phase-1 platform");
             ToPhase(hollow, 2, b);
             await Until(() => hollow.BossPhase == 2, 2f, "phase 2");
-                                                                                                                                          
+            // The platform no longer shrinks, so for longer than the old two-second warning and shrink nothing changes.
             float since = Time.time;
             while (Time.time - since < 3f)
             {
@@ -393,7 +393,7 @@ namespace AnomalyArena
             }
         }
 
-                                                  
+        // ───── Its moves (enemy lab trial) ─────
 
         [Test, LoadScene(LabScene), Category("Integration"), Timeout(60000)]
         public async Task TrialEntry_NoMoveDuringTheOpening_ThenAFarMoveForAPlayerSetDownFar()
@@ -417,7 +417,7 @@ namespace AnomalyArena
             Assume.That(player.knockbackScale, Is.EqualTo(1f), "the distances below assume an unscaled player push");
             Vector3 centre = Flat(world.trialPlatform.position);
             var summon = SpawnSummon(game, hollow, EnemyKind.Grunt, centre + Vector3.left * 3.5f);
-            summon.enabled = false;                                
+            summon.enabled = false; // holds still where it was put
             var hits = new List<DamageInfo>();
             void Record(DamageInfo hit)
             {
@@ -445,11 +445,11 @@ namespace AnomalyArena
                 Assert.That(Flat(summon.Position - summonAt).magnitude, Is.LessThan(.1f), "nor pushed");
                 Assert.That(Flat(hollow.Position - centre).magnitude, Is.LessThan(.05f), "it stands still in the middle");
 
-                summon.DiscardWithoutReward();                                             
+                summon.DiscardWithoutReward(); // its ward would turn away the damage below
                 await Settle(player);
 
-                                                                                                                                            
-                                                       
+                // From the same spot by its body, each phase on the same platform: the player slides about that phase's own push (the slide
+                // runs about 5% longer than the push).
                 Vector3 spot = centre + Vector3.back * (hollow.Radius + player.Radius + .2f);
                 for (int phase = 2; phase <= 3; phase++)
                 {
@@ -471,8 +471,8 @@ namespace AnomalyArena
             var b = game.waves.bosses;
             var player = game.player;
             Vector3 centre = Flat(world.trialPlatform.position);
-            Place(player, centre + Vector3.back * (b.nashPulseReach + 3f));                             
-                                                                                                                                                         
+            Place(player, centre + Vector3.back * (b.nashPulseReach + 3f)); // out of the pulse's circle
+            // Document 7.4: only a boss breaks Bulwark walls; the Prophet's pulse breaks those in its circle (any part inside it).
             var inside = Bulwark(world, centre + Vector3.left * (b.nashPulseReach - .5f), 2f, player);
             var outside = Bulwark(world, centre + Vector3.right * (b.nashPulseReach + 2.5f), 2f, player);
             Assume.That(inside && outside && inside != outside, Is.True, "two bulwarks stand, one at the rim of its circle, one past it");
@@ -494,7 +494,7 @@ namespace AnomalyArena
             var (game, world, hollow) = await StartTrial();
             var b = game.waves.bosses;
             await Mortal(game);
-                                                                                                                       
+            // Where the close range ends: the farthest out a player standing still can meet a pulse it chose for them.
             var (safeEnd, rim) = await PulseBands(1, b.nashNearRange, game, world, hollow);
             Assert.That(rim - safeEnd, Is.InRange(.5f, 2f), "phase 1: only a thin ring at the rim of its circle throws the player off");
         }
@@ -518,7 +518,7 @@ namespace AnomalyArena
             var (game, world, hollow) = await StartTrial();
             var player = await Mortal(game);
             float touching = hollow.Radius + player.Radius, twoBodies = 4f * player.Radius;
-                                                                                                                        
+            // Two player bodies out from touching its body: the room the player keeps to move about must still be safe.
             var (safeEnd, rim) = await PulseBands(3, touching + twoBodies, game, world, hollow);
             Assert.That(safeEnd - touching, Is.GreaterThanOrEqualTo(twoBodies), "phase 3: the safe band is at least two player bodies wide");
             Assert.That(rim - safeEnd, Is.GreaterThan(safeEnd - touching), "but most of its circle throws the player off");
@@ -553,7 +553,7 @@ namespace AnomalyArena
             var labels = Object.FindAnyObjectByType<V2WorldLabels>();
             if (labels)
                 await Until(() => labels.enemyLabels.Any(l => l.root && l.root.gameObject.activeInHierarchy && l.name &&
-                                                            l.name.text.Contains(ArenaText.Pair("INVULNERABLE","INVULNERABLE"))), 2f,
+                                                            l.name.text.Contains(ArenaText.Pair("无敌", "INVULNERABLE"))), 2f,
                     "its label says it is invulnerable");
 
             foreach (var warden in wardens) warden.ReceiveDamage(new DamageInfo { amount = 99999f, source = DamageSource.Wall, ignoreShield = true });
@@ -586,7 +586,7 @@ namespace AnomalyArena
             Assert.That(drawn, Is.EqualTo(b.nashPullSpeed).Within(b.nashPullSpeed * .35f), "it draws the player in at its speed");
             Assert.That(Flat(summon.Position - summonAt).magnitude, Is.LessThan(.1f), "its summons are left where they stand");
 
-            summon.DiscardWithoutReward();                                             
+            summon.DiscardWithoutReward(); // its ward would turn away the damage below
             ToPhase(hollow, 3, b);
             await Until(() => hollow.BossPhase == 3, 2f, "phase 3");
             float drawn3 = await PullDrift(hollow, player, centre, b);
@@ -642,7 +642,7 @@ namespace AnomalyArena
             Force(hollow, Enemy.VoidPillarMove);
             await Until(() => hollow.VoidPillars.Count > 0, b.nashPillarWindup + 2f, "the pillar circles");
             hollow.HoldAttacks(60f);
-            Place(player, centre + new Vector3(-3f, 0f, -6.5f));                                                     
+            Place(player, centre + new Vector3(-3f, 0f, -6.5f)); // stepped out of every circle, clear of the portals
             Assume.That(hollow.VoidPillars.All(p => Flat(p.centre - player.Position).magnitude > p.radius), Is.True, "outside every pillar");
             await Until(() => hollow.VoidPillars.Count > 0 && hollow.VoidPillars.All(p => p.Standing), b.nashPillarWarning + 1f, "the pillars stand");
             for (int i = 0; i < 10; i++) await Awaitable.FixedUpdateAsync();
@@ -674,7 +674,7 @@ namespace AnomalyArena
                 Assert.That(Mathf.Repeat(angles[(i + 1) % angles.Length] - angles[i], 360f), Is.EqualTo(360f / b.nashRingShots).Within(1f), "evenly spaced");
             Vector3 toPlayer = Flat(game.player.Position - hollow.Position).normalized;
             Assert.That(shots.Min(s => Vector3.Angle(s.Direction, toPlayer)), Is.LessThan(2f), "one shot aimed at the player");
-                                                                                                                        
+            // Past the fragments' inner edge and past where a shot used to vanish (two cells beyond the platform edge).
             float past = Mathf.Max(Flat(world.TrialFragmentCentre(0) - centre).magnitude - b.nashFragmentRadius, world.trialRadius + 2.5f);
             await Until(() => BossShots(game).Any(s => Flat(s.transform.position - centre).magnitude > past), 5f,
                 "the ring flies on past the platform to the fragments");
@@ -710,7 +710,7 @@ namespace AnomalyArena
             Assert.That(Vector3.Angle(shot.Direction, Flat(player.Position - shot.transform.position)), Is.LessThan(3f),
                 "aimed at where a player standing still will be: on them");
 
-            Place(player, player.Position + Vector3.right * 2.5f);               
+            Place(player, player.Position + Vector3.right * 2.5f); // steps aside
             float before = Vector3.Angle(shot.Direction, Flat(player.Position - shot.transform.position));
             for (int i = 0; i < 8; i++) await Awaitable.FixedUpdateAsync();
             Assume.That(shot.gameObject.activeSelf, Is.True, "the shot is still in flight");
@@ -722,14 +722,14 @@ namespace AnomalyArena
         public async Task BossPush_IsNoLongerStoppedAtThePlatformEdge_ButStillStopsShortOfAnOpenHole()
         {
             var (game, world, hollow) = await StartTrial();
-            hollow.enabled = false;               
+            hollow.enabled = false; // holds still
             var player = await Mortal(game);
             Assume.That(player.knockbackScale, Is.EqualTo(1f), "the distances below assume an unscaled player push");
             var b = game.waves.bosses;
             Vector3 centre = Flat(world.trialPlatform.position);
             float r = world.trialRadius;
 
-                                                                                                               
+            // An open hole of the player's own (no pull ring) in the way: the push stops a margin short of it.
             Vector3 hole = centre + Vector3.back * 9.5f;
             world.CreateVoidHole(hole, 3f, 0f, 10f, player, false);
             Assume.That(world.IsHole(hole), Is.True, "the hole is open");
@@ -740,7 +740,7 @@ namespace AnomalyArena
                 "a boss hit stops the player a margin short of an open hole");
             Assert.That(player.IsAlive, Is.True);
 
-                                                                                                                                
+            // On a portal's line beyond the portal there is only void past the edge, and nothing stops the push there any more.
             Vector3 outward = Quaternion.Euler(0f, b.nashPortalAngle, 0f) * Vector3.forward;
             Vector3 start = centre + outward * (r - 3.5f);
             Assume.That(world.OnTrialGround(centre + outward * (r + 1.5f)), Is.False, "void beyond the edge on that line");
@@ -751,9 +751,9 @@ namespace AnomalyArena
             Assert.That(player.DeathCause, Is.EqualTo(DeathCause.FellIntoGap));
         }
 
-                              
+        // ───── Helpers ─────
 
-                                                                                                                                                        
+        /// <summary>A bulwark width wide raised by user at at, standing 60 seconds with no push of its own; null when the pool has none free.</summary>
         static TemporaryWall Bulwark(WorldMap world, Vector3 at, float width, Combatant user)
         {
             world.CreateWall(at, width, 60f, 0f, user);
@@ -766,33 +766,33 @@ namespace AnomalyArena
         static int[] Moves(int phase, bool near, bool canSummon, bool pillars, BossTuning b) =>
             Enumerable.Range(0, 200).Select(i => Enemy.NashMoveFor(phase, near, canSummon, pillars, i / 200f, b)).Distinct().ToArray();
 
-                                                                                                                                    
+        /// <summary>Its next move is this one, as soon as nothing is running (the opening hold and the rest are skipped).</summary>
         internal static void Force(Enemy hollow, int move)
         {
             hollow.ForceNextBossMove(move);
             typeof(Enemy).GetField("cooldown", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(hollow, 0f);
         }
 
-                                                                                                                            
+        /// <summary>Takes it just under the HP share where the phase begins (not a player hit: no crit, no ward).</summary>
         internal static void ToPhase(Enemy hollow, int phase, BossTuning b)
         {
             float share = phase >= 3 ? b.nashPhase3HpShare : b.nashPhase2HpShare;
             hollow.ReceiveDamage(new DamageInfo { amount = hollow.Hp - hollow.maxHp * share + 1f, source = DamageSource.Wall, ignoreShield = true });
         }
 
-                                                                                                                                                    
+        /// <summary>How long a quick player keeps a key down after the view jumps to the far side of a portal, the camera still settling.</summary>
         const float Reaction = .35f;
 
-                                                                                                                           
+        /// <summary>Holds a move key the way WASD would (and the sprint key with it), or lets go of both (null).</summary>
         static void HoldKeys(PlayerController player, Vector3? key, bool sprint = false)
         {
             player.debugMoveHeld = key.HasValue ? new Vector2(key.Value.x, key.Value.z) : (Vector2?)null;
             player.debugSprintHeld = key.HasValue ? sprint : (bool?)null;
         }
 
-                                                                                                                                             
-                                                                                                                                              
-                                                                                 
+        /// <summary>Holds the key (none: hands off) and presses E every physics step, as a player taps it stepping onto a portal, until they
+        /// have come through one, and returns where they came out. The key stays down. A fall fails at once unless through allows it: it ends
+        /// the run and stops the clock, so no physics step would come.</summary>
         static async Task<Vector3> GoThrough(PlayerController player, Vector3? key, bool sprint, Func<bool> through, string operation)
         {
             HoldKeys(player, key, sprint);
@@ -808,8 +808,8 @@ namespace AnomalyArena
             return Flat(player.Position);
         }
 
-                                                                                                                                               
-                                                                                                                                              
+        /// <summary>E through the code the key reaches, as TestKeyboard presses it: WorldMap's portal entry while the game is in combat or the
+        /// player can move (in the trial it takes the trial portal the player stands on). Returns whether a portal took the player.</summary>
         static bool PressE()
         {
             var game = GameManager.Instance;
@@ -817,8 +817,8 @@ namespace AnomalyArena
             return world && game && game.player && (game.IsCombatActive || game.CanPlayerMove) && world.TryEnterPortal(game.player);
         }
 
-                                                                                                                                           
-                                                              
+        /// <summary>The key stays down for a quick reaction after the jump, then the player lets go; returns how far they moved meanwhile,
+        /// and waits until a second after the jump.</summary>
         static async Task<float> ReactAndLetGo(PlayerController player, Vector3 landed)
         {
             float jumped = Time.time;
@@ -829,16 +829,16 @@ namespace AnomalyArena
             return moved;
         }
 
-                                                                                                                                   
+        /// <summary>Takes it into the phase and waits until it is there; the platform keeps its size.</summary>
         internal static async Task EnterPhase(Enemy hollow, int phase, BossTuning b)
         {
             ToPhase(hollow, phase, b);
             await Until(() => hollow.BossPhase == phase, 2f, $"phase {phase}");
         }
 
-                                                                                                                                               
-                                                                                                                                            
-                                                   
+        /// <summary>In the phase, pulses the player from spot and returns how far they slid; they stay on the platform. They meet the pulse at
+        /// full HP: a hit that would empty the lab's undying player leaves it at 1 HP without the push (Combatant.ReceiveDamage pushes only
+        /// when the hit leaves some HP).</summary>
         static async Task<float> PulseSlideFrom(Vector3 spot, int phase, GameManager game, WorldMap world, Enemy hollow, List<DamageInfo> hits)
         {
             var b = game.waves.bosses;
@@ -855,17 +855,17 @@ namespace AnomalyArena
             return Flat(player.Position - spot).magnitude;
         }
 
-                                                                                                                                                 
-                                                                                                                                               
-                                                                                                                                              
-                                                                                                                                      
+        /// <summary>The repulse pulse of one phase on the platform, which keeps its size, on the line straight behind it (clear of the portals),
+        /// with a player who can die (Mortal). Hit at safeAt, the player only slides and stays on; from that slide follows where the safe band
+        /// ends (the platform radius less the slide). Hit a little past it, still inside the circle, they go into the void. Returns where the
+        /// safe band ends and how far out the pulse reaches (its reach plus the player's body); the run is over afterwards.</summary>
         internal static async Task<(float safeEnd, float rim)> PulseBands(int phase, float safeAt, GameManager game, WorldMap world, Enemy hollow)
         {
             var b = game.waves.bosses;
             var player = game.player;
             Assume.That(player.knockbackScale, Is.EqualTo(1f), "the distances below assume an unscaled player push");
             Vector3 centre = Flat(world.trialPlatform.position);
-            hollow.HoldAttacks(60f);                                
+            hollow.HoldAttacks(60f); // only the pulses forced below
             Place(player, centre + Vector3.back * safeAt);
             if (phase > 1) await EnterPhase(hollow, phase, b);
             float edge = world.trialRadius, rim = b.nashPulseReach + player.Radius, touching = hollow.Radius + player.Radius;
@@ -888,14 +888,14 @@ namespace AnomalyArena
             Place(player, centre + Vector3.back * deadlyAt);
             player.Heal(player.maxHp);
             Force(hollow, Enemy.PulseMove);
-                                                                                                              
+            // A fall ends the run and its result screen stops the clock: no physics step is awaited after it.
             await Until(() => !player.IsAlive, b.nashPulseWindup + 3f, $"phase {phase}: hit {deadlyAt:0.##} cells out, the pulse throws the player off");
             Assert.That(player.DeathCause, Is.EqualTo(DeathCause.FellIntoGap), "into the void");
             Assert.That(player.LastDamagedBy, Is.SameAs(hollow), "thrown by its pulse");
             return (safeEnd, rim);
         }
 
-                                                                                                             
+        /// <summary>Puts a body at a point at rest (no knockback carried over, no hit protection).</summary>
         internal static void Place(Combatant body, Vector3 at)
         {
             body.ClearWaveState();
@@ -910,14 +910,14 @@ namespace AnomalyArena
             while (body.State == CharacterState.Knocked && Time.realtimeSinceStartup < deadline) await Awaitable.FixedUpdateAsync();
         }
 
-                                                                                           
+        /// <summary>Lets this much game time pass, physics step by physics step.</summary>
         static async Task StandFor(float seconds)
         {
             float until = Time.time + seconds;
             while (Time.time < until) await Awaitable.FixedUpdateAsync();
         }
 
-                                                                                                                             
+        /// <summary>The enemy lab keeps its player from dying; the void and the pillars must be able to kill here.</summary>
         internal static async Task<PlayerController> Mortal(GameManager game)
         {
             Object.FindAnyObjectByType<EnemyLab>().invulnerable = false;
@@ -927,7 +927,7 @@ namespace AnomalyArena
             return game.player;
         }
 
-                                                                                                                             
+        /// <summary>A trial summon at a point through WaveManager's boss-summon path, as the Prophet's own appear.</summary>
         static Enemy SpawnSummon(GameManager game, Enemy hollow, EnemyKind kind, Vector3 at)
         {
             var before = game.waves.Alive.ToArray();
@@ -945,7 +945,7 @@ namespace AnomalyArena
 
         static EnemyBolt[] BossShots(GameManager game) => game.waves.preparedBolts.Where(s => s && s.gameObject.activeSelf && s.IsBossShot).ToArray();
 
-                                                                                                                                       
+        /// <summary>Boss shots launched over the next seconds (a saved bolt starting to fly), so a reused bolt counts again.</summary>
         static async Task<int> CountLaunches(GameManager game, float seconds)
         {
             var flying = new HashSet<EnemyBolt>(BossShots(game));
@@ -962,7 +962,7 @@ namespace AnomalyArena
             return launched;
         }
 
-                                                                                                                                                  
+        /// <summary>Puts the player far out, forces a gravity pull and returns how fast it drew them toward the middle, cells a second.</summary>
         static async Task<float> PullDrift(Enemy hollow, PlayerController player, Vector3 centre, BossTuning b)
         {
             Place(player, centre + Vector3.back * 9f);

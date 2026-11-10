@@ -9,24 +9,24 @@ using Object = UnityEngine.Object;
 
 namespace AnomalyArena
 {
-                                                                                                                                      
-                                                                                                                                    
-                                                                                                                                           
-                                                                                                                   
+    /// <summary>Boss stagger removed (system doc §5.3: bosses are wholly immune to knockback). Heavy
+    /// knockback on the Nash Prophet or the Tyrant neither moves it, nor knocks it, nor stuns it, nor makes it take more damage; no
+    /// stagger state, tuning or HUD bar is left, and no card says a boss takes stagger. Nor is a boss ever stunned: the
+    /// Tyrant's charge breaks the walls it runs into instead of crashing into them (TyrantRedesignTest).</summary>
     [TestFixture]
     [Category("V3Smoke")]
     public class BossNoStaggerTest
     {
         const string LabScene = "Assets/AnomalyArena/Scenes/EnemyLab.unity";
-        const string ArenaScene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
-                                                                                                                        
+        const string ArenaScene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
+        // Twelve 10-cell knockbacks: three times the Prophet's old 40-cell stagger limit and twice the Tyrant's old 60.
         const int Hits = 12;
         const float HeavyKnock = 10f;
 
         [TearDown]
         public void TearDown() => Time.timeScale = 1f;
 
-                               
+        // ───── No scene ─────
 
         [Test]
         public void StaggerState_IsGoneFromBossesTuningStatusRulesAndHud()
@@ -54,25 +54,25 @@ namespace AnomalyArena
             foreach (var field in typeof(ArenaTerms).GetFields(tables).Where(f => f.FieldType == typeof(string[])))
             foreach (var text in (string[])field.GetValue(null) ?? Array.Empty<string>())
             {
-                Assert.That(text ?? "", Does.Not.Contain("stagger"), $"{field.Name}: {text}");
+                Assert.That(text ?? "", Does.Not.Contain("失衡"), $"{field.Name}: {text}");
                 Assert.That((text ?? "").IndexOf("stagger", StringComparison.OrdinalIgnoreCase), Is.LessThan(0), $"{field.Name}: {text}");
             }
 
-            var tameZh = (string[])typeof(ArenaTerms).GetField("ExpandedTameEn", tables).GetValue(null);
+            var tameZh = (string[])typeof(ArenaTerms).GetField("ExpandedTameZh", tables).GetValue(null);
             var tameEn = (string[])typeof(ArenaTerms).GetField("ExpandedTameEn", tables).GetValue(null);
-            Assert.That(tameZh.Count(t => t.Contains("{tankPush}") && t.Contains("bosses are not knocked back")), Is.EqualTo(1),
+            Assert.That(tameZh.Count(t => t.Contains("{tankPush}") && t.Contains("Boss 免疫击退")), Is.EqualTo(1),
                 "the Stream Tame card says bosses are immune to its knockback");
             Assert.That(tameEn.Count(t => t.Contains("{tankPush}") && t.Contains("bosses are not knocked back")), Is.EqualTo(1),
                 "and so does its English twin");
         }
 
-                                                     
+        // ───── Nash Prophet (enemy lab trial) ─────
 
         [Test, LoadScene(LabScene), Category("Integration"), Timeout(60000)]
         public async Task Prophet_HeavyKnockbackHits_NeitherMoveNorKnockNorStunIt()
         {
             var (game, _, hollow) = await BossRedesignTest.StartTrial();
-            hollow.enabled = false;                                                            
+            hollow.enabled = false; // holds still: any movement below would come from the hits
             await AssertKnockbackChangesNothing(game, hollow);
         }
 
@@ -87,7 +87,7 @@ namespace AnomalyArena
             Vector3 away = Query.Flat(hollow.Position - game.player.Position).normalized;
             for (int i = 0; i < Hits; i++) hollow.ReceiveDamage(DamageInfo.Attack(1f, game.player, away, HeavyKnock, HitKind.Slam));
 
-                                                                               
+            // A few of the HUD's own 10 Hz refreshes, then one more right now.
             float until = Time.realtimeSinceStartup + .4f;
             while (Time.realtimeSinceStartup < until) await Awaitable.NextFrameAsync();
             hud.RefreshView();
@@ -99,7 +99,7 @@ namespace AnomalyArena
             Assert.That(typeof(ArenaUiSnapshot).GetField("bossStagger"), Is.Null, "and the HUD snapshot carries no stagger value");
         }
 
-                                             
+        // ───── Tyrant (arena sandbox) ─────
 
         [Test, LoadScene(ArenaScene), Category("Integration"), Timeout(60000)]
         public async Task Tyrant_HeavyKnockbackHits_NeitherMoveNorKnockNorStunIt()
@@ -108,18 +108,18 @@ namespace AnomalyArena
             foreach (var target in targets) target.DiscardWithoutReward();
             var tyrant = game.waves.SpawnLabTyrant(game.player.Position + Vector3.forward * 12f);
             Assume.That(tyrant && tyrant.IsBoss, Is.True, "the scene keeps the Tyrant");
-            tyrant.enabled = false;                                                            
+            tyrant.enabled = false; // holds still: any movement below would come from the hits
             Physics.SyncTransforms();
             await AssertKnockbackChangesNothing(game, tyrant);
         }
 
-                              
+        // ───── Helpers ─────
 
-                                                                                                                                    
-                                                                                                                                      
+        /// <summary>Heavy player knockback hits, all pushing the boss straight away from the player: it stays where it stood, never
+        /// enters the knocked state, is never stunned, and a plain hit afterwards deals exactly its amount (no stun bonus).</summary>
         static async Task AssertKnockbackChangesNothing(GameManager game, Enemy boss)
         {
-                                                                                   
+            // A few steps first, so any push-out from overlapping scenery is over.
             for (int i = 0; i < 5; i++) await Awaitable.FixedUpdateAsync();
             Vector3 settled = Query.Flat(boss.Position);
             Vector3 away = Query.Flat(boss.Position - game.player.Position).normalized;

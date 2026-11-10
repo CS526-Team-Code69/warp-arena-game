@@ -3,7 +3,10 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>
+    /// Saved quad pool that draws element states on enemies and the player's active buffs.
+    /// It only reads gameplay state; it never creates objects, moves bodies or changes combat.
+    /// </summary>
     [DefaultExecutionOrder(1200)]
     public sealed class V4CombatVfx : MonoBehaviour
     {
@@ -57,9 +60,9 @@ namespace AnomalyArena
         MaterialPropertyBlock block;
         int used;
         Material baseMaterial;
-
+        // Textures of the V5 art, swapped in while the illustrated art shows.
         Texture shadowTexture, softGlow, thinRing, shellTexture, sporeTexture, orbTexture, hexTexture;
-
+        // The bright line of the V5 ring picture lies at .93 of its half width.
         const float RingEdge = 1.075f;
         (Texture frostShell, Texture frostRing, Texture slowRing, Texture auraShield) savedTextures;
         bool v5Textures;
@@ -76,7 +79,7 @@ namespace AnomalyArena
 
         readonly Dictionary<AttackActor, Strike> strikes = new();
         readonly List<AttackActor> ended = new();
-
+        // Last fired laser per Spire: its sequence number and the time it was seen, for the short bright flash.
         readonly Dictionary<Enemy, (int sequence, float at)> lasers = new();
         Renderer[] boltBodies;
 
@@ -86,7 +89,7 @@ namespace AnomalyArena
             if (items != null && items.Length > 0 && items[0])
             {
                 baseMaterial = items[0].sharedMaterial;
-
+                // The soft shadows under the bodies need quads of their own in a big wave.
                 int saved = items.Length;
                 System.Array.Resize(ref items, saved + 160);
                 for (int i = saved; i < items.Length; i++)
@@ -97,6 +100,7 @@ namespace AnomalyArena
             }
         }
 
+        /// <summary>The V5 art draws frost, shields and rings with its own textures while the illustrated art shows; whitebox keeps the saved ones.</summary>
         void SwapTextures(bool v5)
         {
             if (v5 == v5Textures) return;
@@ -128,8 +132,9 @@ namespace AnomalyArena
 
         public static bool IsRocketStrike(AttackActor actor) =>
             actor && actor.gameObject.activeInHierarchy && actor.mode == AttackMode.Blast && actor.weapon != null
-            && actor.weapon.form == WeaponForm.RocketLauncher && actor.weapon.variant == 0 && !actor.chainChild;                                                    
+            && actor.weapon.form == WeaponForm.RocketLauncher && actor.weapon.variant == 0 && !actor.chainChild; // Strike Twist chain blasts have no falling rocket
 
+        /// <summary>True when this pool draws the falling rocket, so the plain blast ring can stay hidden.</summary>
         public static bool DrawsRocketStrike(AttackActor actor) => Active && Active.isActiveAndEnabled &&
                                                                    Active.strikeRocket && Art.Enabled &&
                                                                    IsRocketStrike(actor);
@@ -160,7 +165,9 @@ namespace AnomalyArena
             SwapTextures(V5Vfx.On);
             if (!Art.Enabled)
             {
-
+                // Whitebox (the default mode) still needs the lines and marks that carry weapon information: Execute and Chain
+                // lines, fences, trails and the card markers; and the Spire's laser, whose lock and shot follow its light wave catching
+                // the player. Everything else here is illustrated art.
                 DrawTracers(gm, time);
                 DrawWeaponMarks(gm, player, time);
                 DrawSpireLasers(gm, time);
@@ -193,6 +200,7 @@ namespace AnomalyArena
             HideRest();
         }
 
+        /// <summary>A soft shadow under each living body, so it stands on the ground and reads against it.</summary>
         void DrawBodyShadows(GameManager gm)
         {
             if (!v5Textures || !shadowTexture) return;
@@ -206,7 +214,7 @@ namespace AnomalyArena
                 if (body is Enemy { Cloaked: true }) continue;
                 Flat(shadowTexture, new Vector3(body.Position.x, .03f, body.Position.z), Mathf.Max(1.5f, body.radius * 3.4f), new Color(0f, 0f, 0f, .62f), 0f);
             }
-
+            // The player stands in a faint cool light, so the eye finds them in a crowd.
             if (gm.player && gm.player.IsAlive && softGlow)
             {
                 Flat(thinRing, new Vector3(gm.player.Position.x, .05f, gm.player.Position.z), 2.5f, new Color(.4f, .85f, 1f, .3f), 0f, true);
@@ -225,7 +233,7 @@ namespace AnomalyArena
                 if (status.Frozen) Billboard(frostShell, chest, r * 2.9f, new Color(.9f, .97f, 1f, .94f));
                 else if (status.Frost > .05f) Flat(frostRing, feet, r * (2.2f + .9f * status.Chill01), new Color(.72f, .93f, 1f, .25f + .55f * status.Chill01), phase * 90f);
                 if (status.Paralysed) Flat(slowRing, feet, r * 2.5f, new Color(1f, .88f, .42f, .38f), -time * 40f, true);
-
+                // An enemy's shield (a Warden's, the Earth affix, a Stomper's own) stands round it, faint enough not to hide it.
                 if (status.Shield > 0f) Billboard(auraShield, chest, r * 2.3f, new Color(1f, .86f, .55f, .13f), true);
                 return;
             }
@@ -260,6 +268,7 @@ namespace AnomalyArena
                     new Color(1f, .9f, .5f, .3f + .1f * status.Lightning));
         }
 
+        /// <summary>A rocket falls from the sky on a slant during the blast delay and lands exactly when the blast resolves.</summary>
         void DrawStrikes(GameManager gm, float time)
         {
             var attackPool = AttackPool.Instance;
@@ -290,7 +299,7 @@ namespace AnomalyArena
                     float pulse = .5f + .5f * Mathf.Sin(time * 18f);
                     if (v5Textures)
                     {
-
+                        // A thin ring at the true radius and a soft glow closing on the point of impact.
                         Flat(thinRing, strike.target, strike.radius * 2f * RingEdge, new Color(1f, .42f, .18f, Mathf.Lerp(.55f, 1f, strike.progress)), 0f, true);
                         Flat(softGlow, strike.target, strike.radius * 2f * Mathf.Lerp(1.4f, .7f, strike.progress), new Color(1f, .3f, .1f, Mathf.Lerp(.08f, .42f, strike.progress) * (.75f + .25f * pulse)), 0f, true);
                         PlaceStretched(strikeRocket, position, ScreenRoll(velocity), strikeRocketLength, strikeRocketLength * .5f, Color.white);
@@ -323,11 +332,12 @@ namespace AnomalyArena
             {
                 var strike = strikes[actor];
                 strikes.Remove(actor);
-
+                // A strike seen close to its landing exploded; one removed early (wave cleanup) did not.
                 if (strike.lastDelay <= Mathf.Max(.2f, strike.total * .35f)) Impact(gm, fx, strike);
             }
         }
 
+        /// <summary>Backfires left on the ground: Shatter ice patches, spore pods, Scatter Blast shells before they flare up and Blizzard snow.</summary>
         void DrawHazards(GameManager gm, float time)
         {
             if (!gm.runWeapons) return;
@@ -343,7 +353,7 @@ namespace AnomalyArena
                     if (h.kind == GroundHazardKind.ScatterShell)
                     {
                         float heat = 1f - Mathf.Clamp01(h.timeLeft / Mathf.Max(.01f, h.life));
-
+                        // A real brass case, heating toward orange as its fuse runs out; the glow around it is HotShell's.
                         Flat(shellTexture, h.position + Vector3.up * .08f, .72f, new Color(1f, 1f - .25f * heat, 1f - .55f * heat, 1f), i * 71f);
                         Flat(thinRing, h.position + Vector3.up * .06f, h.radius * 2f * RingEdge, new Color(1f, .5f, .2f, .25f + .55f * heat), 0f, true);
                         fx5.HotShell(h.position, heat);
@@ -360,19 +370,19 @@ namespace AnomalyArena
                     }
                     continue;
                 }
-
+                // A tamed patch does not make you slip: a deeper blue so it does not read as a trap for you.
                 if (h.kind == GroundHazardKind.IcePatch)
                     Flat(frostRing, h.position + Vector3.up * .06f, h.radius * 2.4f,
                         tamed ? new Color(.35f, .55f, 1f, .8f * fade) : new Color(.7f, .95f, 1f, .75f * fade), i * 37f);
                 else if (h.kind == GroundHazardKind.ScatterShell)
                 {
-
+                    // A hot shell glowing where it landed, inside the ring of the fire it is about to become.
                     float heat = 1f - Mathf.Clamp01(h.timeLeft / Mathf.Max(.01f, h.life));
                     Flat(slowRing, h.position + Vector3.up * .06f, h.radius * 2f, new Color(1f, .5f, .2f, .25f + .5f * heat), time * 90f);
                     Billboard(Frame(fireFrames, time * 1.5f + i * .3f), h.position + Vector3.up * .3f, .45f + .35f * heat, Color.white);
                 }
                 else if (h.kind == GroundHazardKind.Snow)
-
+                    // Tamed snow helps you: a cooler blue, like a tamed ice patch.
                     Flat(frostRing, h.position + Vector3.up * .055f, h.radius * 2.2f,
                         tamed ? new Color(.6f, .8f, 1f, .5f * fade) : new Color(.95f, .98f, 1f, .5f * fade), i * 53f);
                 else
@@ -385,6 +395,7 @@ namespace AnomalyArena
             }
         }
 
+        /// <summary>Bloater radiation zones (document 10.2): a sickly ground glow that fades with the zone.</summary>
         void DrawRadiation(float time)
         {
             var zones = Enemy.RadiationZones;
@@ -406,6 +417,7 @@ namespace AnomalyArena
             }
         }
 
+        /// <summary>Affix and chant glows and Chanter auras (document 10.2); the Spire's laser is DrawSpireLasers'.</summary>
         void DrawSpecialEnemies(GameManager gm, float time)
         {
             if (!gm.waves) return;
@@ -415,7 +427,7 @@ namespace AnomalyArena
                 if (!enemy || !enemy.IsAlive || !enemy.gameObject.activeInHierarchy || !enemy.definition || used >= items.Length) continue;
                 if (v5Textures && V5Vfx.On)
                 {
-
+                    // What an enemy carries shows on it: the colour of its affix round its feet and the element rising from it; a body the chant strengthens glows violet.
                     if (enemy.Affix != ElementKind.None)
                     {
                         V5Vfx.I.AffixAura(enemy, enemy.Affix);
@@ -440,6 +452,8 @@ namespace AnomalyArena
             }
         }
 
+        /// <summary>Spire laser lock and shot (document 10.2), in both modes: the line it aims along once its light wave caught the player,
+        /// then the shot. Whitebox draws them blended, the illustrated art additively.</summary>
         void DrawSpireLasers(GameManager gm, float time)
         {
             if (!gm.waves || !prismBeam) return;
@@ -454,7 +468,7 @@ namespace AnomalyArena
                 Vector3 direction = Query.Flat(enemy.LaserDirection).sqrMagnitude > .001f ? Query.Flat(enemy.LaserDirection).normalized : Vector3.forward;
                 float length = Mathf.Max(1f, enemy.LaserLength);
                 Vector3 from = Query.AtCastHeight(enemy.Position) + direction * enemy.radius;
-
+                // Kept plain on purpose: a steady thin lock line and a modest shot, no flicker.
                 float width = fired ? prismBeamWidth : prismBeamWidth * .22f;
                 Color color = fired ? new Color(1f, .55f, .35f, .85f) : new Color(1f, .3f, .25f, .5f);
                 PlaceStretched(prismBeam, from + direction * length * .5f, ScreenRoll(direction), length, width, color, v5Textures);
@@ -462,6 +476,7 @@ namespace AnomalyArena
             if (lasers.Count > 64) lasers.Clear();
         }
 
+        /// <summary>Shots with no projectile (Execute tracer, Chain arcs) as short beams, drawn like the Spire laser.</summary>
         void DrawTracers(GameManager gm, float time)
         {
             if (!gm.runWeapons || !prismBeam) return;
@@ -478,6 +493,9 @@ namespace AnomalyArena
             }
         }
 
+        /// <summary>Card markers that would otherwise show only on illustrated models: a ring under every enemy the Charged Shot Tame
+        /// aim line slows, a pale shell on the player while the Scatter Focus Tame guard blocks attacks, and an icy one while tamed
+        /// Blizzard snow under the player cuts the damage it takes.</summary>
         void DrawWeaponMarks(GameManager gm, Combatant player, float time)
         {
             var weapons = gm.runWeapons;
@@ -497,6 +515,7 @@ namespace AnomalyArena
                 Billboard(auraShield, Query.AtCastHeight(player.Position) + Vector3.up * .3f, 2.2f, new Color(.6f, .85f, 1f, .45f));
         }
 
+        /// <summary>Spitter spikes fly as thorns; the plain spit ball under each one is hidden while this pool draws it.</summary>
         void DrawBolts(GameManager gm)
         {
             var bolts = gm.waves ? gm.waves.preparedBolts : null;
@@ -514,7 +533,7 @@ namespace AnomalyArena
                 var bolt = bolts[i];
                 bool drawn = poisonSpike && bolt && bolt.gameObject.activeInHierarchy && bolt.IsPoisonSpike &&
                              used < items.Length;
-
+                // Boss shots glow in the V5 art instead of showing a plain white ball.
                 bool orb = v5Textures && orbTexture && V5Vfx.On && bolt && bolt.gameObject.activeInHierarchy && !bolt.IsPoisonSpike && used < items.Length;
                 if (orb)
                 {
@@ -526,7 +545,7 @@ namespace AnomalyArena
                 }
                 else if (drawn && v5Textures && bolt.Affix != ElementKind.None)
                 {
-
+                    // A poison thorn from an affixed Spitter also carries the colour of its element.
                     V5Vfx.I.ShotMote(bolt.transform.position, V5Vfx.ElementTint(bolt.Affix));
                     Vector3 direction = bolt.Direction;
                     PlaceStretched(poisonSpike, bolt.transform.position - direction * spikeLength * .24f, ScreenRoll(direction), spikeLength, spikeLength * .375f, Color.white);
@@ -534,7 +553,7 @@ namespace AnomalyArena
                 else if (drawn)
                 {
                     Vector3 direction = bolt.Direction;
-
+                    // Keep the thorn head on the real hit point; the trail streams out behind it.
                     PlaceStretched(poisonSpike, bolt.transform.position - direction * spikeLength * .24f,
                         ScreenRoll(direction),
                         spikeLength, spikeLength * .375f, Color.white);
@@ -554,7 +573,7 @@ namespace AnomalyArena
 
         void Impact(GameManager gm, FxPool fx, Strike strike)
         {
-
+            // The V5 art draws this burst from AttackActor.Explode, as it does every other explosion.
             if (fx && !V5Vfx.On)
             {
                 if (strikeFlash)
@@ -652,7 +671,7 @@ namespace AnomalyArena
         void Billboard(Texture texture, Vector3 at, float size, Color color, bool additive = false)
         {
             if (!texture || used >= items.Length) return;
-
+            // Pull the quad toward the camera so it sits over the body instead of cutting through it.
             Vector3 toCamera = (cameraTransform.position - at).normalized;
             Place(texture, at + toCamera * size * .35f, cameraTransform.rotation, size, color, additive);
         }

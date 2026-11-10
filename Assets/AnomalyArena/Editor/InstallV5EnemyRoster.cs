@@ -6,7 +6,13 @@ using UnityEngine;
 
 namespace AnomalyArena.EditorTools
 {
-
+    /// <summary>
+    /// V5 enemy roster (system doc §10–11): melee Grunt with three real variants (Brute, Skitter, Splitter), ranged Spitter, support Warden,
+    /// and six specials (Rammer, Bloater, Spire, Stomper, Shade, Chanter) that spawn as ordinary enemies in the waves that list them;
+    /// an elite is a special with an element affix. Writes the enemy definitions (creates Chanter if missing), the 14-wave weights of
+    /// Waves15 (wave 15 is the final boss) and the Chanter/mini/boss entries of EncounterBalance.
+    /// Data only: no scene, prefab or runtime object is touched. Safe to run again.
+    /// </summary>
     public static class InstallV5EnemyRoster
     {
         const string EnemyFolder = "Assets/AnomalyArena/V2/Data/Enemies/";
@@ -14,6 +20,8 @@ namespace AnomalyArena.EditorTools
         const string BalancePath = "Assets/AnomalyArena/Data/EncounterBalance.asset";
         const int OrdinaryWaves = 14;
 
+        // Melee variants (§10.2): Brute winds up longer and hits harder but walks slowly; Skitter hits lightly with a short wind-up and runs;
+        // Splitter is in between and splits on death. HP shares the fodder TTK budget.
         static readonly (EnemyKind kind, float damage, float windup, float interval, float speed, float radius, bool splits)[] Melee =
         {
             (EnemyKind.Grunt, 5f, .25f, .8f, 5.4f, .5f, false),
@@ -24,6 +32,7 @@ namespace AnomalyArena.EditorTools
 
         static readonly EnemyKind[] Specials = { EnemyKind.Rammer, EnemyKind.Bloater, EnemyKind.Spire, EnemyKind.Stomper, EnemyKind.Shade, EnemyKind.Chanter };
 
+        // §11.2 table: kinds allowed besides the melee kinds, per ordinary wave; Grunt, Brute, Skitter and Splitter are in every wave.
         static readonly EnemyKind[][] Allowed =
         {
             new EnemyKind[0],
@@ -42,6 +51,8 @@ namespace AnomalyArena.EditorTools
             new[] { EnemyKind.Spitter, EnemyKind.Warden, EnemyKind.Rammer, EnemyKind.Stomper, EnemyKind.Bloater, EnemyKind.Spire, EnemyKind.Shade, EnemyKind.Chanter },
         };
 
+        /// <summary>One weight per EnemyKind. Melee, Spitter and Warden weights share the basic group; specials share the special group and,
+        /// from firstEliteWave, the elite group (WaveManager, system doc §11.2).</summary>
         static int[] WeightsFor(int wave)
         {
             var weights = new int[Enum.GetValues(typeof(EnemyKind)).Length];
@@ -80,7 +91,7 @@ namespace AnomalyArena.EditorTools
                 var data = Load(kind);
                 if (data != grunt)
                 {
-
+                    // Same HP data, interval, reach, XP and push response as the melee basic; the differences are listed above.
                     data.hp = grunt.hp; data.reach = grunt.reach; data.xp = grunt.xp;
                     data.knockbackScale = grunt.knockbackScale; data.canAffix = grunt.canAffix; data.startShieldShare = grunt.startShieldShare;
                 }
@@ -95,7 +106,7 @@ namespace AnomalyArena.EditorTools
             Save(spitter, log);
 
             var warden = Load(EnemyKind.Warden);
-            warden.knockback = 0f; warden.canElite = false; warden.canAffix = false; warden.splitsOnDeath = false;                                      
+            warden.knockback = 0f; warden.canElite = false; warden.canAffix = false; warden.splitsOnDeath = false; // §7.6: Wardens never carry affixes.
             Save(warden, log);
 
             var chanter = LoadOrCreateChanter(warden, log);
@@ -107,7 +118,7 @@ namespace AnomalyArena.EditorTools
             foreach (var kind in Specials)
             {
                 var data = kind == EnemyKind.Chanter ? chanter : Load(kind);
-                data.canElite = true;                                   
+                data.canElite = true; // An elite is an affixed special.
                 data.canAffix = true;
                 data.splitsOnDeath = false;
                 Save(data, log);
@@ -116,7 +127,7 @@ namespace AnomalyArena.EditorTools
             var waves = AssetDatabase.LoadAssetAtPath<WaveSet>(WavesPath);
             if (!waves || waves.waves == null || waves.waves.Length < OrdinaryWaves)
                 throw new InvalidOperationException($"{WavesPath} needs at least {OrdinaryWaves} wave entries.");
-            if (waves.waves.Length > OrdinaryWaves) waves.waves = waves.waves.Take(OrdinaryWaves).ToArray();                              
+            if (waves.waves.Length > OrdinaryWaves) waves.waves = waves.waves.Take(OrdinaryWaves).ToArray(); // Wave 15 is the final boss.
             for (int i = 0; i < waves.waves.Length; i++)
             {
                 waves.waves[i].weights = WeightsFor(i + 1);

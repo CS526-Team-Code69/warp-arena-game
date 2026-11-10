@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>Saved as ints in assets and wave weights: only append new kinds at the end.</summary>
     public enum EnemyKind
     {
         Grunt,
@@ -21,6 +21,9 @@ namespace AnomalyArena
         Chanter
     }
 
+    /// <summary>V5 roster roles (system doc §10). Basic: melee (Grunt and its variants Brute/Skitter/Splitter), ranged (Spitter), support (Warden).
+    /// Specials (Rammer, Bloater, Spire, Stomper, Shade, Chanter) are ordinary spawns in the waves that list them; an elite is a special with an element affix.
+    /// Only bosses knock the player back (§5.2).</summary>
     public static class EnemyRoles
     {
         public static bool IsMelee(EnemyKind kind) =>
@@ -29,10 +32,12 @@ namespace AnomalyArena
         public static bool IsSpecial(EnemyKind kind) => kind is EnemyKind.Rammer or EnemyKind.Bloater or EnemyKind.Spire
             or EnemyKind.Stomper or EnemyKind.Shade or EnemyKind.Chanter;
 
+        /// <summary>Never attacks; stays behind the nearest ally, away from the player.</summary>
         public static bool IsSupport(EnemyKind kind) => kind is EnemyKind.Warden or EnemyKind.Chanter;
 
         public static bool IsBoss(EnemyKind kind) => kind is EnemyKind.Hollow or EnemyKind.Tyrant;
-
+        /// <summary>Bosses, the Stomper slam (far) and the Rammer charge (a little, then a stun) push the player; every other
+        /// enemy hit is feedback only. The distance is the attack's knockback tier (KnockbackRules); bosses keep their own numbers.</summary>
         public static bool KnocksBackPlayer(EnemyKind kind) => IsBoss(kind) || kind is EnemyKind.Stomper or EnemyKind.Rammer;
     }
 
@@ -52,6 +57,8 @@ namespace AnomalyArena
         [Tooltip("Bosses only: push of a plain hit (their moves push by Boss Tuning). Every other enemy pushes by its attack's knockback tier (GameManager > Rules > Knockback).")]
         public float knockback = 5f;
 
+        // Retired (document 5.3): knockback resistance follows body size now (GameManager > Rules > Knockback). Hidden but kept, because
+        // the V5 roster installer still copies it.
         [HideInInspector] public float knockbackScale = 1f;
 
         [Tooltip(

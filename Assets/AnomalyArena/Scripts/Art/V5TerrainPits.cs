@@ -3,16 +3,18 @@ using UnityEngine.Rendering;
 
 namespace AnomalyArena
 {
-
+    /// <summary>The illustrated look of the quicksand pools: one sunken, slowly turning pit per pool, exactly the pool's size (Quicksand decides when; gameplay reads the
+    /// layout, never these).</summary>
     public static class V5TerrainPits
     {
         const string MaterialPath = "V5/Terrain/V5QuicksandPit";
-
+        // One full turn of the spiral takes this many seconds.
         const float SecondsPerTurn = 26f;
         static readonly int ClockId = Shader.PropertyToID("_Clock");
         static Material material;
         static float clock;
 
+        /// <summary>Draws the pools under parent. False if the pit's material is missing, so the caller can fall back on its decals.</summary>
         public static bool Draw(Transform parent, MapLayout.SandPool[] pools, Mesh quad, float height, int sortingOrder)
         {
             if (!material)
@@ -38,6 +40,7 @@ namespace AnomalyArena
             return true;
         }
 
+        /// <summary>Turns the spiral; it stands still while the game's time does.</summary>
         public static void Tick(float deltaTime)
         {
             if (!material) return;

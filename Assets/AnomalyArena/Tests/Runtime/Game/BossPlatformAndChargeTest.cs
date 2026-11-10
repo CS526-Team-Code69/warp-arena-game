@@ -8,23 +8,23 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-                                                                                                                                              
-                                                                                                                                          
-                                                                                                                                         
-                                                                                                                                            
-                                                                                                                                         
-                                                                                
+    /// <summary>The Nash Prophet's platform keeps its phase-1 size in every phase (no
+    /// shrink and no dashed new edge before one), its fragments and portals stay where they were, and a void pillar can stand on a player
+    /// anywhere on it; its repulse pulse pushes 4.8, 6 and 7 cells in phases 1, 2 and 3, so the safe band by its body narrows each phase
+    /// (NashProphetTest measures the bands). The Tyrant's Rampage Charge knocks the enemies its body runs into out of its lane, each to the
+    /// side it stands on and unhurt, instead of passing through them, while one beside the lane is left alone and the run keeps its line
+    /// and its whole length; running the player down stays as it was.</summary>
     [TestFixture]
     [Category("V3Smoke")]
     public class BossPlatformAndChargeTest
     {
         const string LabScene = "Assets/AnomalyArena/Scenes/EnemyLab.unity";
-        const string ArenaScene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        const string ArenaScene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
 
         [TearDown]
         public void TearDown() => Time.timeScale = 1f;
 
-                                              
+        // ───── Nash Prophet (no scene) ─────
 
         [Test]
         public void ProphetTuning_ThePulsePushesHarderEachPhase_TheDesignNumbers_NoShrinkOrEdgeWarningIsLeft()
@@ -39,7 +39,7 @@ namespace AnomalyArena
             Assert.That(typeof(Enemy).GetMethod("TickNashPlatform", members), Is.Null, "nor the shrink itself");
         }
 
-                                                     
+        // ───── Nash Prophet (enemy lab trial) ─────
 
         [Test, LoadScene(LabScene), Category("Integration"), Timeout(60000)]
         public async Task ProphetPhaseThree_FightsOnThePhaseOnePlatform_FragmentsAndPortalsStay_APillarStandsOnAPlayerPastTheOldEdge()
@@ -54,10 +54,10 @@ namespace AnomalyArena
             var portals = Enumerable.Range(0, world.TrialPortalCount).Select(world.TrialPortalCentre).ToArray();
             Assume.That(portals, Is.Not.Empty, "the scene has its trial portals");
 
-            hollow.HoldAttacks(60f);                                               
+            hollow.HoldAttacks(60f); // no moves of its own: only the phases change
             await NashProphetTest.EnterPhase(hollow, 2, b);
             await NashProphetTest.EnterPhase(hollow, 3, b);
-                                                                      
+            // Longer than the old two-second warning before a shrink.
             float since = Time.time;
             while (Time.time - since < 2.5f) await Awaitable.NextFrameAsync();
 
@@ -71,7 +71,7 @@ namespace AnomalyArena
             for (int i = 0; i < portals.Length; i++)
                 Assert.That(Vector3.Distance(world.TrialPortalCentre(i), portals[i]), Is.LessThan(.001f), $"portal {i} where it was");
 
-                                                                                                                                         
+            // Out past the old phase-3 edge (prophetPlatformRadii.z), clear of the portals: the first pillar stands right on the player.
             Vector3 spot = centre + Vector3.back * (b.prophetPlatformRadii.z + 2f);
             Assume.That(Flat(spot - centre).magnitude, Is.LessThan(start - 1f), "still well on the platform");
             NashProphetTest.Place(player, spot);
@@ -82,7 +82,7 @@ namespace AnomalyArena
                 "the first pillar stands on the player, not cut back to an edge the platform no longer shrinks to");
         }
 
-                                             
+        // ───── Tyrant (arena sandbox) ─────
 
         [Test, LoadScene(ArenaScene), Category("Integration"), Timeout(60000)]
         public async Task RampageCharge_KnocksTheMinionsInItsWayAside_EachToItsOwnSideUnhurt_RunsItsWholeLine_LeavesOneBesideItsLaneAlone()
@@ -96,14 +96,14 @@ namespace AnomalyArena
             float Along(Combatant body) => Vector3.Dot(Flat(body.Position) - from, ahead);
             float Across(Combatant body) => Vector3.Dot(Flat(body.Position) - from, side);
 
-                                                                                                                                         
-                                                                                                                                   
-                                                                                                              
+            // Three Grunts (the sandbox's first kinds vary): two square in its body's way, a little right and a little left of its line,
+            // and one beside the lane near the run's end, just out of reach of its body (and of the first one's slide). Unlike the
+            // sandbox's frozen targets these can be moved and play out a push, but they never walk (speed 0).
             var grunt = game.waves.DefinitionOf(EnemyKind.Grunt);
             Assume.That(grunt, Is.Not.Null, "the roster has the Grunt");
             foreach (var minion in targets)
             {
-                minion.Configure(grunt, 1f, false);                                       
+                minion.Configure(grunt, 1f, false); // movable again: only rotation frozen
                 minion.moveSpeed = 0f;
                 minion.enabled = true;
             }
@@ -138,7 +138,7 @@ namespace AnomalyArena
                 float[] hpAtLeap = null, acrossAtLeap = null, alongAtLeap = null;
                 Vector3 ranTo = await TyrantRedesignTest.RunAndLand(tyrant, () =>
                 {
-                                                                                            
+                    // How far either came back toward the lane since the last physics step.
                     inward = Mathf.Max(inward, Mathf.Max(rightWas - Across(right), Across(left) - leftWas));
                     rightWas = Across(right);
                     leftWas = Across(left);
@@ -159,12 +159,12 @@ namespace AnomalyArena
                 });
 
                 Assert.That(leapt, Is.True, "the run ended in its leap");
-                                                                                     
+                // The last sample of the run can be one physics step before its end.
                 Assert.That(Vector3.Dot(ranTo - from, ahead), Is.GreaterThan(run - .3f), "nothing held it back: it ran its whole planned run");
                 Assert.That(drift, Is.LessThan(.1f), "straight down its line");
                 Assert.That(Flat(tyrant.Position - landing).magnitude, Is.LessThan(.5f), "then leapt and landed on its circle");
 
-                                                                                                             
+                // Passing through them, they would still stand 0.6 cells off its line as its centre came by.
                 Assert.That(rightAbreast, Is.GreaterThanOrEqualTo(tyrant.Radius), "the minion right of its line was already knocked well out to the right");
                 Assert.That(leftAbreast, Is.LessThanOrEqualTo(-tyrant.Radius), "the one left of it out to the left");
                 Assert.That(acrossAtLeap[0], Is.GreaterThanOrEqualTo(tyrant.Radius + right.Radius), "by the end of the run each is clear of its lane");
@@ -198,7 +198,7 @@ namespace AnomalyArena
             {
                 TyrantRedesignTest.Force(tyrant, Enemy.RampageChargeMove);
                 await Until(() => tyrant.WindingUp && tyrant.LineTelegraph, 3f, "the charge wind-up");
-                                                                                          
+                // The line is locked at the wind-up: you step into the middle of its run.
                 TyrantRedesignTest.Place(player, from + ahead * 4f);
                 await TyrantRedesignTest.RunAndLand(tyrant);
 
@@ -214,7 +214,7 @@ namespace AnomalyArena
             }
         }
 
-                              
+        // ───── Helpers ─────
 
         static Vector3 Flat(Vector3 v) => Query.Flat(v);
 

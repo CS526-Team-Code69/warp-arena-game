@@ -2,13 +2,14 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
+    /// <summary>Late saved-renderer feedback for the real Bloater warning. No separate explosion timer or attack rule.</summary>
     [DefaultExecutionOrder(1200)]
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Enemy))]
     public sealed class V2EnemyThreatFeedback : MonoBehaviour
     {
         public Enemy enemy;
-        [Tooltip("Saved 3D model and affix renderers; no visual objects are created at runtime.")]
+        [Tooltip("保存的3D模型及白盒Renderer；不在运行时创建任何视觉物件。")]
         public Renderer[] surfaces;
         public SpriteRenderer legacyIllustration;
         [Min(.1f)] public float flashesPerSecond = 6f;
@@ -58,6 +59,8 @@ namespace AnomalyArena
                 surface.GetPropertyBlock(block);
                 if (emissionMaterial[i])
                 {
+                    // V2ModelPresentation wrote current hit/windup emission earlier this frame.
+                    // Preserve PBR base colour and per-kind submesh materials completely.
                     block.SetColor(Emission, block.GetColor(Emission) + warningEmission * pulse);
                 }
                 else

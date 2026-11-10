@@ -2,89 +2,92 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>
+    /// Whitebox / illustrated toggle shared by every presentation component, switched on the title (in whitebox the base,
+    /// the characters, the monsters and the weapons are boxes, the terrain and the backdrop pictures stay as they are). Since 2026-11-10 one
+    /// scene serves both languages, and the first run's art is whitebox in both (until that afternoon it followed the start language, illustrated in Chinese): whitebox
+    /// is the default (the course staff approved the illustrated art only as an optional mode). Once
+    /// the player switches, their choice is kept from run to run for the rest of the play: static fields survive scene reloads. The enemy
+    /// lab shows only the illustrated art. The switch changes the scene, the monsters, the characters and the combat
+    /// effects; the menus and icons are the same either way.
+    /// The boxes of the characters and of the weapon in hand: V2ModelPresentation, V2WeaponPresentation.
+    /// </summary>
     public static class Art
     {
-
-        public const string ChineseEditionScene = "ArenaV2_CN";
-
+        /// <summary>The enemy lab shows only the illustrated art. A developer's scene, not a language: it keeps its name check.</summary>
         public const string EnemyLabScene = "EnemyLab";
 
-        public enum Edition { None, English, Chinese, EnemyLab }
+        /// <summary>The named scene shows only the illustrated art (the enemy lab).</summary>
+        public static bool IsIllustratedOnlyScene(string sceneName) => sceneName == EnemyLabScene;
 
-        public static Edition EditionOf(string sceneName) => sceneName switch
-        {
-            ChineseEditionScene => Edition.Chinese,
-            EnemyLabScene => Edition.EnemyLab,
-            _ => Edition.English,
-        };
-
-        public readonly struct SceneArt
-        {
-            public readonly Edition edition;
-            public SceneArt(Edition edition) => this.edition = edition;
-            public bool IllustratedOnly => edition == Edition.EnemyLab;
-            public static implicit operator bool(SceneArt art) => art.IllustratedOnly;
-        }
-
-        public static SceneArt IsIllustratedOnlyScene(string sceneName) => new SceneArt(EditionOf(sceneName));
+        /// <summary>The first run's art: whitebox, whatever language the game opened in (2026-11-10).</summary>
+        public const bool DefaultIllustrated = false;
 
         public static bool Enabled;
-
+        /// <summary>The running scene shows only the illustrated art (the enemy lab): Enabled stays on and the title's switch does nothing.</summary>
         public static bool IllustratedOnly { get; private set; }
-
-        public static Edition RunningEdition { get; private set; }
-
-        static bool v2ChoiceInitialized, chineseInitialized;
-        static bool? toggleChoice, chineseChoice;
+        // Whether this play's first run has taken its default (the name it had before 2026-11-10; RunAnalyticsTest reads it), and the
+        // runs' choice, held while the enemy lab runs.
+        static bool v2ChoiceInitialized;
+        static bool? toggleChoice;
         static MaterialPropertyBlock mpb;
 
+        /// <summary>Every play starts the way a freshly loaded page does. The editor keeps statics from one play to the next (domain reload
+        /// is off), so otherwise the choice made in the last play would decide the first run of the next one.</summary>
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void ResetForPlay()
         {
             Enabled = false;
             IllustratedOnly = false;
-            RunningEdition = Edition.None;
-            v2ChoiceInitialized = chineseInitialized = false;
-            toggleChoice = chineseChoice = null;
+            v2ChoiceInitialized = false;
+#if UNITY_INCLUDE_TESTS
+            DefaultForTests = null;
+#endif
+            toggleChoice = null;
         }
 
-        public static void EnsureV2Default(SceneArt scene) => Begin(scene.edition);
-
-        public static void EnsureV2Default(bool illustratedOnly = false) => Begin(illustratedOnly ? Edition.EnemyLab : Edition.English);
-
-        static void Begin(Edition next)
+        /// <summary>Called as each run scene starts (GameManagerV2), with whether the scene shows only the illustrated art. The first run
+        /// of a play takes the default (whitebox); later runs keep the player's choice, and get it back after the enemy lab.</summary>
+        public static void EnsureV2Default(bool illustratedOnly = false)
         {
-            if (next == Edition.None) next = Edition.English;
-            if (RunningEdition != next)
+            if (illustratedOnly)
             {
-
-                if (RunningEdition == Edition.English) toggleChoice = Enabled;
-                else if (RunningEdition == Edition.Chinese) chineseChoice = Enabled;
+                if (!IllustratedOnly) toggleChoice = Enabled;
+                IllustratedOnly = true;
+                Enabled = true;
+                return;
             }
-            RunningEdition = next;
-            IllustratedOnly = next == Edition.EnemyLab;
-            switch (next)
+            if (IllustratedOnly)
             {
-                case Edition.EnemyLab:
-                    Enabled = true;
-                    break;
-                case Edition.Chinese:
-                    if (chineseChoice.HasValue) { Enabled = chineseChoice.Value; chineseChoice = null; }
-                    if (!chineseInitialized) { Enabled = true; chineseInitialized = true; }
-                    break;
-                default:
-                    if (toggleChoice.HasValue) { Enabled = toggleChoice.Value; toggleChoice = null; }
-                    if (!v2ChoiceInitialized) { Enabled = false; v2ChoiceInitialized = true; }
-                    break;
+                IllustratedOnly = false;
+                if (toggleChoice.HasValue) Enabled = toggleChoice.Value;
+            }
+            toggleChoice = null;
+            if (!v2ChoiceInitialized)
+            {
+#if UNITY_INCLUDE_TESTS
+                Enabled = DefaultForTests?.Invoke() ?? DefaultIllustrated;
+#else
+                Enabled = DefaultIllustrated;
+#endif
+                v2ChoiceInitialized = true;
             }
         }
 
+#if UNITY_INCLUDE_TESTS
+        /// <summary>Tests only: the first run's art in place of the default. TestStartLanguage sets it for the whole test run, so the tests
+        /// keep the start they were written for (illustrated when started in Chinese, whitebox in English); a test of the default itself
+        /// sets it to null. Null outside tests.</summary>
+        public static System.Func<bool> DefaultForTests { get; set; }
+#endif
+
+        /// <summary>The title's whitebox / illustrated switch. The enemy lab has none, so it never leaves the illustrated art.</summary>
         public static void Toggle()
         {
             if (!IllustratedOnly) Enabled = !Enabled;
         }
 
+        /// <summary>Tints one renderer through a property block, leaving its shared material untouched.</summary>
         public static void Tint(Renderer r, Color c)
         {
             if (!r) return;

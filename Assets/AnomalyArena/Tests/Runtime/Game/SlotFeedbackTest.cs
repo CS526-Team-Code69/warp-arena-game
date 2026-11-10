@@ -2,26 +2,39 @@ using System;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using TestHelper.Attributes;
+using TestHelper.RuntimeInternals;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace AnomalyArena
 {
-
+    /// <summary>The bottom row's feedback: the hand slot in use is marked and the buttons follow it, an attack flashes its own weapon's
+    /// slot, and a cast flashes the skill's slot, runs a light round it and turns its cooldown.</summary>
     [TestFixture]
     public class SlotFeedbackTest
     {
-        const string SceneCn = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
-        const string SceneEn = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        const string SceneCn = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
 
         [TearDown]
-        public void RestoreClock() => Time.timeScale = 1f;
+        public void RestoreClock()
+        {
+            Time.timeScale = 1f;
+            TestStartLanguage.Reset();
+        }
+
+        // ───── The hand in use ─────
 
         [Test, LoadScene(SceneCn), Category("Integration"), Timeout(60000)]
         public async Task Chinese_TheHandInUse_IsMarked_AndTheMarkAndTheButtonsFollowTheSwap() => await HandInUseIsMarked();
 
-        [Test, LoadScene(SceneEn), Category("Integration"), Timeout(60000)]
-        public async Task English_TheHandInUse_IsMarked_AndTheMarkAndTheButtonsFollowTheSwap() => await HandInUseIsMarked();
+        [Test, BuildScene(SceneCn), Category("Integration"), Timeout(60000)]
+        public async Task English_TheHandInUse_IsMarked_AndTheMarkAndTheButtonsFollowTheSwap()
+        {
+            // One scene serves both languages since 2026-11-10: the English start is asked for before the scene loads.
+            TestStartLanguage.Use(StartupLanguage.English);
+            await SceneManagerHelper.LoadSceneAsync(SceneCn);
+            await HandInUseIsMarked();
+        }
 
         static async Task HandInUseIsMarked()
         {
@@ -33,18 +46,18 @@ namespace AnomalyArena
             await Refreshed(hud);
             AssertInUse(hud, held);
             Assert.That(game.UiSnapshot.hint, Is.EqualTo(weapons.Active.Label), "the line over the charge bar names the weapon in hand");
-            Assert.That(Key(hud, other), Is.EqualTo(ArenaText.Pair($"HAND {other + 1}",$"HAND {other + 1}")), "right click does nothing with the other slot empty, so it names no button");
+            Assert.That(Key(hud, other), Is.EqualTo(ArenaText.Pair($"手持{other + 1}", $"HAND {other + 1}")), "right click does nothing with the other slot empty, so it names no button");
 
             weapons.Hand[other] = new RunWeapon { form = WeaponForm.Knife, variant = 0, revealed = true };
             await Refreshed(hud);
-            Assert.That(Key(hud, other), Is.EqualTo(ArenaText.Pair($"HAND {other + 1} [RMB SWITCH]",$"HAND {other + 1} [RMB SWITCH]")));
+            Assert.That(Key(hud, other), Is.EqualTo(ArenaText.Pair($"手持{other + 1} [右键切换]", $"HAND {other + 1} [RMB SWITCH]")));
 
             weapons.Switch();
             await Refreshed(hud);
             Assert.That(weapons.ActiveIndex, Is.EqualTo(other));
             AssertInUse(hud, other);
             Assert.That(game.UiSnapshot.hint, Is.EqualTo(weapons.Active.Label), "and follows the swap, whichever weapon was revealed last");
-            Assert.That(Key(hud, held), Is.EqualTo(ArenaText.Pair($"HAND {held + 1} [RMB SWITCH]",$"HAND {held + 1} [RMB SWITCH]")), "the buttons move with the swap");
+            Assert.That(Key(hud, held), Is.EqualTo(ArenaText.Pair($"手持{held + 1} [右键切换]", $"HAND {held + 1} [RMB SWITCH]")), "the buttons move with the swap");
 
             var dimmed = hud.handSlots[held].GetComponent<CanvasGroup>();
             var lit = hud.handSlots[other].GetComponent<CanvasGroup>();
@@ -57,9 +70,9 @@ namespace AnomalyArena
             var other = hud.handSlots[1 - index].feedback;
             Assert.That(inUse.IsInUse && inUse.TagShown && inUse.EdgeAlpha > .99f, Is.True, $"hand {index + 1} has the tag and the lit edge");
             Assert.That(other.IsInUse || other.TagShown, Is.False, $"hand {2 - index} has neither");
-            Assert.That(Key(hud, index), Is.EqualTo(ArenaText.Pair($"HAND {index + 1} [LMB]",$"HAND {index + 1} [LMB]")), "the left button uses the slot in hand");
+            Assert.That(Key(hud, index), Is.EqualTo(ArenaText.Pair($"手持{index + 1} [左键]", $"HAND {index + 1} [LMB]")), "the left button uses the slot in hand");
             var label = hud.handSlots[index].transform.Find("InUseTag/Label").GetComponent<Text>();
-            Assert.That(label.text, Is.EqualTo(ArenaText.Pair("IN USE","IN USE")));
+            Assert.That(label.text, Is.EqualTo(ArenaText.Pair("使用中", "IN USE")));
         }
 
         [Test, LoadScene(SceneCn), Category("Integration"), Timeout(30000)]
@@ -77,9 +90,11 @@ namespace AnomalyArena
             var hud = UnityEngine.Object.FindAnyObjectByType<V2Hud>();
             await Refreshed(hud);
             foreach (var slot in hud.handSlots) Assert.That(slot.feedback.IsInUse || slot.feedback.TagShown, Is.False, "no weapon yet, nothing is in use");
-            Assert.That(Key(hud, 0), Is.EqualTo(ArenaText.Pair("HAND 1 [LMB]","HAND 1 [LMB]")), "the first weapon will go here");
-            Assert.That(Key(hud, 1), Is.EqualTo(ArenaText.Pair("HAND 2","HAND 2")));
+            Assert.That(Key(hud, 0), Is.EqualTo(ArenaText.Pair("手持1 [左键]", "HAND 1 [LMB]")), "the first weapon will go here");
+            Assert.That(Key(hud, 1), Is.EqualTo(ArenaText.Pair("手持2", "HAND 2")));
         }
+
+        // ───── Attacks ─────
 
         [Test, LoadScene(SceneCn), Category("Integration"), Timeout(60000)]
         public async Task AnAttack_FlashesItsWeaponsSlot_AndChargingDoesNot()
@@ -118,6 +133,8 @@ namespace AnomalyArena
             Assert.That(held.Flash, Is.Zero, "the auto weapon flashes its own slot, not the hand's");
         }
 
+        // ───── Casts ─────
+
         [Test, LoadScene(SceneCn), Category("Integration"), Timeout(60000)]
         public async Task ACast_FlashesTurnsAndCoolsItsSlot_AndARefusedOneDoesNot()
         {
@@ -137,7 +154,7 @@ namespace AnomalyArena
             await Awaitable.NextFrameAsync();
             Assert.That(feedback.Flash, Is.GreaterThan(.5f), "the cast flashes the slot at once");
             Assert.That(feedback.Spin, Is.GreaterThanOrEqualTo(0f), "and starts the light round its edge");
-
+            // The HUD writes its numbers at 10 Hz: from the first frame the clock keeps up with the cooldown, it does not fall away and jump back at the next write.
             float watchUntil = Time.realtimeSinceStartup + .25f;
             while (Time.realtimeSinceStartup < watchUntil)
             {
@@ -160,8 +177,11 @@ namespace AnomalyArena
             Assert.That(feedback.Spin, Is.EqualTo(-1f), "or turn");
         }
 
+        // ───── Helpers ─────
+
         static string Key(V2Hud hud, int index) => hud.handSlots[index].transform.Find("SlotKey").GetComponent<Text>().text;
 
+        /// <summary>Draws the current run into the HUD and gives the feedback its frame.</summary>
         static async Task Refreshed(V2Hud hud)
         {
             hud.RefreshView();

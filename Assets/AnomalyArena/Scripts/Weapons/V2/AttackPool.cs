@@ -3,7 +3,7 @@ using UnityEngine;
 namespace AnomalyArena
 {
     public enum AttackMode { Bolt, Knife, Blast, Field, Pull, Sticky, Bouncy, Swarm, Hook, Swap, Recall, Lob, Shard }
-
+    /// <summary>Actors are pre-placed in ArenaV2. A full pool refuses an attack instead of allocating during combat.</summary>
     public sealed class AttackPool : MonoBehaviour
     {
         public AttackActor[] actors;

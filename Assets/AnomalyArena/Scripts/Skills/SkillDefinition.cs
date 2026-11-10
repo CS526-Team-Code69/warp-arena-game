@@ -5,7 +5,8 @@ namespace AnomalyArena
     [CreateAssetMenu(menuName = "Anomaly Arena/Skill Definition")]
     public sealed class SkillDefinition : ScriptableObject
     {
-
+        /// <summary>Document 7.3: skills have levels 1 to 5. Every per-level array holds five entries, level 1 first, and
+        /// every max-level effect starts at this level. Greater Void skills have no levels and stay at level 1.</summary>
         public const int MaxLevel = 5;
         public SkillId id;
         public string displayName;
@@ -25,7 +26,7 @@ namespace AnomalyArena
         [Tooltip("One value per level, levels 1 to 5 (stacks, bolts, pull, shield share, HP line or speed, depending on the skill).")]
         public float[] strength = { 0f, 0f, 0f, 0f, 0f };
         [Tooltip("Storm Call direct damage per bolt.")] public float hitDamage = 6f;
-        [Tooltip("Storm Call Lightning stacks per bolt, one value per level, levels 1 to 5 (numbers by decision P28, 2026-10-27; document 7.3: stacking skills give "
+        [Tooltip("Storm Call Lightning stacks per bolt, one value per level, levels 1 to 5 (document 7.3: stacking skills give "
             + "more stacks per level). Levels 1-4 do not chain; level 5 chains through ElementCombat.ApplyStacks.")]
         public float[] hitStacksByLevel = { 3f, 4f, 4f, 5f, 5f };
         [Tooltip("Gravity Well level 5 ending hit.")] public float endDamage = 10f;
@@ -72,7 +73,7 @@ namespace AnomalyArena
         public float ContactKnockback(int level) => At(contactKnockback, level);
         public float HitStacks(int level) => At(hitStacksByLevel, level);
         public float StatusResistance(int level) => Mathf.Clamp01(At(statusResistance, level));
-
+        /// <summary>The entry of a level; an array shorter than five (an asset saved before skills had five levels) repeats its last entry.</summary>
         static float At(float[] values, int level) => values is { Length: > 0 } ? values[Mathf.Clamp(level - 1, 0, values.Length - 1)] : 0f;
         [Min(1f), Tooltip("Growth of direct skill damage per level: × this^(level-1), then × wave scale R(w) and the player's damage multiplier. "
             + "1.161895 (the square root of 1.35) makes level 5 hit 1.82 times as hard as level 1, as level 3 did when skills had three levels.")]
@@ -83,14 +84,47 @@ namespace AnomalyArena
             + "its damage, instead of the 0.7 a normal Shield lets count (Status Rules > shieldDirectFactor). 0.5 = half. The level-5 Shield "
             + "may also stand above the usual Shield cap, up to its own size.")]
         [Range(0f, 1f)] public float bulwarkShieldDirectFactor = 0.5f;
-
+        /// <summary>Direct skill damage: base × R(w) × growth^(level−1) × the caster's damage multiplier.</summary>
         public float ScaledDamage(float baseDamage, int level, float damageMultiplier = 1f) =>
             baseDamage * ElementCombat.WaveScale * Mathf.Pow(Mathf.Max(1f, levelDamageGrowth), Mathf.Clamp(level, 1, MaxLevel) - 1) * Mathf.Max(0f, damageMultiplier);
         public float Cooldown(int level) => id == SkillId.Devour && level >= MaxLevel ? advancedCooldown : cooldown;
-        public string Description(int level) => ArenaText.Pair(EnglishDescription(level),EnglishDescription(level));
-
+        public string Description(int level) => ArenaText.Pair(ChineseDescription(level), EnglishDescription(level));
+        // The V2 day campaign has no cards (since 2026-11-06): its texts name the days and the Damage bonus instead.
         static bool InCampaign => V2Campaign.Active && V2Campaign.Active.Running;
-        string ChineseDescription(int level) =>EnglishDescription(level);
+        string ChineseDescription(int level) => id switch
+        {
+            SkillId.FlameWake => $"身后留下燃烧尾迹，碰到的敌人被点燃（{Duration(level):0.#} 秒，每秒烧 {Strength(level):0.#} 点，随波次成长）。"
+                + (level >= 2 ? "持续更久" + (level >= MaxLevel ? "，满级尾迹更宽" : "") + "。" : ""),
+            SkillId.Contagion => $"给附近敌人叠毒；期间中毒的敌人死亡时，毒跳到附近敌人身上（{Radius(level):0.#} 单位内 {Strength(level):0.#} 层毒素，{Duration(level):0.#} 秒）。"
+                + (level >= 2 ? "持续更久" + (level >= MaxLevel ? "，满级一次跳给两个敌人，向外扩散" : "") + "。" : ""),
+            SkillId.FrostNova => $"给周围敌人叠冰冻，小怪当场冻住（{Radius(level):0.#} 单位内 {Strength(level):0.#} 层冰冻）。"
+                + (level >= 2 ? "范围更大" + (level >= MaxLevel ? $"，满级冻住的敌人至少冻 {freezeHold:0.#} 秒" : "") + "。" : ""),
+            SkillId.StormCall => $"在光标附近随机落雷，造成伤害并叠雷电（{Duration(level):0.#} 秒内 {Radius(level):0.#} 单位内落 {Strength(level):0} 道，每道 {ScaledDamage(hitDamage, level):0.#} 伤害、{HitStacks(level):0.#} 层雷电，伤害{(InCampaign ? "随天数和伤害加成" : "随波次和伤害卡")}成长）。"
+                + (level >= 2 ? "闪电更多、范围更大" + (level >= MaxLevel ? "，满级闪电命中后还会跳到附近敌人" : "") + "。" : ""),
+            SkillId.Bulwark => $"在光标处立一道墙，撞上的敌人被击退，只有 Boss 能摧毁它：暴虐君王的冲锋、纳什先知的斥力脉冲；同时获得护盾（墙长 {Radius(level):0.#} 单位，{Duration(level):0.#} 秒，击退 {ContactKnockback(level):0.#} 单位，"
+                + (shieldScalesWithMaxHp ? $"护盾为最大生命的 {Strength(level) * 100:0}%）。" : $"护盾 {Strength(level):0.#} 点）。")
+                + (level >= 2 ? "护盾更厚、击退更远、墙更长" + (level >= MaxLevel ? $"，满级护盾特别厚、减伤更高：打在这层护盾上的直接伤害只算 {bulwarkShieldDirectFactor * 100:0}%" : "") + "。" : ""),
+            SkillId.Radiance => $"清除你身上所有状态；之后攻击吸血，异常抗性提高（{Duration(level):0.#} 秒，吸血 {Strength(level) * 100:0}%，抗性 {StatusResistance(level) * 100:0}%）。"
+                + (level >= 2 ? "持续更久、抗性更高" + (level >= MaxLevel ? $"，满级还立刻回 {healOnCast:0.#} 点生命" : "") + "。" : ""),
+            SkillId.Devour => $"吞掉附近一个残血敌人，回能量（{Range(level):0.#} 单位内生命低于 {Strength(level) * 100:0}% 的敌人，精英可以，Boss 不行；回 {energyReward:0.#} 能量，冷却 {Cooldown(level):0.#} 秒）。"
+                + (level >= 2 ? "能吞的血线更高" + (level >= MaxLevel ? "，满级冷却更短" : "") + "。" : ""),
+            SkillId.Blink => $"朝光标瞬移，并取消正在进行的击退（最远 {Range(level):0.#} 单位）。"
+                + (level >= 2 ? "距离更远" + (level >= MaxLevel ? "，满级有两次充能，各自冷却" : "") + "。" : ""),
+            SkillId.Shockwave => $"把你周围的敌人全部重重推开（{Radius(level):0.#} 单位内击退 {Strength(level):0.#} 单位）。"
+                + (level >= 2 ? "范围更大" + (level >= MaxLevel ? "，满级还能反弹敌方飞行物" : "") + "。" : ""),
+            SkillId.GravityWell => $"在落点放一个引力井，把附近敌人拉向中心（{Radius(level):0.#} 单位内每秒拉 {Strength(level):0.#} 单位，{Duration(level):0.#} 秒）。"
+                + (level >= 2 ? "持续更久" + (level >= MaxLevel ? $"，满级结束时爆炸（{ScaledDamage(endDamage, level):0.#} 伤害、向外击退 {endKnockback:0.#} 单位，伤害随波次成长）" : "") + "。" : ""),
+            SkillId.TimeSlip => $"除你以外的一切变慢（{Strength(level) * 100:0}% 速度，{Duration(level):0.#} 秒）。"
+                + (level >= 2 ? "持续更久" + (level >= MaxLevel ? "，满级期间你的攻速 +50%" : "") + "。" : ""),
+            SkillId.Decoy => $"放一个你的镜像，敌人会去追它（{Duration(level):0.#} 秒）。"
+                + (level >= 2 ? "持续更久" + (level >= MaxLevel ? "，满级镜像死亡时免费放出你随机一个其他技能（按该技能当前等级）" : "") + "。" : ""),
+            SkillId.Overcharge => $"所有武器攻击频率翻倍（手持和自动，冷却计时 ×{overchargeRate:0.#}，{Duration(level):0.#} 秒）。"
+                + (level >= 2 ? "持续更久" + (level >= MaxLevel ? $"，满级武器伤害 +{(overchargeDamageMultiplier - 1f) * 100:0}%" : "") + "。" : ""),
+            SkillId.PocketVoid => $"在光标处开一个小黑洞，吞掉除 Boss 外的一切，并获得被吞怪物的经验（占地 {Radius(level):0.#}×{Radius(level):0.#} 单位，引力环 {voidGravityWidth:0.#} 单位，{Duration(level):0.#} 秒；也会吞掉你）。",
+            SkillId.VoidWalk => $"进入虚空：移速提高，不能被选中、不受伤害，并打断正在进行的击退（{Duration(level):0.#} 秒，移速 ×{voidWalkMoveMultiplier:0.#}）；结束后两把手持武器带虚空属性 {voidWalkEnchantSeconds:0.#} 秒。",
+            SkillId.Singularity => $"化身奇点 {Duration(level):0.#} 秒：完全无敌（不受伤害、击退和控制）但大幅减速，仍能开火和放技能；屏幕上所有敌人被拽向你并减速，结束时爆炸，吸来的越多伤害越高（拉近 {Strength(level):0.#} 单位，敌人减速到 {singularitySlowMultiplier * 100:0}%，你移速 {singularityPlayerMoveMultiplier * 100:0}%，爆炸半径 {Radius(level):0.#}，伤害 {ScaledDamage(singularityBaseDamage, level):0.#} + 每个敌人 {ScaledDamage(singularityDamagePerEnemy, level):0.#}）。",
+            _ => ""
+        };
         string EnglishDescription(int level) => id switch
         {
             SkillId.FlameWake => $"Leave a burning trail that sets touching enemies alight ({Duration(level):0.#} s, burns {Strength(level):0.#} per second, more in later waves)."
@@ -126,6 +160,10 @@ namespace AnomalyArena
             _ => descriptions is { Length: > 0 } ? descriptions[Mathf.Clamp(level - 1, 0, descriptions.Length - 1)] : ""
         };
 
+        /// <summary>Used only by the editor when a new asset is made; existing tuned assets stay untouched.
+        /// Level 1 keeps the old level 1, level 5 the old level 3, levels 2-4 lie evenly between; only Flame Wake's
+        /// wider trail stays a max-level jump (document 7.4). The Bulwark's wall and Shield then got their own numbers,
+        /// with a very thick Shield at level 5. Document 7.3 (the 10-27 doc): the four stacking skills give more stacks per level.</summary>
         public void SetDefaults(SkillId skill)
         {
             id = skill; greaterVoid = skill >= SkillId.PocketVoid; cooldown = 2f;
@@ -145,7 +183,7 @@ namespace AnomalyArena
                     descriptions = new[] { "6 Frost within 4: small enemies freeze.", "7 Frost within 4.375.", "8 Frost within 4.75.", "9 Frost within 5.125.", "10 Frost within 5.5; enemies it freezes stay frozen at least 3 s." }; break;
                 case SkillId.StormCall:
                     displayName = "Storm Call"; element = ElementKind.Lightning; category = SkillCategory.BasicElement; cost = 30f;
-
+                    // Bolts are whole: 3 to 6 evenly would be 3, 3.75, 4.5, 5.25, 6.
                     duration = new[] { 1.5f, 1.5f, 1.5f, 1.5f, 1.5f }; radius = new[] { 5f, 5.25f, 5.5f, 5.75f, 6f }; strength = new[] { 3f, 4f, 5f, 5f, 6f }; hitStacksByLevel = new[] { 3f, 4f, 4f, 5f, 5f };
                     descriptions = new[] { "3 bolts within 5 over 1.5 s: 6 damage and 3 Lightning each.", "4 bolts within 5.25 over 1.5 s, 4 Lightning each.", "5 bolts within 5.5 over 1.5 s, 4 Lightning each.", "5 bolts within 5.75 over 1.5 s, 5 Lightning each.", "6 bolts within 6 over 1.5 s, 5 Lightning each; bolts chain to nearby enemies." }; break;
                 case SkillId.Bulwark:

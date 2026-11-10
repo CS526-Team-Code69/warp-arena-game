@@ -13,36 +13,36 @@ using Object = UnityEngine.Object;
 
 namespace AnomalyArena.EditorTools
 {
-                 
-                                                                                                                                             
-                                                                                                                                       
-       
-                                                                                                                                           
-                                                                                                                                                     
-                                                                                                                       
-                                                                                                                                                    
-                                                                                                                                                   
-                                                                                                                                         
-                                                                                                                                                          
-                                                                                                                                              
-                                                                                                                                                          
-                                                                                                                                                                
-                                                                                                                                                         
-       
-                                                                                                                                  
-                                                                                                                                                           
-                                                                                                                                                  
-                                                                                                                                                    
-                                                                                                                                              
-                                                                                                                                               
-                                                                                                                                           
-       
-                                                                                       
-                                                                                                                                                           
-                                                                                   
-                                                                                               
-                                                                                                                  
-                  
+    /// <summary>
+    /// 2026-11-05 V6 enemy models: puts the approved models (multi-view, decimated and rigged in Blender, one folder per kind in
+    /// work/art-plans/v2-1104/models/&lt;Kind&gt;/ with a manifest.json) into the enemy prefabs, and takes them out again in one step.
+    ///
+    /// Install, for every kind whose manifest rig is not "none" (a humanoid whose rig has not been chosen yet is skipped and logged):
+    ///  1. copies the FBX, the four 2K maps and the manifest into Art/V6/Enemies/&lt;Kind&gt;/ and imports the FBX like the V3 sources: Generic rig,
+    ///     scale 1, file units, no axis bake, clips named Idle, Run and Attack (Idle and Run loop, Attack plays once);
+    ///  2. builds Art/V6/EnemyModels/Generated/Enemy_&lt;Kind&gt;/ like the V3 folder: PBR_0.mat (a copy of the kind's V3 URP Lit material with the
+    ///     new maps), MetallicSmoothness_0.png (metallic in R, 1 - roughness in A), MovementCombat.controller (a copy of the V3 controller playing
+    ///     the new clips) and Model.prefab (the FBX under a "Model" root, shifted so its idle pose stands centred on the root's origin);
+    ///  3. in V2/Prefabs/&lt;Kind&gt;.prefab deactivates the old model root (kept, renamed &lt;name&gt;_V3), adds the new one (&lt;name&gt;_V6) under the
+    ///     same parent, sized to the old model's visible height and footprint with its feet on the ground, and points V2ModelPresentation and
+    ///     V2EnemyThreatFeedback at it. A prefab variant that shows a model of its own (the Chanter, a Warden variant) keeps the new Warden model hidden.
+    /// Revert reactivates the &lt;name&gt;_V3 roots, removes the &lt;name&gt;_V6 ones and points the presentation back; the V6 assets stay for a later install.
+    /// Not changed by either: colliders, hit radii, scenes, and the presentation's tuning (rotation offset, run speed, contact frame, emission colours).
+    ///
+    /// The player hero, named with -kinds PlayerV2 (never part of the default list):
+    /// the same steps for V2/Prefabs/PlayerV2.prefab with the sources in Art/V6/Player/PlayerV2/ and the model in Art/V6/PlayerModels/Generated/PlayerV2/,
+    /// and also: the manifest's extra_clips (Walk, Sprint, Dash, Knocked, Fall, Death) are imported, the controller is built fresh with one state
+    /// per clip and a RunSpeed parameter driving Run, Walk and Sprint, the model is sized to the explorer's height and stands on the body's centre,
+    /// and the presentation is switched to legsFollowMovement with no attack motion, no light blue illustrated-art tint (the hero has its own
+    /// colours) and run, walk and sprint reference speeds measured from the clips (how fast a planted foot moves at the model's size in Play).
+    /// Revert turns legsFollowMovement off and puts the explorer's run reference speed and tint back (kept in the work folder at install).
+    ///
+    /// Batch mode; each throws (Unity exits with code 1) if any requested kind failed:
+    ///   -executeMethod AnomalyArena.EditorTools.InstallV6EnemyModels.InstallBatch [-kinds Skitter,Spitter] [-fit balanced|height|footprint|Kind=mode,...]
+    ///                  [-bodyGlow on|off] [-source &lt;Blender output folder&gt;]
+    ///   -executeMethod AnomalyArena.EditorTools.InstallV6EnemyModels.RevertBatch [-kinds ...]
+    ///   -executeMethod AnomalyArena.EditorTools.InstallV6EnemyModels.BodyGlowBatch -bodyGlow on|off [-kinds ...]
+    /// </summary>
     public static class InstallV6EnemyModels
     {
         const string Tag = "[V6Install] ";
@@ -51,34 +51,34 @@ namespace AnomalyArena.EditorTools
         const string V6ModelFolder = "Assets/AnomalyArena/Art/V6/EnemyModels/Generated/";
         const string SceneFolder = "Assets/AnomalyArena/Scenes";
         const string PrefabSearchFolder = "Assets/AnomalyArena";
-                                                                                           
+        // The Blender step's output, relative to the project folder; -source overrides it.
         const string DefaultSourceRoot = "work/art-plans/v2-1104/models";
         const string OldSuffix = "_V3", NewSuffix = "_V6";
         const string RigGeneric = "blender-generic", RigHumanoid = "rigged-humanoid", RigNone = "none";
         const string LitShader = "Universal Render Pipeline/Lit";
-                                                                                                                                               
+        // Above this the web build grows noticeably (pitfall T-014: a 559k-triangle model cost 20 MB; the other enemies had about 2.6k).
         const int TriangleWarning = 50000;
-                                                                                                                
+        // One model clearly longer along X and the other along Z: the new one is probably turned by 90 degrees.
         const float FacingAspect = 1.3f;
-                                                                                                                             
+        // The maps the Blender step delivers are 2K; the web build caps textures at 1024 itself (WebGLBuild.MaxTextureSize).
         const int MapSize = 2048;
         static readonly string[] Kinds = { "Grunt", "Brute", "Skitter", "Spitter", "Rammer", "Bloater", "Warden", "Splitter", "Spire", "Stomper", "Shade", "Tyrant" };
-                                                                                                                                   
+        // The player hero: only when named (-kinds PlayerV2); its own folders, extra clips and controller (see the class summary).
         const string PlayerKind = "PlayerV2";
         const string PlayerSourceFolder = "Assets/AnomalyArena/Art/V6/Player/";
         const string PlayerModelFolder = "Assets/AnomalyArena/Art/V6/PlayerModels/Generated/";
-                                                                                                                                          
+        // Looping clips when the manifest lists none; the others (Attack, Dash, Knocked, Fall, Death) play once and hold their last pose.
         static readonly string[] DefaultLoops = { "Idle", "Run", "Walk", "Sprint" };
-                                                                                                                         
+        // Clips that play at the movement speed through the RunSpeed parameter (V2ModelPresentation.legsFollowMovement).
         static readonly string[] GaitClips = { "Run", "Walk", "Sprint" };
         const string RunSpeedParameter = "RunSpeed";
-                                                                                            
+        // V2ModelPresentation.PresentationScale for the player when presentationScale is 0.
         const float PlayerPresentationScale = 1.3f;
         const string PlayerStashFile = "explorer-presentation.json";
-                                                                                                                                          
+        // The Animator states V2ModelPresentation plays ("Base Layer.Idle", ".Run", ".Attack") and the clip names the Blender step bakes.
         static readonly string[] ClipNames = { "Idle", "Run", "Attack" };
         static readonly string[] ClipFields = { "idleClip", "runClip", "attackClip" };
-                                                                                                                    
+        // The V2ModelPresentation fields Install and Revert set; everything else on the component is left as tuned.
         static readonly string[] PresentationFields = { "modelRoot", "animator", "idleClip", "runClip", "attackClip", "modelRenderers", "authoredScale", "authoredPosition" };
         static readonly int EmissionColor = Shader.PropertyToID("_EmissionColor");
 
@@ -89,11 +89,11 @@ namespace AnomalyArena.EditorTools
             public string SourceRoot;
             public Fit DefaultFit = Fit.Balanced;
             public readonly Dictionary<string, Fit> FitByKind = new Dictionary<string, Fit>(StringComparer.OrdinalIgnoreCase);
-            public bool? BodyGlow;                                                                                           
+            public bool? BodyGlow; // null keeps the material's state; a new material starts as its V3 template (keyword off)
             public Fit FitFor(string kind) => FitByKind.TryGetValue(kind, out var fit) ? fit : DefaultFit;
         }
 
-                                                                                                                 
+        /// <summary>manifest.json written by the Blender step (field names as in the shared contract).</summary>
         [Serializable]
         sealed class Manifest
         {
@@ -102,10 +102,10 @@ namespace AnomalyArena.EditorTools
             public float height;
             public float[] bounds_min, bounds_max;
             public string[] clips;
-                                                                                                                        
+            // Optional, for the humanoid layout: the rigged model file and one animation file per entry of clips.
             public string model_file;
             public string[] clip_files;
-                                                                                                                              
+            // Optional (the player hero): takes beyond Idle, Run and Attack, and which clips loop (DefaultLoops when absent).
             public string[] extra_clips, loop_clips;
         }
 
@@ -114,22 +114,22 @@ namespace AnomalyArena.EditorTools
             public string Kind, Rig, SourceDir, AssetDir, ModelDir, PrefabPath, ModelFile;
             public Manifest Manifest;
             public string[] Textures;
-            public string[] ClipFiles;                                                                                    
-            public string[] Clips = ClipNames;                                                          
+            public string[] ClipFiles; // humanoid layout only: one file per ClipNames entry, relative to the kind's folder
+            public string[] Clips = ClipNames; // every clip imported, ClipNames first (blender-generic)
             public bool Player => Kind == PlayerKind;
             public bool Loops(string clip) => Manifest?.loop_clips != null && Manifest.loop_clips.Length > 0 ? Manifest.loop_clips.Contains(clip) : DefaultLoops.Contains(clip);
         }
 
-                                                                                                                                                
+        /// <summary>The explorer's presentation values the hero install changes, kept in the work folder so Revert can put them back.</summary>
         [Serializable]
         sealed class PlayerStash
         {
             public float runReferenceSpeed;
             public bool legsFollowMovement, playerAttackMotion;
-            public Color illustratedTint;                                                                
+            public Color illustratedTint; // alpha 0: not kept (a stash written before the field existed)
         }
 
-                                                                                                                                                                
+        /// <summary>What the kind's V3 model hands on: its controller (copied for the new clips), its material (the template) and its clip root node.</summary>
         sealed class OldModel
         {
             public string ControllerPath;
@@ -137,7 +137,7 @@ namespace AnomalyArena.EditorTools
             public string MotionNode = "";
         }
 
-                                   
+        // ───── Entry points ─────
 
         [MenuItem("Anomaly Arena/V6/Install Enemy Models")]
         static void InstallMenu() => Install();
@@ -151,13 +151,13 @@ namespace AnomalyArena.EditorTools
         [MenuItem("Anomaly Arena/V6/Body Glow Off (V6 Materials)")]
         static void BodyGlowOffMenu() => SetBodyGlow(false);
 
-                                                                                                                                               
+        /// <summary>-executeMethod entry for <see cref="Install"/>: reads -kinds, -fit, -bodyGlow and -source from the command line.</summary>
         public static void InstallBatch() => Install(Arg("-kinds"), Arg("-fit"), Arg("-bodyGlow"), Arg("-source"));
 
-                                                                                                                 
+        /// <summary>-executeMethod entry for <see cref="Revert"/>: reads -kinds from the command line.</summary>
         public static void RevertBatch() => Revert(Arg("-kinds"));
 
-                                                                                                                                           
+        /// <summary>-executeMethod entry for <see cref="SetBodyGlow"/>: reads -bodyGlow on|off and -kinds from the command line.</summary>
         public static void BodyGlowBatch()
         {
             string value = Arg("-bodyGlow");
@@ -165,12 +165,12 @@ namespace AnomalyArena.EditorTools
             SetBodyGlow(ParseSwitch(value, "-bodyGlow"), Arg("-kinds"));
         }
 
-                                                                                                                                         
-                                                                      
-                                                                                                                                                     
-                                                                                                          
-                                                                                                                                                                    
-                                                                                                                                    
+        /// <summary>Installs the V6 model of each listed kind (comma-separated; all twelve when empty). See the class summary.</summary>
+        /// <param name="kinds">For example "Skitter,Spitter".</param>
+        /// <param name="fit">How one uniform scale matches the old model: balanced (default; the geometric mean of the height and footprint ratios),
+        /// height or footprint, for every kind or per kind, for example "balanced,Tyrant=height".</param>
+        /// <param name="bodyGlow">on or off sets the _EMISSION keyword of the V6 materials; empty keeps it (a new material starts as its V3 template: off).</param>
+        /// <param name="source">The Blender output folder; empty means work/art-plans/v2-1104/models in the project folder.</param>
         public static void Install(string kinds = null, string fit = null, string bodyGlow = null, string source = null)
         {
             var list = ParseKinds(kinds);
@@ -184,14 +184,14 @@ namespace AnomalyArena.EditorTools
             Run("install", list, kind => InstallKind(kind, options, scenes));
         }
 
-                                                                                                                                                     
+        /// <summary>Puts each listed kind back on its V3 model (comma-separated; all twelve when empty). A kind still on V3 is left alone.</summary>
         public static void Revert(string kinds = null) => Run("revert", ParseKinds(kinds), RevertKind);
 
-                     
-                                                                                                                                                     
-                                                                                                                                                  
-                                                                                                   
-                      
+        /// <summary>
+        /// Turns the _EMISSION keyword of the installed V6 materials on or off. URP Lit adds emission only with that keyword, so while it is off the
+        /// emission V2ModelPresentation writes (wind-up yellow, hit flash, element glow) does not reach the screen; the V3 materials have it off.
+        /// No emission map is involved either way: the presentation's colour tints the whole body.
+        /// </summary>
         public static void SetBodyGlow(bool on, string kinds = null) => Run(on ? "body glow on" : "body glow off", ParseKinds(kinds), kind =>
         {
             string path = (kind == PlayerKind ? PlayerModelFolder + kind : V6ModelFolder + "Enemy_" + kind) + "/PBR_0.mat";
@@ -202,7 +202,7 @@ namespace AnomalyArena.EditorTools
             return $"{path}: _EMISSION {(on ? "on" : "off")}";
         });
 
-                                                                                                                                                                               
+        /// <summary>Runs one step per kind. A kind that fails leaves its prefab as it was (prefabs are saved last); the others go on, and the run throws at the end.</summary>
         static void Run(string action, List<string> kinds, Func<string, string> step)
         {
             Require(!EditorApplication.isPlaying, "stop Play first");
@@ -238,7 +238,7 @@ namespace AnomalyArena.EditorTools
             if (failed.Count > 0) throw Fail($"{action} failed for {failed.Count} kind(s): {string.Join(" | ", failed)}");
         }
 
-                              
+        // ───── Install ─────
 
         static string InstallKind(string kind, Options options, SceneOverrides scenes)
         {
@@ -255,7 +255,7 @@ namespace AnomalyArena.EditorTools
             var controller = BuildController(job, clips, old.ControllerPath);
             AssetDatabase.SaveAssets();
             var model = BuildModelPrefab(job, material, controller, clips[0], out Bounds unit);
-                                                                                                                            
+            // The hero keeps the explorer's height (the body and its labels are sized for it) unless -fit names the player.
             var fit = job.Player && !options.FitByKind.ContainsKey(kind) ? Fit.Height : options.FitFor(kind);
             string fitted = SwapIntoEnemyPrefab(job, model, unit, clips, fit, out string baseName);
             FollowInVariants(prefabPath, kind, baseName, installed: true);
@@ -303,7 +303,7 @@ namespace AnomalyArena.EditorTools
                 job.ModelFile = SafeRelative(manifest.model_file, file) ?? kind + ".fbx";
                 return job;
             }
-                                                                                                                                                             
+            // The V3 humanoid layout: a rigged model plus one animation file per clip (V3: <Kind>-rigged.fbx, Animations/Idle, Run, Action).
             job.ModelFile = SafeRelative(manifest.model_file, file) ?? FirstExisting(dir, kind + ".fbx", kind + "-rigged.fbx");
             job.ClipFiles = new string[ClipNames.Length];
             for (int i = 0; i < ClipNames.Length; i++)
@@ -339,12 +339,12 @@ namespace AnomalyArena.EditorTools
         static void CopySources(Job job)
         {
             EnsureFolder(job.AssetDir);
-                                                                                                                                 
-                                                                                                                 
+            // The manifest stays in the work folder (it is read from there): it records production details that do not belong in
+            // Assets, which the English edition copies from.
             var files = new List<string> { job.ModelFile };
             files.AddRange(job.Textures);
             if (job.ClipFiles != null) files.AddRange(job.ClipFiles);
-                                                                                                                 
+            // Only the files of the contract: a .blend next to them would make Unity start Blender to import it.
             foreach (string relative in files.Distinct()) CopyOne(job, relative);
         }
 
@@ -360,16 +360,16 @@ namespace AnomalyArena.EditorTools
             Log($"{job.Kind}: {(same ? "unchanged" : "copied")} {to} ({new FileInfo(to).Length / 1048576.0:0.0} MB)");
         }
 
-                                   
+        // ───── Model import ─────
 
-                                                                                                                                    
+        /// <summary>blender-generic: one FBX holding the skinned mesh, the armature and the actions Idle, Run and Attack.</summary>
         static AnimationClip[] ImportGeneric(Job job)
         {
             string path = job.AssetDir + job.ModelFile;
             var importer = ModelImporterAt(path);
-                                                                                                                                             
+            // No root-motion node: the presentation turns and moves the model itself, and the baked actions play exactly as made in Blender.
             ApplyModelSettings(importer, null, "", importAnimation: true);
-            importer.SaveAndReimport();                                                
+            importer.SaveAndReimport(); // the takes below are read with these settings
             var takes = importer.defaultClipAnimations ?? Array.Empty<ModelImporterClipAnimation>();
             Log($"{job.Kind}: {path} takes [{string.Join(", ", takes.Select(t => $"{t.takeName} {t.firstFrame:0}-{t.lastFrame:0}"))}]");
             importer.clipAnimations = job.Clips.Select(name => ClipFrom(FindTake(takes, name, path, allowSingle: false), name, job.Loops(name))).ToArray();
@@ -384,10 +384,10 @@ namespace AnomalyArena.EditorTools
             }).ToArray();
         }
 
-                     
-                                                                                                                                                    
-                                                                                                                                                          
-                      
+        /// <summary>
+        /// The V3 humanoid layout (not exercised yet): the rigged model makes the Generic avatar, each animation file copies it and
+        /// gives one clip. The root-motion node is the one the kind's V3 clips use (Armature/Hips for those rigs), which keeps their runs in place.
+        /// </summary>
         static AnimationClip[] ImportHumanoid(Job job, string v3MotionNode)
         {
             string modelPath = job.AssetDir + job.ModelFile;
@@ -423,11 +423,11 @@ namespace AnomalyArena.EditorTools
 
         static void ApplyModelSettings(ModelImporter importer, Avatar copyFrom, string motionNode, bool importAnimation)
         {
-                                                                                                                                                 
+            // Scale and axes as the V3 sources (Art/V3/Enemies/*/LocalAnimation/Rigged.fbx and *-rigged.fbx): scale 1, file units, no axis bake.
             importer.globalScale = 1f;
             importer.useFileScale = true;
             importer.bakeAxisConversion = false;
-                                                                                                                                        
+            // Materials are authored here (PBR_0.mat), and a camera or light left in the Blender scene must not end up inside an enemy.
             importer.materialImportMode = ModelImporterMaterialImportMode.None;
             importer.importCameras = false;
             importer.importLights = false;
@@ -441,13 +441,13 @@ namespace AnomalyArena.EditorTools
             else importer.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel;
             importer.motionNodeName = motionNode ?? "";
             importer.importAnimation = importAnimation;
-                                                                                                             
+            // As V3: no keyframe reduction and no resampling, so the clips keep Blender's baked 30 fps keys.
             importer.animationCompression = ModelImporterAnimationCompression.Off;
             importer.resampleCurves = false;
             importer.optimizeGameObjects = false;
         }
 
-                                                                                                                                                                                          
+        /// <summary>A take named exactly like the clip, or one whose "|"-separated name has it as a part (Blender: "Armature|Idle"; other exports: "Armature|Armature|Idle|baselayer").</summary>
         static ModelImporterClipAnimation FindTake(ModelImporterClipAnimation[] takes, string clip, string where, bool allowSingle)
         {
             Require(takes != null && takes.Length > 0, $"{where} has no animation takes");
@@ -460,8 +460,8 @@ namespace AnomalyArena.EditorTools
             throw Fail($"{where}: no take for {clip}; the takes are [{string.Join(", ", takes.Select(t => t.takeName))}]");
         }
 
-                                                                                                                                                                
-                                                                                                                        
+        /// <summary>The V3 clip settings (Skitter and Grunt metas): Idle and Run loop with loop pose, Attack plays once; root height baked, original root kept.
+        /// The hero's extra clips: Walk and Sprint loop, Dash, Knocked, Fall and Death play once (Job.Loops).</summary>
         static ModelImporterClipAnimation ClipFrom(ModelImporterClipAnimation take, string name, bool loop)
         {
             take.name = name;
@@ -491,7 +491,7 @@ namespace AnomalyArena.EditorTools
             return clip;
         }
 
-                                                                                                                                                       
+        /// <summary>Every bone path a clip animates must exist under the model's Animator, or that part of the motion silently does nothing.</summary>
         static void CheckBindings(AnimationClip clip, GameObject model, string kind)
         {
             var paths = AnimationUtility.GetCurveBindings(clip).Select(b => b.path).Distinct().ToList();
@@ -508,7 +508,7 @@ namespace AnomalyArena.EditorTools
             return avatar;
         }
 
-                                                         
+        // ───── Material, controller, model prefab ─────
 
         static Material BuildMaterial(Job job, Material v3Template, bool? bodyGlow)
         {
@@ -520,8 +520,8 @@ namespace AnomalyArena.EditorTools
             var material = AssetDatabase.LoadAssetAtPath<Material>(path);
             if (!material)
             {
-                                                                                                                                                     
-                                                                                                                                                      
+                // A copy of the kind's V3 material keeps every V3 setting (URP Lit, metallic workflow, smoothness from the map's alpha, the emission
+                // keyword as V3 has it), so the presentation's emission and base-colour blocks reach the new model exactly as they reach the old one.
                 if (v3Template && v3Template.shader && v3Template.shader.name == LitShader) material = new Material(v3Template) { name = "PBR_0" };
                 else
                 {
@@ -547,7 +547,7 @@ namespace AnomalyArena.EditorTools
             material.SetFloat("_Metallic", 1f);
             material.SetFloat("_Smoothness", 1f);
             material.SetFloat("_SmoothnessTextureChannel", 0f);
-                                                                                                                
+            // The readability rule tints the whole body (every wind-up turns it yellow): no emission map, ever.
             if (material.HasProperty("_EmissionMap")) material.SetTexture("_EmissionMap", null);
             Require(material.HasProperty(EmissionColor) && material.HasProperty("_BaseColor"), $"{path} lacks _EmissionColor or _BaseColor, which V2ModelPresentation drives");
             if (bodyGlow.HasValue) ApplyBodyGlow(material, bodyGlow.Value);
@@ -562,7 +562,7 @@ namespace AnomalyArena.EditorTools
             if (on)
             {
                 material.EnableKeyword("_EMISSION");
-                                                                                                                                                     
+                // URP's material validation keeps _EMISSION only while the GI flags say emissive; with EmissiveIsBlack it would switch it off again.
                 material.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
             }
             else
@@ -600,7 +600,7 @@ namespace AnomalyArena.EditorTools
             return texture;
         }
 
-                                                                                                                                               
+        /// <summary>The V3 layout (MetallicSmoothness_0.png): metallic in R, G and B empty, smoothness (1 - roughness) in A, linear.</summary>
         static Texture2D BuildMetallicSmoothness(Job job)
         {
             string metallicPath = job.AssetDir + job.Kind + "_Metallic.png", roughnessPath = job.AssetDir + job.Kind + "_Roughness.png";
@@ -627,7 +627,7 @@ namespace AnomalyArena.EditorTools
             return ImportTexture(path, srgb: false, alphaFromInput: true);
         }
 
-                                                                                                                            
+        /// <summary>The PNG's own pixels: the imported texture is compressed, possibly resized, and not readable.</summary>
         static Color32[] ReadPixels(string path, out int width, out int height)
         {
             var texture = new Texture2D(2, 2, TextureFormat.RGBA32, false, true);
@@ -641,7 +641,7 @@ namespace AnomalyArena.EditorTools
             finally { Object.DestroyImmediate(texture); }
         }
 
-                                                                                                                                                    
+        /// <summary>A copy of the kind's V3 controller (same layers, states, parameters and transitions) whose states play the new clips.</summary>
         static AnimatorController BuildController(Job job, AnimationClip[] clips, string v3Path)
         {
             if (job.Player) return BuildPlayerController(job, clips);
@@ -654,7 +654,7 @@ namespace AnomalyArena.EditorTools
             }
             var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(path);
             Require(controller && controller.layers.Length > 0, $"{job.Kind}: {path} has no layers");
-                                                                                                              
+            // V2ModelPresentation plays "Base Layer.Idle", ".Run" and ".Attack" on layer 0 by full path hash.
             Require(controller.layers[0].name == "Base Layer", $"{job.Kind}: {path} layer 0 is '{controller.layers[0].name}', not Base Layer");
             var top = controller.layers[0].stateMachine.states.Select(s => s.state.name).ToList();
             Require(ClipNames.All(top.Contains), $"{job.Kind}: {path} Base Layer states are [{string.Join(", ", top)}]; it needs {string.Join(", ", ClipNames)} at the top");
@@ -666,11 +666,11 @@ namespace AnomalyArena.EditorTools
             return controller;
         }
 
-                     
-                                                                                                                                                     
-                                                                                                                                                   
-                                                                                                                                
-                      
+        /// <summary>
+        /// The hero's controller, built fresh (the explorer's has only Idle, Run and Attack): one Base Layer state per clip, named like the clip, no
+        /// transitions (V2ModelPresentation cross-fades by state name), Idle the default, and a float RunSpeed (default 1) as the speed multiplier
+        /// of Run, Walk and Sprint. An existing file is updated in place, so the model prefab keeps pointing at the same asset.
+        /// </summary>
         static AnimatorController BuildPlayerController(Job job, AnimationClip[] clips)
         {
             EnsureFolder(job.ModelDir);
@@ -735,22 +735,22 @@ namespace AnomalyArena.EditorTools
             return assigned;
         }
 
-                     
-                                                                                                                                                   
-                                                                                                                                                  
-                                                                                                                                                
-                                                                                                                                        
-                      
+        /// <summary>
+        /// Model.prefab as in V3: a plain "Model" root holding the FBX instance, whose Animator plays the controller. The root's origin must be at
+        /// the feet: V2ModelPresentation multiplies the model's scale at runtime (body radius, presentation scale, a Bloater's swell), and only a
+        /// pivot at the feet keeps the feet on the ground at every size. A Blender FBX already has its origin there (the middle of the feet, on
+        /// the ground) and keeps it; any other FBX is shifted so the first frame of its idle pose stands on the root's origin, centred.
+        /// </summary>
         static GameObject BuildModelPrefab(Job job, Material material, AnimatorController controller, AnimationClip idle, out Bounds unit)
         {
             string path = job.ModelDir + "Model.prefab";
             var fbx = AssetDatabase.LoadAssetAtPath<GameObject>(job.AssetDir + job.ModelFile);
             Require(fbx, $"{job.Kind}: cannot load {job.AssetDir + job.ModelFile}");
             Bounds raw = MeasureFbx(fbx, idle, job.Kind + " new model");
-                                                                                                                                           
-                                                                                                                                               
-                                                                                                                                            
-                                                                                                                               
+            // The Blender step (rig blender-generic) puts the FBX origin at the middle of the feet on the ground: the turning point, since
+            // V2ModelPresentation rotates modelRoot. Keep it there. Centring the idle pose's box instead would push a long-tailed body off its
+            // collider and turn it around an empty spot behind it (review 2026-11-06: Tyrant 0.48 m, Splitter 0.33 m), and its lowest point
+            // is the Tyrant's tail tip, not its soles. Other rigs stand their idle pose's bottom centre on the root as before.
             var offset = job.Rig == RigGeneric ? Vector3.zero : new Vector3(-raw.center.x, -raw.min.y, -raw.center.z);
             unit = new Bounds(raw.center + offset, raw.size);
             if (job.Manifest.height > 0f)
@@ -761,8 +761,8 @@ namespace AnomalyArena.EditorTools
                 else Log(note);
             }
 
-                                                                                                                                                  
-                                                                                                            
+            // An existing Model.prefab is edited in place, never saved over: the enemy prefab finds its V6 root (name override, modelRoot) by the
+            // file ids of this prefab's root, and a fresh hierarchy saved over the file would get new ones.
             bool existed = AssetDatabase.LoadAssetAtPath<GameObject>(path);
             var scene = existed ? default : EditorSceneManager.NewPreviewScene();
             GameObject root;
@@ -797,7 +797,7 @@ namespace AnomalyArena.EditorTools
                     var mesh = MeshOf(renderer);
                     int slots = Mathf.Max(1, renderer.sharedMaterials.Length, mesh ? mesh.subMeshCount : 0);
                     renderer.sharedMaterials = Enumerable.Repeat(material, slots).ToArray();
-                    if (renderer is SkinnedMeshRenderer skinned) skinned.quality = SkinQuality.Bone4;                                        
+                    if (renderer is SkinnedMeshRenderer skinned) skinned.quality = SkinQuality.Bone4; // as the V3 Model.prefab (m_Quality 4)
                     if (mesh) for (int s = 0; s < mesh.subMeshCount; s++) triangles += mesh.GetIndexCount(s) / 3;
                 }
                 var saved = PrefabUtility.SaveAsPrefabAsset(root, path, out bool success);
@@ -814,7 +814,7 @@ namespace AnomalyArena.EditorTools
             }
         }
 
-                                                                                                                                                                             
+        /// <summary>The FBX's idle-pose bounds in its parent's space, on a throw-away instance: sampling the clip writes bone transforms, which must not be saved.</summary>
         static Bounds MeasureFbx(GameObject fbx, AnimationClip idle, string what)
         {
             var scene = EditorSceneManager.NewPreviewScene();
@@ -828,7 +828,7 @@ namespace AnomalyArena.EditorTools
             finally { EditorSceneManager.ClosePreviewScene(scene); }
         }
 
-                                       
+        // ───── The enemy prefab ─────
 
         static string SwapIntoEnemyPrefab(Job job, GameObject modelPrefab, Bounds unit, AnimationClip[] clips, Fit fit, out string baseName)
         {
@@ -842,7 +842,7 @@ namespace AnomalyArena.EditorTools
                 Transform parent = shown.parent, oldRoot, previous;
                 if (IsNew(shown))
                 {
-                                                                                                                              
+                    // Installed before: the hidden V3 root keeps the original values; the earlier V6 model is refitted below.
                     baseName = BaseNameOf(shown);
                     oldRoot = parent.Find(baseName + OldSuffix);
                     Require(oldRoot, $"{job.PrefabPath}: {shown.name} is shown but {baseName}{OldSuffix} is missing");
@@ -854,7 +854,7 @@ namespace AnomalyArena.EditorTools
                     oldRoot = shown;
                     Require(!parent.Find(baseName + OldSuffix), $"{job.PrefabPath}: {baseName} is shown but {baseName}{OldSuffix} exists too; sort it out by hand");
                     previous = parent.Find(baseName + NewSuffix);
-                                                                                                                                             
+                    // The hidden old root carries the presentation's current values in its own transform, so Revert reads them back exactly.
                     oldRoot.localScale = presentation.authoredScale;
                     oldRoot.localPosition = presentation.authoredPosition;
                     if (job.Player) WritePlayerStash(job, presentation);
@@ -869,15 +869,15 @@ namespace AnomalyArena.EditorTools
                 if (presentation.rotationOffsetEuler != Vector3.zero)
                     Warn($"{job.Kind}: rotationOffsetEuler is {presentation.rotationOffsetEuler}; the sizes below are measured without it");
 
-                                                                                                                     
+                // Old model's visible size: its idle pose at the authored scale and position, in the parent's space.
                 Bounds before = MeasureClone(oldRoot, oldClips[0], $"{job.Kind} V3 model");
                 float oldHeight = before.size.y, newHeight = unit.size.y;
                 float oldFoot = Mathf.Sqrt(before.size.x * before.size.z), newFoot = Mathf.Sqrt(unit.size.x * unit.size.z);
                 Require(oldHeight > 1e-4f && oldFoot > 1e-4f && newHeight > 1e-4f && newFoot > 1e-4f, $"{job.Kind}: a model has no size (old {Size(before.size)}, new {Size(unit.size)})");
                 float byHeight = oldHeight / newHeight, byFoot = oldFoot / newFoot;
                 float scale = fit switch { Fit.Height => byHeight, Fit.Footprint => byFoot, _ => Mathf.Sqrt(byHeight * byFoot) };
-                                                                                                                                                          
-                                                                                                                                             
+                // The new pivot is the idle pose's bottom centre: standing on the body's ground plane (y 0), centred where the old model's footprint was.
+                // The hero's pivot is the middle of its feet (Blender origin), and it turns with the aim, so it stands on the body's centre.
                 var position = job.Player ? Vector3.zero : new Vector3(before.center.x, 0f, before.center.z);
                 Log($"{job.Kind}: old model {Size(before.size)}, bottom at {before.min.y:0.###}, footprint centre ({before.center.x:0.###}, {before.center.z:0.###}); new model at scale 1 {Size(unit.size)}");
                 string fitted = $"fit {fit.ToString().ToLowerInvariant()}: height x{byHeight:0.####}, footprint x{byFoot:0.####}, scale {scale:0.####}; " +
@@ -888,8 +888,8 @@ namespace AnomalyArena.EditorTools
                 Log($"{job.Kind}: collider {(capsule ? $"capsule radius {capsule.radius:0.###}, height {capsule.height:0.###}" : "none on the root")} and body radius {presentation.referenceBodyRadius:0.###} (reference) are not changed; " +
                     $"kept tuning: rotation offset {presentation.rotationOffsetEuler}, run reference speed {presentation.runReferenceSpeed:0.##}, attack contact {presentation.attackContactNormalized:0.##} of {clips[2].length:0.00} s");
 
-                                                                                                                                               
-                                                                                                                    
+                // Swap: hide and keep the old root, show the new one next to it. An earlier V6 instance of the same Model.prefab is reused, so
+                // anything that points at it (a variant's override, for one) stays valid; any other one is removed.
                 var replaced = previous ? ModelRenderers(previous) : Array.Empty<Renderer>();
                 bool reuse = previous && PrefabUtility.IsAnyPrefabInstanceRoot(previous.gameObject) && PrefabUtility.GetCorrespondingObjectFromSource(previous.gameObject) == modelPrefab;
                 oldRoot.name = baseName + OldSuffix;
@@ -939,17 +939,17 @@ namespace AnomalyArena.EditorTools
                  $"check its facing in Play; the rotation offset {rotationOffset} is kept. Axis note: {job.Manifest.fbx_axis_note}");
         }
 
-                                      
+        // ───── The player hero ─────
 
-                     
-                                                                                                                                     
-                                                                                                                                             
-                      
+        /// <summary>
+        /// The hero's presentation: legs and chest apart, no attack motion, and the Run, Walk and
+        /// Sprint reference speeds measured from the clips at the size the model has in Play, so a planted foot does not slide on the floor.
+        /// </summary>
         static string SetUpPlayer(Job job, GameObject prefabRoot, V2ModelPresentation presentation, Transform model, AnimationClip[] clips)
         {
             var body = prefabRoot.GetComponent<Combatant>();
             Require(body, $"{job.PrefabPath} has no {nameof(Combatant)}");
-                                                                                                                                  
+            // V2ModelPresentation.SizeNow for the player: body radius against the reference radius, times the presentation scale.
             float size = (presentation.scaleWithBodyRadius ? body.radius / Mathf.Max(.01f, presentation.referenceBodyRadius) : 1f)
                          * (presentation.presentationScale > 0f ? presentation.presentationScale : PlayerPresentationScale);
             var byName = new Dictionary<string, AnimationClip>();
@@ -958,23 +958,23 @@ namespace AnomalyArena.EditorTools
             float run = Measure("Run"), walk = Measure("Walk"), sprint = Measure("Sprint");
             presentation.legsFollowMovement = true;
             presentation.playerAttackMotion = false;
-                                                                                                                                    
+            // The light blue the illustrated art laid over the pale explorer turned the hero's white armour and navy suit all blue.
             presentation.illustratedTint = Color.white;
-            const float Least = .3f;                                                                                        
+            const float Least = .3f; // below this the measurement failed (no planted foot found); the field keeps its value
             if (run > Least) presentation.runReferenceSpeed = run;
             else Warn($"{job.Kind}: could not measure the Run clip's foot speed; runReferenceSpeed stays {presentation.runReferenceSpeed:0.##}");
             if (walk > Least) presentation.walkReferenceSpeed = walk;
             if (sprint > Least) presentation.sprintReferenceSpeed = sprint;
-                                                                                                                            
+            // Walk below the speed where walking sped up and running slowed down are off their own pace by the same factor.
             if (walk > Least && run > Least) presentation.walkBelowSpeed = Mathf.Sqrt(walk * run);
             return $"legs follow movement, no attack motion; planted-foot speeds at size x{size:0.##}: run {run:0.##}, walk {walk:0.##}, sprint {sprint:0.##} m/s, " +
                    $"walk below {presentation.walkBelowSpeed:0.##} m/s";
         }
 
-                     
-                                                                                                                                                   
-                                                                                                                                         
-                      
+        /// <summary>
+        /// The ground speed a gait clip shows at the given size: how fast a planted foot slides backwards under the body (the clips run in place).
+        /// The presentation plays the clip at movement speed divided by this, so the feet stay planted. 0 when no planted foot is found.
+        /// </summary>
         static float MeasureGroundSpeed(Transform modelRoot, AnimationClip clip, float size, string what)
         {
             var scene = EditorSceneManager.NewPreviewScene();
@@ -1032,7 +1032,7 @@ namespace AnomalyArena.EditorTools
 
         static string PlayerStashPath(string sourceRoot) => Path.Combine(sourceRoot, PlayerKind, PlayerStashFile).Replace('\\', '/');
 
-                                                                                                                                                    
+        /// <summary>The explorer's values the hero changes, written once when the explorer is first hidden (the work folder, not Assets).</summary>
         static void WritePlayerStash(Job job, V2ModelPresentation presentation)
         {
             string path = job.SourceDir + "/" + PlayerStashFile;
@@ -1045,7 +1045,7 @@ namespace AnomalyArena.EditorTools
             Log($"{job.Kind}: kept the explorer's run reference speed {stash.runReferenceSpeed:0.##} in {path} for Revert");
         }
 
-                             
+        // ───── Revert ─────
 
         static string RevertKind(string kind)
         {
@@ -1082,19 +1082,19 @@ namespace AnomalyArena.EditorTools
                 presentation.runClip = clips[1];
                 presentation.attackClip = clips[2];
                 presentation.modelRenderers = oldRenderers;
-                                                                                                
+                // Install left the presentation's V3 values in the hidden root's own transform.
                 presentation.authoredScale = oldRoot.localScale;
                 presentation.authoredPosition = oldRoot.localPosition;
                 if (kind == PlayerKind)
                 {
-                                                                                                                                      
+                    // The explorer's controller has no RunSpeed or extra states: back to the whole-body facing and its own run speed.
                     string stashPath = PlayerStashPath(ResolveSourceRoot(null));
                     var stash = File.Exists(stashPath) ? JsonUtility.FromJson<PlayerStash>(File.ReadAllText(stashPath)) : null;
                     presentation.legsFollowMovement = stash != null && stash.legsFollowMovement;
                     presentation.playerAttackMotion = stash != null && stash.playerAttackMotion;
                     if (stash != null && stash.runReferenceSpeed > 0f) presentation.runReferenceSpeed = stash.runReferenceSpeed;
                     else Warn($"{kind}: no {stashPath}; legsFollowMovement is off, runReferenceSpeed stays {presentation.runReferenceSpeed:0.##}");
-                                                                                                    
+                    // The explorer's light blue (2026-10-30), unless the stash kept another colour.
                     presentation.illustratedTint = stash != null && stash.illustratedTint.a > 0f ? stash.illustratedTint : new Color(.62f, .82f, 1f);
                 }
                 ReplaceSurfaces(root, newRenderers, oldRenderers, kind);
@@ -1108,7 +1108,7 @@ namespace AnomalyArena.EditorTools
             return "reverted to the V3 model";
         }
 
-                                                                                           
+        // ───── Prefab variants (the Chanter is a Warden variant with its own model) ─────
 
         static void FollowInVariants(string basePath, string kind, string baseName, bool installed)
         {
@@ -1129,14 +1129,14 @@ namespace AnomalyArena.EditorTools
                         Require(inheritedNew, $"variant {path} lacks the inherited {baseName}{NewSuffix}");
                         if (!ownModel)
                         {
-                                                                                                                              
+                            // It shows the base model: any value of its own for the swapped fields was made for the V3 model.
                             changed |= RevertOverrides(presentation, PresentationFields, path, kind);
                             if (inheritedOld && inheritedOld.gameObject.activeSelf) { inheritedOld.gameObject.SetActive(false); changed = true; }
                             Require(presentation.modelRoot == inheritedNew, $"variant {path} does not show the inherited {baseName}{NewSuffix} after its overrides were reverted");
                         }
                         else
                         {
-                                                                                                                                                      
+                            // It shows its own model: the base's new model stays hidden here, and the clip fields follow what its own Animator plays.
                             if (inheritedNew.gameObject.activeSelf) { inheritedNew.gameObject.SetActive(false); changed = true; }
                             var own = ClipsOf(presentation.animator, $"variant {path}");
                             if (presentation.idleClip != own[0] || presentation.runClip != own[1] || presentation.attackClip != own[2])
@@ -1150,7 +1150,7 @@ namespace AnomalyArena.EditorTools
                     }
                     else if (ownModel)
                     {
-                                                                                                             
+                        // Back on V3: drop the clip overrides Install added where they equal the base again.
                         var basePresentation = AssetDatabase.LoadAssetAtPath<GameObject>(basePath).GetComponent<V2ModelPresentation>();
                         var baseClips = new[] { basePresentation.idleClip, basePresentation.runClip, basePresentation.attackClip };
                         var ownClips = new[] { presentation.idleClip, presentation.runClip, presentation.attackClip };
@@ -1184,7 +1184,7 @@ namespace AnomalyArena.EditorTools
             return any;
         }
 
-                                                                                                                 
+        /// <summary>Prefab variants of the base, directly or through other variants, shallowest first.</summary>
         static List<string> VariantsOf(string basePath)
         {
             var prefabs = AssetDatabase.FindAssets("t:Prefab", new[] { PrefabSearchFolder }).Select(g => AssetDatabase.GUIDToAssetPath(g)).Where(File.Exists).Distinct().ToList();
@@ -1194,12 +1194,12 @@ namespace AnomalyArena.EditorTools
             while (frontier.Count > 0)
             {
                 string source = frontier.Dequeue();
-                                                                                                                             
+                // Text filter first, so only prefabs that name this source get loaded (loading each prefab loads its model).
                 string marker = "m_SourcePrefab: {fileID: 100100000, guid: " + AssetDatabase.AssetPathToGUID(source);
                 foreach (string path in prefabs)
                 {
                     if (path == basePath || found.Contains(path) || !File.ReadAllText(path).Contains(marker)) continue;
-                                                                                                               
+                    // A nested instance names the guid too; only a variant has the source behind its own root.
                     var asset = AssetDatabase.LoadAssetAtPath<GameObject>(path);
                     var parent = asset && PrefabUtility.GetPrefabAssetType(asset) == PrefabAssetType.Variant ? PrefabUtility.GetCorrespondingObjectFromSource(asset) : null;
                     if (!parent || AssetDatabase.GetAssetPath(parent) != source) continue;
@@ -1210,9 +1210,9 @@ namespace AnomalyArena.EditorTools
             return found;
         }
 
-                                     
+        // ───── Shared helpers ─────
 
-                                                                                                                                   
+        /// <summary>The Idle, Run and Attack clips the Animator's controller plays on its top level, in ClipNames order.</summary>
         static AnimationClip[] ClipsOf(Animator animator, string what)
         {
             var controller = animator ? animator.runtimeAnimatorController as AnimatorController : null;
@@ -1226,7 +1226,7 @@ namespace AnomalyArena.EditorTools
             }).ToArray();
         }
 
-                                                                                                                                                  
+        /// <summary>The model's exact bounds in its parent's space, in the first frame of its idle clip, measured on a throw-away copy.</summary>
         static Bounds MeasureClone(Transform modelRoot, AnimationClip idle, string what)
         {
             var scene = EditorSceneManager.NewPreviewScene();
@@ -1234,7 +1234,7 @@ namespace AnomalyArena.EditorTools
             {
                 var space = new GameObject("Measure");
                 SceneManager.MoveGameObjectToScene(space, scene);
-                var copy = Object.Instantiate(modelRoot.gameObject, space.transform, false);                                                            
+                var copy = Object.Instantiate(modelRoot.gameObject, space.transform, false); // same local position, rotation and scale as in the prefab
                 copy.SetActive(true);
                 return MeasurePose(copy, space.transform, idle, what);
             }
@@ -1250,7 +1250,7 @@ namespace AnomalyArena.EditorTools
                 Vector3 position = target.localPosition, scale = target.localScale;
                 Quaternion rotation = target.localRotation;
                 idle.SampleAnimation(animator.gameObject, 0f);
-                                                                                                                       
+                // A clip with a root-motion node may move the Animator's own transform too; only the pose counts here.
                 target.localPosition = position;
                 target.localRotation = rotation;
                 target.localScale = scale;
@@ -1259,7 +1259,7 @@ namespace AnomalyArena.EditorTools
             return bounds;
         }
 
-                                                                                                                                       
+        /// <summary>Bounds of every mesh vertex under the root, in the space's coordinates, for the pose the bones hold now.</summary>
         static bool MeasureBounds(GameObject root, Transform space, out Bounds bounds)
         {
             bounds = default;
@@ -1272,8 +1272,8 @@ namespace AnomalyArena.EditorTools
                     Mesh mesh;
                     if (renderer is SkinnedMeshRenderer skinned && skinned.sharedMesh)
                     {
-                                                                                                                                         
-                                                                                                                                           
+                        // useScale true: the snapshot stays in the renderer's own unscaled space, so the renderer's full matrix maps it.
+                        // Renderer.bounds is avoided: for a skinned mesh it is the import-time box in root-bone space, not the posed mesh.
                         skinned.BakeMesh(baked, true);
                         mesh = baked;
                     }
@@ -1302,7 +1302,7 @@ namespace AnomalyArena.EditorTools
         static Renderer[] ModelRenderers(Transform root) =>
             root.GetComponentsInChildren<Renderer>(true).Where(r => r is SkinnedMeshRenderer || r is MeshRenderer).ToArray();
 
-                                                                                                                                  
+        /// <summary>V2EnemyThreatFeedback (the Bloater's warning flash) lists the model's renderers among its surfaces.</summary>
         static void ReplaceSurfaces(GameObject root, Renderer[] from, Renderer[] to, string kind)
         {
             foreach (var feedback in root.GetComponentsInChildren<V2EnemyThreatFeedback>(true))
@@ -1322,7 +1322,7 @@ namespace AnomalyArena.EditorTools
             }
         }
 
-                                                                                                                                                                          
+        /// <summary>Fails if a component outside both models still points into the one being hidden or removed: the installer would not know where to point it.</summary>
         static void RequireNoReferencesInto(GameObject root, Transform leaving, Transform staying, string kind)
         {
             var found = new List<string>();
@@ -1391,7 +1391,7 @@ namespace AnomalyArena.EditorTools
             return sha.ComputeHash(first).SequenceEqual(sha.ComputeHash(second));
         }
 
-                                                                                                                                   
+        /// <summary>A file name from the manifest, which is data: no absolute paths and no way out of the kind's folder.</summary>
         static string SafeRelative(string value, string manifestFile)
         {
             if (string.IsNullOrWhiteSpace(value)) return null;
@@ -1483,7 +1483,7 @@ namespace AnomalyArena.EditorTools
             if (!condition) throw Fail(message);
         }
 
-                                                                                                                                                            
+        /// <summary>Scene instances that override the presentation's model fields keep their own values after the prefab changes (pitfall T-003).</summary>
         sealed class SceneOverrides
         {
             Dictionary<string, string> texts;

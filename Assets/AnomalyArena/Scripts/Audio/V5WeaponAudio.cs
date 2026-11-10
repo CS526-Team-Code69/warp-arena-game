@@ -3,25 +3,31 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>Every clip of the 2026-10-30 sound rework, one per file in Resources/V5/Audio. The files come from
+    /// work/art-plans/art-redo-1030/audio/make_sfx.py, which also prints the gains in the table below.</summary>
     public enum V5Sfx
     {
-
+        // Hand weapons
         RifleShot, RifleHeavy, RifleBurst, ChargeTick, ChargeFull, ChargeCancel, ScatterBlast, ScatterPellet, ScatterVacuum, RailShot, RailExecute,
         MinigunShot, MinigunSpindown, MinigunOverheat, MinigunVent, SwarmSalvo, SwarmBurst, BombardLaunch, FlameStart, WildfireLob, WildfireLand,
         CryoShard, CryoStrike, CryoShatter, ArcChain, CapacitorBoom, NeedleShot, SporeLob, SporeLand, HookThrow, HookCatch, RocketSelf,
         ReloadClip, ReloadShell, ReloadNeedler, ReloadDone, DryClick,
-
+        // Auto weapons
         OrbitSlice, DroneShot, DroneWhirl, WhirlSlam, RingDeflect, RingTick, RingShieldUp, RingShieldBreak,
-
+        // Loops
         LoopChargeRifle, LoopChargeRail, LoopChargeFocus, LoopCapacitor, LoopMinigun, LoopFlame, LoopBlizzard, LoopGravity,
-
+        // Enemies
         SpitGurgle, SpireCharge, StomperRaise, StomperSlam, ShadeHiss, ShadeStrike, RamCrash, TyrantGrowl, TyrantSweep, PoundBand, HeavyWhoosh,
         MeteorWhistle, EnergyRise, ScepterRaise, ScepterBlast, AstralDevour, NashWindup, NashRepulse, NashRing, NashVolley, NashPillarWarn, NashPillar, NashSummon,
-
+        // The seven elements, in ElementKind order (ElementHit counts on it)
         ElementFire, ElementPoison, ElementFrost, ElementLightning, ElementEarth, ElementLight, ElementVoid
     }
 
+    /// <summary>The sound layer: weapons that sound like themselves, charge and spray loops
+    /// that follow the state of the gun, enemy moves with their own sounds and a short sound for each of the seven elements. V2Audio adds it at
+    /// runtime, so no scene changes; it makes its own 2D AudioSources, and gameplay only ever reads from it. The loops are driven in LateUpdate
+    /// from what the weapon's own state says, so a release or a cancel stops them in the frame it happens, whichever path it came by.
+    /// Pitch variation uses its own sequence, never the gameplay random numbers.</summary>
     [DefaultExecutionOrder(1450)]
     public sealed class V5WeaponAudio : MonoBehaviour
     {
@@ -34,6 +40,8 @@ namespace AnomalyArena
             { this.id = id; this.file = file; this.gain = gain; this.minInterval = minInterval; this.voices = voices; this.jitter = jitter; this.bus = bus; }
         }
 
+        // id, file, gain, shortest gap between two starts, voices at once (a fast stream cuts its own oldest tail, it never drops a shot), pitch variation.
+        // The gains hold the levels of audio/levels.csv: the rifle shot about as loud as before, the music about where it was against it, elements well below.
         static readonly Entry[] Table =
         {
             new(V5Sfx.RifleShot, "rifle-shot", 0.314f, .05f, 4, .03f), new(V5Sfx.RifleHeavy, "rifle-heavy", 0.321f, .05f), new(V5Sfx.RifleBurst, "rifle-burst", 0.379f, .04f, 4, .035f),
@@ -120,13 +128,17 @@ namespace AnomalyArena
         void Start()
         {
             SwapBanks();
-
+            // A saved clip whose Preload is off loads on its first play; loading the banks now keeps that stall away from the first shot of a run.
             var v2 = V2Audio.Instance;
             if (v2 && v2.clips != null) foreach (var entry in v2.clips) if (entry != null && entry.clip && entry.clip.loadState == AudioDataLoadState.Unloaded && entry.clip.loadType == AudioClipLoadType.DecompressOnLoad) entry.clip.LoadAudioData();
             var v3 = V3WorldAudio.Instance;
             if (v3 && v3.bank != null) foreach (var sound in v3.bank) if (sound != null && sound.clip && sound.clip.loadState == AudioDataLoadState.Unloaded && sound.clip.loadType == AudioClipLoadType.DecompressOnLoad) sound.clip.LoadAudioData();
         }
 
+        /// <summary>Why the clips are built here and not imported (measured 2026-10-30 in Chrome 156 on clips cut out of a web build; work/art-plans/art-redo-1030/audio):
+        /// on the web Unity re-encodes every imported AudioClip to AAC whatever its import settings, and the first 10.2 ms of each comes out as digital silence with its end
+        /// padded to a whole AAC frame. That eats the attack of every shot and opens a gap of about 31 ms at each turn of a loop. A clip made with AudioClip.Create reaches the
+        /// browser as plain samples at once. The files are wav data kept as .bytes so that Unity leaves them alone; a clip is built once and lives through scene reloads.</summary>
         static AudioClip BuildClip(string file)
         {
             if (Built.TryGetValue(file, out var clip) && clip) return clip;
@@ -148,6 +160,8 @@ namespace AnomalyArena
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void ForgetBuiltClips() => Built.Clear();
 
+        /// <summary>The saved banks' hits and shots: the scene keeps its clips and this run plays the same recordings built as above, so they lose nothing on the web either.
+        /// Only what is struck or fired; wind and menus can spare 10 ms. A file that is missing leaves the saved clip in place.</summary>
         void SwapBanks()
         {
             var v2 = V2Audio.Instance;
@@ -200,6 +214,9 @@ namespace AnomalyArena
 
         float BusGain(Bus bus) => bus == Bus.Enemy ? enemyBus : bus == Bus.Element ? elementBus : weaponBus;
 
+        // ───── One-shot sounds ─────
+
+        /// <summary>Plays one clip at once, heard the same everywhere (the player's own sounds).</summary>
         public bool Play(V5Sfx sfx, float gainScale = 1f, float pitchScale = 1f)
         {
             int id = (int)sfx;
@@ -218,6 +235,7 @@ namespace AnomalyArena
             return true;
         }
 
+        /// <summary>A sound from a point in the world: silent past the audible range, a little lower with distance. All voices are 2D, like the other banks.</summary>
         public static bool At(V5Sfx sfx, Vector3 at, float gainScale = 1f, float pitchScale = 1f)
         {
             var audio = Instance;
@@ -232,6 +250,7 @@ namespace AnomalyArena
             return audio.Play(sfx, gainScale, pitchScale);
         }
 
+        /// <summary>The same, played fast or slow so that it lasts this many seconds: a wind-up that ends when the blow lands.</summary>
         public static bool AtFit(V5Sfx sfx, Vector3 at, float seconds, float gainScale = 1f)
         {
             var clip = Instance && Instance.clips != null ? Instance.clips[(int)sfx] : null;
@@ -256,6 +275,7 @@ namespace AnomalyArena
             return free >= 0 ? free : oldest;
         }
 
+        /// <summary>Keeps sounds that start together from adding up past the headroom. Tails do not count for long: what was started fades out of the sum in a moment.</summary>
         float Limited(float gain, float now)
         {
             burst *= Mathf.Exp(-(now - burstAt) / .06f); burstAt = now;
@@ -264,6 +284,9 @@ namespace AnomalyArena
             return gain;
         }
 
+        // ───── The weapons ─────
+
+        /// <summary>Every weapon sound comes through here. When this layer has none for the event, the saved V2Audio bank plays it as before.</summary>
         public static void Weapon(RunWeapon weapon, WeaponAudioPhase phase, bool strike = false)
         {
             if (weapon == null) return;
@@ -289,9 +312,9 @@ namespace AnomalyArena
         {
             switch (w.form)
             {
-                case WeaponForm.Minigun: Play(V5Sfx.MinigunOverheat); return true;                      
+                case WeaponForm.Minigun: Play(V5Sfx.MinigunOverheat); return true; // Meltdown's warning
                 case WeaponForm.ScatterCannon:
-                    if (w.variant == 0) Play(V5Sfx.ScatterVacuum);                                                            
+                    if (w.variant == 0) Play(V5Sfx.ScatterVacuum); // Focus has the saved burst WeaponFocusCharge on its press
                     return true;
                 case WeaponForm.Rifle: Play(V5Sfx.ChargeTick); return true;
                 case WeaponForm.Railgun: Play(V5Sfx.ChargeTick, 1f, 1.25f); return true;
@@ -304,8 +327,8 @@ namespace AnomalyArena
             switch (w.form)
             {
                 case WeaponForm.Knife:
-                    if (w.variant == 0) return false;                                               
-                    if (w.hooked) Play(V5Sfx.HeavyWhoosh, .6f, 1.25f);                               
+                    if (w.variant == 0) return false; // the saved Knife cue, its slow start now cut
+                    if (w.hooked) Play(V5Sfx.HeavyWhoosh, .6f, 1.25f); // the caught enemy flung away
                     else Play(V5Sfx.HookThrow);
                     return true;
                 case WeaponForm.RocketLauncher:
@@ -323,11 +346,11 @@ namespace AnomalyArena
         {
             switch (w.form)
             {
-                case WeaponForm.ScatterCannon: Play(V5Sfx.WildfireLand, .8f, 1.1f); return true;                          
+                case WeaponForm.ScatterCannon: Play(V5Sfx.WildfireLand, .8f, 1.1f); return true; // a hot shell flaring up
                 case WeaponForm.CryoCannon: Play(V5Sfx.CryoShatter); return true;
                 case WeaponForm.SporeLauncher: Play(V5Sfx.SporeLand); return true;
                 case WeaponForm.SwarmLauncher:
-                    if (w.variant == 1) return false;                                            
+                    if (w.variant == 1) return false; // Bombard's blasts are the saved explosion
                     Play(V5Sfx.SwarmBurst); return true;
                 case WeaponForm.SentryDrone: Play(V5Sfx.WhirlSlam); return true;
                 case WeaponForm.ArcCoil: Play(V5Sfx.CapacitorBoom); return true;
@@ -339,8 +362,8 @@ namespace AnomalyArena
         {
             switch (w.form)
             {
-                case WeaponForm.OrbitBlades: return true;                        
-                case WeaponForm.Flamethrower when w.variant == 0: return true;                                                                            
+                case WeaponForm.OrbitBlades: return true; // the slice is its hit
+                case WeaponForm.Flamethrower when w.variant == 0: return true; // the spray's loop carries it, a tick for each hit would break it up again
                 case WeaponForm.CryoCannon when w.variant == 1: return true;
                 case WeaponForm.Knife when w.variant == 1: Play(V5Sfx.HookCatch); return true;
                 case WeaponForm.ShieldRing when w.variant == 0: Play(V5Sfx.RingTick); return true;
@@ -356,22 +379,22 @@ namespace AnomalyArena
                 case WeaponForm.Rifle:
                     if (w.variant == 1) { Play(V5Sfx.RifleBurst); return true; }
                     float c = Mathf.Clamp01(w.charge);
-
+                    // The more it holds, the lower and heavier: the same shot with its weight mixed in.
                     Play(V5Sfx.RifleShot, Mathf.Lerp(.85f, .75f, c), Mathf.Lerp(1.1f, .88f, c));
                     if (c > .05f) Play(V5Sfx.RifleHeavy, Mathf.Lerp(.12f, 1f, c * c), Mathf.Lerp(1.22f, 1f, c));
                     return true;
-
+                // The Pistol (since 2026-11-06) has no recording of its own: the Rifle's uncharged shot, lighter and a little higher.
                 case WeaponForm.Pistol: Play(V5Sfx.RifleShot, .7f, 1.2f); return true;
                 case WeaponForm.ScatterCannon:
                     if (w.variant == 0) { Play(V5Sfx.ScatterBlast); return true; }
-
+                    // Focus: the bolts climb a little through the burst and weigh what the release held.
                     Play(V5Sfx.ScatterPellet, Mathf.Lerp(.6f, 1f, focusCharge), 1f + .035f * Mathf.Max(0, 6 - w.burstLeft));
                     return true;
                 case WeaponForm.Flamethrower:
-                    if (w.variant == 1) Play(V5Sfx.WildfireLand);                      
+                    if (w.variant == 1) Play(V5Sfx.WildfireLand); // Stream is the loop
                     return true;
                 case WeaponForm.CryoCannon:
-                    if (w.variant == 0) Play(strike ? V5Sfx.CryoStrike : V5Sfx.CryoShard);                        
+                    if (w.variant == 0) Play(strike ? V5Sfx.CryoStrike : V5Sfx.CryoShard); // Blizzard is the loop
                     return true;
                 case WeaponForm.ArcCoil:
                     if (w.variant == 0) { Play(V5Sfx.ArcChain); return true; }
@@ -382,7 +405,7 @@ namespace AnomalyArena
                 case WeaponForm.SporeLauncher: Play(w.variant == 0 ? V5Sfx.SporeLand : V5Sfx.NeedleShot); return true;
                 case WeaponForm.Railgun: Play(w.variant == 0 ? V5Sfx.RailShot : V5Sfx.RailExecute); return true;
                 case WeaponForm.Minigun: Play(V5Sfx.MinigunShot, 1f, Mathf.Lerp(.96f, 1.1f, spinShare)); return true;
-                case WeaponForm.SwarmLauncher: Play(V5Sfx.SwarmSalvo); return true;                                                                      
+                case WeaponForm.SwarmLauncher: Play(V5Sfx.SwarmSalvo); return true; // one clip for the volley; the rest of its frame falls under the gap
                 case WeaponForm.OrbitBlades: Play(V5Sfx.OrbitSlice, 1f, w.variant == 0 ? 1f : .86f); return true;
                 case WeaponForm.SentryDrone: Play(V5Sfx.DroneShot); return true;
                 case WeaponForm.ShieldRing: Play(w.variant == 0 ? V5Sfx.RingDeflect : V5Sfx.RingShieldBreak); return true;
@@ -390,12 +413,15 @@ namespace AnomalyArena
             }
         }
 
+        /// <summary>The saved Focus release, with the weight of what the charge held; the burst's bolts read it too.</summary>
         public static void FocusRelease(float charge, Vector3 at)
         {
             charge = Mathf.Clamp01(charge);
             if (Instance) Instance.focusCharge = charge;
             V3WorldAudio.Instance?.Play(ArenaWorldCue.WeaponFocusRelease, at, Mathf.Lerp(1.22f, .92f, charge), Mathf.Lerp(.55f, 1f, charge));
         }
+
+        // ───── The loops: read from the weapon's state every frame ─────
 
         void LateUpdate()
         {
@@ -405,6 +431,7 @@ namespace AnomalyArena
             if (!paused) Tick();
         }
 
+        /// <summary>One pass over the state of the guns. LateUpdate runs it after input and the weapons' own tick, so it sees this frame's press or release.</summary>
         public void Tick()
         {
             var gm = GameManager.Instance;
@@ -431,12 +458,13 @@ namespace AnomalyArena
             else if (on && w.form == WeaponForm.ScatterCannon) { sfx = V5Sfx.LoopChargeFocus; low = .85f; high = 1.5f; }
             float c = on ? Mathf.Clamp01(w.charge) : 0f;
             Drive(charge, sfx, on, Mathf.Lerp(.45f, 1.25f, c), Mathf.Lerp(low, high, c), .03f);
-
+            // The Railgun fires itself at full, so it never holds here long enough to ring.
             bool full = on && w.form != WeaponForm.Railgun && c >= .999f;
             if (full && !chargeFull) Play(V5Sfx.ChargeFull);
             chargeFull = full;
         }
 
+        /// <summary>The Capacitor in hand hums with what it stores, rings once at full, and climbs through the seconds before it goes off by itself.</summary>
         void DriveCapacitor(RunWeapon w, RunWeapons weapons)
         {
             bool on = w != null && w.form == WeaponForm.ArcCoil && w.variant == 1 && w.charge > 0f;
@@ -447,6 +475,7 @@ namespace AnomalyArena
             capacitorFull = full;
         }
 
+        /// <summary>The Gatling's barrels: pitch and level follow the spin (Spin-up) or the heat (Meltdown); the trigger coming up runs them down at once.</summary>
         void DriveSpin(RunWeapon w, bool trigger)
         {
             bool on = trigger && w.form == WeaponForm.Minigun && w.reload <= 0f;
@@ -462,6 +491,7 @@ namespace AnomalyArena
             }
         }
 
+        /// <summary>The Stream and the Blizzard are one unbroken sound for as long as the trigger is down.</summary>
         void DriveSpray(RunWeapon w, bool trigger)
         {
             bool flame = trigger && w.form == WeaponForm.Flamethrower && w.variant == 0, snow = trigger && w.form == WeaponForm.CryoCannon && w.variant == 1;
@@ -471,6 +501,7 @@ namespace AnomalyArena
             Drive(spray, snow ? V5Sfx.LoopBlizzard : V5Sfx.LoopFlame, flame || snow, 1f, 1f, .02f);
         }
 
+        /// <summary>Starts, follows or ends a loop. The frame it ends it drops to a third and the next frame it stops: a few milliseconds' fade, so the hard cut does not click.</summary>
         void Drive(Loop loop, V5Sfx sfx, bool on, float gainScale, float pitch, float attack)
         {
             var clip = clips != null ? clips[(int)sfx] : null;
@@ -495,6 +526,7 @@ namespace AnomalyArena
             else if (loop.dying) { loop.dying = false; loop.source.Stop(); }
         }
 
+        /// <summary>A reload has no event of its own, so it is read from its timer: the moment it starts and the moment it is done.</summary>
         void WatchReloads(bool live, RunWeapons weapons)
         {
             if (!weapons || weapons.Hand == null) return;
@@ -514,6 +546,9 @@ namespace AnomalyArena
             }
         }
 
+        // ───── Enemies ─────
+
+        /// <summary>The wind-up of an ordinary enemy's attack: its own where it had none, the saved one pitched to its body where that fits.</summary>
         public static void Windup(EnemyKind kind, Vector3 at)
         {
             var bank = V3WorldAudio.Instance;
@@ -529,6 +564,7 @@ namespace AnomalyArena
             }
         }
 
+        /// <summary>A melee blow: a heavy body swings low, a small one quick and light; the Shade's is a blade.</summary>
         public static void Swing(EnemyKind kind, Vector3 at)
         {
             var bank = V3WorldAudio.Instance;
@@ -542,8 +578,13 @@ namespace AnomalyArena
             }
         }
 
+        /// <summary>The Nash Prophet's gravity pull: a low swirl that lasts as long as the pull does.</summary>
         public void TrackPull(Enemy prophet) => puller = prophet;
 
+        // ───── The seven elements ─────
+
+        /// <summary>A hit that carried an element, under the weapons in the mix. Each element waits a moment after its last sound, all of them wait a little for each
+        /// other, and an element heard again soon comes in lower, so a rapid-fire infused gun colours its hits instead of covering them.</summary>
         public static void ElementHit(ElementKind element, Vector3 at, float stacks = 1f)
         {
             var audio = Instance;
@@ -562,6 +603,7 @@ namespace AnomalyArena
             ElementKind.Earth => V5Sfx.ElementEarth, ElementKind.Light => V5Sfx.ElementLight, _ => V5Sfx.ElementVoid
         };
 
+        /// <summary>An enemy's hit with Earth, Light or Void puts no stacks on you, so ElementStatus never hears of it: it is read here, shots included.</summary>
         void WatchPlayer(GameManager gm)
         {
             var player = gm ? gm.player : null;
@@ -575,6 +617,8 @@ namespace AnomalyArena
         {
             if (info.element is ElementKind.Earth or ElementKind.Light or ElementKind.Void && watchedPlayer) ElementHit(info.element, watchedPlayer.Position);
         }
+
+        // ───── Pause and stop ─────
 
         void SetPaused(bool pause)
         {
@@ -597,19 +641,22 @@ namespace AnomalyArena
             spinShare = 0f; puller = null;
         }
 
-        public int Plays(V5Sfx sfx) => plays[(int)sfx];
+        // ───── What the tests read ─────
 
+        /// <summary>How many times this clip has started.</summary>
+        public int Plays(V5Sfx sfx) => plays[(int)sfx];
+        /// <summary>The volume and pitch this clip last started at.</summary>
         public float LastGain(V5Sfx sfx) => lastGain[(int)sfx];
         public float LastPitch(V5Sfx sfx) => lastPitch[(int)sfx];
-
+        /// <summary>The clip this layer holds for the entry, or null when its file is missing.</summary>
         public AudioClip ClipOf(V5Sfx sfx) => clips[(int)sfx];
-
+        /// <summary>This looping clip is running and not on its way out.</summary>
         public bool LoopLive(V5Sfx sfx)
         {
             foreach (var loop in loops) if (loop.live && loop.sfx == sfx) return true;
             return false;
         }
-
+        /// <summary>The source playing this looping clip, null when it is not running.</summary>
         public AudioSource LoopSource(V5Sfx sfx)
         {
             foreach (var loop in loops) if ((loop.live || loop.dying) && loop.sfx == sfx) return loop.source;

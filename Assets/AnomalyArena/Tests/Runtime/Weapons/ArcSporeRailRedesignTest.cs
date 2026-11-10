@@ -8,11 +8,13 @@ using Object = UnityEngine.Object;
 
 namespace AnomalyArena
 {
-
+    /// <summary>Weapon section 5 of the design document: the Execute's kill reward and its boss rule, the Lance rail beam,
+    /// a kicked spore pod setting off the Cloud Twist, the Arc Jump and Execute card states set aside by the void trial, and the weapon
+    /// cards of the Arc Cannon, Venom Launcher and Railgun in both languages.</summary>
     [TestFixture]
     public class ArcSporeRailRedesignTest
     {
-        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
 
         [TearDown]
         public void RestoreClock() => Time.timeScale = 1f;
@@ -50,6 +52,8 @@ namespace AnomalyArena
             while (Time.time < until) await Awaitable.NextFrameAsync();
         }
 
+        // ───── Railgun · Execute ─────
+
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task Execute_KillingShot_GivesHalfItsCooldownBackAndArmsTheNextShotOnce()
         {
@@ -60,6 +64,7 @@ namespace AnomalyArena
             Assert.That(weapons.roster.Get(WeaponForm.Railgun).damageB, Is.EqualTo(36f), "2026-10-27: one very heavy shot");
             Assert.That(weapons.roster.Get(WeaponForm.Railgun).cooldownB, Is.EqualTo(1.8f), "fired less often, so its damage per second stays");
 
+            // The shot leaves 20% HP, under the 40% line: executed, so this shot killed.
             LeaveHp(targets[0], hit + targets[0].maxHp * .2f);
             weapons.HandleInput(true, true, false);
             Assert.That(targets[0].IsAlive, Is.False);
@@ -67,12 +72,14 @@ namespace AnomalyArena
             Assert.That(rail.executeNextShot, Is.EqualTo(tuning.executeNextShotBonus).Within(.0001f), "and the next shot is armed");
             Assert.That(game.UiSnapshot.handSlots[weapons.ActiveIndex].detail, Does.Contain($"+{tuning.executeNextShotBonus * 100f:0}%"), "the slot shows it");
 
+            // The armed shot kills again: the bonus does not stack.
             LeaveHp(targets[1], hit * (1f + tuning.executeNextShotBonus) + targets[1].maxHp * .2f);
             rail.cooldown = 0f;
             weapons.HandleInput(true, true, false);
             Assert.That(targets[1].IsAlive, Is.False);
             Assert.That(rail.executeNextShot, Is.EqualTo(tuning.executeNextShotBonus).Within(.0001f), "a second kill arms it again, no higher");
 
+            // The armed shot hits harder once and is spent, though it kills nothing (enough HP that it stays over the line).
             targets[2].maxHp = 1000f; targets[2].Heal(targets[2].maxHp);
             rail.cooldown = 0f;
             weapons.HandleInput(true, true, false);
@@ -110,6 +117,8 @@ namespace AnomalyArena
             await Awaitable.NextFrameAsync();
         }
 
+        // ───── Railgun · Lance ─────
+
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task LanceBeam_DrawnAlongTheSlugsRealPath_EndsWhereTheSlugStops()
         {
@@ -117,7 +126,7 @@ namespace AnomalyArena
             foreach (var target in targets) target.DiscardWithoutReward();
             var weapons = game.runWeapons; var tuning = weapons.upgrades;
             Vector3 origin = game.player.Position;
-
+            // A Bulwark across the lane 8 ahead stops the slug well short of its range.
             WorldMap.Active.CreateWall(origin + Vector3.forward * 8f, 4f, 60f, 0f, game.player);
             Physics.SyncTransforms();
             var rail = Equip(game, WeaponForm.Railgun, 0, UpgradeAxis.Tame);
@@ -143,6 +152,8 @@ namespace AnomalyArena
             Assert.That(Beam(out _), Is.False, "it fades a moment after the slug stops");
         }
 
+        // ───── Venom Launcher · Cloud ─────
+
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task CloudTwistAndTame_KickedPodLandingInsideACloud_DetonatesIt()
         {
@@ -154,12 +165,14 @@ namespace AnomalyArena
             cloud.element = ElementKind.Poison; cloud.builtInElement = true;
             player.DebugSetAimPoint(at);
 
+            // A first cloud ends and leaves its pods.
             game.runWeapons.HandleInput(true, true, false);
             await Until(() => AttackPool.Instance.actors.Any(a => a && a.gameObject.activeSelf && a.weapon == cloud && a.mode == AttackMode.Field), 2f, "the first cloud lands");
             AttackPool.Instance.actors.First(a => a && a.gameObject.activeSelf && a.weapon == cloud && a.mode == AttackMode.Field).Release();
             await Until(() => game.runWeapons.Hazards.Any(h => h.kind == GroundHazardKind.SporePod), 1f, "the pods drop");
             var pod = game.runWeapons.Hazards.Where(h => h.kind == GroundHazardKind.SporePod).OrderBy(h => h.position.z).First();
 
+            // A second cloud where that pod will land once you kick it forward.
             Vector3 landing = WorldMap.Active.ClampPoint(pod.position + Vector3.forward * tuning.sporeKickDistance, .2f);
             player.DebugSetAimPoint(landing);
             cloud.cooldown = 0f;
@@ -170,10 +183,13 @@ namespace AnomalyArena
             await Seconds(.5f);
             float left = second.remaining;
 
+            // Step on the pod from behind: the Tame kicks it forward, and it bursts where it lands.
             V3CombatSmokeTest.Teleport(player, pod.position - Vector3.forward * .3f);
             await Until(() => second.remaining > left + .2f, 3f, "the kicked pod lands inside the cloud and sets it off");
             Assert.That(second.remaining, Is.GreaterThan(tuning.cloudSeconds - .5f), "the cloud's time starts again");
         }
+
+        // ───── The void trial ─────
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task VoidTrial_StoredJumpsAndTheArmedShot_StayOnTheBattlefield()
@@ -184,7 +200,7 @@ namespace AnomalyArena
             var rail = new RunWeapon { form = WeaponForm.Railgun, variant = 1, revealed = true };
             weapons.Hand[1 - weapons.ActiveIndex] = rail;
             chain.chainStoredJumps = 2; rail.executeNextShot = tuning.executeNextShotBonus;
-
+            // A miss just put the Execute on its long cooldown; the slot bar spans it.
             float longCooldown = weapons.CycleSeconds(rail) * tuning.executeMissCooldown;
             rail.cooldown = rail.holeReturnSpan = longCooldown;
             Assume.That(weapons.MoveMultiplier, Is.EqualTo(tuning.chainTameMoveSpeed).Within(.0001f));
@@ -193,7 +209,7 @@ namespace AnomalyArena
             Assert.That(chain.chainStoredJumps, Is.Zero, "the stored jumps wait on the battlefield");
             Assert.That(weapons.MoveMultiplier, Is.EqualTo(1f), "so the trial gets no speed-up");
             Assert.That(rail.executeNextShot, Is.Zero, "the armed shot waits there too");
-            rail.cooldown = rail.holeReturnSpan = 0f;                                         
+            rail.cooldown = rail.holeReturnSpan = 0f; // as a long trial runs the cooldown out
 
             weapons.FreezeBattlefieldForTrial(false);
             Assert.That(chain.chainStoredJumps, Is.EqualTo(2), "back on the battlefield they are there again");
@@ -203,6 +219,8 @@ namespace AnomalyArena
             Assert.That(weapons.GetCooldownDuration(rail), Is.EqualTo(longCooldown).Within(.0001f), "and the slot bar still spans the long cooldown");
             await Awaitable.NextFrameAsync();
         }
+
+        // ───── Cards ─────
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task WeaponCards_BothLanguages_SayWhatTheArcCannonVenomLauncherAndRailgunNowDo()
@@ -246,30 +264,30 @@ namespace AnomalyArena
 
             string[] zh = texts["zh-Hans"], en = texts["en"];
             foreach (var text in zh.Concat(en)) Assert.That(text, Does.Not.Contain("{").And.Not.Empty, "every number is filled in");
-            Assert.That(zh[0], Does.Contain("cone ahead of your aim").And.Contain("never through a wall").And.Contain("does not discharge"), "Arc Jump");
+            Assert.That(zh[0], Does.Contain("准星前方扇形").And.Contain("不会隔墙跳").And.Contain("前方没有敌人就不放电"), "Arc Jump");
             Assert.That(en[0], Does.Contain("cone ahead of your aim").And.Contain("never through a wall").And.Contain("does not discharge"));
-            Assert.That(zh[1], Does.Contain("in your hand").And.Contain("enemies close by").And.Contain("full charge hits harder"), "Capacitor");
+            Assert.That(zh[1], Does.Contain("拿在手上").And.Contain("身边有敌人时充得快").And.Contain("充满时放出去更痛"), "Capacitor");
             Assert.That(en[1], Does.Contain("in your hand").And.Contain("enemies close by").And.Contain("full charge hits harder"));
-            Assert.That(zh[2], Does.Contain("reload").And.Contain("mist").And.Not.Contain("costs you HP"), "Needler trait: the reload mist");
+            Assert.That(zh[2], Does.Contain("换弹").And.Contain("毒雾").And.Not.Contain("扣血"), "Needler trait: the reload mist");
             Assert.That(en[2], Does.Contain("reload").And.Contain("mist"));
-            Assert.That(zh[3], Does.Contain("rail beam").And.Contain("Shield's damage cut"), "Lance: a rail beam");
+            Assert.That(zh[3], Does.Contain("轨道射线").And.Contain("无视护盾的减伤"), "Lance: a rail beam");
             Assert.That(en[3], Does.Contain("rail beam"));
-            Assert.That(zh[4], Does.Contain("BLACK HOLE").And.Contain("does not hurt"), "Lance trait: the push can carry you into a black hole");
+            Assert.That(zh[4], Does.Contain("黑洞").And.Contain("不会撞伤"), "Lance trait: the push can carry you into a black hole");
             Assert.That(en[4], Does.Contain("black hole").And.Contain("does not hurt"));
-            Assert.That(zh[5], Does.Contain("cooldown back").And.Contain("next shot").And.Not.Contain("threshold"), "Execute: the kill reward, no growing line");
+            Assert.That(zh[5], Does.Contain("返还部分冷却").And.Contain("提升下一发伤害").And.Not.Contain("阈值"), "Execute: the kill reward, no growing line");
             Assert.That(en[5], Does.Contain("cooldown back").And.Contain("next shot").And.Not.Contain("threshold"));
-            Assert.That(zh[6], Does.Contain("shocks you").And.Contain("long cooldown").And.Contain("Boss").And.Not.Contain("Max HP"), "Execute trait");
+            Assert.That(zh[6], Does.Contain("电击玩家自身").And.Contain("长冷却").And.Contain("Boss").And.Not.Contain("生命上限"), "Execute trait");
             Assert.That(en[6], Does.Contain("shocks you").And.Contain("long cooldown"));
             string speed = ((tuning.chainTameMoveSpeed - 1f) * 100f).ToString("0.#");
-            Assert.That(zh[7], Does.Contain($"{speed}%").And.Contain($"up to +{tuning.chainStoreMax}"), "Arc Jump Tame: the cap stays and the speed-up is new");
+            Assert.That(zh[7], Does.Contain($"移速 +{speed}%").And.Contain($"最多多跳 {tuning.chainStoreMax} 次"), "Arc Jump Tame: the cap stays and the speed-up is new");
             Assert.That(en[7], Does.Contain($"{speed}% faster"));
-            Assert.That(zh[8], Does.Contain("detonates").And.Contain(""), "Cloud Twist");
+            Assert.That(zh[8], Does.Contain("引爆整团毒云").And.Contain("刷新"), "Cloud Twist");
             Assert.That(en[8], Does.Contain("detonates"));
-            Assert.That(zh[9], Does.Contain("reload").And.Contain("no longer hurts you"), "Needler Tame");
+            Assert.That(zh[9], Does.Contain("换弹速度").And.Contain("不再伤你"), "Needler Tame");
             Assert.That(en[9], Does.Contain("reload").And.Contain("no longer hurts you"));
-            Assert.That(zh[10], Does.Contain("wind-up still slows you"), "Lance Tame keeps the wind-up slow");
+            Assert.That(zh[10], Does.Contain("蓄势时仍会减速"), "Lance Tame keeps the wind-up slow");
             Assert.That(en[10], Does.Contain("wind-up still slows you"));
-            Assert.That(zh[11], Does.Contain("arc shield").And.Contain("blocks no damage").And.Not.Contain("Max HP"), "Execute Tame: the arc shield");
+            Assert.That(zh[11], Does.Contain("电弧护盾").And.Contain("不挡伤害").And.Not.Contain("生命上限"), "Execute Tame: the arc shield");
             Assert.That(en[11], Does.Contain("arc shield").And.Contain("blocks no damage"));
         }
     }

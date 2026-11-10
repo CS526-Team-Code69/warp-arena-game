@@ -8,11 +8,13 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>In the saved arena. Winning the void trial mid-wave grants one level's rewards without touching XP, turns
+    /// the level purple at once and pops the extra pick up when the wave resumes. A reroll offers another weapon direction and another
+    /// skill whenever one exists, and the wave's single reroll is not handed out again when the wave intro resumes from a pause.</summary>
     [TestFixture]
     public class VoidLevelRerollTest
     {
-        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
 
         [TearDown]
         public void TearDown() => Time.timeScale = 1f;
@@ -80,7 +82,7 @@ namespace AnomalyArena
             try
             {
                 tuning.reinfuseChance = .5f;
-
+                // Twist and Tame are open and the infused element can be changed: three directions on one weapon.
                 weapons.Hand = new[] { new RunWeapon { form = WeaponForm.Rifle, variant = 0, revealed = true, element = ElementKind.Fire, axes = UpgradeAxis.Infusion }, null };
                 weapons.Auto = new RunWeapon[RunWeapons.AutoSlotCount];
                 var repeated = new List<UpgradeAxis>();
@@ -102,7 +104,7 @@ namespace AnomalyArena
         {
             await Until(() => GameManager.Instance && ArenaText.Ready, 12f, "scene and localization");
             var weapons = GameManager.Instance.runWeapons;
-
+            // Built-in element and Twist taken: Tame is the only direction left.
             weapons.Hand = new[] { new RunWeapon { form = WeaponForm.Rifle, variant = 0, revealed = true, element = ElementKind.Fire, builtInElement = true,
                 axes = UpgradeAxis.Infusion | UpgradeAxis.Twist }, null };
             weapons.Auto = new RunWeapon[RunWeapons.AutoSlotCount];
@@ -133,6 +135,7 @@ namespace AnomalyArena
             Assert.That(repeated, Is.Empty);
         }
 
+        /// <summary>Title → supply crate → Rifle → close its card: the first wave is being introduced.</summary>
         static async Task<GameManager> StartRun()
         {
             await Awaitable.NextFrameAsync();

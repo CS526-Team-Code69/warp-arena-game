@@ -827,7 +827,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 818548936
-    m_Localized: "WASD MOVE \xB7 MOUSE AIM \xB7 LMB USE WEAPON \xB7 RMB SWITCH SLOTS \xB7 SHIFT SPRINT \xB7 1/2/3 SKILLS \xB7 E ON A PORTAL ENTERS THE TRIAL \xB7 ESC PAUSE"
+    m_Localized: "WASD MOVE \xB7 MOUSE AIM \xB7 LMB ATTACK \xB7 RMB SWAP \xB7 SHIFT SPRINT \xB7 1/2/3 SKILLS \xB7 ESC PAUSE"
     m_Metadata:
       m_Items: []
   - m_Id: 818548937

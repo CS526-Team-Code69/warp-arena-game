@@ -4,12 +4,13 @@ using UnityEngine.UI;
 
 namespace AnomalyArena
 {
-
+    /// <summary>The controls table on the pause screen: one row per line of document 3.2 (V2Hud.ControlRows), a key cap and then what it does
+    /// (Wenbo Zhang's how-to-play branch).</summary>
     public sealed class V2ControlsTable : MonoBehaviour
     {
         const string PillSprite = "V5/UI/ui-pill";
         const float KeyGap = 14f;
-
+        // The pill sprite is a grey fill with a white edge; the tint gives it the menu buttons' navy and cyan.
         static readonly Color KeyTint = new(.50f, .82f, 1f), KeyFill = new(.06f, .13f, .22f, .92f), KeyText = new(.50f, .86f, 1f), ActionText = new(.86f, .90f, .96f);
         const string NoteColour = "#8E9DB4";
         static Sprite pill;
@@ -33,9 +34,10 @@ namespace AnomalyArena
 
         public RectTransform Rect => (RectTransform)transform;
 
+        /// <summary>Writes the rows in the current language and font: the table is built in Awake, before ArenaText has its answers.</summary>
         public void Fill(Font font)
         {
-
+            // A V2 campaign run has its own rows (V2Hud.ControlRows): refill when one starts or ends, not only for a new font.
             bool campaign = V2Hud.CampaignControls;
             if (filled && font == filledWith && campaign == filledForCampaign) return;
             filled = true;
@@ -49,6 +51,7 @@ namespace AnomalyArena
             }
             if (font) foreach (var label in labels) if (label.font != font) label.font = font;
 
+            // The rows stay left-aligned and the block sits in the middle of the panel: the Chinese lines are much shorter than the English ones.
             float widest = 0f;
             foreach (var action in actions) widest = Mathf.Max(widest, action.preferredWidth);
             float left = Mathf.Max(0f, (Rect.rect.width - keyWidth - KeyGap - widest) * .5f);
@@ -94,7 +97,7 @@ namespace AnomalyArena
                 keys.Add(keyLabel);
 
                 var action = NewText(line, "Action", fontSize - 2, TextAnchor.MiddleLeft, FontStyle.Normal);
-
+                // One size for every row: a long one wraps onto a second line instead of shrinking.
                 action.resizeTextForBestFit = false;
                 action.lineSpacing = .92f;
                 action.color = ActionText;
@@ -118,7 +121,7 @@ namespace AnomalyArena
             label.alignment = anchor;
             label.horizontalOverflow = HorizontalWrapMode.Wrap;
             label.verticalOverflow = VerticalWrapMode.Truncate;
-
+            // A long key label shrinks rather than spilling out of its cap.
             label.resizeTextForBestFit = true;
             label.resizeTextMinSize = Mathf.Max(9, size - 5);
             label.resizeTextMaxSize = size;

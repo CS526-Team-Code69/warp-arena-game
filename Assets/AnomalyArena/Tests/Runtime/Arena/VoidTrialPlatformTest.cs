@@ -7,14 +7,14 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-                                                                                                                                        
-                                                                                                                                           
-                                                                                         
+    /// <summary>Void trial platform. The platform is a flattened cylinder whose
+    /// default capsule collider became a sphere as wide as the disc, pushing the player over the edge within about half a second. A player
+    /// who enters through a portal and stands still must stay on the platform.</summary>
     [TestFixture]
     [Category("V3Smoke")]
     public class VoidTrialPlatformTest
     {
-        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
 
         [TearDown]
         public void TearDown() => Time.timeScale = 1f;
@@ -50,12 +50,12 @@ namespace AnomalyArena
             await StandStill(game, 2f);
             Assert.That(game.player.State, Is.Not.EqualTo(CharacterState.Falling), "standing still, the player does not slide off the platform");
             Assert.That(world.TrialActive, Is.True, "the trial is still running");
-                                                                                              
+            // Set down 8 cells out since 2026-10-23 (outside the Nash Prophet's pulse range).
             Assert.That(Query.Flat(game.player.Position - world.trialPlatform.position).magnitude, Is.EqualTo(world.trialEntryDistance).Within(.3f), "the player stays where they were set down");
             Assert.That(game.player.Position.y, Is.EqualTo(0f).Within(.3f), "the player stands on the platform's top face");
         }
 
-                                                                                                                                                  
+        /// <summary>Waits with the Hollow held still, so only the platform itself can move the player; stops early if the player falls.</summary>
         internal static async Task StandStill(GameManager game, float seconds)
         {
             var hollow = WorldMap.Active.hollow;

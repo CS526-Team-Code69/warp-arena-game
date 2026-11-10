@@ -3,10 +3,14 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>
+    /// The Bulwark in the illustrated art: slabs of rock that break out of the ground over the wall's real box and lean away from its middle line,
+    /// tall in the middle and low at the ends, with rubble around their foot. Only a look: the wall keeps its own box collider. The rocks are built here with hard flat faces,
+    /// because the view looks almost straight down and a rounded model reads as a pile of lumps from there.
+    /// </summary>
     public sealed class V5EarthWall : MonoBehaviour
     {
-
+        // Seconds one rock takes to break out, and how much later the ends follow the middle.
         const float RiseTime = .17f, Stagger = .12f;
         const int Shapes = 6;
 
@@ -26,6 +30,7 @@ namespace AnomalyArena
         Material rockMaterial;
         float age;
 
+        /// <summary>Raises the rocks on a Bulwark wall that was just deployed. False when the assets are missing: the caller keeps the wall's box then.</summary>
         public static bool Raise(GameObject wall, float width, float depth)
         {
             var world = WorldMap.Active;
@@ -49,7 +54,7 @@ namespace AnomalyArena
             if (!shader || !walls) return null;
             var material = new Material(shader);
             material.SetTexture("_BaseMap", walls.GetTexture("_BaseMap"));
-
+            // Earth, in each map's own light: brown stone on the grey ruins, warmer on the sand, darker in the void.
             material.SetColor("_Tint", style switch
             {
                 V5WallStyle.Dunes => new Color(.92f, .72f, .52f),
@@ -60,6 +65,7 @@ namespace AnomalyArena
             return material;
         }
 
+        /// <summary>A rock one unit tall and two wide: a few sides, narrowing upward through a broken middle ring, with a flat colour on each face.</summary>
         static Mesh MakeShard(int seed)
         {
             var rng = new System.Random(seed);
@@ -129,7 +135,7 @@ namespace AnomalyArena
                 root.SetParent(transform, false);
                 MakeShadow();
             }
-
+            // The wall scales its box, so the rocks' parent undoes that and works in world units.
             var scale = transform.localScale;
             root.localScale = new Vector3(1f / Mathf.Max(.01f, scale.x), 1f / Mathf.Max(.01f, scale.y), 1f / Mathf.Max(.01f, scale.z));
             root.position = new Vector3(transform.position.x, 0f, transform.position.z);
@@ -141,7 +147,7 @@ namespace AnomalyArena
             }
 
             int used = 0;
-
+            // The ridge: two ranks of slabs leaning away from the middle line, as the ground would break under something pushing up.
             int ridge = Mathf.Max(6, Mathf.RoundToInt(width * 3f));
             for (int i = 0; i < ridge; i++)
             {
@@ -151,7 +157,7 @@ namespace AnomalyArena
                 Place(used++, along * width * .5f + Random.Range(-.08f, .08f), side * depth * Random.Range(.05f, .24f), Random.Range(2f, 3.1f) * taper,
                     Random.Range(.6f, .86f) * depth * (.72f + .28f * taper), Mathf.Abs(along), side * Random.Range(10f, 24f));
             }
-
+            // Broken rock along both faces and the two ends.
             int foot = Mathf.Max(8, Mathf.RoundToInt(width * 3.2f));
             for (int i = 0; i < foot; i++)
             {
@@ -193,7 +199,7 @@ namespace AnomalyArena
             rock.z = z;
             rock.height = height;
             rock.delay = lateness * Stagger + Random.Range(0f, .03f);
-
+            // Each rock turns freely and leans along the wall's short axis, away from the middle line.
             rock.filter.transform.localRotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
             rock.pivot.localRotation = Quaternion.Euler(tilt, 0f, Random.Range(-6f, 6f));
             rock.pivot.localScale = new Vector3(radius, height, radius * Random.Range(.8f, 1.15f));
@@ -223,7 +229,7 @@ namespace AnomalyArena
             {
                 if (!rock.pivot.gameObject.activeSelf) continue;
                 float t = Mathf.Clamp01((age - rock.delay) / RiseTime);
-
+                // Fast out of the ground, a little past its height, then settling back (an ease-out with overshoot).
                 float eased = 1f + 2.4f * Mathf.Pow(t - 1f, 3f) + 1.4f * Mathf.Pow(t - 1f, 2f);
                 rock.pivot.localPosition = new Vector3(rock.x, (eased - 1f) * rock.height, rock.z);
             }

@@ -10,6 +10,7 @@ using UnityEngine.ResourceManagement.AsyncOperations;
 
 namespace AnomalyArena
 {
+    /// <summary>Reads the official selected Locale; cached tables are data, never a separate language setting.</summary>
     public static class ArenaText
     {
         public const string StringCollection = "ArenaUI";
@@ -42,6 +43,7 @@ namespace AnomalyArena
                     && selection.Result.Identifier.Code.StartsWith("zh", StringComparison.OrdinalIgnoreCase);
             }
         }
+        // Null until the locale's font asset arrives; the scene's labels keep the packaged font they were saved with until then.
         public static Font Font => Ready ? font : null;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -54,15 +56,19 @@ namespace AnomalyArena
             LoadError = ""; missingKeys.Clear(); Changed = null;
         }
 
-        public static async Awaitable InitializeAsync(Locale startingLocale, CancellationToken cancellationToken = default)
+        /// <summary>Waits for the official Localization, selects the starting language (a locale code, StartupLanguage.Chinese or
+        /// English; an unknown one keeps what Localization's own start selected) and loads its text table.</summary>
+        public static async Awaitable InitializeAsync(string startingCode, CancellationToken cancellationToken = default)
         {
             loaded = false; OnChanged();
-
+            // WebGL cannot use synchronous Addressables completion or the handle Task property.
             var initialization = LocalizationSettings.InitializationOperation;
             await WaitAsync(initialization, cancellationToken);
             if (!initialization.IsValid() || initialization.Status != AsyncOperationStatus.Succeeded)
             { Fail("Localization initialization failed."); return; }
             LocalizationSettings.SelectedLocaleChanged -= LocalizationSettings_SelectedLocaleChanged;
+            var startingLocale = string.IsNullOrEmpty(startingCode) ? null
+                : LocalizationSettings.AvailableLocales.GetLocale(new LocaleIdentifier(startingCode));
             if (startingLocale) LocalizationSettings.SelectedLocale = startingLocale;
             LocalizationSettings.SelectedLocaleChanged += LocalizationSettings_SelectedLocaleChanged;
             await LoadAsync(LocalizationSettings.SelectedLocaleAsync.Result, ++revision, cancellationToken);
@@ -82,12 +88,14 @@ namespace AnomalyArena
             {
                 var textOperation = LocalizationSettings.StringDatabase.GetTableAsync(StringCollection, locale);
                 var fontOperation = LocalizationSettings.AssetDatabase.GetLocalizedAssetAsync<Font>(AssetCollection, UiFontKey, locale);
-
+                // Localized-asset operations auto-release after completion; retain a lease for the cached font.
                 acquiredFont = Addressables.ResourceManager.Acquire(fontOperation);
                 await WaitAsync(textOperation, cancellationToken);
                 if (request != revision || LocalizationSettings.SelectedLocaleAsync.Result != locale) return;
                 if (!textOperation.IsValid() || textOperation.Status != AsyncOperationStatus.Succeeded || !textOperation.Result)
                 { Fail("ArenaUI StringTable did not load for " + locale.Identifier.Code); return; }
+                // Text is enough to show the UI. The font asset is a separate web download of the whole CJK font, so waiting
+                // for it here kept the title screen hidden behind the bare arena.
                 table = textOperation.Result;
                 missingKeys.Clear(); LoadError = ""; loaded = true; OnChanged();
 
@@ -120,8 +128,9 @@ namespace AnomalyArena
             cancellationToken.ThrowIfCancellationRequested();
         }
 
-        public static string Pair(string chinese, string english) => Ready ? english : "";
+        public static string Pair(string chinese, string english) => Ready ? IsChinese ? chinese : english : "";
 
+        /// <summary>Formats an already loaded official entry. No synchronous loading or fallback-language flash.</summary>
         public static string Text(string key, params object[] arguments)
         {
             if (!Ready || string.IsNullOrEmpty(key)) return "";

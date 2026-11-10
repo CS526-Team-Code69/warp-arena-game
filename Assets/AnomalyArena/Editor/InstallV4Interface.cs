@@ -11,23 +11,22 @@ using UnityEngine.UI;
 
 namespace AnomalyArena.EditorTools
 {
-                 
-                                                                                                                            
-                                                                                                                      
-                  
+    /// <summary>
+    /// V4 interface pass: the sprint numbers, a bottom HUD row whose text always fits inside its box, the weapon card shown
+    /// the moment a weapon is taken, and the card-pick flourish layer. Safe to run again: objects it made are reused.
+    /// </summary>
     public static class InstallV4Interface
     {
         static readonly string[] Scenes =
         {
-            "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity",
-            "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity"
+            "Assets/AnomalyArena/Scenes/ArenaV2.unity"
         };
 
         const string TextureFolder = "Assets/AnomalyArena/Art/V4/UI/Textures";
         const string IntroName = "WeaponIntroScreen";
         const string FxName = "CardPickFx";
         const int SparkPool = 24;
-                                                                                                                       
+        // Bottom row in reference units (1600 × 900): small slots sit in the free space either side of the hand slots.
         static readonly Vector2 SmallSlot = new(146f, 92f);
         const float Edge = 24f, Gap = 8f, Bottom = 22f;
 
@@ -103,7 +102,7 @@ namespace AnomalyArena.EditorTools
                 importer.wrapMode = TextureWrapMode.Clamp;
                 importer.filterMode = FilterMode.Bilinear;
                 importer.sRGBTexture = true;
-                                                                                          
+                // The frame is 9-sliced so its glow keeps its width on cards of any size.
                 importer.spriteBorder = Path.GetFileNameWithoutExtension(path) == "card-pick-frame"
                     ? new Vector4(64f, 64f, 64f, 64f)
                     : Vector4.zero;
@@ -128,7 +127,7 @@ namespace AnomalyArena.EditorTools
             var rules = AssetDatabase.LoadAssetAtPath<ProgressionRules>(progressionPath);
             if (!rules) throw new InvalidOperationException("Missing asset: " + progressionPath);
             Undo.RecordObject(rules, "V4 sprint");
-                                                                                                              
+            // A full bar is one second of sprinting; the stamina bonus keeps its old headroom above the base.
             rules.startingStats.sprintDuration = 1f;
             var caps = rules.startingStats.caps;
             if (caps != null && caps.Length > (int)StatId.Stamina) caps[(int)StatId.Stamina] = 1.75f;
@@ -146,7 +145,6 @@ namespace AnomalyArena.EditorTools
             {
                 Undo.RecordObject(player, "V4 sprint");
                 player.stamina.sprintDuration = 1f;
-                player.stamina.minToStart = .3f;
                 EditorUtility.SetDirty(player);
                 entry.staminaSet = true;
             }
@@ -163,7 +161,7 @@ namespace AnomalyArena.EditorTools
             return entry;
         }
 
-                                                                                                          
+        // ───── Bottom row: every text gets its own box and shrinks to fit instead of spilling over ─────
 
         static int LayOutBottomRow(V2Hud hud)
         {
@@ -209,7 +207,7 @@ namespace AnomalyArena.EditorTools
             rect.sizeDelta = size;
             EditorUtility.SetDirty(rect);
             float w = size.x, h = size.y;
-                                                                                            
+            // Top row: key label on the left, element and weapon/skill glyphs on the right.
             float glyphRight = w - pad;
             Place(slot.weaponIcon, glyphRight - 30f, top + 1f, 30f, 18f);
             Place(slot.contentIcon, glyphRight - 22f, top, 22f, 22f);
@@ -219,7 +217,7 @@ namespace AnomalyArena.EditorTools
             var key = keyTransform ? keyTransform.GetComponent<Text>() : null;
             Place(key, pad, top, elementX - 4f - pad, 19f);
             Fit(key, 8, 12, TextAnchor.UpperLeft);
-                                                                                                           
+            // Detail sits on its own line above the cooldown bar; the title fills what is left in between.
             float detailHeight = small ? 15f : 17f, detailTop = h - 8f - detailHeight;
             Place(slot.title, pad, titleTop, w - pad * 2f, detailTop - titleTop - 2f);
             Fit(slot.title, small ? 9 : 11, small ? 13 : 16, TextAnchor.UpperLeft);
@@ -257,7 +255,7 @@ namespace AnomalyArena.EditorTools
             EditorUtility.SetDirty(text);
         }
 
-                                                                                                                      
+        // ───── Weapon card: a pause screen about the weapon just taken, dismissed by any click, Space or Enter ─────
 
         static int BuildWeaponIntro(V2Hud hud)
         {
@@ -345,7 +343,7 @@ namespace AnomalyArena.EditorTools
             DropLocalization(label);
             intro.continueLabel = label;
 
-                                                                                        
+            // The whole screen is one big continue button, so a click anywhere goes on.
             var root = intro.gameObject;
             var backdrop = root.GetComponent<Image>();
             var anywhere = root.GetComponent<Button>();
@@ -383,7 +381,7 @@ namespace AnomalyArena.EditorTools
             return null;
         }
 
-                                                                                                                           
+        /// <summary>The copied pause texts carried fixed localized strings; the weapon card writes its own text.</summary>
         static void DropLocalization(Component part)
         {
             if (!part) return;
@@ -392,7 +390,7 @@ namespace AnomalyArena.EditorTools
                     Undo.DestroyObjectImmediate(behaviour);
         }
 
-                                                                             
+        // ───── Card-pick flourish: one saved layer above every screen ─────
 
         static int BuildCardPickFx(V2Hud hud)
         {

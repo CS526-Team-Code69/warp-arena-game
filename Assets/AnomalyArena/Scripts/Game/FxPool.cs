@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>Saved effect quads share a material and use property blocks; saturation drops only decoration.</summary>
     public sealed class FxPool : MonoBehaviour
     {
         public Renderer[] items;
@@ -35,14 +35,14 @@ namespace AnomalyArena
                 block.Clear();block.SetColor("_BaseColor",color);block.SetTexture("_BaseMap",texture?texture:spark);r.SetPropertyBlock(block);return;
             }
         }
-
+        /// <summary>Camera-facing quad whose +X axis follows the world direction as seen on screen.</summary>
         public void EmitDirectional(Texture texture,Vector3 at,Vector3 worldDirection,float size,float life,Color color)
         {
             var cam=GameManager.Instance?GameManager.Instance.cam:null;float roll=0f;
             if(cam&&worldDirection.sqrMagnitude>.0001f){var local=cam.transform.InverseTransformDirection(worldDirection);roll=Mathf.Atan2(local.y,local.x)*Mathf.Rad2Deg;}
             Emit(at,color,size,life,texture:texture,roll:roll);
         }
-
+        /// <summary>A cone texture for the element (random frame), the plain cone when the element has none, or null when nothing is assigned.</summary>
         public Texture ConeTexture(ElementKind element)
         {
             var set=element==ElementKind.Fire?coneFire:element==ElementKind.Frost?coneFrost:element==ElementKind.Poison?conePoison:null;

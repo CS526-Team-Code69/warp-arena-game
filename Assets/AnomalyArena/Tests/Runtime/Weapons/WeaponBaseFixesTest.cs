@@ -7,11 +7,13 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>Weapon base fixes: self-hits, spawn points in walls, Bombard, Chain Coil,
+    /// lost knives, flat self-damage, Whirl, Capacitor, Deflect, Shatter, Blizzard, walls shielding area hits, ice patches,
+    /// Execute and Chain lines, hook hold, lob landing, Gunner, re-infuse cards and the changed numbers.</summary>
     [TestFixture]
     public class WeaponBaseFixesTest
     {
-        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
 
         [TearDown]
         public void RestoreClock() => Time.timeScale = 1f;
@@ -20,7 +22,7 @@ namespace AnomalyArena
         {
             game.runWeapons.ClearWaveEffects();
             var weapon = new RunWeapon { form = form, variant = variant, revealed = true, axes = axes, mk = mk, rounds = game.runWeapons.ClipSize(form, variant) };
-
+            // Built-in elements as CreateWeapon sets them.
             weapon.element = form switch { WeaponForm.Flamethrower => ElementKind.Fire, WeaponForm.CryoCannon => ElementKind.Frost, WeaponForm.ArcCoil => ElementKind.Lightning, WeaponForm.SporeLauncher => ElementKind.Poison, _ => ElementKind.None };
             weapon.builtInElement = weapon.element != ElementKind.None;
             if (weapon.builtInElement) weapon.axes |= UpgradeAxis.Infusion;
@@ -35,6 +37,7 @@ namespace AnomalyArena
             return weapon;
         }
 
+        /// <summary>The weapon's damage multiplier now (Mk, cards, global factors): one hit divided by its asset value.</summary>
         static float Scale(GameManager game, RunWeapon w)
         {
             var d = game.runWeapons.roster.Get(w.form);
@@ -43,6 +46,7 @@ namespace AnomalyArena
 
         static float TakenFactor(GameManager game) => game.progression.Stats.DamageTakenMultiplier;
 
+        /// <summary>A Bulwark wall across the aim, centred this far ahead of the player.</summary>
         static void WallAhead(GameManager game, float distance, float width = 4f)
         {
             WorldMap.Active.CreateWall(game.player.Position + Query.Flat(game.player.AimDirection).normalized * distance, width, 60f, 0f, game.player);
@@ -84,6 +88,8 @@ namespace AnomalyArena
         static bool ActiveActors(RunWeapon w, AttackMode mode) =>
             AttackPool.Instance.actors.Any(a => a && a.gameObject.activeSelf && a.weapon == w && a.mode == mode);
 
+        // ───── A. Broken ─────
+
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task SelfHit_OwnAttack_IgnoresProtectionGrantsNoneAndAddsNoStacks()
         {
@@ -124,7 +130,8 @@ namespace AnomalyArena
             await Until(() => player.Hp < hp, 2f, "the patch lands under the player and burns");
             float first = player.Hp;
             Assert.That(player.Protected, Is.False, "the own patch grants no protection");
-
+            // Ticks come every 0.25 s and a self-hit grants no protection, so the patch keeps burning: over 2 s, 8 ticks of the
+            // base share. The fraction a tick cannot deal carries over instead of each tick rounding up to the 1-damage floor.
             float share = game.runWeapons.roster.Get(WeaponForm.Flamethrower).damageB * game.runWeapons.upgrades.wildfireSelfShare;
             Assume.That(share, Is.LessThan(1f), "a share below the floor is the case the carry is for");
             await Seconds(2f);
@@ -139,7 +146,7 @@ namespace AnomalyArena
         {
             var (game, targets) = await V3CombatSmokeTest.StartSandbox();
             Equip(game, WeaponForm.Rifle, 1);
-
+            // A wall whose face touches the player's back: the round must start in front of it and bounce.
             game.player.DebugSetAim(Vector3.back);
             WallAhead(game, game.player.radius + .5f);
             game.player.DebugSetAim(Vector3.forward);
@@ -198,7 +205,7 @@ namespace AnomalyArena
             var chain = Equip(game, WeaponForm.ArcCoil, 0);
             var status = ElementStatus.For(game.player);
             status.ClearStatuses();
-
+            // Close by but 90° off an aim pointing away from the lane.
             Place(targets[0], game.player.Position + Vector3.right * 2f);
             game.player.DebugSetAim(Vector3.back);
 
@@ -220,9 +227,10 @@ namespace AnomalyArena
 
             game.runWeapons.HandleInput(true, true, false);
 
+            // Five jumps, three targets: two unused jumps return. The first target stands 3 cells away, inside the return ring.
             Assert.That(targets[1].Hp, Is.EqualTo(targets[1].maxHp - hit).Within(.01f), "no element jump adds damage on top of the chain");
             Assert.That(targets[2].Hp, Is.EqualTo(targets[2].maxHp - hit).Within(.01f));
-
+            // The 10-27 doc (document 0149, P21): the returning current no longer shocks the enemies around you.
             Assert.That(targets[0].Hp, Is.EqualTo(targets[0].maxHp - hit).Within(.01f), "only the arc's own hit");
             Assert.That(status.Lightning + (status.Paralysed ? 99f : 0f), Is.EqualTo(2f).Within(.01f), "one Lightning per unused jump on you");
             Assert.That(game.runWeapons.Tracers.Count, Is.EqualTo(3), "an arc to each target");
@@ -236,7 +244,8 @@ namespace AnomalyArena
             var status = ElementStatus.For(game.player);
             status.ClearStatuses();
             targets[2].DiscardWithoutReward();
-
+            // Everyone stays inside the sandbox's clear lane: on some map variants a wall stands right behind the lane's start, and it
+            // would hide the body behind you from the return ring.
             V3CombatSmokeTest.Teleport(game.player, game.player.Position + Vector3.forward * 4f);
             Place(targets[0], game.player.Position + Vector3.forward * 5f);
             Place(targets[1], game.player.Position + Vector3.back * 2f);
@@ -320,12 +329,14 @@ namespace AnomalyArena
             game.runWeapons.HandleInput(true, true, false);
             await Until(() => game.player.Hp < hp, 2f, "the strike lands on the player");
 
+            // Rule R6, Q105: a starting form's backfire also takes the starting-form factor (10 -> 5), never the Mk or cards.
             float starting = game.runWeapons.StartingFormDamageFactor(WeaponForm.RocketLauncher);
             Assume.That(starting, Is.LessThan(1f), "the Rocket Launcher is a starting form with a damage factor below 1");
             Assert.That(hp - game.player.Hp, Is.EqualTo(game.runWeapons.roster.Get(WeaponForm.RocketLauncher).damageA * starting * TakenFactor(game)).Within(.01f),
                 "the wielder takes damageA times the starting factor, not the Mk-scaled hit");
         }
 
+        // Q87: the Whirl pulls only a lone enemy 5 to 12 cells away that you can see and that can be moved.
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task Whirl_SpireIsTheNearestLoneOne_GrabsTheMovableEnemyInstead()
         {
@@ -371,7 +382,7 @@ namespace AnomalyArena
             targets[1].DiscardWithoutReward(); targets[2].DiscardWithoutReward();
             Vector3 origin = game.player.Position;
             Place(targets[0], origin + Vector3.forward * 10f, movable: true);
-            game.runWeapons.ClearWaveEffects();                                                             
+            game.runWeapons.ClearWaveEffects(); // the afterimage spot starts here, not where the wave began
             var whirl = EquipAuto(game, WeaponForm.SentryDrone, 1);
             float hit = game.runWeapons.HitDamage(whirl);
 
@@ -438,7 +449,7 @@ namespace AnomalyArena
 
             capacitor.cooldown = 0f; capacitor.charge = tuning.capacitorMax;
             before = targets[0].Hp;
-
+            // The last discharge left its Lightning on the target, and each stack adds to a player attack.
             float lightning = ElementStatus.For(targets[0]).LightningDamageTaken;
             weapons.HandleInput(true, true, false);
             Assert.That(before - targets[0].Hp, Is.EqualTo(hit * tuning.capacitorFullBonus * lightning).Within(.01f), "a full discharge hits harder");
@@ -465,6 +476,8 @@ namespace AnomalyArena
 
             Assert.That(targets[0].maxHp - targets[0].Hp, Is.EqualTo(hit).Within(.01f), "damageA times the weapon's multiplier, not the floor of 1");
         }
+
+        // ───── B. Unfun / balance ─────
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task Shatter_ThreeShardsAtOneEnemy_HitItOnceAndFrozenBonusIsAboutDouble()
@@ -537,6 +550,7 @@ namespace AnomalyArena
             Assert.That(targets[0].Hp, Is.LessThan(hp), "with the wall gone it hits");
         }
 
+        /// <summary>Lands one Shatter ice patch of the given radius at a point, as a shard ending there would.</summary>
         static void LandIce(GameManager game, RunWeapon shatter, Vector3 at, float radius)
         {
             var tuning = game.runWeapons.upgrades;
@@ -562,16 +576,16 @@ namespace AnomalyArena
             var shatter = Equip(game, WeaponForm.CryoCannon, 0);
             Vector3 origin = player.Position;
             LandIce(game, shatter, origin + Vector3.forward * 3f, 8f);
-
+            // Ordinary enemies slip too; bosses and the Spire do not.
             targets[1].Configure(game.waves.DefinitionOf(EnemyKind.Spire), 1f, false);
             Assert.That(game.runWeapons.IceGrip(targets[0]), Is.GreaterThan(0f), "an ordinary enemy on the ice slips");
             Assert.That(game.runWeapons.IceGrip(targets[1]), Is.Zero, "the Spire keeps its footing");
-            foreach (var t in targets) t.DiscardWithoutReward();                  
+            foreach (var t in targets) t.DiscardWithoutReward(); // clear the lane
             var status = ElementStatus.For(player);
             status.ClearStatuses();
             float speed = player.moveSpeed;
             player.enabled = true;
-
+            // The speed of the first physics steps once the key is down.
             async Task<float> FirstStep()
             {
                 float first = 0f;
@@ -592,6 +606,7 @@ namespace AnomalyArena
                 Assert.That(slid, Is.EqualTo(tuning.iceSlideDistance).Within(.5f), "letting go you slide on about this far");
                 Assert.That(status.Frost, Is.Zero, "the patch no longer chills you");
 
+                // Off the ice you start and stop at once.
                 game.runWeapons.ClearWaveEffects();
                 player.CancelDisplacement();
                 player.debugMoveHeld = Vector2.up;
@@ -614,7 +629,7 @@ namespace AnomalyArena
             var world = WorldMap.Active;
             var hole = world.holes.FirstOrDefault(h => h && h.Phase == HolePhase.Active);
             Assume.That(hole, Is.Not.Null, "the map has an active black hole");
-
+            // Open ground just outside the gravity ring, with an open path down to it.
             Vector3 spot = default, inward = default;
             bool found = false;
             for (int angle = 0; angle < 360 && !found; angle += 15)
@@ -631,7 +646,7 @@ namespace AnomalyArena
             LandIce(game, shatter, spot, 4f);
             Place(enemy, spot, movable: true);
             enemy.enabled = true;
-
+            // It is already sliding toward the hole (its own walk is still: the sandbox set its speed to 0).
             typeof(Combatant).GetField("slideVel", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
                 .SetValue(enemy, inward * 8f);
             for (int i = 0; i < 40; i++) await Awaitable.FixedUpdateAsync();
@@ -641,6 +656,7 @@ namespace AnomalyArena
             Assert.That(Query.Flat(enemy.Position - spot).magnitude, Is.GreaterThan(.3f), "after sliding toward it");
         }
 
+        /// <summary>Turns a frozen sandbox target into a live enemy of this kind at a point; it does not walk (speed 0) and attacks on its own.</summary>
         static void Arm(Enemy enemy, GameManager game, EnemyKind kind, Vector3 at)
         {
             enemy.Configure(game.waves.DefinitionOf(kind), 1f, false);
@@ -658,11 +674,13 @@ namespace AnomalyArena
             var player = game.player;
             var enemy = targets[0];
             var shatter = Equip(game, WeaponForm.CryoCannon, 0);
-
+            // One wide patch under you and the whole lane in front of you.
             LandIce(game, shatter, player.Position + Vector3.forward * 4f, 9f);
             Enemy hitBy = null;
             player.AttackReceived += info => hitBy = info.dealer?.Owner as Enemy;
 
+            // Only the walk slips. A charge that slipped would start from a standstill (the armed enemy's walk is 0)
+            // and use up its distance long before it reached you.
             Arm(enemy, game, EnemyKind.Rammer, player.Position + Vector3.forward * 8f);
             Assert.That(game.runWeapons.IceGrip(enemy), Is.GreaterThan(0f), "the Rammer stands on the ice");
             await Until(() => enemy.Charging, 4f, "the Rammer charges");
@@ -726,7 +744,7 @@ namespace AnomalyArena
             Assert.That(Query.Flat(open - game.player.Position).magnitude, Is.EqualTo(game.player.radius + held.radius + .3f).Within(.01f), "open ground keeps the usual distance");
 
             WallAhead(game, 1.5f);
-
+            // The sandbox enemy kind is random; a big body (Stomper-sized and up) starts the hold cast already touching the wall.
             foreach (float radius in new[] { held.radius, 1f })
             {
                 held.radius = radius;
@@ -760,7 +778,7 @@ namespace AnomalyArena
         {
             var (game, _) = await V3CombatSmokeTest.StartSandbox();
             game.runWeapons.Hand[0] = game.runWeapons.Hand[1] = null;
-            game.progression.UnlockEnergy();                                 
+            game.progression.UnlockEnergy(); // to see that no shot spends it
             WallAhead(game, 1.5f, 6f);
             var gunner = EquipAuto(game, WeaponForm.SentryDrone, 0);
 
@@ -823,7 +841,7 @@ namespace AnomalyArena
             spin.heldTime = 3f;
             Assert.That(weapons.GetCooldownDuration(spin), Is.EqualTo(1f / weapons.upgrades.spinUpTopRate).Within(.001f));
             Assert.That(weapons.upgrades.spinUpTopRate, Is.EqualTo(10f));
-            Assert.That(roster.Get(WeaponForm.ShieldRing).damageB, Is.EqualTo(4f), "Drain Infusion: 4 per released hit (decision P23, 2026-10-27)");
+            Assert.That(roster.Get(WeaponForm.ShieldRing).damageB, Is.EqualTo(4f), "Drain Infusion: 4 per released hit");
         }
     }
 }

@@ -9,21 +9,21 @@ using Object = UnityEngine.Object;
 
 namespace AnomalyArena
 {
-                                                                                                                                          
-                                                                                                                                             
-                                                                                                                                           
-                                                                                                                                           
-                                                                                                                                         
-                                                                                      
+    /// <summary>Elements and weapons (system document 4.4, 5.5, 6.2, 6.4, 7.2): a player weapon hit adds
+    /// the same element stacks whatever its damage, and a continuous source (a spray, a ground field, a drain ring) counts once per interval
+    /// on each target; Light heals a flat share of the damage at any HP; the Lance and Focus recoil pushes you but never knocks you into a
+    /// wall, and their Tame halves the push; the Lance slug skips only the Shield's damage cut; the weapon cards say so in both languages;
+    /// before the first skill brings the energy bar the Energy Ring is always the Deflect, while the Sentry Drone is a fair coin and the
+    /// Gunner fires without the bar and costs no Energy.</summary>
     [TestFixture]
     public class ElementsWeaponsRulesTest
     {
-        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
 
         [TearDown]
         public void RestoreClock() => Time.timeScale = 1f;
 
-                                                               
+        // ───── Element stacks count hits (document 6.2) ─────
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task WeaponHit_WeakOrStrong_AddsTheSameStacksAndAnOwnElementItsFactor()
@@ -131,7 +131,7 @@ namespace AnomalyArena
             targets[1].DiscardWithoutReward(); targets[2].DiscardWithoutReward();
             var enemy = targets[0];
             var board = Bare(enemy);
-            board.ControlThresholdFactor = 1000f;                                                   
+            board.ControlThresholdFactor = 1000f; // it never freezes, so every Frost addition shows
             var blizzard = Equip(game, WeaponForm.CryoCannon, 1);
             Assume.That(game.runWeapons.CycleSeconds(blizzard), Is.LessThanOrEqualTo(board.Rules.continuousStackInterval * .5f),
                 "the spray ticks at least twice per interval");
@@ -145,11 +145,11 @@ namespace AnomalyArena
             game.runWeapons.HandleInput(false, false, true);
 
             Assume.That(hits, Is.GreaterThanOrEqualTo(6), "the spray kept hitting");
-                                                                                            
+            // A turn brings two Frost additions, the hit's stacks and the spray's own dose.
             Assert.That(frost, Is.InRange(2 * (hits / 3), 2 * (hits / 2 + 1)), "both come about once per interval, not on every tick");
         }
 
-                                           
+        // ───── Light (document 6.2) ─────
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task LightHit_WielderHurtALittleOrALot_HealsTheSameShareOfTheDamage()
@@ -178,7 +178,7 @@ namespace AnomalyArena
             Assert.That(healedLow, Is.EqualTo(healedHigh).Within(.01f), "and no more when the wielder is low");
         }
 
-                                                  
+        // ───── Recoil (documents 4.4, 5.5) ─────
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task LanceRecoil_OpenGround_PushesYouTheWholeRecoilWithoutKnockback_TameKeepsTheWholePush()
@@ -188,8 +188,8 @@ namespace AnomalyArena
             var tuning = game.runWeapons.upgrades;
             var player = game.player;
             Vector3 origin = player.Position;
-            player.DebugSetAim(Vector3.back);                                                                                 
-            player.enabled = true;                                                        
+            player.DebugSetAim(Vector3.back); // the recoil then pushes you down the clear lane, where no wall braces the shot
+            player.enabled = true; // the push is applied by the player's own physics step
             var rail = Equip(game, WeaponForm.Railgun, 0);
 
             var (untamed, untamedKnocked) = await LanceShot(game, rail);
@@ -203,7 +203,7 @@ namespace AnomalyArena
             var (pushed, tamedKnocked) = await LanceShot(game, tamed);
 
             Assert.That(tamedKnocked, Is.False);
-                                                                                                                            
+            // The 10-27 doc (document 0198, P17): on open ground the tamed Lance still pushes you the whole recoil.
             Assert.That(game.runWeapons.LanceRecoil(tamed), Is.EqualTo(tuning.lanceRecoil));
             Assert.That(pushed, Is.EqualTo(untamed).Within(.6f), "Tame keeps the whole push on open ground");
         }
@@ -216,9 +216,9 @@ namespace AnomalyArena
             var player = game.player;
             Vector3 origin = player.Position;
             player.DebugSetAim(Vector3.back);
-                                                                                                 
+            // A Bulwark across the lane just behind you: the recoil drives you straight into it.
             WorldMap.Active.CreateWall(origin + Vector3.forward * 1.8f, 4f, 60f, 0f, player);
-            await SetBack(player, origin);                                
+            await SetBack(player, origin); // the wall going up nudged you
             player.enabled = true;
             var rail = Equip(game, WeaponForm.Railgun, 0);
             float hp = player.Hp;
@@ -240,7 +240,7 @@ namespace AnomalyArena
             Vector3 origin = player.Position;
             player.DebugSetAim(Vector3.back);
             player.enabled = true;
-            player.ClearWaveState();                                                                     
+            player.ClearWaveState(); // drop the sandbox's long protection, so the Tame guard can be seen
             var focus = Equip(game, WeaponForm.ScatterCannon, 1);
 
             var (untamed, untamedKnocked, untamedGuard) = await FocusShot(game, focus);
@@ -255,13 +255,13 @@ namespace AnomalyArena
             var (pushed, tamedKnocked, tamedGuard) = await FocusShot(game, tamed);
 
             Assert.That(tamedKnocked, Is.False);
-                                                                                                                 
+            // The 10-27 doc (document 0189, P18): the Tame keeps the push and adds only the short guard.
             Assert.That(game.runWeapons.FocusRecoil(tamed, 1f), Is.EqualTo(tuning.focusRecoilMax).Within(.001f));
             Assert.That(pushed, Is.EqualTo(untamed).Within(.8f), "Tame keeps the whole push");
             Assert.That(tamedGuard, Is.True, "and still guards you against attacks for a moment");
         }
 
-                                                              
+        // ───── The Lance and the Shield (document 6.4) ─────
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task LanceSlug_ShieldedEnemy_ShieldTakesTheWholeHitFirstThenTheHp()
@@ -297,7 +297,7 @@ namespace AnomalyArena
             var rail = Equip(game, WeaponForm.Railgun, 0, UpgradeAxis.Twist);
             float blast = game.runWeapons.HitDamage(rail) * game.runWeapons.upgrades.lanceCrossShare;
             Assume.That(blast, Is.GreaterThan(shield), "the blast outweighs the Shield");
-                                                                                              
+            // The slug that crossed the trail: the blast only reads its weapon and direction.
             var slug = AttackPool.Instance.Acquire();
             slug.Configure(AttackMode.Bolt, game.player, rail, game.player.Position, Vector3.forward, 0f, 0f, 0f, 0f, 0f, 1f);
 
@@ -315,7 +315,7 @@ namespace AnomalyArena
             Assert.That(hp - enemy.Hp, Is.EqualTo(3f).Within(.01f), "straight into the HP");
         }
 
-                                                             
+        // ───── Weapon cards (documents 4.4, 5.5, 6.4) ─────
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task WeaponCards_BothLanguages_SayWhatTheWeaponsNowDo()
@@ -360,46 +360,46 @@ namespace AnomalyArena
             }
 
             string[] zh = texts["zh-Hans"], en = texts["en"];
-            Assert.That(zh[0], Does.Contain("where it lands").And.Not.Contain("at your feet"), "Wildfire: the burning ground is where it lands");
+            Assert.That(zh[0], Does.Contain("落点").And.Not.Contain("脚下"), "Wildfire: the burning ground is where it lands");
             Assert.That(en[0], Does.Contain("where it lands"));
-                                                                                                              
-            Assert.That(zh[0], Does.Not.Contain("at most"), "Wildfire: no patch cap on the card");
+            // The Wildfire cap of 3 patches stays in the game but is no longer on the card.
+            Assert.That(zh[0], Does.Not.Contain("3 片"), "Wildfire: no patch cap on the card");
             Assert.That(en[0], Does.Not.Contain("at most"));
-            Assert.That(zh[1], Does.Contain("snow").And.Contain("Frost").And.Not.Contain("move slower"), "Blizzard: snow at your feet chills you; spraying no longer slows you");
+            Assert.That(zh[1], Does.Contain("积雪").And.Contain("冰冻").And.Not.Contain("移动变慢"), "Blizzard: snow at your feet chills you; spraying no longer slows you");
             Assert.That(en[1], Does.Contain("snow").And.Contain("Frost").And.Not.Contain("move slower"));
-            Assert.That(zh[2], Does.Contain("drags you").And.Not.Contain("short wait"), "Chain Blade (2026-10-27): the two-way pull is its backfire; the wait is only a cooldown now");
+            Assert.That(zh[2], Does.Contain("反向拽").And.Not.Contain("稍等一下"), "Chain Blade (2026-10-27): the two-way pull is its backfire; the wait is only a cooldown now");
             Assert.That(en[2], Does.Contain("drags you"));
-            Assert.That(zh[3], Does.Contain("force field").And.Contain("Deflect"), "Deflect (2026-10-27): a slowing field that deflects shots");
+            Assert.That(zh[3], Does.Contain("环状力场").And.Contain("偏折"), "Deflect (2026-10-27): a slowing field that deflects shots");
             Assert.That(en[3], Does.Contain("force field").And.Contain("deflected"));
             Assert.That(zh[3], Does.Contain("轻伤"), "Deflect (P22): the card states its light hit");
             Assert.That(en[3], Does.Contain("light"));
             for (int i = 4; i <= 5; i++)
             {
-                Assert.That(zh[i], Does.Contain("Shield's damage cut"), "the Lance and its crossing blast skip only the Shield's cut");
+                Assert.That(zh[i], Does.Contain("无视护盾的减伤"), "the Lance and its crossing blast skip only the Shield's cut");
                 Assert.That(en[i], Does.Contain("Shield's damage cut"));
             }
             for (int i = 6; i <= 7; i++)
             {
-                Assert.That(zh[i], Does.Contain("does not hurt"), "the Lance and Focus recoil never hurts against a wall");
+                Assert.That(zh[i], Does.Contain("不会撞伤"), "the Lance and Focus recoil never hurts against a wall");
                 Assert.That(en[i], Does.Contain("does not hurt"));
             }
             string lanceRecoil = tuning.lanceRecoil.ToString("0.##");
-            Assert.That(zh[8], Does.Contain($"没墙时照样后退 {lanceRecoil}").And.Not.Contain("只推"), "Lance Tame (P17): the whole push on open ground");
+            Assert.That(zh[8], Does.Contain($"没墙时照样后退 {lanceRecoil} 格").And.Not.Contain("只推"), "Lance Tame (P17): the whole push on open ground");
             Assert.That(en[8], Does.Contain($"still pushes you back {lanceRecoil}").And.Not.Contain("only"));
-            Assert.That(zh[9], Does.Contain("照样把你推开").And.Contain("免受攻击").And.Not.Contain("%").And.Not.Contain("wall"), "Focus Tame (P18): the push stays, the guard is added");
+            Assert.That(zh[9], Does.Contain("照样把你推开").And.Contain("免受攻击").And.Not.Contain("%").And.Not.Contain("撞墙"), "Focus Tame (P18): the push stays, the guard is added");
             Assert.That(en[9], Does.Contain("as far").And.Contain("immune").And.Not.Contain("%").And.Not.Contain("wall"));
-                                                                                                                                         
-            Assert.That(zh[10], Does.Contain("shells").And.Not.Contain("jam"), "Scatter Blast: hot shells, no jam");
+            // Scatter Blast throws hot shells instead of jamming; the element weapons' cards no longer say "built-in".
+            Assert.That(zh[10], Does.Contain("弹壳").And.Not.Contain("卡壳"), "Scatter Blast: hot shells, no jam");
             Assert.That(en[10], Does.Contain("shells").And.Not.Contain("jam"));
-            Assert.That(zh[11], Does.Not.Contain("built-in"), "Stream: no built-in note");
+            Assert.That(zh[11], Does.Not.Contain("自带"), "Stream: no built-in note");
             Assert.That(en[11], Does.Not.Contain("built-in"));
-            Assert.That(zh[12], Does.Contain("one per enemy").And.Not.Contain("built-in"), "Shatter: one shard per enemy, no built-in note");
+            Assert.That(zh[12], Does.Contain("最多中一根").And.Not.Contain("自带"), "Shatter: one shard per enemy, no built-in note");
             Assert.That(en[12], Does.Contain("one per enemy").And.Not.Contain("built-in"));
-            Assert.That(zh[13], Does.Contain("slip").And.Not.Contain("Frost"), "Shatter: the ice makes you slip and no longer chills you");
+            Assert.That(zh[13], Does.Contain("打滑").And.Not.Contain("叠冰"), "Shatter: the ice makes you slip and no longer chills you");
             Assert.That(en[13], Does.Contain("slip").And.Not.Contain("Frost"));
         }
 
-                                                                                                          
+        // ───── Sentry Drone and Energy Ring before the energy bar (document 5.5) ─────
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task RollArmory_BeforeTheFirstSkill_RingIsAlwaysDeflectAndDroneIsAFairCoin()
@@ -426,7 +426,7 @@ namespace AnomalyArena
                 Assert.That(drones.versions, Is.Not.Empty.And.All.Matches<RunWeapon>(w => w.variant == 1),
                     "a stronger version keeps the held drone's anomaly (2026-10-28)");
 
-                game.progression.UnlockEnergy();                                    
+                game.progression.UnlockEnergy(); // as learning the first skill does
                 var after = DrawAuto(weapons, WeaponForm.ShieldRing, 0);
                 Assert.That(weapons.DrainOfferable, Is.True);
                 Assert.That(after.newOnes, Has.Some.Matches<RunWeapon>(w => w.variant == 1), "with the energy bar the Drain is offered");
@@ -447,16 +447,16 @@ namespace AnomalyArena
             await Until(() => ActiveBolts(gunner), 2f, "the drone fires without an energy bar (2026-10-27, Q86)");
             Assert.That(game.progression.EnergyUnlocked, Is.False, "and does not bring the bar itself");
 
-            game.progression.UnlockEnergy();                                    
+            game.progression.UnlockEnergy(); // as learning the first skill does
             float energy = game.progression.Energy;
             int shots = gunner.droneShots;
             await Until(() => gunner.droneShots >= shots + 2 || game.runWeapons.DroneDown(gunner), 2f, "the drone keeps firing");
             Assert.That(game.progression.Energy, Is.EqualTo(energy).Within(.01f), "its shots cost no Energy");
         }
 
-                              
+        // ───── Helpers ─────
 
-                                                                                                                  
+        /// <summary>A hand weapon in the active slot, with its built-in element as the armory gives it.</summary>
         static RunWeapon Equip(GameManager game, WeaponForm form, int variant, UpgradeAxis axes = UpgradeAxis.None)
         {
             game.runWeapons.ClearWaveEffects();
@@ -475,7 +475,7 @@ namespace AnomalyArena
             return weapon;
         }
 
-                                                                                               
+        /// <summary>A player hit of this element, as a weapon carrying it lands one.</summary>
         static DamageInfo Hit(GameManager game, float amount, ElementKind element)
         {
             var info = DamageInfo.Attack(amount, game.player);
@@ -483,7 +483,7 @@ namespace AnomalyArena
             return info;
         }
 
-                                                                                                            
+        /// <summary>A Poison hit from a continuous source: one tick of a spray or a ground field.</summary>
         static DamageInfo Continuous(GameManager game, float amount, object source)
         {
             var info = Hit(game, amount, ElementKind.Poison);
@@ -491,7 +491,7 @@ namespace AnomalyArena
             return info;
         }
 
-                                                                                      
+        /// <summary>The body's status board with no Shield and no statuses.</summary>
         static ElementStatus Bare(Combatant body)
         {
             var board = ElementStatus.For(body);
@@ -500,14 +500,14 @@ namespace AnomalyArena
             return board;
         }
 
-                                                                                                           
+        /// <summary>Takes the player down to about this much HP with a tick that nothing blocks.</summary>
         static void LeaveHp(GameManager game, float hp)
         {
             float taken = Mathf.Max(.01f, game.progression.Stats.DamageTakenMultiplier);
             game.player.ReceiveDamage(new DamageInfo { amount = (game.player.Hp - hp) / taken, source = DamageSource.Poison, ignoreShield = true });
         }
 
-                                                                    
+        /// <summary>Puts a body back at a point, at rest.</summary>
         static async Task SetBack(Combatant body, Vector3 at)
         {
             body.CancelDisplacement();
@@ -516,8 +516,8 @@ namespace AnomalyArena
             await Awaitable.FixedUpdateAsync();
         }
 
-                                                                                                                                               
-                                                                                                            
+        /// <summary>Holds the trigger until the Lance fires by itself at full wind-up, then lets its recoil settle. Returns how far the player
+        /// slid along the lane (against the aim) and whether it was ever knocked back on the way.</summary>
         static async Task<(float distance, bool knocked)> LanceShot(GameManager game, RunWeapon rail)
         {
             var player = game.player;
@@ -530,8 +530,8 @@ namespace AnomalyArena
             return (Vector3.Dot(Query.Flat(player.Position - from), Vector3.forward), knocked);
         }
 
-                                                                                                                                           
-                                                                                                        
+        /// <summary>Releases a full Focus charge, then lets its recoil settle. Returns how far the player slid along the lane (against the
+        /// aim), whether it was ever knocked back and whether the release guarded it at once.</summary>
         static async Task<(float distance, bool knocked, bool guarded)> FocusShot(GameManager game, RunWeapon focus)
         {
             var player = game.player;
@@ -545,8 +545,8 @@ namespace AnomalyArena
             return (Vector3.Dot(Query.Flat(player.Position - from), Vector3.forward), knocked, guarded);
         }
 
-                                                                                                                                              
-                                                                                                                                                       
+        /// <summary>200 armory rolls on wave 3 with both hands full and the auto slots empty, so the first offer is always a new auto weapon;
+        /// then 200 with this form held (as heldVariant) and every later offer a stronger version. Returns the offers of that form each way.</summary>
         static (List<RunWeapon> newOnes, List<RunWeapon> versions) DrawAuto(RunWeapons weapons, WeaponForm form, int heldVariant)
         {
             var newOnes = new List<RunWeapon>();

@@ -3,7 +3,8 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>Move numbers of the two bosses (system doc §13). Damage values are multiples of the boss's attack damage (asset damage ×
+    /// the wave's enemy damage factor), so tuning that factor moves the bosses too. Distances are in cells from the boss's centre.</summary>
     [Serializable]
     public sealed class BossTuning
     {
@@ -68,6 +69,8 @@ namespace AnomalyArena
         [Min(.1f), Tooltip("Phase 3: the Prophet's summon clock runs this many times faster.")] public float prophetPhase3SummonRate = 1.3f;
         [Range(0f, 1f), Tooltip("Share of its max HP the Prophet loses for each summon that falls off the platform or into a hole.")] public float summonFallHpShare = .04f;
 
+        // The Nash Prophet since the 2026-10-25 design (Enemy.Prophet.cs, WorldMap.Trial.cs). Of the blocks above only the platform
+        // radius (prophetPlatformRadii.x) still shapes the fight (with the hole margin below); the rest belong to its old moves.
         [Header("Nash Prophet (2026-10-25): phases and move choice")]
         [Range(0f, 1f), Tooltip("Below this share of its max HP it enters phase 2: void pillars, the predictive volley and the gravity pull join, the rings come several at a time and the pulse pushes harder. The platform keeps its size.")] public float nashPhase2HpShare = .6f;
         [Range(0f, 1f), Tooltip("Below this share it enters phase 3: Shades instead of Wardens, bigger pillars, more rings and volley shots, a harder pulse and pull.")] public float nashPhase3HpShare = .3f;
@@ -83,9 +86,16 @@ namespace AnomalyArena
         [Min(0f), Tooltip("Far, from phase 2: chance weight of the gravity pull.")] public float nashPullWeight = .8f;
         [Min(1f), Tooltip("While void pillars stand, the gravity pull's weight is multiplied by this, so it drags the player into them.")] public float nashPullPillarBonus = 2.5f;
 
+        // The repulse pulse pushes the player straight away from it and the platform edge does not stop the push: hit
+        // closer than the platform radius less the push, the player only slides and stays on; hit farther out, still inside its reach, they
+        // go off into the void. The platform keeps its size and the push grows each phase, so the safe band by its body
+        // narrows: phase 1 spares the whole close range and only the rim of its circle throws off, so the player learns early that being far
+        // out when it goes off costs the run; phase 2 spares a band that ends a little inside the close range; phase 3 only a band about two
+        // player bodies wide outside its body, so the player fights close to it while dodging its shots. The platform portals
+        // (nashPortalRadius) stand where a hit throws off in phases 2 and 3: taking one before the pulse goes off is a way out.
         [Header("Nash Prophet (2026-10-25): repulse pulse and gravity pull")]
         [Min(0f), Tooltip("Wind-up of the repulse pulse; a ground circle shows its reach.")] public float nashPulseWindup = .8f;
-        [Min(0f), Tooltip("Pulse reach from its centre in every phase (the player's body counts); the ground circle shows it. 7.5 reaches a cell past the close range (nashNearRange); the platform runs on past it to its edge, so the player can still step out of the circle. Every Bulwark wall any part of which lies inside it breaks when the pulse goes off (decision P29, 2026-10-27).")] public float nashPulseReach = 7.5f;
+        [Min(0f), Tooltip("Pulse reach from its centre in every phase (the player's body counts); the ground circle shows it. 7.5 reaches a cell past the close range (nashNearRange); the platform runs on past it to its edge, so the player can still step out of the circle. Every Bulwark wall any part of which lies inside it breaks when the pulse goes off.")] public float nashPulseReach = 7.5f;
         [Min(0f), Tooltip("Pulse damage, × its base damage (Hollow asset damage × nashDamageFactor).")] public float nashPulseDamage = 1.5f;
         [Min(0f), Tooltip("Phase 1: cells the pulse pushes the player away from it (the slide runs about 5% longer). It throws off a player hit farther out than the platform radius less the slide: 4.8 on the 12-cell platform spares the whole close range and throws off only from about 7 cells out to the rim of its circle (8 cells: its reach plus the player's body).")] public float nashPulsePush = 4.8f;
         [Min(0f), Tooltip("Phase 2: cells the pulse pushes the player (2026-10-27: 5.2). 5.2 on the 12-cell platform spares about the whole close range (6.5 cells out); only the outer part of its circle, about 1.5 cells wide, throws the player off. Above about 5.2 the outer end of the close range throws off too.")] public float nashPhase2PulsePush = 5.2f;
@@ -147,6 +157,8 @@ namespace AnomalyArena
         [Min(0f), Tooltip("No longer used (2026-10-25): the trial platform edge does not stop a boss push any more, only an open hole does.")] public float edgeKnockMargin = 2.5f;
         [Min(0f), Tooltip("A boss hit never pushes the player closer than this to the edge of a void hole on the platform.")] public float holeKnockMargin = 1f;
 
+        // The Tyrant blocks from here to the royal shield are its moves before the 2026-10-25 redesign (the Tyrant blocks at the end of the
+        // class replace them); only tyrantOpeningGrace is still read. They go in the dead-code pass.
         [Header("Tyrant: move choice")]
         [Min(0f), Tooltip("Up to this distance (centre to centre) it cleaves, slams or charges.")] public float tyrantCloseRange = 6.5f;
         [Min(0f), Tooltip("Up to this distance it slams or charges; beyond it charges or leaps.")] public float tyrantMidRange = 8.5f;

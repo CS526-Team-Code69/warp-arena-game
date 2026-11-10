@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-                                                                                                                           
+    /// <summary>Eight saved screen-edge groups. It points to actual living offscreen enemies, not spawn guesses.</summary>
     public sealed class V2EnemyDirections : MonoBehaviour
     {
         [Serializable]
@@ -16,7 +16,7 @@ namespace AnomalyArena
         public Camera cameraSource;
         public RectTransform canvasRect;
         public Indicator[] indicators;
-        [Tooltip("Combine markers within each 45-degree sector; at most eight directions.")] public float refreshInterval = .1f;
+        [Tooltip("同方向45度范围合并，最多显示8个方向。")] public float refreshInterval = .1f;
         [Tooltip("Canvas units kept clear at the sides, top and bottom (the bottom one is set by V2HudLayout).")]
         public float horizontalInset = 92f, topInset = 148f, bottomInset = 200f;
         public Color arrowColor = new(1f, .61f, .37f);
@@ -32,7 +32,7 @@ namespace AnomalyArena
         void Update()
         {
             var gm = GameManager.Instance;
-                                                                                                                                   
+            // Also during the freeze after a Void Trial won mid-wave, which is there to see where the enemies are (document 12.5).
             bool battlefield = gm && (gm.IsCombatActive || gm.RunPhase == ArenaUiState.TrialReturn);
             if (!ArenaText.Ready || !battlefield || !waves || !cameraSource || !canvasRect) { HideAll(); return; }
             refresh -= Time.unscaledDeltaTime;
@@ -59,7 +59,7 @@ namespace AnomalyArena
                 if (!on) continue;
                 var direction = sums[i].normalized;
                 Vector2 centre = new(Screen.width * .5f, Screen.height * .5f);
-                                                                                                     
+                // Insets are canvas units, so the markers stay clear of the HUD at every resolution.
                 float unit = canvasRect && canvasRect.lossyScale.x > 0f ? canvasRect.lossyScale.x : 1f;
                 float reachX = Mathf.Max(30f, centre.x - horizontalInset * unit);
                 float reachY = Mathf.Max(30f, direction.y > 0f ? centre.y - topInset * unit : centre.y - bottomInset * unit);
@@ -72,7 +72,7 @@ namespace AnomalyArena
                     view.arrow.text = "▲"; view.arrow.color = arrowColor;
                     view.arrow.rectTransform.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg - 90f);
                 }
-                if (view.count) view.count.text = ArenaText.Pair("×" + counts[i],"×" + counts[i]);
+                if (view.count) view.count.text = ArenaText.Pair("敌×" + counts[i], "×" + counts[i]);
             }
         }
     }

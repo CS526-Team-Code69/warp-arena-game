@@ -9,12 +9,16 @@ using UnityEngine;
 
 namespace AnomalyArena.EditorTools
 {
-
+    /// <summary>
+    /// 2026-10-21 document alignment: wires the generated sound takes into the saved V3WorldAudio bank of every arena scene,
+    /// assigns the new VFX sprites, the energy orb texture and the Crit stat icon, and builds the Chanter's generated model.
+    /// Everything goes through the native authoring API; nothing is created at runtime. Safe to run again.
+    /// </summary>
     public static class InstallV5AudioAndArt
     {
         static readonly string[] ScenePaths =
         {
-            "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity", "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity"
+            "Assets/AnomalyArena/Scenes/ArenaV2.unity"
         };
         const string AudioFolder = "Assets/AnomalyArena/Audio/V5/DocAlign/";
         const string VfxFolder = "Assets/AnomalyArena/Art/V4/VFX/Textures/";
@@ -27,6 +31,7 @@ namespace AnomalyArena.EditorTools
         const string ChanterPrefabPath = "Assets/AnomalyArena/V2/Prefabs/Chanter.prefab";
         const float ChanterPresentationHeight = 2.1f;
 
+        // Cue → generated take (see work/art-plans/v5-doc-align-sfx-plan.json and the receipt next to the files).
         static readonly (ArenaWorldCue cue, string file, float gain, float interval, int concurrent)[] Takes =
         {
             (ArenaWorldCue.NpcChant, "npc-chant", .5f, .4f, 2), (ArenaWorldCue.NpcLaserLock, "npc-laser-lock", .55f, .2f, 2),
@@ -46,12 +51,12 @@ namespace AnomalyArena.EditorTools
             var clips = new Dictionary<ArenaWorldCue, AudioClip>();
             foreach (var take in Takes)
             {
-
+                // The 2026-10-30 sound rework re-cut the takes that started silent as .wav, under the same GUIDs.
                 string path = AudioFolder + take.file + ".wav";
                 if (!File.Exists(path)) path = AudioFolder + take.file + ".mp3";
                 if (AssetImporter.GetAtPath(path) is AudioImporter importer)
                 {
-
+                    // Short effects decode like the V3 bank: mono, PCM, loaded in full.
                     var settings = importer.defaultSampleSettings;
                     settings.loadType = AudioClipLoadType.DecompressOnLoad; settings.compressionFormat = AudioCompressionFormat.PCM;
                     bool changed = !importer.forceToMono || importer.defaultSampleSettings.loadType != settings.loadType || importer.defaultSampleSettings.compressionFormat != settings.compressionFormat;
@@ -130,7 +135,7 @@ namespace AnomalyArena.EditorTools
             if (!source) throw new InvalidOperationException("Missing " + ChanterSourceFbx);
             if (AssetImporter.GetAtPath(ChanterSourceFbx) is ModelImporter importer && (importer.animationType != ModelImporterAnimationType.None || importer.materialImportMode != ModelImporterMaterialImportMode.None))
             {
-
+                // The provider mesh is unrigged; materials are authored here, not imported.
                 importer.animationType = ModelImporterAnimationType.None;
                 importer.materialImportMode = ModelImporterMaterialImportMode.None;
                 importer.SaveAndReimport();
@@ -138,6 +143,7 @@ namespace AnomalyArena.EditorTools
             }
             if (!AssetDatabase.IsValidFolder(ChanterModelFolder.TrimEnd('/'))) AssetDatabase.CreateFolder(Path.GetDirectoryName(ChanterModelFolder.TrimEnd('/')).Replace('\\', '/'), "Enemy_Chanter");
 
+            // Material: the Warden's PBR template with the Chanter maps.
             string materialPath = ChanterModelFolder + "PBR_0.mat";
             var material = AssetDatabase.LoadAssetAtPath<Material>(materialPath);
             if (!material)
@@ -154,6 +160,7 @@ namespace AnomalyArena.EditorTools
             material.EnableKeyword("_NORMALMAP"); material.EnableKeyword("_METALLICSPECGLOSSMAP");
             EditorUtility.SetDirty(material);
 
+            // Model prefab: "Model" root holding the FBX instance, like the other generated enemies.
             string modelPrefabPath = ChanterModelFolder + "Model.prefab";
             var modelPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(modelPrefabPath);
             if (!modelPrefab)
@@ -177,6 +184,7 @@ namespace AnomalyArena.EditorTools
                 log.Append("  model prefab created\n");
             }
 
+            // Chanter prefab variant: keep the inherited Warden model (disabled) and present the generated Chanter mesh instead.
             var prefabRoot = PrefabUtility.LoadPrefabContents(ChanterPrefabPath);
             try
             {

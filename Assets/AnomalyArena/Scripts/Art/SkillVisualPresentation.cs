@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>Small saved visual view of the real Void Walk and Singularity cast state. No spell clock or damage is owned here.</summary>
     public sealed class SkillVisualPresentation : MonoBehaviour
     {
         public SkillLoadout skills;
@@ -13,7 +13,7 @@ namespace AnomalyArena
         [Tooltip("Decorative charging ring radius; this is not a damage or pull area.")]
         public float chargeRingRadius = 1.35f;
         public float absorbLineWidth = .045f;
-
+        // Recent player positions for the Void Walk afterimages; sampled on a fixed clock so the trail reads at any frame rate.
         readonly Vector3[] trail = new Vector3[16];
         int trailHead;
         float trailClock;
@@ -33,7 +33,7 @@ namespace AnomalyArena
             var camera = gm ? gm.cam : null;
             if (V5Vfx.On)
             {
-
+                // The V5 art: no flat afterimages or thin lines. The player sinks into smoke (V4CombatVfx) and the Singularity is a dark point the world falls into.
                 HideAll();
                 if (skills.SingularityActive) V5Vfx.I.SingularityTick(skills.SingularityOrigin, skills.SingularityProgress01);
                 return;
@@ -49,7 +49,7 @@ namespace AnomalyArena
                     if (!show) continue;
                     ghost.sprite = character.illustration.sprite;
                     ghost.flipX = character.illustration.flipX;
-
+                    // Void Walk (document 8.4) is a fast untargetable state: afterimages trail behind the player instead of marking two holes.
                     var point = TrailPoint((i + 1) * 3);
                     ghost.transform.position = point + Vector3.up * character.height * .5f - camera.transform.forward * .025f;
                     ghost.transform.rotation = camera.transform.rotation;

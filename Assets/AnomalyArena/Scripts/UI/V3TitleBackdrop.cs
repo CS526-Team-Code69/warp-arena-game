@@ -3,6 +3,7 @@ using UnityEngine.InputSystem;
 
 namespace AnomalyArena
 {
+    /// <summary>Animates only saved title graphics. Restores the shared background before another screen uses it.</summary>
     [DisallowMultipleComponent]
     [DefaultExecutionOrder(650)]
     public sealed class V3TitleBackdrop : MonoBehaviour
@@ -14,13 +15,13 @@ namespace AnomalyArena
         public UnityEngine.UI.Image[] softGlows;
         public UnityEngine.UI.Image[] dust;
         public UnityEngine.UI.Button initialSelection;
-        [Header("Lightweight background motion without changing game time.")]
-        [Tooltip("Disabling motion retains the static title and saved art objects.")] public bool animate = true;
-        [Range(0f, .025f), Tooltip("Small offset amplitude for the background texture coordinates.")] public float parallaxAmount = .007f;
-        [Range(0f, .45f), Tooltip("Brighten the existing background on the title screen; restore its color on exit.")] public float backgroundLift = .18f;
-        [Tooltip("Rotation speed of background distortion per second.")] public float arcDegreesPerSecond = 1.6f;
-        [Tooltip("Ambient particle drift speed in reference Canvas units per second.")] public float dustRiseSpeed = 9f;
-        [Range(0f, .02f), Tooltip("Pulse amount for decorative light strips.")] public float logoBreath = .005f;
+        [Header("轻量背景动态；不改变游戏时间")]
+        [Tooltip("关闭后保留静态标题，不删除已保存的素材物件。")] public bool animate = true;
+        [Range(0f, .025f), Tooltip("原背景纹理坐标的细微偏移幅度。")] public float parallaxAmount = .007f;
+        [Range(0f, .45f), Tooltip("仅开始页略微提亮现有背景；离开恢复原色。")] public float backgroundLift = .18f;
+        [Tooltip("背景扭曲弧每秒旋转角度。")] public float arcDegreesPerSecond = 1.6f;
+        [Tooltip("保存的尘点漂浮速度，参考Canvas单位每秒。")] public float dustRiseSpeed = 9f;
+        [Range(0f, .02f), Tooltip("标题缓慢呼吸的比例幅度。")] public float logoBreath = .005f;
         Rect backgroundUv;
         Color backgroundColor;
         Color[] dustColor, glowColor;
@@ -46,9 +47,70 @@ namespace AnomalyArena
             for (int i = 0; i < count; i++) if (softGlows[i]) glowColor[i] = softGlows[i].color;
             captured = true;
         }
+        // ───── Whitebox (2026-11-10: the interface's pictures become plain shapes and colours) ─────
+        // The title art itself is covered by V2Hud's WhiteboxBackdrop (the background is V2Hud.themeBackground). Here the drawn logo gives
+        // way to the game's name in plain text over the logo's own box, and the decorations over the art (the warp arcs, the soft glows,
+        // the dust) are hidden; switching back shows them as they were saved.
+        const string Wordmark = "WARP ARENA";
+        const int WordmarkLargest = 150, WordmarkSmallest = 40;
+        UnityEngine.UI.Text wordmark;
+        bool? shownArt;
+
+        void ApplyArt()
+        {
+            bool art = Art.Enabled;
+            if (!art && !wordmark && logo) wordmark = MakeWordmark();
+            if (wordmark && !wordmark.font) wordmark.font = WordmarkFont();
+            if (shownArt == art) return;
+            shownArt = art;
+            if (logo) logo.enabled = art;
+            if (wordmark) wordmark.gameObject.SetActive(!art);
+            if (warpArcs) warpArcs.enabled = art;
+            foreach (var glow in softGlows ?? System.Array.Empty<UnityEngine.UI.Image>()) if (glow) glow.enabled = art;
+            foreach (var mote in dust ?? System.Array.Empty<UnityEngine.UI.Image>()) if (mote) mote.enabled = art;
+        }
+
+        /// <summary>The wordmark's font is Unity's built-in one, not the game's. Its letters are several hundred pixels tall; in the
+        /// game's font they grew that font's texture four times in one frame on a fresh start in whitebox (512 x 512 to 1024 x 2048)
+        /// and the key hints under the title kept glyph positions of a texture that was gone (2026-11-10, see FontAtlasGuard). The
+        /// built-in font has a texture of its own, so the wordmark leaves the texts of the game's font alone. The game's font only
+        /// stands in where the built-in one is missing.</summary>
+        static Font WordmarkFont()
+        {
+            var builtIn = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            return builtIn ? builtIn : ArenaText.Font;
+        }
+
+        UnityEngine.UI.Text MakeWordmark()
+        {
+            var box = logo.rectTransform;
+            var text = new GameObject("WhiteboxWordmark", typeof(RectTransform), typeof(CanvasRenderer), typeof(UnityEngine.UI.Text)).GetComponent<UnityEngine.UI.Text>();
+            var rect = text.rectTransform;
+            rect.SetParent(box.parent, false);
+            rect.SetSiblingIndex(box.GetSiblingIndex() + 1);
+            rect.anchorMin = box.anchorMin; rect.anchorMax = box.anchorMax; rect.pivot = box.pivot;
+            rect.anchoredPosition = box.anchoredPosition; rect.sizeDelta = box.sizeDelta;
+            text.font = WordmarkFont();
+            text.text = Wordmark; // the game's name is English in every language (V2Hud's title)
+            text.fontStyle = FontStyle.Bold;
+            text.alignment = TextAnchor.MiddleCenter;
+            text.color = new Color(.92f, .96f, 1f);
+            text.resizeTextForBestFit = true;
+            text.resizeTextMinSize = WordmarkSmallest;
+            text.resizeTextMaxSize = WordmarkLargest;
+            text.horizontalOverflow = HorizontalWrapMode.Wrap;
+            text.verticalOverflow = VerticalWrapMode.Truncate;
+            text.raycastTarget = false;
+            var shadow = text.gameObject.AddComponent<UnityEngine.UI.Shadow>();
+            shadow.effectColor = new Color(0f, 0f, 0f, .6f);
+            shadow.effectDistance = new Vector2(2f, -3f);
+            return text;
+        }
+
         void LateUpdate()
         {
             if (!Application.isPlaying || !captured) return;
+            ApplyArt();
             var events = UnityEngine.EventSystems.EventSystem.current;
             if (selectionPending && ArenaText.Ready && events && initialSelection && initialSelection.IsInteractable())
             {

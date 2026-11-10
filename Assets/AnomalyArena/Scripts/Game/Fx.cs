@@ -3,19 +3,19 @@ using Random = UnityEngine.Random;
 
 namespace AnomalyArena
 {
-                                                                                                                                                            
+    /// <summary>One-shot feedback shapes drawn from the scene's saved FxPool; nothing is created at runtime, and without a pool they are skipped.</summary>
     public static class Fx
     {
         const float NativeHalfAngle = 24f;
 
-                                                         
+        /// <summary>A short soft flash at pos.</summary>
         public static void Pop(Vector3 pos, Color c, float size)
         {
             if (V5Vfx.On) { V5Vfx.I.Pop(pos, c, size); return; }
             if (FxPool.Active) FxPool.Active.Emit(pos, c, size, .25f);
         }
 
-                                                                                                                                                                
+        /// <summary>Hit shards flying from pos within spreadDeg degrees either side of dir (all directions when dir is zero). At most eight per call.</summary>
         public static void Burst(Vector3 pos, Vector3 dir, Color c, int count, float speed, float spreadDeg, float size)
         {
             if (V5Vfx.On) { V5Vfx.I.Burst(pos, dir, c, count, speed, spreadDeg, size); return; }
@@ -29,19 +29,19 @@ namespace AnomalyArena
             }
         }
 
-                                                                                  
+        /// <summary>Ground shock ring that expands to radius and fades.</summary>
         public static void Ring(Vector3 pos, float radius, Color c, float life = 0.25f)
         {
             if (V5Vfx.On) { V5Vfx.I.Ring(pos, radius, c, life); return; }
             if (FxPool.Active) FxPool.Active.Emit(pos, c, radius * 2, life, texture: FxPool.Active.ring, flat: true);
         }
 
-                                                                                                                    
+        /// <summary>Ground sector showing the reach of a strike in a plain look; the apex sits at origin.</summary>
         public static void Sector(Vector3 origin, Vector3 dir, float radius, float arcDeg, Color c)
             => Flat(origin, dir, radius, arcDeg, c, V5Vfx.On ? V5Vfx.I.TeleCone : FxPool.Active ? FxPool.Active.conePlain : null, .15f);
 
-                                                                                                                                       
-                                                                                                  
+        /// <summary>Element cone of a weapon strike along the aim with the apex at origin: flame tongues with drifting puffs for Fire,
+        /// frost mist, spore cloud, or the plain sector for strikes without an element.</summary>
         public static void Cone(Vector3 origin, Vector3 dir, float radius, float arcDeg, ElementKind element)
         {
             if (V5Vfx.On) { V5Vfx.I.Cone(origin, dir, radius, arcDeg, element); return; }
@@ -69,12 +69,12 @@ namespace AnomalyArena
             }
         }
 
-                                                                                                                
+        /// <summary>Red punch arc of an enemy wind-up: an outlined sector with the apex at the enemy.</summary>
         public static void Telegraph(Vector3 origin, Vector3 dir, float radius, float arcDeg, Color c)
             => Flat(origin, dir, radius, arcDeg, c, V5Vfx.On ? V5Vfx.I.TeleCone : FxPool.Active ? FxPool.Active.telegraph : null, .18f);
 
-                                                                                                                                        
-                                                                           
+        /// <summary>Flat cone quad: apex at origin, far edge radius ahead, width following the arc. Without the cone textures the saved
+        /// centred sector texture is drawn at its old placement.</summary>
         static void Flat(Vector3 origin, Vector3 dir, float radius, float arcDeg, Color c, Texture texture, float life)
         {
             var pool = FxPool.Active;

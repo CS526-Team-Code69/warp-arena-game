@@ -4,23 +4,30 @@ using UnityEngine.UI;
 
 namespace AnomalyArena
 {
-
+    /// <summary>
+    /// What the bottom row says about use. The hand slot in use keeps a lit edge and an "in use" tag and names the left button; the other
+    /// hand slot dims and names the right button. A weapon slot flashes each time its weapon attacks. A skill slot flashes and runs a light once round its
+    /// edge when cast, and its cooldown turns as a clock over the slot. Built at run time over the saved frame and under its text. Since 2026-11-10 (second
+    /// round) the shapes follow the art switch: the frame's cut corners and the soft glow outside it with the art on; in whitebox, where the frame is a plain
+    /// rectangle (V2UiSlot, WhiteboxSkin), plain rectangles with a thin lit edge and no glow.
+    /// </summary>
     [DisallowMultipleComponent]
     public sealed class V2SlotFeedback : MonoBehaviour
     {
         public enum Kind { Hand, Auto, Skill }
 
-        const int Glow = 12, CutCorner = 16, TagCut = 5;
+        // The saved frame's cut corners, and how far the glow reaches outside it.
+        const int Glow = 12, CutCorner = 16, TagCut = 5, TagWidth = 62, TagHeight = 20;
         const float FrameInset = 1.5f, EdgeHalfWidth = 1.25f, GlowStrength = .6f;
         const float AttackSeconds = .24f, CastSeconds = .42f, SpinSeconds = .46f, SpinFadeSeconds = .2f, SwapSeconds = .3f;
-
+        // A weapon that keeps firing shimmers instead of strobing: an attack soon after another one lights the slot less.
         const float RapidGap = .2f, RapidPeak = .7f;
         const float AttackFill = .42f, CastFill = .55f, SwapFill = .3f, OtherHandAlpha = .6f, IconPop = .16f, ClockFollow = 12f;
-
+        // The pictures in the row a little smaller.
         const float PictureScale = .88f;
         static readonly Color InUse = new(.45f, .9f, 1f), Attack = new(1f, .92f, .68f), Cast = new(.86f, .78f, 1f), Clock = new(.62f, .52f, 1f, .3f);
         static readonly Color TagText = new(.02f, .07f, .12f);
-        static readonly Dictionary<(Vector2Int size, int cut), (Sprite fill, Sprite edge)> Shapes = new();
+        static readonly Dictionary<(Vector2Int size, int cut, bool glow), (Sprite fill, Sprite edge)> Shapes = new();
 
         Kind kind;
         int index;
@@ -33,6 +40,7 @@ namespace AnomalyArena
         Color flashColour;
         bool wasInUse;
         Vector2 builtFor;
+        bool builtIllustrated;
         Image clockImage, flashImage, edgeImage;
         CanvasGroup group;
         GameObject tag;
@@ -40,13 +48,14 @@ namespace AnomalyArena
         float appliedEdgeAlpha = -1f, appliedFlashAlpha = -1f, appliedClock = -1f, appliedPop = -1f;
         Color appliedEdgeColour;
 
+        /// <summary>The hand slot the left button uses, when it holds a weapon.</summary>
         public bool IsInUse => kind == Kind.Hand && model != null && model.active && model.formIndex >= 0;
-
+        /// <summary>The other hand slot, while one is in use.</summary>
         public bool IsOtherHand => kind == Kind.Hand && !IsInUse && partner && partner.IsInUse;
         public bool TagShown => tag && tag.activeSelf;
         public float Flash => flash;
         public float ClockShown => shownClock;
-
+        /// <summary>The light running round a skill's edge: 0 to 1 while it goes round, -1 when it is not running.</summary>
         public float Spin => spinAge < 0f ? -1f : Mathf.Clamp01(spinAge / SpinSeconds);
         public float EdgeAlpha => appliedEdgeAlpha;
 
@@ -69,6 +78,7 @@ namespace AnomalyArena
             }
         }
 
+        /// <summary>The snapshot's slot, which the game reuses and writes pulses into as they happen.</summary>
         public void Bind(ArenaUiSlot value)
         {
             if (model == value) return;
@@ -89,7 +99,7 @@ namespace AnomalyArena
         {
             if (model == null) return;
             var size = ((RectTransform)transform).rect.size;
-            if (size != builtFor) Build(size);
+            if (size != builtFor || builtIllustrated != Art.Enabled) Build(size);
             if (!flashImage) return;
             float dt = Time.unscaledDeltaTime, now = Time.unscaledTime;
 
@@ -99,7 +109,7 @@ namespace AnomalyArena
                 seenPulses = model.pulses;
             }
             bool inUse = IsInUse;
-
+            // The swap itself: the slot that takes over lights once.
             if (inUse && !wasInUse) Light(1f, SwapSeconds, SwapFill, InUse);
             wasInUse = inUse;
             flash = Mathf.Max(0f, flash - dt / flashSeconds);
@@ -148,19 +158,20 @@ namespace AnomalyArena
             if (tag.activeSelf != inUse) tag.SetActive(inUse);
             if (inUse)
             {
-                if (tagLabel.text.Length == 0) tagLabel.text = ArenaText.Pair("IN USE","IN USE");
+                if (tagLabel.text.Length == 0) tagLabel.text = ArenaText.Pair("使用中", "IN USE");
                 if (tagLabel.font != slot.title.font) tagLabel.font = slot.title.font;
             }
             float alpha = Mathf.MoveTowards(group.alpha, IsOtherHand ? OtherHandAlpha : 1f, dt * 6f);
             if (!Mathf.Approximately(alpha, group.alpha)) group.alpha = alpha;
 
+            // The buttons follow the weapon: the left one uses the slot in hand, the right one swaps to the other, and an empty slot has nothing to swap to.
             int keyState = model.active ? 0 : model.formIndex >= 0 ? 1 : 2;
             if (keyState == shownKey || !keyLabel || !ArenaText.Ready) return;
             shownKey = keyState;
             int number = index + 1;
-            keyLabel.text = keyState == 0 ? ArenaText.Pair($"HAND {number} [LMB]",$"HAND {number} [LMB]")
-                : keyState == 1 ? ArenaText.Pair($"HAND {number} [RMB SWITCH]",$"HAND {number} [RMB SWITCH]")
-                : ArenaText.Pair($"HAND {number}",$"HAND {number}");
+            keyLabel.text = keyState == 0 ? ArenaText.Pair($"手持{number} [左键]", $"HAND {number} [LMB]")
+                : keyState == 1 ? ArenaText.Pair($"手持{number} [右键切换]", $"HAND {number} [RMB SWITCH]")
+                : ArenaText.Pair($"手持{number}", $"HAND {number}");
         }
 
         void RenderSkill(float dt)
@@ -208,19 +219,20 @@ namespace AnomalyArena
         void Build(Vector2 size)
         {
             builtFor = size;
+            builtIllustrated = Art.Enabled;
             var whole = new Vector2Int(Mathf.RoundToInt(size.x), Mathf.RoundToInt(size.y));
             if (whole.x <= 0 || whole.y <= 0) return;
-            var (fill, edge) = ShapesFor(whole, CutCorner);
+            var (fill, edge) = ShapesFor(whole, builtIllustrated ? CutCorner : 0, builtIllustrated);
             if (!flashImage)
             {
-
+                // Under the slot's text and icons, in this order: the frame is this object's own image, so the first children draw straight over it.
                 clockImage = Overlay("CooldownClock", 0);
                 flashImage = Overlay("Flash", 1);
                 edgeImage = Overlay("LitEdge", 2);
                 clockImage.type = Image.Type.Filled;
                 clockImage.fillMethod = Image.FillMethod.Radial360;
                 clockImage.fillOrigin = (int)Image.Origin360.Top;
-
+                // The covered part shrinks clockwise, so the slot comes back the way a clock's hand goes.
                 clockImage.fillClockwise = false;
                 clockImage.color = Clock;
                 if (kind == Kind.Skill)
@@ -238,8 +250,10 @@ namespace AnomalyArena
             clockImage.sprite = fill;
             flashImage.sprite = fill;
             edgeImage.sprite = edge;
+            if (tag) tag.GetComponent<Image>().sprite = ShapesFor(new Vector2Int(TagWidth, TagHeight), builtIllustrated ? TagCut : 0, builtIllustrated).fill;
         }
 
+        /// <summary>Around its own centre, which also makes an attack's pop grow from the middle of the picture.</summary>
         static void ShrinkPicture(Image picture)
         {
             if (!picture) return;
@@ -259,15 +273,16 @@ namespace AnomalyArena
 
             var key = transform.Find("SlotKey");
             keyLabel = key ? key.GetComponent<Text>() : null;
-
+            // The saved label would write the fixed "[LMB]" back over the live one.
             if (key && key.GetComponent<UnityEngine.Localization.Components.LocalizeStringEvent>() is { } localizer) Destroy(localizer);
 
-            const int tagWidth = 62, tagHeight = 20;
+            // A solid tag on the frame's top edge, clear of the key row under it and the charge bar over it.
+            const int tagWidth = TagWidth, tagHeight = TagHeight;
             tag = new GameObject("InUseTag", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
             tag.transform.SetParent(transform, false);
             var back = tag.GetComponent<Image>();
             back.raycastTarget = false;
-            back.sprite = ShapesFor(new Vector2Int(tagWidth, tagHeight), TagCut).fill;
+            back.sprite = ShapesFor(new Vector2Int(tagWidth, tagHeight), TagCut, true).fill;
             back.color = InUse;
             var rect = back.rectTransform;
             rect.anchorMin = rect.anchorMax = new Vector2(.5f, 1f);
@@ -307,9 +322,12 @@ namespace AnomalyArena
             return image;
         }
 
-        static (Sprite fill, Sprite edge) ShapesFor(Vector2Int size, int cut)
+        // ───── The shapes: the frame's outline drawn at the slot's own size, one texture pixel to one canvas unit ─────
+
+        /// <summary>The fill and the lit edge at a size: with `cut` corners cut off, and with the soft glow outside the edge or without it.</summary>
+        static (Sprite fill, Sprite edge) ShapesFor(Vector2Int size, int cut, bool withGlow)
         {
-            if (Shapes.TryGetValue((size, cut), out var known) && known.fill) return known;
+            if (Shapes.TryGetValue((size, cut, withGlow), out var known) && known.fill) return known;
             int w = size.x + Glow * 2, h = size.y + Glow * 2;
             var fill = new Color32[w * h];
             var edge = new Color32[w * h];
@@ -319,14 +337,15 @@ namespace AnomalyArena
                     float d = DistanceToFrame(x + .5f - Glow, y + .5f - Glow, size, cut);
                     fill[x + y * w] = new Color32(255, 255, 255, (byte)(255f * Mathf.Clamp01(.5f - d)));
                     float line = Mathf.Clamp01(EdgeHalfWidth + .5f - Mathf.Abs(d));
-                    float glow = d > 0f ? Mathf.Pow(Mathf.Clamp01(1f - d / (Glow - FrameInset)), 2f) * GlowStrength : 0f;
+                    float glow = withGlow && d > 0f ? Mathf.Pow(Mathf.Clamp01(1f - d / (Glow - FrameInset)), 2f) * GlowStrength : 0f;
                     edge[x + y * w] = new Color32(255, 255, 255, (byte)(255f * Mathf.Max(line, glow)));
                 }
             var shapes = (Sprite(fill, w, h), Sprite(edge, w, h));
-            Shapes[(size, cut)] = shapes;
+            Shapes[(size, cut, withGlow)] = shapes;
             return shapes;
         }
 
+        /// <summary>Signed distance to the frame's outline, negative inside: a rectangle with its top-left and bottom-right corners cut off.</summary>
         static float DistanceToFrame(float x, float y, Vector2Int size, int cut)
         {
             float left = FrameInset - x, right = x - (size.x - FrameInset), bottom = FrameInset - y, top = y - (size.y - FrameInset);

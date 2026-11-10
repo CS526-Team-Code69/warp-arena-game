@@ -12,12 +12,13 @@ using Object = UnityEngine.Object;
 
 namespace AnomalyArena
 {
-
+    /// <summary>The tutorial and the pause screen's controls table. The table is document 3.2, row for row; the pages open
+    /// for the first run that starts from the title's button and freeze the game until they close.</summary>
     [TestFixture]
     public class ControlsTableTest
     {
-        const string SceneCn = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
-        const string SceneEn = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        // Since 2026-11-10 one scene serves both languages; the English cases load it with an English start (TestStartLanguage).
+        const string SceneCn = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
         static readonly Regex Tags = new("<[^<>]+>");
 
         [SetUp]
@@ -28,17 +29,24 @@ namespace AnomalyArena
         {
             if (V2Tutorial.IsOpen) V2Tutorial.Close();
             V2Tutorial.ForgetShown();
+            TestStartLanguage.Reset();
             Time.timeScale = 1f;
         }
 
+        // ───── The pages ─────
+
         [Test, BuildScene(SceneCn), Category("Integration"), Timeout(90000)]
-        public async Task Chinese_FirstRun_ShowsThePages_FrozenUntilTheLastOne_AndARestartDoesNot() => await FirstRunShowsThePages(SceneCn);
+        public async Task Chinese_FirstRun_ShowsThePages_FrozenUntilTheLastOne_AndARestartDoesNot() => await FirstRunShowsThePages(StartupLanguage.Chinese);
 
-        [Test, BuildScene(SceneEn), Category("Integration"), Timeout(90000)]
-        public async Task English_FirstRun_ShowsThePages_FrozenUntilTheLastOne_AndARestartDoesNot() => await FirstRunShowsThePages(SceneEn);
+        [Test, BuildScene(SceneCn), Category("Integration"), Timeout(90000)]
+        public async Task English_FirstRun_ShowsThePages_FrozenUntilTheLastOne_AndARestartDoesNot() => await FirstRunShowsThePages(StartupLanguage.English);
 
-        static async Task FirstRunShowsThePages(string scene)
+        /// <summary>The classic run's first-time pages, for a run started from the title (V2Hud.Dispatch with the classic run's Start, which
+        /// the open mode's map pick also leads to).</summary>
+        static async Task FirstRunShowsThePages(string language)
         {
+            const string scene = SceneCn;
+            TestStartLanguage.Use(language);
             await SceneManagerHelper.LoadSceneAsync(scene);
             var game = await ReadyScene();
             var title = Screen(ArenaUiState.Title);
@@ -69,6 +77,7 @@ namespace AnomalyArena
             await CommandUntil(game, ArenaUiCommand.OpenSupply, () => game.RunPhase == ArenaUiState.Loadout);
             Assert.That(V2Tutorial.IsOpen, Is.False, "once in a run");
 
+            // Restart and quit reload the scene and go through the title again.
             await SceneManagerHelper.LoadSceneAsync(scene);
             game = await ReadyScene();
             await DispatchUntil(Object.FindAnyObjectByType<V2Hud>(), () => game.RunPhase != ArenaUiState.Title);
@@ -93,15 +102,18 @@ namespace AnomalyArena
             Assert.That(Time.timeScale, Is.EqualTo(game.CanPlayerMove || game.BuildTimeFlows ? 1f : 0f), "closing gives the arena its own time back at once");
         }
 
+        // ───── The pause screen ─────
+
         [Test, BuildScene(SceneCn), Category("Integration"), Timeout(90000)]
-        public async Task Chinese_Pause_ShowsTheWholeTable_AndOpensThePages() => await PauseShowsTheTable(SceneCn);
+        public async Task Chinese_Pause_ShowsTheWholeTable_AndOpensThePages() => await PauseShowsTheTable(StartupLanguage.Chinese);
 
-        [Test, BuildScene(SceneEn), Category("Integration"), Timeout(90000)]
-        public async Task English_Pause_ShowsTheWholeTable_AndOpensThePages() => await PauseShowsTheTable(SceneEn);
+        [Test, BuildScene(SceneCn), Category("Integration"), Timeout(90000)]
+        public async Task English_Pause_ShowsTheWholeTable_AndOpensThePages() => await PauseShowsTheTable(StartupLanguage.English);
 
-        static async Task PauseShowsTheTable(string scene)
+        static async Task PauseShowsTheTable(string language)
         {
-            await SceneManagerHelper.LoadSceneAsync(scene);
+            TestStartLanguage.Use(language);
+            await SceneManagerHelper.LoadSceneAsync(SceneCn);
             var game = await ReadyScene();
             await StartRun(game);
             await CommandUntil(game, ArenaUiCommand.Pause, () => game.RunPhase == ArenaUiState.Paused);
@@ -112,7 +124,7 @@ namespace AnomalyArena
 
             var howTo = paused.transform.Find("Content/HowToPlay");
             Assert.That(howTo && howTo.gameObject.activeInHierarchy, Is.True, "the pause screen has the tutorial's button");
-            Assert.That(howTo.GetComponentInChildren<UnityEngine.UI.Text>().text, Is.EqualTo(ArenaText.Pair("HOW TO PLAY","HOW TO PLAY")));
+            Assert.That(howTo.GetComponentInChildren<UnityEngine.UI.Text>().text, Is.EqualTo(ArenaText.Pair("教程", "HOW TO PLAY")));
             Click((RectTransform)howTo);
             Assert.That(V2Tutorial.IsOpen && V2Tutorial.HoldsInput, Is.True, "it opens the pages, which hold the game's keys");
             await Awaitable.NextFrameAsync();
@@ -132,6 +144,8 @@ namespace AnomalyArena
             Assert.That(paused.gameObject.activeInHierarchy, Is.False, "the table goes away with the pause screen");
         }
 
+        /// <summary>The build phase's crate, its hint and the damage numbers showed over the pause panel. The first crate of a run cannot be
+        /// paused, so this one comes at the end of a wave; FlowInputTest gets there.</summary>
         internal static async Task PauseCoversTheCrate(GameManager game)
         {
             var hud = Object.FindAnyObjectByType<V2Hud>();
@@ -153,9 +167,10 @@ namespace AnomalyArena
                 foreach (var graphic in canvas.GetChild(i).GetComponentsInChildren<UnityEngine.UI.Graphic>(true))
                     Assert.That(graphic.gameObject.activeInHierarchy && graphic.enabled && graphic.color.a > 0f, Is.False, $"{graphic.name} under {canvas.GetChild(i).name} draws over the pause panel");
 
+            // Back in the run, the crate still answers to a click.
             await CommandUntil(game, ArenaUiCommand.Resume, () => game.RunPhase == ArenaUiState.SupplyDrop);
             await Until(() => !paused.gameObject.activeInHierarchy, 2f, "the pause screen goes at the HUD's next refresh");
-
+            // Coming back from the pause locks the menus for a moment, as every phase change does, so the click is tried until it counts.
             float deadline = Time.realtimeSinceStartup + 3f;
             while (game.RunPhase == ArenaUiState.SupplyDrop)
             {
@@ -165,6 +180,9 @@ namespace AnomalyArena
             }
         }
 
+        // ───── When T answers ─────
+
+        /// <summary>T pressed in a fight does nothing: it answers only to a pick kept for later, which the table now says.</summary>
         [Test, BuildScene(SceneCn), Category("Integration"), Timeout(90000)]
         public async Task T_DoesNothingWithoutAPick_AndOpensTheOneEscKeptForLater()
         {
@@ -201,9 +219,10 @@ namespace AnomalyArena
             var table = screen.GetComponentInChildren<V2ControlsTable>(true);
             Assert.That(table && table.gameObject.activeInHierarchy, Is.True, "the pause screen shows the controls table");
 
+            // Document 3.2's inputs in its order. Space and Enter only close the weapon card, which says so itself.
             Assert.That(table.keys.Select(key => key.text).ToArray(), Is.EqualTo(new[]
             {
-                "WASD", ArenaText.Pair("Mouse","Mouse"), ArenaText.Pair("Left mouse button","Left mouse button"), ArenaText.Pair("Right mouse button","Right mouse button"),
+                "WASD", ArenaText.Pair("鼠标", "Mouse"), ArenaText.Pair("左键", "Left mouse button"), ArenaText.Pair("右键", "Right mouse button"),
                 "Shift", "1 / 2 / 3", "E", "Esc", "R", "T", "Tab",
             }));
             foreach (var key in new[] { KeyCode.Alpha1, KeyCode.Alpha2, KeyCode.Alpha3, KeyCode.Escape, KeyCode.R, KeyCode.T, KeyCode.Tab })
@@ -228,11 +247,14 @@ namespace AnomalyArena
             return Rect.MinMaxRect(corners[0].x - 1f, corners[0].y - 1f, corners[2].x + 1f, corners[2].y + 1f);
         }
 
+        // ───── Helpers ─────
+
         static V2UiScreen Screen(ArenaUiState state) =>
             Object.FindAnyObjectByType<V2Hud>().screens.First(s => s && s.state == state);
 
         static RectTransform TutorialButton(string name) => (RectTransform)GameObject.Find("HowToPlay/Panel/" + name).transform;
 
+        /// <summary>What the pointer would land on over the middle of this rect: the top EventSystem raycast, as a player's click.</summary>
         static GameObject TopHit(RectTransform rect, out PointerEventData pointer)
         {
             Canvas.ForceUpdateCanvases();
@@ -248,6 +270,7 @@ namespace AnomalyArena
             return hits.Count > 0 ? hits[0].gameObject : null;
         }
 
+        /// <summary>A real pointer click: the button has to be the one on top where it is drawn.</summary>
         static void Click(RectTransform button)
         {
             var hit = TopHit(button, out var pointer);

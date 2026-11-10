@@ -87,7 +87,7 @@ MonoBehaviour:
   scatterNodes: 2
   scatterYield: 2
   scatterReach: 60
-  daySpawnRing: 70
+  daySpawnRing: 56
   holeFeedsToOpen: 20
   holeQuestSpawnSeconds: 3
   holeQuestMaxAlive: 5

@@ -5,7 +5,11 @@ using UnityEngine;
 
 namespace AnomalyArena.EditorTools
 {
-
+    /// <summary>
+    /// Enemy spawn warnings as a red cross instead of the flat red disc. Each saved WaveSpawnMarker's
+    /// visual becomes a flat quad with the SpawnCross material (the cross texture, tinted at runtime by WaveSpawnMarker.Begin).
+    /// Menu: Anomaly Arena/V5/Install Spawn Cross. Safe to run again.
+    /// </summary>
     internal static class InstallV5SpawnCross
     {
         const string TexturePath = "Assets/AnomalyArena/Art/V4/VFX/Textures/spawn-cross.png";
@@ -13,8 +17,7 @@ namespace AnomalyArena.EditorTools
         const string MaterialPath = "Assets/AnomalyArena/V2/Materials/SpawnCross.mat";
         static readonly string[] ScenePaths =
         {
-            "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity",
-            "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity"
+            "Assets/AnomalyArena/Scenes/ArenaV2.unity"
         };
 
         [MenuItem("Anomaly Arena/V5/Install Spawn Cross")]
@@ -56,7 +59,7 @@ namespace AnomalyArena.EditorTools
                     Undo.RecordObject(t, "Spawn cross");
                     filter.sharedMesh = quad;
                     marker.visual.sharedMaterial = material;
-
+                    // Unity's quad faces -Z; turned by 90 degrees about X it faces up, towards the top-down camera.
                     t.localRotation = Quaternion.Euler(90f, 0f, 0f);
                     t.localPosition = new Vector3(0f, .02f, 0f);
                     t.localScale = new Vector3(1.2f, 1.2f, 1f);

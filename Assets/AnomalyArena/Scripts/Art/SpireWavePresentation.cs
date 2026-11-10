@@ -2,7 +2,13 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>
+    /// The Spire's light wave on screen. A LightWaveRing whose leading edge is the wave's real
+    /// front (Enemy.LightWaveRadius) and which stays dark behind walls, as the light does; a short bright flash on the player the moment
+    /// the wave catches them, so the laser that follows has a visible cause; and a brief fade where the wave stops at the sentry range.
+    /// The laser's lock line and shot are V4CombatVfx's. Added to a Spire at runtime (Enemy.Configure); it only reads the enemy's state,
+    /// so the ring holds still whenever the wave does and freezes with the battlefield.
+    /// </summary>
     [DisallowMultipleComponent]
     public sealed class SpireWavePresentation : MonoBehaviour
     {
@@ -32,6 +38,7 @@ namespace AnomalyArena
         int drawnWave = -1, seenWaves = -1, seenCatches = -1;
         float fadeLeft;
 
+        /// <summary>The ring this Spire draws its wave with; null until the first frame it is a Spire.</summary>
         public LightWaveRing Ring => ring;
 
         void LateUpdate()
@@ -52,7 +59,7 @@ namespace AnomalyArena
                 ring.shadowWalls = true;
             }
 
-            ring.shadowReach = enemy.LightWaveReach;                                                           
+            ring.shadowReach = enemy.LightWaveReach; // the shadows are cast once a wave, out to where it stops
             if (enemy.LightWaveActive)
             {
                 drawnWave = enemy.LightWaveSequence;
@@ -61,6 +68,7 @@ namespace AnomalyArena
                 return;
             }
 
+            // A wave that reached the sentry range fades out there for a moment, in the battlefield's time; one cut short goes at once.
             bool reachedEnd = drawnWave == enemy.LightWaveSequence && enemy.LightWaveRadius >= enemy.LightWaveReach - .001f;
             if (reachedEnd && fadeLeft > 0f)
             {
@@ -92,6 +100,7 @@ namespace AnomalyArena
             ring.Draw(enemy.LightWaveCentre, enemy.LightWaveRadius, trailLength, colour, art ? artIntensity : 1f);
         }
 
+        /// <summary>A new wave lights the Spire's crown for a moment in the illustrated art; a catch flashes the player in both modes.</summary>
         void Flash(bool spire)
         {
             bool first = seenCatches < 0;
@@ -104,6 +113,7 @@ namespace AnomalyArena
             if (caught) FlashPlayer();
         }
 
+        /// <summary>The moment the wave catches the player: a short bright flash on them and a small ring at their feet.</summary>
         void FlashPlayer()
         {
             var game = GameManager.Instance;

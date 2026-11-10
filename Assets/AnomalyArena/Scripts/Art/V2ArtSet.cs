@@ -3,6 +3,7 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
+    /// <summary>The interstellar visual set is independent of the historical sand/brick ArtSet.</summary>
     [CreateAssetMenu(menuName = "Anomaly Arena/V2 Interstellar Art Set")]
     public class V2ArtSet : ScriptableObject
     {

@@ -3,7 +3,7 @@ using UnityEngine.UI;
 
 namespace AnomalyArena
 {
-
+    /// <summary>Colours a text from white at its top to the title logo's pale cyan at its bottom. Used on the menu headings (V5MenuSkin).</summary>
     public sealed class V5TextGradient : BaseMeshEffect
     {
         public Color top = Color.white;

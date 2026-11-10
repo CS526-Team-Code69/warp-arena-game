@@ -8,15 +8,18 @@ using Object = UnityEngine.Object;
 
 namespace AnomalyArena
 {
-
+    /// <summary>General weapon rules of design document section 5: right-click does not switch to an empty
+    /// hand slot (5.4); a stowed Capacitor loses its charge and runs its full-charge timer back instead of pausing (5.4); the weapon card
+    /// always states the element, and the cards use the doc's words, pairing (搭配) and trait (特性), in both languages (5.2, 5.6).</summary>
     [TestFixture]
     public class WeaponGeneralRulesTest
     {
-        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
 
         [TearDown]
         public void RestoreClock() => Time.timeScale = 1f;
 
+        /// <summary>A hand weapon in the active slot, with no element so the self-discharge is not blurred by element payoffs.</summary>
         static RunWeapon Equip(GameManager game, WeaponForm form, int variant)
         {
             game.runWeapons.ClearWaveEffects();
@@ -24,6 +27,8 @@ namespace AnomalyArena
             game.runWeapons.Hand[game.runWeapons.ActiveIndex] = weapon;
             return weapon;
         }
+
+        // ───── 5.4 Switching ─────
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task Switch_OtherHandSlotEmpty_RightClickDoesNothing()
@@ -44,6 +49,7 @@ namespace AnomalyArena
             weapons.Switch();
             Assert.That(weapons.Active, Is.SameAs(second), "a weapon in the other slot is switched to as before");
 
+            // An empty slot in hand (only reachable by a replacement) still switches to the weapon in the other one.
             weapons.Hand[1 - slot] = null;
             weapons.Hand[slot] = held;
             weapons.Switch();
@@ -61,11 +67,11 @@ namespace AnomalyArena
             Assume.That(tuning.capacitorStowedDrainSeconds, Is.EqualTo(10f).Within(.001f), "the decided drain: a full charge in 10 s (3 a second at 30)");
             float max = tuning.capacitorMax, perSecond = max / tuning.capacitorStowedDrainSeconds, hp = game.player.Hp;
             float drainSeconds = tuning.capacitorStowedDrainSeconds;
-            Assert.That(WeaponGuide.Backfire(WeaponForm.ArcCoil, 1), Does.Contain("Stowed"), "its weapon card says what stowing does");
+            Assert.That(WeaponGuide.Backfire(WeaponForm.ArcCoil, 1), Does.Contain("收起来"), "its weapon card says what stowing does");
 
             try
             {
-
+                // Full and 0.1 s from discharging into you when it is put away.
                 capacitor.charge = max; capacitor.chargeFullTime = 3.9f;
                 weapons.Switch();
                 Assume.That(weapons.Active, Is.Not.SameAs(capacitor), "the Capacitor is stowed");
@@ -78,13 +84,14 @@ namespace AnomalyArena
                 Assert.That(ranBack, Is.EqualTo(away).Within(.25f), "its full timer runs back one second a second");
                 Assert.That(max - capacitor.charge, Is.EqualTo(ranBack * perSecond).Within(.05f), "it loses its charge evenly, a full charge in 10 s");
                 string shown = Mathf.Ceil(Mathf.Clamp01(capacitor.charge / max) * 100f).ToString("0");
-                Assert.That(game.UiSnapshot.handSlots[slot].detail, Does.Contain($"Charge {shown}%"), "its slot shows the charge it has left");
+                Assert.That(game.UiSnapshot.handSlots[slot].detail, Does.Contain($"电量 {shown}%"), "its slot shows the charge it has left");
 
+                // Run it down faster: the charge and the timer stop at 0, still without a discharge.
                 tuning.capacitorStowedDrainSeconds = .5f;
                 await Until(() => capacitor.chargeFullTime <= 0f, 5f, "the full timer runs all the way back");
                 Assert.That(capacitor.charge, Is.Zero, "the charge stops at 0");
                 Assert.That(game.player.Hp, Is.EqualTo(hp), "nothing went off");
-                Assert.That(game.UiSnapshot.handSlots[slot].detail, Does.Not.Contain("Charge"), "an empty stowed Capacitor shows no charge");
+                Assert.That(game.UiSnapshot.handSlots[slot].detail, Does.Not.Contain("电量"), "an empty stowed Capacitor shows no charge");
             }
             finally { tuning.capacitorStowedDrainSeconds = drainSeconds; }
         }
@@ -108,8 +115,9 @@ namespace AnomalyArena
             Assert.That(weapons.Active, Is.SameAs(capacitor), "back in hand");
             Assert.That(left, Is.InRange(3.4f - .6f, 3.4f - .1f), "a quick switch only takes off the time it was away");
             Assert.That(capacitor.charge, Is.LessThan(max), "it lost some charge meanwhile");
-            Assert.That(game.UiSnapshot.handSlots[slot].detail, Does.Not.Contain("Charge"), "in hand the charge bar shows the charge, not the slot");
+            Assert.That(game.UiSnapshot.handSlots[slot].detail, Does.Not.Contain("电量"), "in hand the charge bar shows the charge, not the slot");
 
+            // Full again in hand (walking refills it): it goes off once the timer it kept reaches 4 s, not after a fresh 4 s.
             float hp = game.player.Hp;
             capacitor.charge = max;
             float fullAt = Time.time;
@@ -119,6 +127,8 @@ namespace AnomalyArena
                 "the self-discharge at its base value");
             Assert.That(capacitor.charge, Is.Zero, "the discharge empties it");
         }
+
+        // ───── 5.2 Weapon card, 5.6 armory: the doc's words ─────
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(60000)]
         public async Task WeaponCards_StateTheElementAndUseTheNewWords_InBothLanguages()
@@ -132,27 +142,29 @@ namespace AnomalyArena
             await CommandUntil(game, ArenaUiCommand.OpenSupply, () => game.RunPhase == ArenaUiState.Loadout);
             await Awaitable.NextFrameAsync();
 
+            // The opening pick (R1, R2): the attack and the trait are unknown until taken.
             var pick = Object.FindAnyObjectByType<V2Hud>().screens.First(s => s && s.state == ArenaUiState.Loadout);
-            Assert.That(pick.body.text, Does.Contain("attack and trait").And.Not.Contain("Backfire"), "the opening pick's text");
+            Assert.That(pick.body.text, Does.Contain("攻击方式和特性").And.Not.Contain("反噬"), "the opening pick's text");
             foreach (var choice in game.UiSnapshot.loadoutChoices)
-                Assert.That(choice.body, Does.Contain("attack and trait").And.Not.Contain("Backfire"), "each starting form's card");
+                Assert.That(choice.body, Does.Contain("攻击方式和特性").And.Not.Contain("反噬"), "each starting form's card");
 
             await CommandUntil(game, ArenaUiCommand.ChooseLoadout, () => game.RunPhase == ArenaUiState.WeaponIntro, 1);
             var rifle = game.runWeapons.Hand[0];
             Assume.That(rifle != null && rifle.form == WeaponForm.Rifle && rifle.element == ElementKind.None, Is.True, "the Rifle has no element");
             string body = game.UiSnapshot.weaponIntroBody;
-            Assert.That(body, Does.Contain("How it attacks").And.Contain("Trait"), "the card's headings are the doc's words");
-            Assert.That(body, Does.Contain("Element: None"), "document 5.2: the card states the element, none included");
-            Assert.That(body, Does.Not.Contain("Backfire").And.Not.Contain("How it fires").And.Not.Contain("anomaly"), "no old words");
+            Assert.That(body, Does.Contain("攻击方式").And.Contain("特性"), "the card's headings are the doc's words");
+            Assert.That(body, Does.Contain("属性：无属性"), "document 5.2: the card states the element, none included");
+            Assert.That(body, Does.Not.Contain("反噬").And.Not.Contain("射击方式").And.Not.Contain("异常"), "no old words");
 
+            // Armory: a new weapon and a stronger version of the held Rifle.
             game.runWeapons.Offers[0] = new RunWeapon { form = WeaponForm.ScatterCannon, variant = 0, mk = 1 };
             game.runWeapons.Offers[1] = new RunWeapon { form = WeaponForm.Rifle, variant = 0, mk = 2, upgradeOf = rifle };
             var locale = new GameObject("test locale").AddComponent<ArenaLocaleButton>();
             try
             {
                 var offers = game.UiSnapshot.armoryOffers;
-                Assert.That(offers[0].body, Does.Contain("pairing unrevealed").And.Not.Contain("Backfire"), "a new weapon's pairing is unrevealed");
-                Assert.That(offers[1].body, Does.Contain("Its attack and trait stay the same").And.Not.Contain("Backfire"), "a stronger version keeps its pairing (2026-10-28)");
+                Assert.That(offers[0].body, Does.Contain("搭配未揭晓").And.Not.Contain("反噬"), "a new weapon's pairing is unrevealed");
+                Assert.That(offers[1].body, Does.Contain("攻击方式和特性不变").And.Not.Contain("反噬"), "a stronger version keeps its pairing (2026-10-28)");
 
                 locale.localeCode = "en";
                 locale.SelectLocale();
@@ -172,6 +184,8 @@ namespace AnomalyArena
                 Object.Destroy(locale.gameObject);
             }
         }
+
+        // ───── Helpers ─────
 
         static async Task CommandUntil(GameManager game, ArenaUiCommand command, Func<bool> completed, int index = -1)
         {

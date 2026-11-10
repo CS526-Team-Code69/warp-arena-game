@@ -4,9 +4,9 @@ namespace AnomalyArena
 {
     public sealed partial class RunWeapons
     {
-                                                                                                                                          
-                                                                                                                                             
-                                                           
+        /// <summary>Build phase (GameManager.BuildTimeFlows): time flows but no weapon is used, so only the timers Tick
+        /// runs down move on: cooldowns, reloads, heat, a lost knife's way back and the Meltdown haste. Nothing fires, charges or moves, and
+        /// the auto weapons hold where they are.</summary>
         public void TickTimers(float dt)
         {
             float chill=ElementStatus.For(player)?.PlayerChillMultiplier??1f;

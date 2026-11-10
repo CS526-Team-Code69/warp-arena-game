@@ -52,6 +52,7 @@ namespace AnomalyArena
                                                                    Mathf.Clamp(wave - 4, 0, 6) * Mathf.Max(0, middle) +
                                                                    Mathf.Max(0, wave - 10) * Mathf.Max(0, late);
 
+        /// <summary>Saved weight of a kind in a 1-based ordinary wave (0 outside the table).</summary>
         public int Weight(int wave, EnemyKind kind)
         {
             if (waves == null || wave < 1 || wave > waves.Length) return 0;
@@ -59,6 +60,7 @@ namespace AnomalyArena
             return weights != null && (int)kind < weights.Length ? Mathf.Max(0, weights[(int)kind]) : 0;
         }
 
+        /// <summary>Whether the 1-based ordinary wave lists this kind (§11.2 table). The melee swarm is listed in every wave.</summary>
         public bool AllowsKind(int wave, EnemyKind kind) => Weight(wave, kind) > 0;
     }
 }

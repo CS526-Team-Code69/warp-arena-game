@@ -9,13 +9,15 @@ using UnityEngine.SceneManagement;
 
 namespace AnomalyArena.EditorTools
 {
-
+    /// <summary>
+    /// Removes what the retired 1.0 mode left in the V2 scenes: components whose scripts were deleted (the old weapon spawner),
+    /// the objects that held only them, and build-settings entries for scenes that no longer exist. Idempotent; backs up the scenes first.
+    /// </summary>
     public static class InstallV4LegacyCleanup
     {
         static readonly string[] Scenes =
         {
-            "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity",
-            "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity"
+            "Assets/AnomalyArena/Scenes/ArenaV2.unity"
         };
 
         static readonly string[] RetiredObjects = { "WeaponSpawner" };
@@ -63,12 +65,12 @@ namespace AnomalyArena.EditorTools
                     entry.missingScriptsRemoved += GameObjectUtility.RemoveMonoBehavioursWithMissingScript(t.gameObject);
                 foreach (var root in scene.GetRootGameObjects().Where(r => RetiredObjects.Contains(r.name)).ToArray())
                 {
-
+                    // Only an object left with nothing but its transform is a pure leftover.
                     if (root.GetComponents<Component>().Length > 1 || root.transform.childCount > 0) continue;
                     UnityEngine.Object.DestroyImmediate(root);
                     entry.objectsRemoved++;
                 }
-
+                // Re-serialising also drops the fields the 1.0 mode stored on the game and wave managers.
                 EditorSceneManager.MarkSceneDirty(scene);
                 if (!EditorSceneManager.SaveScene(scene)) throw new IOException("Save failed: " + path);
                 entries.Add(entry);

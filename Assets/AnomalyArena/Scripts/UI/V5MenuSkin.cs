@@ -7,36 +7,39 @@ using UnityEngine.UI;
 
 namespace AnomalyArena
 {
-                 
-                                                                                                                                                 
-                                                                                                                                                    
-                                                                                                                                                 
-                                                                                                                                    
-                  
+    /// <summary>
+    /// The menu look: layered dark panels in the title art's colours, large cards whose picture is the weapon or skill itself
+    /// and whose frame carries the rarity colour. Since 2026-11-10 all of it follows the art switch: in whitebox the title art behind a panel
+    /// gives way to flat blocks (WhiteboxBackdrop), the cards' pictures to shapes (WhiteboxIcons, through V2Hud's icon setters), and the
+    /// panels, cards, plates and buttons to flat rectangles with a thin edge, the card's edge in its rarity colour, the glows, clouds and
+    /// rules left out (WhiteboxSkin). The saved
+    /// scene is left as it is: when a scene loads, this component is added to its V2Hud and changes the saved panels' images and rectangles, and
+    /// V2Hud keeps driving the same objects. The textures are in Resources/V5/UI (work/art-plans/art-redo-1030/ui/make_ui_skin.py).
+    /// </summary>
     [DisallowMultipleComponent]
     public sealed class V5MenuSkin : MonoBehaviour
     {
         const string Folder = "V5/UI/";
-                                                             
+        // The textures are drawn at twice their canvas size.
         const float Density = 2f;
 
-                                                                                                          
+        // Card screens, in canvas units at the 1440 x 810 reference. The panel's outer 12 units are glow.
         const float CardPanelW = 1328f, CardPanelH = 776f, CardPanelNoButtonsH = 704f, Margin = 52f;
         const float CardW = 392f, CardH = 474f, CardGap = 24f, CardsTop = 198f, BottomRowTop = 684f, BottomRowH = 56f;
-                                                                              
+        // The pictures a little smaller than the art band.
         const float ArtH = 208f, MainWeaponW = 304f, MainWeaponH = 152f, MainGlyph = 156f, SmallIcon = 34f;
         const int TitleLargest = 26, TitleSmallest = 18;
 
-                                                                                                                                                       
+        /// <summary>The void colour on screen: "black" has to stay visible on a dark panel, so a void card is a black line in a violet glow.</summary>
         public static readonly Color VoidGlow = new(.62f, .34f, 1f);
         static readonly Color VoidText = new(.86f, .79f, 1f);
         static readonly Color SoftText = new(.86f, .90f, .96f), FaintText = new(.62f, .72f, .85f);
         static readonly Color AccentCyan = new(.47f, .89f, 1f);
-                                                                          
+        // By ArenaRarity.Rank: white, green, blue, purple, orange, black.
         static readonly float[] GlowByRank = { .10f, .50f, .58f, .72f, .88f, .95f };
         static readonly float[] CloudByRank = { .12f, .40f, .44f, .48f, .53f, .68f };
         static readonly float[] RadialByRank = { .12f, .40f, .45f, .50f, .56f, .64f };
-                                                                                                                                 
+        // Common is white, which as a backdrop would be the brightest of them all; its line stays white and its art a cool grey.
         static readonly Color CommonBackdrop = new(.70f, .76f, .90f);
 
         static Sprite panelSprite, cardSprite, cardLine, cardGlow, buttonSprite, buttonPrimary, ruleSprite, pillSprite, radialSprite, dimSprite, nebulaSprite, cloudSprite, fadeSprite;
@@ -53,6 +56,8 @@ namespace AnomalyArena
             public V2UiChoice choice;
             public RectTransform rect;
             public Image line, glow, cloud, radial, rule, pill;
+            /// <summary>The card's own image in whitebox: a flat plate whose thin edge carries the rarity colour.</summary>
+            public WhiteboxSkin.Entry plate;
             public Color glowColour;
             public float glowAlpha, hover;
             public bool pulses, weaponShown, glyphShown, elementShown, placed;
@@ -76,12 +81,14 @@ namespace AnomalyArena
         }
 
         readonly List<Panel> panels = new();
+        // 2026-11-10 (second round): every image this skin dresses, with its flat whitebox look (WhiteboxSkin); LateUpdate follows the switch.
+        readonly WhiteboxSkin.Set flat = new();
         V2Hud hud;
         Sprite themeSprite;
-                                                                                                                             
+        // A clicked card stays the selected object, so the selection only counts as a highlight once the keyboard is in use.
         bool keyboardInUse;
 
-                                                                                                                             
+        // Registered once per play: the editor keeps statics between plays (domain reload is off), so it is taken off first.
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void Register()
         {
@@ -89,9 +96,9 @@ namespace AnomalyArena
             SceneManager.sceneLoaded += OnSceneLoaded;
         }
 
-                                                                                                                                
-                                                                                                                                
-                                                 
+        // Entering Play Mode without a scene reload (this project's editor setting) raises no sceneLoaded for the scene that is
+        // already open, so the open scenes are skinned here as well; a built game loads its first scene normally, and the check
+        // in OnSceneLoaded keeps it to one skin.
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void SkinOpenScenes()
         {
@@ -111,7 +118,7 @@ namespace AnomalyArena
                 }
         }
 
-                                                                      
+        /// <summary>The saved screens have taken this look.</summary>
         public bool Installed { get; private set; }
 
         void Install(V2Hud view)
@@ -177,12 +184,19 @@ namespace AnomalyArena
             }
         }
 
-                                                                                                                                       
-                                                                                                                                        
+        // The title is the look the other screens follow; only its buttons join the new set. Since 2026-11-10 (one game in two languages)
+        // these are the three entries and the open mode's map choices in Start's own skin, and the Language option and the map pick's back
+        // button in the plain one (V2Hud makes them all in its Awake, before this runs). The art switch keeps its saved look.
         void SkinTitle(V2UiScreen screen)
         {
-            foreach (var name in new[] { "StartRun", V2Hud.TitleTutorialButton })
+            foreach (var name in V2Hud.TitlePrimaryButtons)
                 if (screen.transform.Find("Content/" + name) is { } part && part.GetComponent<Button>() is { } button) SkinButton(button, true, 0);
+            foreach (var name in V2Hud.TitleSecondaryButtons)
+                if (screen.transform.Find("Content/" + name) is { } part && part.GetComponent<Button>() is { } button) SkinButton(button, false, 0);
+            // In whitebox the art switch is a plain button too, and the drawn rules above and under the saved buttons (and their copies) go.
+            if (screen.transform.Find("Content/ToggleArt") is { } toggle && toggle.GetComponent<Image>() is { } switchImage) flat.Add(switchImage, WhiteboxSkin.Look.Button);
+            foreach (var image in screen.GetComponentsInChildren<Image>(true))
+                if (image.name is "V3TopRule" or "V3BottomRule") flat.Add(image, WhiteboxSkin.Look.Hide);
         }
 
         void SkinCardScreen(V2UiScreen screen, RectTransform content)
@@ -192,13 +206,13 @@ namespace AnomalyArena
                 if (button.transform.parent == content && !button.GetComponent<V2UiChoice>()) buttons.Add(button);
             float height = buttons.Count > 0 ? CardPanelH : CardPanelNoButtonsH;
             var panel = MakePanel(screen.gameObject, content, new Vector2(CardPanelW, height));
-                                                                              
+            // Loadout already stands on the title art (V2Hud shows it there).
             Backdrop(screen, screen.state != ArenaUiState.Loadout);
             Style(screen.heading, Margin, 24f, CardPanelW - Margin * 2f - 340f, 54f, 36, TextAnchor.MiddleLeft);
             Gradient(screen.heading);
             Style(screen.clock, CardPanelW - Margin - 320f, 30f, 320f, 42f, 20, TextAnchor.MiddleRight);
             Rule(content, "HeadingRule", 40f, 78f, CardPanelW - 80f, 14f, AccentCyan);
-                                                                                                                    
+            // Narrower than the panel: shorter lines read better, and no paragraph ends in a line holding one mark.
             Style(screen.body, Margin, 94f, 1120f, 98f, 18, TextAnchor.UpperLeft);
             Fit(panel, screen.body, 18, 13);
             Style(screen.summary, Margin + 280f, BottomRowTop, CardPanelW - Margin * 2f - 280f - 340f, BottomRowH, 14, TextAnchor.MiddleLeft);
@@ -229,6 +243,7 @@ namespace AnomalyArena
                 baseImage.type = Image.Type.Sliced;
                 baseImage.pixelsPerUnitMultiplier = Density;
                 baseImage.color = Color.white;
+                card.plate = flat.Add(baseImage, WhiteboxSkin.Look.Card);
             }
             card.glow = NewImage(rect, "CardGlow", cardGlow, Color.clear, Image.Type.Sliced);
             card.glow.rectTransform.anchorMin = Vector2.zero;
@@ -258,14 +273,17 @@ namespace AnomalyArena
             Style(choice.kind, 16f, 9f, CardW - 120f, 26f, 16, TextAnchor.MiddleLeft);
             Shadowed(choice.kind);
             Style(choice.title, 18f, ArtH + 18f, CardW - 36f, 66f, TitleLargest, TextAnchor.MiddleCenter);
-                                                                                                                              
+            // From under the title to the card's foot: the long comparison texts (one level against the next) need all of it.
             Style(choice.body, 20f, ArtH + 88f, CardW - 40f, CardH - ArtH - 100f, 19, TextAnchor.UpperLeft);
             choice.bodyFontSize = 19;
             foreach (var image in new[] { choice.icon, choice.weaponIcon, choice.contentIcon })
                 if (image) image.preserveAspect = true;
-                                                                                                            
+            // The rarity name sits on the line under the picture. These stay in front of the large picture.
             card.pill = NewImage(rect, "BadgePill", pillSprite, Color.white, Image.Type.Sliced);
             Place(card.pill, CardW * .5f - 38f, ArtH - 13f, 76f, 28f);
+            // In whitebox only the plate and its rarity edge stay: the glow, the art band's cloud, light and fade, the rule, the line and the
+            // pill are drawn pictures.
+            foreach (var picture in new[] { card.glow, card.cloud, card.radial, fade, card.rule, card.line, card.pill }) flat.Add(picture, WhiteboxSkin.Look.Hide);
             if (choice.badge)
             {
                 Style(choice.badge, CardW * .5f - 38f, ArtH - 13f, 76f, 28f, 15, TextAnchor.MiddleCenter);
@@ -292,14 +310,15 @@ namespace AnomalyArena
             card.radial.color = WithAlpha(backdrop, RadialByRank[rank]);
             card.rule.color = tint;
             card.pill.color = tint;
+            card.plate?.SetEdge(tint);
             if (!isVoid) return;
-                                                                                                         
+            // ArenaRarity's black cannot be read on a dark card, so a void card's words are pale violet.
             if (card.choice.title) card.choice.title.color = VoidText;
             if (card.choice.badge) card.choice.badge.color = VoidText;
         }
 
-                                                                                                                                                               
-                                                                  
+        /// <summary>Which picture leads depends on what V2Hud switched on: a weapon when there is one (an upgrade direction's glyph then sits small beside the
+        /// element), otherwise the skill or stat glyph.</summary>
         static void ArrangeArt(Card card, bool force)
         {
             var choice = card.choice;
@@ -318,8 +337,8 @@ namespace AnomalyArena
             else Place(choice.contentIcon, (CardW - MainGlyph) * .5f, (ArtH - MainGlyph) * .5f + 4f, MainGlyph, MainGlyph);
         }
 
-                                                                                                                                                   
-                                                                                                                                 
+        /// <summary>The weapon card's picture against its former size: since 2026-11-06 half as wide and half as high (the plate was 420 x 440 and
+        /// the weapon 348 x 174). It keeps the top of the left column, and the description takes the width it gave up.</summary>
         public const float WeaponCardArtScale = .5f;
         const float WeaponCardTop = 112f, WeaponCardTextH = 440f, WeaponCardTextGap = 28f;
 
@@ -334,13 +353,16 @@ namespace AnomalyArena
             float plateW = 420f * s, plateH = 440f * s, weaponW = 348f * s, weaponH = 174f * s;
             var plate = NewImage(content, "ArtPlate", cardSprite, Color.white, Image.Type.Sliced);
             Place(plate, Margin, WeaponCardTop, plateW, plateH);
-                                                                                                                                    
+            // The cloud fills the plate's upper half inside its 3-unit frame; the glow is centred on the plate and a little larger.
             var cloud = NewImage(plate.transform, "Cloud", cloudSprite, WithAlpha(new Color(.42f, .30f, .95f), .28f), Image.Type.Simple);
             Place(cloud, 3f, 3f, plateW - 6f, 221f * s);
             var radial = NewImage(plate.transform, "Radial", radialSprite, WithAlpha(AccentCyan, .22f), Image.Type.Simple);
             Place(radial, -20f * s, -10f * s, 460f * s, 460f * s);
             var line = NewImage(plate.transform, "CardLine", cardLine, WithAlpha(AccentCyan, .9f), Image.Type.Sliced);
             Stretch(line.rectTransform);
+            // In whitebox: a flat plate with a thin cyan edge behind the weapon's shape; the cloud, the light and the drawn line go.
+            flat.Add(plate, WhiteboxSkin.Look.Plate).SetEdge(WithAlpha(AccentCyan, .9f));
+            foreach (var picture in new[] { cloud, radial, line }) flat.Add(picture, WhiteboxSkin.Look.Hide);
             if (screen.icon)
             {
                 screen.icon.preserveAspect = true;
@@ -365,12 +387,12 @@ namespace AnomalyArena
             var panel = MakePanel(screen.gameObject, content, new Vector2(w, h));
             panel.heightWithoutSummary = top + 64f + 40f;
             panel.summary = screen.summary;
-                                                                     
+            // The frozen battlefield stays in view around the panel.
             Backdrop(screen, false);
             Style(screen.heading, 40f, 28f, w - 80f, 56f, 36, TextAnchor.MiddleCenter);
             Gradient(screen.heading);
             Rule(content, "HeadingRule", 40f, 86f, w - 80f, 14f, AccentCyan);
-                                                                       
+            // The paused line; V2Hud puts the controls table under it.
             Style(screen.body, 40f, 106f, w - 80f, 36f, 18, TextAnchor.MiddleCenter);
             if (screen.body) screen.body.color = SoftText;
             float left = (w - V2Hud.PauseButtons.Length * (buttonW + buttonGap) + buttonGap) * .5f;
@@ -390,7 +412,7 @@ namespace AnomalyArena
             Fit(panel, screen.summary, 15, 10);
         }
 
-                                                                                                                                       
+        /// <summary>The ready and result screens: a heading, some lines and one large button in the middle of the title art.</summary>
         void SkinCentred(V2UiScreen screen, RectTransform content)
         {
             const float w = 900f, h = 560f;
@@ -449,8 +471,10 @@ namespace AnomalyArena
                 image.type = Image.Type.Sliced;
                 image.pixelsPerUnitMultiplier = Density;
                 image.color = Color.white;
+                flat.Add(image, WhiteboxSkin.Look.Panel);
             }
             var nebula = NewImage(content, "Nebula", nebulaSprite, Color.white, Image.Type.Simple);
+            flat.Add(nebula, WhiteboxSkin.Look.Hide);
             nebula.rectTransform.anchorMin = Vector2.zero;
             nebula.rectTransform.anchorMax = Vector2.one;
             nebula.rectTransform.offsetMin = Vector2.one * 14f;
@@ -462,7 +486,7 @@ namespace AnomalyArena
             return panel;
         }
 
-                                                                                                                                        
+        /// <summary>The screen behind the panel: the title art itself, dimmed (art), or whatever is under the screen, dimmed.</summary>
         void Backdrop(V2UiScreen screen, bool art)
         {
             if (screen.GetComponent<Image>() is not { } root) return;
@@ -475,16 +499,20 @@ namespace AnomalyArena
             var dim = NewImage(screen.transform, "Dim", dimSprite, Color.white, Image.Type.Simple);
             Stretch(dim.rectTransform);
             dim.transform.SetAsFirstSibling();
+            flat.Add(dim, WhiteboxSkin.Look.Dim);
+            // 2026-11-10: in whitebox flat blocks cover the title art, under the dim layer and the panel.
+            WhiteboxBackdrop.Attach(root);
         }
 
-        static void Dim(Image image)
+        void Dim(Image image)
         {
             image.sprite = dimSprite;
             image.type = Image.Type.Simple;
             image.color = Color.white;
+            flat.Add(image, WhiteboxSkin.Look.Dim);
         }
 
-        static void SkinButton(Button button, bool primary, int textSize)
+        void SkinButton(Button button, bool primary, int textSize)
         {
             if (!button) return;
             if (button.GetComponent<Image>() is { } image)
@@ -494,6 +522,7 @@ namespace AnomalyArena
                 image.pixelsPerUnitMultiplier = Density;
                 image.color = Color.white;
                 button.targetGraphic = image;
+                flat.Add(image, primary ? WhiteboxSkin.Look.PrimaryButton : WhiteboxSkin.Look.Button);
             }
             button.transition = Selectable.Transition.ColorTint;
             var colours = button.colors;
@@ -514,9 +543,10 @@ namespace AnomalyArena
             Shadowed(label);
         }
 
-        static void Rule(Transform parent, string name, float left, float top, float width, float height, Color colour)
+        void Rule(Transform parent, string name, float left, float top, float width, float height, Color colour)
         {
             var rule = NewImage(parent, name, ruleSprite, colour, Image.Type.Simple);
+            flat.Add(rule, WhiteboxSkin.Look.Hide);
             Place(rule, left, top, width, height);
         }
 
@@ -569,7 +599,7 @@ namespace AnomalyArena
             rect.offsetMin = rect.offsetMax = Vector2.zero;
         }
 
-                                                                                                          
+        /// <summary>Left and top measured from the parent's top-left corner, as in V2HudLayout.</summary>
         static void Place(Component part, float left, float top, float width, float height)
         {
             if (!part || part.transform is not RectTransform rect) return;
@@ -586,6 +616,7 @@ namespace AnomalyArena
 
         void LateUpdate()
         {
+            flat.Follow();
             Vector2 canvas = ((RectTransform)transform).rect.size;
             float dt = Time.unscaledDeltaTime, now = Time.unscaledTime;
             var pointer = Mouse.current != null ? Mouse.current.position.ReadValue() : new Vector2(-1f, -1f);
@@ -605,11 +636,11 @@ namespace AnomalyArena
 
         static void Tick(Panel panel, Vector2 canvas)
         {
-                                                                                                         
+            // A short fade in. Very narrow windows scale the panel down whole instead of cutting it off.
             float t = Mathf.Clamp01(panel.age / .16f);
             t = t * t * (3f - 2f * t);
             if (panel.group.alpha != t) panel.group.alpha = t;
-                                                                       
+            // The panels with a free-length summary end just below it.
             if (panel.summary && panel.summary.text != panel.summaryShown)
             {
                 panel.summaryShown = panel.summary.text;
@@ -618,7 +649,7 @@ namespace AnomalyArena
                     : Mathf.Clamp(panel.summaryTop + panel.summary.preferredHeight + 44f, panel.heightWithoutSummary, panel.size.y));
             }
             float fit = Mathf.Min(1f, canvas.x / panel.content.sizeDelta.x, canvas.y / panel.content.sizeDelta.y);
-                                                                                            
+            // Written only when it changes: a moved transform makes the canvas batch again.
             Vector3 scale = Vector3.one * fit * (.985f + .015f * t);
             if (panel.content.localScale != scale) panel.content.localScale = scale;
             foreach (var entry in panel.fits)
@@ -628,7 +659,7 @@ namespace AnomalyArena
                 ArenaTextFit.Refit(entry.label, entry.largest, entry.smallest);
             }
             if (panel.cards.Count == 0) return;
-                                                                                                                        
+            // Replacing a weapon offers two cards where the others offer three, so the row is centred on what is shown.
             int shown = 0;
             foreach (var card in panel.cards) if (card.choice.gameObject.activeSelf) shown++;
             if (shown == panel.shownCards) return;

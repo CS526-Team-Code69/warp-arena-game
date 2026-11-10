@@ -7,11 +7,12 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>The first-sight black-hole cutscene (document 12): it starts the first time an active, unfed hole is on screen during a
+    /// wave, three fodder spiral in and feed the hole, and play resumes. It lives in run memory only, so a new run plays it again.</summary>
     [TestFixture]
     public class HoleIntroTest
     {
-        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
 
         [TearDown]
         public void TearDown() => Time.timeScale = 1f;
@@ -35,7 +36,7 @@ namespace AnomalyArena
             Assume.That(hole, Is.Not.Null, "the arena has an active fixed hole");
             if (game.RunPhase != ArenaUiState.Cutscene)
             {
-
+                // Stand just outside the gravity ring so the hole is on screen.
                 Vector3 away = Query.Flat(game.player.Position - hole.Centre);
                 away = away.sqrMagnitude > .01f ? away.normalized : Vector3.forward;
                 Vector3 spot = hole.Centre + away * (hole.GravityRadius + 3f);

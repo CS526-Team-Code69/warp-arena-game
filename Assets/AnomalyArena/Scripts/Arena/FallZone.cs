@@ -2,6 +2,7 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
+    /// <summary>Trigger placed outside each gap: touching it counts as falling, regardless of distance to the edge.</summary>
     [RequireComponent(typeof(BoxCollider))]
     public class FallZone : MonoBehaviour
     {
@@ -11,7 +12,7 @@ namespace AnomalyArena
 
         void OnTriggerEnter(Collider other) => Handle(other);
 
-
+        // Entering while hooked does not count as falling; if still inside after release, the next frame counts
         void OnTriggerStay(Collider other) => Handle(other);
 
         void Handle(Collider other)

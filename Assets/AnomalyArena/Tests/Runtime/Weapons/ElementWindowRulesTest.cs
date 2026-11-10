@@ -10,14 +10,22 @@ using Object = UnityEngine.Object;
 
 namespace AnomalyArena
 {
-
+    /// <summary>Element rules on enemies: an element status lasts 3 s after its last hit, a hit renews it, and
+    /// once it runs out the stacks drain within 1 s; Poison holds up to 10 stacks that each deal a share a second through the Shield;
+    /// a Fire hit sets the enemy burning at a quarter of the hit a second for the window, the heaviest hit counts and the Shield cuts
+    /// the burn; each Frost stack slows moves and attacks 10%, each Lightning stack adds 5% damage taken and a chance to twitch; full
+    /// stacks freeze (with extra damage taken) or paralyse (the most extra damage), clear the stacks and leave 2 s in which stacks build
+    /// but nothing controls; bosses are never frozen, paralysed or twitched; a freeze or a twitch cuts a wind-up short and stops a
+    /// Rammer's charge; the Infusion and Wildfire cards say so in both languages.</summary>
     [TestFixture]
     public class ElementWindowRulesTest
     {
-        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
 
         [TearDown]
         public void RestoreClock() => Time.timeScale = 1f;
+
+        // ───── Window and drain ─────
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task EnemyStacks_RenewedInsideTheWindow_HoldThenDrainWithinTheDrainTime()
@@ -25,7 +33,7 @@ namespace AnomalyArena
             var (game, targets) = await V3CombatSmokeTest.StartSandbox();
             var board = Manual(targets[0]);
             var rules = board.Rules;
-            board.ControlThresholdFactor = 100f;                                                                    
+            board.ControlThresholdFactor = 100f; // nothing freezes or paralyses: only the window and the drain show
             Assume.That(rules.elementWindow, Is.GreaterThan(.5f), "a window long enough to step through");
             Assume.That(rules.elementDrainSeconds, Is.GreaterThan(.3f), "a drain long enough to catch half-way");
 
@@ -38,7 +46,7 @@ namespace AnomalyArena
                 board.Add(element, 1f, game.player);
                 board.Tick(rules.elementWindow - .1f);
                 float renewed = Stacks(board, element);
-                board.Tick(.2f);                                                  
+                board.Tick(.2f); // the window runs out half-way through this step
                 float draining = Stacks(board, element);
                 board.Tick(rules.elementDrainSeconds);
                 float drained = Stacks(board, element);
@@ -76,6 +84,8 @@ namespace AnomalyArena
             }
         }
 
+        // ───── Poison ─────
+
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task PoisonOnAnEnemy_StopsAtTenStacks_EachDealsItsShareASecondThroughTheShieldAndStays()
         {
@@ -95,12 +105,14 @@ namespace AnomalyArena
 
             Assert.That(rules.poisonOnEnemyCap, Is.EqualTo(10f), "the design cap: ten stacks");
             Assert.That(capped, Is.EqualTo(rules.poisonOnEnemyCap), "more Poison stops at the cap");
-
+            // The ticks pay whole points and carry the rest, so at most one point waits for the next tick.
             Assert.That(hp - sut.Hp, Is.EqualTo(expected).Within(1f), "each stack deals its share a second");
             Assert.That(hp - sut.Hp, Is.GreaterThan(0f), "and the ticks land");
             Assert.That(board.Shield, Is.EqualTo(shield), "straight past the Shield into the HP");
             Assert.That(board.Poison, Is.EqualTo(rules.poisonOnEnemyCap), "and the stacks stay while the window lasts");
         }
+
+        // ───── Fire ─────
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task FireHit_OnAnEnemy_BurnsItsShareOfTheHitASecondForTheWindowAndThenStops()
@@ -137,7 +149,7 @@ namespace AnomalyArena
             board.Tick(rules.elementWindow - 1f);
             sut.ReceiveDamage(Hit(game, 4f, ElementKind.Fire));
             float kept = board.Fire;
-            board.Tick(1.5f);                                                           
+            board.Tick(1.5f); // past the first hit's own window, inside the renewed one
             bool stillBurning = board.Burning;
             sut.ReceiveDamage(Hit(game, 32f, ElementKind.Fire));
             float raised = board.Fire;
@@ -159,12 +171,12 @@ namespace AnomalyArena
 
             sut.ReceiveDamage(Hit(game, 40f, ElementKind.Fire));
             for (int step = 0; step < 4; step++) board.Tick(.1f);
-            sut.ReceiveDamage(Hit(game, 4f, ElementKind.Fire));                                            
+            sut.ReceiveDamage(Hit(game, 4f, ElementKind.Fire)); // renews the window 0.4 s after the ignite
             float afterHits = sut.Hp;
             for (int step = 0; step < Mathf.CeilToInt(rules.elementWindow * 10f) + 5; step++) board.Tick(.1f);
 
             Assert.That(board.Burning, Is.False, "the burn is over");
-
+            // No tick fell in the first 0.4 s, so all of the burn comes after the second hit; whole points carry the rest, at most one.
             Assert.That(afterHits - sut.Hp, Is.EqualTo(40f * rules.fireBurnShare * (rules.elementWindow + .4f)).Within(1f),
                 "the heaviest hit's rate for the whole renewed time, its last part between two ticks included");
         }
@@ -198,7 +210,7 @@ namespace AnomalyArena
             targets[2].DiscardWithoutReward();
             var sut = targets[0];
             var board = Bare(sut);
-
+            // Within the trail's reach of the point it starts from, the player's feet.
             V3CombatSmokeTest.Teleport(sut, game.player.Position + Vector3.right * .6f);
             Physics.SyncTransforms();
             Assume.That(game.skills.Learn(SkillId.FlameWake), Is.True, "Flame Wake is learned");
@@ -242,6 +254,7 @@ namespace AnomalyArena
             var rules = board.Rules;
             float hp = sut.Hp;
 
+            // Fire stacks from a source with no burn rate of its own.
             board.Add(ElementKind.Fire, 2f, game.player);
             bool burning = board.Burning;
             immune.Add(ElementKind.Fire, 2f, game.player);
@@ -264,7 +277,7 @@ namespace AnomalyArena
             float chance = stats.critChance;
             try
             {
-                stats.critChance = 1f;                                      
+                stats.critChance = 1f; // every player hit on an enemy crits
                 float hp = sut.Hp;
                 sut.ReceiveDamage(Hit(game, 20f, ElementKind.Fire));
                 Assume.That(sut.LastHitCritical, Is.True, "the hit crit");
@@ -306,7 +319,7 @@ namespace AnomalyArena
             targets[0].ReceiveDamage(Hit(game, 2f, ElementKind.Fire));
             targets[1].ReceiveDamage(Hit(game, 40f, ElementKind.Fire));
             string strong = Mathf.RoundToInt(40f * rules.fireBurnShare).ToString();
-
+            // The bar each enemy is bound to; its fire count shows only while the icon does (null without a bar).
             var bindings = (Enemy[])typeof(V2WorldLabels).GetField("bindings", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(labels);
             string FireCount(Enemy enemy)
             {
@@ -321,6 +334,8 @@ namespace AnomalyArena
             Assert.That(FireCount(targets[1]), Is.EqualTo(strong), "a strong one its rate a second");
             Assert.That(FireCount(targets[2]), Is.Empty, "an enemy that does not burn shows no fire icon");
         }
+
+        // ───── Frost ─────
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task FrostStacks_SlowMovesAndAttacksTenPercentEach_OnAnyBody_AtMostHalf()
@@ -338,7 +353,7 @@ namespace AnomalyArena
                 slowed.Add(board.SpeedMultiplier);
             }
             board.ClearStatuses();
-            board.ControlThresholdFactor = 2f;                             
+            board.ControlThresholdFactor = 2f; // a large body needs twelve
             board.Add(ElementKind.Frost, 4f);
             float large = board.SpeedMultiplier;
             board.Add(ElementKind.Frost, 7f);
@@ -385,6 +400,8 @@ namespace AnomalyArena
             Assert.That(refrozen, Is.True, "full stacks freeze it as soon as the immunity ends");
         }
 
+        // ───── Lightning ─────
+
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task LightningStacks_RaisePlayerDamageFivePercentEach_AParalysedEnemyTakesTheMost_EnemyHitsGainNothing()
         {
@@ -423,7 +440,7 @@ namespace AnomalyArena
             var rules = board.Rules;
             rules.lightningTwitchChancePerStack = .1f;
             rules.lightningTwitchChanceMax = .5f;
-            board.ControlThresholdFactor = 2f;                             
+            board.ControlThresholdFactor = 2f; // a large body needs twelve
 
             board.Add(ElementKind.Lightning, 3f, game.player);
             float three = board.LightningDamageTaken, threeChance = board.TwitchChance;
@@ -444,7 +461,7 @@ namespace AnomalyArena
             var board = Manual(targets[0]);
             var rules = board.Rules;
 
-            rules.lightningTwitchChancePerStack = 1f;                                     
+            rules.lightningTwitchChancePerStack = 1f; // one stack: a twitch at every roll
             rules.lightningTwitchChanceMax = 1f;
             board.Add(ElementKind.Lightning, 1f, game.player);
             board.Tick(rules.twitchInterval - .05f);
@@ -455,7 +472,7 @@ namespace AnomalyArena
             bool over = !board.Twitching;
             bool paralysed = board.Paralysed;
 
-            rules.lightningTwitchChancePerStack = 0f;                    
+            rules.lightningTwitchChancePerStack = 0f; // no chance: never
             board.ClearStatuses();
             board.Add(ElementKind.Lightning, 5f, game.player);
             bool everTwitched = false;
@@ -497,6 +514,8 @@ namespace AnomalyArena
             Assert.That(paralysedAgain, Is.True, "full stacks paralyse it as soon as the immunity ends");
         }
 
+        // ───── Bosses ─────
+
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task Bosses_FullFrostAndLightning_NeverFreezeParalyseOrTwitch()
         {
@@ -507,7 +526,7 @@ namespace AnomalyArena
             var tyrant = game.waves.SpawnLabTyrant(game.player.Position + Vector3.forward * 12f);
             Assume.That(tyrant && tyrant.IsBoss, Is.True, "the scene keeps the Tyrant");
             tyrant.enabled = false;
-
+            // Even a body without the bosses' element immunities, once immune to control as bosses are.
             var stripped = Manual(targets[1]);
             stripped.ImmuneToControl = true;
             var boards = new[] { Manual(prophet), Manual(tyrant), stripped };
@@ -532,6 +551,8 @@ namespace AnomalyArena
             Assert.That(controlled, Is.False, "a boss is never frozen, paralysed or made to twitch");
         }
 
+        // ───── Interrupts ─────
+
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task Freeze_DuringARammersWindUpOrCharge_CutsTheWindUpShortAndStopsTheCharge()
         {
@@ -551,7 +572,7 @@ namespace AnomalyArena
             bool windUpCut = !rammer.WindingUp;
 
             await Until(() => !board.Frozen, 4f, "it thaws");
-            board.ClearStatuses();                                                
+            board.ClearStatuses(); // a fresh body, so it can freeze again at once
             await Until(() => rammer.Charging, 6f, "it winds up again and charges");
             board.Add(ElementKind.Frost, board.FrostThreshold, game.player);
             Assume.That(board.Frozen, Is.True, "full Frost freezes it mid-charge");
@@ -580,7 +601,7 @@ namespace AnomalyArena
             var rules = Object.Instantiate(original);
             try
             {
-
+                // One stack twitches it within a moment: a roll every 0.05 s that never misses.
                 rules.lightningTwitchChancePerStack = 1f;
                 rules.lightningTwitchChanceMax = 1f;
                 rules.twitchInterval = .05f;
@@ -605,6 +626,8 @@ namespace AnomalyArena
             finally { board.Rules = original; Object.Destroy(rules); }
         }
 
+        // ───── Card texts ─────
+
         [Test, LoadScene(Scene), Category("Integration"), Timeout(60000)]
         public async Task InfusionAndWildfireCards_BothLanguages_SayTheNewElementRulesWithTheLiveNumbersAndFit()
         {
@@ -627,7 +650,7 @@ namespace AnomalyArena
             var locale = new GameObject("test locale").AddComponent<ArenaLocaleButton>();
             try
             {
-
+                // Only Infusion weighs anything and the rifle has no element yet: the card infuses one of the seven.
                 infusionOnly.weaponDirectionBands = new[] { new WeaponDirectionBand(1, 0f, 0f, 100f) };
                 game.progression.Rules = infusionOnly;
                 game.runWeapons.Hand = new[] { new RunWeapon { form = WeaponForm.Rifle, variant = 0, revealed = true }, null };
@@ -651,7 +674,7 @@ namespace AnomalyArena
                     }
                     foreach (var element in elements)
                     {
-                        string body = ArenaText.Pair("Infuse ","Infuse ") + ArenaTerms.Element(element) + "\n" + ArenaTerms.ElementRule(element);
+                        string body = ArenaText.Pair("灌注 ", "Infuse ") + ArenaTerms.Element(element) + "\n" + ArenaTerms.ElementRule(element);
                         if (!FitsTheCard(choice, body, out string fit)) overflow.Add($"{code} {element}: {fit}");
                     }
                 }
@@ -672,23 +695,25 @@ namespace AnomalyArena
             string N(float value) => value.ToString("0.##");
             Assert.That(cardRule, Is.Not.Null.And.Not.Empty, "an Infusion card came up");
             Assert.That(cardBody, Does.Contain(cardRule), "the Infusion card carries its element's rule");
-            Assert.That(zh[0], Does.Contain(P(r.fireBurnShare)).And.Contain($"{N(r.elementWindow)} s").And.Contain("DPS"), "Fire: a share of the weapon's DPS a second");
+            Assert.That(zh[0], Does.Contain(P(r.fireBurnShare)).And.Contain($"{N(r.elementWindow)} 秒").And.Contain("秒伤"), "Fire: a share of the weapon's DPS a second");
             Assert.That(en[0], Does.Contain(P(r.fireBurnShare)).And.Contain($"{N(r.elementWindow)} s").And.Contain("DPS"));
-            Assert.That(zh[1], Does.Contain($"up to {N(r.poisonOnEnemyCap)}").And.Contain("through Shields"), "Poison: ten stacks through the Shield");
+            Assert.That(zh[1], Does.Contain($"最多 {N(r.poisonOnEnemyCap)} 层").And.Contain("无视护盾"), "Poison: ten stacks through the Shield");
             Assert.That(en[1], Does.Contain($"up to {N(r.poisonOnEnemyCap)}").And.Contain("through Shields"));
-            Assert.That(zh[2], Does.Contain(P(r.frostSlowPerStack)).And.Contain($"{N(r.frostThreshold)}").And.Contain($"{N(r.controlImmunity)} s"),
+            Assert.That(zh[2], Does.Contain(P(r.frostSlowPerStack)).And.Contain($"{N(r.frostThreshold)} 层").And.Contain($"{N(r.controlImmunity)} 秒不会再冻结"),
                 "Frost: the slow per stack, the threshold and the immunity");
             Assert.That(en[2], Does.Contain(P(r.frostSlowPerStack)).And.Contain($"at {N(r.frostThreshold)}").And.Contain($"for {N(r.controlImmunity)} s"));
-            Assert.That(zh[3], Does.Contain(P(r.lightningVulnerabilityPerStack)).And.Contain(P(r.lightningTwitchChancePerStack)).And.Contain("twitch")
-                .And.Contain($"{N(r.controlImmunity)} s"), "Lightning: damage taken and twitch chance per stack, the immunity");
+            Assert.That(zh[3], Does.Contain(P(r.lightningVulnerabilityPerStack)).And.Contain(P(r.lightningTwitchChancePerStack)).And.Contain("抽搐")
+                .And.Contain($"{N(r.controlImmunity)} 秒不会再麻痹"), "Lightning: damage taken and twitch chance per stack, the immunity");
             Assert.That(en[3], Does.Contain(P(r.lightningVulnerabilityPerStack)).And.Contain("twitch").And.Contain($"for {N(r.controlImmunity)} s"));
-            Assert.That(zh[4], Does.Contain(P(r.earthShare)).And.Contain("Shield"), "Earth: a share as Shield");
-            Assert.That(zh[5], Does.Contain(P(r.lightShare)).And.Contain("heal"), "Light: a share as healing");
-            Assert.That(zh[6], Does.Contain(P(r.voidShare)).And.Contain("Energy"), "Void: a share as Energy");
-            Assert.That(zh[7], Does.Contain("burns").And.Contain($"burns for {fenceBurn} per second"), "Wildfire fence: the enemy burns a fixed amount a second");
+            Assert.That(zh[4], Does.Contain(P(r.earthShare)).And.Contain("护盾"), "Earth: a share as Shield");
+            Assert.That(zh[5], Does.Contain(P(r.lightShare)).And.Contain("回血"), "Light: a share as healing");
+            Assert.That(zh[6], Does.Contain(P(r.voidShare)).And.Contain("能量"), "Void: a share as Energy");
+            Assert.That(zh[7], Does.Contain("被点燃").And.Contain($"每秒烧 {fenceBurn} 点"), "Wildfire fence: the enemy burns a fixed amount a second");
             Assert.That(en[7], Does.Contain($"burns for {fenceBurn} per second"));
             Assert.That(overflow, Is.Empty, "every Infusion card fits its body box");
         }
+
+        // ───── Helpers ─────
 
         static float Stacks(ElementStatus board, ElementKind element) => element switch
         {
@@ -698,6 +723,7 @@ namespace AnomalyArena
             _ => board.Fire
         };
 
+        /// <summary>A player hit of this element, as a weapon carrying it lands one.</summary>
         static DamageInfo Hit(GameManager game, float amount, ElementKind element, bool noJump = false)
         {
             var info = DamageInfo.Attack(amount, game.player);
@@ -706,6 +732,7 @@ namespace AnomalyArena
             return info;
         }
 
+        /// <summary>The body's status board with no Shield and no statuses.</summary>
         static ElementStatus Bare(Combatant body)
         {
             var board = ElementStatus.For(body);
@@ -714,6 +741,8 @@ namespace AnomalyArena
             return board;
         }
 
+        /// <summary>The body's bare status board on its own copy of the rules (Lightning stacks never twitch unless a test says so),
+        /// out of the game's status loop, so only the test moves its clock.</summary>
         static ElementStatus Manual(Combatant body)
         {
             var board = Bare(body);
@@ -723,6 +752,7 @@ namespace AnomalyArena
             return board;
         }
 
+        /// <summary>Turns a frozen sandbox target into a live enemy of this kind at a point; it keeps still and attacks on its own.</summary>
         static void Arm(Enemy enemy, GameManager game, EnemyKind kind, Vector3 at)
         {
             enemy.Configure(game.waves.DefinitionOf(kind), 1f, false);
@@ -732,6 +762,7 @@ namespace AnomalyArena
             Physics.SyncTransforms();
         }
 
+        /// <summary>Whether this text shows in full in the draft card's body box (CardTextFitTest's measure).</summary>
         static bool FitsTheCard(V2UiChoice choice, string text, out string report)
         {
             choice.ShowBody(text);

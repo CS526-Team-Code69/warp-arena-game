@@ -3,12 +3,15 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>What weapons and enemies were still missing: an element shows when it lands, an affix shows on its enemy, a charge shows while it builds,
+    /// enemies arrive through the warp, a Warden's shield is seen going out. Everything here only reads game state.</summary>
     public sealed partial class V5Vfx
     {
+        // ───── An element landing ─────
 
         readonly Dictionary<(Component body, ElementKind element), float> nextTouch = new();
 
+        /// <summary>At most a few a second per body and element, so rapid fire does not smother the target.</summary>
         bool Throttled(Component body, ElementKind element, float interval)
         {
             var key = (body, element);
@@ -18,6 +21,7 @@ namespace AnomalyArena
             return false;
         }
 
+        /// <summary>An element reaching a body: a small burst that says which one it is.</summary>
         public void ElementTouch(Combatant body, ElementKind element)
         {
             if (!body || Throttled(body, element, .16f)) return;
@@ -48,6 +52,7 @@ namespace AnomalyArena
             }
         }
 
+        /// <summary>The elements that pay their wielder: Earth raises a shield, Light heals, Void gives Energy. Motes fly to the wielder.</summary>
         public void WielderPay(Combatant body, ElementKind element)
         {
             if (!body || element is not (ElementKind.Earth or ElementKind.Light or ElementKind.Void) || Throttled(body, element, .22f)) return;
@@ -62,6 +67,9 @@ namespace AnomalyArena
             if (element == ElementKind.Earth) groundGlow.Emit(OnGround(at), Vector3.zero, 3f, .22f, WithAlpha(c, .4f));
         }
 
+        // ───── An affix on its enemy ─────
+
+        /// <summary>A body that carries an element shows it: flames, gas, frost, sparks, dust, light or void smoke rising from it.</summary>
         public void AffixAura(Enemy enemy, ElementKind element)
         {
             float r = Mathf.Max(.4f, enemy.radius);
@@ -95,6 +103,7 @@ namespace AnomalyArena
             }
         }
 
+        /// <summary>A Rammer on its charge: dust thrown up behind it, in the colour of its affix when it has one.</summary>
         public void ChargeDust(Enemy enemy)
         {
             Vector3 feet = OnGround(enemy.Position, .3f);
@@ -102,6 +111,7 @@ namespace AnomalyArena
             if (enemy.Affix != ElementKind.None && Chance(16f)) ember.Emit(feet, Random.insideUnitSphere * 2f + Vector3.up, R(.06f, .11f), R(.25f, .45f), ElementTint(enemy.Affix));
         }
 
+        /// <summary>A Warden's shield going out to an ally.</summary>
         public void WardLink(Vector3 from, Vector3 to, float radius)
         {
             Color c = new(1f, .84f, .5f);
@@ -111,6 +121,7 @@ namespace AnomalyArena
             ringLayer.Emit(OnGround(to, .09f), Vector3.zero, Mathf.Max(1.2f, radius * 2.8f), .3f, WithAlpha(c, .7f));
         }
 
+        /// <summary>The cloak of a Shade, coming or going: a puff of dark smoke.</summary>
         public void CloakPuff(Vector3 at, float radius)
         {
             Vector3 air = Query.AtCastHeight(at);
@@ -119,6 +130,7 @@ namespace AnomalyArena
             for (int i = 0; i < Count(4); i++) ember.Emit(air, Random.insideUnitSphere * 3f, R(.05f, .09f), R(.2f, .4f), VoidTint);
         }
 
+        /// <summary>An enemy arriving through the warp: smoke and a violet rim at its feet.</summary>
         public void SpawnPuff(Enemy enemy)
         {
             if (!enemy) return;
@@ -130,11 +142,14 @@ namespace AnomalyArena
             for (int i = 0; i < Count(4); i++) ember.Emit(OnGround(at, .4f) + Random.insideUnitSphere * r * .6f, Vector3.up * R(1.5f, 3.5f), R(.05f, .1f), R(.3f, .55f), VoidTint);
         }
 
+        // ───── A weapon in the hand ─────
+
         WaveManager subscribedWaves;
         WorldMap subscribedWorld;
         readonly Dictionary<Enemy, bool> cloaks = new();
         readonly Dictionary<Enemy, int> bossPhases = new();
 
+        /// <summary>A hole taking a body: its edge flares and motes spiral in.</summary>
         void HoleFed(BlackHole hole)
         {
             if (!On || !hole) return;
@@ -175,7 +190,7 @@ namespace AnomalyArena
                 if (enemy.Charging) ChargeDust(enemy);
                 if (enemy.IsBoss)
                 {
-
+                    // A boss entering a new phase: the Prophet's void bursts out, the Tyrant shakes the ground.
                     if (bossPhases.TryGetValue(enemy, out int phase) && phase != enemy.BossPhase)
                     {
                         if (enemy.definition.kind == EnemyKind.Hollow) VoidExplosion(enemy.Position, 6f);
@@ -215,19 +230,20 @@ namespace AnomalyArena
             }
             else if (w.form == WeaponForm.ArcCoil && w.variant == 1 && t > .02f)
             {
-
+                // The Capacitor holds its charge in the coil: sparks round the player as it fills, a steady crackle when full.
                 Vector3 at = Query.AtCastHeight(player.Position);
                 if (Chance(Mathf.Lerp(2f, 22f, t))) elec.Emit(at + Random.insideUnitSphere * .9f, Vector3.zero, R(.9f, 1.5f) * Mathf.Lerp(.7f, 1.4f, t), R(.05f, .09f), ArcTint, R(0f, 360f));
                 if (t >= 1f && Chance(10f)) Bolt(at + Random.insideUnitSphere * 1.2f, at + Random.insideUnitSphere * 1.2f, ArcTint, .8f, .06f);
             }
             else if (w.form == WeaponForm.Minigun && t > .35f)
             {
-
+                // A barrel that has been firing: it glows and smokes, more as the spin or the heat climbs.
                 if (Chance(Mathf.Lerp(2f, 16f, t))) smokeLow.Emit(muzzle, Vector3.up * R(.5f, 1.2f) + aim * .3f, R(.4f, .8f), R(.3f, .6f), new Color(.6f, .58f, .56f, .3f * t), R(0f, 360f));
                 if (w.variant == 1 && t > .7f && Chance(14f)) ember.Emit(muzzle, Random.insideUnitSphere * 2f + Vector3.up, R(.05f, .09f), R(.2f, .4f), FireTint);
             }
         }
 
+        /// <summary>A shot gathering at the muzzle: motes falling in, a light growing with the charge, a flare when it is full.</summary>
         void ChargeGlow(Vector3 muzzle, float t, Color c)
         {
             if (Chance(Mathf.Lerp(10f, 40f, t)))
@@ -242,6 +258,7 @@ namespace AnomalyArena
             if (Chance(8f)) groundGlow.Emit(OnGround(muzzle), Vector3.zero, Mathf.Lerp(1f, 2.6f, t), .12f, WithAlpha(c, Mathf.Lerp(.1f, .42f, t)));
         }
 
+        /// <summary>A burst of lightning from a point out to its true reach (the Capacitor's discharge).</summary>
         public void Nova(Vector3 at, float range, Color c)
         {
             Vector3 centre = Query.AtCastHeight(at);
@@ -256,12 +273,17 @@ namespace AnomalyArena
             }
         }
 
+        /// <summary>A spent case thrown out to the side of the gun.</summary>
         public void CaseEject(Vector3 at, Vector3 aim, bool shotgun = false)
         {
             Vector3 side = new Vector3(-aim.z, 0f, aim.x) * (Random.value < .5f ? -1f : 1f);
             casing.Emit(at, side * R(3.5f, 6.5f) + Vector3.up * R(3f, 6f) - aim * R(.5f, 1.8f), shotgun ? .56f : .42f, R(.42f, .66f), shotgun ? new Color(1f, .58f, .48f) : Color.white);
         }
 
+        // ───── Shooting feel ─────
+
+        /// <summary>Everything the player feels at the moment of a shot, weapon by weapon: camera push against the aim, shake, the model's recoil, the view closing in a little
+        /// and the size of the muzzle flash. Nothing pauses the world (document: hit feedback never slows the game).</summary>
         public void FireKick(RunWeapon w, PlayerController body, Vector3 aim, HitFeelProfile profile)
         {
             var gm = GameManager.Instance;
@@ -270,7 +292,7 @@ namespace AnomalyArena
             {
                 (WeaponForm.Rifle, 0) => (.12f + .4f * charge, .04f + .14f * charge, .2f + .35f * charge, .004f + .012f * charge, 1.9f + 1.6f * charge),
                 (WeaponForm.Rifle, _) => (.09f, 0f, .16f, 0f, 1.7f),
-                (WeaponForm.ScatterCannon, 0) => (.56f, .24f, .5f, .017f, 0f),                                   
+                (WeaponForm.ScatterCannon, 0) => (.56f, .24f, .5f, .017f, 0f), // ScatterShot draws its own blast
                 (WeaponForm.ScatterCannon, _) => (.16f, .05f, .2f, .002f, 1.9f),
                 (WeaponForm.RocketLauncher, 0) => (.32f, .1f, .42f, .006f, 2.6f),
                 (WeaponForm.Railgun, 0) => (.6f, .3f, .55f, .02f, 3.2f),
@@ -290,13 +312,14 @@ namespace AnomalyArena
             if (size > 0f) Muzzle(Query.AtCastHeight(body.Position) + aim * (body.radius + .45f), aim, flashColour, size, w.form is WeaponForm.Rifle or WeaponForm.Minigun or WeaponForm.ScatterCannon);
         }
 
+        /// <summary>A shotgun blast: a tongue of flame, and pellets that really fly out across the true cone and stop at the first body or wall they meet, kicking up what they hit.</summary>
         public void ScatterShot(Vector3 origin, Vector3 dir, float range, float arcDeg, ElementKind element)
         {
             Vector3 d = FlatDir(dir, Vector3.forward);
             Vector3 at = new Vector3(origin.x, Query.CastHeight, origin.z) + d * 1.1f;
             float half = Mathf.Clamp(arcDeg, 10f, 170f) * .5f;
             Color hot = element == ElementKind.None ? new Color(1f, .86f, .56f) : ElementTint(element);
-
+            // The art points along +X in the picture.
             float roll = ScreenRoll(d);
             blastFlash.Emit(at + d * 1.3f, d * 5f, 5.2f, .09f, Bright(hot, .3f), -roll);
             flash.Emit(at + d * .4f, Vector3.zero, 3.6f, .07f, hot);
@@ -309,7 +332,7 @@ namespace AnomalyArena
             int pellets = Count(20);
             for (int i = 0; i < pellets; i++)
             {
-
+                // More of them near the middle of the cone, the way a real pattern spreads.
                 float spread = R(-1f, 1f);
                 Vector3 v = Quaternion.Euler(0f, spread * Mathf.Abs(spread) * .4f * half + spread * .6f * half, 0f) * d;
                 float speed = R(46f, 78f);
@@ -335,6 +358,7 @@ namespace AnomalyArena
 
         readonly List<PelletHit> pelletHits = new();
 
+        /// <summary>How far a pellet flies: to the first body or wall on its line, or to its own reach. The blast's damage is decided by the weapon; this is only where it shows.</summary>
         static float PelletStop(Vector3 from, Vector3 dir, float reach, out bool body)
         {
             float best = reach;
@@ -370,7 +394,7 @@ namespace AnomalyArena
                 }
                 else
                 {
-
+                    // Kicked-up ground, or chips off a wall.
                     smokeLow.Emit(new Vector3(hit.at.x, .4f, hit.at.z), Vector3.up * R(.5f, 1.4f) + hit.along * R(.5f, 1.5f), R(.45f, .8f), R(.2f, .36f), new Color(.66f, .6f, .52f, .42f), R(0f, 360f));
                     if (Random.value < .5f) debris.Emit(new Vector3(hit.at.x, .4f, hit.at.z), Vector3.up * R(2f, 5f) + hit.along * R(-1f, 2f), R(.12f, .22f), R(.25f, .45f), new Color(.5f, .46f, .42f), R(0f, 360f));
                     spark.Emit(new Vector3(hit.at.x, .4f, hit.at.z), Vector3.up * R(2f, 5f) + hit.along * R(1f, 5f), R(.07f, .11f), R(.07f, .14f), Bright(hit.tint, .3f));
@@ -380,6 +404,7 @@ namespace AnomalyArena
 
         static readonly Color Ichor = new(.42f, .05f, .09f);
 
+        /// <summary>A blast near the player shakes the view, by its size.</summary>
         void BlastShake(Vector3 at, float radius)
         {
             var gm = GameManager.Instance;
@@ -392,6 +417,7 @@ namespace AnomalyArena
 
         float footClock;
 
+        /// <summary>Sprinting kicks up dust at the feet.</summary>
         void TickFeet()
         {
             var gm = GameManager.Instance;
@@ -403,6 +429,9 @@ namespace AnomalyArena
             smokeLow.Emit(new Vector3(p.x + R(-.3f, .3f), .25f, p.z + R(-.3f, .3f)), Vector3.up * R(.2f, .6f), R(.6f, 1.05f), R(.28f, .46f), new Color(.62f, .58f, .5f, .32f), R(0f, 360f));
         }
 
+        // ───── The earth wall ─────
+
+        /// <summary>The Bulwark breaking out of the ground: cracks under it, thrown rock, dust along both faces, and the ground shaking.</summary>
         public void EarthRise(Vector3 at, Quaternion facing, float width)
         {
             Vector3 along = facing * Vector3.right, side = facing * Vector3.forward;
@@ -429,6 +458,7 @@ namespace AnomalyArena
             }
         }
 
+        /// <summary>The wall's time is up: it falls apart into rubble and dust.</summary>
         public void EarthCrumble(Vector3 at, Quaternion facing, float width)
         {
             Vector3 along = facing * Vector3.right;
@@ -441,11 +471,15 @@ namespace AnomalyArena
             }
         }
 
+        /// <summary>A material for a quad of the wall art: this shader, blended by the texture's alpha.</summary>
         public Material EffectMaterial(string texture) => Mat(texture, false, 1f, 0f, 0f);
+
+        // ───── Time ─────
 
         readonly List<ParticleSystem> allLayers = new();
         bool layersFrozen;
 
+        /// <summary>Particles alive in all the layers now.</summary>
         public int LiveParticles
         {
             get
@@ -456,6 +490,7 @@ namespace AnomalyArena
             }
         }
 
+        /// <summary>The effects stop with the world (the pause menu, a card pick) and go on when it does. The return from the void trial and the first supply crate are the exceptions: they stop the clock and play their animations meanwhile.</summary>
         void TickFreeze()
         {
             var gm = GameManager.Instance;

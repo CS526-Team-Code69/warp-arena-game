@@ -2,6 +2,7 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
+    /// <summary>Switch a saved surface material with the title-screen art choice.</summary>
     public class V2SurfaceArt : MonoBehaviour
     {
         public Renderer target;

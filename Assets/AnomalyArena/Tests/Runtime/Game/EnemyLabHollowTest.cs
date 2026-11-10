@@ -8,7 +8,10 @@ using Object = UnityEngine.Object;
 
 namespace AnomalyArena
 {
-
+    /// <summary>Enemy lab: the Nash Prophet (Hollow) is in the list. Spawning it enters the void trial on its platform;
+    /// clearing ends the trial as a win, returns the player to where they stood and leaves the black holes, so it can be fought again.
+    /// With "player cannot die" on, a fall off the platform sets the player back on it instead of restarting the run, and the Hollow
+    /// holds its first attack for the opening grace.</summary>
     [TestFixture]
     [Category("V3Smoke")]
     public class EnemyLabHollowTest
@@ -43,6 +46,7 @@ namespace AnomalyArena
             Assert.That(world.holes.Count(h => h && h.Phase != HolePhase.Gone), Is.EqualTo(holes), "a lab win leaves the black holes");
             Assert.That(game.RunPhase, Is.EqualTo(ArenaUiState.Draft), "the greater void reward is offered as in a run");
 
+            // Menu commands are ignored until the input lock of a new screen releases, so keep asking.
             float deadline = Time.realtimeSinceStartup + 5f;
             while (game.RunPhase == ArenaUiState.Draft)
             {
@@ -65,6 +69,7 @@ namespace AnomalyArena
             lab.Spawn();
             Assert.That(world.TrialActive, Is.True);
 
+            // Over the edge on the right, still moving outward, as after a slam.
             V3CombatSmokeTest.Teleport(game.player, world.trialPlatform.position + Vector3.right * (world.trialRadius + 1f));
             game.player.Knockback(Vector3.right, 8f, KnockKind.Hit);
             await Awaitable.FixedUpdateAsync();

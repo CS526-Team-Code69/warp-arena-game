@@ -10,15 +10,27 @@ using Object = UnityEngine.Object;
 
 namespace AnomalyArena
 {
-
+    /// <summary>The Tyrant redesign (system doc 13.2). Moves by distance alone, on screen or not: close a Tail Sweep that
+    /// crosses its fan from left to right, throws you by the heavy tier and breaks the wall pieces it touches but never a bulwark, which
+    /// shields you from it (phase 2 also a Ground Pound whose shockwave advances band by band down a rectangle); middle a Rampage Charge down
+    /// a line as wide as its body that nothing stops: its body breaks the map wall pieces and bulwarks it touches, head-on or grazing, and
+    /// runs over holes without being swallowed, then it leaps into a fly-tier slam hitting its own minions too, landing where it can walk
+    /// even when you stand in a gravity ring; it is never stunned (phase 2 also a Royal Scepter calling a wave-14 crowd behind red crosses,
+    /// worth no experience, whose Bloaters still blow up when shot); far a Star Throw whose meteor lands where you stood and leaves fragment
+    /// walls that keep their time while a void trial freezes the battlefield (phase 2 also an Astral Guard devouring up to four nearby
+    /// minions for 5% HP and 2.5% shield each). Two phases: phase 2 refills the shield once, grows the moves and enrages it, so a whole move
+    /// cycle is much shorter. Frost and Lightning are always ignored, fixed, and only shown during its fight; its HP budget counts one shield
+    /// refill.</summary>
     [TestFixture]
     [Category("V3Smoke")]
     public class TyrantRedesignTest
     {
-        const string ArenaScene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        const string ArenaScene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
 
         [TearDown]
         public void TearDown() => Time.timeScale = 1f;
+
+        // ───── No scene ─────
 
         [Test]
         public void TyrantMoveChoice_ByDistance_CloseSweepsMiddleChargesFarThrows_PhaseTwoMovesOnlyInPhaseTwo()
@@ -57,10 +69,11 @@ namespace AnomalyArena
             Assert.That(b.rushSlamRadiusPhase2, Is.GreaterThan(b.rushSlamRadius * 1.3f));
             Assert.That(b.meteorRadiusPhase2, Is.GreaterThan(b.meteorRadius * 1.3f), "and the meteor");
 
+            // Enraged, a whole move (its wind-up, the move, its pause and the walk to the next) takes much less time (document 13.2).
             float walk = b.tyrantMoveGap, shortWalk = b.tyrantMoveGap * b.tyrantEnragedGapShare, quick = b.tyrantEnragedWindupShare;
             float sweep = (b.sweepWindup + b.sweepSeconds + walk) / (b.sweepWindup * quick + b.sweepSeconds + shortWalk);
             float meteor = (b.meteorWindup + walk) / (b.meteorWindup * quick + shortWalk);
-
+            // A charge from 10 cells: its run at the arena's movement scale (WaveManager.movementSpeedMultiplier 0.5) and its leap keep their time.
             float motion = (10f - b.rushLeapDistance) / (b.rushSpeed * .5f) + b.rushLeapFlight;
             float charge = (b.rushWindup + motion + b.rushRecovery + walk) / ((b.rushWindup + b.rushRecovery) * quick + motion + shortWalk);
             Assert.That(sweep, Is.GreaterThanOrEqualTo(1.5f), "enraged, its Tail Sweeps come much more often");
@@ -77,7 +90,7 @@ namespace AnomalyArena
         public void NeverStunned_NoStunTimerStateDamageBonusOrTuningIsLeft_NothingStopsItsRun()
         {
             const BindingFlags members = BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
-
+            // The boss can never be stunned; its charge breaks the walls and bulwarks it runs into instead.
             Assert.That(typeof(Enemy).GetField("bossStun", members), Is.Null, "no stun timer");
             Assert.That(typeof(Enemy).GetProperty("BossStunned", members), Is.Null, "no stun state");
             Assert.That(typeof(Enemy).GetProperty("StunDamageTaken", members), Is.Null, "no damage bonus while stunned");
@@ -119,6 +132,8 @@ namespace AnomalyArena
             }
         }
 
+        // ───── Arena sandbox ─────
+
         [Test, LoadScene(ArenaScene), Category("Integration"), Timeout(60000)]
         public async Task Immunities_AlwaysFrostAndLightning_NoWaveAnnouncesThem_ShownDuringItsFight()
         {
@@ -158,6 +173,8 @@ namespace AnomalyArena
             }
         }
 
+        /// <summary>Number table row 59: the final boss fight counts as wave 15 for R(w) and for the Tyrant's own damage
+        /// growth, though the wave number stays on the last ordinary wave; an ordinary enemy (its scepter's summons) keeps wave 14's.</summary>
         [Test, LoadScene(ArenaScene), Category("Integration"), Timeout(60000)]
         public async Task FinalBossFight_CountsAsWaveFifteen_ForRAndTheTyrantsDamage_ItsSummonsKeepWaveFourteen()
         {
@@ -199,7 +216,7 @@ namespace AnomalyArena
             foreach (var target in targets) target.DiscardWithoutReward();
             var world = WorldMap.Active;
             var player = game.player;
-
+            // Inside the phase-1 middle band (beyond the Tail Sweep's reach) but past the edge of the screen.
             var b = game.waves.bosses;
             Vector3 at = Vector3.zero;
             bool found = false;
@@ -321,10 +338,10 @@ namespace AnomalyArena
             var b = game.waves.bosses;
             targets[1].DiscardWithoutReward();
             targets[2].DiscardWithoutReward();
-
+            // Room beside the lane for you and its minion at the landing (the sandbox lane is narrower than its body).
             Assume.That(await OnChargeLane(game, tyrant, 10f, 1.5f), Is.True, "a lane wider than its body");
             var minion = targets[0];
-            V3CombatSmokeTest.Teleport(minion, tyrant.Position + Vector3.right * 12f);                                             
+            V3CombatSmokeTest.Teleport(minion, tyrant.Position + Vector3.right * 12f); // out of the way until the landing is known
             Physics.SyncTransforms();
             float playerPush = -1f, minionPush = -1f;
             void PlayerHit(DamageInfo hit) { if (hit.dealer?.Owner == tyrant) playerPush = hit.knockDistance; }
@@ -345,6 +362,7 @@ namespace AnomalyArena
                 Assert.That(Flat(landing - from).magnitude, Is.LessThanOrEqualTo(Flat(aim - from).magnitude + .1f), "never past you");
                 Assert.That(tyrant.RushSlamReach, Is.EqualTo(b.rushSlamRadius).Within(.01f), "the phase-1 slam");
 
+                // You and its minion wait inside the landing circle, beside the run's line (out of the run's own reach).
                 Vector3 ahead = (aim - from).normalized, side = Vector3.Cross(Vector3.up, ahead);
                 Place(player, landing + side * 3f);
                 V3CombatSmokeTest.Teleport(minion, landing - side * 3f);
@@ -379,7 +397,7 @@ namespace AnomalyArena
             var b = game.waves.bosses;
             Assume.That(await OnChargeLane(game, tyrant, 10f, 0f), Is.True, "a lane as wide as its body");
             Vector3 ahead = Flat(game.player.Position - tyrant.Position).normalized, wall = Flat(tyrant.Position) + ahead * 5f;
-
+            // Facing you since its first step on the lane, so the bulwark stands square across the run, halfway down it.
             var bulwark = Bulwark(wall, 3f, tyrant);
             Assume.That(bulwark, Is.Not.Null, "a bulwark stands across the lane");
 
@@ -419,7 +437,7 @@ namespace AnomalyArena
             var b = game.waves.bosses;
             Assume.That(await OnChargeLane(game, tyrant, 10f, 0f), Is.True, "a lane as wide as its body");
             Vector3 ahead = Flat(game.player.Position - tyrant.Position).normalized, side = Vector3.Cross(Vector3.up, ahead);
-
+            // A bulwark 3 wide whose near end stands 1.5 cells beside the centre line: the line misses it, the Tyrant's body does not.
             const float Beside = 1.5f;
             Assume.That(tyrant.Radius, Is.GreaterThan(Beside + .3f), "its body reaches well past the bulwark's end");
             var bulwark = Bulwark(Flat(tyrant.Position) + ahead * 5f + side * (Beside + 1.5f), 3f, tyrant);
@@ -453,13 +471,13 @@ namespace AnomalyArena
             float leap = b.rushLeapDistance;
             try
             {
-
+                // A long leap carries the landing well clear of the bulwark past the run's end.
                 b.rushLeapDistance = 8f;
                 float run = b.rushMinRun, reach = tyrant.Radius, gap = .1f;
                 Assume.That(await OnChargeLane(game, tyrant, run + b.rushLeapDistance, 0f), Is.True, "a lane as wide as its body, long enough");
                 Vector3 from = Flat(tyrant.Position), ahead = Flat(game.player.Position - tyrant.Position).normalized;
                 Vector3 side = Vector3.Cross(Vector3.up, ahead);
-
+                // A tenth of a cell out of its body's reach: one across the line past where the run ends, one beside the run's middle.
                 var pastEnd = Bulwark(from + ahead * (run + reach + gap + .5f), 3f, tyrant);
                 var beside = Bulwark(from + ahead * (run * .5f) + side * (reach + gap + 1.5f), 3f, tyrant);
                 Assume.That(pastEnd && beside, Is.True, "both bulwarks stand");
@@ -485,7 +503,7 @@ namespace AnomalyArena
             var b = game.waves.bosses;
             Assume.That(await OnChargeLane(game, tyrant, 10f, 0f), Is.True, "a lane as wide as its body");
             Vector3 from = Flat(tyrant.Position), ahead = Flat(game.player.Position - tyrant.Position).normalized;
-
+            // A Spire (kinematic, never pushed) and a minion frozen in place stand on the line, square in its body's way.
             var spire = targets[0];
             spire.Configure(game.waves.DefinitionOf(EnemyKind.Spire), 1f, false);
             spire.enabled = false;
@@ -506,6 +524,7 @@ namespace AnomalyArena
                 if (tyrant.Charging) drift = Mathf.Max(drift, Mathf.Abs(Vector3.Dot(Flat(tyrant.Position) - from, side)));
             });
 
+            // The last sample of the run can be one physics step before its end.
             Assert.That(Vector3.Dot(ranTo - from, ahead), Is.GreaterThan(run - .3f), "nothing held it back: it ran its whole planned run");
             Assert.That(drift, Is.LessThan(.1f), "straight through them, not sliding round them");
             Assert.That(Flat(tyrant.Position - landing).magnitude, Is.LessThan(.5f), "then leapt its planned leap and landed on its circle");
@@ -534,7 +553,7 @@ namespace AnomalyArena
             var b = game.waves.bosses;
             Assume.That(await OnChargeLane(game, tyrant, 5f, 1.5f), Is.True, "open ground round a short lane");
             Vector3 from = Flat(tyrant.Position), ahead = Flat(player.Position - tyrant.Position).normalized, wall = from + ahead * 3.8f;
-
+            // The bulwark stands square between you and it, inside the tail's reach; you step behind it once it stands.
             var bulwark = Bulwark(wall, 3f, tyrant);
             Assume.That(bulwark, Is.Not.Null, "a bulwark stands");
             Place(player, from + ahead * 5.5f);
@@ -564,7 +583,7 @@ namespace AnomalyArena
             var player = game.player;
             Assume.That(FindRingApproach(world, tyrant.Radius, game.waves.bosses, out var spot, out var from), Is.True,
                 "a gravity ring with open ground along it");
-
+            // Held, so the ring's pull cannot drag you into the core while it takes aim.
             var body = player.GetComponent<Rigidbody>();
             var constraints = body.constraints;
             try
@@ -627,7 +646,7 @@ namespace AnomalyArena
             targets[1].DiscardWithoutReward();
             targets[2].DiscardWithoutReward();
             Vector3 lane = Flat(tyrant.Position - player.Position).normalized;
-
+            // Stand ahead of it down the clear lane, so the rectangle runs along the lane.
             Place(player, tyrant.Position + lane * 7f);
             var minion = targets[0];
             var hits = new List<(DamageInfo hit, int band, float at)>();
@@ -643,6 +662,7 @@ namespace AnomalyArena
                 Assume.That(tyrant.PoundLength, Is.GreaterThan(6f), "room for the shockwave to travel");
                 Assert.That(tyrant.PoundStep, Is.EqualTo(-1), "no shockwave during the wind-up");
 
+                // You wait near its far end, its minion near its start.
                 Vector3 origin = tyrant.PoundOrigin, facing = tyrant.PoundFacing;
                 Place(player, origin + facing * (tyrant.PoundLength * .85f));
                 V3CombatSmokeTest.Teleport(minion, origin + facing * 1f);
@@ -750,7 +770,7 @@ namespace AnomalyArena
             try
             {
                 b.meteorFragmentLife = 2f;
-
+                // Open ground all round you, so every fragment has somewhere to land.
                 Assume.That(OpenGround(world, player.Position, b.meteorRadius + b.meteorFragmentSize, out var open), Is.True, "open ground");
                 Place(player, open);
                 Vector3 stood = Flat(player.Position);
@@ -780,6 +800,7 @@ namespace AnomalyArena
                     Assert.That(fragment.Contains(new Vector2(stood.x, stood.z)), Is.False, "none landed on you");
                 }
 
+                // The Tail Sweep breaks a fragment (TyrantTerrain is what the sweep calls each step).
                 var first = fragments[0];
                 Vector3 target = new(first.center.x, 0f, first.center.y), dir = Vector3.forward;
                 int broken = terrain.BreakSwept(target - dir * 3f, Quaternion.Euler(0f, -10f, 0f) * dir, Quaternion.Euler(0f, 10f, 0f) * dir, 4f,
@@ -806,7 +827,7 @@ namespace AnomalyArena
             var world = WorldMap.Active;
             var player = game.player;
             var b = game.waves.bosses;
-
+            // A short-lived fragment on open ground clear of every body.
             Vector3 piece = Vector3.zero;
             bool found = false;
             foreach (var point in GroundNear(world, player.Position + Vector3.right * 6f, b.meteorFragmentSize))
@@ -877,11 +898,12 @@ namespace AnomalyArena
             {
                 var extra = waves.SpawnLab(targets[0].definition.kind, tyrant.Position + Vector3.back * 20f, false, ElementKind.None);
                 Assume.That(extra, Is.Not.Null, "the pool has another minion");
-                extra.enabled = false;                               
+                extra.enabled = false; // holds still where it is put
                 extra.GetComponent<Rigidbody>().constraints = RigidbodyConstraints.FreezeAll;
                 minions.Add(extra);
             }
 
+            // One more minion than it may devour, all in reach, each a cell farther out than the last.
             for (int i = 0; i < minions.Count; i++)
                 V3CombatSmokeTest.Teleport(minions[i],
                     tyrant.Position + Quaternion.Euler(0f, 360f * i / minions.Count, 0f) * Vector3.forward * (tyrant.Radius + 1f + i));
@@ -945,6 +967,7 @@ namespace AnomalyArena
                 Assert.That(hits, Has.Count.EqualTo(1), "the tail hits you");
                 Assert.That(hits[0].amount, Is.EqualTo(tyrant.attackDamage * b.sweepDamage * b.tyrantEnragedDamage).Within(.01f), "harder");
 
+                // A whole cycle on its own clock, from one wind-up to the next: much shorter than in phase 1 (document 13.2).
                 tyrant.ForceNextBossMove(Enemy.TailSweepMove);
                 await Until(() => tyrant.WindingUp, 4f, "the next move");
                 float cycle = Time.time - started;
@@ -956,17 +979,21 @@ namespace AnomalyArena
             finally { game.player.AttackReceived -= Count; }
         }
 
+        // ───── Helpers ─────
+
         static Vector3 Flat(Vector3 v) => Query.Flat(v);
 
         static void SetPrivate(Enemy enemy, string field, float value) =>
             typeof(Enemy).GetField(field, BindingFlags.Instance | BindingFlags.NonPublic).SetValue(enemy, value);
 
+        /// <summary>The Tyrant's next move is this one, now.</summary>
         internal static void Force(Enemy tyrant, int move)
         {
             tyrant.ForceNextBossMove(move);
             SetPrivate(tyrant, "cooldown", 0f);
         }
 
+        /// <summary>Puts a body at a point at rest (no knockback carried over, no hit protection).</summary>
         internal static void Place(Combatant body, Vector3 at)
         {
             body.ClearWaveState();
@@ -974,6 +1001,8 @@ namespace AnomalyArena
             Physics.SyncTransforms();
         }
 
+        /// <summary>A red cross of a boss summon for this kind (the Royal Scepter's path, WaveSpawnMarker.bossSummon), ticked until its body
+        /// appears; null when the pool cannot supply one.</summary>
         static Enemy CallSummon(WaveManager waves, EnemyDefinition data, Vector3 at)
         {
             var marker = waves.BorrowMarker();
@@ -985,15 +1014,19 @@ namespace AnomalyArena
             return waves.Alive.FirstOrDefault(e => e && e.IsAlive && e.definition == data && !before.Contains(e));
         }
 
+        /// <summary>Moves the Tyrant to the start of a lane as wide as its body plus margin to each side and you length cells down it, so a
+        /// charge has open ground (the sandbox lane is narrower than its body); false when the map has none.</summary>
         internal static async Task<bool> OnChargeLane(GameManager game, Enemy tyrant, float length, float margin)
         {
             if (!OpenLane(WorldMap.Active, tyrant.Position, tyrant.Radius + margin, length + 1f, out var start, out var ahead)) return false;
             Place(tyrant, start);
             Place(game.player, start + ahead * length);
-            await Awaitable.FixedUpdateAsync();                   
+            await Awaitable.FixedUpdateAsync(); // it turns to you
             return true;
         }
 
+        /// <summary>The start nearest to near of a lane length cells long in one of the four directions with open ground body wide to each
+        /// side of it: no wall, hole, gravity ring or quicksand.</summary>
         static bool OpenLane(WorldMap world, Vector3 near, float body, float length, out Vector3 start, out Vector3 direction)
         {
             var sides = new[] { Vector3.forward, Vector3.back, Vector3.right, Vector3.left };
@@ -1022,6 +1055,7 @@ namespace AnomalyArena
             return !Physics.SphereCast(Query.AtCastHeight(from), body, direction, out _, length, GameManager.WallMask, QueryTriggerInteraction.Ignore);
         }
 
+        /// <summary>Points of the map two cells apart, margin inside its edge, nearest to near first.</summary>
         static IEnumerable<Vector3> GroundNear(WorldMap world, Vector3 near, float margin)
         {
             var bounds = world.Bounds;
@@ -1032,6 +1066,8 @@ namespace AnomalyArena
             return points.OrderBy(p => Flat(p - near).sqrMagnitude);
         }
 
+        /// <summary>An active black hole with you halfway across its gravity ring and the Tyrant 9 cells away along the ring's tangent there,
+        /// on open ground with nothing in its way, so that the end of a full run, one leap short of you, would lie in the ring too.</summary>
         static bool FindRingApproach(WorldMap world, float body, BossTuning b, out Vector3 spot, out Vector3 from)
         {
             const float Away = 9f;
@@ -1046,7 +1082,7 @@ namespace AnomalyArena
                 {
                     Vector3 outward = Quaternion.Euler(0f, a, 0f) * Vector3.forward, along = Quaternion.Euler(0f, turn, 0f) * outward;
                     Vector3 you = centre + outward * ring, it = you + along * Away, end = you + along * b.rushLeapDistance;
-
+                    // The run's end in the ring, its body clear of the core.
                     if (!hole.InGravity(end) || Flat(end - centre).magnitude < hole.KillRadius + body) continue;
                     if (!world.Contains(you, 1f) || world.IsWall(you, 1f) || world.IsHole(you) || !world.IsWalkable(it, body)) continue;
                     if (!PathClear(world, it, end, body, hole)) continue;
@@ -1059,6 +1095,9 @@ namespace AnomalyArena
             return false;
         }
 
+        /// <summary>An active black hole the Tyrant can charge straight across at you in one phase-1 run: it stands just outside the hole's
+        /// core on one side (inside the gravity ring, which never pulls it), you a cell past the ring on the far side, so the run, one leap
+        /// short of you, carries its centre over the core and the leap lands on you; nothing else within its body of the way.</summary>
         static bool FindHoleCrossing(WorldMap world, float body, BossTuning b, out BlackHole hole, out Vector3 from, out Vector3 spot)
         {
             hole = null;
@@ -1085,6 +1124,7 @@ namespace AnomalyArena
             return false;
         }
 
+        /// <summary>No wall within a body of the segment, and no other black hole's ring near it.</summary>
         static bool PathClear(WorldMap world, Vector3 from, Vector3 to, float body, BlackHole except)
         {
             Vector3 delta = Flat(to - from);
@@ -1113,6 +1153,11 @@ namespace AnomalyArena
             return Flat(ap - ab * t).magnitude;
         }
 
+        /// <summary>
+        /// A wall rect of the run's map with open ground in front of one side: the Tyrant there (near one end of a long wall when it can),
+        /// you 50° off the line to the wall (inside its 150° fan), a point just inside the wall at that side, and, when the wall runs on past
+        /// the tail's reach, a point of it out of reach. A spot whose wall runs on that far is preferred.
+        /// </summary>
         static bool FindWallToSweep(WorldMap world, float body, BossTuning b, out Vector3 bossAt, out Vector3 playerAt, out Vector3 inWall,
             out Vector3? farPart)
         {
@@ -1132,7 +1177,7 @@ namespace AnomalyArena
                 Vector3 face = centre + n * depth + along * (end * Mathf.Max(0f, length * .5f - 1f));
                 Vector3 boss = face + n * (body + 1.5f), player = boss + Quaternion.Euler(0f, turn, 0f) * -n * 4f;
                 if (!world.IsWalkable(boss, body) || !world.IsWalkable(player, 1f) || Quicksand.IsQuicksand(player)) continue;
-
+                // The other end of the same face, if the wall is long enough to run on past the tail's reach and its piece size.
                 Vector3 other = centre + n * (depth - .3f) - along * (end * (length * .5f - .3f));
                 bool far = end != 0f && Flat(other - boss).magnitude > wanted;
                 if (found && !far) continue;
@@ -1147,6 +1192,7 @@ namespace AnomalyArena
             return found;
         }
 
+        /// <summary>The walkable spot nearest to near with open ground all round it for this radius (the sandbox lane is narrower).</summary>
         static bool OpenGround(WorldMap world, Vector3 near, float radius, out Vector3 spot)
         {
             spot = near;
@@ -1165,12 +1211,21 @@ namespace AnomalyArena
             return best < float.MaxValue;
         }
 
+        /// <summary>A Rampage Charge across a map wall at you (FindWallCrossing): from is where it stands, you where you stand, inPath a point
+        /// of the wall its body crosses, standing (when the wall is long enough) a point of the same wall out of its body's reach.</summary>
         struct WallCrossing
         {
             public Vector3 from, you, inPath;
             public Vector3? standing;
         }
 
+        /// <summary>
+        /// A map wall the Tyrant can charge across at you in one phase-1 run: it stands a body and a cell before one face, you hug the far face
+        /// (a cell past it), so the run, one leap short of you, carries its whole body through the wall and the leap lands on you. With graze
+        /// 0 its centre line crosses the wall a cell in from one end; above 0 the line passes beside that end, so that only graze cells of its
+        /// body's side reach into the wall. Nothing else lies within a body and half a cell of the way: no other wall, hole, gravity ring or
+        /// the map's edge. A wall long enough to keep a part out of its body's reach is preferred.
+        /// </summary>
         static bool FindWallCrossing(WorldMap world, float body, BossTuning b, float graze, out WallCrossing crossing)
         {
             crossing = default;
@@ -1185,7 +1240,7 @@ namespace AnomalyArena
                 float depth = Mathf.Abs(n.x) > 0f ? rect.width : rect.height, length = Mathf.Abs(n.x) > 0f ? rect.height : rect.width;
                 float run = depth + body + 2.1f - b.rushLeapDistance;
                 if (run < b.rushMinRun || run > b.rushMaxRun) continue;
-
+                // Where its centre line passes, measured across from the wall's middle.
                 float line = end * (graze > 0f ? length * .5f + body - graze : length * .5f - Mathf.Min(1f, length * .5f));
                 Vector3 from = centre + across * line + n * (depth * .5f + body + 1f), you = centre + across * line - n * (depth * .5f + 1.1f);
                 if (!world.IsWalkable(from, body) || !ClearOfAllBut(world, rect, from, you, body + .5f)) continue;
@@ -1201,6 +1256,8 @@ namespace AnomalyArena
             return found;
         }
 
+        /// <summary>Along the segment no map wall but except stands within clearance (WorldMap.IsWall's box test, the one walking and
+        /// landing use), the map's edge is no nearer, and no black hole's gravity ring reaches.</summary>
         static bool ClearOfAllBut(WorldMap world, Rect except, Vector3 from, Vector3 to, float clearance)
         {
             Vector3 delta = Flat(to - from);
@@ -1221,6 +1278,9 @@ namespace AnomalyArena
             return true;
         }
 
+        /// <summary>A Rampage Charge at you across a map wall (FindWallCrossing): the line is not cut at the wall and the landing is on you
+        /// behind it, its body breaks the wall pieces it touches (collision and enemy paths follow) and leaves the rest standing, and it
+        /// runs its whole planned run, then leaps and lands, never stunned.</summary>
         static async Task ChargeAcrossAMapWall(float graze)
         {
             var (game, targets, tyrant) = await TyrantSandbox(10f);
@@ -1231,7 +1291,7 @@ namespace AnomalyArena
                 "a map wall with open ground on both sides, near enough for one charge across it");
             Place(game.player, crossing.you);
             Place(tyrant, crossing.from);
-            await Awaitable.FixedUpdateAsync();                   
+            await Awaitable.FixedUpdateAsync(); // it turns to you
             Assume.That(world.IsWall(crossing.inPath), Is.True, "the wall stands in its body's way");
             Assume.That(Physics.CheckSphere(Query.AtCastHeight(crossing.inPath), .2f, GameManager.WallMask, QueryTriggerInteraction.Ignore), Is.True,
                 "with its collider");
@@ -1263,6 +1323,8 @@ namespace AnomalyArena
                 Is.True, "with a collider");
         }
 
+        /// <summary>A bulwark (the player's skill wall) width wide, square across user's facing, standing 30 seconds with no push of its own;
+        /// null when the pool has none free.</summary>
         static TemporaryWall Bulwark(Vector3 at, float width, Combatant user)
         {
             var world = WorldMap.Active;
@@ -1271,6 +1333,8 @@ namespace AnomalyArena
             return world.temporaryWalls.FirstOrDefault(w => w && w.gameObject.activeSelf && Flat(w.transform.position - at).magnitude < .1f);
         }
 
+        /// <summary>Follows a Rampage Charge from its wind-up through the run, the leap and the landing, failing if it is ever stunned, falls
+        /// or is swallowed on the way; watch runs every physics step. Returns the last point it ran to before it leapt.</summary>
         internal static async Task<Vector3> RunAndLand(Enemy tyrant, Action watch = null)
         {
             Vector3 ranTo = Flat(tyrant.Position);
@@ -1296,19 +1360,23 @@ namespace AnomalyArena
             var (game, targets) = await V3CombatSmokeTest.StartSandbox();
             FeedEachHoleOnce(game);
             game.player.Invulnerable = true;
-            game.player.enabled = true;                                           
+            game.player.enabled = true; // a push on the player plays out and ends
             var tyrant = game.waves.SpawnLabTyrant(game.player.Position + Vector3.forward * ahead);
             Assume.That(tyrant && tyrant.IsBoss, Is.True, "the scene keeps the Tyrant");
-
+            // The spawn moves only the transform; let the body and its facing catch up before reading them.
             Physics.SyncTransforms();
             await Awaitable.FixedUpdateAsync();
             return (game, targets, tyrant);
         }
 
+        /// <summary>The sandbox runs in the first wave, and the view follows you about the map: to the sandbox lane, and in these scenes
+        /// often right beside a black hole. During a wave, the first sight of a hole nothing has fed yet plays the teaching cutscene
+        /// (document 12.4), which freezes the battlefield (time scale 0) for several seconds in the middle of a move; the Tyrant's real
+        /// fight is not a wave and never shows it. So each hole is fed once first.</summary>
         static void FeedEachHoleOnce(GameManager game)
         {
             var world = WorldMap.Active;
-            world.SkipHoleIntro();                                    
+            world.SkipHoleIntro(); // one already playing ends at once
             foreach (var hole in world.holes)
                 if (hole && hole.Phase == HolePhase.Active && hole.Feeds == 0)
                     hole.Feed(1, game.waves.WaveIndex + 1);

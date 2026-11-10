@@ -9,15 +9,19 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>Three spawn groups (system doc 11.2): basics (melee kinds, Spitter, Warden), ordinary specials and elites,
+    /// filled per wave from the doc's kind table. Specials join gradually from the first wave that lists one, and every special a wave lists gets
+    /// a slot in the batch until it has appeared; a refill fills only the free places, so those extra slots never lift the field over the wave's
+    /// population.</summary>
     [TestFixture]
     public class SpawnGroupsTest
     {
-        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
         const BindingFlags Private = BindingFlags.Instance | BindingFlags.NonPublic;
-        const int FirstSpecialWave = 4;               
+        const int FirstSpecialWave = 4; // the Chanter
         static readonly EnemyKind[] Melee = { EnemyKind.Grunt, EnemyKind.Brute, EnemyKind.Skitter, EnemyKind.Splitter };
 
+        // Doc 11.2 table: the specials of each ordinary wave. Every wave also has the four melee kinds, the Spitter from wave 2 and the Warden from 3.
         static readonly EnemyKind[][] Specials =
         {
             new EnemyKind[0],
@@ -105,7 +109,7 @@ namespace AnomalyArena
         public async Task BeginBatch_WaveListingTwoSpecials_EachUnseenSpecialGetsASlotUntilItHasAppeared()
         {
             var waves = await ReadyWaves();
-            const int wave = 6;                             
+            const int wave = 6; // the Spire and the Chanter
             BeginWave(waves, wave - 1);
             int population = waves.PopulationTargetForWave(wave - 1);
             var shares = waves.ActiveRoleShares;
@@ -128,7 +132,7 @@ namespace AnomalyArena
         public async Task RefillPopulation_SpecialsAboveTheirShareAfterFirstAppearances_NeverQueuesPastThePopulation()
         {
             var waves = await ReadyWaves();
-            const int wave = 6;                                                                                
+            const int wave = 6; // the Spire and the Chanter: two reserved special slots against a share of one
             BeginWave(waves, wave - 1);
             int population = waves.PopulationTargetForWave(wave - 1);
             Invoke(waves, "BeginBatch");
@@ -164,7 +168,7 @@ namespace AnomalyArena
             int threshold = Mathf.Max(1, Mathf.CeilToInt(population * waves.refillMissingShare));
             Invoke(waves, "BeginBatch");
             Assume.That(Slots(waves, "specialRemaining"), Is.EqualTo(2), "each unseen special reserved a slot");
-
+            // The Spire found no open ground, so both special slots became Chanters: the Spire is still unseen.
             Land(waves, EnemyKind.Grunt, false, Slots(waves, "basicRemaining"));
             Land(waves, EnemyKind.Chanter, false, 2);
             Land(waves, EnemyKind.Chanter, true, Slots(waves, "eliteRemaining"));
@@ -178,7 +182,7 @@ namespace AnomalyArena
 
             Land(waves, EnemyKind.Grunt, false, Slots(waves, "batchSpawnsRemaining"));
             Issued(waves);
-            Lift(waves, EnemyKind.Chanter, false);                                        
+            Lift(waves, EnemyKind.Chanter, false); // the specials are back at their share
             for (int down = 1; down < threshold; down++) Lift(waves, EnemyKind.Grunt, false);
             Invoke(waves, "RefillPopulation");
             Assert.That(Slots(waves, "batchSpawnsRemaining"), Is.EqualTo(threshold), "the free places are refilled");
@@ -186,6 +190,10 @@ namespace AnomalyArena
             Assert.That(OnField(waves) + Slots(waves, "batchSpawnsRemaining"), Is.EqualTo(population), "and the field stays at its population");
         }
 
+        // ───── Helpers ─────
+
+        /// <summary>Lands batch slots as warnings on the field. RefillPopulation counts a warning as a body, and nothing ticks them here
+        /// (the run has not started), so they stay warnings.</summary>
         static void Land(WaveManager waves, EnemyKind kind, bool elite, int count)
         {
             var data = waves.DefinitionOf(kind);
@@ -197,11 +205,13 @@ namespace AnomalyArena
             }
         }
 
+        /// <summary>One body of a kind leaves the field, as if killed.</summary>
         static void Lift(WaveManager waves, EnemyKind kind, bool elite) =>
             waves.preparedMarkers.First(m => m && m.gameObject.activeSelf && m.definition.kind == kind && m.elite == elite).gameObject.SetActive(false);
 
         static int OnField(WaveManager waves) => waves.LivingCount + waves.preparedMarkers.Count(m => m && m.gameObject.activeSelf);
 
+        /// <summary>The queued batch has been placed: nothing is left to issue, as when TickV2 calls RefillPopulation.</summary>
         static void Issued(WaveManager waves)
         {
             foreach (var field in new[] { "batchSpawnsRemaining", "basicRemaining", "specialRemaining", "eliteRemaining" })
@@ -222,6 +232,7 @@ namespace AnomalyArena
             if (!actual.SequenceEqual(sorted)) failures.Add($"wave {wave} {group}: [{string.Join(",", actual)}], expected [{string.Join(",", sorted)}]");
         }
 
+        /// <summary>Starts a 0-based ordinary wave the way the run does (kind memory, affixes, banner) without running its clock.</summary>
         static void BeginWave(WaveManager waves, int index) => Invoke(waves, "BeginV2Wave", index);
 
         static void Invoke(WaveManager waves, string method, params object[] arguments) =>

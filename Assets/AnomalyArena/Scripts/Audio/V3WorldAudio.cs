@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>Saved full-game bank. All event sources and looping channels are authored in the Editor.</summary>
     public sealed class V3WorldAudio : MonoBehaviour
     {
         [Serializable] public sealed class Sound
@@ -54,6 +54,8 @@ namespace AnomalyArena
         }
         public void OnAcceptedReroll()=>Play(ArenaWorldCue.CardReroll,Vector3.zero);
 
+        /// <param name="pitch">Lower for a heavier body, higher for a lighter one, so a saved clip can fit more than one enemy (the bank itself stays as saved).</param>
+        /// <param name="gainScale">Times the bank's gain.</param>
         public void Play(ArenaWorldCue cue,Vector3 at,float pitch=1f,float gainScale=1f)
         {
             if(!isActiveAndEnabled||byCue==null)return;
@@ -76,7 +78,7 @@ namespace AnomalyArena
                 float shortest=float.PositiveInfinity;
                 for(int i=0;i<voices.Length;i++)if(voices[i]&&left[i]<shortest){shortest=left[i];free=i;}
             }
-
+            // An attack's warning must not go missing in a crowd. With every voice busy it takes the voice of a hit, a death or a footstep nearest its end.
             if(free<0&&!life&&Warns(cue))
             {
                 float shortest=float.PositiveInfinity;
@@ -107,7 +109,11 @@ namespace AnomalyArena
             }
             TickVoices(lifecycleVoices,lifeLeft);
             if(!paused)TickVoices(worldVoices,worldLeft);
-
+            // The combat music and the ambience play only while the player can move, as before 10-26:
+            // the wave and its intro, the void trial, the final boss, and the build phase walked with its panel put away or while its
+            // supply crate comes down. Every screen that holds the player (the wave's end, an opened crate and the build panels, a weapon
+            // card, a card pick, the black-hole cutscene, the trial's return) fades them out and stops them; once the player can move
+            // again they start from the top. Only the pause menu holds them where they are, and they fade out once the run is over.
             bool running=gm&&gm.CanPlayerMove;
             if(!paused)backgroundBlend=Mathf.MoveTowards(backgroundBlend,running?1f:0f,Time.unscaledDeltaTime/Mathf.Max(.01f,backgroundFadeSeconds));
             var world=WorldMap.Active;
@@ -118,7 +124,8 @@ namespace AnomalyArena
                 ArenaWorldCue cue=selectedTrial?ArenaWorldCue.AmbientRift:name.StartsWith("Dust",StringComparison.OrdinalIgnoreCase)?ArenaWorldCue.AmbientDust:name.StartsWith("Rift",StringComparison.OrdinalIgnoreCase)?ArenaWorldCue.AmbientRift:ArenaWorldCue.AmbientWreck;
                 if(ambienceSource){ambienceSource.Stop();ambienceSource.clip=byCue[(int)cue]?.clip;}
             }
-
+            // The title screen and a V2 campaign run have their own tracks (CampaignMusic, 2026-11-06): while one plays, this music is
+            // silent and stopped; the ambience goes on as before. Without those tracks (a classic run, or a file not there) nothing changes.
             bool yieldMusic=CampaignMusic.Overrides;
             if(running&&!paused)
             {

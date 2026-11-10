@@ -9,12 +9,13 @@ using Object = UnityEngine.Object;
 
 namespace AnomalyArena
 {
-
+    /// <summary>V5 roster rules (system doc §10–11): the 14-wave kind table, specials as ordinary spawns, elites = affixed specials (cap 3,
+    /// distinct affixes), only bosses push the player, Chanter aura, Splitter minis.</summary>
     [TestFixture]
     [Category("V3Smoke")]
     public class EnemyRosterTest
     {
-        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
         UnityEngine.Random.State savedRandom;
 
         [SetUp]
@@ -31,6 +32,7 @@ namespace AnomalyArena
             Time.timeScale = 1f;
         }
 
+        // §11.2 table: non-melee kinds each ordinary wave may spawn; all four melee kinds are in every wave.
         static readonly EnemyKind[][] DocumentTable =
         {
             new EnemyKind[0],
@@ -144,7 +146,7 @@ namespace AnomalyArena
                     if (affixes.Length > 3 || elements.Distinct().Count() != elements.Length)
                         failures.Add($"t={end - Time.realtimeSinceStartup:0.00}: {string.Join(",", affixes)}");
                     if (Time.realtimeSinceStartup < nextCull) continue;
-
+                    // Clearing the field forces refills, so replacement elites must pick around the survivors' affixes.
                     nextCull = Time.realtimeSinceStartup + 2.5f;
                     foreach (var enemy in game.waves.Alive.ToArray())
                     {
@@ -243,7 +245,7 @@ namespace AnomalyArena
                 target.enabled = false;
                 Assert.That(EnemyRoles.KnocksBackPlayer(data.kind),
                     Is.EqualTo(EnemyRoles.IsBoss(data.kind) || data.kind is EnemyKind.Stomper or EnemyKind.Rammer), data.kind + " push rule");
-
+                // Document 5.3: the Rammer and the Stomper push by their attack's knockback tier; a boss's plain hit keeps its own number.
                 float push = EnemyRoles.IsBoss(data.kind) ? data.knockback : KnockbackRules.Active.Distance(KnockbackRules.AttackTier(data.kind));
                 if (EnemyRoles.KnocksBackPlayer(data.kind))
                     Assert.That(target.attackKnockback, Is.EqualTo(push), data.kind + " pushes by its tier");
@@ -276,6 +278,7 @@ namespace AnomalyArena
             Assert.That(target.attackInterval, Is.EqualTo(spitter.interval).Within(.0001f),
                 "other affixes keep the interval");
 
+            // §7.6, §13.2: like the Hollow, the Tyrant always ignores Frost and Lightning, fixed: nothing is drawn, not even their order.
             Assert.That(waves.TyrantImmunities, Is.EqualTo(new[] { ElementKind.Frost, ElementKind.Lightning }),
                 "the Tyrant ignores Frost and Lightning");
         }
@@ -317,7 +320,7 @@ namespace AnomalyArena
             sandbox.targets[2].DiscardWithoutReward();
             var grunt = sandbox.targets[0];
             var chanter = sandbox.targets[1];
-
+            // The lead adds the Chanter roster slot; until then a runtime copy of the definition drives the same code.
             var saved = game.waves.DefinitionOf(EnemyKind.Chanter);
             var chanterData = saved ? saved : ScriptableObject.CreateInstance<EnemyDefinition>();
             if (!saved)
@@ -362,7 +365,7 @@ namespace AnomalyArena
 
         static async Task<float> NextPunchDamage(PlayerController player)
         {
-            ElementStatus.For(player)?.SetShield(0f);                           
+            ElementStatus.For(player)?.SetShield(0f); // Measure HP damage only.
             float before = player.Hp, deadline = Time.realtimeSinceStartup + 4f;
             while (player.Hp >= before)
             {
@@ -380,7 +383,7 @@ namespace AnomalyArena
             var game = sandbox.game;
             sandbox.targets[0].DiscardWithoutReward();
             sandbox.targets[1].DiscardWithoutReward();
-            var spitter = sandbox.targets[2];                                                                        
+            var spitter = sandbox.targets[2]; // Nine units down the clear lane, inside its 8-10 unit keep-away band.
             var data = game.waves.roster.First(d => d.kind == EnemyKind.Spitter);
             spitter.Configure(data, 1f, false);
             spitter.enabled = true;

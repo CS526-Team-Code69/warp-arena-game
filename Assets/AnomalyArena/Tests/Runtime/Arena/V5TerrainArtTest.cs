@@ -7,11 +7,21 @@ using Object = UnityEngine.Object;
 
 namespace AnomalyArena
 {
-
+    /// <summary>The stone walls of the Ruins and the Dunes (system doc 11.2: the walls block movement and shots, so what is drawn must be what blocks): the drawn wall
+    /// fills its collider's rectangle, also after the Tyrant cuts it, and the whitebox look does not change.</summary>
     [TestFixture]
     public class V5TerrainArtTest
     {
-        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
+        bool savedArt;
+
+        // Since 2026-11-10 the art's default follows the start language and the switch is one state for the whole play, so an earlier
+        // test can leave whitebox behind: a test that needs the stone sets the illustrated art itself, and every test gives the art back.
+        [SetUp]
+        public void SetUp() => savedArt = Art.Enabled;
+
+        [TearDown]
+        public void TearDown() => Art.Enabled = savedArt;
 
         [Test]
         public void Build_AnyRectAndStone_MeshEdgesAreTheRectAndEverySpotHasStone()
@@ -56,7 +66,7 @@ namespace AnomalyArena
                 for (float z = -.875f; z < 1f; z += .25f)
                 {
                     spots++;
-
+                    // The piece's centre is 6 + 1 - 7 = 0 cells from the whole wall's centre along it.
                     if (Mathf.Approximately(piece.HeightAt(x, z), whole.HeightAt(x, z))) same++;
                 }
                 Assert.That(same, Is.GreaterThanOrEqualTo(spots * 3 / 4), "a cut piece shows the same stones in the same places; only the slivers at its new ends may differ");
@@ -72,6 +82,10 @@ namespace AnomalyArena
         public async Task TyrantCut_LongWall_EveryPieceDrawsExactlyItsCollider()
         {
             var world = await LoadedMap();
+            // The stone is the illustrated art's; whitebox shows the wall's own box (Whitebox_TheStoneAndTheOldArtStayHidden_TheWallsOwnBoxShows).
+            Art.Enabled = true;
+            await Awaitable.NextFrameAsync();
+            await Awaitable.NextFrameAsync();
             var longest = world.layout.walls.OrderByDescending(r => Mathf.Max(r.width, r.height)).First();
             var terrain = TyrantTerrain.For(world);
             try

@@ -11,7 +11,7 @@ namespace AnomalyArena
     [Category("V3Smoke")]
     public class V3CombatSmokeTest
     {
-        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
         const float TargetHp = 100f;
         UnityEngine.Random.State savedRandom;
 
@@ -25,6 +25,8 @@ namespace AnomalyArena
             Time.timeScale = 1f;
         }
 
+        // Document 5.5: every return cuts what lies on its path, the thrower included; the enemy it turns back from is
+        // not cut twice.
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task Knife_TwoLiveTargets_HitsEachGoingOutAndTheReturnCutsWhatItPasses()
         {
@@ -41,7 +43,7 @@ namespace AnomalyArena
             var actor = AttackPool.Instance.actors.FirstOrDefault(a => a.gameObject.activeSelf && a.weapon == knife);
             Assert.That(actor, Is.Not.Null, "saved attack pool supplies the thrown knife");
             Assert.That(knife.inFlight, Is.True, "throw owns the hand slot while outbound");
-            float cut = actor.ownerDamage * game.runWeapons.StartingFormDamageFactor(WeaponForm.Knife);                                                                                       
+            float cut = actor.ownerDamage * game.runWeapons.StartingFormDamageFactor(WeaponForm.Knife); // Q105: a starting form's backfire takes the starting-form factor.
             await Until(() => second.Hp < TargetHp && actor.IsReturning, 4f, "knife hits two targets and starts returning");
             await Until(() => !knife.inFlight, 4f, "knife return completes");
 
@@ -57,7 +59,7 @@ namespace AnomalyArena
             var sandbox = await StartSandbox();
             var game = sandbox.game;
             Equip(game, WeaponForm.RocketLauncher, 1);
-
+            // damageB 7 since 2026-10-23 (5.25 after the starting-form and crowd factors): one flight kills a wave-1 Grunt.
             float hit = game.runWeapons.roster.Get(WeaponForm.RocketLauncher).damageB
                 * game.runWeapons.startingDamageFactor * game.runWeapons.crowdDamageMultiplier;
 
@@ -116,7 +118,7 @@ namespace AnomalyArena
 
             Assert.That(swallowed.DeathCause, Is.EqualTo(DeathCause.FellIntoGap), "void uses the fall death path");
             Assert.That(game.orbs.pool, Has.None.Matches<ExperienceOrb>(o => o && o.InUse), "swallowed enemy drops no XP orb");
-
+            // Document 8.4: Pocket Void pays the swallowed enemy's experience straight to the player.
             Assert.That(game.progression.Xp, Is.EqualTo(expectedXp), "swallow pays the enemy's experience directly");
         }
 
@@ -163,7 +165,7 @@ namespace AnomalyArena
             Teleport(victim, target.Position + Vector3.right);
             game.waves.TrackBoss(victim);
             Physics.SyncTransforms();
-
+            // 击杀时唤醒一个从未激活过的敌人（Awake 时加入 Combatant.All），复现爆炸循环中途集合被修改。
             Action<Enemy> wake = dead => { if (dead == victim) fresh[0].gameObject.SetActive(true); };
             game.waves.EnemyEliminated += wake;
             var actor = AttackPool.Instance.Acquire();
@@ -237,7 +239,7 @@ namespace AnomalyArena
                 bool clear = true;
                 for (int step = 0; step <= 34; step++)
                 {
-
+                    // Dunes quicksand would slow the bodies walking down the lane, so the lane keeps off it too.
                     var point = start + Vector3.forward * (step * .5f);
                     if (!map.IsWalkable(point, 1.2f) || Quicksand.IsQuicksand(point)) { clear = false; break; }
                 }

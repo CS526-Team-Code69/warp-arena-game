@@ -3,7 +3,7 @@ using UnityEngine.Rendering;
 
 namespace AnomalyArena
 {
-
+    /// <summary>Saved sprite pose driven by real movement and confirmed hit feedback. No gameplay state is owned here.</summary>
     [DefaultExecutionOrder(1000)]
     public class V2CharacterIllustration : MonoBehaviour
     {
@@ -20,8 +20,6 @@ namespace AnomalyArena
         [Header("Elite outline (M116)")]
         [Tooltip("Size of the white silhouette behind an elite's illustration, as a share of the illustration.")]
         public float eliteOutlineScale = 1.12f;
-        [Tooltip("Size of the white back-face shell round an elite's whitebox body, as a share of the body.")]
-        public float whiteboxOutlineScale = 1.15f;
         Combatant body;
         Enemy enemy;
         Renderer facingMark;
@@ -33,12 +31,9 @@ namespace AnomalyArena
         float walkPhase;
         bool started, illustrated, modelVisible;
         SpriteRenderer eliteOutline;
-        MeshRenderer eliteShell;
-        static Material shellMaterial;
-
+        /// <summary>The white silhouette drawn behind an elite's illustration (null until an elite first shows one). The whitebox elite's
+        /// shell is WhiteboxCharacter's.</summary>
         public SpriteRenderer EliteOutline => eliteOutline;
-
-        public Renderer EliteShell => eliteShell;
 
         void Awake()
         {
@@ -49,11 +44,11 @@ namespace AnomalyArena
                 if (t.name == "Facing") { facingMark = t.GetComponent<Renderer>(); break; }
         }
         void OnEnable() { started = false; walkPhase = 0f; }
-        void OnDisable() { if (hitImpact) hitImpact.enabled = false; ShowIllustrationOutline(false); ShowWhiteboxOutline(false); }
+        void OnDisable() { if (hitImpact) hitImpact.enabled = false; ShowIllustrationOutline(false); }
 
         void LateUpdate()
         {
-
+            // The saved facing cube is not part of the illustrated art (in whitebox WhiteboxCharacter hides it and draws its own front mark).
             if (facingMark && facingMark.enabled == Art.Enabled) facingMark.enabled = !Art.Enabled;
             if (!body || !illustration) return;
             if (!started) { ApplyLook(); started = true; }
@@ -61,7 +56,6 @@ namespace AnomalyArena
             bool on = Art.Enabled && illustration.sprite && !modelVisible;
             illustration.enabled = on;
             bool elite = enemy && enemy.ShowsEliteOutline;
-            ShowWhiteboxOutline(elite && !on && !modelVisible);
             if (!on) { if (hitImpact) hitImpact.enabled = false; ShowIllustrationOutline(false); return; }
             var gm = GameManager.Instance;
             var camera = gm ? gm.cam : null;
@@ -72,7 +66,7 @@ namespace AnomalyArena
             float moving = Mathf.Clamp01(speed / Mathf.Max(.1f, body.moveSpeed));
             float bob = Mathf.Abs(Mathf.Sin(walkPhase)) * walkBob * moving;
             float squash = body.HitSquash01 * hitSquash;
-            float tall = height * (enemy ? enemy.Swell : 1f);                                                  
+            float tall = height * (enemy ? enemy.Swell : 1f); // a Bloater swells before it blows (Enemy.Swell)
             var t = illustration.transform;
             t.position = body.Position + Vector3.up * (tall * .5f + bob) - body.LastHitDirection * (body.HitSquash01 * hitRecoil);
             t.rotation = (camera ? camera.transform.rotation : Quaternion.identity) * Quaternion.Euler(0f, 0f, Mathf.Sin(walkPhase) * walkTilt * moving);
@@ -112,6 +106,8 @@ namespace AnomalyArena
             hitImpact.color = new Color(1f, .95f, .75f, body.HitFlash01);
         }
 
+        /// <summary>M116: an elite's illustration gets a pure white copy of itself, a little larger and drawn just behind it, so a
+        /// white rim shows round the figure. The copy uses the illustration's own material at full hit flash (white, alpha kept).</summary>
         void ShowIllustrationOutline(bool show)
         {
             if (!show) { if (eliteOutline) eliteOutline.enabled = false; return; }
@@ -127,48 +123,9 @@ namespace AnomalyArena
             t.localPosition = Vector3.zero; t.localRotation = Quaternion.identity; t.localScale = Vector3.one * eliteOutlineScale;
             eliteOutline.sprite = illustration.sprite; eliteOutline.flipX = illustration.flipX; eliteOutline.color = Color.white;
             eliteOutline.sortingLayerID = illustration.sortingLayerID; eliteOutline.sortingOrder = illustration.sortingOrder - 1;
-            block.SetFloat("_HitFlash", 1f);                                                                    
+            block.SetFloat("_HitFlash", 1f); // the illustration's own frame and pixel size, flashed fully white
             eliteOutline.SetPropertyBlock(block);
             eliteOutline.enabled = true;
-        }
-
-        void ShowWhiteboxOutline(bool show)
-        {
-            var source = enemy ? enemy.bodyRenderer : null;
-            if (!show || !source || !source.enabled) { if (eliteShell) eliteShell.enabled = false; return; }
-            if (!eliteShell)
-            {
-                var mesh = source.GetComponent<MeshFilter>();
-                if (!mesh || !mesh.sharedMesh) return;
-                var go = new GameObject("EliteShell");
-                go.transform.SetParent(source.transform, false);
-                go.AddComponent<MeshFilter>().sharedMesh = mesh.sharedMesh;
-                eliteShell = go.AddComponent<MeshRenderer>();
-                eliteShell.shadowCastingMode = ShadowCastingMode.Off; eliteShell.receiveShadows = false;
-            }
-            if (!shellMaterial) shellMaterial = WhiteShellMaterial();
-            if (!shellMaterial) { eliteShell.enabled = false; return; }
-            eliteShell.sharedMaterial = shellMaterial;
-            eliteShell.transform.localScale = Vector3.one * whiteboxOutlineScale;
-            eliteShell.enabled = true;
-        }
-
-        static Material WhiteShellMaterial()
-        {
-            var unlit = Shader.Find("Universal Render Pipeline/Unlit");
-            var gm = GameManager.Instance;
-            var m = unlit ? new Material(unlit) : gm && gm.litMaterial ? new Material(gm.litMaterial) : null;
-            if (!m) return null;
-            m.name = "EliteShell (white, back faces)";
-            if (unlit)
-            {
-                m.SetFloat("_Surface", 1f); m.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
-                m.SetFloat("_ZWrite", 0f); m.SetOverrideTag("RenderType", "Transparent");
-                m.renderQueue = (int)RenderQueue.Transparent;
-            }
-            m.SetColor("_BaseColor", Color.white);
-            m.SetFloat("_Cull", (float)CullMode.Front);
-            return m;
         }
 
         static void SetWorldScale(Transform t, float width, float height, Sprite sprite)

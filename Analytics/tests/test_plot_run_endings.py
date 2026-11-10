@@ -150,6 +150,28 @@ class TestEnemyBreakdown(unittest.TestCase):
         self.assertEqual(total, agg["cause_totals"]["enemy"] + agg["cause_totals"]["tyrant"])
 
 
+class TestModes(unittest.TestCase):
+    def setUp(self):
+        self.agg = pre.aggregate(fixture("modes.csv"))
+
+    def test_story_runs_are_left_out_whole(self):
+        # Run 2 is story throughout, run 3 sent its run_start as open and its run_end as story, run 5 is a story start only.
+        # Run 4 has no mode (written before the column existed) and counts as open.
+        self.assertEqual(nonzero(self.agg), {"3": {"enemy": 2}})
+        self.assertEqual((self.agg["started"], self.agg["ended"], self.agg["unfinished"], self.agg["story_runs"]), (3, 2, 1, 3))
+        self.assertEqual(sorted(self.agg["enemies"]), ["Brute", "Grunt"])
+
+    def test_a_csv_without_the_mode_column_is_all_open(self):
+        self.assertEqual(pre.aggregate(fixture("basic.csv"))["story_runs"], 0)
+        row = pre.normalize_row({"event": "run_end", "run_id": "e" * 32, "outcome": "defeat", "cause": "enemy", "wave": "4"})
+        self.assertEqual(row["mode"], "")
+        self.assertEqual(pre.aggregate([row])["ended"], 1)
+
+    def test_summary_says_how_many_story_runs_were_left_out(self):
+        self.assertIn("Story-mode runs left out: 3", pre.format_summary(self.agg))
+        self.assertNotIn("Story-mode", pre.format_summary(pre.aggregate(fixture("basic.csv"))))
+
+
 class TestParsing(unittest.TestCase):
     def test_bom_booleans_and_shuffled_columns(self):
         rows = fixture("messy.csv")

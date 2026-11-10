@@ -3,16 +3,25 @@ using UnityEngine.Rendering;
 
 namespace AnomalyArena
 {
-
+    /// <summary>
+    /// A luminous ring on the ground that a caller drives frame by frame with a centre, the radius of its leading edge, a thickness (the
+    /// soft trail behind that edge), a colour and a brightness: a light wave sweeping outward. The leading edge lies exactly at the radius
+    /// given and nothing is drawn beyond it, so a ring drawn from a gameplay front shows that front. With shadowWalls the parts of the ring
+    /// a wall hides from the centre stay dark. Whitebox draws it plain (blended, never brighter than its colour, so no bloom); the
+    /// illustrated art (V5Vfx.On) adds the glow: drawn additively, bright enough to bloom, a whiter leading edge and glints along the front
+    /// while it moves. Mesh and materials are made at runtime, so scenes and prefabs gain nothing.
+    /// General on purpose: the Spire's light wave is its first user (SpireWavePresentation); light
+    /// sources and sentries of later versions can drive their own.
+    /// </summary>
     [DisallowMultipleComponent]
     public sealed class LightWaveRing : MonoBehaviour
     {
-
+        // Points round the ring: at a radius of 10 cells the edge stays within a hundredth of a cell of a true circle.
         const int Segments = 128;
-
+        // Rows across the ring from the leading edge inward: the edge, the end of the bright band, the middle and the end of the trail.
         const int Rows = 4;
         static readonly float[] RowAlpha = { 1f, 1f, .42f, 0f };
-
+        // How often the wall shadows are cast again while the ring is out, for walls raised in the meantime; seconds.
         const float ShadowRefreshSeconds = .25f;
 
         [Min(0f), Tooltip("Height of the ring above the ground, cells.")]
@@ -49,6 +58,7 @@ namespace AnomalyArena
         Vector3 shadowCentre;
         float shadowProbe = -1f, shadowCastAt;
 
+        /// <summary>A new ring under parent (kept in world space whatever the parent does), hidden until its first Draw.</summary>
         public static LightWaveRing Create(Transform parent, string name = "LightWaveRing")
         {
             var go = new GameObject(name);
@@ -56,14 +66,20 @@ namespace AnomalyArena
             return go.AddComponent<LightWaveRing>();
         }
 
+        /// <summary>The ring was drawn this frame or a frame before and has not been hidden since.</summary>
         public bool Visible => meshRenderer && meshRenderer.enabled && isActiveAndEnabled;
 
+        /// <summary>The centre, on the ground, of the last Draw.</summary>
         public Vector3 Centre { get; private set; }
 
+        /// <summary>The radius of the leading edge in the last Draw.</summary>
         public float Radius { get; private set; }
 
+        /// <summary>The thickness (trail length) of the last Draw.</summary>
         public float Thickness { get; private set; }
 
+        /// <summary>Draws the ring for this frame; call it again each frame the ring changes. colour.a fades the whole ring; intensity is
+        /// its brightness, which only the illustrated art takes above 1 (that is what blooms).</summary>
         public void Draw(Vector3 centre, float radius, float thickness, Color colour, float intensity)
         {
             bool art = V5Vfx.On;
@@ -84,7 +100,7 @@ namespace AnomalyArena
             if (shadowWalls) CastShadows(Mathf.Max(radius, shadowReach));
             Shape(colour, art);
             if (meshRenderer.sharedMaterial != material) meshRenderer.sharedMaterial = material;
-
+            // A raw multiplier, not a colour: SetColor would decode it from sRGB as well and brighten far more than asked.
             float k = art ? Mathf.Max(0f, intensity) : Mathf.Clamp01(intensity);
             block.SetVector(BaseColorId, new Vector4(k, k, k, 1f));
             meshRenderer.SetPropertyBlock(block);
@@ -97,6 +113,8 @@ namespace AnomalyArena
             if (meshRenderer) meshRenderer.enabled = false;
         }
 
+        /// <summary>Whether the ring is lit at this distance from its centre along this flat direction: false in a wall's shadow (with
+        /// shadowWalls), true everywhere otherwise.</summary>
         public bool LitAt(Vector3 direction, float distance)
         {
             if (!shadowWalls || clearDistance == null) return true;
@@ -131,11 +149,13 @@ namespace AnomalyArena
             meshRenderer.lightProbeUsage = LightProbeUsage.Off;
             meshRenderer.reflectionProbeUsage = ReflectionProbeUsage.Off;
             meshRenderer.motionVectorGenerationMode = MotionVectorGenerationMode.ForceNoMotion;
-            meshRenderer.sortingOrder = -1;                                                                             
+            meshRenderer.sortingOrder = -1; // with the other ground effects, under everything that stands on the ground
             meshRenderer.enabled = false;
             block = new MaterialPropertyBlock();
         }
 
+        /// <summary>Places every point for this frame: rows at fixed distances behind the leading edge (clamped at the centre while the ring
+        /// is smaller than its thickness), the edge rows lifted toward white in the illustrated art, points in a wall's shadow left clear.</summary>
         void Shape(Color colour, bool art)
         {
             float edge = Mathf.Min(edgeWidth, Thickness * .25f);
@@ -166,8 +186,12 @@ namespace AnomalyArena
             mesh.RecalculateBounds();
         }
 
+        /// <summary>Mesh colours reach the shader untouched, while every authored colour here is sRGB: in linear space they are converted
+        /// first, so the ring matches the particles and lines drawn in the same colour.</summary>
         static Color ToVertex(Color c) => QualitySettings.activeColorSpace == ColorSpace.Linear ? c.linear : c;
 
+        /// <summary>The distance to the first wall along each point's direction, cast at the height every wall check uses (Query.CastHeight);
+        /// cast again when the centre moves, the reach grows, or every ShadowRefreshSeconds.</summary>
         void CastShadows(float probe)
         {
             clearDistance ??= new float[Segments];
@@ -185,6 +209,7 @@ namespace AnomalyArena
                     : float.MaxValue;
         }
 
+        /// <summary>Illustrated art: a few glints on the front where it is lit; they stay behind as it moves on.</summary>
         void Sparkle(Color colour)
         {
             var fx = V5Vfx.I;
@@ -200,6 +225,8 @@ namespace AnomalyArena
             }
         }
 
+        /// <summary>The V5 effect shader (unlit, vertex colour, blend per material) loaded from Resources, so builds keep it: blended for
+        /// whitebox, additive for the illustrated art.</summary>
         static Material Look(bool art)
         {
             var made = art ? glowMaterial : plainMaterial;

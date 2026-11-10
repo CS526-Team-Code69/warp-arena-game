@@ -11,7 +11,18 @@ using Object = UnityEngine.Object;
 
 namespace AnomalyArena.EditorTools
 {
-
+    /// <summary>
+    /// 2026-11-06 V6 enemy models: renders every enemy prefab the way the game frames it (pitch 72 degrees and field of view 40, as CameraRig
+    /// and the arena scenes), at its runtime size (V2ModelPresentation: body radius over the reference radius, times 1.35, or 1.1 for the
+    /// Tyrant), in the first frame of its idle clip, with two rings on the ground: the gameplay radius (EnemyDefinition.radius, white) and the
+    /// prefab's capsule collider (cyan). Per kind it writes four pictures:
+    ///   &lt;Kind&gt;.png               as the game shows it at rest;
+    ///   &lt;Kind&gt;-windup.png        with the wind-up tint V2ModelPresentation writes into _EmissionColor, on the materials as they are;
+    ///   &lt;Kind&gt;-windup-glow.png   the same on throw-away copies of the materials with _EMISSION switched on (what "-bodyGlow on" changes);
+    ///   &lt;Kind&gt;-flash-glow.png    the hit flash on those copies.
+    /// Nothing is saved but the PNGs: the scene is a new unsaved one, and the prefab instances and material copies are destroyed.
+    ///   -executeMethod AnomalyArena.EditorTools.CaptureEnemyModels.CaptureBatch -tag before|after [-kinds Skitter,Tyrant] [-out folder]
+    /// </summary>
     public static class CaptureEnemyModels
     {
         const string Tag = "[V6Capture] ";
@@ -34,6 +45,9 @@ namespace AnomalyArena.EditorTools
 
         public static void Capture(string tag, string kinds, string outRoot) => Capture(tag, kinds, outRoot, -1f, false);
 
+        /// <param name="brightness">above 0: render every model at this V2ModelPresentation.modelBrightness instead of its own value.</param>
+        /// <param name="gameLight">light the pictures like the arena: the scene's own directional light when one is loaded (the open
+        /// arena scene in the editor), else one with the arena's colour and intensity; the biome's flat ambient and a near-black floor.</param>
         public static void Capture(string tag, string kinds, string outRoot, float brightness, bool gameLight)
         {
             Brightness = brightness;
@@ -47,7 +61,8 @@ namespace AnomalyArena.EditorTools
             if (batch) scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             else
             {
-
+                // In an open editor: an extra empty scene, far from the arena and closed again without saving, so the
+                // scene that is open there is not touched (its lights may still add a little to these pictures).
                 scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
                 SceneManager.SetActiveScene(scene);
             }
@@ -66,10 +81,11 @@ namespace AnomalyArena.EditorTools
         static Vector3 Origin;
         static float Brightness = -1f;
         static bool GameLight;
-
+        /// <summary>Optional lighting trial on top of gameLight: the scene light's colour (alpha unused) and intensity, and the ambient,
+        /// used for the pictures only; the scene light gets its own values back afterwards and nothing is saved.</summary>
         public static Color? TrialLightColor, TrialAmbient;
         public static float TrialLightIntensity = -1f;
-
+        // The arena as saved in ArenaV2.unity (2026-11-06): one directional light, cold blue at 1.2, and the biome's flat ambient.
         static readonly Color ArenaLight = new Color(.72f, .84f, 1f), ArenaAmbient = new Color(.19f, .24f, .35f), ArenaFloor = new Color(.085f, .09f, .105f);
 
         static void CaptureIn(string tag, string[] list, string folder)
@@ -148,7 +164,7 @@ namespace AnomalyArena.EditorTools
                 var presentation = instance.GetComponent<V2ModelPresentation>();
                 if (!presentation || !presentation.modelRoot) throw new Exception("no V2ModelPresentation with a model root");
                 var model = presentation.modelRoot;
-
+                // Only the 3D model: whitebox shapes and other art the arena switches off stay hidden.
                 foreach (var renderer in instance.GetComponentsInChildren<Renderer>(true))
                     if (!renderer.transform.IsChildOf(model)) renderer.enabled = false;
                 float runtime = (presentation.scaleWithBodyRadius ? definition.radius / Mathf.Max(.01f, presentation.referenceBodyRadius) : 1f) *
@@ -166,6 +182,7 @@ namespace AnomalyArena.EditorTools
                     made.Add(Ring("Capsule collider", new Vector3(centre.x, 0f, centre.z), capsule.radius * scale, new Color(.2f, .9f, 1f), .045f, made));
                 }
 
+                // The same framing before and after, so the two pictures of a kind compare directly.
                 float half = Mathf.Max(1.8f, definition.radius * 4.5f);
                 var look = Origin + new Vector3(0f, Mathf.Min(1.2f, definition.radius), 0f);
                 camera.transform.rotation = Quaternion.Euler(Pitch, 0f, 0f);
@@ -174,7 +191,7 @@ namespace AnomalyArena.EditorTools
                 var renderers = presentation.modelRenderers != null && presentation.modelRenderers.Length > 0
                     ? presentation.modelRenderers.Where(r => r).ToArray()
                     : model.GetComponentsInChildren<Renderer>(true);
-
+                // As V2ModelPresentation does in play: the base colour is its runtime tint (white) times the model brightness.
                 float bright = Brightness > 0f ? Brightness : presentation.modelBrightness;
                 var block = new MaterialPropertyBlock();
                 foreach (var renderer in renderers)
@@ -236,6 +253,7 @@ namespace AnomalyArena.EditorTools
             }
         }
 
+        /// <summary>A flat ring on the ground, drawn unlit so it reads the same under any light.</summary>
         static GameObject Ring(string name, Vector3 centre, float radius, Color colour, float width, List<Object> made)
         {
             const int segments = 128;

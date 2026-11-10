@@ -3,7 +3,12 @@ using UnityEngine.UI;
 
 namespace AnomalyArena
 {
-
+    /// <summary>
+    /// The flourish when a card is taken. A copy of the picked card swells and lifts away in its rarity colour while a glow
+    /// frame, a shock ring, light rays and sparks burst from it; the rarer the card, the bigger the burst.
+    /// The images are saved in the scene and reused; only the card's copy is made at the moment of the pick.
+    /// Runs on unscaled time because the game is paused while choosing.
+    /// </summary>
     public class V2CardPickFx : MonoBehaviour
     {
         [Tooltip("Full-screen wash in the rarity colour; shown for Epic and rarer cards.")] public Image screenTint;
@@ -25,6 +30,7 @@ namespace AnomalyArena
         float[] sparkSpin, sparkSize;
         readonly System.Random random = new(526);
 
+        /// <summary>How big the burst is for a rarity, 0–1.</summary>
         public static float Power(CardRarity rarity) => rarity switch
         {
             CardRarity.Rare => .45f,
@@ -34,6 +40,7 @@ namespace AnomalyArena
             _ => .3f
         };
 
+        /// <summary>How many sparks fly for a rarity.</summary>
         public static int SparkCount(CardRarity rarity) => rarity switch
         {
             CardRarity.Rare => 10,
@@ -44,7 +51,7 @@ namespace AnomalyArena
         };
 
         public bool Playing => age < duration;
-
+        /// <summary>How many flourishes have started; tests read it.</summary>
         public int Plays { get; private set; }
 
         void Awake() => Hide();
@@ -55,6 +62,7 @@ namespace AnomalyArena
             Hide();
         }
 
+        /// <summary>Plays the flourish on a card at its current place on screen.</summary>
         public void Play(RectTransform card, CardRarity rarity)
         {
             if (!card) return;
@@ -64,10 +72,12 @@ namespace AnomalyArena
             float scale = root.lossyScale.x > 0f ? card.lossyScale.x / root.lossyScale.x : 1f;
             size = card.rect.size * scale;
             power = Power(rarity);
-
+            // Rarity black would not show on the dark panels; void cards glow violet (V5MenuSkin).
             tint = rarity == CardRarity.Void ? V5MenuSkin.VoidGlow : ArenaRarity.ColorFor(rarity);
             age = 0f;
             Plays++;
+            // 2026-11-10 (second round): whitebox has no flourish; the pick still counts (and its sound plays, V2Hud.PlayCardPick).
+            if (!Art.Enabled) { age = float.MaxValue; Hide(); return; }
             MakeGhost(card);
             int count = sparks == null ? 0 : Mathf.Min(sparks.Length, SparkCount(rarity));
             if (sparkPosition == null || sparkPosition.Length < count)
@@ -80,7 +90,7 @@ namespace AnomalyArena
             sparkCount = count;
             for (int i = 0; i < count; i++)
             {
-
+                // Sparks leave from a random point on the card's edge, outward from its centre.
                 Vector2 half = size * .5f;
                 float along = Next(-1f, 1f);
                 Vector2 start = (i % 4) switch
@@ -174,7 +184,7 @@ namespace AnomalyArena
             if (!ghostHolder) return;
             var copy = Instantiate(card.gameObject, ghostHolder, false);
             copy.name = "Picked Card";
-
+            // The holder is inactive, so nothing on the copy wakes up before its buttons and scripts are removed.
             var parts = copy.GetComponentsInChildren<Component>(true);
             for (int i = parts.Length - 1; i >= 0; i--)
             {

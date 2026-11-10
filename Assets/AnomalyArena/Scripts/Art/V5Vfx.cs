@@ -5,20 +5,26 @@ using UnityEngine.SceneManagement;
 
 namespace AnomalyArena
 {
-
+    /// <summary>
+    /// The V5 effect layer of the illustrated art. One world-space particle system per texture, made at runtime from
+    /// Resources/V5, so the scene gains nothing; recipes below emit into them from the same events that drove the flat rings and stickers. Effects only read game
+    /// state and never change a rule. It stands down in whitebox mode (On), where the old code paths still draw.
+    /// </summary>
     [DefaultExecutionOrder(-40)]
     public sealed partial class V5Vfx : MonoBehaviour
     {
         public static V5Vfx I { get; private set; }
-
+        /// <summary>The layer is up and the run shows the illustrated art.</summary>
         public static bool On => I && Art.Enabled;
 
         Texture teleCone;
-
+        /// <summary>The enemy punch arc of the V5 art.</summary>
         public Texture TeleCone => teleCone ? teleCone : teleCone = Tex("tele-cone");
 
+        /// <summary>A share of the particle counts, lowered when the frame rate is poor.</summary>
         public static float Quality { get; private set; } = 1f;
 
+        /// <summary>One particle system with the shared emit call.</summary>
         sealed class Layer
         {
             public ParticleSystem ps;
@@ -35,6 +41,7 @@ namespace AnomalyArena
                 ps.Emit(p, 1);
             }
 
+            /// <summary>Emits with separate width and height (a layer made with sized3D).</summary>
             public void EmitSized(Vector3 at, Vector3 velocity, Vector2 size, float life, Color color, float rotation = 0f)
             {
                 p.position = at;
@@ -112,8 +119,11 @@ namespace AnomalyArena
             TickFreeze();
         }
 
+        // ───── Materials and layers ─────
+
         public static Texture2D Tex(string name) => Resources.Load<Texture2D>("V5/Fx/" + name);
 
+        /// <summary>For flipbooks of light on black: premultiplied, with the alpha taken from the brightness.</summary>
         Material FireMat(string texture, float intensity, float glow, float bias = 1.2f, float lumaAlpha = 2.4f)
         {
             var m = Mat(texture, false, intensity, glow, bias);
@@ -164,7 +174,7 @@ namespace AnomalyArena
             main.loop = true;
             main.playOnAwake = false;
             main.simulationSpace = ParticleSystemSimulationSpace.World;
-            main.useUnscaledTime = true;                                              
+            main.useUnscaledTime = true; // TickFreeze stops the layers with the world
             main.maxParticles = s.max > 0 ? s.max : 256;
             main.startSpeed = 0f;
             main.gravityModifier = s.gravity;
@@ -189,7 +199,7 @@ namespace AnomalyArena
                 }
                 else
                 {
-
+                    // An atlas of still pictures: every particle keeps one, chosen at random.
                     sheet.frameOverTime = new ParticleSystem.MinMaxCurve(0f);
                     sheet.startFrame = new ParticleSystem.MinMaxCurve(0f, .999f);
                 }
@@ -243,14 +253,14 @@ namespace AnomalyArena
         {
             const ParticleSystemRenderMode Flat = ParticleSystemRenderMode.HorizontalBillboard;
             const ParticleSystemRenderMode Face = ParticleSystemRenderMode.Billboard;
-
+            // Ground layers first (low order), so everything standing on the ground draws above them.
             decal = Make("Scorch", Mat("scorch", false, .9f, 0f, 0f), new LayerShape { tilesX = 2, tilesY = 2, mode = Flat, fade = Fade(.03f, .55f), order = -2, max = 96 });
             frostDecal = Make("Frost", Mat("frost", false, 1f, 0f, 0f), new LayerShape { mode = Flat, fade = Fade(.08f, .6f), order = -2, max = 64 });
             groundGlow = Make("GroundGlow", Mat("glow", true, 1.4f, 0f, 0f), new LayerShape { mode = Flat, fade = Fade(.05f, .2f), order = -1, max = 128 });
             ringLayer = Make("Ring", Mat("ring", true, 2.2f, 0f, 0f), new LayerShape { mode = Flat, size = Curve(.67f, 1.075f, 2.4f), fade = Fade(0f, .35f), order = -1, max = 128 });
             softRing = Make("SoftRing", Mat("shock", true, 1.3f, 0f, 0f), new LayerShape { mode = Flat, size = Curve(.45f, 1.06f, 2.4f), fade = Fade(0f, .15f), order = -1, max = 64 });
             twirl = Make("Twirl", Mat("twirl", true, 1.8f, 0f, 0f), new LayerShape { tilesX = 2, tilesY = 2, mode = Flat, size = Curve(.9f, 1.05f), fade = Fade(.1f, .5f), order = -1, max = 96 });
-
+            // Smoke and fire.
             smokeLow = Make("SmokeLow", Mat("puffs", false, .55f), new LayerShape { tilesX = 2, tilesY = 2, mode = Face, size = Curve(.7f, 1.5f), fade = Fade(.1f, .35f), drag = 1.2f, order = 0, max = 192 });
             smoke = Make("Smoke", Mat("smoke", false, .6f), new LayerShape { tilesX = 8, tilesY = 8, flipbook = true, mode = Face, size = Curve(.75f, 1.4f), fade = Fade(.08f, .45f), drag = .8f, order = 1, max = 128 });
             cloud = Make("Cloud", Mat("cloud", false, 1f), new LayerShape { tilesX = 8, tilesY = 8, flipbook = true, mode = Face, size = Curve(.6f, 1.25f), fade = Fade(.22f, .6f), drag = .6f, order = 1, max = 160 });
@@ -260,7 +270,7 @@ namespace AnomalyArena
             smallFlame = Make("SmallFlame", FireMat("smallflame", .98f, .45f, 1.6f, 2.2f), new LayerShape { tilesX = 11, tilesY = 11, flipbook = true, mode = Face, fade = Fade(.08f, .75f), order = 3, max = 256 });
             energy = Make("Energy", Mat("energy", true, 1.8f, 1f, 1.4f), new LayerShape { tilesX = 6, tilesY = 6, flipbook = true, mode = Face, size = Curve(.8f, 1.15f), fade = Fade(0f, .55f), order = 3, max = 96 });
             debris = Make("Debris", Mat("debris", false, .55f, 0f, 1f), new LayerShape { tilesX = 2, tilesY = 2, mode = Face, gravity = 1.1f, drag = .6f, randomRotation = true, fade = Fade(0f, .75f), order = 2, max = 256 });
-
+            // Bright layers on top.
             flash = Make("Flash", Mat("orb", true, 2f, 0f, 2f), new LayerShape { mode = Face, size = Curve(.7f, 1.2f), fade = Fade(0f, .1f), order = 5, max = 128 });
             star = Make("Star", Mat("stars", true, 3f, 0f, 2f), new LayerShape { tilesX = 4, tilesY = 2, mode = Face, size = Curve(.6f, 1.15f), fade = Fade(0f, .25f), order = 5, max = 96 });
             muzzle = Make("Muzzle", Mat("muzzle", true, 3f, 0f, 1.6f), new LayerShape { tilesX = 2, tilesY = 2, mode = Face, size = Curve(.85f, 1.1f), fade = Fade(0f, .4f), order = 5, max = 64 });
@@ -278,6 +288,8 @@ namespace AnomalyArena
             bubble = Make("Bubble", Mat("bubble", false, 1.2f, 0f, 1.4f), new LayerShape { mode = Face, size = Curve(.5f, 1.1f), fade = Fade(.1f, .75f), order = 4, max = 128 });
         }
 
+        // ───── Small helpers ─────
+
         static float R(float a, float b) => Random.Range(a, b);
         static int Count(float n) => Mathf.Max(1, Mathf.RoundToInt(n * Quality));
         static Vector3 FlatDir(Vector3 d, Vector3 fallback)
@@ -289,6 +301,7 @@ namespace AnomalyArena
         static Color Bright(Color c, float toWhite) => Color.Lerp(c, Color.white, toWhite);
         static Color WithAlpha(Color c, float a) { c.a = a; return c; }
 
+        /// <summary>Roll that lines a camera-facing sprite's +X with a world direction on screen.</summary>
         static float ScreenRoll(Vector3 direction)
         {
             var gm = GameManager.Instance;
@@ -297,11 +310,15 @@ namespace AnomalyArena
             return Mathf.Atan2(local.y, local.x) * Mathf.Rad2Deg;
         }
 
+        // ───── Generic recipes, the ones Fx routes to ─────
+
+        /// <summary>Fx.Pop: a short soft flash.</summary>
         public void Pop(Vector3 at, Color c, float size)
         {
             flash.Emit(at, Vector3.zero, size * .85f, .16f, WithAlpha(Bright(c, .25f), Mathf.Min(1f, c.a)));
         }
 
+        /// <summary>Fx.Burst: hit shards as thin bright streaks.</summary>
         public void Burst(Vector3 at, Vector3 dir, Color c, int count, float speed, float spreadDeg, float size)
         {
             Vector3 forward = dir.sqrMagnitude > 0f ? dir.normalized : Vector3.forward;
@@ -313,6 +330,7 @@ namespace AnomalyArena
             }
         }
 
+        /// <summary>Fx.Ring: a thin ring that grows to the given radius (it still shows the true reach) and fades, with a little soft light behind it.</summary>
         public void Ring(Vector3 at, float radius, Color c, float life)
         {
             float size = Mathf.Max(.2f, radius * 2f);
@@ -321,6 +339,7 @@ namespace AnomalyArena
             if (radius > .8f) softRing.Emit(OnGround(at, .08f), Vector3.zero, size, Mathf.Max(.14f, life) * .8f, WithAlpha(c, .16f * alpha));
         }
 
+        /// <summary>A hit on a body: sparks along the hit, a small flash; a heavy hit adds a star and a puff, a crit a large gold star. No big ring.</summary>
         public void Hit(Vector3 at, Vector3 dir, Color c, float radius, bool heavy, bool crit, bool organic = false)
         {
             Vector3 d = FlatDir(dir, Vector3.forward);
@@ -333,7 +352,7 @@ namespace AnomalyArena
             flash.Emit(at, Vector3.zero, Mathf.Max(.7f, radius * (heavy ? 2.1f : 1.3f)), heavy ? .09f : .06f, WithAlpha(Bright(c, .3f), .9f));
             if (organic)
             {
-
+                // What the hit knocks out of the body flies on along the shot.
                 int drops = Count(heavy ? 7 : 2);
                 for (int i = 0; i < drops; i++)
                     droplet.Emit(at, (Quaternion.Euler(0f, R(-38f, 38f), 0f) * d * R(3f, heavy ? 11f : 8f)) + Vector3.up * R(2f, 6f), R(.14f, heavy ? .32f : .24f), R(.26f, .52f), Ichor);
@@ -350,10 +369,11 @@ namespace AnomalyArena
             }
         }
 
+        /// <summary>Weapon fire: a real flash at the muzzle, light on the ground and a few sparks; size is the old flash length.</summary>
         public void Muzzle(Vector3 at, Vector3 dir, Color c, float size, bool throwCase = false)
         {
             Vector3 d = FlatDir(dir, Vector3.forward);
-            float roll = ScreenRoll(d) - 90f;                     
+            float roll = ScreenRoll(d) - 90f; // the art points up
             muzzle.Emit(at + d * size * .28f, d * 1.5f, size * 1.25f, .055f, Bright(c, .35f), -roll);
             flash.Emit(at, Vector3.zero, size * .7f, .05f, c);
             groundGlow.Emit(OnGround(at), Vector3.zero, size * 2.6f, .08f, WithAlpha(c, .5f));
@@ -364,6 +384,7 @@ namespace AnomalyArena
                 spark.Emit(at, (Quaternion.Euler(0f, R(-16f, 16f), 0f) * d * R(9f, 18f)) + Vector3.up * R(0f, 1f), R(.04f, .07f), R(.05f, .11f), Bright(c, .4f));
         }
 
+        /// <summary>A true explosion: flash, a real fireball turning to dark smoke, sparks, a thin ring at the exact radius, a scorch mark. tint recolours flash and sparks.</summary>
         public void Explosion(Vector3 at, float radius, Color? tint = null, bool scorch = true)
         {
             Color warm = tint ?? new Color(1f, .62f, .24f);
@@ -371,7 +392,7 @@ namespace AnomalyArena
             Vector3 air = new(at.x, Mathf.Max(.8f, radius * .35f), at.z);
             if (tint.HasValue)
             {
-
+                // An infused or affixed blast is its element, not an orange fireball.
                 flash.Emit(air, Vector3.zero, radius * 1.9f, .09f, WithAlpha(Bright(warm, .3f), .85f));
                 groundGlow.Emit(ground, Vector3.zero, radius * 3f, .34f, WithAlpha(warm, .55f));
                 energy.Emit(air, Vector3.up * .4f, radius * 2.7f, R(.5f, .62f), warm, R(0f, 360f));
@@ -417,11 +438,13 @@ namespace AnomalyArena
             BlastShake(at, radius);
         }
 
+        /// <summary>A burn mark on the ground that fades after a few seconds.</summary>
         public void Scorch(Vector3 at, float radius, float life = 5f)
         {
             decal.Emit(OnGround(at, .045f), Vector3.zero, radius * 2.4f, life, new Color(.04f, .035f, .03f, .5f), R(0f, 360f));
         }
 
+        /// <summary>Fx.Cone: a real stream of fire, frost mist, spores, or a blast fan for a plain weapon, reaching the cone's range.</summary>
         public void Cone(Vector3 origin, Vector3 dir, float radius, float arcDeg, ElementKind element)
         {
             Vector3 d = FlatDir(dir, Vector3.forward);
@@ -434,7 +457,7 @@ namespace AnomalyArena
                     int n = Count(6);
                     for (int i = 0; i < n; i++)
                     {
-
+                        // Fast at the muzzle, slowed by the air; the flipbook grows from a small tongue to a big rolling flame.
                         Vector3 v = Quaternion.Euler(0f, R(-half, half) * .7f, 0f) * d;
                         fireball.Emit(at + v * R(.4f, .9f), v * radius * R(2.6f, 3.6f) + Vector3.up * R(0f, .4f), radius * R(.5f, .8f), R(.3f, .46f), new Color(1f, R(.74f, .98f), R(.55f, .88f), 1f), R(0f, 360f));
                     }
@@ -465,7 +488,7 @@ namespace AnomalyArena
                 }
                 default:
                 {
-
+                    // A blast of shot: a wide tongue of flame at the muzzle, a fan of streaks to the true range, gun smoke. An infused shot takes its element's colour.
                     Color blast = element == ElementKind.None ? new Color(1f, .85f, .55f) : ElementTint(element);
                     int n = Count(9);
                     for (int i = 0; i < n; i++)
@@ -489,6 +512,7 @@ namespace AnomalyArena
             }
         }
 
+        /// <summary>A jagged bolt between two points (chain lightning, drone beam, execute shot); stays bright for life seconds.</summary>
         public void Bolt(Vector3 from, Vector3 to, Color c, float width, float life)
         {
             Vector3 line = to - from;
@@ -498,6 +522,8 @@ namespace AnomalyArena
             bolt.EmitSized((from + to) * .5f, Vector3.zero, new Vector2(length, Mathf.Max(.25f, width)), Mathf.Max(.05f, life), Bright(c, .25f), -roll);
             flash.Emit(to, Vector3.zero, Mathf.Max(.5f, width * 1.6f), .06f, c);
         }
+
+        // ───── Look: bloom and a light grade ─────
 
         Volume volume, slipVolume;
         bool lookApplied, lookIllustrated;
@@ -510,7 +536,7 @@ namespace AnomalyArena
             if (!gm || !gm.cam) return;
             lookApplied = true;
             lookIllustrated = Art.Enabled;
-
+            // The player's model lifts a little off the ground in the illustrated art, so the eye finds it in a crowd.
             var look = gm.player ? gm.player.GetComponent<V2ModelPresentation>() : null;
             if (look)
             {
@@ -540,6 +566,7 @@ namespace AnomalyArena
             if (volume) volume.enabled = Art.Enabled;
         }
 
+        /// <summary>Time Slip dims the colour of the world while it lasts ("除玩家以外的一切都变慢").</summary>
         void TickLook()
         {
             var gm = GameManager.Instance;
@@ -561,12 +588,13 @@ namespace AnomalyArena
             if (slipVolume) slipVolume.weight = Mathf.MoveTowards(slipVolume.weight, slip ? 1f : 0f, Time.unscaledDeltaTime * 3.5f);
         }
 
+        // Frame rate watch: a slow machine loses the bloom first, then particles.
         float fpsClock;
         int fpsFrames, slowSpells;
 
         void AdaptQuality()
         {
-
+            // Only real play counts: a menu, a hidden tab or one long hitch (a shader compiling, a map loading) says nothing about the machine.
             var game = GameManager.Instance;
             bool playing = game && game.RunPhase is ArenaUiState.WaveActive or ArenaUiState.VoidTrial or ArenaUiState.FinalBoss;
             if (Time.timeScale <= 0f || !playing || !Application.isFocused || Time.unscaledDeltaTime > .5f)
@@ -587,13 +615,14 @@ namespace AnomalyArena
             if (!bloomDropped && volume)
             {
                 bloomDropped = true;
-
+                // volume.profile is this run's own copy: dropping the bloom must not change the saved asset when this happens in the editor.
                 if (volume.profile.TryGet<Bloom>(out var bloom)) bloom.active = false;
             }
             else Quality = Mathf.Max(.35f, Quality * .75f);
         }
     }
 
+    /// <summary>Runs after the HUD: the hit flash is an edge vignette, and on the black of the void trial it would swamp the screen, so it is held back there.</summary>
     [DefaultExecutionOrder(3000)]
     public sealed class V5VfxLate : MonoBehaviour
     {

@@ -6,7 +6,7 @@ namespace AnomalyArena
     [CreateAssetMenu(menuName = "Anomaly Arena/World/Biome")]
     public sealed class Biome : ScriptableObject
     {
-
+        /// <summary>One decal drawn on every quicksand pool of the map (Quicksand builds them).</summary>
         [Serializable]
         public struct QuicksandLayer
         {
@@ -39,6 +39,8 @@ namespace AnomalyArena
         [Tooltip("Decals drawn on every quicksand pool of the layout, bottom first. Without a material or layers the pools still slow, unseen.")]
         public QuicksandLayer[] quicksandLayers;
 
+        /// <summary>Lights the arena for this map: the scene's directional light (the sun source, else the first enabled directional
+        /// light) and the flat ambient. Only day is used in the game for now; V2's night will pass night: true.</summary>
         public void ApplyLighting(bool night = false)
         {
             RenderSettings.ambientLight = night ? ambient : dayAmbient;
@@ -51,6 +53,28 @@ namespace AnomalyArena
             sun.intensity = night ? nightSunIntensity : daySunIntensity;
         }
 
+        /// <summary>The open mode's map families (沙丘 Dunes, 遗迹 Ruins), as the maps' names begin.</summary>
+        public const string Dunes = "Dunes", Ruins = "Ruins";
+
+        /// <summary>The map belongs to the family: its name begins with it ("Dunes · 2" is a Dunes map).</summary>
+        public bool InFamily(string family) =>
+            !string.IsNullOrEmpty(family) && displayName != null && displayName.StartsWith(family, System.StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>Index of a random map in rotation of the given family (the open mode's map pick). A null or empty family, or one with no
+        /// map in rotation, picks as PickForRun(biomes) does.</summary>
+        public static int PickForRun(Biome[] biomes, string family)
+        {
+            if (biomes == null || string.IsNullOrEmpty(family)) return PickForRun(biomes);
+            int open = 0;
+            foreach (var biome in biomes) if (biome && biome.inRotation && biome.InFamily(family)) open++;
+            if (open == 0) return PickForRun(biomes);
+            int pick = UnityEngine.Random.Range(0, open);
+            for (int i = 0; i < biomes.Length; i++)
+                if (biomes[i] && biomes[i].inRotation && biomes[i].InFamily(family) && pick-- == 0) return i;
+            return PickForRun(biomes);
+        }
+
+        /// <summary>Index of a random map that is in rotation; every map counts when none is.</summary>
         public static int PickForRun(Biome[] biomes)
         {
             int open = 0;

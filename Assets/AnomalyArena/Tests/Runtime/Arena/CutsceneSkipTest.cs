@@ -7,11 +7,13 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>Black-hole cutscene (document 3.2): nothing skips it any more. Space, Enter, Esc and every other key the
+    /// game reads are pressed on a real keyboard device all through it, well past the old one-second skip delay; it still plays to its end
+    /// and hands play back. Afterwards Esc pauses and resumes, so the presses did reach the game.</summary>
     [TestFixture]
     public class CutsceneSkipTest
     {
-        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
 
         static readonly KeyCode[] EveryKey =
         {
@@ -48,7 +50,7 @@ namespace AnomalyArena
             Assume.That(hole, Is.Not.Null, "the arena has an active fixed hole");
             if (game.RunPhase != ArenaUiState.Cutscene)
             {
-
+                // Stand just outside the gravity ring so the hole is on screen.
                 Vector3 away = Query.Flat(game.player.Position - hole.Centre);
                 away = away.sqrMagnitude > .01f ? away.normalized : Vector3.forward;
                 V3CombatSmokeTest.Teleport(game.player, hole.Centre + away * (hole.GravityRadius + 3f));
@@ -66,7 +68,7 @@ namespace AnomalyArena
 
             await Until(() => game.RunPhase == ArenaUiState.WaveActive, 12f, "the cutscene ends by itself and play resumes");
             Assert.That(map.holes.Any(h => h && h.Feeds >= 3), Is.True, "the cutscene played to its end: its three fodder fed the hole");
-
+            // The same keyboard does reach the game: Esc, shown on the title's controls, pauses the wave and resumes it.
             await keyboard.TapUntil(KeyCode.Escape, () => game.RunPhase == ArenaUiState.Paused, "Esc pauses the resumed wave");
             await keyboard.TapUntil(KeyCode.Escape, () => game.RunPhase == ArenaUiState.WaveActive, "Esc resumes it");
         }

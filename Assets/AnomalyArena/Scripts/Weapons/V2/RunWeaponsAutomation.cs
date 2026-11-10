@@ -13,21 +13,23 @@ namespace AnomalyArena
         public float orbitBladeRadius = .35f;
         float autoClock;
         readonly Dictionary<Combatant,float>[] autoHitTimes = { new(), new(), new() };
-
+        // Bodies one auto weapon hits this frame, collected first: a kill can wake a pooled enemy, which joins Combatant.All.
         readonly List<Combatant> autoTargets=new();
-
+        // Closed Blade: when each pickup and each corpse (by spawn version) may be knocked again, on the world clock.
         readonly Dictionary<ExperienceOrb,float> orbKnockReady=new();
         readonly Dictionary<Enemy,(int version,float ready)> corpseKnockReady=new();
-
+        // Deflect: enemies the ring slows (with their spawn version) and the weapon slowing them; enemy shots already rolled (by launch
+        // count, so a pooled shot fired again rolls again); your own shots by pool slot, with their launch sequence and whether they were
+        // inside the ring when last seen.
         readonly Dictionary<Combatant,int> deflectSlowed=new();
         readonly List<Combatant> deflectPruned=new();
         RunWeapon deflectSlowKey;
         readonly Dictionary<EnemyBolt,int> rolledBolts=new();
         readonly Dictionary<AttackActor,(int sequence,bool inside)> crossWatch=new();
-
+        // Whirl: your recent ground positions on the world clock (the afterimage spot).
         readonly Vector3[] playerTrail=new Vector3[128];readonly float[] playerTrailTimes=new float[128];int playerTrailHead,playerTrailCount;
         const float PlayerTrailSample=.05f;
-
+        // Void trial: the battlefield's drone and throw, kept while the trial runs its own.
         readonly Dictionary<RunWeapon,(Vector3 drop,int shots,float down,Vector3 from,Vector3 to,float total)> trialAutoStates=new();
         V2AutoWeaponMarks autoMarks;
         static readonly Color DeflectColor=new(.6f,.95f,1f,.85f);
@@ -44,28 +46,29 @@ namespace AnomalyArena
             return player.Position+new Vector3(Mathf.Cos(radians)*radius,.65f,Mathf.Sin(radians)*radius);
         }
         public float ReturnCooldown(RunWeapon w) => roster.Get(w.form).cooldownA * CooldownScale(w);
-
+        /// <summary>Gunner: rounds in one magazine.</summary>
         public int GunnerClip=>Mathf.Max(1,upgrades.gunnerClip);
-
+        /// <summary>Where the Sentry Drone hovers now: a fixed offset from your centre (droneHoverOffset; y is its height).</summary>
         public Vector3 DroneHover()=>player?player.Position+upgrades.droneHoverOffset:Vector3.zero;
-
+        /// <summary>The Gunner lies on the ground cooling down (w.dronePoint is where).</summary>
         public bool DroneDown(RunWeapon w)=>w!=null&&w.droneDownLeft>0f;
-
+        /// <summary>Radius of an Energy Ring: the Deflect force field round you.</summary>
         public float FieldRadius(RunWeapon w){var d=w!=null&&roster?roster.Get(w.form):null;return d==null?0f:(w.variant==0?d.rangeA:d.rangeB)*w.Reach;}
-
+        /// <summary>Drain (Q95, Q99): seconds without an enemy attack before the Energy Shield forms; a higher Mk divides
+        /// the wait by its damage factor.</summary>
         public float DrainShieldWait(RunWeapon w)=>Mathf.Max(0f,upgrades.drainShieldWait)/Mathf.Max(.01f,MkDamage(w));
         void TickAutoWeapons(float dt)
         {
             autoClock+=dt;
             if(!autoMarks){autoMarks=GetComponent<V2AutoWeaponMarks>();if(!autoMarks)autoMarks=gameObject.AddComponent<V2AutoWeaponMarks>();autoMarks.weapons=this;}
             RecordPlayerTrail();
-
+            // Overcharge speeds auto weapons too: their cooldowns and the blades' re-hit interval.
             float rate=Mathf.Max(.01f,WeaponCooldownRate);
             bool deflect=false;
             for(int slot=0;slot<Auto.Length;slot++)
             {
                 var w=Auto[slot];if(w==null)continue;
-
+                // Trial suspension makes a living battlefield target inactive; retain its grab and timer.
                 if(w.whirled&&BattlefieldFrozen(w.whirled.gameObject))continue;
                 w.cooldown=Mathf.Max(0,w.cooldown-dt*rate);w.orbitAngle+=orbitAngularSpeed*dt;
                 var definition=roster.Get(w.form);
@@ -79,10 +82,15 @@ namespace AnomalyArena
                 if(w.variant==0){deflect=true;TickDeflect(w,hit,range,cycle);}
                 else TickDrain(w,dt,hit);
             }
-
+            // A Deflect no longer held leaves nobody slowed.
             if(!deflect)ClearDeflectSlow();
         }
 
+        // ───── Orbit Blades ─────
+
+        /// <summary>Two tips on the circle hit what they touch (Closed pushes out, Open pulls in), each body at most once per
+        /// orbitHitInterval. Document 5.5, Q82: the Closed Blade also knocks away every pickup and corpse its tips
+        /// touch, checked every frame like the bodies.</summary>
         void TickOrbit(RunWeapon w,int slot,float hit,float rate)
         {
             Reveal(w);
@@ -108,6 +116,9 @@ namespace AnomalyArena
             }
         }
 
+        /// <summary>Closed Blade: pickups (XP, HP, Energy) and lying corpses a tip touches fly outward, away from you (pickups
+        /// OrbPool.repelDistance, corpses orbitCorpseKnock cells), each at most once per orbitKnockRepeat seconds; walls shield them as
+        /// they shield bodies. A corpse knocked into a black hole feeds it (WorldMap.TickCorpses).</summary>
         void KnockLoose(Vector3 tip)
         {
             float repeat=Mathf.Max(0f,upgrades.orbitKnockRepeat);
@@ -131,6 +142,11 @@ namespace AnomalyArena
             }
         }
 
+        // ───── Sentry Drone ─────
+
+        /// <summary>Sentry Drone (document 5.5): it hovers by you and its shots and beam leave from there. Gunner: rapid
+        /// fire at the nearest visible enemy in range, costing no Energy (Q86); after GunnerClip rounds it drops to the ground and cools
+        /// down until you step on it or gunnerAutoReturn seconds pass, then flies back with a full magazine. Whirl: TickWhirl.</summary>
         void TickDrone(RunWeapon w,float dt,float hit,float range,float cycle)
         {
             if(w.variant==0&&w.droneDownLeft>0f){TickDroppedDrone(w,dt);return;}
@@ -146,10 +162,11 @@ namespace AnomalyArena
             Reveal(w);w.cooldown=cycle;
             Vector3 muzzle=DroneMuzzle(),dir=Query.Flat(target.Position-muzzle);
             if(dir.sqrMagnitude<1e-4f)dir=Query.Flat(target.Position-player.Position);
-
+            // The target is picked within range of you, so the round flies that far plus the drone's offset; only a round fired counts.
             if(DroneBolt(w,muzzle,dir.normalized,hit,range+Query.Flat(muzzle-player.Position).magnitude)&&++w.droneShots>=GunnerClip)DropDrone(w);
         }
 
+        /// <summary>The drone's point on the ground, pulled in before any wall between it and you, so a shot never starts inside a wall.</summary>
         Vector3 DroneMuzzle()
         {
             Vector3 from=Query.AtCastHeight(player.Position),to=Query.AtCastHeight(Query.Flat(DroneHover()));
@@ -167,6 +184,9 @@ namespace AnomalyArena
             WeaponSound(w);return a;
         }
 
+        /// <summary>Gunner backfire: the empty drone drops where it hovers, on the nearest ground clear of walls and holes
+        /// (Q84), and lies there for gunnerAutoReturn seconds (Q85). It never lands within reach of your body, or you would
+        /// pick it up the moment it fell.</summary>
         void DropDrone(RunWeapon w)
         {
             w.droneDownLeft=Mathf.Max(.01f,upgrades.gunnerAutoReturn);
@@ -174,6 +194,8 @@ namespace AnomalyArena
             V3WorldAudio.Instance?.Play(ArenaWorldCue.WeaponJam,w.dronePoint);
         }
 
+        /// <summary>A dropped Gunner: touching it with your body sends it back at once (with a sound and a ring), otherwise it goes back
+        /// when its time is up; either way with a full magazine.</summary>
         void TickDroppedDrone(RunWeapon w,float dt)
         {
             w.droneDownLeft=Mathf.Max(0f,w.droneDownLeft-dt);
@@ -185,6 +207,9 @@ namespace AnomalyArena
             Fx.Ring(w.dronePoint,player.radius+upgrades.droneRadius,DeflectColor);
         }
 
+        /// <summary>Whirl target (Q87): the nearest enemy between whirlMinRange and range from you that you can see,
+        /// that can be moved (no boss, Spire or hooked body) and that stands alone, with no other enemy's body within whirlLoneRadius of
+        /// it. Null when there is none, and the drone looks again after whirlRetry.</summary>
         Combatant WhirlTarget(float range)
         {
             Combatant best=null;float nearest=float.PositiveInfinity;
@@ -205,6 +230,8 @@ namespace AnomalyArena
         }
         static bool WhirlCandidate(Combatant body)=>body is not Enemy{Immovable:true}&&body.State!=CharacterState.Hooked;
 
+        /// <summary>The beam locks on: the enemy is hooked (no black hole pulls it, it cannot act) and its throw is set from where it
+        /// stands to the afterimage spot; the cooldown starts now.</summary>
         void BeginWhirl(RunWeapon w,Combatant target,float cycle)
         {
             Reveal(w);w.cooldown=cycle;
@@ -216,10 +243,13 @@ namespace AnomalyArena
             WeaponSound(w,WeaponAudioPhase.Launch);
         }
 
+        /// <summary>Where the Whirl slams (Q89): where you stood whirlAfterimageSeconds ago, kept off your body as
+        /// you stand now, and moved to the nearest legal ground if it is no longer legal (a hole opened, a wall went up).</summary>
         Vector3 WhirlLanding(Combatant target)=>NearestValidPoint(OffYourBody(PlayerPositionAgo(upgrades.whirlAfterimageSeconds),target),target.radius,Query.Flat(target.Position),player.Position,BodyClearance(target));
-
+        /// <summary>Centre distance at which body stands clear of your body.</summary>
         float BodyClearance(Combatant body)=>player.radius+body.radius+.1f;
 
+        /// <summary>A spot for body that does not overlap your body now: a player who stood still gets the enemy beside them.</summary>
         Vector3 OffYourBody(Vector3 spot,Combatant body)
         {
             Vector3 away=Query.Flat(spot-player.Position);float clear=BodyClearance(body);
@@ -229,6 +259,8 @@ namespace AnomalyArena
             return Query.Flat(player.Position)+away.normalized*clear;
         }
 
+        /// <summary>Whirl (Q88): the tractor beam drags the hooked enemy along an arc to the afterimage spot and slams
+        /// it down there. A wall in the way ends the throw where the enemy is, in front of the wall.</summary>
         void TickWhirl(RunWeapon w,float dt,float hit)
         {
             var body=w.whirled;
@@ -241,6 +273,8 @@ namespace AnomalyArena
             if(t>=1f)SlamWhirl(w,next,hit);
         }
 
+        /// <summary>The slam: the thrown enemy lands and it and every other enemy within whirlSlamRadius of it (no wall between) take one
+        /// weapon hit; you never do.</summary>
         void SlamWhirl(RunWeapon w,Vector3 at,float hit)
         {
             var body=w.whirled;w.whirled=null;w.whirlLeft=0f;
@@ -257,6 +291,7 @@ namespace AnomalyArena
             autoTargets.Clear();
         }
 
+        /// <summary>Lets go of the Whirl's enemy without a slam (it died, the wave ended): a living one is set down where it is.</summary>
         void EndWhirl(RunWeapon w)
         {
             var body=w.whirled;w.whirled=null;w.whirlLeft=0f;
@@ -264,6 +299,8 @@ namespace AnomalyArena
             TeleportBody(body,player?NearestValidPoint(body.Position,body.radius,w.whirlFrom,player.Position,BodyClearance(body)):NearestValidPoint(body.Position,body.radius,w.whirlFrom));
         }
 
+        /// <summary>at itself when a body of this radius may stand there clear of the circle of avoidRadius round avoid, else the nearest
+        /// such point within 4 cells, else fallback.</summary>
         static Vector3 NearestValidPoint(Vector3 at,float radius,Vector3 fallback,Vector3 avoid=default,float avoidRadius=0f)
         {
             at=Query.Flat(at);avoid=Query.Flat(avoid);
@@ -282,6 +319,7 @@ namespace AnomalyArena
             playerTrailCount=Mathf.Min(playerTrail.Length,playerTrailCount+1);
         }
 
+        /// <summary>Where you stood this many world seconds ago (the oldest point kept when the record is shorter).</summary>
         public Vector3 PlayerPositionAgo(float seconds)
         {
             if(playerTrailCount==0)return player?Query.Flat(player.Position):Vector3.zero;
@@ -294,6 +332,13 @@ namespace AnomalyArena
             return playerTrail[index];
         }
 
+        // ───── Energy Ring ─────
+
+        /// <summary>Deflect (Q90-Q93, Q99): an always-on ring of the weapon's range round you. Enemies inside it with no
+        /// wall between move at deflectSlow (bosses too) and take one light hit per cycle carrying the weapon's element (Mk and cards
+        /// scale it). An enemy projectile coming into the ring is deflected and fizzles with deflectChance, rolled once per shot
+        /// (DeflectsShot); one of your own bullets or lobs leaving the ring turns by up to deflectOwnAngle degrees with the same chance,
+        /// once per shot.</summary>
         void TickDeflect(RunWeapon w,float hit,float range,float cycle)
         {
             UpdateDeflectSlow(w,range);
@@ -328,6 +373,9 @@ namespace AnomalyArena
             deflectSlowed.Clear();deflectSlowKey=null;
         }
 
+        /// <summary>Deflect (Q91): every enemy shot asks this each physics step before it moves (EnemyBolt.FixedUpdate),
+        /// so it is judged before it can hit anything. A hostile shot inside the ring with no wall between rolls deflectChance once per
+        /// launch; on success it fizzles here and the answer is true.</summary>
         public bool DeflectsShot(EnemyBolt bolt)
         {
             RunWeapon ring=null;
@@ -345,6 +393,7 @@ namespace AnomalyArena
             return true;
         }
 
+        /// <summary>How many of your own shots the Deflect ring has knocked off course (a turn of any size, zero included).</summary>
         public int OwnShotsDeflected{get;private set;}
 
         void DeflectOwnShots(float range)
@@ -354,25 +403,29 @@ namespace AnomalyArena
             {
                 if(!a||!a.gameObject.activeSelf||a.owner!=player||!Deflectable(a)||BattlefieldFrozen(a.gameObject))continue;
                 bool inside=Query.Flat(a.transform.position-player.Position).magnitude<=range;
-
+                // First sight. A straight shot still carries its spawn point (a.point): one fired inside the ring that already left it
+                // between two frames (a fast round at a low frame rate) crosses now; one fired outside it (a deployed minigun) never does.
                 if(!crossWatch.TryGetValue(a,out var seen)||seen.sequence!=a.Sequence)
                     crossWatch[a]=seen=(a.Sequence,a.mode==AttackMode.Lob?inside:Query.Flat(a.point-player.Position).magnitude<=range);
                 if(!seen.inside||inside)continue;
                 crossWatch[a]=(a.Sequence,false);
                 if(!Roll(upgrades.deflectChance))continue;
                 float angle=UnityEngine.Random.Range(-upgrades.deflectOwnAngle,upgrades.deflectOwnAngle);
-
+                // A lob turns its unflown path and landing about where it is; R7 moves a landing in a wall, a hole or off the map.
                 if(a.mode==AttackMode.Lob){var landing=LandingPoint(Query.Flat(a.transform.position)+Quaternion.Euler(0f,angle,0f)*Query.Flat(a.point-a.transform.position));if(!landing.HasValue)continue;a.BendArc(landing.Value);}
                 else a.direction=Quaternion.Euler(0f,angle,0f)*a.direction;
                 OwnShotsDeflected++;
                 Fx.Pop(a.transform.position,DeflectColor,.45f);
             }
         }
-
+        /// <summary>Q93: visible bullets and lobs count (Rifle, Gatling, Needler, Focus pellets, ice shards, Barrage
+        /// rockets, Gunner bullets, Wildfire fireballs, Cloud pods); the Railgun's slug, knives and hooks do not.</summary>
         static bool Deflectable(AttackActor a)=>a.weapon!=null&&(a.mode==AttackMode.Lob||(a.mode is AttackMode.Bolt or AttackMode.Swarm or AttackMode.Shard)&&a.weapon.form!=WeaponForm.Railgun);
-
+        /// <summary>True with this chance; in ten-thousandths, so 1 always hits and 0 never does (Random.value can return 1).</summary>
         static bool Roll(float chance)=>UnityEngine.Random.Range(0,10000)<chance*10000f;
 
+        /// <summary>Drain (Q94-Q99): DrainShieldWait seconds without an enemy attack raise an Energy Shield on you;
+        /// EnergyShieldBlocks spends it.</summary>
         void TickDrain(RunWeapon w,float dt,float hit)
         {
             if(drainReleaseFrom==w){drainReleaseFrom=null;ReleaseDrainElement(w,hit);}
@@ -380,11 +433,15 @@ namespace AnomalyArena
             if(w.drainShieldUp)return;
             w.drainQuiet+=dt;
             if(w.drainQuiet<DrainShieldWait(w))return;
-
+            // A shield formed again ends the overload (a high Mk can form it within drainOverloadSeconds): it takes the next attack whole.
             w.drainShieldUp=true;w.drainOverloadLeft=0f;
             V5WeaponAudio.Instance?.Play(V5Sfx.RingShieldUp);
         }
 
+        /// <summary>Drain (Q94-Q97): Combatant.ReceiveDamage asks this for every enemy attack on you before it lands
+        /// (the attacks hit protection covers; burn, poison, walls and your own weapons never come here). The attack restarts the
+        /// shield's wait. A raised Energy Shield takes it whole (no damage, push, stun or stacks), breaks and gives drainBlockEnergy; the
+        /// first attack in the drainOverloadSeconds after that costs drainOverloadEnergy, once per break.</summary>
         public bool EnergyShieldBlocks()
         {
             RunWeapon drain=null;
@@ -395,7 +452,8 @@ namespace AnomalyArena
             {
                 drain.drainShieldUp=false;drain.drainOverloadLeft=Mathf.Max(0f,upgrades.drainOverloadSeconds);drain.drainOverloadPaid=false;
                 if(progression)progression.GainEnergy(upgrades.drainBlockEnergy);
-
+                // An infused Drain releases its element on the next tick, outside this ReceiveDamage, so an enemy's reaction to it
+                // cannot hit the player again inside the same attack (P23).
                 if(drain.element!=ElementKind.None)drainReleaseFrom=drain;
                 WeaponSound(drain);
                 Fx.Ring(player.Position,player.radius+.6f,new Color(.6f,1f,.95f,.9f));
@@ -411,7 +469,9 @@ namespace AnomalyArena
         }
 
         RunWeapon drainReleaseFrom;
-
+        /// <summary>Drain Infusion (document 5.7): each block releases one hit of the Drain's element (damageB,
+        /// scaled like the weapon) on every enemy within drainInfuseRadius with no wall between. Fire, Poison, Frost and Lightning stack
+        /// on them; Earth, Light and Void pay you through that hit like any infused hit.</summary>
         void ReleaseDrainElement(RunWeapon w,float hit)
         {
             if(w.element==ElementKind.None||!player||!player.IsAlive)return;
@@ -423,21 +483,25 @@ namespace AnomalyArena
             Fx.Ring(player.Position,radius,ElementCombat.ColorFor(w.element));
         }
 
+        /// <summary>Slot text of the auto weapons: the Gunner's rounds left or its drop countdown, the Drain's shield state.</summary>
         string AutoSlotDetail(RunWeapon w)
         {
             if(w.form==WeaponForm.SentryDrone&&w.variant==0)
-                return w.droneDownLeft>0f?ArenaText.Pair($" · Down · step on it or {w.droneDownLeft:0.0}s",$" · Down · step on it or {w.droneDownLeft:0.0}s")
-                    :ArenaText.Pair($" · {GunnerClip-w.droneShots} rounds",$" · {GunnerClip-w.droneShots} rounds");
+                return w.droneDownLeft>0f?ArenaText.Pair($" · 掉落 · 踩它或等 {w.droneDownLeft:0.0} 秒",$" · Down · step on it or {w.droneDownLeft:0.0}s")
+                    :ArenaText.Pair($" · 剩 {GunnerClip-w.droneShots} 发",$" · {GunnerClip-w.droneShots} rounds");
             if(w.form==WeaponForm.ShieldRing&&w.variant==1)
-                return w.drainOverloadLeft>0f&&!w.drainOverloadPaid?ArenaText.Pair($" · Overload {w.drainOverloadLeft:0.0}s",$" · Overload {w.drainOverloadLeft:0.0}s")
-                    :w.drainShieldUp?ArenaText.Pair(" · Energy Shield up"," · Energy Shield up")
-                    :ArenaText.Pair($" · Shield in {Mathf.Max(0f,DrainShieldWait(w)-w.drainQuiet):0.0}s",$" · Shield in {Mathf.Max(0f,DrainShieldWait(w)-w.drainQuiet):0.0}s");
+                return w.drainOverloadLeft>0f&&!w.drainOverloadPaid?ArenaText.Pair($" · 过载 {w.drainOverloadLeft:0.0} 秒",$" · Overload {w.drainOverloadLeft:0.0}s")
+                    :w.drainShieldUp?ArenaText.Pair(" · 能量盾就绪"," · Energy Shield up")
+                    :ArenaText.Pair($" · 能量盾 {Mathf.Max(0f,DrainShieldWait(w)-w.drainQuiet):0.0} 秒",$" · Shield in {Mathf.Max(0f,DrainShieldWait(w)-w.drainQuiet):0.0}s");
             return "";
         }
 
+        /// <summary>Void trial: the battlefield keeps its dropped drone and its throw in flight (the thrown body is frozen with it); the
+        /// trial gets a drone flying by you with a full magazine. Coming back restores them.</summary>
         void FreezeAutoWeaponsForTrial(bool freeze)
         {
-
+            // The knock memories run on autoClock, which the trial winds back on the way out: start them afresh both ways. The shot
+            // memories are keyed by launch, so the battlefield's suspended shots keep theirs and are not rolled twice.
             ClearDeflectSlow();orbKnockReady.Clear();corpseKnockReady.Clear();playerTrailCount=0;drainReleaseFrom=null;
             if(freeze)
             {
@@ -458,6 +522,8 @@ namespace AnomalyArena
             trialAutoStates.Clear();
         }
 
+        /// <summary>Wave end: the thrown enemy is set down, the drone comes back to you with a full magazine, the Drain's overload ends
+        /// and nobody stays slowed.</summary>
         void ClearAutoMotion()
         {
             foreach(var w in Auto)if(w!=null){EndWhirl(w);w.droneShots=0;w.droneDownLeft=0f;w.drainOverloadLeft=0f;}

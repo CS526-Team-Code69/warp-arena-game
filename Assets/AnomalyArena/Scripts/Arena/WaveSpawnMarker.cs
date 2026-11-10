@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>A warning saved in the scene; enabling it never creates new visual geometry.</summary>
     public sealed class WaveSpawnMarker : MonoBehaviour
     {
         public Renderer visual;
@@ -10,7 +10,7 @@ namespace AnomalyArena
         public bool elite;
         public ElementKind affix;
         public float timer;
-
+        /// <summary>A boss summon: the enemy it becomes gives no experience.</summary>
         public bool bossSummon;
         public void Begin(Vector3 position, EnemyDefinition enemy, bool isElite, ElementKind element, bool summon = false)
         {
@@ -24,7 +24,7 @@ namespace AnomalyArena
             if (visual) Art.Tint(visual, enemy.kind == EnemyKind.Shade ? new Color(0.65f, 0.45f, 1f) : new Color(1f, 0.2f, 0.25f));
             if (visual && V5Vfx.On)
             {
-
+                // The illustrated art's thin cross; whitebox keeps the saved picture.
                 block ??= new MaterialPropertyBlock();
                 visual.GetPropertyBlock(block);
                 block.SetTexture("_BaseMap", V5Vfx.Tex("spawn-cross"));

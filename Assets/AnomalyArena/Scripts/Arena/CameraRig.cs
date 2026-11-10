@@ -2,10 +2,10 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>Follow centre, map clamp and shake are separate, so hit feedback cannot reset following.</summary>
     public sealed class CameraRig : MonoBehaviour
     {
-
+        /// <summary>A trial framing for the 2.5D look (2026-11-06): the camera's two angles, its distance and its lens.</summary>
         [System.Serializable]
         public struct View
         {
@@ -28,14 +28,16 @@ namespace AnomalyArena
         public Transform target;
         public Camera camera;
         public Vector3 offset = new Vector3(0f, 46f, -15f);
-
+        /// <summary>How far shake, kick and punch have moved the camera this frame.</summary>
         public Vector3 Transient { get; private set; }
         public float smoothTime = 0.12f;
         [Min(0f), Tooltip("How fast a camera push springs back (per second).")] public float kickReturn = 14f;
         [Min(0f), Tooltip("Largest push, so stacked kicks never throw the view.")] public float kickLimit = .6f;
 
         [Header("Camera view (2026-11-06)")]
-
+        // Named cameraView, not view: a scene opened while the trial field "view" defaulted to 0 kept that 0 through later reloads, so
+        // the choice below would not have reached an open editor. ArenaV2.unity has stored cameraView since 2026-11-06 04:30.
+        // The view is fixed since 2026-11-06: no key switches it any more; the other views stay here.
         [Min(0), Tooltip("0 keeps the camera exactly as the scene saved it (the offset above, the camera's own rotation and lens). 1 and up pick from Views. " +
                          "The default, 2, is the corner-on view chosen on 2026-11-06. The view is fixed in play: no key switches it.")]
         public int cameraView = 2;
@@ -50,10 +52,10 @@ namespace AnomalyArena
         Vector3 follow, velocity, kick;
         float amplitude, punch;
         bool started;
-
+        // Cutscene focus: the view glides to a point and closes in (offset scaled), then glides back; all on unscaled time.
         Vector3 focusPoint;
         float focusWeight, focusTarget, focusZoom = 1f, focusSeconds = 1f;
-
+        // The trial view in use (0 = the scene's own camera) and the scene's own rotation and lens, kept to come back to.
         int applied;
         Vector3 presetOffset;
         float moveYaw;
@@ -61,15 +63,18 @@ namespace AnomalyArena
         Quaternion sceneRotation;
         float sceneSize, sceneFieldOfView;
 
+        /// <summary>Degrees the walking keys turn so that they follow the screen: the trial view's yaw, 0 for the scene's own camera.</summary>
         public float MoveYaw => moveYaw;
 
         Vector3 BaseOffset => applied == 0 ? offset : presetOffset;
 
+        /// <summary>Glide the view onto a world point over seconds, closing the camera in by zoom (0.6 = much closer).</summary>
         public void Focus(Vector3 point, float zoom, float seconds)
         {
             focusPoint = point; focusZoom = Mathf.Clamp(zoom, .2f, 1f); focusSeconds = Mathf.Max(.05f, seconds); focusTarget = 1f;
         }
 
+        /// <summary>Glide back to the follow target over seconds.</summary>
         public void ClearFocus(float seconds)
         {
             focusSeconds = Mathf.Max(.05f, seconds); focusTarget = 0f;
@@ -79,8 +84,10 @@ namespace AnomalyArena
 
         public void Shake(float amount) => amplitude = Mathf.Max(amplitude, amount);
 
+        /// <summary>A very short closing-in of the view on a heavy shot or blast; it springs back by itself. Overlapping requests take the largest.</summary>
         public void Punch(float amount) => punch = Mathf.Max(punch, Mathf.Min(amount, .05f));
 
+        /// <summary>Directional push: a stronger kick replaces the current one, a weaker one adds a little; it springs back on its own.</summary>
         public void Kick(Vector3 worldDirection, float amount)
         {
             Vector3 d = new Vector3(worldDirection.x, 0f, worldDirection.z);
@@ -98,6 +105,7 @@ namespace AnomalyArena
             return new Vector2(Screen.width * 0.5f, Screen.height * 0.5f) + delta / Mathf.Max(1f, ratio);
         }
 
+        /// <summary>Puts the camera on the chosen view; the scene's own rotation and lens are saved first, to come back to on view 0.</summary>
         void ApplyView()
         {
             int count = views != null ? views.Length : 0;
@@ -128,14 +136,14 @@ namespace AnomalyArena
         void LateUpdate()
         {
             if (!target || !camera) return;
-
+            // Re-applied every frame while a trial view is on, so its numbers can be tuned in the Inspector during play.
             if (cameraView != 0 || applied != 0) ApplyView();
             Vector3 baseOffset = BaseOffset;
             Vector3 want = target.position;
             if (WorldMap.Active && !WorldMap.Active.TrialActive)
             {
                 Bounds bounds = WorldMap.Active.Bounds;
-
+                // The ground footprint comes from the actual camera rays, not a guessed zoom constant.
                 var plane = new Plane(Vector3.up, Vector3.zero);
                 Vector2 min = new Vector2(float.PositiveInfinity, float.PositiveInfinity), max = -min;
                 for (int y = 0; y < 2; y++) for (int x = 0; x < 2; x++)

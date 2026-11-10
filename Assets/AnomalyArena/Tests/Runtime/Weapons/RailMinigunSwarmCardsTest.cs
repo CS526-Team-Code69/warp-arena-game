@@ -7,11 +7,12 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>Twist and Tame cards of the Railgun (Lance, Execute), Minigun (Spin-up, Meltdown) and Swarm Launcher (Barrage, Bombard),
+    /// redesigned 2026-10-23 (spec-cards-C).</summary>
     [TestFixture]
     public class RailMinigunSwarmCardsTest
     {
-        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
 
         [TearDown]
         public void RestoreClock() => Time.timeScale = 1f;
@@ -30,6 +31,7 @@ namespace AnomalyArena
             Physics.SyncTransforms();
         }
 
+        /// <summary>Moves bodies far out along the lane, beyond every weapon's reach, where they stay frozen.</summary>
         static void ClearLane(GameManager game, params Enemy[] bodies)
         {
             for (int i = 0; i < bodies.Length; i++) Place(bodies[i], game.player.Position + Vector3.forward * (60f + 3f * i));
@@ -57,23 +59,25 @@ namespace AnomalyArena
         static AttackActor[] Actors(RunWeapon w, AttackMode mode) =>
             AttackPool.Instance.actors.Where(a => a && a.gameObject.activeSelf && a.weapon == w && a.mode == mode).ToArray();
 
+        // ───── Railgun · Lance ─────
+
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task LanceTwist_SlugCrossesThePreviousTrail_BurstsOnceAtTheCrossingAndAParallelShotDoesNot()
         {
             var (game, targets) = await V3CombatSmokeTest.StartSandbox();
             var tuning = game.runWeapons.upgrades;
-
+            // Tame as well, so the recoil is a harmless push whatever lies behind the lane: the shooter's HP must only answer to the blast.
             var rail = Equip(game, WeaponForm.Railgun, 0, UpgradeAxis.Twist | UpgradeAxis.Tame);
             Vector3 origin = game.player.Position;
             ClearLane(game, targets[1], targets[2]);
-
+            // Beside the slug's path (so the slug itself misses it) but well inside the crossing blast, within the clear lane.
             var near = targets[0];
             var capsule = near.GetComponent<CapsuleCollider>();
             float body = Mathf.Max(near.radius, capsule ? capsule.radius : 0f);
             float side = Mathf.Min(1.15f, body + .16f + .25f);
             Assume.That(side - body - .16f, Is.GreaterThan(.1f), "room beside the slug inside the clear lane");
             Place(near, origin + Vector3.forward * 6f + Vector3.right * side);
-
+            // The previous slug's trail lies across the lane, 6 ahead.
             rail.lanceTrailFrom = origin + Vector3.forward * 6f + Vector3.left * 5f;
             rail.lanceTrailTo = origin + Vector3.forward * 6f + Vector3.right * 5f;
             rail.lanceTrailLeft = tuning.lanceTrailSeconds;
@@ -91,6 +95,7 @@ namespace AnomalyArena
             Assert.That(Vector3.Angle(Query.Flat(rail.lanceTrailTo - rail.lanceTrailFrom), Vector3.forward), Is.LessThan(1f), "along its real path");
             Assert.That(game.runWeapons.Tracers.Any(t => Query.Flat(t.to - rail.lanceTrailTo).magnitude < .01f && t.from.y < .2f), Is.True, "the trail is drawn on the ground");
 
+            // The same line again: parallel to the trail, so nothing bursts.
             float hp = near.Hp;
             rail.cooldown = 0f;
             game.runWeapons.HandleInput(true, true, false);
@@ -107,7 +112,7 @@ namespace AnomalyArena
             var tuning = game.runWeapons.upgrades;
             var rail = Equip(game, WeaponForm.Railgun, 0, UpgradeAxis.Tame);
             Vector3 origin = game.player.Position;
-
+            // A Bulwark wall 3.5 behind (its push only reaches bodies within 3 of it).
             WorldMap.Active.CreateWall(origin + Vector3.back * 3.5f, 4f, 60f, 0f, game.player);
             Physics.SyncTransforms();
             var first = targets[0];
@@ -119,6 +124,7 @@ namespace AnomalyArena
             Assert.That(Query.Flat(game.player.Position - origin).magnitude, Is.LessThan(.05f), "a braced shot has no recoil");
             Assert.That(game.player.State, Is.EqualTo(CharacterState.Normal));
 
+            // Open ground: 8 cells into the clear lane, nothing within 4 behind.
             foreach (var wall in WorldMap.Active.temporaryWalls) if (wall && wall.gameObject.activeSelf) wall.gameObject.SetActive(false);
             Place(game.player, origin + Vector3.forward * 8f);
             ClearLane(game, targets[1], targets[2]);
@@ -132,6 +138,8 @@ namespace AnomalyArena
             Assert.That(first.maxHp - first.Hp, Is.EqualTo(game.runWeapons.HitDamage(rail)).Within(.01f), "no bonus without a wall");
             Assert.That(knocked, Is.False, "the recoil is a push, never a knockback");
         }
+
+        // ───── Railgun · Execute ─────
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task ExecuteTwist_HitEnemy_IsMarkedAndExecutedByAnyLaterDamageUnderTheLine()
@@ -149,7 +157,7 @@ namespace AnomalyArena
             float maxHp = game.progression.Stats.maxHp, cooldown = rail.cooldown;
             LeaveHp(marked, marked.maxHp * .3f);
             Assert.That(marked.IsAlive, Is.False, "a poison tick that drops a marked enemy under 40% executes it");
-
+            // Executions no longer raise the line or change max HP, and a later mark execution is no kill of the shot.
             Assert.That(weapons.ExecuteThreshold(rail), Is.EqualTo(tuning.executeThreshold).Within(.0001f), "the line stays where it was");
             Assert.That(game.progression.Stats.maxHp, Is.EqualTo(maxHp).Within(.001f), "and max HP does not change");
             Assert.That(rail.executeNextShot, Is.Zero, "it arms no next shot");
@@ -166,7 +174,7 @@ namespace AnomalyArena
                 rail.cooldown = 0f;
                 weapons.HandleInput(true, true, false);
                 Assert.That(weapons.IsExecuteMarked(targets[1]), Is.True);
-
+                // Out of the lane, still marked; the next shot marks the one behind it and the oldest mark goes.
                 Place(targets[1], game.player.Position + Vector3.forward * 60f);
                 rail.cooldown = 0f;
                 weapons.HandleInput(true, true, false);
@@ -186,7 +194,7 @@ namespace AnomalyArena
             var player = game.player;
             var rail = Equip(game, WeaponForm.Railgun, 1, UpgradeAxis.Tame);
             float shot = weapons.HitDamage(rail), zap = shot * tuning.executeAuraShare;
-
+            // Just ahead of you but off the aim line, inside the shield; the third enemy far down the lane, outside it.
             var near = targets[1];
             Vector3 beside = player.Position + Vector3.forward * 1.2f + Vector3.right * (near.radius + .35f);
             Assume.That(RunWeapons.ValidTeleportPoint(beside, near.radius), Is.True, "room beside the lane");
@@ -195,12 +203,13 @@ namespace AnomalyArena
             ElementStatus.For(player).SetShield(0f);
             float hp = player.Hp;
 
+            // The shot hits the first enemy and leaves it over the line: nothing killed.
             weapons.HandleInput(true, true, false);
             Assume.That(targets[0].IsAlive, Is.True);
             Assert.That(player.Hp, Is.EqualTo(hp), "Tame: the backflow no longer shocks you");
             Assert.That(rail.cooldown, Is.EqualTo(weapons.CycleSeconds(rail)).Within(.05f), "nor forces the long cooldown");
             Assert.That(rail.executeAuraLeft, Is.EqualTo(tuning.executeAuraSeconds).Within(.05f), "it becomes the arc shield");
-            Assert.That(game.UiSnapshot.handSlots[weapons.ActiveIndex].detail, Does.Contain(ArenaText.Pair("Arc shield","Arc shield")), "the slot shows it");
+            Assert.That(game.UiSnapshot.handSlots[weapons.ActiveIndex].detail, Does.Contain(ArenaText.Pair("电弧护盾", "Arc shield")), "the slot shows it");
 
             await Seconds(tuning.executeAuraInterval * 2f + .2f);
             float zapped = near.maxHp - near.Hp;
@@ -208,8 +217,9 @@ namespace AnomalyArena
             Assert.That(Mathf.Abs(zapped / zap - Mathf.Round(zapped / zap)), Is.LessThan(.01f), "for its share of the shot each time");
             Assert.That(targets[2].Hp, Is.EqualTo(targets[2].maxHp), "only within its radius");
 
+            // Another shot that kills nothing restarts it instead of adding a second one.
             await Seconds(.5f);
-            targets[0].Heal(targets[0].maxHp);                                        
+            targets[0].Heal(targets[0].maxHp); // so the second shot cannot execute it
             rail.cooldown = 0f;
             weapons.HandleInput(true, true, false);
             Assume.That(targets[0].IsAlive, Is.True);
@@ -221,6 +231,8 @@ namespace AnomalyArena
             Assert.That(player.Hp, Is.EqualTo(hp), "it never hurts you");
         }
 
+        // ───── Minigun · Spin-up ─────
+
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task SpinUpTwist_SwitchAtFullSpinWithFireHeld_LeavesTheMinigunFiringInPlace()
         {
@@ -231,11 +243,12 @@ namespace AnomalyArena
             weapons.Hand[1 - gunSlot] = new RunWeapon { form = WeaponForm.Rifle, variant = 0, revealed = true };
             Vector3 origin = game.player.Position;
             var target = targets[0];
-
+            // 3 s at the top rate is more than the sandbox target's 100 HP; give it room so the whole burst is counted.
             target.maxHp = 1000f; target.Heal(target.maxHp);
 
+            // A long cooldown keeps the held trigger from firing from the hand, so every hit below comes from the deployed gun.
             gun.cooldown = 99f;
-
+            // Not at full spin yet: switching only switches.
             weapons.HandleInput(false, true, false);
             gun.heldTime = 1f;
             weapons.Switch();
@@ -249,16 +262,17 @@ namespace AnomalyArena
             Assert.That(weapons.ActiveIndex, Is.Not.EqualTo(gunSlot), "the other weapon is in hand");
             Assert.That(gun.turretLeft, Is.EqualTo(tuning.turretSeconds).Within(.001f));
             Assert.That(Query.Flat(gun.turretPoint - origin).magnitude, Is.LessThan(.01f), "it stays where you stood");
-
+            // Turning away does not turn it: it keeps the aim it had.
             game.player.DebugSetAim(Vector3.back);
             await Until(() => gun.turretLeft <= 0f, 5f, "the deployed minigun runs out");
-            await Seconds(.3f);                         
+            await Seconds(.3f); // the last bullets land
 
             float hit = weapons.HitDamage(gun);
             int shots = Mathf.RoundToInt(tuning.turretSeconds * tuning.spinUpTopRate);
             Assert.That(hp - target.Hp, Is.InRange((shots - 2) * hit - .01f, (shots + 1) * hit + .01f), "about 3 s at the top rate, along the old aim");
             Assert.That(gun.heldTime, Is.Zero, "back in its slot with no spin");
 
+            // Taking it back in hand early recalls it.
             game.player.DebugSetAim(Vector3.forward);
             weapons.Switch();
             weapons.HandleInput(false, true, false);
@@ -270,6 +284,8 @@ namespace AnomalyArena
             Assert.That(gun.turretLeft, Is.Zero, "switching back recalls it");
         }
 
+        // Document 5.5: the spin also pushes you slowly back, from nothing at the first shot to about 1 cell a second at
+        // full spin. A push you keep control through, never a knockback, so a wall behind you just stops it.
         [Test, LoadScene(Scene), Category("Integration"), Timeout(60000)]
         public async Task SpinUp_HoldingFire_PushesYouSlowlyBackFasterWithTheSpin_AWallStopsItHarmlessly()
         {
@@ -278,8 +294,8 @@ namespace AnomalyArena
             var tuning = game.runWeapons.upgrades;
             var player = game.player;
             Vector3 origin = player.Position;
-            player.DebugSetAim(Vector3.back);                                                   
-            player.enabled = true;                                                        
+            player.DebugSetAim(Vector3.back); // the retreat then pushes you down the clear lane
+            player.enabled = true; // the push is applied by the player's own physics step
             var gun = Equip(game, WeaponForm.Minigun, 0);
             float hp = player.Hp;
 
@@ -287,26 +303,31 @@ namespace AnomalyArena
             await SetBack(player, origin);
             var (full, fullKnocked) = await HoldFire(game, gun, 3f, 2f);
 
+            // From the first shot the speed grows with the spin: 0.6 s is about 0.06 cells at 1 cell/s full speed.
             Assert.That(early, Is.LessThan(.2f * tuning.spinUpRetreatSpeed), "a fresh spin hardly moves you");
             Assert.That(full, Is.EqualTo(2f * tuning.spinUpRetreatSpeed).Within(.45f), "about spinUpRetreatSpeed cells a second at full spin");
             Assert.That(earlyKnocked || fullKnocked, Is.False, "the retreat is a push, never a knockback");
             Assert.That(player.Hp, Is.EqualTo(hp));
 
+            // Let go and it stops at once.
             Vector3 stopped = player.Position;
             await Seconds(.5f);
             Assert.That(Query.Flat(player.Position - stopped).magnitude, Is.LessThan(.05f), "only while you hold fire");
 
+            // A Bulwark across the lane just behind you (against the aim): the retreat runs into it and stops there, unhurt.
             await SetBack(player, origin);
             float gap = .2f;
             WorldMap.Active.CreateWall(origin + Vector3.forward * (BodyRadius(player) + .5f + gap), 4f, 60f, 0f, player);
             Physics.SyncTransforms();
-            await SetBack(player, origin);                                
+            await SetBack(player, origin); // the wall going up nudged you
             var (blocked, blockedKnocked) = await HoldFire(game, gun, 3f, 2f);
             Assert.That(blocked, Is.LessThan(Mathf.Min(.5f * full, gap + .25f)), "the wall stops the retreat");
             Assert.That(blockedKnocked, Is.False, "never a knockback");
             Assert.That(player.Hp, Is.EqualTo(hp), "and running into the wall costs no HP");
         }
 
+        // Document 5.8: turning is free; at full spin, backing into a wall braces you, and only then is knockback halved,
+        // the black hole's pull ignored and the fire rate raised. On open ground nothing braces you.
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task SpinUpTame_WallAtYourBackAtFullSpin_BracesYou_OpenGroundOnlyFreesTurning()
         {
@@ -314,14 +335,14 @@ namespace AnomalyArena
             var weapons = game.runWeapons; var tuning = weapons.upgrades;
             var gun = Equip(game, WeaponForm.Minigun, 0, UpgradeAxis.Tame);
             ClearLane(game, targets);
-
+            // 8 cells into the clear lane, so the wall behind you and the hole ahead both stand in it.
             Vector3 origin = game.player.Position + Vector3.forward * 8f;
             Place(game.player, origin);
             void Spin() { weapons.HandleInput(false, true, false); gun.heldTime = tuning.spinAnchorSpinSeconds; }
 
             Spin();
             Assert.That(weapons.AimTurnRateLimit, Is.Zero, "turning is free");
-
+            // The 10-27 doc (document 0155, P20): the spin slows your aim, never your feet, tamed or not.
             Assert.That(weapons.MoveMultiplier, Is.EqualTo(1f), "the spin does not slow your feet");
             gun.axes &= ~UpgradeAxis.Tame;
             Assert.That(weapons.MoveMultiplier, Is.EqualTo(1f), "nor untamed");
@@ -331,6 +352,7 @@ namespace AnomalyArena
             Assert.That(openCycle, Is.EqualTo(1f / tuning.spinUpTopRate).Within(.0005f), "the plain top rate");
             float free = await KnockSpeed(game, origin);
 
+            // A Bulwark right at your back.
             WorldMap.Active.CreateWall(origin + Vector3.back * (BodyRadius(game.player) + .5f + .1f), 4f, 60f, 0f, game.player);
             Physics.SyncTransforms();
             game.player.CancelDisplacement(); Place(game.player, origin);
@@ -352,6 +374,7 @@ namespace AnomalyArena
             Assert.That(weapons.Anchored, Is.False, "untamed, a wall never braces you");
             gun.axes = UpgradeAxis.Tame;
 
+            // A black hole 4 ahead whose pull reaches you: braced, it does not drag you; let go and it does.
             WorldMap.Active.CreateVoidHole(origin + Vector3.forward * 4f, 1f, 5f, 3f, null, false);
             Spin();
             for (int i = 0; i < 5; i++) await Awaitable.FixedUpdateAsync();
@@ -363,6 +386,8 @@ namespace AnomalyArena
             Assert.That(dragged, Is.GreaterThan(.02f), "let go and the pull takes you again");
         }
 
+        /// <summary>Holds fire with the spin starting at spin seconds, for this long (game time), then lets the push settle. Returns how far
+        /// the player moved against the aim and whether it was ever knocked back.</summary>
         static async Task<(float distance, bool knocked)> HoldFire(GameManager game, RunWeapon gun, float spin, float seconds)
         {
             var player = game.player;
@@ -383,6 +408,7 @@ namespace AnomalyArena
             return (Vector3.Dot(Query.Flat(player.Position - from), back), knocked);
         }
 
+        /// <summary>Knocks the (disabled) player 4 cells along the lane and returns its speed two physics steps later, then puts it back.</summary>
         static async Task<float> KnockSpeed(GameManager game, Vector3 origin)
         {
             game.player.Knockback(Vector3.forward, 4f, KnockKind.Hit);
@@ -398,6 +424,7 @@ namespace AnomalyArena
             return Mathf.Max(body.radius, capsule ? capsule.radius : 0f);
         }
 
+        /// <summary>Puts a body back at a point, at rest.</summary>
         static async Task SetBack(Combatant body, Vector3 at)
         {
             body.CancelDisplacement();
@@ -405,12 +432,15 @@ namespace AnomalyArena
             await Awaitable.FixedUpdateAsync();
         }
 
+        // ───── Minigun · Meltdown ─────
+
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task MeltdownTwist_BulletKills_VentHeatAndAnEliteKillClearsIt()
         {
             var (game, targets) = await V3CombatSmokeTest.StartSandbox();
             var weapons = game.runWeapons; var tuning = weapons.upgrades;
 
+            // Without the Twist a kill changes nothing.
             var plain = Equip(game, WeaponForm.Minigun, 1);
             plain.heat = 2f;
             LeaveHp(targets[0], 1f);
@@ -438,6 +468,7 @@ namespace AnomalyArena
             Assert.That(gun.heat, Is.Zero, "an elite kill clears the heat");
         }
 
+        // The tamed meltdown speeds up your weapons instead of giving Shield.
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task MeltdownTame_Overheat_SpeedsUpEveryWeaponInsteadOfHurtingYouAndStillLocksOut()
         {
@@ -461,6 +492,8 @@ namespace AnomalyArena
             Assert.That(gun.reload, Is.EqualTo(3f).Within(.001f), "the lockout remains");
         }
 
+        // Document 5.8: the tamed meltdown also knocks the enemies around you back, and for the same time your feet
+        // move faster too, whichever weapon you switch to.
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task MeltdownTame_Overheat_KnocksNearbyEnemiesBackAndSpeedsUpYourFeetOnEveryWeapon()
         {
@@ -473,7 +506,7 @@ namespace AnomalyArena
                 var near = targets[0];
                 ClearLane(game, targets[1], targets[2]);
                 Place(near, game.player.Position + Vector3.forward * 2.5f);
-
+                // Free to slide on the ground, so the knockback shows.
                 near.GetComponent<Rigidbody>().constraints = RigidbodyConstraints.FreezeRotation | RigidbodyConstraints.FreezePositionY;
 
                 var plain = Equip(game, WeaponForm.Minigun, 1);
@@ -510,6 +543,8 @@ namespace AnomalyArena
             finally { tuning.meltdownTameHasteSeconds = seconds; }
         }
 
+        // ───── Swarm Launcher · Barrage ─────
+
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task BarrageTwist_RocketsOnOneEnemy_MergeIntoOneBiggerBlastAfterTheFuse()
         {
@@ -518,7 +553,7 @@ namespace AnomalyArena
             var swarm = Equip(game, WeaponForm.SwarmLauncher, 0, UpgradeAxis.Twist);
             var host = targets[0];
             var bystander = targets[1];
-
+            // Out of reach of a single 1.5 blast, inside the merged one of three rockets (1.5 + 2 × 0.3).
             float merged = Mathf.Min(1.5f + 2f * tuning.swarmHivePerRocketRadius, tuning.swarmHiveMaxRadius);
             Place(bystander, host.Position + Vector3.forward * (merged + bystander.radius - .15f));
             ClearLane(game, targets[2]);
@@ -538,6 +573,8 @@ namespace AnomalyArena
             Assert.That(bystander.Hp, Is.EqualTo(bystander.maxHp - 12f).Within(.01f), "the merged blast reaches further than one rocket");
         }
 
+        // Document 5.5: the missiles home in on the enemies they lock, wherever you aim; one whose target dies goes for
+        // the visible enemy nearest itself, however far. Tamed, the spare missiles take turns on the enemies already locked.
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task Barrage_LockedEnemiesOffTheAim_MissilesHomeInAndOneWhoseTargetDiesTakesTheNearest()
         {
@@ -546,16 +583,16 @@ namespace AnomalyArena
             float spread = tuning.barrageLaunchSpread;
             try
             {
-
+                // A narrower fan keeps every missile inside the one-cell clear lane, so each one that is counted below can arrive.
                 tuning.barrageLaunchSpread = 20f;
-
+                // Tamed, so the missiles that find no enemy of their own join the others instead of coming back for you.
                 var swarm = Equip(game, WeaponForm.SwarmLauncher, 0, UpgradeAxis.Tame);
                 Vector3 origin = game.player.Position;
                 float hit = weapons.HitDamage(swarm), range = weapons.roster.Get(WeaponForm.SwarmLauncher).rangeA;
                 ClearLane(game, targets[1], targets[2]);
                 var first = targets[0]; var second = targets[1];
                 Place(first, origin + Vector3.forward * 6f);
-
+                // The lane lies 90 degrees off the aim.
                 game.player.DebugSetAim(Vector3.right);
 
                 weapons.HandleInput(true, true, false);
@@ -565,6 +602,7 @@ namespace AnomalyArena
                 await Until(() => Actors(swarm, AttackMode.Swarm).Length == 0, 4f, "the volley lands");
                 Assert.That(first.maxHp - first.Hp, Is.EqualTo(8f * hit).Within(.01f), "all eight curve in and hit it, 90 degrees off the aim");
 
+                // Two enemies in range: the spares take turns, four missiles each.
                 first.ResetForSpawn(); first.enabled = false;
                 second.ResetForSpawn(); second.enabled = false;
                 Place(first, origin + Vector3.forward * 4f);
@@ -576,6 +614,7 @@ namespace AnomalyArena
                 Assert.That(missiles.Count(a => a.HomeTarget == second), Is.EqualTo(4));
                 await Until(() => Actors(swarm, AttackMode.Swarm).Length == 0, 4f, "the volley lands");
 
+                // The second beyond the lock radius: all eight lock the first. It dies at once, and they go for the second, out of range as it is.
                 first.ResetForSpawn(); first.enabled = false;
                 second.ResetForSpawn(); second.enabled = false;
                 Place(first, origin + Vector3.forward * 4f);
@@ -593,19 +632,22 @@ namespace AnomalyArena
             finally { tuning.barrageLaunchSpread = spread; }
         }
 
+        // Document 5.5: with too few enemies to lock, two of the spare missiles lock onto you and come back to blast you
+        // for the base damage; the other spares fly straight on. Only those two hurt you: a missile bursting on an enemy next to you, or a
+        // merged Twist blast, does not. With an enemy for every missile, none comes back.
         [Test, LoadScene(Scene), Category("Integration"), Timeout(60000)]
         public async Task BarrageBackfire_TooFewEnemies_TwoSpareMissilesComeBackForYou_EnoughEnemiesNone()
         {
             var (game, targets) = await V3CombatSmokeTest.StartSandbox();
             var weapons = game.runWeapons; var tuning = weapons.upgrades;
-
+            // Twist too: its merged blast next to you must spare you as well. Mk 3: the missiles that hit you still deal the base value.
             var swarm = Equip(game, WeaponForm.SwarmLauncher, 0, UpgradeAxis.Twist, mk: 3);
             float baseDamage = weapons.roster.Get(WeaponForm.SwarmLauncher).damageA;
-
+            // Mid-lane, aiming back down it: the missiles locked onto you fly out that way and come back.
             Vector3 mid = game.player.Position + Vector3.forward * 8f;
             Place(game.player, mid);
             game.player.DebugSetAim(Vector3.back);
-            Place(targets[0], mid + Vector3.forward * 1.6f);                     
+            Place(targets[0], mid + Vector3.forward * 1.6f); // right next to you
             Place(targets[1], mid + Vector3.forward * 3.5f);
             Place(targets[2], mid + Vector3.forward * 5.5f);
             float hp = game.player.Hp;
@@ -625,6 +667,7 @@ namespace AnomalyArena
             Assert.That(game.player.Hp, Is.EqualTo(hp - tuning.barrageSelfLockMax * baseDamage * taken).Within(.01f), "exactly the two that came back hurt you");
             Assert.That(targets[0].Hp, Is.LessThan(targets[0].maxHp), "the merged blast beside you went off");
 
+            // An enemy for every missile: none comes back.
             var extra = MoreTargets(game, targets, 5);
             var all = targets.Concat(extra).ToArray();
             float[] spots = { 1.6f, 2.8f, 4f, 5.2f, 6.4f, -2.2f, -3.4f, -4.6f };
@@ -640,6 +683,8 @@ namespace AnomalyArena
             Assert.That(game.player.Hp, Is.EqualTo(hp), "so none hurts you");
         }
 
+        // Document 5.8: tamed, with enemies on the field but none in range, the missiles go for the nearest visible one;
+        // with no enemy at all they circle you, take the first enemy that comes in range, and vanish without a blast when the escort ends.
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task BarrageTame_NoEnemyInRange_GoesForTheNearestVisible_NoEnemyAtAll_EscortsYou()
         {
@@ -650,7 +695,7 @@ namespace AnomalyArena
             float range = weapons.roster.Get(WeaponForm.SwarmLauncher).rangeA;
             targets[1].DiscardWithoutReward(); targets[2].DiscardWithoutReward();
             var enemy = targets[0];
-            Place(enemy, origin + Vector3.forward * (range + 3f));                                                   
+            Place(enemy, origin + Vector3.forward * (range + 3f)); // beyond the lock radius, still in the clear lane
             float hp = game.player.Hp;
 
             weapons.HandleInput(true, true, false);
@@ -660,6 +705,7 @@ namespace AnomalyArena
             await Until(() => Actors(swarm, AttackMode.Swarm).Length == 0, 4f, "the volley lands");
             Assert.That(enemy.Hp, Is.LessThan(enemy.maxHp), "and hits it");
 
+            // No enemy at all: the missiles circle you.
             enemy.DiscardWithoutReward();
             swarm.cooldown = 0f;
             weapons.HandleInput(true, true, false);
@@ -668,13 +714,15 @@ namespace AnomalyArena
             Assert.That(escort.All(a => a.Escorting && a.HomeTarget == null), Is.True, "nothing to lock: they escort you");
             await Seconds(.3f);
             Assert.That(escort.All(a => a.gameObject.activeSelf && Query.Flat(a.transform.position - game.player.Position).magnitude < tuning.barrageEscortRadius + .2f), Is.True, "close around you");
-
+            // An enemy comes within range: the escort takes it at once.
             enemy.ResetForSpawn(); enemy.enabled = false;
             Place(enemy, origin + Vector3.forward * 5f);
             await Until(() => escort.All(a => !a.gameObject.activeSelf || a.HomeTarget == enemy && !a.Escorting), 1f, "the escort locks the newcomer");
             await Until(() => Actors(swarm, AttackMode.Swarm).Length == 0, 4f, "the volley lands");
             Assert.That(enemy.Hp, Is.LessThan(enemy.maxHp), "and strikes it");
 
+            // Nobody comes, and a Bulwark crosses the circle just ahead: the escort keeps to your side of it, and when the escort ends the
+            // missiles vanish quietly.
             enemy.DiscardWithoutReward();
             WorldMap.Active.CreateWall(origin + Vector3.forward * (BodyRadius(game.player) + .5f + .1f), 4f, 60f, 0f, game.player);
             Physics.SyncTransforms();
@@ -693,6 +741,7 @@ namespace AnomalyArena
             Assert.That(game.player.Hp, Is.EqualTo(hp), "tamed, no missile ever hurts you");
         }
 
+        /// <summary>count more still, AI-less 100 HP bodies from the wave's pool, set up like StartSandbox's three (placed by the caller).</summary>
         static Enemy[] MoreTargets(GameManager game, Enemy[] targets, int count)
         {
             var extra = game.waves.preparedEnemies
@@ -711,6 +760,8 @@ namespace AnomalyArena
             return extra;
         }
 
+        // ───── Swarm Launcher · Bombard ─────
+
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task BombardTwist_AimMovedAfterFiring_EachBlastLandsAlongTheAimOfItsMoment()
         {
@@ -726,6 +777,7 @@ namespace AnomalyArena
             Assert.That(Query.Flat(firstBlast[0].point - (origin + Vector3.forward * tuning.bombardStart)).magnitude, Is.LessThan(.01f));
             Assert.That(firstBlast[0].delay, Is.EqualTo(tuning.bombardFuse).Within(.001f), "with its fuse and marker");
 
+            // Sweep the aim 10 degrees (inside the clear lane): the next blast follows it from where you fired.
             Vector3 swept = Quaternion.Euler(0f, 10f, 0f) * Vector3.forward;
             game.player.DebugSetAim(swept);
             await Until(() => bombard.bombardLeft <= tuning.bombardBlasts - 2, 1f, "the second blast is placed");
@@ -766,6 +818,8 @@ namespace AnomalyArena
             Assert.That(game.player.Hp, Is.EqualTo(hp));
         }
 
+        // ───── Card texts ─────
+
         [Test, LoadScene(Scene), Category("Integration"), Timeout(30000)]
         public async Task CardTexts_RailMinigunSwarm_DescribeTheNewForms()
         {
@@ -780,18 +834,19 @@ namespace AnomalyArena
             string spin = ArenaTerms.ExpandedUpgradeDescription(WeaponForm.Minigun, 0, UpgradeAxis.Twist);
             Assert.That(spin, Does.Contain("3").And.Not.Contain("12"), "Spin-up Twist: 3 s in place, no stale 12 shots/s");
 
+            // Documents 5.5, 5.8, Chinese scene.
             var tuning = GameManager.Instance.runWeapons.upgrades;
             string P(float share) => (share * 100f).ToString("0.#") + "%";
             string spinTame = ArenaTerms.ExpandedUpgradeDescription(WeaponForm.Minigun, 0, UpgradeAxis.Tame);
-            Assert.That(spinTame, Does.Contain("backing into a wall").And.Contain("braces you").And.Contain("+" + P(tuning.spinBraceRateBonus)).And.Contain(P(tuning.spinAnchorKnockFactor)), "Spin-up Tame: the wall brace and what it gives");
+            Assert.That(spinTame, Does.Contain("撞到墙体").And.Contain("架枪").And.Contain("+" + P(tuning.spinBraceRateBonus)).And.Contain(P(tuning.spinAnchorKnockFactor)), "Spin-up Tame: the wall brace and what it gives");
             string meltTame = ArenaTerms.ExpandedUpgradeDescription(WeaponForm.Minigun, 1, UpgradeAxis.Tame);
-            Assert.That(meltTame, Does.Contain($"knocks nearby enemies back {tuning.meltdownTamePush:0.##}").And.Contain("" + P(tuning.meltdownTameMoveBonus)).And.Contain("" + P(tuning.meltdownTameHaste)).And.Contain("3 s lockout"), "Meltdown Tame: push, both speeds, the lockout");
+            Assert.That(meltTame, Does.Contain($"震退 {tuning.meltdownTamePush:0.##} 格").And.Contain("移速 +" + P(tuning.meltdownTameMoveBonus)).And.Contain("攻速 +" + P(tuning.meltdownTameHaste)).And.Contain("停火 3 秒"), "Meltdown Tame: push, both speeds, the lockout");
             string barrageTame = ArenaTerms.ExpandedUpgradeDescription(WeaponForm.SwarmLauncher, 0, UpgradeAxis.Tame);
-            Assert.That(barrageTame, Does.Contain("circle you").And.Contain($"{tuning.barrageEscortSeconds:0.##} s").And.Contain("take turns on the locked enemies"), "Barrage Tame: focus fire and the escort");
+            Assert.That(barrageTame, Does.Contain("护航").And.Contain($"{tuning.barrageEscortSeconds:0.##} 秒").And.Contain("集火"), "Barrage Tame: focus fire and the escort");
             foreach (var text in new[] { spinTame, meltTame, barrageTame }) Assert.That(text, Does.Not.Contain("{"), "every number is filled in");
-            Assert.That(WeaponGuide.How(WeaponForm.SwarmLauncher, 0), Does.Contain("micro-missiles").And.Contain("home in"), "Barrage card: homing micro-missiles");
-            Assert.That(WeaponGuide.Backfire(WeaponForm.SwarmLauncher, 0), Does.Contain($"up to {tuning.barrageSelfLockMax} spare").And.Contain("lock onto you"), "Barrage card: the missiles that come back for you");
-            Assert.That(WeaponGuide.Backfire(WeaponForm.Minigun, 0), Does.Contain("pushes you back").And.Not.Contain("移速"), "Spin-up card: the slow retreat, no slow walk (P20)");
+            Assert.That(WeaponGuide.How(WeaponForm.SwarmLauncher, 0), Does.Contain("微型导弹").And.Contain("追踪"), "Barrage card: homing micro-missiles");
+            Assert.That(WeaponGuide.Backfire(WeaponForm.SwarmLauncher, 0), Does.Contain($"最多 {tuning.barrageSelfLockMax} 枚").And.Contain("折返"), "Barrage card: the missiles that come back for you");
+            Assert.That(WeaponGuide.Backfire(WeaponForm.Minigun, 0), Does.Contain("缓慢后退").And.Not.Contain("移速"), "Spin-up card: the slow retreat, no slow walk (P20)");
         }
     }
 }

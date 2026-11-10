@@ -1,0 +1,8 @@
+received_at,event,run_id,session_id,edition,build,day,stage,item,detail,room,alloy,energy,dark
+2026-11-10 20:01:00,v2_purchase,a,s1,en,1.0.0+test,1,dawn,repair,Armament,Armament,30,0,0
+2026-11-10 20:02:00,v2_purchase,a,s1,en,1.0.0+test,1,day,new_weapon,Railgun Mk 1,Armament,120,40,0
+2026-11-10 20:03:00,v2_purchase,a,s1,en,1.0.0+test,2,dawn,repair,Armament,Armament,30,0,0
+2026-11-10 20:04:00,v2_purchase,b,s2,zh,1.0.0+test,1,dawn,lamp,Control,Control,10,5,0
+2026-11-10 20:05:00,v2_purchase,d,s4,test,1.0.0+test,1,dawn,repair,Armament,Armament,30,0,0
+2026-11-10 20:06:00,v2_purchase,e,s5,en,1.0.0+test,1,dawn,room_upgrade,Energy 2,Energy,150,50,10
+2026-11-10 20:07:00,v2_purchase,e,s5,en,1.0.0+test,,dawn,repair,Armament,Armament,30,0,0

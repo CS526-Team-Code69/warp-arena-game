@@ -57,6 +57,18 @@ class DamageTests(unittest.TestCase):
         self.assertEqual(agg["by_bucket"][m.BOSS_BUCKET], {"Tyrant": 60})
         self.assertEqual(len(agg["runs"]), 2)
 
+    def test_story_rows_are_left_out_and_rows_without_a_mode_are_open(self):
+        text = (COMMON + ",stage,wave,bucket,source,dot,damage,damage_pct,hits,mode\n"
+                "t,wave_damage,a,s,en,b,wave,1,W01,Grunt,FALSE,10,20,1,open\n"
+                "t,wave_damage,a,s,en,b,wave,1,W01,Brute,FALSE,5,10,1,\n"
+                "t,wave_damage,c,s,en,b,night,3,D03,shadow,FALSE,30,60,4,story\n")
+        agg = m.aggregate_damage(m.parse_csv_text(text))
+        self.assertEqual((agg["total"], agg["story_rows"]), (30, 1))
+        self.assertEqual(sorted(agg["sources"]), ["Brute", "Grunt"])
+        self.assertEqual(agg["runs"], {"a"})
+        self.assertEqual(agg["by_bucket"]["W01"], {"Grunt": 20, "Brute": 10})
+        self.assertIn("Story-mode rows left out: 1", m.format_damage(agg))
+
     def test_colour_groups_keep_fixed_sources_and_fold_the_rest(self):
         agg = {"sources": {"backfire": 5, "wall_slam": 4, "Tyrant": 3, "Grunt": 50, "Brute": 40, "Spitter": 30, "Rammer": 20,
                            "Skitter": 10, "Skitter_elite": 1, "other": 2}}

@@ -3,21 +3,31 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>
+    /// The V2 day campaign's own ground (since 2026-11-06): a map larger than the classic arena, with terrain, laid out afresh from a seed
+    /// at the start of every campaign run. Its pieces are the walls' rectangles every map already has (MapLayout.walls), so paths, spawns,
+    /// shots, knockback and both art styles read them like any map wall: ridges (a long wall, sometimes with a kink), broken walls (a row
+    /// of short pieces with gaps a body walks through), rock forests (a cluster of pillars), L-shaped outcrops and lone boulders, plus a
+    /// few quicksand pools between them. The ground the campaign needs stays open (Plan.keep: the base and the ship, the crash site and
+    /// the Day 0 route, the black hole and a band from the base to it). The result is checked on a one-cell grid laid like MapGrid's:
+    /// every open cell must be reachable on foot from the base door, so no wall closes off any ground; a wall that does is taken away,
+    /// until the check passes (with no wall left at worst). Only the V2 campaign calls this; the classic maps are the saved layouts.
+    /// </summary>
     public static class CampaignTerrain
     {
-
-        const float Rim = 4f;                                                                                                
-        const float FeatureGap = 5f;                                                                                                  
-        const float MinGap = 3f;                                                                                                    
-        const float KeepMargin = 1f;                                                                        
-        const float PoolGap = 2f;                                                                                  
-        const float Body = .6f;                                                                                                          
-        const float AreaPerFeature = 800f;                                          
+        // Shape of the terrain, in cells. These are level geometry, not balance numbers.
+        const float Rim = 4f;              // walls keep this far from the map's edge, so a corridor runs all round inside it
+        const float FeatureGap = 5f;       // between two features: room for the largest walking body (Brute, Stomper: 2 cells across)
+        const float MinGap = 3f;           // between the pieces of one broken wall or rock forest: a 2-cell body still fits through
+        const float KeepMargin = 1f;       // walls keep at least this far out of the ground that stays open
+        const float PoolGap = 2f;          // quicksand keeps this far from walls (and twice this from other pools)
+        const float Body = .6f;            // the walking body the connectivity check fits through gaps (MapGrid blocks 0.5 round a wall)
+        const float AreaPerFeature = 800f; // one feature for this many cells of map
         const int MinFeatures = 8, MaxFeatures = 90, MaxRects = 260;
         const float AreaPerPool = 7000f;
         const int MinPools = 2, MaxPools = 8;
 
+        /// <summary>Ground that must stay open: a circle (a == b) or a band along the segment from a to b, radius wide on each side.</summary>
         public readonly struct Keep
         {
             public readonly Vector2 a, b;
@@ -25,42 +35,46 @@ namespace AnomalyArena
             Keep(Vector2 a, Vector2 b, float radius) { this.a = a; this.b = b; this.radius = radius; }
             public static Keep Circle(Vector2 centre, float radius) => new(centre, centre, radius);
             public static Keep Band(Vector2 from, Vector2 to, float halfWidth) => new(from, to, halfWidth);
-
+            /// <summary>How far the rect stays outside this ground; negative where it reaches in.</summary>
             public float Clearance(Rect rect) => SegmentToRect(rect, a, b) - radius;
             public float Clearance(Vector2 point) => PointToSegment(point, a, b) - radius;
         }
 
+        /// <summary>What the campaign asks of its map. Coordinates are (x, z) in cells, the map centred on (0, 0).</summary>
         public sealed class Plan
         {
             public Vector2Int size = new(200, 140);
             public int seed;
-
+            /// <summary>Ground no wall or pool may take.</summary>
             public readonly List<Keep> keep = new();
-
+            /// <summary>Walls the campaign adds itself (the base, the ship pad): they block the check and are never taken away.</summary>
             public readonly List<Rect> fixedWalls = new();
-
+            /// <summary>Where walking starts (the base door): every open cell must be reachable from here.</summary>
             public Vector2 start;
-
+            /// <summary>The black hole and the radius of its pull ring: blocked in the check.</summary>
             public Vector2 hole;
             public float holePull;
-
+            /// <summary>False when the map has no wall objects to copy: the layout then gets no terrain walls.</summary>
             public bool walls = true;
             public bool sand = true;
         }
 
+        /// <summary>What Generate laid out: the terrain's wall rects, its quicksand pools, and how it got there.</summary>
         public sealed class Result
         {
             public readonly List<Rect> walls = new();
             public readonly List<MapLayout.SandPool> pools = new();
-
+            /// <summary>Features placed, and wall rects taken away again to keep every open cell reachable.</summary>
             public int features, removed;
-
+            /// <summary>Every open cell can be walked to from the plan's start (always true once Generate returns).</summary>
             public bool connected;
             public int width, height;
             public string Report(int seed) => $"map {width} x {height}, seed {seed}: {walls.Count} wall rects in {features} features " +
                                               $"({removed} taken away to keep every open cell reachable), {pools.Count} quicksand pools";
         }
 
+        /// <summary>Builds the campaign's layout: a runtime copy of template (the classic map's own settings, such as the quicksand speed)
+        /// with the plan's size, the terrain walls, the pools and the black hole as its one anchor. report says what was built.</summary>
         public static MapLayout Build(MapLayout template, Plan plan, out string report)
         {
             var result = Generate(plan);
@@ -76,6 +90,8 @@ namespace AnomalyArena
             return layout;
         }
 
+        /// <summary>The terrain of a plan, without touching any object (the same seed always gives the same terrain): features at random
+        /// spots that fit, then walls taken away until every open cell is reachable, then the pools.</summary>
         public static Result Generate(Plan plan)
         {
             var rng = new System.Random(plan.seed);
@@ -102,6 +118,7 @@ namespace AnomalyArena
             return result;
         }
 
+        /// <summary>Whether every open cell of the layout (as Generate checks it) can be walked to from the plan's start; for checks.</summary>
         public static bool AllReachable(MapLayout layout, Plan plan) => layout && AllReachable(layout.walls, layout.width, layout.height, plan);
 
         public static bool AllReachable(IList<Rect> layoutWalls, int width, int height, Plan plan)
@@ -116,6 +133,8 @@ namespace AnomalyArena
             Flood(blocked, seen, new int[count], start, width, height);
             return FirstStray(blocked, seen) < 0;
         }
+
+        // ───── Features: u runs along a feature, v across it; turn lays u along z instead of x ─────
 
         static void MakeFeature(System.Random rng, Vector2 c, List<Rect> parts)
         {
@@ -132,6 +151,7 @@ namespace AnomalyArena
             ? Rect.MinMaxRect(c.x + Mathf.Min(v0, v1), c.y + Mathf.Min(u0, u1), c.x + Mathf.Max(v0, v1), c.y + Mathf.Max(u0, u1))
             : Rect.MinMaxRect(c.x + Mathf.Min(u0, u1), c.y + Mathf.Min(v0, v1), c.x + Mathf.Max(u0, u1), c.y + Mathf.Max(v0, v1));
 
+        /// <summary>A long wall; often a shorter one goes on from its end, shifted sideways but still touching it (a kink).</summary>
         static void Ridge(System.Random rng, Vector2 c, bool turn, List<Rect> parts)
         {
             float length = Range(rng, 12f, 22f), thick = Range(rng, 2f, 3f);
@@ -141,6 +161,7 @@ namespace AnomalyArena
             parts.Add(Piece(c, length * .5f, length * .5f + more, jog - thick * .5f, jog + thick * .5f, turn));
         }
 
+        /// <summary>A row of three to five short pieces with walkable gaps; the row wanders a little sideways.</summary>
         static void BrokenWall(System.Random rng, Vector2 c, bool turn, List<Rect> parts)
         {
             int count = rng.Next(3, 6);
@@ -162,6 +183,7 @@ namespace AnomalyArena
             }
         }
 
+        /// <summary>Five to eight pillars scattered in a disc, each at least MinGap from the others; fewer than three is no forest.</summary>
         static void RockForest(System.Random rng, Vector2 c, List<Rect> parts)
         {
             int want = rng.Next(5, 9);
@@ -180,6 +202,7 @@ namespace AnomalyArena
             if (parts.Count < 3) parts.Clear();
         }
 
+        /// <summary>An L: a long arm and a short arm meeting at a corner, open on its two inner sides, so nothing is closed in.</summary>
         static void Outcrop(System.Random rng, Vector2 c, bool turn, List<Rect> parts)
         {
             float a = Range(rng, 7f, 11f), b = Range(rng, 5f, 8f), thick = Range(rng, 2f, 3f);
@@ -195,6 +218,7 @@ namespace AnomalyArena
             parts.Add(new Rect(c.x - w * .5f, c.y - h * .5f, w, h));
         }
 
+        /// <summary>A feature fits where every piece lies inside the rim, out of the open ground, and FeatureGap from every other wall.</summary>
         static bool Fits(List<Rect> parts, List<Rect> walls, Plan plan, float hw, float hh)
         {
             foreach (var rect in parts)
@@ -211,6 +235,7 @@ namespace AnomalyArena
             return true;
         }
 
+        /// <summary>A few round quicksand pools on open ground, PoolGap from walls and out of the ground that stays open.</summary>
         static void PlacePools(System.Random rng, List<Rect> walls, Plan plan, float hw, float hh, List<MapLayout.SandPool> pools)
         {
             int want = Mathf.Clamp(Mathf.RoundToInt(hw * hh * 4f / AreaPerPool), MinPools, MaxPools);
@@ -231,6 +256,11 @@ namespace AnomalyArena
             }
         }
 
+        // ───── Connectivity: a one-cell grid laid like MapGrid's (cell centres at -size / 2 + i + 0.5) ─────
+
+        /// <summary>Takes walls away until every open cell can be walked to from the plan's start: the wall nearest a cell that cannot be
+        /// reached is part of what closes it off. Returns how many went; connected says whether the check passed (it always does once no
+        /// terrain wall is left, as the base, the ship pad and the black hole's ring cannot close off ground on their own).</summary>
         static int Connect(List<Rect> walls, Plan plan, int width, int height, out bool connected)
         {
             int count = width * height, removed = 0;
@@ -263,6 +293,7 @@ namespace AnomalyArena
 
         static Vector2 CellCentre(int index, int width, int height) => new(-width * .5f + index % width + .5f, -height * .5f + index / width + .5f);
 
+        /// <summary>Blocked: a body would stand off the map, against a wall (the campaign's own included) or in the black hole's pull.</summary>
         static void Mark(bool[] blocked, List<Rect> walls, Plan plan, int width, int height)
         {
             float hw = width * .5f, hh = height * .5f, pull = plan.holePull * plan.holePull;
@@ -323,6 +354,7 @@ namespace AnomalyArena
             }
         }
 
+        /// <summary>An open cell the flood did not reach, or -1 when it reached them all.</summary>
         static int FirstStray(bool[] blocked, bool[] seen)
         {
             for (int i = 0; i < blocked.Length; i++)
@@ -330,8 +362,11 @@ namespace AnomalyArena
             return -1;
         }
 
+        // ───── Geometry ─────
+
         static float Range(System.Random rng, float min, float max) => min + (float)rng.NextDouble() * (max - min);
 
+        /// <summary>The gap between two rects: 0 where they touch or overlap.</summary>
         static float RectGap(Rect a, Rect b)
         {
             float dx = Mathf.Max(0f, Mathf.Max(a.xMin - b.xMax, b.xMin - a.xMax));
@@ -352,6 +387,7 @@ namespace AnomalyArena
             return Vector2.Distance(p, a + ab * t);
         }
 
+        /// <summary>Distance from the segment (a point when a == b) to the rect, 0 where they meet.</summary>
         static float SegmentToRect(Rect r, Vector2 a, Vector2 b)
         {
             if (SegmentHits(a, b, r)) return 0f;
@@ -362,6 +398,7 @@ namespace AnomalyArena
             return Mathf.Min(near, PointToSegment(new Vector2(r.xMax, r.yMax), a, b));
         }
 
+        /// <summary>Liang-Barsky: whether the segment from a to b crosses the rect (a point: whether it lies inside).</summary>
         static bool SegmentHits(Vector2 a, Vector2 b, Rect r)
         {
             Vector2 d = b - a;

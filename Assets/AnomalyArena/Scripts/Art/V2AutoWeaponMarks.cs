@@ -2,7 +2,13 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>Marks of the auto weapons (document 5.5), made at runtime from flat line renderers and two sprites so
+    /// no scene object is needed: the Sentry Drone hovering by the player, or lying on the ground to cool down with smoke and a ring where
+    /// to step on it; the Whirl's tractor beam and the player's afterimage where the enemy will land; the Deflect force-field ring; and the
+    /// Drain's Energy Shield, flashing while the next enemy hit would cost Energy. RunWeapons adds it to the player. Gameplay state is
+    /// only read here. With the art off (2026-11-10) the drone is the whitebox table's solid look ("sentry": a small octahedron over a
+    /// thin ring) and the Deflect field and the Energy Shield are eight small cubes circling the player at their radius ("ring.box"),
+    /// instead of flat discs and lines; the ground rings that only mark a spot (where to step on the drone, the afterimage) stay.</summary>
     public sealed class V2AutoWeaponMarks : MonoBehaviour
     {
         public RunWeapons weapons;
@@ -23,7 +29,21 @@ namespace AnomalyArena
         V2ArtSet art;
         V2CharacterIllustration look;
         Combatant holder;
-        LineRenderer fieldRing, shieldRing, beam, ghostRing, ghostFill, droneDisc, droneRim, dropRing;
+        LineRenderer fieldRing, shieldRing, beam, ghostRing, ghostFill, dropRing;
+        // The whitebox solids: the drone, and the two rings of cubes.
+        const int RingCubes = 8;               // the table's energy ring: eight small cubes round the player
+        const float RingCubeHeight = 1f;       // height of the cubes' middle above the player's feet, cells
+        const float RingDegreesPerSecond = 60f, DroneDegreesPerSecond = 90f;
+        WhiteboxLook droneLook;
+        readonly CubeRing fieldCubes = new(), shieldCubes = new();
+
+        /// <summary>A ring of whitebox cubes round a centre, made on first use.</summary>
+        sealed class CubeRing
+        {
+            public Transform holder;
+            public WhiteboxLook[] cubes;
+            public Color? painted;
+        }
         MeshRenderer fieldDisc, shieldDisc;
         SpriteRenderer droneSprite, ghostSprite;
         Vector3 droneShown;
@@ -32,7 +52,10 @@ namespace AnomalyArena
 
         void OnDisable()
         {
-            foreach (var line in new[] { fieldRing, shieldRing, beam, ghostRing, ghostFill, droneDisc, droneRim, dropRing }) if (line) line.enabled = false;
+            foreach (var line in new[] { fieldRing, shieldRing, beam, ghostRing, ghostFill, dropRing }) if (line) line.enabled = false;
+            if (droneLook) droneLook.gameObject.SetActive(false);
+            if (fieldCubes.holder) fieldCubes.holder.gameObject.SetActive(false);
+            if (shieldCubes.holder) shieldCubes.holder.gameObject.SetActive(false);
             if (droneSprite) droneSprite.enabled = false;
             if (ghostSprite) ghostSprite.enabled = false;
             if (fieldDisc) fieldDisc.enabled = false;
@@ -62,6 +85,7 @@ namespace AnomalyArena
             DrawWhirl(drone, player);
         }
 
+        /// <summary>The sprite material an enemy warning uses: it takes vertex colours (as V2BossGroundMarks does).</summary>
         void FindLook()
         {
             nextSearch = Time.unscaledTime + 1f;
@@ -79,8 +103,9 @@ namespace AnomalyArena
         {
             if (V5Vfx.On)
             {
-
+                // The V5 art: a faint hexagon force field at the true radius instead of a one-pixel line.
                 if (fieldRing) fieldRing.enabled = false;
+                ShowCubes(fieldCubes, null, false, Vector3.zero, 0f, null);
                 bool on = deflect != null;
                 if (on && !fieldDisc) fieldDisc = V5Vfx.I.MakeFlatDisc("DeflectField", "hex", transform);
                 if (fieldDisc)
@@ -91,7 +116,10 @@ namespace AnomalyArena
                 return;
             }
             if (fieldDisc) fieldDisc.enabled = false;
-            if (!Line(ref fieldRing, "DeflectField", deflect != null, true)) return;
+            bool solid = !Art.Enabled;
+            ShowCubes(fieldCubes, "DeflectFieldCubes", deflect != null && solid, player ? player.Position : Vector3.zero,
+                deflect != null ? weapons.FieldRadius(deflect) : 0f, null);
+            if (!Line(ref fieldRing, "DeflectField", deflect != null && !solid, true)) return;
             Circle(fieldRing, player.Position, weapons.FieldRadius(deflect), .06f);
             fieldRing.widthMultiplier = lineWidth;
             Paint(fieldRing, fieldColor, .85f + .15f * Mathf.Sin(Time.time * 4f));
@@ -103,6 +131,7 @@ namespace AnomalyArena
             if (V5Vfx.On)
             {
                 if (shieldRing) shieldRing.enabled = false;
+                ShowCubes(shieldCubes, null, false, Vector3.zero, 0f, null);
                 bool on = drain != null && (drain.drainShieldUp || overload);
                 if (on && !shieldDisc) shieldDisc = V5Vfx.I.MakeFlatDisc("EnergyShield", "hex", transform);
                 if (shieldDisc)
@@ -113,7 +142,11 @@ namespace AnomalyArena
                 return;
             }
             if (shieldDisc) shieldDisc.enabled = false;
-            if (!Line(ref shieldRing, "EnergyShield", drain != null && (drain.drainShieldUp || overload), true)) return;
+            bool solid = !Art.Enabled, up = drain != null && (drain.drainShieldUp || overload);
+            // The overload flashes: the cubes blink, in the overload colour.
+            ShowCubes(shieldCubes, "EnergyShieldCubes", up && solid && !(overload && Mathf.Repeat(Time.time, .2f) > .1f),
+                player ? player.Position : Vector3.zero, player ? player.radius + .45f : 0f, Opaque(overload ? overloadColor : shieldColor));
+            if (!Line(ref shieldRing, "EnergyShield", up && !solid, true)) return;
             Circle(shieldRing, player.Position, player.radius + .45f, .5f);
             shieldRing.widthMultiplier = lineWidth * (overload ? 1.5f : 2.5f);
             Paint(shieldRing, overload ? overloadColor : shieldColor, overload && Mathf.Repeat(Time.time, .2f) > .1f ? .25f : 1f);
@@ -136,9 +169,7 @@ namespace AnomalyArena
                 Billboard(droneSprite, droneShown, droneWidth, droneWidth * sprite.bounds.size.y / Mathf.Max(.01f, sprite.bounds.size.x));
                 droneSprite.color = down ? droneDownColor : Color.white;
             }
-            Color body = down ? droneDownColor : droneColor;
-            if (Line(ref droneDisc, "DroneDisc", on && !sprite, true)) { Disc(droneDisc, droneShown, .3f); Paint(droneDisc, body, 1f); }
-            if (Line(ref droneRim, "DroneRim", on && !sprite, true)) { Circle(droneRim, droneShown, .45f, droneShown.y); droneRim.widthMultiplier = lineWidth; Paint(droneRim, body, 1f); }
+            ShowDroneLook(on && !sprite, down);
             if (Line(ref dropRing, "DroneStepRing", down, true))
             {
                 Circle(dropRing, drone.dronePoint, player.radius + weapons.upgrades.droneRadius, .06f);
@@ -182,6 +213,58 @@ namespace AnomalyArena
             if (Line(ref ghostRing, "AfterimageRing", on, true)) { Circle(ghostRing, spot, player.radius + .1f, .06f); ghostRing.widthMultiplier = lineWidth; Paint(ghostRing, afterimageColor, 2f); }
         }
 
+        /// <summary>The whitebox drone: the table's look with its octahedron at the hover point, turning slowly; lying on the ground to cool
+        /// down it sits on the ground in the cooling grey.</summary>
+        void ShowDroneLook(bool show, bool down)
+        {
+            if (!show)
+            {
+                if (droneLook && droneLook.gameObject.activeSelf) droneLook.gameObject.SetActive(false);
+                return;
+            }
+            if (!droneLook) droneLook = Whitebox.Build(V2WeaponPresentation.LookIdFor(WeaponForm.SentryDrone), transform, "WhiteboxDrone").GetComponent<WhiteboxLook>();
+            if (!droneLook.gameObject.activeSelf) droneLook.gameObject.SetActive(true);
+            var body = droneLook.Part(droneLook.MainPart);
+            float y = down ? 0f : droneShown.y - body.position.y;
+            Whitebox.PlaceWorld(droneLook.transform, new Vector3(droneShown.x, y, droneShown.z), Quaternion.Euler(0f, Time.time * DroneDegreesPerSecond, 0f));
+            if (down) for (int i = 0; i < droneLook.PartCount; i++) droneLook.SetColour(i, Opaque(droneDownColor));
+            else droneLook.ResetColours();
+        }
+
+        /// <summary>A ring of the table's small cubes round centre at radius, turning; colour null keeps the table's colour.</summary>
+        void ShowCubes(CubeRing ring, string name, bool show, Vector3 centre, float radius, Color? colour)
+        {
+            if (!show)
+            {
+                if (ring.holder && ring.holder.gameObject.activeSelf) ring.holder.gameObject.SetActive(false);
+                return;
+            }
+            if (!ring.holder)
+            {
+                ring.holder = new GameObject(name).transform;
+                ring.holder.SetParent(transform, false);
+                ring.cubes = new WhiteboxLook[RingCubes];
+                for (int i = 0; i < RingCubes; i++)
+                    ring.cubes[i] = Whitebox.Build(V2WeaponPresentation.LookIdFor(WeaponForm.ShieldRing), ring.holder, "Cube " + i).GetComponent<WhiteboxLook>();
+                ring.painted = null;
+            }
+            if (!ring.holder.gameObject.activeSelf) ring.holder.gameObject.SetActive(true);
+            Whitebox.PlaceWorld(ring.holder, new Vector3(centre.x, centre.y + RingCubeHeight, centre.z), Quaternion.Euler(0f, Time.time * RingDegreesPerSecond, 0f));
+            for (int i = 0; i < RingCubes; i++)
+            {
+                float angle = i * Mathf.PI * 2f / RingCubes;
+                ring.cubes[i].transform.localPosition = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * radius;
+            }
+            if (ring.painted == colour) return;
+            ring.painted = colour;
+            foreach (var cube in ring.cubes)
+                if (colour.HasValue) for (int p = 0; p < cube.PartCount; p++) cube.SetColour(p, colour.Value);
+                else cube.ResetColours();
+        }
+
+        static Color Opaque(Color c) { c.a = 1f; return c; }
+
+        /// <summary>Makes the line on first use and turns it on or off; true when it is on.</summary>
         bool Line(ref LineRenderer line, string name, bool on, bool flat)
         {
             if (!on) { if (line) line.enabled = false; return false; }
@@ -201,12 +284,13 @@ namespace AnomalyArena
                 line.loop = flat;
                 line.positionCount = flat ? Segments : 2;
             }
-
+            // The player turns every frame; keep a flat ring facing straight up.
             if (flat) line.transform.rotation = Quaternion.LookRotation(Vector3.up, Vector3.forward);
             line.enabled = true;
             return true;
         }
 
+        /// <summary>Makes the sprite on first use and shows it when there is one to draw; true when it is shown.</summary>
         bool ShowSprite(ref SpriteRenderer renderer, string name, Sprite sprite)
         {
             if (!sprite) { if (renderer) renderer.enabled = false; return false; }
@@ -235,6 +319,7 @@ namespace AnomalyArena
             }
         }
 
+        /// <summary>A filled disc: a ring as wide as half the radius drawn halfway in.</summary>
         static void Disc(LineRenderer line, Vector3 centre, float radius)
         {
             Circle(line, centre, radius * .5f, centre.y);

@@ -23,107 +23,107 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 814354432
-    m_Localized: START RUN
+    m_Localized: "\u5F00\u59CB\u6E38\u620F"
     m_Metadata:
       m_Items: []
   - m_Id: 818548736
-    m_Localized: CHOOSE YOUR STARTING WEAPON
+    m_Localized: "\u9009\u62E9\u521D\u59CB\u6B66\u5668"
     m_Metadata:
       m_Items: []
   - m_Id: 818548737
-    m_Localized: "EARTH SUPPLY \xB7 ARMORY"
+    m_Localized: "\u5730\u7403\u8865\u7ED9 \xB7 \u519B\u68B0\u5E93"
     m_Metadata:
       m_Items: []
   - m_Id: 818548738
-    m_Localized: BUILD YOUR RUN
+    m_Localized: "\u9009\u62E9\u672C\u5C40\u5347\u7EA7"
     m_Metadata:
       m_Items: []
   - m_Id: 818548739
-    m_Localized: REPLACE A WEAPON
+    m_Localized: "\u66FF\u6362\u6B66\u5668"
     m_Metadata:
       m_Items: []
   - m_Id: 818548740
-    m_Localized: REPLACE A SKILL
+    m_Localized: "\u66FF\u6362\u6280\u80FD"
     m_Metadata:
       m_Items: []
   - m_Id: 818548741
-    m_Localized: BUILD READY
+    m_Localized: "\u6574\u5907\u5B8C\u6210"
     m_Metadata:
       m_Items: []
   - m_Id: 818548742
-    m_Localized: PAUSED
+    m_Localized: "\u5DF2\u6682\u505C"
     m_Metadata:
       m_Items: []
   - m_Id: 818548743
-    m_Localized: RESUME
+    m_Localized: "\u7EE7\u7EED"
     m_Metadata:
       m_Items: []
   - m_Id: 818548744
-    m_Localized: RESTART RUN
+    m_Localized: "\u91CD\u65B0\u5F00\u5C40"
     m_Metadata:
       m_Items: []
   - m_Id: 818548745
-    m_Localized: QUIT TO TITLE
+    m_Localized: "\u8FD4\u56DE\u6807\u9898"
     m_Metadata:
       m_Items: []
   - m_Id: 818548746
-    m_Localized: 'NEW RUN [R]'
+    m_Localized: "\u65B0\u7684\u4E00\u5C40 [R]"
     m_Metadata:
       m_Items: []
   - m_Id: 818548747
-    m_Localized: START NEXT WAVE
+    m_Localized: "\u5F00\u59CB\u4E0B\u4E00\u6CE2"
     m_Metadata:
       m_Items: []
   - m_Id: 818548748
-    m_Localized: RETURN / DECLINE SKILL
+    m_Localized: "\u653E\u5F03\u6280\u80FD\u5E76\u8FD4\u56DE\u5F53\u524D\u6CE2"
     m_Metadata:
       m_Items: []
   - m_Id: 818548749
-    m_Localized: SKIP OFFER
+    m_Localized: "\u653E\u5F03\u672C\u6B21\u6B66\u5668"
     m_Metadata:
       m_Items: []
   - m_Id: 818548750
-    m_Localized: 'REROLL [{0}]'
+    m_Localized: "\u91CD\u62BD [{0}]"
     m_Metadata:
       m_Items: []
   - m_Id: 818548751
-    m_Localized: BACK
+    m_Localized: "\u8FD4\u56DE"
     m_Metadata:
       m_Items: []
   - m_Id: 818548752
-    m_Localized: PICK RANDOMLY & START
+    m_Localized: "\u968F\u673A\u9009\u62E9\u5E76\u5F00\u59CB"
     m_Metadata:
       m_Items: []
   - m_Id: 818548753
-    m_Localized: KEEP CHOOSING
+    m_Localized: "\u7EE7\u7EED\u9009\u62E9"
     m_Metadata:
       m_Items: []
   - m_Id: 818548754
-    m_Localized: 'ART: WHITEBOX'
+    m_Localized: "\u7F8E\u672F\uFF1A\u767D\u76D2"
     m_Metadata:
       m_Items: []
   - m_Id: 818548755
-    m_Localized: 'ART: INTERSTELLAR'
+    m_Localized: "\u7F8E\u672F\uFF1A\u661F\u9645"
     m_Metadata:
       m_Items: []
   - m_Id: 818548756
-    m_Localized: HP {0} / {1}
+    m_Localized: "\u751F\u547D {0} / {1}"
     m_Metadata:
       m_Items: []
   - m_Id: 818548757
-    m_Localized: STAMINA
+    m_Localized: "\u4F53\u529B"
     m_Metadata:
       m_Items: []
   - m_Id: 818548758
-    m_Localized: ENERGY {0} / {1}
+    m_Localized: "\u80FD\u91CF {0} / {1}"
     m_Metadata:
       m_Items: []
   - m_Id: 818548759
-    m_Localized: VOID ENERGY {0} / {1}
+    m_Localized: "\u865A\u7A7A\u80FD\u91CF {0} / {1}"
     m_Metadata:
       m_Items: []
   - m_Id: 818548760
-    m_Localized: "LV {0} \xB7 XP {1} / {2} \xB7 DRAFTS {3}"
+    m_Localized: "\u7B49\u7EA7 {0} \xB7 \u7ECF\u9A8C {1} / {2} \xB7 \u5F85\u9009\u5361\u7EC4 {3}"
     m_Metadata:
       m_Items: []
   - m_Id: 818548761
@@ -131,83 +131,83 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 818548762
-    m_Localized: "WAVE {0} / {1} \xB7 {2}s"
+    m_Localized: "\u7B2C {0} / {1} \u6CE2 \xB7 {2} \u79D2"
     m_Metadata:
       m_Items: []
   - m_Id: 818548763
-    m_Localized: "{0} \xB7 {1} / {2} \xB7 SHIELD {3}"
+    m_Localized: "{0} \xB7 {1} / {2} \xB7 \u62A4\u76FE {3}"
     m_Metadata:
       m_Items: []
   - m_Id: 818548764
-    m_Localized: BUILD TIME {0}s
+    m_Localized: "\u6574\u5907\u5269\u4F59 {0} \u79D2"
     m_Metadata:
       m_Items: []
   - m_Id: 818548765
-    m_Localized: '{0} cards remain. Pick the unfinished choices at random and start the next wave?'
+    m_Localized: "\u8FD8\u6709 {0} \u7EC4\u5361\u672A\u9009\u3002\u968F\u673A\u5B8C\u6210\u5269\u4F59\u9009\u5361\u5E76\u5F00\u59CB\u4E0B\u4E00\u6CE2\uFF1F"
     m_Metadata:
       m_Items: []
   - m_Id: 818548766
-    m_Localized: SLOT {0}
+    m_Localized: "\u69FD\u4F4D {0}"
     m_Metadata:
       m_Items: []
   - m_Id: 818548767
-    m_Localized: REPLACE
+    m_Localized: "\u66FF\u6362"
     m_Metadata:
       m_Items: []
   - m_Id: 818548768
-    m_Localized: FROZEN
+    m_Localized: "\u51BB\u7ED3"
     m_Metadata:
       m_Items: []
   - m_Id: 818548769
-    m_Localized: PARALYSED
+    m_Localized: "\u9EBB\u75F9"
     m_Metadata:
       m_Items: []
   - m_Id: 818548770
-    m_Localized: ICE
+    m_Localized: "\u51BB"
     m_Metadata:
       m_Items: []
   - m_Id: 818548771
-    m_Localized: STUN
+    m_Localized: "\u9EBB"
     m_Metadata:
       m_Items: []
   - m_Id: 818548772
-    m_Localized: VOID PORTAL
+    m_Localized: "\u865A\u7A7A\u4F20\u9001\u95E8"
     m_Metadata:
       m_Items: []
   - m_Id: 818548773
-    m_Localized: "E \xB7 ENTER\nFAILURE ENDS RUN\nCLEARS STATUS & SHIELD"
+    m_Localized: "E \xB7 \u8FDB\u5165\n\u5931\u8D25\u4F1A\u7ED3\u675F\u672C\u5C40\n\u72B6\u6001\u6E05\u9664 \xB7 \u62A4\u76FE\u6E05 0"
     m_Metadata:
       m_Items: []
   - m_Id: 818548774
-    m_Localized: '{0} WAVES LEFT'
+    m_Localized: "\u8FD8\u5269 {0} \u6CE2"
     m_Metadata:
       m_Items: []
   - m_Id: 818548775
-    m_Localized: "VOID \xB7 {0} WAVES"
+    m_Localized: "\u865A\u7A7A\u95E8 \xB7 \u8FD8\u5269 {0} \u6CE2"
     m_Metadata:
       m_Items: []
   - m_Id: 818548776
-    m_Localized: BLACK HOLE
+    m_Localized: "\u9ED1\u6D1E"
     m_Metadata:
       m_Items: []
   - m_Id: 818548777
-    m_Localized: ELITE
+    m_Localized: "\u7CBE\u82F1"
     m_Metadata:
       m_Items: []
   - m_Id: 818548778
-    m_Localized: SHADE INCOMING
+    m_Localized: "\u5F71\u866B\u6765\u88AD"
     m_Metadata:
       m_Items: []
   - m_Id: 818548779
-    m_Localized: GREATER VOID REWARD
+    m_Localized: "\u9AD8\u9636\u865A\u7A7A\u5956\u52B1"
     m_Metadata:
       m_Items: []
   - m_Id: 818548780
-    m_Localized: Pick one of three Greater Void skills (or none); they have no further levels. 1 / 2 / 3 select.
+    m_Localized: "\u4ECE\u4E09\u4E2A\u9AD8\u9636\u865A\u7A7A\u6280\u80FD\u91CC\u9009\u4E00\u4E2A\uFF08\u53EF\u4EE5\u4E0D\u9009\uFF09\uFF0C\u6CA1\u6709\u540E\u7EED\u5347\u7EA7\u3002\u6309 1 / 2 / 3 \u9009\u62E9\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548781
-    m_Localized: DRAFT {0} / {1}
+    m_Localized: "\u7B2C {0} / {1} \u7EC4\u9009\u5361"
     m_Metadata:
       m_Items: []
   - m_Id: 818548782
@@ -215,613 +215,611 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 818548783
-    m_Localized: 'Pick one familiar form. Which backfire it has is unknown until you take it; the moment you choose, the game pauses and the weapon card appears.
-
-      Aim manually; use the terrain.'
+    m_Localized: "\u9009\u62E9\u4E00\u79CD\u719F\u6089\u7684\u5916\u5F62\u3002\u62FF\u5230\u4E4B\u524D\u4E0D\u77E5\u9053\u662F\u54EA\u79CD\u53CD\u566C\uFF1B\u9009\u4E2D\u7684\u90A3\u4E00\u523B\u63ED\u6653\uFF1A\u6E38\u620F\u6682\u505C\uFF0C\u5F39\u51FA\u6B66\u5668\u5361\u3002\n\u624B\u52A8\u7784\u51C6\uFF0C\u5229\u7528\u5730\u5F62\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548784
-    m_Localized: 'Pick one of three: a new weapon, or a higher Mk of one you hold (weapons grow stronger through higher Mks from the armory). You may skip. Upgrades stay with the weapon: replace it and they are gone with it.'
+    m_Localized: "\u4E09\u9009\u4E00\uFF1A\u4E00\u4EF6\u65B0\u6B66\u5668\uFF0C\u6216\u5DF2\u6301\u6709\u6B66\u5668\u7684\u66F4\u9AD8\u578B\u53F7\uFF08\u6B66\u5668\u53D8\u5F3A\u9760\u519B\u68B0\u5E93\u91CC\u7684\u66F4\u9AD8\u578B\u53F7\uFF09\u3002\u4E5F\u53EF\u4EE5\u8DF3\u8FC7\u3002\u5F3A\u5316\u8DDF\u7740\u6B66\u5668\u8D70\uFF0C\u6B66\u5668\u88AB\u66FF\u6362\u6389\uFF0C\u5B83\u8EAB\u4E0A\u7684\u5F3A\u5316\u4E5F\u4E00\u8D77\u6CA1\u4E86\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548785
-    m_Localized: 'Three cards, one of each: a stat card, a weapon card (an upgrade direction a revealed weapon has not taken yet) and a skill card (a new skill, or one level for a skill you own). 1 / 2 / 3 select; R rerolls (once per build phase).'
+    m_Localized: "\u4E09\u5F20\u5361\u6BCF\u79CD\u4E00\u5F20\uFF1A\u5C5E\u6027\u5361\u3001\u6B66\u5668\u5361\uFF08\u7ED9\u4E00\u628A\u5DF2\u7ECF\u63ED\u6653\u7684\u6B66\u5668\u4E00\u4E2A\u8FD8\u6CA1\u62FF\u8FC7\u7684\u5F3A\u5316\u65B9\u5411\uFF09\u3001\u6280\u80FD\u5361\uFF08\u4E00\u4E2A\u65B0\u6280\u80FD\uFF0C\u6216\u8005\u7ED9\u5DF2\u6709\u6280\u80FD\u5347\u4E00\u7EA7\uFF09\u3002\u6309 1 / 2 / 3 \u9009\u62E9\uFF1BR \u91CD\u62BD\uFF08\u6BCF\u6B21\u6574\u5907\u4E00\u6B21\uFF09\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548786
-    m_Localized: 'Choose the weapon to replace. Upgrades stay with the weapon: replace it and they are gone with it.'
+    m_Localized: "\u9009\u62E9\u8981\u66FF\u6362\u7684\u6B66\u5668\u3002\u5F3A\u5316\u8DDF\u7740\u6B66\u5668\u8D70\uFF0C\u6B66\u5668\u88AB\u66FF\u6362\u6389\uFF0C\u5B83\u8EAB\u4E0A\u7684\u5F3A\u5316\u4E5F\u4E00\u8D77\u6CA1\u4E86\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548787
-    m_Localized: With 3 skills already, taking a new one means replacing an old one; the new skill starts at level 1.
+    m_Localized: "\u5DF2\u6709 3 \u4E2A\u6280\u80FD\u65F6\u518D\u9009\u62E9\u65B0\u6280\u80FD\uFF0C\u5C31\u8981\u9009\u4E00\u4E2A\u65E7\u7684\u66FF\u6362\uFF0C\u65B0\u6280\u80FD\u4ECE 1 \u7EA7\u5F00\u59CB\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548788
-    m_Localized: Build choices complete. Click START NEXT WAVE to go on.
+    m_Localized: "\u6574\u5907\u9009\u9879\u5DF2\u5B8C\u6210\u3002\u70B9\u51FB\u300C\u5F00\u59CB\u4E0B\u4E00\u6CE2\u300D\u7EE7\u7EED\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548789
-    m_Localized: The battlefield and the build clock are paused.
+    m_Localized: "\u6218\u573A\u4E0E\u6574\u5907\u8BA1\u65F6\u5747\u5DF2\u6682\u505C\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548790
-    m_Localized: RUN ENDED
+    m_Localized: "\u672C\u5C40\u7ED3\u675F"
     m_Metadata:
       m_Items: []
   - m_Id: 818548791
-    m_Localized: EARTH IS WITHIN REACH
+    m_Localized: "\u5373\u5C06\u91CD\u8FD4\u5730\u7403"
     m_Metadata:
       m_Items: []
   - m_Id: 818548792
-    m_Localized: EXPLORER LOST
+    m_Localized: "\u63A2\u7D22\u8005\u9668\u843D"
     m_Metadata:
       m_Items: []
   - m_Id: 818548793
-    m_Localized: "Wave {0} \xB7 Level {1} \xB7 {2} kills\n{3} seconds on the Interstellar Battlefield"
+    m_Localized: "\u7B2C {0} \u6CE2 \xB7 \u7B49\u7EA7 {1} \xB7 \u6D88\u706D {2} \u4E2A\u654C\u4EBA\n\u5728\u661F\u9645\u6218\u573A\u751F\u5B58\u4E86 {3} \u79D2\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548794
-    m_Localized: LEVEL {0}
+    m_Localized: "\u5347\u5230 {0} \u7EA7"
     m_Metadata:
       m_Items: []
   - m_Id: 818548795
-    m_Localized: Energy refilled. Pick the card after the wave.
+    m_Localized: "\u80FD\u91CF\u5DF2\u8865\u6EE1\uFF0C\u6CE2\u6B21\u7ED3\u675F\u540E\u9009\u5361\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548796
-    m_Localized: '{0} pending drafts resolved automatically'
+    m_Localized: "\u5DF2\u81EA\u52A8\u5904\u7406 {0} \u7EC4\u5F85\u9009\u5361\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548797
-    m_Localized: 'Armory: {0}'
+    m_Localized: "\u519B\u68B0\u5E93\uFF1A{0}"
     m_Metadata:
       m_Items: []
   - m_Id: 818548798
-    m_Localized: 'Tyrant King immunities: {0}'
+    m_Localized: "\u66B4\u8650\u541B\u738B\u514D\u75AB\uFF1A{0}"
     m_Metadata:
       m_Items: []
   - m_Id: 818548799
-    m_Localized: Recall point is blocked
+    m_Localized: "\u56DE\u8FD4\u70B9\u88AB\u963B\u6321\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548800
-    m_Localized: Not during a menu
+    m_Localized: "\u83DC\u5355\u4E2D\u4E0D\u80FD\u65BD\u653E\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548801
-    m_Localized: Not ready
+    m_Localized: "\u6682\u65F6\u65E0\u6CD5\u65BD\u653E\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548802
-    m_Localized: World action unavailable
+    m_Localized: "\u6B64\u6548\u679C\u6682\u4E0D\u53EF\u7528\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548803
-    m_Localized: No valid point
+    m_Localized: "\u6CA1\u6709\u5408\u6CD5\u843D\u70B9\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548804
-    m_Localized: No weakened target
+    m_Localized: "\u6CA1\u6709\u7B26\u5408\u751F\u547D\u9608\u503C\u7684\u76EE\u6807\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548805
-    m_Localized: No target
+    m_Localized: "\u6CA1\u6709\u53EF\u9009\u76EE\u6807\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548806
-    m_Localized: No Energy
+    m_Localized: "\u80FD\u91CF\u4E0D\u8DB3\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548807
-    m_Localized: Fists
+    m_Localized: "\u62F3\u51FB"
     m_Metadata:
       m_Items: []
   - m_Id: 818548808
-    m_Localized: Empty
+    m_Localized: "\u7A7A\u69FD"
     m_Metadata:
       m_Items: []
   - m_Id: 818548809
-    m_Localized: HAND
+    m_Localized: "\u624B\u6301"
     m_Metadata:
       m_Items: []
   - m_Id: 818548810
-    m_Localized: AUTO
+    m_Localized: "\u81EA\u52A8"
     m_Metadata:
       m_Items: []
   - m_Id: 818548811
-    m_Localized: Backfire unrevealed
+    m_Localized: "\u53CD\u566C\u672A\u63ED\u6653"
     m_Metadata:
       m_Items: []
   - m_Id: 818548812
-    m_Localized: Which backfire it has is unknown until you take it; it is revealed the moment you choose.
+    m_Localized: "\u62FF\u5230\u4E4B\u524D\u4E0D\u77E5\u9053\u662F\u54EA\u79CD\u53CD\u566C\uFF1B\u9009\u4E2D\u7684\u90A3\u4E00\u523B\u63ED\u6653\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548813
-    m_Localized: No eligible weapon
+    m_Localized: "\u6CA1\u6709\u53EF\u63D0\u4F9B\u7684\u6B66\u5668"
     m_Metadata:
       m_Items: []
   - m_Id: 818548814
-    m_Localized: Stat
+    m_Localized: "\u5C5E\u6027"
     m_Metadata:
       m_Items: []
   - m_Id: 818548815
-    m_Localized: Weapon
+    m_Localized: "\u6B66\u5668"
     m_Metadata:
       m_Items: []
   - m_Id: 818548816
-    m_Localized: Skill
+    m_Localized: "\u6280\u80FD"
     m_Metadata:
       m_Items: []
   - m_Id: 818548817
-    m_Localized: Common
+    m_Localized: "\u666E\u901A"
     m_Metadata:
       m_Items: []
   - m_Id: 818548818
-    m_Localized: Rare
+    m_Localized: "\u7A00\u6709"
     m_Metadata:
       m_Items: []
   - m_Id: 818548819
-    m_Localized: Epic
+    m_Localized: "\u53F2\u8BD7"
     m_Metadata:
       m_Items: []
   - m_Id: 818548820
-    m_Localized: Infuse {0}
+    m_Localized: "\u704C\u6CE8 {0}"
     m_Metadata:
       m_Items: []
   - m_Id: 818548821
-    m_Localized: Infuse {0}, replaces {1}
+    m_Localized: "\u704C\u6CE8 {0}\uFF0C\u66FF\u6362 {1}"
     m_Metadata:
       m_Items: []
   - m_Id: 818548822
-    m_Localized: Damage +40%
+    m_Localized: "\u4F24\u5BB3 +40%"
     m_Metadata:
       m_Items: []
   - m_Id: 818548823
-    m_Localized: Cooldown, charge and reload -30%
+    m_Localized: "\u51B7\u5374\u3001\u84C4\u529B\u4E0E\u6362\u5F39\u65F6\u95F4 -30%"
     m_Metadata:
       m_Items: []
   - m_Id: 818548824
-    m_Localized: Range, area or targets +40%
+    m_Localized: "\u5C04\u7A0B\u3001\u8303\u56F4\u6216\u76EE\u6807\u6570\u91CF +40%"
     m_Metadata:
       m_Items: []
   - m_Id: 818548825
-    m_Localized: Adds a new variant to this anomaly
+    m_Localized: "\u7ED9\u8FD9\u79CD\u5F02\u5E38\u52A0\u4E00\u4E2A\u65B0\u7684\u53D8\u5F0F"
     m_Metadata:
       m_Items: []
   - m_Id: 818548826
-    m_Localized: Removes or softens this anomaly's backfire
+    m_Localized: "\u53BB\u6389\u6216\u8005\u51CF\u8F7B\u8FD9\u79CD\u5F02\u5E38\u7684\u53CD\u566C"
     m_Metadata:
       m_Items: []
   - m_Id: 818548827
-    m_Localized: Max HP
+    m_Localized: "\u6700\u5927\u751F\u547D"
     m_Metadata:
       m_Items: []
   - m_Id: 818548828
-    m_Localized: Regeneration
+    m_Localized: "\u751F\u547D\u56DE\u590D"
     m_Metadata:
       m_Items: []
   - m_Id: 818548829
-    m_Localized: Move Speed
+    m_Localized: "\u79FB\u52A8\u901F\u5EA6"
     m_Metadata:
       m_Items: []
   - m_Id: 818548830
-    m_Localized: Stamina
+    m_Localized: "\u51B2\u523A\u65F6\u957F"
     m_Metadata:
       m_Items: []
   - m_Id: 818548831
-    m_Localized: Damage
+    m_Localized: "\u4F24\u5BB3"
     m_Metadata:
       m_Items: []
   - m_Id: 818548832
-    m_Localized: Attack Speed
+    m_Localized: "\u653B\u51FB\u901F\u5EA6"
     m_Metadata:
       m_Items: []
   - m_Id: 818548833
-    m_Localized: Knockback
+    m_Localized: "\u51FB\u9000\u52A0\u6210"
     m_Metadata:
       m_Items: []
   - m_Id: 818548834
-    m_Localized: Impact
+    m_Localized: "\u649E\u5899\u4F24\u5BB3\u52A0\u6210"
     m_Metadata:
       m_Items: []
   - m_Id: 818548835
-    m_Localized: Pickup Range
+    m_Localized: "\u62FE\u53D6\u8303\u56F4"
     m_Metadata:
       m_Items: []
   - m_Id: 818548836
-    m_Localized: Protection
+    m_Localized: "\u9632\u62A4"
     m_Metadata:
       m_Items: []
   - m_Id: 818548837
-    m_Localized: Luck
+    m_Localized: "\u5E78\u8FD0"
     m_Metadata:
       m_Items: []
   - m_Id: 818548838
-    m_Localized: Max Energy
+    m_Localized: "\u80FD\u91CF\u4E0A\u9650"
     m_Metadata:
       m_Items: []
   - m_Id: 818548839
-    m_Localized: Energy Siphon
+    m_Localized: "\u80FD\u91CF\u6C72\u53D6"
     m_Metadata:
       m_Items: []
   - m_Id: 818548840
-    m_Localized: Element Penetration
+    m_Localized: "\u5C5E\u6027\u7A7F\u900F"
     m_Metadata:
       m_Items: []
   - m_Id: 818548841
-    m_Localized: Infusion
+    m_Localized: "\u704C\u6CE8"
     m_Metadata:
       m_Items: []
   - m_Id: 818548842
-    m_Localized: Power
+    m_Localized: "\u5A01\u529B"
     m_Metadata:
       m_Items: []
   - m_Id: 818548843
-    m_Localized: Tempo
+    m_Localized: "\u8282\u594F"
     m_Metadata:
       m_Items: []
   - m_Id: 818548844
-    m_Localized: Reach
+    m_Localized: "\u8303\u56F4"
     m_Metadata:
       m_Items: []
   - m_Id: 818548845
-    m_Localized: Twist
+    m_Localized: "\u53D8\u62DB"
     m_Metadata:
       m_Items: []
   - m_Id: 818548846
-    m_Localized: Tame
+    m_Localized: "\u9A6F\u5316"
     m_Metadata:
       m_Items: []
   - m_Id: 818548847
-    m_Localized: Rifle
+    m_Localized: "\u6B65\u67AA"
     m_Metadata:
       m_Items: []
   - m_Id: 818548848
-    m_Localized: Charged Shot
+    m_Localized: "\u84C4\u529B\u5C04\u51FB"
     m_Metadata:
       m_Items: []
   - m_Id: 818548849
-    m_Localized: Reverse Shot
+    m_Localized: "\u53CD\u5411\u5C04\u51FB"
     m_Metadata:
       m_Items: []
   - m_Id: 818548850
-    m_Localized: Knife
+    m_Localized: "\u5C0F\u5200"
     m_Metadata:
       m_Items: []
   - m_Id: 818548851
-    m_Localized: Throwing Knife
+    m_Localized: "\u98DE\u5200"
     m_Metadata:
       m_Items: []
   - m_Id: 818548852
-    m_Localized: Hook
+    m_Localized: "\u94A9\u5B50"
     m_Metadata:
       m_Items: []
   - m_Id: 818548853
-    m_Localized: Rocket Launcher
+    m_Localized: "\u706B\u7BAD\u7B52"
     m_Metadata:
       m_Items: []
   - m_Id: 818548854
-    m_Localized: Strike
+    m_Localized: "\u706B\u529B\u6253\u51FB"
     m_Metadata:
       m_Items: []
   - m_Id: 818548855
-    m_Localized: Launch Yourself
+    m_Localized: "\u4EBA\u4F53\u5BFC\u5F39"
     m_Metadata:
       m_Items: []
   - m_Id: 818548856
-    m_Localized: Grav Gun
+    m_Localized: "\u91CD\u529B\u67AA"
     m_Metadata:
       m_Items: []
   - m_Id: 818548857
-    m_Localized: Attract
+    m_Localized: "\u5438\u5F15"
     m_Metadata:
       m_Items: []
   - m_Id: 818548858
-    m_Localized: Repel
+    m_Localized: "\u6392\u65A5"
     m_Metadata:
       m_Items: []
   - m_Id: 818548859
-    m_Localized: Scatter Cannon
+    m_Localized: "\u9730\u5C04\u70AE"
     m_Metadata:
       m_Items: []
   - m_Id: 818548860
-    m_Localized: Blast
+    m_Localized: "\u8F70\u51FB"
     m_Metadata:
       m_Items: []
   - m_Id: 818548861
-    m_Localized: Focus
+    m_Localized: "\u96C6\u4E2D"
     m_Metadata:
       m_Items: []
   - m_Id: 818548862
-    m_Localized: Phase Dagger
+    m_Localized: "\u76F8\u4F4D\u5315\u9996"
     m_Metadata:
       m_Items: []
   - m_Id: 818548863
-    m_Localized: Swap
+    m_Localized: "\u4F4D\u7F6E\u4EA4\u6362"
     m_Metadata:
       m_Items: []
   - m_Id: 818548864
-    m_Localized: Recall
+    m_Localized: "\u56DE\u8FD4"
     m_Metadata:
       m_Items: []
   - m_Id: 818548865
-    m_Localized: Plasma Launcher
+    m_Localized: "\u7B49\u79BB\u5B50\u53D1\u5C04\u5668"
     m_Metadata:
       m_Items: []
   - m_Id: 818548866
-    m_Localized: Sticky
+    m_Localized: "\u9ECF\u9644"
     m_Metadata:
       m_Items: []
   - m_Id: 818548867
-    m_Localized: Bouncy
+    m_Localized: "\u5F39\u8DF3"
     m_Metadata:
       m_Items: []
   - m_Id: 818548868
-    m_Localized: Flamethrower
+    m_Localized: "\u55B7\u706B\u5668"
     m_Metadata:
       m_Items: []
   - m_Id: 818548869
-    m_Localized: Stream
+    m_Localized: "\u55B7\u6D41"
     m_Metadata:
       m_Items: []
   - m_Id: 818548870
-    m_Localized: Wildfire
+    m_Localized: "\u91CE\u706B"
     m_Metadata:
       m_Items: []
   - m_Id: 818548871
-    m_Localized: Cryo Cannon
+    m_Localized: "\u51B7\u51DD\u70AE"
     m_Metadata:
       m_Items: []
   - m_Id: 818548872
-    m_Localized: Shatter
+    m_Localized: "\u788E\u51B0"
     m_Metadata:
       m_Items: []
   - m_Id: 818548873
-    m_Localized: Blizzard
+    m_Localized: "\u66B4\u96EA"
     m_Metadata:
       m_Items: []
   - m_Id: 818548874
-    m_Localized: Arc Coil
+    m_Localized: "\u7535\u5F27\u7EBF\u5708"
     m_Metadata:
       m_Items: []
   - m_Id: 818548875
-    m_Localized: Chain
+    m_Localized: "\u8FDE\u9501"
     m_Metadata:
       m_Items: []
   - m_Id: 818548876
-    m_Localized: Capacitor
+    m_Localized: "\u84C4\u7535"
     m_Metadata:
       m_Items: []
   - m_Id: 818548877
-    m_Localized: Venom Launcher
+    m_Localized: "\u6BD2\u6DB2\u53D1\u5C04\u5668"
     m_Metadata:
       m_Items: []
   - m_Id: 818548878
-    m_Localized: Cloud
+    m_Localized: "\u6BD2\u4E91"
     m_Metadata:
       m_Items: []
   - m_Id: 818548879
-    m_Localized: Needler
+    m_Localized: "\u6BD2\u9488"
     m_Metadata:
       m_Items: []
   - m_Id: 818548880
-    m_Localized: Railgun
+    m_Localized: "\u8F68\u9053\u70AE"
     m_Metadata:
       m_Items: []
   - m_Id: 818548881
-    m_Localized: Lance
+    m_Localized: "\u7A7F\u7532"
     m_Metadata:
       m_Items: []
   - m_Id: 818548882
-    m_Localized: Execute
+    m_Localized: "\u5904\u51B3"
     m_Metadata:
       m_Items: []
   - m_Id: 818548883
-    m_Localized: Minigun
+    m_Localized: "\u8F6C\u8F6E\u673A\u67AA"
     m_Metadata:
       m_Items: []
   - m_Id: 818548884
-    m_Localized: Spin-up
+    m_Localized: "\u9884\u70ED"
     m_Metadata:
       m_Items: []
   - m_Id: 818548885
-    m_Localized: Meltdown
+    m_Localized: "\u7194\u6BC1"
     m_Metadata:
       m_Items: []
   - m_Id: 818548886
-    m_Localized: Swarm Launcher
+    m_Localized: "\u8702\u7FA4\u53D1\u5C04\u5668"
     m_Metadata:
       m_Items: []
   - m_Id: 818548887
-    m_Localized: Barrage
+    m_Localized: "\u9F50\u5C04"
     m_Metadata:
       m_Items: []
   - m_Id: 818548888
-    m_Localized: Bombard
+    m_Localized: "\u8F70\u70B8"
     m_Metadata:
       m_Items: []
   - m_Id: 818548889
-    m_Localized: Orbit Blades
+    m_Localized: "\u73AF\u7ED5\u5203"
     m_Metadata:
       m_Items: []
   - m_Id: 818548890
-    m_Localized: Closed Blade
+    m_Localized: "\u95ED\u5203"
     m_Metadata:
       m_Items: []
   - m_Id: 818548891
-    m_Localized: Open Blade
+    m_Localized: "\u5F00\u5203"
     m_Metadata:
       m_Items: []
   - m_Id: 818548892
-    m_Localized: Sentry Drone
+    m_Localized: "\u54E8\u6212\u65E0\u4EBA\u673A"
     m_Metadata:
       m_Items: []
   - m_Id: 818548893
-    m_Localized: Gunner
+    m_Localized: "\u5C04\u624B"
     m_Metadata:
       m_Items: []
   - m_Id: 818548894
-    m_Localized: Whirl
+    m_Localized: "\u56DE\u65CB"
     m_Metadata:
       m_Items: []
   - m_Id: 818548895
-    m_Localized: Shield Ring
+    m_Localized: "\u62A4\u76FE\u73AF"
     m_Metadata:
       m_Items: []
   - m_Id: 818548896
-    m_Localized: Repulsor
+    m_Localized: "\u65A5\u529B"
     m_Metadata:
       m_Items: []
   - m_Id: 818548897
-    m_Localized: Leech
+    m_Localized: "\u6C72\u80FD"
     m_Metadata:
       m_Items: []
   - m_Id: 818548898
-    m_Localized: Flame Wake
+    m_Localized: "\u70C8\u7130\u5C3E\u8FF9"
     m_Metadata:
       m_Items: []
   - m_Id: 818548899
-    m_Localized: Contagion
+    m_Localized: "\u4F20\u67D3"
     m_Metadata:
       m_Items: []
   - m_Id: 818548900
-    m_Localized: Frost Nova
+    m_Localized: "\u51B0\u971C\u65B0\u661F"
     m_Metadata:
       m_Items: []
   - m_Id: 818548901
-    m_Localized: Storm Call
+    m_Localized: "\u98CE\u66B4\u53EC\u5524"
     m_Metadata:
       m_Items: []
   - m_Id: 818548902
-    m_Localized: Bulwark
+    m_Localized: "\u58C1\u5792"
     m_Metadata:
       m_Items: []
   - m_Id: 818548903
-    m_Localized: Radiance
+    m_Localized: "\u8F89\u5149"
     m_Metadata:
       m_Items: []
   - m_Id: 818548904
-    m_Localized: Devour
+    m_Localized: "\u541E\u566C"
     m_Metadata:
       m_Items: []
   - m_Id: 818548905
-    m_Localized: Blink
+    m_Localized: "\u95EA\u73B0"
     m_Metadata:
       m_Items: []
   - m_Id: 818548906
-    m_Localized: Shockwave
+    m_Localized: "\u51B2\u51FB\u6CE2"
     m_Metadata:
       m_Items: []
   - m_Id: 818548907
-    m_Localized: Gravity Well
+    m_Localized: "\u5F15\u529B\u4E95"
     m_Metadata:
       m_Items: []
   - m_Id: 818548908
-    m_Localized: Time Stop
+    m_Localized: "\u65F6\u505C"
     m_Metadata:
       m_Items: []
   - m_Id: 818548909
-    m_Localized: Mirror Image
+    m_Localized: "\u955C\u50CF"
     m_Metadata:
       m_Items: []
   - m_Id: 818548910
-    m_Localized: Overcharge
+    m_Localized: "\u8FC7\u8F7D"
     m_Metadata:
       m_Items: []
   - m_Id: 818548911
-    m_Localized: Pocket Void
+    m_Localized: "\u53E3\u888B\u865A\u7A7A"
     m_Metadata:
       m_Items: []
   - m_Id: 818548912
-    m_Localized: Void Walk
+    m_Localized: "\u865A\u7A7A\u884C\u8D70"
     m_Metadata:
       m_Items: []
   - m_Id: 818548913
-    m_Localized: Singularity
+    m_Localized: "\u865A\u7A7A\u5947\u70B9"
     m_Metadata:
       m_Items: []
   - m_Id: 818548914
-    m_Localized: Grunt
+    m_Localized: "\u5C0F\u602A"
     m_Metadata:
       m_Items: []
   - m_Id: 818548915
-    m_Localized: Brute
+    m_Localized: "\u91CD\u5175"
     m_Metadata:
       m_Items: []
   - m_Id: 818548916
-    m_Localized: Skitter
+    m_Localized: "\u75BE\u884C\u866B"
     m_Metadata:
       m_Items: []
   - m_Id: 818548917
-    m_Localized: Spitter
+    m_Localized: "\u55B7\u5410\u8005"
     m_Metadata:
       m_Items: []
   - m_Id: 818548918
-    m_Localized: Rammer
+    m_Localized: "\u51B2\u649E\u8005"
     m_Metadata:
       m_Items: []
   - m_Id: 818548919
-    m_Localized: Bloater
+    m_Localized: "\u81EA\u7206\u8005"
     m_Metadata:
       m_Items: []
   - m_Id: 818548920
-    m_Localized: Warden
+    m_Localized: "\u62A4\u536B\u8005"
     m_Metadata:
       m_Items: []
   - m_Id: 818548921
-    m_Localized: Splitter
+    m_Localized: "\u5206\u88C2\u8005"
     m_Metadata:
       m_Items: []
   - m_Id: 818548922
-    m_Localized: Spire
+    m_Localized: "\u5C16\u5854"
     m_Metadata:
       m_Items: []
   - m_Id: 818548923
-    m_Localized: Stomper
+    m_Localized: "\u64BC\u5730\u8005"
     m_Metadata:
       m_Items: []
   - m_Id: 818548924
-    m_Localized: Shade
+    m_Localized: "\u5F71\u866B"
     m_Metadata:
       m_Items: []
   - m_Id: 818548925
-    m_Localized: THE NASH PROPHET
+    m_Localized: "\u7EB3\u4EC0\u5148\u77E5"
     m_Metadata:
       m_Items: []
   - m_Id: 818548926
-    m_Localized: THE TYRANT KING
+    m_Localized: "\u66B4\u8650\u541B\u738B"
     m_Metadata:
       m_Items: []
   - m_Id: 818548927
-    m_Localized: None
+    m_Localized: "\u65E0\u5C5E\u6027"
     m_Metadata:
       m_Items: []
   - m_Id: 818548928
-    m_Localized: Fire
+    m_Localized: "\u706B\u7130"
     m_Metadata:
       m_Items: []
   - m_Id: 818548929
-    m_Localized: Poison
+    m_Localized: "\u6BD2\u7D20"
     m_Metadata:
       m_Items: []
   - m_Id: 818548930
-    m_Localized: Frost
+    m_Localized: "\u51B0\u51BB"
     m_Metadata:
       m_Items: []
   - m_Id: 818548931
-    m_Localized: Lightning
+    m_Localized: "\u96F7\u7535"
     m_Metadata:
       m_Items: []
   - m_Id: 818548932
-    m_Localized: Earth
+    m_Localized: "\u5927\u5730"
     m_Metadata:
       m_Items: []
   - m_Id: 818548933
-    m_Localized: Light
+    m_Localized: "\u5149\u660E"
     m_Metadata:
       m_Items: []
   - m_Id: 818548934
-    m_Localized: Void
+    m_Localized: "\u865A\u7A7A"
     m_Metadata:
       m_Items: []
   - m_Id: 818548935
@@ -829,311 +827,311 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 818548936
-    m_Localized: "WASD MOVE \xB7 MOUSE AIM \xB7 LMB USE WEAPON \xB7 RMB SWITCH SLOTS \xB7 SHIFT SPRINT \xB7 1/2/3 SKILLS \xB7 E ON A PORTAL ENTERS THE TRIAL \xB7 ESC PAUSE"
+    m_Localized: "WASD \u79FB\u52A8 \xB7 \u9F20\u6807 \u7784\u51C6 \xB7 \u5DE6\u952E \u4F7F\u7528\u624B\u6301\u6B66\u5668 \xB7 \u53F3\u952E \u5207\u6362\u624B\u6301\u680F\u4F4D \xB7 Shift \u51B2\u523A \xB7 1/2/3 \u91CA\u653E\u6280\u80FD \xB7 Esc \u6682\u505C"
     m_Metadata:
       m_Items: []
   - m_Id: 818548937
-    m_Localized: 'HAND 1 [LMB]'
+    m_Localized: "\u624B\u63011 [\u5DE6\u952E]"
     m_Metadata:
       m_Items: []
   - m_Id: 818548938
-    m_Localized: 'HAND 2 [RMB SWITCH]'
+    m_Localized: "\u624B\u63012 [\u53F3\u952E\u5207\u6362]"
     m_Metadata:
       m_Items: []
   - m_Id: 818548939
-    m_Localized: AUTO 1
+    m_Localized: "\u81EA\u52A81"
     m_Metadata:
       m_Items: []
   - m_Id: 818548940
-    m_Localized: AUTO 2
+    m_Localized: "\u81EA\u52A82"
     m_Metadata:
       m_Items: []
   - m_Id: 818548941
-    m_Localized: AUTO 3
+    m_Localized: "\u81EA\u52A83"
     m_Metadata:
       m_Items: []
   - m_Id: 818548942
-    m_Localized: 'SKILL 1 [1]'
+    m_Localized: "\u6280\u80FD1 [1]"
     m_Metadata:
       m_Items: []
   - m_Id: 818548943
-    m_Localized: 'SKILL 2 [2]'
+    m_Localized: "\u6280\u80FD2 [2]"
     m_Metadata:
       m_Items: []
   - m_Id: 818548944
-    m_Localized: 'SKILL 3 [3]'
+    m_Localized: "\u6280\u80FD3 [3]"
     m_Metadata:
       m_Items: []
   - m_Id: 818548945
-    m_Localized: Chinese (Team)
+    m_Localized: "\u4E2D\u6587\uFF08\u56E2\u961F\uFF09"
     m_Metadata:
       m_Items: []
   - m_Id: 818548946
-    m_Localized: English (Showcase)
+    m_Localized: "\u82F1\u6587\uFF08\u5C55\u793A\uFF09"
     m_Metadata:
       m_Items: []
   - m_Id: 818548947
-    m_Localized: GREATER VOID REWARD
+    m_Localized: "\u9AD8\u9636\u865A\u7A7A\u5956\u52B1"
     m_Metadata:
       m_Items: []
   - m_Id: 818548948
-    m_Localized: DRAFT {0} / {1}
+    m_Localized: "\u7B2C {0} / {1} \u7EC4\u9009\u5361"
     m_Metadata:
       m_Items: []
   - m_Id: 818548949
-    m_Localized: 'REROLL [{0}]'
+    m_Localized: "\u91CD\u62BD [{0}]"
     m_Metadata:
       m_Items: []
   - m_Id: 818548950
-    m_Localized: Fully charged shots can bounce off walls up to 2 times.
+    m_Localized: "\u6EE1\u84C4\u529B\u5B50\u5F39\u6700\u591A\u5F39\u5899 2 \u6B21\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548951
-    m_Localized: Charging no longer slows you.
+    m_Localized: "\u84C4\u529B\u65F6\u4E0D\u518D\u51CF\u901F\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548952
-    m_Localized: Reverse shots can bounce off walls 3 times instead of 1.
+    m_Localized: "\u53CD\u5411\u5B50\u5F39\u7684\u5F39\u5899\u6B21\u6570\u4ECE 1 \u6B21\u589E\u52A0\u5230 3 \u6B21\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548953
-    m_Localized: Reverse rounds turn toward your aim 0.3 s after leaving.
+    m_Localized: "\u53CD\u5411\u5B50\u5F39\u98DE\u51FA 0.3 \u79D2\u540E\u6389\u5934\u671D\u4F60\u7684\u7784\u51C6\u65B9\u5411\u98DE\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548954
-    m_Localized: The throwing knife can bounce off walls up to 2 times.
+    m_Localized: "\u98DE\u5200\u6700\u591A\u5F39\u5899 2 \u6B21\u540E\u7EE7\u7EED\u98DE\u884C\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548955
-    m_Localized: The straight return after a kill no longer hurts you; it still cuts enemies on the way.
+    m_Localized: "\u51FB\u6740\u540E\u76F4\u7EBF\u8FD4\u56DE\u7684\u98DE\u5200\u4E0D\u518D\u4F24\u5230\u4F60\uFF0C\u4ECD\u4F1A\u4F24\u5BB3\u8DEF\u4E0A\u7684\u654C\u4EBA\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548956
-    m_Localized: A hook that hits a wall moves you to the wall.
+    m_Localized: "\u94A9\u5B50\u547D\u4E2D\u5899\u9762\u65F6\uFF0C\u628A\u4F60\u79FB\u52A8\u5230\u5899\u524D\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548957
-    m_Localized: The flung enemy is stunned for 1.5 seconds when it lands.
+    m_Localized: "\u88AB\u629B\u51FA\u7684\u654C\u4EBA\u843D\u5730\u540E\u7729\u6655 1.5 \u79D2\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548958
-    m_Localized: The explosion pulls characters toward its centre instead of knocking them outward.
+    m_Localized: "\u7206\u70B8\u628A\u8303\u56F4\u5185\u89D2\u8272\u62C9\u5411\u4E2D\u5FC3\uFF0C\u53D6\u4EE3\u5411\u5916\u51FB\u9000\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548959
-    m_Localized: Your explosion no longer damages you, but still displaces you.
+    m_Localized: "\u81EA\u5DF1\u7684\u7206\u70B8\u4E0D\u6263\u4F60\u7684\u751F\u547D\uFF0C\u4F46\u4ECD\u4F1A\u4F7F\u4F60\u4F4D\u79FB\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548960
-    m_Localized: Ending the flight on open ground pushes enemies within radius 3 outward by 8 units.
+    m_Localized: "\u98DE\u884C\u5728\u7A7A\u5730\u7ED3\u675F\u65F6\uFF0C\u628A\u534A\u5F84 3 \u5185\u654C\u4EBA\u5411\u5916\u63A8 8 \u5355\u4F4D\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548961
-    m_Localized: Hitting a wall no longer damages you; you still bounce back 3 units.
+    m_Localized: "\u649E\u5899\u4E0D\u518D\u6263\u4F60\u7684\u751F\u547D\uFF0C\u4ECD\u4F1A\u5411\u540E\u5F39 3 \u5355\u4F4D\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548962
-    m_Localized: Push enemies out by 3 when the pull ends; no extra damage.
+    m_Localized: "\u7275\u5F15\u7ED3\u675F\u5411\u5916\u51FB\u90003\u5355\u4F4D\uFF0C\u4E0D\u52A0\u4F24\u5BB3\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548963
-    m_Localized: Your attraction field no longer pulls you.
+    m_Localized: "\u81EA\u5DF1\u7684\u7275\u5F15\u573A\u4E0D\u518D\u62C9\u81EA\u5DF1\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548964
-    m_Localized: Repel only in the aimed 180-degree half circle.
+    m_Localized: "\u6392\u65A5\u53EA\u5F71\u54CD\u51C6\u661F\u524D\u65B9180\xB0\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548965
-    m_Localized: Remove your 2-unit recoil; orbs are still repelled.
+    m_Localized: "\u53D6\u6D88\u81EA\u8EAB2\u5355\u4F4D\u540E\u5750\uFF0C\u7ECF\u9A8C\u7403\u4ECD\u4F1A\u88AB\u63A8\u6563\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548966
-    m_Localized: Push side targets toward the aim line; push centred targets forward.
+    m_Localized: "\u628A\u4E24\u4FA7\u654C\u4EBA\u8D76\u5411\u7784\u51C6\u7EBF\uFF0C\u7EBF\u4E0A\u76EE\u6807\u5411\u524D\u63A8\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548967
-    m_Localized: Reloading never jams.
+    m_Localized: "\u6362\u5F39\u4E0D\u518D\u5361\u58F3\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548968
-    m_Localized: Focused pellets pierce the first target; later targets take 60%.
+    m_Localized: "\u96C6\u4E2D\u5F39\u4E38\u7A7F\u900F\u7B2C\u4E00\u4E2A\u76EE\u6807\uFF0C\u4E4B\u540E\u7684\u76EE\u6807\u53D7 60% \u4F24\u5BB3\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548969
-    m_Localized: The release recoil becomes a push that never causes wall damage.
+    m_Localized: "\u677E\u624B\u7684\u540E\u5750\u6539\u4E3A\u4E0D\u4F1A\u649E\u5899\u53D7\u4F24\u7684\u63A8\u79FB\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548970
-    m_Localized: Pierce the first body and swap with the second valid target; hit each once.
+    m_Localized: "\u5315\u9996\u7A7F\u8FC7\u7B2C\u4E00\u4EBA\uFF0C\u4E0E\u7B2C\u4E8C\u4E2A\u5408\u6CD5\u76EE\u6807\u4EA4\u6362\uFF1B\u6BCF\u4EBA\u4EC5\u4E00\u6B21\u547D\u4E2D\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548971
-    m_Localized: Gain 0.5 s hit protection after a swap; no status clear or hole immunity.
+    m_Localized: "\u6210\u529F\u4EA4\u6362\u540E\u83B7\u5F970.5\u79D2\u53D7\u51FB\u4FDD\u62A4\uFF0C\u4E0D\u6E05\u72B6\u6001\u3001\u4E0D\u9632\u6389\u6D1E\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548972
-    m_Localized: Blast at departure too; overlapping blasts hit each enemy once.
+    m_Localized: "\u79BB\u5F00\u5904\u4E5F\u7206\u70B8\uFF1B\u4E24\u5708\u91CD\u53E0\u7684\u540C\u4E00\u654C\u4EBA\u53EA\u53D7\u4E00\u6B21\u4F24\u5BB3\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548973
-    m_Localized: Recall the unused planted dagger after 6 s, without teleporting or exploding.
+    m_Localized: "\u7559\u7F6E6\u79D2\u672A\u56DE\u8FD4\u4FBF\u81EA\u52A8\u6536\u5200\uFF0C\u4E0D\u4F20\u9001\u3001\u4E0D\u7206\u70B8\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548974
-    m_Localized: Click again after 0.3 s attached to detonate early.
+    m_Localized: "\u9ECF\u96440.3\u79D2\u540E\u518D\u6B21\u70B9\u51FB\u53EF\u63D0\u524D\u5F15\u7206\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548975
-    m_Localized: Attached carriers no longer speed up; the blast can still hurt you.
+    m_Localized: "\u643A\u5E26\u8005\u4E0D\u518D\u52A0\u901F\uFF0C\u7206\u70B8\u4ECD\u80FD\u4F24\u81EA\u5DF1\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548976
-    m_Localized: Stick to the wall after the third bounce, keeping the original fuse.
+    m_Localized: "\u7B2C\u4E09\u6B21\u5F39\u5899\u540E\u8D34\u5899\uFF0C\u4FDD\u7559\u539F\u5F15\u4FE1\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548977
-    m_Localized: The blast spares your HP but still displaces you.
+    m_Localized: "\u7206\u70B8\u4E0D\u6263\u672C\u4EBA\u751F\u547D\uFF0C\u4ECD\u63A8\u79FB\u672C\u4EBA\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548978
-    m_Localized: Reflect the flame once at the first wall; hit each body once per shot.
+    m_Localized: "\u706B\u7130\u9047\u7B2C\u4E00\u9762\u5899\u53CD\u5C04\u4E00\u6B21\uFF1B\u540C\u4E00\u53D1\u4E0D\u91CD\u590D\u4F24\u654C\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548979
-    m_Localized: Overheat adds no Fire to you; the 1.5 s lockout stays.
+    m_Localized: "\u8FC7\u70ED\u4E0D\u9644\u52A0\u81EA\u8EAB\u706B\u7130\uFF0C\u505C\u706B1.5\u79D2\u4ECD\u5728\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548980
-    m_Localized: Push out by 3 when a fire patch ends; no extra damage.
+    m_Localized: "\u706B\u533A\u7184\u706D\u65F6\u5411\u5916\u63A83\u5355\u4F4D\uFF0C\u4E0D\u52A0\u4F24\u5BB3\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548981
-    m_Localized: Your own fire patches no longer burn you; other fire still can.
+    m_Localized: "\u81EA\u5DF1\u7684\u706B\u533A\u4E0D\u518D\u70E7\u4F60\uFF1B\u5176\u4ED6\u706B\u6E90\u4ECD\u5371\u9669\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548982
-    m_Localized: 'Frozen bodies can chain-shatter: at most 3 bursts, each body once.'
+    m_Localized: "\u51BB\u7ED3\u76EE\u6807\u53EF\u8FDE\u9501\u788E\u88C2\uFF0C\u6BCF\u53D1\u6700\u591A3\u6B21\uFF0C\u6BCF\u4EBA\u4E00\u6B21\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548983
-    m_Localized: Wall shards no longer apply Frost to you.
+    m_Localized: "\u5899\u9762\u788E\u7247\u4E0D\u5411\u672C\u4EBA\u9644\u52A0\u971C\u51BB\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548984
-    m_Localized: Cloud stays for 2 s after release; only one cloud at a time.
+    m_Localized: "\u677E\u624B\u540E\u51B0\u4E91\u75592\u79D2\uFF0C\u7ED3\u675F\u524D\u4E0D\u80FD\u518D\u5F00\u4E00\u7247\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548985
-    m_Localized: Spraying no longer slows you.
+    m_Localized: "\u55B7\u5C04\u65F6\u4E0D\u518D\u51CF\u901F\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548986
-    m_Localized: Later jumps prefer the most Lightning stacks, then the nearest target.
+    m_Localized: "\u540E\u7EED\u8DF3\u8DC3\u4F18\u5148\u96F7\u7535\u5C42\u6570\u6700\u9AD8\u76EE\u6807\uFF0C\u76F8\u540C\u9009\u6700\u8FD1\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548987
-    m_Localized: Empty jumps end without damaging you.
+    m_Localized: "\u65E0\u76EE\u6807\u7684\u7A7A\u8DF3\u76F4\u63A5\u7ED3\u675F\uFF0C\u4E0D\u518D\u4F24\u81EA\u5DF1\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548988
-    m_Localized: 'Knockback and thrown travel also charge: 1 per unit, cap 30.'
+    m_Localized: "\u51FB\u9000\u3001\u629B\u51FA\u4F4D\u79FB\u4E5F\u5145\u80FD\uFF0C\u6BCF\u5355\u4F4D1\u70B9\uFF0C\u4E0A\u965030\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548989
-    m_Localized: After 4 s full, drain 1 charge/s instead of self-blasting.
+    m_Localized: "\u6EE1\u80FD4\u79D2\u540E\u6BCF\u79D2\u6CC41\u70B9\uFF0C\u4E0D\u518D\u81EA\u7206\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548990
-    m_Localized: Cloud drifts 1 unit/s along its launch direction, blocked by walls and bounds.
+    m_Localized: "\u6BD2\u4E91\u6CBF\u6295\u63B7\u65B9\u5411\u6BCF\u79D2\u98D81\u5355\u4F4D\uFF0C\u53D7\u5899\u4E0E\u8FB9\u754C\u963B\u6321\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548991
-    m_Localized: Your clouds do not hurt or poison you; other poison still can.
+    m_Localized: "\u81EA\u5DF1\u7684\u6BD2\u4E91\u4E0D\u4F24\u3001\u4E0D\u6BD2\u81EA\u5DF1\uFF0C\u5176\u4ED6\u6BD2\u6E90\u4ECD\u5371\u9669\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548992
-    m_Localized: Needles bounce once off a wall; no body piercing.
+    m_Localized: "\u6BD2\u9488\u53EF\u5F39\u5899\u4E00\u6B21\uFF0C\u4E0D\u7A7F\u4EBA\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548993
-    m_Localized: Firing no longer costs you HP.
+    m_Localized: "\u5C04\u51FB\u4E0D\u518D\u6263\u4F60\u7684\u8840\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548994
-    m_Localized: Pierce one interior wall, never bounds; body damage still decays.
+    m_Localized: "\u591A\u7A7F\u4E00\u9762\u5185\u90E8\u5899\uFF0C\u4E0D\u80FD\u7A7F\u8FB9\u754C\uFF0C\u7A7F\u4EBA\u4ECD\u8870\u51CF\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548995
-    m_Localized: Still move back by 4, using a push without wall-impact damage.
+    m_Localized: "\u540E\u5750\u4ECD\u540E\u79FB4\u5355\u4F4D\uFF0C\u6539\u4E3A\u4E0D\u4F1A\u9020\u6210\u649E\u5899\u4F24\u5BB3\u7684\u63A8\u79FB\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548996
-    m_Localized: On a kill, fire one half-damage follow-up within 4; no execute, kill bonus or repeat follow-up.
+    m_Localized: "\u6210\u529F\u51FB\u6740\u540E\u8865\u534A\u4F24\u4E00\u53D1\u52304\u5355\u4F4D\u5185\u6700\u8FD1\u76EE\u6807\uFF1B\u4E0D\u80FD\u518D\u5904\u51B3\u6216\u89E6\u53D1\u8865\u5C04\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548997
-    m_Localized: Executions no longer lower your max HP.
+    m_Localized: "\u5904\u51B3\u4E0D\u518D\u964D\u4F4E\u4F60\u7684\u751F\u547D\u4E0A\u9650\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548998
-    m_Localized: Keep spin-up for 1 s after release; release still restores movement.
+    m_Localized: "\u677E\u624B\u4FDD\u7559\u9884\u70ED1\u79D2\uFF0C\u505C\u706B\u79FB\u901F\u60E9\u7F5A\u89E3\u9664\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818548999
-    m_Localized: Keep 70% movement at full heat; firing speed is unchanged.
+    m_Localized: "\u5168\u70ED\u4FDD\u755970%\u79FB\u901F\uFF0C\u5C04\u901F\u4E0D\u53D8\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818549000
-    m_Localized: Enemy blast becomes a forward 90-degree cone; self-damage and lockout remain.
+    m_Localized: "\u5BF9\u654C\u7206\u70B8\u6539\u4E3A\u524D\u65B990\xB0\uFF1B\u672C\u4EBA\u81EA\u4F24\u4E0E\u505C\u706B\u4FDD\u7559\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818549001
-    m_Localized: Overheat spares your HP; the 3 s lockout remains.
+    m_Localized: "\u8FC7\u70ED\u4E0D\u6263\u672C\u4EBA\u751F\u547D\uFF0C\u4ECD\u505C\u706B3\u79D2\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818549002
-    m_Localized: Wall hit leaves a 1 s mine; blast if an enemy enters 1.5, without making new mines.
+    m_Localized: "\u649E\u5899\u53D8\u62101\u79D2\u5730\u96F7\uFF1B\u654C\u8FDB\u534A\u5F841.5\u7206\u70B8\uFF0C\u4E0D\u80FD\u518D\u751F\u5730\u96F7\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818549003
-    m_Localized: Rockets never hurt you.
+    m_Localized: "\u706B\u7BAD\u4E0D\u4F1A\u70B8\u5230\u4F60\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818549004
-    m_Localized: Reverse the six blasts from far to near; other values stay the same.
+    m_Localized: "\u516D\u6B21\u7206\u70B8\u4ECE\u8FDC\u5230\u8FD1\uFF0C\u5176\u4ED6\u6570\u503C\u4E0D\u53D8\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818549005
-    m_Localized: Bombard blasts spare your HP but still displace you.
+    m_Localized: "\u8F70\u70B8\u4E0D\u6263\u672C\u4EBA\u751F\u547D\uFF0C\u4ECD\u63A8\u79FB\u672C\u4EBA\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 818549006
-    m_Localized: 'Portal open: stand on it and press E to enter the Void Trial'
+    m_Localized: "\u4F20\u9001\u95E8\u5DF2\u5F00\u542F\uFF1A\u7AD9\u5230\u95E8\u4E0A\u6309 E \u8FDB\u5165\u865A\u7A7A\u8BD5\u70BC"
     m_Metadata:
       m_Items: []
   - m_Id: 818549007
-    m_Localized: TIME HELD
+    m_Localized: "\u65F6\u95F4\u6682\u505C"
     m_Metadata:
       m_Items: []
   - m_Id: 818549008
-    m_Localized: Crit
+    m_Localized: "\u66B4\u51FB"
     m_Metadata:
       m_Items: []
   - m_Id: 818549009
-    m_Localized: Chanter
+    m_Localized: "\u541F\u5531\u8005"
     m_Metadata:
       m_Items: []
   - m_Id: 818549010
-    m_Localized: Exceptional
+    m_Localized: "\u7F55\u89C1"
     m_Metadata:
       m_Items: []
   - m_Id: 818549011
-    m_Localized: Legendary
+    m_Localized: "\u4F20\u8BF4"
     m_Metadata:
       m_Items: []
   - m_Id: 818549012
-    m_Localized: Void
+    m_Localized: "\u865A\u7A7A"
     m_Metadata:
       m_Items: []
   references:

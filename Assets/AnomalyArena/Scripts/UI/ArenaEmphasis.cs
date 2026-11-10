@@ -4,7 +4,12 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>
+    /// Players picked cards without reading them, so the card and help texts now make their key words stand out.
+    /// The text itself is drawn in a soft grey-blue; numbers (damage, %, seconds, cells) turn bold gold, element words take their
+    /// element's colour, keys (1 / 2 / 3, R, E, Tab, Esc) turn bold light blue, and costs (lost, cannot, ends the run) bold red.
+    /// Works on rich text: existing tags are left as they are and only the text between them is coloured.
+    /// </summary>
     public static class ArenaEmphasis
     {
         public static readonly Color BodyColor = new(.80f, .85f, .92f);
@@ -29,6 +34,7 @@ namespace AnomalyArena
             ("lightning", Hex(V2Hud.ElementColors[3])), ("light", Hex(V2Hud.ElementColors[5])), ("void", Hex(V2Hud.ElementColors[6])),
         };
 
+        /// <summary>The same text with its key words coloured. Empty text stays empty.</summary>
         public static string Apply(string text)
         {
             if (string.IsNullOrEmpty(text)) return text ?? "";
@@ -51,6 +57,7 @@ namespace AnomalyArena
         static string Bold(string value, string colour) => $"<b><color={colour}>{value}</color></b>";
         static string Hex(Color colour) => "#" + ColorUtility.ToHtmlStringRGB(colour);
 
+        /// <summary>Gives a scene-authored text the emphasis look: rich text on, the soft body colour and a light shadow. Safe to repeat.</summary>
         public static void Style(UnityEngine.UI.Text label)
         {
             if (!label) return;

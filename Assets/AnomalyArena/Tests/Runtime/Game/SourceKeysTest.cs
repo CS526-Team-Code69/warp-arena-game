@@ -6,7 +6,9 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>Only the keys the game shows work. Document 2.2 (10-27): the weapon card, whose hint names them, also
+    /// closes with Space or Enter; the key handling in GameManagerFlow.cs reads them for that card and no other game script may read them,
+    /// so a read added later fails here even where no play test reaches it.</summary>
     [TestFixture]
     public class SourceKeysTest
     {

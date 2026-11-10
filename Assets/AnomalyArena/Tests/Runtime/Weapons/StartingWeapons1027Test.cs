@@ -8,11 +8,13 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>The starting weapons (document 5.5 / 5.8, questions Q1-Q26): the Charged Shot charge
+    /// that hurts (or guards once tamed), the Chain Blade's two-way pull, its shield against shots and its tamed shockwave, the tamed
+    /// missile that black holes cannot touch, the Flying Blade return that walls shield, and the knife names 飞刃 / 链刃.</summary>
     [TestFixture]
     public class StartingWeapons1027Test
     {
-        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
         const float TargetHp = 100f;
 
         [TearDown]
@@ -46,6 +48,8 @@ namespace AnomalyArena
         static IEnumerable<AttackActor> Actors(RunWeapon w, AttackMode mode) =>
             AttackPool.Instance.actors.Where(a => a && a.gameObject.activeSelf && a.weapon == w && a.mode == mode);
 
+        // ───── Rifle · Charged Shot ─────
+
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task ChargedShot_WhileCharging_EnemyAttacksHitHarderAndTamedSofter_TicksAndWallsUnchanged()
         {
@@ -59,7 +63,7 @@ namespace AnomalyArena
 
             float Lost(DamageInfo info)
             {
-                player.ClearWaveState();                                      
+                player.ClearWaveState(); // no hit protection between the hits
                 player.Heal(player.maxHp);
                 float before = player.Hp;
                 player.ReceiveDamage(info);
@@ -83,6 +87,8 @@ namespace AnomalyArena
             Assert.That(game.runWeapons.MoveMultiplier, Is.EqualTo(1f), "and no longer slows you");
         }
 
+        // ───── Knife · Chain Blade ─────
+
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task ChainBlade_Hook_YouAndTheEnemyMeetHalfwayAndOnlyThePullHoldsYouStill()
         {
@@ -92,7 +98,7 @@ namespace AnomalyArena
             float pullSpeed = weapons.hookPullSpeed;
             try
             {
-                weapons.hookPullSpeed = 2f;                                              
+                weapons.hookPullSpeed = 2f; // slowed down so the test can watch the pull
                 targets[1].DiscardWithoutReward(); targets[2].DiscardWithoutReward();
                 Vector3 start = player.Position;
                 var enemy = targets[0];
@@ -129,7 +135,7 @@ namespace AnomalyArena
                 Vector3 start = player.Position;
                 var enemy = targets[0];
                 Place(enemy, start + Vector3.forward * 7f, movable: true);
-
+                // Beside where you will meet, off the hook's line.
                 var bystander = targets[1];
                 float meet = (7f - (player.radius + enemy.radius + .3f)) * .5f;
                 Place(bystander, start + Vector3.forward * meet + Vector3.right * (.7f + bystander.radius));
@@ -145,9 +151,9 @@ namespace AnomalyArena
                 Assert.That(player.ReceiveDamage(DamageInfo.Attack(3f, bystander)), Is.False, "Q22 A: an attack during the pull is blocked");
                 Assert.That(player.ReceiveDamage(new DamageInfo { amount = 1f, source = DamageSource.Burn, dealer = bystander }), Is.True, "a burn tick still lands");
                 Assert.That(player.Hp, Is.EqualTo(hp - 1f).Within(.01f));
-                player.Knockback(Vector3.back, 4f, KnockKind.Hit);                                                                               
+                player.Knockback(Vector3.back, 4f, KnockKind.Hit); // a self-hit's knockback passes the attack guard, so ask the knockback itself
                 Assert.That(player.State, Is.EqualTo(CharacterState.Normal), "unstoppable: nothing knocks you off the pull");
-                player.Stun(5f);                                   
+                player.Stun(5f); // it would cancel an untamed pull
                 await Until(() => hook.hooked == enemy, 5f, "nothing breaks the tamed pull: you meet");
 
                 Assert.That(bystander.State, Is.EqualTo(CharacterState.Knocked), "the meeting shockwave throws the enemy beside you back");
@@ -190,7 +196,7 @@ namespace AnomalyArena
             targets[1].DiscardWithoutReward(); targets[2].DiscardWithoutReward();
             var enemy = targets[0];
             Place(enemy, start + Vector3.forward * 7f, movable: true);
-
+            // A small hole beside the lane: the hook's line misses its core but crosses its pull from about 1.5 to 3.3 cells ahead.
             world.CreateTemporaryHole(start + Vector3.forward * 2.4f + Vector3.right * 1.2f, 1f, 10f, null);
             Assume.That(world.IsHole(start + Vector3.forward * 2.4f), Is.False, "the line misses the core");
             Assume.That(world.GetPull(start + Vector3.forward * 2.4f, player).sqrMagnitude, Is.GreaterThan(.01f), "but crosses the pull");
@@ -204,6 +210,8 @@ namespace AnomalyArena
             Assert.That(Vector3.Dot(player.Position - start, Vector3.forward), Is.LessThan(1.6f), "you stopped where its pull begins");
         }
 
+        // ───── Rocket Launcher · Launch Yourself ─────
+
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task LaunchYourselfTame_FlightOverHoles_IsNeitherSwallowedNorDraggedAndNeverEndsInsideOne()
         {
@@ -214,7 +222,8 @@ namespace AnomalyArena
             Vector3 start = player.Position;
             var rocket = Equip(game, WeaponForm.RocketLauncher, 1, UpgradeAxis.Tame);
             float range = game.runWeapons.roster.Get(WeaponForm.RocketLauncher).rangeB * rocket.Reach;
-
+            // One hole right across the flight, a little off its line so its pull would drag the missile sideways, and one (without a
+            // pull ring) exactly where the flight would end.
             world.CreateVoidHole(start + Vector3.forward * 6f + Vector3.right * .4f, 2f, 1f, 10f, null, false);
             world.CreateVoidHole(start + Vector3.forward * range, 2f, 0f, 10f, null, false);
             Assume.That(world.IsHole(start + Vector3.forward * 6f) && world.IsHole(start + Vector3.forward * range), Is.True, "both holes lie on the flight");
@@ -230,6 +239,8 @@ namespace AnomalyArena
             Assert.That(Mathf.Abs(Vector3.Dot(player.Position - start, Vector3.right)), Is.LessThan(.05f), "no hole pulled it sideways");
         }
 
+        // ───── Knife · Flying Blade ─────
+
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task FlyingBlade_ReturnThroughAWall_CutsWhatLiesBeforeTheWallButNothingBeyondIt()
         {
@@ -241,7 +252,7 @@ namespace AnomalyArena
             game.runWeapons.HandleInput(true, true, false);
             var actor = Actors(knife, AttackMode.Knife).Single();
             await Until(() => actor.IsReturning, 3f, "the knife turns back from the second enemy");
-
+            // A wall between the first enemy (3 ahead) and you, raised behind the knife: its way home now runs through it.
             WorldMap.Active.CreateWall(game.player.Position + Vector3.forward * 1.5f, 6f, 60f, 0f, game.player);
             Physics.SyncTransforms();
             await Until(() => !knife.inFlight, 3f, "the knife still comes home through the wall");
@@ -256,7 +267,7 @@ namespace AnomalyArena
             var (game, targets) = await V3CombatSmokeTest.StartSandbox();
             Vector3 home = game.player.Position;
             targets[1].DiscardWithoutReward(); targets[2].DiscardWithoutReward();
-
+            // The knife goes out of your back; the enemy waits in the clear lane ahead, out of the return's reach but inside the spin.
             game.player.DebugSetAim(Vector3.back);
             Place(targets[0], home + Vector3.forward * (.6f + targets[0].radius));
             var knife = Equip(game, WeaponForm.Knife, 0, UpgradeAxis.Twist | UpgradeAxis.Tame);
@@ -269,6 +280,8 @@ namespace AnomalyArena
             Assert.That(targets[0].Hp, Is.EqualTo(TargetHp - spin).Within(.01f), "the spin went off where you caught it");
             Assert.That(game.player.Hp, Is.EqualTo(playerHp), "neither the tamed return nor the spin cuts you");
         }
+
+        // ───── Names (Q24) ─────
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(30000)]
         public async Task KnifeTexts_Chinese_NameTheFlyingBladeAndTheChainBlade()
@@ -292,15 +305,15 @@ namespace AnomalyArena
                     weapons.Hand = new[] { new RunWeapon { form = WeaponForm.Knife, variant = variant, revealed = true, axes = open }, null };
                     weapons.Auto = new RunWeapon[RunWeapons.AutoSlotCount];
                     var card = weapons.RollUpgradeCard();
-                    Assert.That(card.Title, Does.Contain(variant == 0 ? "Knife · Flying Blade" : "Knife · Chain Blade"), "the card title names the combination");
+                    Assert.That(card.Title, Does.Contain(variant == 0 ? "小刀 · 飞刃" : "小刀 · 链刃"), "the card title names the combination");
                     texts.Add(card.Title + " " + card.Description);
                 }
             }
             finally { weapons.Hand = hand; weapons.Auto = auto; }
 
-            foreach (var text in texts) Assert.That(text, Does.Not.Contain("Throwing Knife").And.Not.Contain("Fling Hook"), text);
-            Assert.That(texts[0], Does.Contain("Flying Blade"), "the Flying Blade card");
-            Assert.That(texts[2], Does.Contain("Chain Blade"), "the Chain Blade card");
+            foreach (var text in texts) Assert.That(text, Does.Not.Contain("飞刀").And.Not.Contain("甩勾"), text);
+            Assert.That(texts[0], Does.Contain("飞刃"), "the Flying Blade card");
+            Assert.That(texts[2], Does.Contain("链刃"), "the Chain Blade card");
         }
     }
 }

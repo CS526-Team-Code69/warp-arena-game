@@ -5,12 +5,13 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>HUD layout saved state (2026-10-22: the lab scene grew to 430 MB and the editor crashed). The state remembered after
+    /// applying the layout must not hold a copy of itself, so applying again and again keeps it the same size.</summary>
     [TestFixture]
     [Category("V3Smoke")]
     public class HudLayoutStateTest
     {
-        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
 
         [Test, LoadScene(Scene), Timeout(30000)]
         public async Task Apply_Repeated_SavedStateStaysTheSameSize()

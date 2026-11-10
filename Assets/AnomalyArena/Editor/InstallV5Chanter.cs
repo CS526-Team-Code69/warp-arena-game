@@ -7,11 +7,11 @@ using UnityEngine;
 
 namespace AnomalyArena.EditorTools
 {
-                 
-                                                                                                                      
-                                                                                                                  
-                                                                                  
-                  
+    /// <summary>
+    /// Adds the Chanter (吟唱者, document §10.2) to the saved enemy pools: a Chanter prefab variant of the Warden prefab
+    /// (same model, violet tint, Chanter definition), pooled instances in every arena scene, and the roster slot.
+    /// Safe to run again: existing instances are counted, missing ones are added.
+    /// </summary>
     public static class InstallV5Chanter
     {
         const string WardenPrefabPath = "Assets/AnomalyArena/V2/Prefabs/Warden.prefab";
@@ -19,13 +19,13 @@ namespace AnomalyArena.EditorTools
         const string ChanterDefinitionPath = "Assets/AnomalyArena/V2/Data/Enemies/Chanter.asset";
         static readonly string[] ScenePaths =
         {
-            "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity", "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity"
+            "Assets/AnomalyArena/Scenes/ArenaV2.unity"
         };
         [Tooltip("Pooled Chanters per scene; the Warden pool is the reference size.")]
         const int PoolSize = 12;
 
-                                                                                                                        
-                                                                                                             
+        // Document 10.2 / 11.2: the five specials are ordinary spawns now and the Splitter hatches two minis per death,
+        // so their saved pools (24 each) are topped up to these sizes. Existing instances are counted first.
         static readonly (EnemyKind kind, int target)[] PoolTargets =
         {
             (EnemyKind.Splitter, 72), (EnemyKind.Rammer, 36), (EnemyKind.Bloater, 36), (EnemyKind.Spire, 36), (EnemyKind.Stomper, 36), (EnemyKind.Shade, 36)
@@ -68,7 +68,7 @@ namespace AnomalyArena.EditorTools
             if (existing) { log.Append("  prefab exists\n"); return existing; }
             var warden = AssetDatabase.LoadAssetAtPath<GameObject>(WardenPrefabPath);
             if (!warden) throw new InvalidOperationException("Missing " + WardenPrefabPath);
-                                                                                                                         
+            // A prefab variant keeps the Warden's model, animation and feedback components; only the enemy data differs.
             var instance = (GameObject)PrefabUtility.InstantiatePrefab(warden);
             instance.name = "Chanter";
             var enemy = instance.GetComponent<Enemy>();
@@ -110,7 +110,7 @@ namespace AnomalyArena.EditorTools
             return added;
         }
 
-                                                                                                                          
+        /// <summary>Instantiates more pooled copies of an existing kind's prefab next to its current instances.</summary>
         static int TopUpPool(WaveManager waves, EnemyKind kind, int target)
         {
             var pool = new List<Enemy>(waves.preparedEnemies ?? Array.Empty<Enemy>());

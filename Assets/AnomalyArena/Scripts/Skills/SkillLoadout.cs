@@ -4,39 +4,48 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>System doc §8: three one-press skills. It operates existing actors and world pools, never builds a scene.</summary>
     [DisallowMultipleComponent]
     public sealed class SkillLoadout : MonoBehaviour
     {
-
+        /// <summary>Blink at max level stores this many charges; levels 1-4 have one.</summary>
         const int BlinkChargeCap = 2;
-
+        /// <summary>Document 7.3: skills have levels 1 to 5; every max-level effect starts here.</summary>
         const int MaxLevel = SkillDefinition.MaxLevel;
         [field: SerializeField, Tooltip("The 13 normal skills and 3 Greater Void skills as editable assets.")]
         public SkillCatalog Catalog { get; set; }
         [field: SerializeField] public SkillSlot[] Slots { get; private set; } = { new(), new(), new() };
         public int OwnedCount { get { int count = 0; foreach (var slot in Slots) if (!slot.Empty) count++; return count; } }
         public bool VoidWalkActive => voidWalkTimer > 0f;
-
+        /// <summary>Void Walk: enemies lose the player and search where the void state began
+        /// (WorldMap.EnemyTarget, Enemy), start no attack on them, and their shots fly through (EnemyBolt).</summary>
         public bool PlayerUntargetable => VoidWalkActive;
-
+        /// <summary>Raised when a Void Walk runs out (not when a run resets), with how long its Void enchant lasts (RunWeapons).</summary>
         public event System.Action<float> VoidWalkEnded;
         float voidWalkEnchant;
-
+        /// <summary>Void Walk no longer teleports: both points are the cast position, kept for the presentation layer.</summary>
         public Vector3 VoidWalkStart { get; private set; }
         public Vector3 VoidWalkEnd { get; private set; }
         public float VoidWalkFlash01 => voidWalkDuration > 0f ? Mathf.Clamp01(voidWalkTimer / voidWalkDuration) : 0f;
-
+        /// <summary>Player move speed multiplier: Void Walk's boost (1.6) while it lasts, times Singularity's heavy slow (0.35) while one
+        /// gathers (the slow replaces the old root), else 1.</summary>
         public float PlayerMoveMultiplier => (VoidWalkActive ? voidWalkMove : 1f)
             * (CurrentSingularity is { } singularity ? Mathf.Clamp01(singularity.definition.singularityPlayerMoveMultiplier) : 1f);
-
+        /// <summary>Radiance status resistance 0..1 while active: stacks enemies put on the player × (1 − this).</summary>
         public float StatusResistance => radianceTimer > 0f ? radianceResistance : 0f;
         public bool SingularityActive => CurrentSingularity != null;
-
+        /// <summary>Void Walk, and the Singularity until its blast: the player takes no damage of any kind
+        /// and is not killed outright, so no hit lands with the knockback, stun or stacks it would carry (Combatant). The Singularity also
+        /// keeps every other knockback and every element stack off the player, their own blasts and backfires included (Combatant.Knockback,
+        /// ElementStatus.Add), keeps the Nash Prophet's gravity pull off them (WorldMap.Trial) and ends a paralysis it is cast through.
+        /// Black holes still pull and swallow as ground does.</summary>
         public bool Invincible => VoidWalkActive || SingularityActive;
-
+        /// <summary>No skill roots the player any more (Singularity slows instead, PlayerMoveMultiplier), so the player may
+        /// still fire and cast. Kept, always false, instead of removed so this change leaves its callers in Combatant and GameManagerV2
+        /// untouched while other work edits those files; remove it together with them.</summary>
         public bool ActionLocked => false;
-
+        /// <summary>No skill holds the player still any more. Kept, always false, for the same reason as ActionLocked
+        /// (callers in Combatant).</summary>
         public bool MovementLocked => false;
         public float SingularityProgress01 => CurrentSingularity is { } effect
             ? 1f - Mathf.Clamp01(effect.remaining / Mathf.Max(0.01f, effect.definition.Duration(effect.level))) : 0f;
@@ -47,34 +56,38 @@ namespace AnomalyArena
         public bool TimeSlipActive => timeSlipTimer > 0f;
         public bool OverchargeActive => overchargeTimer > 0f;
         public bool RadianceActive => radianceTimer > 0f;
-        float DamageMultiplier => progression ? progression.Stats.DamageMultiplier : 1f;
-
+        float DamageMultiplier => (progression ? progression.Stats.DamageMultiplier : 1f) * Mathf.Max(0f, DamageScale?.Invoke() ?? 1f);
+        /// <summary>V2 day campaign (since 2026-11-10, the base's rooms): factors on every skill's cooldown, energy cost and damage (the
+        /// Ship Launch Bay's level 3, the Energy Lab's level 2 by day, the last day's overload). Null or 1 outside a running campaign.</summary>
+        public static Func<float> CooldownScale, CostScale, DamageScale;
+        /// <summary>Overcharge: cooldown timer rate for hand AND auto weapons (2 while active), else 1.</summary>
         public float WeaponCooldownRate => overchargeTimer > 0f ? overchargeCooldownRate : 1f;
-
+        /// <summary>Overcharge at max level: weapon damage multiplier while active (1.25), else 1. Skill damage does not apply it.</summary>
         public float SkillDamageMultiplier => overchargeTimer > 0f && overchargeLevel >= MaxLevel ? overchargeDamageMultiplier : 1f;
         public float AttackSpeedMultiplier => timeSlipTimer > 0f && timeSlipLevel >= MaxLevel ? 1.5f : 1f;
-
+        /// <summary>Kept for existing callers; Overcharge no longer boosts knockback.</summary>
         public float KnockbackMultiplier => 1f;
-
+        /// <summary>Blink charges ready now (HUD).</summary>
         public int BlinkCharges { get { int max = BlinkChargesMax, ready = 0; for (int c = 0; c < max; c++) if (blinkRecharge[c] <= 0f) ready++; return ready; } }
-
+        /// <summary>Blink charge capacity: 0 without Blink, 1 at levels 1-4, 2 at max level (HUD).</summary>
         public int BlinkChargesMax { get { int index = SlotOf(SkillId.Blink); return index < 0 ? 0 : Slots[index].Level >= MaxLevel ? BlinkChargeCap : 1; } }
         public event Action Changed;
         public event Action<int, string> CastRefused;
-
+        /// <summary>One accepted cast, distinct from repeated hits and persistent ground state.</summary>
         public event Action<SkillId, Vector3, float, float> CastSucceeded;
-
+        /// <summary>Confirmed one-shot impacts (for example each bolt of Storm Call).</summary>
         public event Action<SkillId, Vector3, float, float> VisualRequested;
         Combatant body;
         RunProgression progression;
         float radianceTimer, radianceFraction, radianceShare, radianceResistance, voidWalkTimer, voidWalkDuration, voidWalkMove = 1f, timeSlipTimer, overchargeTimer;
         float overchargeCooldownRate = 2f, overchargeDamageMultiplier = 1f;
         int overchargeLevel, timeSlipLevel;
-
+        /// <summary>Mirror Image at max level is waiting for its mirror to end (battlefield, and the copy held while inside the trial).</summary>
         bool mirrorEcho, suspendedMirrorEcho;
-
+        /// <summary>Seconds until each Blink charge is ready; each charge recovers independently.</summary>
         readonly float[] blinkRecharge = new float[BlinkChargeCap];
-
+        /// <summary>Skill cards drawn in a row that gave less than their wave band's high tier (document 8.6 pity; counted apart from stat
+        /// cards, see RollSkillLevel).</summary>
         int skillCardsWithoutHighTier;
         readonly List<TimedSkill> effects = new();
         readonly List<TimedSkill> suspendedBattlefieldEffects = new();
@@ -95,7 +108,7 @@ namespace AnomalyArena
             public int level, remainingBolts;
             public float remaining, clock, interval;
             public Vector3 center;
-
+            /// <summary>Flame Wake cast by a mirror: the patch stays at its point instead of following the player.</summary>
             public bool anchored;
             public readonly List<Vector3> trail = new();
             public readonly List<Combatant> targets = new();
@@ -124,6 +137,7 @@ namespace AnomalyArena
         void OnDestroy() { if (body) body.Eliminated -= OnBodyEliminated; }
         void OnBodyEliminated(Combatant _) => ClearWaveEffects();
 
+        /// <summary>Temporary movement slowdown owned by the actual active Singularity, without adding Frost.</summary>
         public static float EnemySlowMultiplier(Combatant enemy)
         {
             if (!enemy) return 1f;
@@ -156,6 +170,9 @@ namespace AnomalyArena
             ClearWaveEffects(); OnChanged();
         }
 
+        /// <param name="level">The level the card gives (document 9.6; five levels since 2026-10-26: white 1, green 2,
+        /// blue 3, purple 4, orange 5). A new skill starts there; an owned one rises to it, by at least one level and never above
+        /// SkillDefinition.MaxLevel. Greater void skills have no levels.</param>
         public bool Learn(SkillId id, int replaceIndex = -1, int level = 1)
         {
             var definition = Catalog ? Catalog.Find(id) : null;
@@ -165,7 +182,7 @@ namespace AnomalyArena
                 if (Slots[i].Empty || Slots[i].Id != id) continue;
                 if (Slots[i].Level >= MaxLevel || definition.greaterVoid) return false;
                 Slots[i].Level = Mathf.Min(MaxLevel, Mathf.Max(Slots[i].Level + 1, level));
-
+                // Blink at max level gains its second charge ready to use.
                 if (id == SkillId.Blink && Slots[i].Level >= MaxLevel) { blinkRecharge[1] = 0f; SyncBlinkCooldown(); }
                 OnChanged(); return true;
             }
@@ -177,11 +194,16 @@ namespace AnomalyArena
             progression?.UnlockEnergy(); OnChanged(); return true;
         }
 
+        /// <summary>System doc §11.2 card-pool bands for NEW skill cards. Upgrades of owned skills are never banded.</summary>
         public static bool OffersNewSkill(SkillCategory category, int wave) => wave <= 5 ? category == SkillCategory.BasicElement
             : wave <= 8 ? category is SkillCategory.BasicElement or SkillCategory.BasicMechanic
             : wave <= 11 ? category is SkillCategory.AdvancedElement or SkillCategory.BasicMechanic
             : category is SkillCategory.AdvancedElement or SkillCategory.AdvancedMechanic;
 
+        /// <summary>A new skill from this wave's band, or an upgrade of an owned skill; null when neither exists (the draft falls back to a stat card).
+        /// avoid: the skill on the card a reroll replaces (document 9.4); it is offered again only when no other skill can be.
+        /// Document 8.6: the card rolls a colour like a stat card does (RollSkillLevel), and the colour is
+        /// the level it gives: white level 1 or one more level, green 2, blue 3, purple 4, orange 5.</summary>
         public DraftCard RollCard(int wave = 1, SkillId? avoid = null)
         {
             if (!Catalog || Catalog.skills == null) return null;
@@ -196,10 +218,10 @@ namespace AnomalyArena
             if (upgradeable.Count > 0 && (candidates.Count == 0 || UnityEngine.Random.value < upgradeChance))
             {
                 var slot = Slots[upgradeable[UnityEngine.Random.Range(0, upgradeable.Count)]];
-
+                // An upgrade adds at least one level, so the card's colour is the level it reaches (an upgrade card is never white).
                 SkillId id = slot.Id; int level = slot.Level, next = RollSkillLevel(wave, level + 1);
-
-                return new DraftCard(DraftCardKind.Skill, ArenaText.Pair($"{slot.Name} · Level {next}",$"{slot.Name} · Level {next}"),
+                // A card put off fits only while the skill is still owned at the level it upgrades from.
+                return new DraftCard(DraftCardKind.Skill, ArenaText.Pair($"{slot.Name} · 等级 {next}", $"{slot.Name} · Level {next}"),
                     $"{slot.Definition.Description(slot.Level)} → {slot.Definition.Description(next)}",
                     _ => Learn(id, -1, next), payload: id, rarity: ArenaRarity.ForSkill(slot.Definition, next),
                     stillFits: () => SlotOf(id) >= 0 && Slots[SlotOf(id)].Level == level);
@@ -209,6 +231,12 @@ namespace AnomalyArena
             return MakeLearnCard(picked, RollSkillLevel(wave));
         }
 
+        /// <summary>The level a skill card drawn on this wave gives, never below <paramref name="floor"/> (an upgrade adds at least one
+        /// level): its colour rolled like a stat card's (document 8.6: the wave band's two tiers, mostly the lower one),
+        /// white 1, green 2, blue 3, purple 4, orange 5; the floor alone without progression rules. After ProgressionRules.highTierPity skill
+        /// cards in a row that gave less than the band's higher tier, the next one is rolled at that tier. Skill cards keep this count apart
+        /// from stat cards, and it counts the level the card gives, so an upgrade carried above the band by its floor counts as a high card.
+        /// The roll is in hundredths of a percent below 100, because Random.value can return 1 and a 100% colour must always come up.</summary>
         int RollSkillLevel(int wave, int floor = 1)
         {
             floor = Mathf.Clamp(floor, 1, MaxLevel);
@@ -233,14 +261,15 @@ namespace AnomalyArena
             return result;
         }
 
+        /// <param name="level">The level the new skill starts at; greater void skills always start (and stay) at 1.</param>
         DraftCard MakeLearnCard(SkillDefinition definition, int level = 1)
         {
-
+            // A card put off fits only while the skill is still new and the loadout is as full as when it was drawn.
             bool full = OwnedCount >= 3;
             level = definition.greaterVoid ? 1 : Mathf.Clamp(level, 1, MaxLevel);
-            string title = ArenaTerms.Skill(definition.id) + (level > 1 ? ArenaText.Pair($" · Level {level}",$" · Level {level}") : "");
+            string title = ArenaTerms.Skill(definition.id) + (level > 1 ? ArenaText.Pair($" · 等级 {level}", $" · Level {level}") : "");
             return new(DraftCardKind.Skill, title,
-                definition.Description(level) + ArenaText.Pair($"\n{definition.cost:0} Energy",$"\n{definition.cost:0} Energy"),
+                definition.Description(level) + ArenaText.Pair($"\n消耗 {definition.cost:0} 能量", $"\n{definition.cost:0} Energy"),
                 replacement => Learn(definition.id, replacement, level), full, definition.id,
                 ArenaRarity.ForSkill(definition, level), () => SlotOf(definition.id) < 0 && (OwnedCount >= 3) == full);
         }
@@ -249,18 +278,19 @@ namespace AnomalyArena
         {
             if (index < 0 || index >= Slots.Length || Slots[index].Empty || !body || !body.IsAlive) return false;
             var game = GameManager.Instance;
-            if (game && !game.IsCombatActive) return Refuse(index, ArenaText.Pair("Not during a menu","Not during a menu"));
+            if (game && !game.IsCombatActive) return Refuse(index, ArenaText.Pair("菜单中不能施放", "Not during a menu"));
             var slot = Slots[index]; var def = slot.Definition; int level = slot.Level;
             var board = ElementStatus.For(body);
-
+            // A Blink cast with a stored charge ignores the slot cooldown.
             bool coolingDown = def.id == SkillId.Blink ? BlinkCharges == 0 : slot.CooldownLeft > 0f;
-
+            // Knocked back or thrown, the player cannot act until the slide ends; only the skills that forcibly break a
+            // displacement (Blink, Void Walk) still cast, and they end the slide.
             bool sliding = (body.State is CharacterState.Knocked or CharacterState.Thrown) && !BreaksDisplacement(def.id);
             if (body.Stunned || body.State == CharacterState.Dashing || sliding || (board && board.BlocksActions) || coolingDown)
-                return Refuse(index, ArenaText.Pair("Not ready","Not ready"));
-
-            if (EffectActive(def.id)) return Refuse(index, ArenaText.Pair("Still active","Still active"));
-            if (!HasWorldHook(def.id)) return Refuse(index, ArenaText.Pair("World action unavailable","World action unavailable"));
+                return Refuse(index, ArenaText.Pair("暂时无法施放", "Not ready"));
+            // Not again while this skill's own effect still lasts; no Energy and no cooldown are spent.
+            if (EffectActive(def.id)) return Refuse(index, ArenaText.Pair("效果仍在持续", "Still active"));
+            if (!HasWorldHook(def.id)) return Refuse(index, ArenaText.Pair("此效果暂不可用", "World action unavailable"));
             Vector3 desired = body.AimPoint;
             Vector3 origin = body.Position;
             Vector3 offset = Query.Flat(desired - origin);
@@ -271,7 +301,7 @@ namespace AnomalyArena
             {
                 var valid = SkillWorldAPI.ValidPoint(origin, desired);
                 if (!valid.HasValue)
-                    return Refuse(index, ArenaText.Pair("No valid point","No valid point"));
+                    return Refuse(index, ArenaText.Pair("没有合法落点", "No valid point"));
                 point = valid.Value;
             }
 
@@ -279,19 +309,26 @@ namespace AnomalyArena
             if (def.id == SkillId.Devour)
             {
                 target = FindDevourTarget(def, level, origin, body.AimPoint);
-                if (!target) return Refuse(index, ArenaText.Pair("No weakened target","No weakened target"));
+                if (!target) return Refuse(index, ArenaText.Pair("没有符合生命阈值的目标", "No weakened target"));
             }
-            if (!progression || !progression.TrySpendEnergy(def.cost)) return Refuse(index, ArenaText.Pair("No Energy","No Energy"));
-            if (def.id == SkillId.Blink) SpendBlinkCharge(def.Cooldown(level));
-            else slot.CooldownLeft = def.Cooldown(level);
+            // Cost and Cooldown carry the campaign's room factors (SkillSlot), which are 1 elsewhere.
+            if (!progression || !progression.TrySpendEnergy(slot.Cost)) return Refuse(index, ArenaText.Pair("能量不足", "No Energy"));
+            if (def.id == SkillId.Blink) SpendBlinkCharge(slot.Cooldown);
+            else slot.CooldownLeft = slot.Cooldown;
             Vector3 visualPoint = target ? target.Position : pointTarget ? point : origin;
             Execute(def, level, point, target, origin, false);
             CastSucceeded?.Invoke(def.id, visualPoint, def.Radius(level), def.Duration(level));
             OnChanged(); return true;
         }
 
+        /// <summary>Skills that may be cast while knocked back or thrown and end that slide (document 8.3/8.4).</summary>
         public static bool BreaksDisplacement(SkillId id) => id is SkillId.Blink or SkillId.VoidWalk;
 
+        /// <summary>Whether this skill's own effect still lasts, so it cannot be cast again
+        /// yet: its trail, poison spread, bolts, well or singularity (the timed effects here), its buff (Radiance, Time Stop, Overcharge,
+        /// Void Walk), or what it put in the world (a Bulwark wall still standing, the mirror image still out, the Pocket Void hole still
+        /// open). Frost Nova, Devour, Blink and Shockwave act at once and are never held back. Battlefield effects held while the void trial
+        /// runs do not count inside it.</summary>
         public bool EffectActive(SkillId id) => id switch
         {
             SkillId.Radiance => radianceTimer > 0f,
@@ -310,6 +347,7 @@ namespace AnomalyArena
         static bool IsPointSkill(SkillId id) => id is SkillId.Blink or SkillId.Bulwark or SkillId.Decoy or SkillId.GravityWell
             or SkillId.PocketVoid or SkillId.StormCall;
 
+        /// <summary>The weakened enemy nearest <paramref name="aim"/> within Devour's range of <paramref name="center"/>. Elites are valid; bosses never are.</summary>
         Combatant FindDevourTarget(SkillDefinition def, int level, Vector3 center, Vector3 aim)
         {
             QueryInto(center, def.Range(level), nearby);
@@ -325,6 +363,10 @@ namespace AnomalyArena
             return target;
         }
 
+        /// <summary>
+        /// <paramref name="center"/> is where self-centred area skills resolve: the player for a normal cast, the mirror for a Mirror Image echo.
+        /// Self buffs (Radiance, Overcharge, Time Stop, Bulwark's shield) always go to the player.
+        /// </summary>
         void Execute(SkillDefinition def, int level, Vector3 point, Combatant target, Vector3 center, bool echo)
         {
             switch (def.id)
@@ -341,14 +383,15 @@ namespace AnomalyArena
                         var board = ElementStatus.For(c);
                         if (!board) continue;
                         board.Add(ElementKind.Frost, def.Strength(level), body);
-
+                        // Max level: whatever this cast leaves frozen stays frozen at least freezeHold seconds in total.
                         if (level >= MaxLevel && board.Frozen) board.ExtendFreeze(def.freezeHold);
                     }
                     break;
                 case SkillId.StormCall: AddTimed(def, level, point); break;
                 case SkillId.Bulwark:
                     SkillWorldAPI.CreateWall?.Invoke(point, def.Radius(level), def.Duration(level), def.ContactKnockback(level), body);
-
+                    // The usual Shield cap never cuts this Shield below its own size, and at level 5 it cuts the
+                    // direct hits it takes harder (bulwarkShieldDirectFactor) for as long as any of it is left.
                     ElementStatus.For(body)?.GainBulwarkShield(def.shieldScalesWithMaxHp ? body.maxHp * def.Strength(level) : def.Strength(level),
                         level >= MaxLevel ? def.bulwarkShieldDirectFactor : (float?)null); break;
                 case SkillId.Radiance:
@@ -358,7 +401,7 @@ namespace AnomalyArena
                 case SkillId.Devour:
                     Vector3 where = target.Position;
                     NotifyDevoured(target);
-
+                    // Devour is a targeted finisher; the held-body protection is a black-hole rule, not a skill veto.
                     if (target.State == CharacterState.Hooked) target.SetState(CharacterState.Normal);
                     if (SkillWorldAPI.Swallow != null) SkillWorldAPI.Swallow(target, body);
                     else target.OnEnterFallZone(Vector3.zero);
@@ -381,7 +424,7 @@ namespace AnomalyArena
                     timeSlipTimer = def.Duration(level); timeSlipLevel = level;
                     SkillWorldAPI.TimeSlip?.Invoke(def.Strength(level), timeSlipTimer); break;
                 case SkillId.Decoy:
-
+                    // Mirror Image never explodes; at max level it echoes another skill when the mirror ends (OnDecoyEnded).
                     SkillWorldAPI.CreateDecoy?.Invoke(point, def.Duration(level), false, body);
                     mirrorEcho = level >= MaxLevel; break;
                 case SkillId.Overcharge:
@@ -391,7 +434,7 @@ namespace AnomalyArena
                 case SkillId.PocketVoid:
                     SkillWorldAPI.CreateVoidHole?.Invoke(point, def.Radius(level), def.voidGravityWidth, def.Duration(level), body, false); break;
                 case SkillId.VoidWalk:
-
+                    // A void state: no teleport, no holes; it breaks an ongoing knockback like Blink does.
                     body.CancelDisplacement();
                     VoidWalkStart = VoidWalkEnd = body.Position;
                     voidWalkTimer = voidWalkDuration = def.Duration(level);
@@ -399,7 +442,10 @@ namespace AnomalyArena
                     voidWalkEnchant = Mathf.Max(0f, def.voidWalkEnchantSeconds);
                     V3WorldAudio.Instance?.Play(ArenaWorldCue.SkillVoidWalk, body.Position); break;
                 case SkillId.Singularity:
-
+                    // No root. The player keeps moving (heavily slowed, PlayerMoveMultiplier), firing and casting
+                    // while it gathers, and is invincible until the blast (Invincible: no damage, knockback or control), so a paralysis it
+                    // is cast through (between two twitches; frozen or mid-twitch, no skill casts) ends now with its stacks. The pull
+                    // follows the player and the blast comes when its duration ends (Tick).
                     body.CancelDisplacement();
                     ElementStatus.For(body)?.ClearControl();
                     AddTimed(def, level, body.Position);
@@ -407,6 +453,8 @@ namespace AnomalyArena
             }
         }
 
+        /// <summary>Mirror Image at max level: when the mirror ends, cast one random other owned skill there for free, leaving its cooldown
+        /// alone. Like a press, it skips a skill whose own effect still lasts (EffectActive).</summary>
         void OnDecoyEnded(Vector3 point)
         {
             if (!mirrorEcho) return;
@@ -419,7 +467,7 @@ namespace AnomalyArena
                 if (!Slots[i].Empty && Slots[i].Id != SkillId.Decoy && !Slots[i].Definition.greaterVoid && HasWorldHook(Slots[i].Id)
                     && !EffectActive(Slots[i].Id))
                     echoSlots.Add(i);
-
+            // Try the owned skills in random order; skip silently if none can resolve at the mirror.
             while (echoSlots.Count > 0)
             {
                 int pick = UnityEngine.Random.Range(0, echoSlots.Count);
@@ -490,7 +538,7 @@ namespace AnomalyArena
             for (int i = effects.Count - 1; i >= 0; i--)
             {
                 var effect = effects[i]; var def = effect.definition; int level = effect.level;
-
+                // The Singularity runs on the player's own clock, so Time Stop does not stretch it.
                 float step = effect.id == SkillId.Singularity ? dt : worldDt;
                 float activeDt = Mathf.Min(step, Mathf.Max(0f, effect.remaining));
                 effect.remaining = Mathf.Max(0f, effect.remaining - step); effect.clock += activeDt;
@@ -511,7 +559,7 @@ namespace AnomalyArena
                                 foreach (var position in effect.trail)
                                 {
                                     if (Query.Flat(c.Position - position).sqrMagnitude > def.Radius(level) * def.Radius(level)) continue;
-
+                                    // Fire on an enemy is a burn: the trail keeps it burning at Strength a second (× R(w)).
                                     ElementStatus.For(c)?.Ignite(def.Strength(level) * ElementCombat.WaveScale, body); break;
                                 }
                             }
@@ -524,14 +572,17 @@ namespace AnomalyArena
                             QueryInto(effect.center, def.Radius(level), nearby);
                             if (nearby.Count == 0) continue;
                             var c = nearby[UnityEngine.Random.Range(0, nearby.Count)];
-
+                            // Document 9.5: a target immune to the bolt's element takes none of its damage (or the Damage Penetration
+                            // share) and no stacks. The hit carries no element tag, which would add a second, damage-based set of stacks.
+                            // A wholly immune target is still struck, as by a Lightning weapon's hit: Add refuses its stacks, and a max-level
+                            // bolt still jumps on from it to the enemies around.
                             float share = ElementImmunity.DamageShare(c, def.element, body);
                             bool struck = share > 0f
                                 ? c.ReceiveDamage(DamageInfo.Attack(def.ScaledDamage(def.hitDamage, level, DamageMultiplier) * share, body, kind: HitKind.Bullet))
                                 : c.IsAlive && !c.Protected;
                             if (struck)
                             {
-
+                                // Levels 1-4: plain stacks; max level: ApplyStacks chains the Lightning to nearby enemies.
                                 if (level >= MaxLevel) ElementCombat.ApplyStacks(c, ElementKind.Lightning, def.HitStacks(level), body);
                                 else if (c.IsAlive) ElementStatus.For(c)?.Add(ElementKind.Lightning, def.HitStacks(level), body);
                             }
@@ -556,7 +607,8 @@ namespace AnomalyArena
                             if (!c || !c.IsAlive) continue;
                             Vector3 beforePull = c.Position;
                             SkillWorldAPI.Pull?.Invoke(c, effect.center, pullStep);
-
+                            // MovePosition commits at the next physics step. Count the real observed
+                            // position on this tick, not an imaginary immediate transform change.
                             if (Query.Flat(beforePull - effect.center).sqrMagnitude <= def.Radius(level) * def.Radius(level))
                                 effect.absorbed.Add(c);
                         }
@@ -578,7 +630,7 @@ namespace AnomalyArena
         public void HealFromDamage(float damage)
         {
             if (!body || !body.IsAlive || radianceTimer <= 0f || damage <= 0f) return;
-            radianceFraction += damage * radianceShare;
+            radianceFraction += damage * radianceShare * Mathf.Max(0f, ElementStatus.PayoffScale?.Invoke(body) ?? 1f); // the campaign's payoff by day
             int heal = Mathf.FloorToInt(radianceFraction); radianceFraction -= heal;
             if (heal > 0) body.Heal(heal);
         }
@@ -588,6 +640,7 @@ namespace AnomalyArena
             foreach (var loadout in active) if (loadout && loadout.body && loadout.body.IsAlive) loadout.SpreadPoison(victim);
         }
 
+        /// <summary>GDD §6.3 explicitly lets Devour spread Contagion; ordinary hole swallowing does not.</summary>
         public static void NotifyDevoured(Combatant victim)
         {
             foreach (var loadout in active)
@@ -622,6 +675,7 @@ namespace AnomalyArena
             for (int i = 0; i < count; i++) ElementStatus.For(deathNearby[i])?.Add(ElementKind.Poison, stacks, body);
         }
 
+        /// <summary>Preserves battlefield spell objects and timers while casts inside the trial use a separate list.</summary>
         public void FreezeBattlefieldForTrial(bool freeze)
         {
             if (freeze)
@@ -648,6 +702,7 @@ namespace AnomalyArena
             mirrorEcho = suspendedMirrorEcho = false;
         }
 
+        /// <summary>Read-only presentation snapshot. The damage path and lifetime remain owned by this component.</summary>
         public void CopyGroundVisuals(List<SkillGroundVisual> output)
         {
             output.Clear();
@@ -686,6 +741,7 @@ namespace AnomalyArena
             SyncBlinkCooldown();
         }
 
+        /// <summary>The Blink slot shows a cooldown only while no charge is ready; then it shows the soonest recharge.</summary>
         void SyncBlinkCooldown()
         {
             int index = SlotOf(SkillId.Blink);
@@ -700,6 +756,10 @@ namespace AnomalyArena
             Slots[index].CooldownLeft = wait;
         }
 
+        /// <param name="damage">The final hit: the caller's ScaledDamage already carries the run's damage multiplier, which is not applied
+        /// again here (document 7.3: Damage cards count once for every skill, as for Storm Call).</param>
+        /// <param name="element">The skill's element: a body immune to it takes none of the damage, or the Damage Penetration share
+        /// (document 9.5). None for the pure mechanic skills.</param>
         void AreaHit(Vector3 point, float radius, float damage, float knock, ElementKind element = ElementKind.None)
         {
             QueryInto(point, radius, nearby);

@@ -6,13 +6,16 @@ using UnityEngine;
 
 namespace AnomalyArena.EditorTools
 {
-
+    /// <summary>
+    /// Wires the generated cone textures (work/art-plans/make-v5-cones.py) and the flame puff frames into every scene's saved FxPool,
+    /// so weapon cones, the blizzard spray and enemy punch arcs draw with Fx.Cone / Fx.Telegraph instead of the centred sector quad.
+    /// Menu: Anomaly Arena/V5/Install Cone Effects. Safe to run again.
+    /// </summary>
     internal static class InstallV5Cones
     {
         static readonly string[] ScenePaths =
         {
-            "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity",
-            "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity"
+            "Assets/AnomalyArena/Scenes/ArenaV2.unity"
         };
 
         const string Folder = "Assets/AnomalyArena/Art/V4/VFX/Textures/";

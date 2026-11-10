@@ -6,11 +6,11 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>V4 formula families: chained damage, divided cooldown and armor, wave-derived Mk tiers, chill and paralysis.</summary>
     [TestFixture]
     public class V4NumbersTest
     {
-        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
 
         [Test]
         public void Add_TwoDamageCards_MultiplyInsteadOfAdding()

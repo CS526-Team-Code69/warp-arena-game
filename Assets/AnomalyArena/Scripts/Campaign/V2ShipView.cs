@@ -2,10 +2,16 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>
+    /// The ship tab's live picture (D1-C, chosen 2026-11-04: the base stays a 2D panel and the ship bay shows the 3D ship itself). A camera
+    /// of its own swings slowly to and fro north of the ship pad, so the base never stands in front of the ship, and draws into a render
+    /// texture the base panel shows. It renders only while the ship tab is open, with a soft light of its own, so neither the night nor the
+    /// darkness overlay (drawn on the HUD, not in this camera) hides what has been repaired: the engine, the armour and the fuel show on
+    /// the ship the moment they are bought. With the whitebox it shows the whitebox ship.
+    /// </summary>
     public sealed class V2ShipView : MonoBehaviour
     {
-        const int Width = 960, Height = 540;                                                
+        const int Width = 960, Height = 540;      // the panel's picture is 560 x 315 (16:9)
         const float Distance = 17f, Height3D = 7.5f, Swing = 70f, SwingSpeed = .22f;
         const int UiLayer = 5;
 
@@ -46,6 +52,7 @@ namespace AnomalyArena
             return v;
         }
 
+        /// <summary>On while the ship tab is open: the camera and its light work only then.</summary>
         public bool Live
         {
             get => view && view.enabled;
@@ -61,13 +68,13 @@ namespace AnomalyArena
         void LateUpdate()
         {
             if (!view || !view.enabled) return;
-            clock += Time.unscaledDeltaTime;                                                              
+            clock += Time.unscaledDeltaTime;   // the base panel may pause the game; the view keeps moving
             Place();
         }
 
         void Place()
         {
-
+            // North of the ship (+Z), swinging between north-west and north-east: the base (south of the ship) stays behind it.
             float yaw = Mathf.Sin(clock * SwingSpeed) * Swing;
             Vector3 dir = Quaternion.Euler(0f, yaw, 0f) * Vector3.forward;
             view.transform.position = centre + dir * Distance + Vector3.up * Height3D;

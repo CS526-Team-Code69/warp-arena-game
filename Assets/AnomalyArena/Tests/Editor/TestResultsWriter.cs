@@ -6,7 +6,12 @@ using UnityEngine;
 
 namespace AnomalyArena.EditorTools
 {
-
+    /// <summary>
+    /// When tests run in the editor (Test Runner window, or a script calling TestRunnerApi), writes the results under the project's Logs/ folder:
+    /// TestResults.xml (NUnit format) and TestResults.txt (a one-line summary per test).
+    /// Unity only writes a result file for command-line runs; this fills that gap so scripts and tools can read the results.
+    /// Running Play Mode tests reloads the domain and callbacks are lost, so InitializeOnLoad re-registers on every load.
+    /// </summary>
     [InitializeOnLoad]
     public static class TestResultsWriter
     {
@@ -19,9 +24,12 @@ namespace AnomalyArena.EditorTools
             ScriptableObject.CreateInstance<TestRunnerApi>().RegisterCallbacks(new Callbacks());
         }
 
+        /// <summary>Runs AnomalyArena.Tests (Play Mode). Results are written to Logs/TestResults.*.</summary>
         [MenuItem("Anomaly Arena/4. Run Play Mode Tests")]
         public static void RunPlayModeTests() => RunPlayMode(null);
 
+        /// <summary>Runs the Play Mode tests whose full names match the regexes (all of them when null). Open scenes are saved
+        /// first so the run never stops at a "save scene?" dialog; nothing is launched while the editor plays or compiles.</summary>
         public static bool RunPlayMode(string[] groupNames)
         {
             if (EditorApplication.isPlaying || EditorApplication.isPlayingOrWillChangePlaymode || EditorApplication.isCompiling) return false;
@@ -32,6 +40,7 @@ namespace AnomalyArena.EditorTools
             return true;
         }
 
+        /// <summary>Saves every loaded scene that is dirty, without a dialog.</summary>
         public static void SaveOpenScenesIfDirty()
         {
             for (int i = 0; i < UnityEditor.SceneManagement.EditorSceneManager.sceneCount; i++)

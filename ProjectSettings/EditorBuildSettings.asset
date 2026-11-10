@@ -6,8 +6,8 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/AnomalyArena/Scenes/ArenaV2_EN.unity
-    guid: 691a521c20dfc544092e6e396313d3b8
+    path: Assets/AnomalyArena/Scenes/ArenaV2.unity
+    guid: d2da2b2ef6ad5fe44b83d9f7c3c97cd3
   m_configObjects:
     com.unity.addressableassets: {fileID: 11400000, guid: 98ae94cd67d722547b8230641bc09272, type: 2}
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}

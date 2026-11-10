@@ -20,26 +20,30 @@ namespace AnomalyArena
             + "the armory, the air drop and the base research never offer it. It takes no starting-form factor and no Mk; the crowd multiplier "
             + "still applies. Defaults: see DefaultPistol.")]
         public Definition pistol = DefaultPistol();
-        [field: SerializeField, Min(0f), Tooltip("Uncharged rifle base damage. Full charge uses Rifle.damageA. Candidate 7/3 and full-charge 9 each yield about 10 DPS at the reference cycle.")]
+        [field: SerializeField, Min(0f), Tooltip("蓄力枪零蓄力时的基础伤害。满蓄力使用 Rifle.damageA；候选 7/3 与满蓄 9 在当前周期下都约 10 DPS。")]
         public float RifleMinimumChargeDamage { get; set; } = 6f;
         [field: SerializeField, HideInInspector] public int StarterBalanceRevision { get; set; }
-        [Tooltip("V4 armory Mk damage multipliers, index 0 = Mk1. Derived from fodder EHP: M(k) = R(c)·h(c) / (h(1)·S(c)) at each tier window centre c; see Docs/tools/v4_numbers.py.")]
+        [Tooltip("V4 军械库型号伤害倍率，下标0 = Mk1。由小怪EHP反推：M(k) = R(c)·h(c) / (h(1)·S(c))，c为该档窗口中点；见 work/balance/v4_numbers.py。")]
         public float[] mkDamage = { 1f, 1.4f, 1.65f, 1.9f, 2.1f, 2.3f };
-        [Min(1), Tooltip("Every this many waves, the standard Mk of new weapons rises by one.")]
+        [Min(1), Tooltip("每隔几波，新武器的标准型号提高一档。")]
         public int mkWaveSpacing = 3;
         [Tooltip("Armory (2026-10-25): chance 0-1 that an offer comes one Mk above its usual tier, one row per band of mkWaveSpacing waves "
             + "(row 0 = waves 1-3, row 1 = waves 4-6, ...; the last row holds for every later wave). It applies to new weapons (never above the "
             + "second-highest Mk) and to stronger versions of held weapons.")]
         public float[] mkBonusChance = { 0f, .15f, .25f, .35f, .45f };
         public int MaxMk => mkDamage != null && mkDamage.Length > 0 ? mkDamage.Length : 1;
-
+        /// <summary>The mkBonusChance row of this 1-based wave's band.</summary>
         public float MkBonusChance(int wave) => mkBonusChance == null || mkBonusChance.Length == 0 ? 0f
             : Mathf.Clamp01(mkBonusChance[Mathf.Clamp((Mathf.Max(1, wave) - 1) / Mathf.Max(1, mkWaveSpacing), 0, mkBonusChance.Length - 1)]);
         public float MkDamage(int mk) => mkDamage == null || mkDamage.Length == 0 ? 1f : mkDamage[Mathf.Clamp(mk - 1, 0, mkDamage.Length - 1)];
-
+        /// <summary>Tier a new weapon arrives at for this wave; the last table entry is reserved for upgrades.</summary>
         public int ParMk(int wave) => Mathf.Clamp(1 + (Mathf.Max(1, wave) - 1) / Mathf.Max(1, mkWaveSpacing), 1, Mathf.Max(1, MaxMk - 1));
         public Definition Get(WeaponForm form) { foreach(var d in definitions) if(d.form==form) return d; return form==WeaponForm.Pistol?pistol??=DefaultPistol():null; }
-
+        /// <summary>The Pistol's numbers (since 2026-11-06), what it deals before the crowd multiplier. Damage 3 is two thirds of a fully
+        /// charged Rifle shot (9 x the starting-form factor .5 = 4.5); 0.75 s between shots is a little slower than a full Rifle charge plus
+        /// its cooldown ((1 s + .35 s) x the starting cycle factor .5 = .675 s). Together about 60% of the Rifle's damage per second (4 against
+        /// 6.7, 6 against 10 with the crowd multiplier 1.5), on one target: the round stops at the first enemy and never bounces. Range 20,
+        /// half the Rifle's.</summary>
         public static Definition DefaultPistol() => new Definition{form=WeaponForm.Pistol,unlockWave=1,damageA=3,damageB=3,cooldownA=.75f,cooldownB=.75f,rangeA=20,rangeB=20};
         public static int DefaultUnlockWave(WeaponForm form) => form switch
         {
@@ -50,7 +54,7 @@ namespace AnomalyArena
             WeaponForm.Railgun => 11,
             _ => 6
         };
-
+        /// <summary>Forms removed from the design; the enum values stay so saved data keeps loading.</summary>
         public static bool IsRetired(WeaponForm form) => form is WeaponForm.GravGun or WeaponForm.PhaseDagger or WeaponForm.PlasmaLauncher;
         public static string FormName(WeaponForm f) => f switch { WeaponForm.RocketLauncher=>"Rocket Launcher",WeaponForm.GravGun=>"Grav Gun",WeaponForm.ScatterCannon=>"Scatter Cannon",WeaponForm.PhaseDagger=>"Phase Dagger",WeaponForm.PlasmaLauncher=>"Plasma Launcher",WeaponForm.CryoCannon=>"Cryo Cannon",WeaponForm.ArcCoil=>"Arc Cannon",WeaponForm.SporeLauncher=>"Venom Launcher",WeaponForm.Minigun=>"Gatling",WeaponForm.SwarmLauncher=>"Swarm Launcher",WeaponForm.OrbitBlades=>"Orbit Blades",WeaponForm.SentryDrone=>"Sentry Drone",WeaponForm.ShieldRing=>"Energy Ring",_=>f.ToString()};
         static readonly string[] Names={"Charged Shot","Reverse Shot","Flying Blade","Chain Blade","Strike","Launch Yourself","Attract","Repel","Blast","Focus","Swap","Recall","Sticky","Bouncy","Stream","Wildfire","Shatter","Blizzard","Arc Jump","Capacitor","Cloud","Needler","Lance","Execute","Spin-up","Meltdown","Barrage","Bombard","Closed Blade","Open Blade","Gunner","Whirl","Deflect","Leech","Plain Shot","Plain Shot"};
@@ -59,7 +63,9 @@ namespace AnomalyArena
         {
             definitions=new Definition[17];
             float[] da={9,6.100529f,10,0,8,5,12,1.25f,18,6,1,36,2.5f,4,4,5,3};
-
+            // Scatter Focus (form 4, B): 16 for the whole six-bolt burst, 1 s cooldown, range 20 — placeholders.
+            // Reverse Shot (form 0, B): 1.8 per round since the clip went 4 -> 3 (2026-10-21), so two clips still kill a 5-HP Grunt.
+            // 2026-10-23: Stream 1.25, Spin-up 2.5, Launch Yourself 7 (one flight kills a wave-1 Grunt), Repulsor 3, Bombard range 12.75.
             float[] db={1.8f,12,7,0,16,8,12,1,1.5f,15,2,24,3,6,4,5,4};
             float[] ca={.35f,.3f,1.5f,2,1,.6f,1.6f,.25f,1,.9f,3,2.2f,.25f,1.8f,.5f,1.2f,4};
             float[] cb={.12f,.2f,1.8f,2,1,1,1.8f,1.5f,.25f,1,.125f,1.2f,.1f,2.5f,.5f,5,1};

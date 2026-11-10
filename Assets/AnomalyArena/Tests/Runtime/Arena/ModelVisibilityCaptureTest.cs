@@ -11,12 +11,17 @@ using Object = UnityEngine.Object;
 
 namespace AnomalyArena
 {
-
+    /// <summary>
+    /// Before the 2026-11-06 web release: an editor screenshot of the illustrated art showed some enemies as a health bar with no body.
+    /// Six kinds stand in a ring round the player in a classic wave, by day, under the game's own camera; the illustrated art and the
+    /// whitebox each get a picture (Logs/models-art.png, Logs/models-whitebox.png) and a check that every enemy shows its body: the 3D
+    /// model's renderers in the art, the whitebox body otherwise, inside the camera's view.
+    /// </summary>
     [TestFixture]
     [Category("VisualVerification")]
     public class ModelVisibilityCaptureTest
     {
-        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
         static readonly EnemyKind[] Kinds = { EnemyKind.Brute, EnemyKind.Grunt, EnemyKind.Skitter, EnemyKind.Spitter, EnemyKind.Warden, EnemyKind.Stomper };
         bool savedArt;
 
@@ -56,7 +61,7 @@ namespace AnomalyArena
                 var enemy = game.waves.SpawnLab(Kinds[i], at, false, ElementKind.None);
                 Assume.That(enemy, Is.Not.Null, $"the pool has a free {Kinds[i]}");
                 enemy.SuppressRewards = true;
-                enemy.enabled = false;                                     
+                enemy.enabled = false; // they stand still for the pictures
                 lineup.Add(enemy);
             }
 
@@ -75,6 +80,7 @@ namespace AnomalyArena
             Assert.That(missingWhitebox, Is.Empty, "every enemy shows its body in the whitebox:\n" + report);
         }
 
+        /// <summary>Kinds whose body does not show: no enabled, active renderer of the expected kind whose bounds the camera sees.</summary>
         static List<string> Check(List<Enemy> lineup, Camera cam, bool art, StringBuilder report)
         {
             var missing = new List<string>();

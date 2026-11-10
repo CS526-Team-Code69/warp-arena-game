@@ -1,0 +1,11 @@
+received_at,event,run_id,session_id,edition,build,outcome,cause,enemy,elite,stage,wave,run_seconds,level,kills,starting_weapon,mode
+2026-11-10T20:00:00.000Z,run_start,aaaaaaaaaaaaaaaaaaaaaaaaaaaaa001,55555555555555555555555555555555,en,1.0.0+test,,,,FALSE,wave,1,0,1,0,Rifle,open
+2026-11-10T20:01:00.000Z,run_end,aaaaaaaaaaaaaaaaaaaaaaaaaaaaa001,55555555555555555555555555555555,en,1.0.0+test,defeat,enemy,Grunt,FALSE,wave,3,210.4,1,0,Rifle,open
+2026-11-10T20:02:00.000Z,run_start,aaaaaaaaaaaaaaaaaaaaaaaaaaaaa002,55555555555555555555555555555555,en,1.0.0+test,,,,FALSE,tutorial,0,0,1,0,Pistol,story
+2026-11-10T20:03:00.000Z,run_end,aaaaaaaaaaaaaaaaaaaaaaaaaaaaa002,55555555555555555555555555555555,en,1.0.0+test,defeat,base_destroyed,,FALSE,night,3,900.5,1,0,Pistol,story
+2026-11-10T20:04:00.000Z,run_start,aaaaaaaaaaaaaaaaaaaaaaaaaaaaa003,55555555555555555555555555555555,en,1.0.0+test,,,,FALSE,wave,1,0,1,0,Pistol,open
+2026-11-10T20:05:00.000Z,run_end,aaaaaaaaaaaaaaaaaaaaaaaaaaaaa003,55555555555555555555555555555555,en,1.0.0+test,defeat,enemy,Grunt,FALSE,day,3,640,1,0,Pistol,story
+2026-11-10T20:06:00.000Z,run_start,aaaaaaaaaaaaaaaaaaaaaaaaaaaaa004,55555555555555555555555555555555,en,1.0.0+test,,,,FALSE,wave,1,0,1,0,Knife,
+2026-11-10T20:07:00.000Z,run_end,aaaaaaaaaaaaaaaaaaaaaaaaaaaaa004,55555555555555555555555555555555,en,1.0.0+test,defeat,enemy,Brute,FALSE,wave,3,300,1,0,Knife,
+2026-11-10T20:08:00.000Z,run_start,aaaaaaaaaaaaaaaaaaaaaaaaaaaaa005,55555555555555555555555555555555,en,1.0.0+test,,,,FALSE,tutorial,0,0,1,0,Pistol,story
+2026-11-10T20:09:00.000Z,run_start,aaaaaaaaaaaaaaaaaaaaaaaaaaaaa006,55555555555555555555555555555555,en,1.0.0+test,,,,FALSE,wave,1,0,1,0,Rifle,open

@@ -9,14 +9,14 @@ using Object = UnityEngine.Object;
 
 namespace AnomalyArena
 {
-                                                                                                                                        
-                                                                                                                                 
-                                                                           
+    /// <summary>Visual check of whitebox mode against the illustrated mode: the same arranged enemies (a Spire and a Rammer winding up,
+    /// a Stomper, Spitter, Skitter and Grunt standing still) are rendered from the game camera in both modes and saved to Logs/.
+    /// The HUD is a screen overlay and is not in these captures.</summary>
     [TestFixture]
     [Category("VisualVerification")]
     public class WhiteboxCaptureTest
     {
-        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
         bool savedArt;
 
         [SetUp]
@@ -49,7 +49,7 @@ namespace AnomalyArena
             var cam = game.cam ? game.cam : Camera.main;
             Assume.That(cam, Is.Not.Null, "the scene has a game camera");
 
-            Capture(cam, "warmup");                                                                            
+            Capture(cam, "warmup"); // the first render into a fresh texture can come back as clear colour only
             Art.Enabled = false;
             for (int i = 0; i < 5; i++) await Awaitable.NextFrameAsync();
             Capture(cam, "whitebox-idle");
@@ -76,7 +76,7 @@ namespace AnomalyArena
             var map = WorldMap.Active;
             var hole = map.holes.FirstOrDefault(h => h && h.Phase == HolePhase.Active);
             Assume.That(hole, Is.Not.Null, "the arena has an active black hole");
-            map.FeedNearestHole(hole.Centre, 1f, 1);                                                   
+            map.FeedNearestHole(hole.Centre, 1f, 1); // a fed hole never plays the first-sight cutscene
             Vector3 centre = hole.Centre;
             Vector3 toPlayer = Query.Flat(game.player.Position - centre);
             toPlayer = toPlayer.sqrMagnitude > .01f ? toPlayer.normalized : Vector3.back;
@@ -84,7 +84,7 @@ namespace AnomalyArena
             var kinds = new[] { EnemyKind.Grunt, EnemyKind.Skitter, EnemyKind.Brute, EnemyKind.Grunt, EnemyKind.Splitter, EnemyKind.Skitter };
             for (int i = 0; i < kinds.Length; i++)
             {
-                                                                                                                
+                // Spread over the far half of the ring, so a straight chase toward the player crosses the hole.
                 Vector3 direction = Quaternion.Euler(0f, 110f + i * 28f, 0f) * toPlayer;
                 float radius = hole.KillRadius + .8f + (i % 2) * 1f;
                 var enemy = game.waves.SpawnLab(kinds[i], centre + direction * radius, false, ElementKind.None);
@@ -94,7 +94,7 @@ namespace AnomalyArena
             var cam = game.cam ? game.cam : Camera.main;
             Assume.That(cam, Is.Not.Null, "the scene has a game camera");
             Art.Enabled = false;
-            float settle = Time.realtimeSinceStartup + .6f;                                                    
+            float settle = Time.realtimeSinceStartup + .6f; // the camera catches up with the teleported player
             while (Time.realtimeSinceStartup < settle) await Awaitable.NextFrameAsync();
             Capture(cam, "warmup");
             await Awaitable.NextFrameAsync();

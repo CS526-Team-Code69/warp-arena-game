@@ -9,7 +9,7 @@ namespace AnomalyArena
     [TestFixture]
     public class HitFeedbackTest
     {
-        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
 
         [TearDown]
         public void RestoreClock() => Time.timeScale = 1f;
@@ -66,7 +66,7 @@ namespace AnomalyArena
             grunt.Configure(grunt.definition, 1f, false);
             grunt.enabled = false;
             float hpBefore = player.Hp;
-
+            // The title screen parks the clock at zero; the assertion below is that the hit itself never touches it.
             Time.timeScale = 1f;
 
             bool landed = player.ReceiveDamage(DamageInfo.Attack(1f, grunt, Vector3.right, 6f));

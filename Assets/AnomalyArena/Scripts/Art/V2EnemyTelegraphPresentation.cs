@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>Transparent geometry masks on a saved warning, sized and oriented by the enemy's real attack.</summary>
     public sealed class V2EnemyTelegraphPresentation : MonoBehaviour
     {
         public Enemy enemy;
@@ -29,7 +29,7 @@ namespace AnomalyArena
             }
             if (spireLine) spireLine.enabled = false;
             Sprite sprite = enemy.LineTelegraph ? art.telegraphCharge : enemy.CleaveTelegraph ? art.telegraphCleave : art.telegraphRing;
-
+            // The V5 art: the same shapes with thin bright lines. Each new sprite has the size of the old one, so the warning keeps its true reach.
             if (V5Vfx.On)
             {
                 var drawn = V5Vfx.I.Sprite(enemy.LineTelegraph ? "tele-charge" : enemy.CleaveTelegraph ? "tele-cleave" : "tele-ring", sprite ? sprite.pixelsPerUnit : 100f);
@@ -42,7 +42,7 @@ namespace AnomalyArena
             if (illustration.sprite != sprite)
             {
                 illustration.sprite = sprite;
-
+                // Parent warning scale/position/facing is authoritative; normalize only when the shape changes.
                 illustration.transform.localScale = new Vector3(1f / Mathf.Max(.01f, sprite.bounds.size.x), 1f / Mathf.Max(.01f, sprite.bounds.size.y), 1f);
             }
             Color telegraphColor = Art.Enabled ? enemy.IsBoss && enemy.BossPhase == 3 ? new Color(1f, .44f, .22f, .75f)

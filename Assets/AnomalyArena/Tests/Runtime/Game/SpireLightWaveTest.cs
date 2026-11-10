@@ -6,12 +6,16 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>The Spire's light wave.
+    /// After its wind-up the Spire sends a wave from its centre out to its sentry range, 30% smaller than before, at waveSpeed. The wave
+    /// hurts nobody; the step its front reaches the living player with no wall between them, the laser locks on them, and the laser is
+    /// the attack. A player beyond the range or behind a wall is never caught. The wave runs on the battlefield's time, and its ring on
+    /// the ground draws its front, dark behind walls, and leaves nothing once the wave has stopped or the player has died.</summary>
     [TestFixture]
     [Category("V3Smoke")]
     public class SpireLightWaveTest
     {
-        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
 
         [TearDown]
         public void TearDown() => Time.timeScale = 1f;
@@ -80,7 +84,7 @@ namespace AnomalyArena
             targets[1].DiscardWithoutReward();
             targets[2].DiscardWithoutReward();
             Arm(spire, game.waves.DefinitionOf(EnemyKind.Spire), origin + Vector3.forward * 4.5f);
-            var wall = Wall(origin + Vector3.forward * 2f);                                                          
+            var wall = Wall(origin + Vector3.forward * 2f); // after the Spire has moved, so no body ever overlaps it
             try
             {
                 Assume.That(Query.WallBetween(Query.AtCastHeight(spire.Position), Query.AtCastHeight(player.Position), out _), Is.True,
@@ -122,7 +126,7 @@ namespace AnomalyArena
             targets[1].DiscardWithoutReward();
             targets[2].DiscardWithoutReward();
             var data = game.waves.DefinitionOf(EnemyKind.Spire);
-
+            // The player stands beyond the range, so nothing interrupts the wave's whole run.
             Arm(spire, data, player.Position + Vector3.forward * (data.pulseRadius + player.Radius + 1.5f));
             var presentation = spire.GetComponent<SpireWavePresentation>();
             Assume.That(presentation, Is.Not.Null, "a Spire carries its light wave's presentation");
@@ -135,7 +139,7 @@ namespace AnomalyArena
             {
                 if (Time.realtimeSinceStartup > deadline) Assert.Fail("Timed out waiting for: the wave reaches the sentry range");
                 await Awaitable.NextFrameAsync();
-
+                // No physics step falls between a frame's Update and its LateUpdate, so the ring drawn last frame shows last frame's sample.
                 var drawn = presentation.Ring;
                 ringOnTheFront &= drawn && drawn.Visible && Mathf.Abs(drawn.Radius - sample) < 1e-4f;
                 float now = spire.LightWaveRadius;
@@ -147,6 +151,8 @@ namespace AnomalyArena
             float lasted = Time.fixedTime - started;
             await Until(() => !presentation.Ring.Visible, 2f, "the ring fades out at the sentry range and nothing is left on the ground");
 
+            // The sentry range 15 → 10.5 and the laser 20 → 14 with it, so the laser still
+            // reaches anyone the wave can find.
             Assert.That(data.pulseRadius, Is.EqualTo(15f * .7f).Within(1e-4f), "the sentry range is 30% smaller");
             Assert.That(data.laserLength, Is.EqualTo(20f * .7f).Within(1e-4f), "the laser is 30% shorter");
             Assert.That(most, Is.EqualTo(data.pulseRadius).Within(1e-4f), "the front reaches the sentry range");
@@ -173,7 +179,7 @@ namespace AnomalyArena
             bool stillOut, ringHeld;
             try
             {
-
+                // The battlefield's own clock at zero, as in the freeze on the way back from the void trial: enemies tick with no time.
                 SkillWorldAPI.TimeSlip?.Invoke(0f, 30f);
                 Assume.That(game.WorldTimeScale, Is.Zero, "the battlefield's time stands still");
                 await Awaitable.FixedUpdateAsync();
@@ -205,7 +211,7 @@ namespace AnomalyArena
             targets[1].DiscardWithoutReward();
             targets[2].DiscardWithoutReward();
             var data = game.waves.DefinitionOf(EnemyKind.Spire);
-
+            // The player stands beyond the range, so the wave is still on its way out, having caught nobody, when they die.
             Arm(spire, data, player.Position + Vector3.forward * (data.pulseRadius + player.Radius + 1.5f));
             var presentation = spire.GetComponent<SpireWavePresentation>();
             Assume.That(presentation, Is.Not.Null, "a Spire carries its light wave's presentation");
@@ -213,9 +219,10 @@ namespace AnomalyArena
                 "the light wave and its ring are on their way out");
             Assume.That(spire.LightWaveRadius, Is.LessThan(data.pulseRadius), "part way out, not at the sentry range");
 
+            // Wall damage is not an attack, so nothing in the sandbox turns it away (as in RunAnalyticsTest).
             Assert.That(player.ReceiveDamage(new DamageInfo { amount = 99999f, source = DamageSource.Wall }), Is.True, "the player dies");
             await Until(() => game.RunPhase == ArenaUiState.Result, 5f, "the run ends");
-
+            // The result screen stops time in the frame the player dies, so the Spire may not step again; the ring is drawn in LateUpdate.
             await Awaitable.NextFrameAsync();
             await Awaitable.NextFrameAsync();
 
@@ -223,6 +230,7 @@ namespace AnomalyArena
             Assert.That(presentation.Ring.Visible, Is.False, "and its ring goes at once instead of staying frozen on the ground behind the result");
         }
 
+        /// <summary>Turns a frozen sandbox target into a live enemy of this kind at a point; it keeps still and attacks on its own.</summary>
         static void Arm(Enemy enemy, EnemyDefinition data, Vector3 at)
         {
             enemy.Configure(data, 1f, false);
@@ -232,6 +240,7 @@ namespace AnomalyArena
             Physics.SyncTransforms();
         }
 
+        /// <summary>A wall across the lane at a point: a box collider on the wall layer, the one the wall checks (Query.WallBetween) see.</summary>
         static GameObject Wall(Vector3 at)
         {
             var wall = new GameObject("SpireLightWaveTestWall") { layer = GameManager.WallLayer };
@@ -251,6 +260,7 @@ namespace AnomalyArena
             }
         }
 
+        /// <summary>Waits physics step by physics step, for a state to be seen in the step it starts.</summary>
         static async Task UntilStep(Func<bool> completed, float timeout, string operation)
         {
             float deadline = Time.realtimeSinceStartup + timeout;

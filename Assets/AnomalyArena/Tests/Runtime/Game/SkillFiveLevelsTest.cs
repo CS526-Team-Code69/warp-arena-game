@@ -9,14 +9,23 @@ using Object = UnityEngine.Object;
 
 namespace AnomalyArena
 {
-
+    /// <summary>Skills (document 7.3, 7.4, 8.6). Skills have five levels: level 1 keeps the old level 1,
+    /// level 5 the old level 3 and levels 2-4 lie evenly between; every max-level effect comes at level 5, and cards and slots run white,
+    /// green, blue, purple, orange (Devour and the Greater Void skills stay black). A skill card rolls its colour like a stat card: the wave
+    /// band's two tiers, mostly the lower one, with the pity. Damage cards count once on the Gravity Well and Singularity blasts.
+    /// Singularity no longer roots the player: it slows them heavily while it gathers, and they may still fire and cast. The Bulwark text
+    /// says only a boss breaks it: the Tyrant King's charge or the Nash Prophet's Repulse Pulse (document 7.4). A second batch
+    /// set the Bulwark's wall and Shield and the Singularity's duration outright (SkillRecastSingularityBulwarkTest covers the rest
+    /// of that batch). Document 7.3: the stacking skills give more stacks per level, and their cards show the level's numbers.</summary>
     [TestFixture]
     public class SkillFiveLevelsTest
     {
-        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
         const float TargetHp = 100f;
         UnityEngine.Random.State savedRandom;
 
+        /// <summary>Before 2026-10-26 (three levels): the level-1 and level-3 values of every per-level value that changed with the level.
+        /// Every other per-level value was the same at all levels, unless it was set outright since (DesignSetValues).</summary>
         static readonly Dictionary<(SkillId, string), (float first, float last)> OldLevelOneAndThree = new()
         {
             [(SkillId.Blink, "range")] = (6f, 8f),
@@ -37,6 +46,8 @@ namespace AnomalyArena
             [(SkillId.TimeSlip, "duration")] = (2.5f, 3.5f),
         };
 
+        /// <summary>A second batch set these per-level values outright: the Bulwark's longer wall and thicker Shield
+        /// (very thick at level 5) and the Singularity's 3 s. Document 7.3: the stacks of the four stacking skills grow with the level.</summary>
         static readonly Dictionary<(SkillId, string), float[]> DesignSetValues = new()
         {
             [(SkillId.Contagion, "strength")] = new[] { 6f, 7f, 8f, 9f, 10f },
@@ -58,6 +69,8 @@ namespace AnomalyArena
             Time.timeScale = 1f;
         }
 
+        // ───── Five levels ─────
+
         [TestCase(4, CardRarity.Epic)]
         [TestCase(5, CardRarity.Legendary)]
         public void ForSkill_LevelsFourAndFive_ArePurpleAndOrange(int level, CardRarity expected)
@@ -74,7 +87,7 @@ namespace AnomalyArena
             var definition = ScriptableObject.CreateInstance<SkillDefinition>();
             try
             {
-                definition.element = ElementKind.Void;                                                              
+                definition.element = ElementKind.Void; // Devour: document 8.6 colours every skill card by its level
 
                 var actual = ArenaRarity.ForSkill(definition, level);
 
@@ -125,9 +138,9 @@ namespace AnomalyArena
                         float value = values[level - 1], even = Mathf.Lerp(old.first, old.last, (level - 1) / (float)(SkillDefinition.MaxLevel - 1));
                         bool fits = (definition.id, name) switch
                         {
-
+                            // The wider trail is Flame Wake's max-level effect (document 7.4): levels 1-4 keep the narrow one.
                             (SkillId.FlameWake, "radius") => Near(value, old.first),
-
+                            // Storm Call bolts are whole: the whole count nearest the even spread, never fewer than the level below.
                             (SkillId.StormCall, "strength") => Near(value, Mathf.Round(value)) && Mathf.Abs(value - even) <= .5f + 1e-4f
                                 && value >= values[level - 2],
                             _ => Near(value, even)
@@ -185,7 +198,7 @@ namespace AnomalyArena
             var locale = new GameObject("test locale").AddComponent<ArenaLocaleButton>();
             try
             {
-                foreach (var (code, clause) in new[] { ("zh-Hans", "at max level"), ("en", "at max level") })
+                foreach (var (code, clause) in new[] { ("zh-Hans", "满级"), ("en", "at max level") })
                 {
                     locale.localeCode = code;
                     locale.SelectLocale();
@@ -207,13 +220,15 @@ namespace AnomalyArena
             Assert.That(texts["zh-Hans"].noClauseAtFive, Is.Empty, "Chinese: every ordinary skill names its max-level effect at level 5");
             Assert.That(texts["en"].clauseAtFour, Is.Empty, "English: no max-level clause at level 4");
             Assert.That(texts["en"].noClauseAtFive, Is.Empty, "English: every ordinary skill names its max-level effect at level 5");
-            Assert.That(texts["zh-Hans"].bulwark, Does.Contain("只有 Boss").And.Contain("Tyrant King").And.Contain("纳什先知").And.Not.Contain("unbreakable"),
+            Assert.That(texts["zh-Hans"].bulwark, Does.Contain("只有 Boss").And.Contain("暴虐君王").And.Contain("纳什先知").And.Not.Contain("摧毁不了"),
                 "Chinese Bulwark: only a boss breaks it, the Tyrant King's charge or the Nash Prophet's pulse");
             Assert.That(texts["en"].bulwark, Does.Contain("only a boss").And.Contain("Tyrant King").And.Contain("Nash Prophet").And.Not.Contain("unbreakable"),
                 "English Bulwark: only a boss breaks it, the Tyrant King's charge or the Nash Prophet's pulse");
-            Assert.That(texts["zh-Hans"].singularity, Does.Contain("heavily slowed").And.Not.Contain("hold still"), "Chinese Singularity: slowed, not held");
+            Assert.That(texts["zh-Hans"].singularity, Does.Contain("大幅减速").And.Not.Contain("定住"), "Chinese Singularity: slowed, not held");
             Assert.That(texts["en"].singularity, Does.Contain("heavily slowed").And.Not.Contain("hold still"), "English Singularity: slowed, not held");
         }
+
+        // ───── Stacks per level (document 7.3) ─────
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(30000)]
         public async Task StackingSkillCards_EachLevel_ShowThatLevelsStacks()
@@ -266,7 +281,7 @@ namespace AnomalyArena
             var skills = game.skills;
             skills.ResetRun();
             var originalCatalog = skills.Catalog;
-
+            // A copy with one bolt a cast, so the target's Lightning is one bolt's worth (a second bolt would reach the paralysis line).
             var storm = Object.Instantiate(originalCatalog.Find(SkillId.StormCall));
             storm.strength = new[] { 1f, 1f, 1f, 1f, 1f };
             var stormOnly = ScriptableObject.CreateInstance<SkillCatalog>();
@@ -292,6 +307,8 @@ namespace AnomalyArena
                 Object.Destroy(storm);
             }
         }
+
+        // ───── Skill card colours ─────
 
         [Test]
         public void SkillRarity_EveryWaveRollAndPity_IsTheStatCardRoll()
@@ -327,7 +344,7 @@ namespace AnomalyArena
                 for (int i = 0; i < 200; i++)
                 {
                     var card = skills.RollCard(wave);
-
+                    // Devour is black at every level (kept 2026-10-26), so its colour does not show its level.
                     if (card.Payload is SkillId.Devour) continue;
                     if (card.Rarity == low) lows++;
                     else if (card.Rarity == high) highs++;
@@ -350,7 +367,7 @@ namespace AnomalyArena
             var rules = Object.Instantiate(original);
             try
             {
-
+                // Waves 12 and later offer purple and orange.
                 rules.highTierPercent = highTierPercent;
                 game.progression.Rules = rules;
                 DraftCard card = null;
@@ -381,7 +398,7 @@ namespace AnomalyArena
             var rules = Object.Instantiate(original);
             try
             {
-
+                // Waves 3-8 offer green and blue; blue never comes up by chance.
                 rules.highTierPercent = 0f;
                 rules.highTierPity = 4;
                 game.progression.Rules = rules;
@@ -406,7 +423,7 @@ namespace AnomalyArena
             var flameOnly = ScriptableObject.CreateInstance<SkillCatalog>();
             try
             {
-
+                // Waves 3-8 offer green and blue; blue never comes up by chance, and after two cards below blue the next one is blue.
                 rules.highTierPercent = 0f;
                 rules.highTierPity = 2;
                 game.progression.Rules = rules;
@@ -414,7 +431,7 @@ namespace AnomalyArena
                 flameOnly.skills = new[] { originalCatalog.Find(SkillId.FlameWake) };
                 skills.Catalog = flameOnly;
                 Assume.That(skills.Learn(SkillId.FlameWake, -1, 4), Is.True, "Flame Wake at level 4");
-
+                // Avoiding Flame Wake, the only card left is a new Frost Nova; with Flame Wake the only skill, the card upgrades it.
                 skills.Catalog = frostOnly;
                 var first = skills.RollCard(3, SkillId.FlameWake);
                 skills.Catalog = flameOnly;
@@ -436,6 +453,8 @@ namespace AnomalyArena
                 Object.Destroy(flameOnly);
             }
         }
+
+        // ───── Damage cards count once ─────
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(60000)]
         public async Task GravityWell_LevelFourThenFive_OnlyLevelFiveBlastsAndItCountsTheDamageCardOnce()
@@ -485,6 +504,8 @@ namespace AnomalyArena
             Assert.That(target.Hp, Is.EqualTo(TargetHp - blast).Within(.01f));
         }
 
+        // ───── Singularity ─────
+
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task Singularity_WhileItGathers_SlowsThePlayerWhoMayStillFireAndCast()
         {
@@ -515,6 +536,8 @@ namespace AnomalyArena
             Assert.That(skills.PlayerMoveMultiplier, Is.EqualTo(before).Within(1e-4f), "full speed again after the blast");
         }
 
+        // ───── Helpers ─────
+
         static IEnumerable<(string, float[])> PerLevelValues(SkillDefinition definition)
         {
             yield return ("duration", definition.duration);
@@ -523,13 +546,15 @@ namespace AnomalyArena
             yield return ("strength", definition.strength);
             yield return ("contactKnockback", definition.contactKnockback);
             yield return ("statusResistance", definition.statusResistance);
-            if (definition.id == SkillId.StormCall) yield return ("hitStacksByLevel", definition.hitStacksByLevel);                            
+            if (definition.id == SkillId.StormCall) yield return ("hitStacksByLevel", definition.hitStacksByLevel); // only Storm Call reads it
         }
 
         static bool Near(float a, float b) => Mathf.Abs(a - b) <= 1e-3f;
 
         static int SlotOf(SkillLoadout skills, SkillId id) => Array.FindIndex(skills.Slots, s => !s.Empty && s.Id == id);
 
+        /// <summary>The sandbox's first target alone, with no Shield or statuses, no auto weapon firing at it and a Damage multiplier of
+        /// 1.5, so a skill's damage reads straight off its HP.</summary>
         static Enemy LoneTarget(GameManager game, Enemy[] targets)
         {
             targets[1].DiscardWithoutReward();

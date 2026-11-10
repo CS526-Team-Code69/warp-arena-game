@@ -3,16 +3,19 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>
+    /// Saved presentation objects follow the actual skill state. No duplicate lifetime,
+    /// damage timer, per-flame GameObject, or runtime material is created here.
+    /// </summary>
     [DefaultExecutionOrder(1400)]
     public sealed class SkillGroundPresentation : MonoBehaviour
     {
         public SkillLoadout skills;
-        [Header("Saved fire layers.")]
+        [Header("已保存的火焰粒子层 / Saved fire layers")]
         public ParticleSystem flameGround, flamePlumes;
         public Renderer[] areaFields;
         public LineRenderer[] lightningBolts;
-        [Tooltip("Offset above the ground surface; does not change the damage area.")]
+        [Tooltip("地图地面表面之上的偏移，不改变伤害范围。")]
         public float groundHeight = .08f;
         [Range(.25f, 2f)] public float flameHeight = .85f;
         [Range(.1f, 1f)] public float groundOpacity = .48f;
@@ -40,6 +43,7 @@ namespace AnomalyArena
             Hold(flameGround); Hold(flamePlumes);
         }
 
+        // Simulation is held because SetParticles reads the authoritative spell state every frame.
         static void Hold(ParticleSystem system)
         { if (system) { system.Play(false); system.Pause(false); } }
 
@@ -66,7 +70,7 @@ namespace AnomalyArena
             var game = GameManager.Instance;
             float dt = game && game.IsCombatActive ? game.WorldDeltaTime : 0f;
             AnimationTime += dt;
-
+            // Blink starts here: CastSucceeded fires after the teleport, so the point of departure is last frame's.
             if (game && game.player) lastPlayerAt = game.player.Position;
             skills.CopyGroundVisuals(samples);
             VisibleFlameCount = VisibleAreaCount = 0;
@@ -75,7 +79,7 @@ namespace AnomalyArena
             {
                 if (v5)
                 {
-
+                    // The V5 art: real flames along the wake, dust falling into the well, a storm shadow. The old layers below stay empty.
                     if (sample.Id == SkillId.FlameWake) { VisibleFlameCount++; V5Vfx.I.WakeSample(sample.Position, sample.Radius); }
                     else
                     {
@@ -93,7 +97,7 @@ namespace AnomalyArena
                     float fade = Mathf.Clamp01(sample.Remaining / .25f);
                     ground[i] = Particle(point, sample.Radius * 2f, groundOpacity * fade, i);
                     ground[i].rotation = i * 137.5f;
-
+                    // Upright tongues live inside the ground footprint; neighbouring tongues overlap naturally.
                     float height = flameHeight * Mathf.Min(1.5f, sample.Radius / .75f);
                     plumes[i] = Particle(point + Vector3.up * height * .5f, height, plumeOpacity * fade, i);
                     plumes[i].startSize3D = new Vector3(sample.Radius * 1.15f, height, 1f);
@@ -146,7 +150,7 @@ namespace AnomalyArena
                 V5Vfx.I.SkillCast(id, point, radius, lastPlayerAt);
                 return;
             }
-
+            // These have real persistent views, saved world objects, or their own Void view.
             if (id is SkillId.FlameWake or SkillId.GravityWell or SkillId.StormCall
                 or SkillId.PocketVoid or SkillId.VoidWalk or SkillId.Singularity) return;
             var definition = skills.Catalog ? skills.Catalog.Find(id) : null;

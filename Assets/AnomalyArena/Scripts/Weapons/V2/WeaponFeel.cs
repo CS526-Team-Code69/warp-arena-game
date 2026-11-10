@@ -3,9 +3,10 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>How a hit should feel. Auto means "derive it from the hit kind" for damage that does not come from a weapon.</summary>
     public enum HitFeel { Auto, Melee, HeavyShot, LightShot, Area }
 
+    /// <summary>Feel numbers for one class of attack. Nothing here pauses the world: holds and jolts are local to the bodies involved.</summary>
     [Serializable]
     public class HitFeelProfile
     {
@@ -22,6 +23,7 @@ namespace AnomalyArena
         [Min(0f), Tooltip("Muzzle flash length on firing (0 = none).")] public float muzzleFlash;
     }
 
+    /// <summary>Which feel each weapon anomaly has. Melee hits bite, shots kick, area damage only flashes.</summary>
     public static class WeaponFeel
     {
         public static HitFeel Of(RunWeapon weapon) => weapon == null ? HitFeel.Auto : Of(weapon.form, weapon.variant);
@@ -29,15 +31,16 @@ namespace AnomalyArena
         public static HitFeel Of(WeaponForm form, int variant) => form switch
         {
             WeaponForm.Knife or WeaponForm.PhaseDagger or WeaponForm.OrbitBlades or WeaponForm.ShieldRing => HitFeel.Melee,
-            WeaponForm.RocketLauncher => variant == 1 ? HitFeel.Melee : HitFeel.Area,                                                     
+            WeaponForm.RocketLauncher => variant == 1 ? HitFeel.Melee : HitFeel.Area, // Launch Yourself is a body slam; Strike is a blast
             WeaponForm.Rifle or WeaponForm.Railgun => HitFeel.HeavyShot,
-            WeaponForm.CryoCannon => variant == 0 ? HitFeel.HeavyShot : HitFeel.Area,                                  
-            WeaponForm.Minigun or WeaponForm.SentryDrone or WeaponForm.Pistol => HitFeel.LightShot,                                                                
-            WeaponForm.ScatterCannon => variant == 0 ? HitFeel.LightShot : HitFeel.HeavyShot,                              
-            WeaponForm.SporeLauncher => variant == 1 ? HitFeel.LightShot : HitFeel.Area,                  
-            _ => HitFeel.Area,                                                                    
+            WeaponForm.CryoCannon => variant == 0 ? HitFeel.HeavyShot : HitFeel.Area, // Shatter shards; Blizzard spray
+            WeaponForm.Minigun or WeaponForm.SentryDrone or WeaponForm.Pistol => HitFeel.LightShot, // the Pistol: the V2 campaign's plain round (since 2026-11-06)
+            WeaponForm.ScatterCannon => variant == 0 ? HitFeel.LightShot : HitFeel.HeavyShot, // Blast pellets; Focus bolts
+            WeaponForm.SporeLauncher => variant == 1 ? HitFeel.LightShot : HitFeel.Area, // Needler; Cloud
+            _ => HitFeel.Area, // Plasma, Flamethrower, Arc Coil, Swarm (and the retired Grav Gun)
         };
 
+        /// <summary>Damage without a weapon (skills, crashes, walls) takes its feel from the hit kind.</summary>
         public static HitFeel FromKind(HitKind kind) => kind switch
         {
             HitKind.Bullet => HitFeel.LightShot,

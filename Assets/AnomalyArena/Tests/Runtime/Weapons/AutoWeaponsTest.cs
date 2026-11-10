@@ -8,14 +8,20 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>The auto weapons (system document 5.5): the Closed Blade knocks away the pickups and
+    /// corpses its tips touch; the Sentry Gunner fires rapidly, drops to the ground when a magazine is empty and flies back when you step
+    /// on it or after a while; the Whirl slams a lone far enemy where you stood two seconds ago, hitting it and its neighbours but never
+    /// you; the Deflect ring slows and lightly hits the enemies inside it and deflects shots crossing its edge; the Drain's Energy Shield
+    /// takes one enemy attack whole, and the next attack soon after costs Energy once.</summary>
     [TestFixture]
     public class AutoWeaponsTest
     {
-        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
 
         [TearDown]
         public void RestoreClock() => Time.timeScale = 1f;
+
+        // ───── Orbit Blades ─────
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task ClosedBlade_PickupOnTheBladePath_IsKnockedOutward_OpenBladeLeavesIt()
@@ -31,7 +37,7 @@ namespace AnomalyArena
             float Distance() => Query.Flat(orb.Position - origin).magnitude;
 
             EquipAuto(game, WeaponForm.OrbitBlades, 1);
-            await Seconds(1.2f);                                                        
+            await Seconds(1.2f); // a tip passes every point of the circle once a second
             Assert.That(orb.InUse, Is.True);
             Assert.That(Distance(), Is.EqualTo(2.5f).Within(.2f), "the Open Blade leaves pickups alone");
 
@@ -49,7 +55,7 @@ namespace AnomalyArena
             var corpse = targets[0];
             corpse.Kill();
             Assume.That(corpse.CorpseActive, Is.True, "a pooled enemy killed by HP loss leaves a corpse");
-            await Seconds(1f);                                 
+            await Seconds(1f); // its death slide has died down
             Vector3 origin = game.player.Position;
             V3CombatSmokeTest.Teleport(corpse, origin + Vector3.forward * 2.5f);
             float Along() => Vector3.Dot(Query.Flat(corpse.Position - origin), Vector3.forward);
@@ -61,6 +67,8 @@ namespace AnomalyArena
             Assert.That(corpse.CorpseActive, Is.True);
             Assert.That(Along(), Is.GreaterThan(4.8f), "about orbitCorpseKnock cells outward, away from you");
         }
+
+        // ───── Sentry Drone ─────
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task Gunner_EmptyMagazine_DropsToTheGround_StepOnItOrWaitForItToComeBack()
@@ -86,7 +94,7 @@ namespace AnomalyArena
                 await Seconds(.3f);
                 Assert.That(weapons.DroneDown(gunner), Is.True, "it cools down on the ground");
                 Assert.That(gunner.droneShots, Is.EqualTo(3), "without firing");
-                Assert.That(weapons.AnomalySlotDetail(gunner), Does.Contain("step on it"), "the slot says to step on it");
+                Assert.That(weapons.AnomalySlotDetail(gunner), Does.Contain("踩"), "the slot says to step on it");
 
                 V3CombatSmokeTest.Teleport(game.player, gunner.dronePoint);
                 await Awaitable.NextFrameAsync(); await Awaitable.NextFrameAsync();
@@ -126,7 +134,7 @@ namespace AnomalyArena
                 Assert.That(gunner.dronePoint, Is.EqualTo(drop));
                 Assert.That(gunner.droneDownLeft, Is.EqualTo(left).Within(.0001f), "with the same time left");
 
-                weapons.ClearWaveEffects();                        
+                weapons.ClearWaveEffects(); // as the wave end does
                 Assert.That(weapons.DroneDown(gunner), Is.False, "the wave end brings it back to you");
                 Assert.That(gunner.droneShots, Is.Zero, "with a full magazine");
             }
@@ -146,9 +154,9 @@ namespace AnomalyArena
             Place(targets[0], origin + Vector3.forward * 9f, movable: true);
             Place(targets[1], before + Vector3.forward * 1.2f);
             V3CombatSmokeTest.Teleport(game.player, before);
-            weapons.ClearWaveEffects();                                             
+            weapons.ClearWaveEffects(); // the record of where you stood starts here
             var whirl = EquipAuto(game, WeaponForm.SentryDrone, 1);
-            whirl.cooldown = 99f;                                       
+            whirl.cooldown = 99f; // the beam waits while you stand here
 
             await Seconds(tuning.whirlAfterimageSeconds + .4f);
             V3CombatSmokeTest.Teleport(game.player, origin);
@@ -166,6 +174,8 @@ namespace AnomalyArena
             Assert.That(targets[1].maxHp - targets[1].Hp, Is.EqualTo(hit).Within(.01f), "and so does the enemy beside the landing");
             Assert.That(game.player.Hp, Is.EqualTo(hp), "you never do");
         }
+
+        // ───── Energy Ring ─────
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task Deflect_Field_SlowsAndLightlyHitsTheEnemiesInside_NotBehindAWall()
@@ -220,7 +230,7 @@ namespace AnomalyArena
                 float hp = game.player.Hp;
                 Assert.That(await Shoot(), Is.LessThan(1.5f), "with no chance the shot flies on into you");
                 Assert.That(game.player.Hp, Is.LessThan(hp));
-                game.player.ClearWaveState();                           
+                game.player.ClearWaveState(); // drop the hit protection
 
                 tuning.deflectChance = 1f;
                 hp = game.player.Hp;
@@ -253,8 +263,8 @@ namespace AnomalyArena
                 weapons.HandleInput(false, false, true);
                 Vector3 aim = Query.Flat(bullet.direction).normalized;
                 await Until(() => Query.Flat(bullet.transform.position - game.player.Position).magnitude > radius + .5f, 2f, "the bullet leaves the ring");
-                await Awaitable.NextFrameAsync();                                        
-
+                await Awaitable.NextFrameAsync(); // the weapons tick has seen it outside
+                // The turn is drawn evenly within the maximum either way, so it may be next to nothing: the count says it was knocked.
                 Assert.That(weapons.OwnShotsDeflected, Is.EqualTo(deflected + 1), "it is knocked off course as it crosses the edge");
                 Assert.That(Vector3.Angle(aim, Query.Flat(bullet.direction)), Is.LessThanOrEqualTo(tuning.deflectOwnAngle + .01f), "by up to the maximum");
 
@@ -282,7 +292,7 @@ namespace AnomalyArena
             try
             {
                 tuning.deflectChance = 1f;
-                tuning.deflectOwnAngle = 10f;                                                            
+                tuning.deflectOwnAngle = 10f; // keeps the turned landing inside the sandbox's clear lane
                 var ring = EquipAuto(game, WeaponForm.ShieldRing, 0);
                 float radius = weapons.FieldRadius(ring);
                 var cloud = Equip(game, WeaponForm.SporeLauncher, 0);
@@ -301,7 +311,8 @@ namespace AnomalyArena
                 Assert.That(weapons.OwnShotsDeflected, Is.EqualTo(deflected + 1), "the pod is knocked off course");
                 Assert.That(pod.mode, Is.EqualTo(AttackMode.Lob), "in the air, before it lands");
                 Assert.That(Query.Flat(bentAt - game.player.Position).magnitude, Is.EqualTo(radius).Within(.6f), "at the ring's edge");
-
+                // The turn is drawn evenly within the maximum either way (next to nothing is possible); seen from a point a frame past the
+                // bend it reads a little larger than the angle drawn.
                 float turned = Vector3.Angle(aimed - bentAt, Query.Flat(pod.point) - bentAt);
                 Assert.That(turned, Is.LessThanOrEqualTo(tuning.deflectOwnAngle + 3f), "its unflown path and landing turn by up to the maximum");
                 Assert.That(RunWeapons.ValidTeleportPoint(pod.point, .2f), Is.True, "onto legal ground (rule R7)");
@@ -332,7 +343,7 @@ namespace AnomalyArena
                 Assert.That(player.Hp, Is.EqualTo(hp), "no damage");
                 Assert.That(drain.drainShieldUp, Is.False, "and breaks");
                 Assert.That(game.progression.Energy, Is.EqualTo(energy + tuning.drainBlockEnergy).Within(.01f), "the block gives Energy (Q97)");
-                Assert.That(game.runWeapons.AnomalySlotDetail(drain), Does.Contain("Overload"), "the slot shows the overload");
+                Assert.That(game.runWeapons.AnomalySlotDetail(drain), Does.Contain("过载"), "the slot shows the overload");
 
                 energy = game.progression.Energy;
                 Assert.That(player.ReceiveDamage(DamageInfo.Attack(4f, enemy)), Is.True, "the next attack lands");
@@ -340,7 +351,7 @@ namespace AnomalyArena
                 Assert.That(game.progression.Energy, Is.EqualTo(energy - tuning.drainOverloadEnergy).Within(.01f), "and so soon after the break it costs Energy (Q96)");
 
                 energy = game.progression.Energy;
-                player.ClearWaveState();                           
+                player.ClearWaveState(); // drop the hit protection
                 Assert.That(player.ReceiveDamage(DamageInfo.Attack(4f, enemy)), Is.True);
                 Assert.That(game.progression.Energy, Is.EqualTo(energy).Within(.01f), "only once per break");
                 await Until(() => drain.drainShieldUp, 2f, "quiet again, the shield forms again");
@@ -348,6 +359,7 @@ namespace AnomalyArena
             finally { tuning.drainShieldWait = wait; }
         }
 
+        // Document 5.7: an infused Drain releases its element on the enemies close by each time its shield blocks.
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task DrainInfused_EachBlock_ReleasesTheElementOnEnemiesWithinReach_UninfusedReleasesNothing()
         {
@@ -439,7 +451,7 @@ namespace AnomalyArena
             try
             {
                 weapons.Hand = new RunWeapon[2];
-
+                // Document 5.7 (the 10-27 doc): the Drain takes Infusion like every other weapon.
                 var drained = new RunWeapon { form = WeaponForm.ShieldRing, variant = 1, revealed = true };
                 weapons.Auto = new[] { drained, null };
                 var drainCard = weapons.RollUpgradeCard();
@@ -455,24 +467,28 @@ namespace AnomalyArena
                 Assert.That(offer.Axis, Is.EqualTo(UpgradeAxis.Infusion), "the Deflect's light hit carries one");
 
                 Assume.That(ArenaText.IsChinese, Is.True, "the Chinese scene starts in Chinese");
-                Assert.That(ArenaTerms.WeaponForm(WeaponForm.ShieldRing), Is.EqualTo("Energy Ring"), "2026-10-27 (Q100)");
-                Assert.That(ArenaTerms.WeaponAnomaly(WeaponForm.ShieldRing, 0), Is.EqualTo("Deflect"));
-                Assert.That(WeaponGuide.Backfire(WeaponForm.OrbitBlades, 0), Does.Contain("pickups").And.Contain("corpses"));
+                Assert.That(ArenaTerms.WeaponForm(WeaponForm.ShieldRing), Is.EqualTo("能量环"), "2026-10-27 (Q100)");
+                Assert.That(ArenaTerms.WeaponAnomaly(WeaponForm.ShieldRing, 0), Is.EqualTo("偏折"));
+                Assert.That(WeaponGuide.Backfire(WeaponForm.OrbitBlades, 0), Does.Contain("可拾取物").And.Contain("尸体"));
                 Assert.That(WeaponGuide.How(WeaponForm.ShieldRing, 1), Does.Contain("灌注后").And.Contain($"{tuning.drainInfuseRadius:0.##} 格内"), "the Drain card says what an Infusion does (P23)");
-                Assert.That(WeaponGuide.How(WeaponForm.ShieldRing, 0), Does.Contain("轻伤").And.Contain("Infusion"), "the Deflect card states its light hit (P22)");
+                Assert.That(WeaponGuide.How(WeaponForm.ShieldRing, 0), Does.Contain("轻伤").And.Contain("灌注"), "the Deflect card states its light hit (P22)");
                 tuning.gunnerClip = 17;
                 Assert.That(WeaponGuide.How(WeaponForm.SentryDrone, 0), Does.Contain("17"), "the Gunner card reads the live magazine");
 
+                // The Drain's weapon card gives the shield's wait at its Mk instead of a hit (Q99). Since 2026-11-06 the
+                // card has no damage section (no hit damage, no use interval); the wait stays, after the attack's description.
                 var drain = new RunWeapon { form = WeaponForm.ShieldRing, variant = 1, mk = 3, revealed = true };
                 typeof(GameManager).GetMethod("ShowWeaponIntro", BindingFlags.Instance | BindingFlags.NonPublic)
                     .Invoke(GameManager.Instance, new object[] { drain, null });
                 string body = GameManager.Instance.UiSnapshot.weaponIntroBody;
-                Assert.That(body, Does.Contain($"{weapons.DrainShieldWait(drain):0.#} s without an enemy hit"), "the Drain's card states its shield wait");
-                Assert.That(body, Does.Not.Contain("per hit").And.Not.Contain("between uses"), "no damage section on the card");
+                Assert.That(body, Does.Contain($"{weapons.DrainShieldWait(drain):0.#} 秒没受到敌人攻击后生成能量盾"), "the Drain's card states its shield wait");
+                Assert.That(body, Does.Not.Contain("每次命中").And.Not.Contain("出手间隔"), "no damage section on the card");
                 Assert.That(weapons.DrainShieldWait(drain), Is.LessThan(tuning.drainShieldWait), "Mk3 waits less than the Mk1 wait");
             }
             finally { tuning.gunnerClip = clip; }
         }
+
+        // ───── Helpers ─────
 
         static RunWeapon EquipAuto(GameManager game, WeaponForm form, int variant)
         {
@@ -481,6 +497,7 @@ namespace AnomalyArena
             return weapon;
         }
 
+        /// <summary>A hand weapon in the active slot.</summary>
         static RunWeapon Equip(GameManager game, WeaponForm form, int variant)
         {
             var weapon = new RunWeapon { form = form, variant = variant, revealed = true, rounds = game.runWeapons.ClipSize(form, variant) };
@@ -495,6 +512,7 @@ namespace AnomalyArena
             Physics.SyncTransforms();
         }
 
+        /// <summary>A Bulwark wall across the aim, centred this far ahead of the player.</summary>
         static void WallAhead(GameManager game, float distance, float width)
         {
             WorldMap.Active.CreateWall(game.player.Position + Query.Flat(game.player.AimDirection).normalized * distance, width, 60f, 0f, game.player);

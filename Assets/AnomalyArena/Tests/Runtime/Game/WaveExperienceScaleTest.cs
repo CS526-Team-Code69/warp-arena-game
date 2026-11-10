@@ -7,12 +7,14 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>Design document 9.2: special minions and elites pay XP that grows with the wave's difficulty, as their HP does, so a share
+    /// of enemy HP pays about the same XP on every wave; each wave's experienceScale is an extra factor on top. The melee swarm, mini
+    /// Splitters and bosses keep their fixed rewards.</summary>
     [TestFixture]
     [Category("V3Smoke")]
     public class WaveExperienceScaleTest
     {
-        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
 
         [Test, LoadScene(Scene), Timeout(40000)]
         public async Task WaveScale_MovesSpecialAndEliteXp_SwarmAndBossStayFixed()
@@ -75,7 +77,7 @@ namespace AnomalyArena
             var early = At(2);
             var late = At(waves.Length);
             Assert.That(late.xp, Is.GreaterThan(early.xp * 2f), "a Spitter on the last ordinary wave pays far more than on wave 2");
-
+            // Rounded HP and the floored shield budget leave a few percent of slack.
             Assert.That(late.xp / late.hp, Is.EqualTo(early.xp / early.hp).Within(10).Percent, "the same XP per point of Spitter HP");
         }
 
@@ -86,7 +88,7 @@ namespace AnomalyArena
             var game = GameManager.Instance;
             Assume.That(game && game.progression && game.progression.Rules, Is.True, "the arena scene has its progression rules");
             var costs = game.progression.Rules.levelCosts;
-
+            // Document 9.3: every level needs more XP than the one before, and the last three take most of the total.
             for (int i = 1; i < costs.Length; i++) Assert.That(costs[i], Is.GreaterThan(costs[i - 1]), $"level {i + 2} costs more than level {i + 1}");
             Assert.That(costs.Skip(costs.Length - 3).Sum(), Is.GreaterThan(costs.Sum() / 2), "the last three levels take most of the XP");
         }

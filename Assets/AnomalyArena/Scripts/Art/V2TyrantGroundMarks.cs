@@ -2,7 +2,13 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>
+    /// Ground marks of the Tyrant's moves (system doc 13.2), drawn like V2BossGroundMarks draws the Nash Prophet's: flat line renderers in the
+    /// material of the enemy's own warning, so no scene objects or art files are needed. The landing circle at the end of the Rampage Charge,
+    /// the tail crossing the Tail Sweep's fan, the Ground Pound's rectangle with the band its shockwave has reached, the Star Throw's impact
+    /// circle filling from the rim as the meteor nears (and the meteor itself in the air), and the reach of the Astral Guard while it
+    /// channels. The charge line and the sweep fan of the wind-ups stay on the saved warning sprite. Added to the Tyrant at runtime.
+    /// </summary>
     public sealed class V2TyrantGroundMarks : MonoBehaviour
     {
         [Tooltip("Rims of the charge's landing circle, the Ground Pound's rectangle and the meteor's impact circle.")]
@@ -44,6 +50,7 @@ namespace AnomalyArena
                     line.enabled = false;
         }
 
+        /// <summary>The sprite material the enemy's own warning uses: it takes vertex colours, as the Spire circle does.</summary>
         void FindMaterial()
         {
             var telegraph = GetComponentInChildren<V2EnemyTelegraphPresentation>(true);
@@ -80,7 +87,7 @@ namespace AnomalyArena
             Flatten(tail);
             if (V5Vfx.On)
             {
-
+                // The V5 art: a tapering burning blade instead of a flat bar, with a crescent running behind it; the hit shape is unchanged.
                 Style(fanRim, lineWidth * .6f, new Color(1f, .62f, .28f, .6f));
                 tail.sharedMaterial = V5Vfx.I.TailMaterial;
                 tail.startWidth = Mathf.Max(lineWidth, enemy.TailHalfWidth * 2.2f);
@@ -107,7 +114,7 @@ namespace AnomalyArena
             Flatten(pound);
             Style(pound, lineWidth, rimColor);
             if (!band) return;
-
+            // The band the shockwave is crossing, drawn as one ribbon as long as a step.
             float step = enemy.PoundLength / enemy.PoundSteps, middle = step * (enemy.PoundStep + .5f);
             poundBand.SetPosition(0, origin - side + ahead * middle + lift);
             poundBand.SetPosition(1, origin + side + ahead * middle + lift);
@@ -124,19 +131,20 @@ namespace AnomalyArena
             float reach = enemy.MeteorReach, filled = Mathf.Max(.02f, reach * enemy.MeteorFill01);
             Circle(impactRim, enemy.MeteorTarget, reach, .055f);
             Style(impactRim, lineWidth, rimColor);
-
+            // A band as wide as the filled part, hugging the rim; when the meteor lands it covers the whole circle.
             Circle(impactFill, enemy.MeteorTarget, reach - filled * .5f, .05f);
             Style(impactFill, filled, V5Vfx.On ? new Color(.7f, .12f, .03f, .3f) : fillColor);
             DrawMeteorBody(enemy.MeteorPosition);
         }
 
+        /// <summary>The meteor in the air: a disc facing the camera (a ring half the meteor wide, so its middle closes).</summary>
         Vector3 meteorLast;
 
         void DrawMeteorBody(Vector3 at)
         {
             if (V5Vfx.On)
             {
-
+                // The V5 art: a real falling rock wrapped in fire, not a flat disc.
                 meteor.enabled = false;
                 V5Vfx.I.MeteorBody(at, meteorSize * 1.25f);
                 V5Vfx.I.MeteorTick(at, at - meteorLast, meteorSize);
@@ -169,6 +177,7 @@ namespace AnomalyArena
             Style(astral, lineWidth, astralColor);
         }
 
+        /// <summary>Makes the line on first use and shows or hides it; true when it should be drawn this frame.</summary>
         bool Show(ref LineRenderer line, string name, int points, bool loop, bool show)
         {
             if (!show)
@@ -193,7 +202,7 @@ namespace AnomalyArena
             line.sharedMaterial = material;
             line.sortingLayerID = sortingLayer;
             line.sortingOrder = sortingOrder;
-            line.alignment = LineAlignment.TransformZ;                                                    
+            line.alignment = LineAlignment.TransformZ; // flat on the ground, not turned toward the camera
             line.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             line.receiveShadows = false;
             line.numCapVertices = 0;
@@ -219,6 +228,7 @@ namespace AnomalyArena
             Flatten(line);
         }
 
+        /// <summary>The body turns every frame; keep each ribbon facing straight up.</summary>
         static void Flatten(LineRenderer line) => line.transform.rotation = Quaternion.LookRotation(Vector3.up, Vector3.forward);
     }
 }

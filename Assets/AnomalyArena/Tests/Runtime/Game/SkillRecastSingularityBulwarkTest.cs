@@ -10,23 +10,32 @@ using Object = UnityEngine.Object;
 
 namespace AnomalyArena
 {
-
+    /// <summary>A skill cannot be cast again while its own effect still lasts: pressing
+    /// it spends nothing, its slot shows as not ready, and the Mirror Image echo skips it too; a Bulwark wall the Tyrant breaks no longer
+    /// counts. The Singularity lasts 3 s and the player is fully invincible meanwhile: no damage, no outright kill, no knockback and no
+    /// element stacks (not even from their own blasts and backfires), no Nash Prophet pull, and a paralysis it is cast through ends. The
+    /// Bulwark's wall and Shield grow with its level; the level-5 Shield (60% of max HP) stands above the usual cap, a smaller Shield it
+    /// lifts merges into it, and a direct hit on it counts half instead of 70% for as long as any of it is left.</summary>
     [TestFixture]
     public class SkillRecastSingularityBulwarkTest
     {
-        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
         const string LabScene = "Assets/AnomalyArena/Scenes/EnemyLab.unity";
 
+        /// <summary>Skills whose effect outlasts the cast: a timed effect, a buff or something left in the world.</summary>
         static readonly SkillId[] Lasting =
         {
             SkillId.FlameWake, SkillId.Contagion, SkillId.StormCall, SkillId.Bulwark, SkillId.Radiance, SkillId.GravityWell, SkillId.TimeSlip,
             SkillId.Decoy, SkillId.Overcharge, SkillId.VoidWalk, SkillId.Singularity, SkillId.PocketVoid,
         };
 
+        /// <summary>Skills that act at once and leave nothing running (Blink last: it moves the player; at level 5 it has a second charge).</summary>
         static readonly SkillId[] Instant = { SkillId.FrostNova, SkillId.Shockwave, SkillId.Blink };
 
         [TearDown]
         public void TearDown() => Time.timeScale = 1f;
+
+        // ───── The Bulwark's Shield (no scene) ─────
 
         [Test, CreateScene]
         public void ResolveDamage_BulwarkShieldLeft_HitsCountItsShareAndUseItFirst_ThenTheNormalShare()
@@ -104,7 +113,7 @@ namespace AnomalyArena
             skills.ClearWaveEffects();
             WorldMap.Active.ClearTemporaryObjects();
             board.SetShield(0f);
-
+            // An ordinary Shield as full as it gets, as from Earth hits.
             board.GainShield(player.maxHp);
             float ordinary = board.Shield;
             skills.Learn(SkillId.Bulwark);
@@ -126,6 +135,8 @@ namespace AnomalyArena
             Assert.That(afterTopUp, Is.EqualTo(shieldAtFive), "a Shield top-up from elsewhere never cuts it back to the cap");
             Assert.That(hitAtFive, Is.EqualTo(Mathf.Round(taken * bulwark.bulwarkShieldDirectFactor)), "level 5: a hit counts half on it");
         }
+
+        // ───── No second cast while the effect lasts ─────
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(60000)]
         public async Task TryCast_EffectStillLasting_RefusedSpendingNothingAndSlotNotReady_InstantSkillsCastAgain()
@@ -149,7 +160,7 @@ namespace AnomalyArena
                     game.player.DebugSetAimPoint(aim);
                     progression.GainEnergy(1000f);
                     Assume.That(skills.TryCast(0), Is.True, $"{id} is cast");
-
+                    // Its cooldown is over and the Energy is full: only its own effect may hold it back now.
                     skills.Slots[0].CooldownLeft = 0f;
                     progression.GainEnergy(1000f);
                     float energy = progression.Energy;
@@ -158,7 +169,7 @@ namespace AnomalyArena
 
                     bool again = skills.TryCast(0);
 
-                    if (lasting && (again || reason != ArenaText.Pair("Still active","Still active")))
+                    if (lasting && (again || reason != ArenaText.Pair("效果仍在持续", "Still active")))
                         wrong.Add($"{id}: cast again {again}, refused with \"{reason}\"");
                     if (lasting && (progression.Energy != energy || skills.Slots[0].CooldownLeft > 0f))
                         wrong.Add($"{id}: the refused press spent Energy or started the cooldown");
@@ -189,7 +200,7 @@ namespace AnomalyArena
             var wall = WorldMap.Active.temporaryWalls.First(w => w && w.gameObject.activeSelf);
             skills.Slots[0].CooldownLeft = 0f;
             bool whileStanding = skills.TryCast(0);
-
+            // TyrantTerrain.BreakBulwarks: a wall the charge runs into goes at once, as when its time is up.
             wall.gameObject.SetActive(false);
 
             bool afterBreak = skills.TryCast(0);
@@ -240,6 +251,8 @@ namespace AnomalyArena
             Assert.That(echoes, Is.EqualTo(1), "the echo casts Contagion once it has ended");
         }
 
+        // ───── The Singularity ─────
+
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task Singularity_UntilItsBlast_NoDamageNoKillNoKnockback_ThenHitsLandAgain()
         {
@@ -286,7 +299,7 @@ namespace AnomalyArena
             skills.ResetRun();
             Assume.That(skills.Learn(SkillId.Singularity), Is.True, "Singularity is learned");
             Assume.That(skills.TryCast(0), Is.True, "Singularity is cast");
-
+            // As a Strike rocket's blast throws its owner, and as an Arc Jump's unused jumps return through the player.
             player.Knockback(Vector3.back, 6f, KnockKind.Hit);
             board.Add(ElementKind.Lightning, 10f, player);
             var stateMeanwhile = player.State;
@@ -344,6 +357,8 @@ namespace AnomalyArena
             Assert.That(drift, Is.LessThan(b.nashPullSpeed * .2f));
         }
 
+        // ───── Texts ─────
+
         [Test, LoadScene(Scene), Category("Integration"), Timeout(30000)]
         public async Task SkillTexts_BothLanguages_SingularityNamesItsInvincibility_BulwarkItsWallLengthAndLevelFiveShield()
         {
@@ -372,16 +387,19 @@ namespace AnomalyArena
                 Object.Destroy(locale.gameObject);
             }
 
-            Assert.That(texts["zh-Hans"].singularity, Does.Contain("for 3 s").And.Contain("fully invincible").And.Contain("heavily slowed"), "Chinese Singularity");
+            Assert.That(texts["zh-Hans"].singularity, Does.Contain("化身奇点 3 秒").And.Contain("完全无敌").And.Contain("大幅减速"), "Chinese Singularity");
             Assert.That(texts["en"].singularity, Does.Contain("for 3 s").And.Contain("fully invincible").And.Contain("heavily slowed"), "English Singularity");
-            Assert.That(texts["zh-Hans"].bulwarkOne, Does.Contain("wall 5 long").And.Contain("Shield 20% of max HP"), "Chinese Bulwark level 1");
+            Assert.That(texts["zh-Hans"].bulwarkOne, Does.Contain("墙长 5 单位").And.Contain("最大生命的 20%"), "Chinese Bulwark level 1");
             Assert.That(texts["en"].bulwarkOne, Does.Contain("wall 5 long").And.Contain("Shield 20% of max HP"), "English Bulwark level 1");
-            Assert.That(texts["zh-Hans"].bulwarkFive, Does.Contain("wall 8 long").And.Contain("Shield 60% of max HP").And.Contain("count 50%"), "Chinese Bulwark level 5");
+            Assert.That(texts["zh-Hans"].bulwarkFive, Does.Contain("墙长 8 单位").And.Contain("最大生命的 60%").And.Contain("只算 50%"), "Chinese Bulwark level 5");
             Assert.That(texts["en"].bulwarkFive, Does.Contain("wall 8 long").And.Contain("Shield 60% of max HP").And.Contain("count 50%"), "English Bulwark level 5");
         }
 
+        // ───── Helpers ─────
+
         static int SlotOf(SkillLoadout skills, SkillId id) => Array.FindIndex(skills.Slots, s => !s.Empty && s.Id == id);
 
+        /// <summary>A status board on a bare object (no body, so no player cap) with default rules.</summary>
         static ElementStatus Board(out StatusRules rules)
         {
             rules = ScriptableObject.CreateInstance<StatusRules>();
@@ -390,6 +408,7 @@ namespace AnomalyArena
             return board;
         }
 
+        /// <summary>Shield a plain attack on the player costs (the player's hit protection must be off).</summary>
         static float ShieldSpentBy(PlayerController player, ElementStatus board, Combatant dealer, float damage)
         {
             float before = board.Shield;
@@ -397,6 +416,7 @@ namespace AnomalyArena
             return before - board.Shield;
         }
 
+        /// <summary>The Prophet's next move is this one, as soon as nothing is running (as NashProphetTest does).</summary>
         static void Force(Enemy hollow, int move)
         {
             hollow.ForceNextBossMove(move);
@@ -410,6 +430,7 @@ namespace AnomalyArena
             Physics.SyncTransforms();
         }
 
+        /// <summary>The enemy lab's void trial against the Nash Prophet, as NashProphetTest enters it.</summary>
         static async Task<(GameManager game, WorldMap world, Enemy hollow)> StartTrial()
         {
             await Awaitable.NextFrameAsync();

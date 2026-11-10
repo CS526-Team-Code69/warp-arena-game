@@ -15,7 +15,7 @@ namespace AnomalyArena
         public int formIndex = -1;
         public int skillIndex = -1;
         public int statIndex = -1;
-
+        // Infusion, Power, Tempo, Reach, Twist, Tame; not the UpgradeAxis bit value.
         public int axisIndex = -1;
     }
 }

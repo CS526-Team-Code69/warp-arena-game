@@ -4,9 +4,10 @@ namespace AnomalyArena
 {
     public enum HolePhase { Active, Collapsing, Portal, Gone }
 
+    /// <summary>Saved radial kill core and gravity footprint, with a separate feed count for each hole.</summary>
     public sealed class BlackHole : MonoBehaviour
     {
-        [Tooltip("Diameter of the circular black core in world grid units.")] public float size = 7f;
+        [Tooltip("圆形黑核的直径，单位：世界格。")] public float size = 7f;
         [Tooltip("Gravity border beyond each side, in cells.")] public float gravityCells = 2f;
         public float pullSpeed = 3f;
         public int feedsToOpen = 40;
@@ -21,9 +22,16 @@ namespace AnomalyArena
         float temporaryLife;
         public bool Temporary { get; private set; }
         Combatant protectedOwner;
-
+        /// <summary>Who opened this temporary hole (a Pocket Void's caster, or the Nash Prophet), null for a map hole or a trial portal
+        /// (WorldMap.SkillObjectStanding: no second Pocket Void while its hole is open).</summary>
         public Combatant Owner { get; private set; }
         public float TemporarySecondsLeft => temporaryLife;
+        /// <summary>Whether what this hole swallows counts toward its gate (the classic run). The V2 campaign's hole opens by its timed
+        /// damage check instead (since 2026-11-10), so the campaign turns this off: it still swallows, but counts nothing.</summary>
+        [System.NonSerialized] public bool countsFeeds = true;
+        /// <summary>The V2 campaign's text over its open hole (V2WorldLabels): the check's damage share and time while it runs, empty
+        /// otherwise. Null keeps the classic count.</summary>
+        [System.NonSerialized] public string campaignLabel;
         public Vector3 Centre => transform.position;
         public float KillRadiusNominal=>size*.5f;
         public float KillRadius=>KillRadiusNominal*(Phase==HolePhase.Collapsing?Mathf.Clamp01(collapseTimer/1.5f):1f);
@@ -64,15 +72,27 @@ namespace AnomalyArena
 
         public void Feed(int count, int wave)
         {
-            if (Temporary || Phase != HolePhase.Active || WorldMap.Active == null || !WorldMap.Active.CanFeed) return;
+            if (!countsFeeds || Temporary || Phase != HolePhase.Active || WorldMap.Active == null || !WorldMap.Active.CanFeed) return;
             Feeds = Mathf.Min(feedsToOpen, Feeds + count);
             if (Feeds < feedsToOpen) return;
+            Collapse(wave);
+        }
+
+        /// <summary>The V2 campaign's hole passed its timed damage check: it collapses into the hidden gate as a fed-full hole does.</summary>
+        public void OpenGate(int wave)
+        {
+            if (Temporary || Phase != HolePhase.Active) return;
+            Collapse(wave);
+        }
+
+        void Collapse(int wave)
+        {
             Phase = HolePhase.Collapsing;
             collapseTimer = 1.5f;
             OpenedWave = wave;
             WavesLeft = 3;
             RefreshLook();
-            WorldMap.Active.HoleChanged();
+            if (WorldMap.Active) WorldMap.Active.HoleChanged();
         }
 
         public void Tick(float dt)
@@ -105,6 +125,8 @@ namespace AnomalyArena
             if (WorldMap.Active) WorldMap.Active.HoleChanged();
         }
 
+        /// <summary>A portal of the void trial (WorldMap.Trial.cs): the open-portal look at this point. It never swallows, pulls or counts and
+        /// never runs out; WorldMap hides it when the trial ends.</summary>
         public void ShowAsTrialPortal(Vector3 at)
         {
             transform.position = at;

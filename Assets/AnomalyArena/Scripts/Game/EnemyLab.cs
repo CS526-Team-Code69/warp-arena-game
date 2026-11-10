@@ -6,7 +6,13 @@ using UnityEngine.UI;
 
 namespace AnomalyArena
 {
-
+    /// <summary>
+    /// Enemy lab (scene EnemyLab: the Chinese arena with WaveManager.labMode on): no waves, every enemy kind spawned by hand, so a
+    /// designer can edit an EnemyDefinition asset (V2/Data/Enemies) in the Inspector and feel the change at once. The panel on the
+    /// right lists the kinds, the switches and the live numbers of the selected kind. Keys: F5 spawn, F6 respawn (clear first),
+    /// F7 clear, F8 player invulnerable, F9 slow motion, F10 elite, PageUp / PageDown select the kind. The Hollow is fought only in the
+    /// void trial, so spawning it enters the trial on its platform; clearing kills it and ends the trial as a win.
+    /// </summary>
     public sealed class EnemyLab : MonoBehaviour
     {
         [Tooltip("Cells from the player, in the aim direction, where a spawned enemy appears.")] public float spawnDistance = 10f;
@@ -27,20 +33,20 @@ namespace AnomalyArena
 
         static string Name(EnemyKind kind) => kind switch
         {
-            EnemyKind.Grunt => ArenaText.Pair("Grunt","Grunt"),
-            EnemyKind.Brute => ArenaText.Pair("Brute","Brute"),
-            EnemyKind.Skitter => ArenaText.Pair("Skitter","Skitter"),
-            EnemyKind.Splitter => ArenaText.Pair("Splitter","Splitter"),
-            EnemyKind.Spitter => ArenaText.Pair("Spitter","Spitter"),
-            EnemyKind.Warden => ArenaText.Pair("Warden","Warden"),
-            EnemyKind.Chanter => ArenaText.Pair("Chanter","Chanter"),
-            EnemyKind.Rammer => ArenaText.Pair("Rammer","Rammer"),
-            EnemyKind.Bloater => ArenaText.Pair("Bloater","Bloater"),
-            EnemyKind.Spire => ArenaText.Pair("Spire","Spire"),
-            EnemyKind.Stomper => ArenaText.Pair("Stomper","Stomper"),
-            EnemyKind.Shade => ArenaText.Pair("Shade","Shade"),
-            EnemyKind.Hollow => ArenaText.Pair("Nash Prophet (void trial)","Nash Prophet (void trial)"),
-            EnemyKind.Tyrant => ArenaText.Pair("Tyrant","Tyrant"),
+            EnemyKind.Grunt => ArenaText.Pair("小怪", "Grunt"),
+            EnemyKind.Brute => ArenaText.Pair("重兵", "Brute"),
+            EnemyKind.Skitter => ArenaText.Pair("疾行虫", "Skitter"),
+            EnemyKind.Splitter => ArenaText.Pair("分裂者", "Splitter"),
+            EnemyKind.Spitter => ArenaText.Pair("喷吐者", "Spitter"),
+            EnemyKind.Warden => ArenaText.Pair("护卫者", "Warden"),
+            EnemyKind.Chanter => ArenaText.Pair("吟唱者", "Chanter"),
+            EnemyKind.Rammer => ArenaText.Pair("冲撞者", "Rammer"),
+            EnemyKind.Bloater => ArenaText.Pair("自爆者", "Bloater"),
+            EnemyKind.Spire => ArenaText.Pair("尖塔", "Spire"),
+            EnemyKind.Stomper => ArenaText.Pair("撼地者", "Stomper"),
+            EnemyKind.Shade => ArenaText.Pair("影虫", "Shade"),
+            EnemyKind.Hollow => ArenaText.Pair("纳什先知（虚空试炼）", "Nash Prophet (void trial)"),
+            EnemyKind.Tyrant => ArenaText.Pair("暴虐君王", "Tyrant"),
             _ => kind.ToString()
         };
 
@@ -50,7 +56,7 @@ namespace AnomalyArena
         Text readout, eliteLabel, rewardsLabel, invulnerableLabel, slowLabel;
         Canvas panelCanvas;
         readonly Dictionary<EnemyKind, Text> kindLabels = new();
-
+        // Localized text is empty until the string tables load, so every label is rewritten each frame from its source.
         readonly List<(Text label, System.Func<string> text)> liveLabels = new();
         Enemy last;
 
@@ -61,7 +67,8 @@ namespace AnomalyArena
             gm = GameManager.Instance;
             if (!gm || !gm.waves) return;
             gm.waves.labMode = true;
-
+            // Skip the title, the crate and the weapon card: commands are ignored until the menu input lock releases, so keep asking.
+            // The starting weapon is still the player's pick (1 / 2 / 3 on the loadout screen).
             if (gm.RunPhase == ArenaUiState.Title) gm.ExecuteUiCommand(ArenaUiCommand.Start);
             else if (gm.RunPhase == ArenaUiState.SupplyDrop) gm.ExecuteUiCommand(ArenaUiCommand.OpenSupply);
             else if (gm.RunPhase == ArenaUiState.WeaponIntro) gm.ExecuteUiCommand(ArenaUiCommand.DismissWeaponIntro);
@@ -90,9 +97,11 @@ namespace AnomalyArena
         void LateUpdate()
         {
             if (gm && hud && hud.waveLabel && gm.IsCombatActive)
-                hud.waveLabel.text = ArenaText.Pair("ENEMY LAB · NO WAVES","ENEMY LAB · NO WAVES");
+                hud.waveLabel.text = ArenaText.Pair("敌人实验室 · 没有波次", "ENEMY LAB · NO WAVES");
         }
 
+        /// <summary>One enemy of the selected kind, spawnDistance cells ahead of the player (or at a valid ring point when that spot is blocked).
+        /// The Hollow enters the void trial instead; nothing else spawns while the trial runs.</summary>
         public Enemy Spawn()
         {
             if (!gm || !gm.player || !gm.waves || !gm.IsCombatActive) return null;
@@ -133,7 +142,7 @@ namespace AnomalyArena
             canvasObject.transform.SetParent(transform, false);
             var canvas = canvasObject.GetComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.sortingOrder = 500;                                                                                
+            canvas.sortingOrder = 500; // above the HUD's edge arrows; hidden outside combat so card panels stay clear
             panelCanvas = canvas;
             var scaler = canvasObject.GetComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
@@ -142,7 +151,7 @@ namespace AnomalyArena
             var panel = new GameObject("Panel", typeof(RectTransform), typeof(Image), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter)).GetComponent<RectTransform>();
             panel.SetParent(canvasObject.transform, false);
             panel.anchorMin = panel.anchorMax = panel.pivot = new Vector2(1f, 1f);
-            panel.anchoredPosition = new Vector2(-12f, -64f);                           
+            panel.anchoredPosition = new Vector2(-12f, -64f); // below the HUD's top bar
             panel.sizeDelta = new Vector2(340f, 0f);
             panel.GetComponent<Image>().color = new Color(0f, 0f, 0f, .62f);
             var layout = panel.GetComponent<VerticalLayoutGroup>();
@@ -152,8 +161,8 @@ namespace AnomalyArena
             layout.childControlHeight = true;
             layout.childControlWidth = true;
             panel.GetComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-            Live(MakeLabel(panel, "", 20, FontStyle.Bold), () => ArenaText.Pair("ENEMY LAB","ENEMY LAB"));
-            Live(MakeLabel(panel, "", 13), () => ArenaText.Pair("F5 spawn · F6 respawn · F7 clear · PgUp / PgDn pick","F5 spawn · F6 respawn · F7 clear · PgUp / PgDn pick"));
+            Live(MakeLabel(panel, "", 20, FontStyle.Bold), () => ArenaText.Pair("敌人实验室", "ENEMY LAB"));
+            Live(MakeLabel(panel, "", 13), () => ArenaText.Pair("F5 生成 · F6 重生 · F7 清场 · PgUp / PgDn 选怪", "F5 spawn · F6 respawn · F7 clear · PgUp / PgDn pick"));
             foreach (var kind in Kinds)
             {
                 var chosen = kind;
@@ -163,8 +172,8 @@ namespace AnomalyArena
             rewardsLabel = MakeButton(panel, "", () => rewards = !rewards);
             invulnerableLabel = MakeButton(panel, "", () => invulnerable = !invulnerable);
             slowLabel = MakeButton(panel, "", () => slowMotion = !slowMotion);
-            Live(MakeButton(panel, "", () => Spawn()), () => ArenaText.Pair("Spawn one more (F5)","Spawn one more (F5)"));
-            Live(MakeButton(panel, "", Clear), () => ArenaText.Pair("Clear (F7)","Clear (F7)"));
+            Live(MakeButton(panel, "", () => Spawn()), () => ArenaText.Pair("再生成一只（F5）", "Spawn one more (F5)"));
+            Live(MakeButton(panel, "", Clear), () => ArenaText.Pair("清场（F7）", "Clear (F7)"));
             readout = MakeLabel(panel, "", 13);
         }
 
@@ -211,10 +220,10 @@ namespace AnomalyArena
             if (panelCanvas) panelCanvas.enabled = gm && gm.IsCombatActive;
             foreach (var (label, text) in liveLabels) if (label) label.text = text();
             foreach (var pair in kindLabels) pair.Value.color = pair.Key == selected ? new Color(1f, .85f, .35f) : Color.white;
-            if (eliteLabel) eliteLabel.text = (elite ? "■ " : "□ ") + ArenaText.Pair("Elite (F10) · affix ","Elite (F10) · affix ") + ArenaTerms.Element(affix);
-            if (rewardsLabel) rewardsLabel.text = (rewards ? "■ " : "□ ") + ArenaText.Pair("Experience and drops","Experience and drops");
-            if (invulnerableLabel) invulnerableLabel.text = (invulnerable ? "■ " : "□ ") + ArenaText.Pair("Player cannot die (F8)","Player cannot die (F8)");
-            if (slowLabel) slowLabel.text = (slowMotion ? "■ " : "□ ") + ArenaText.Pair("Slow motion (F9)","Slow motion (F9)");
+            if (eliteLabel) eliteLabel.text = (elite ? "■ " : "□ ") + ArenaText.Pair("精英（F10）· 词条 ", "Elite (F10) · affix ") + ArenaTerms.Element(affix);
+            if (rewardsLabel) rewardsLabel.text = (rewards ? "■ " : "□ ") + ArenaText.Pair("掉经验和掉落", "Experience and drops");
+            if (invulnerableLabel) invulnerableLabel.text = (invulnerable ? "■ " : "□ ") + ArenaText.Pair("玩家不会死（F8）", "Player cannot die (F8)");
+            if (slowLabel) slowLabel.text = (slowMotion ? "■ " : "□ ") + ArenaText.Pair("慢动作（F9）", "Slow motion (F9)");
             if (readout) readout.text = Readout();
         }
 
@@ -227,24 +236,30 @@ namespace AnomalyArena
             if (data)
             {
                 float walk = data.speed * gm.waves.EnemySpeedFactor, rush = gm.waves.MovementSpeedScale;
-                text.AppendLine(ArenaText.Pair(                    $"HP {data.hp:0.#} · speed {data.speed:0.##} (actual {walk:0.#}) · radius {data.radius:0.##}",                    $"HP {data.hp:0.#} · speed {data.speed:0.##} (actual {walk:0.#}) · radius {data.radius:0.##}"));
-                text.AppendLine(ArenaText.Pair(                    $"damage {data.damage:0.#} · wind-up {data.windup:0.##} s · interval {data.interval:0.##} s",                    $"damage {data.damage:0.#} · wind-up {data.windup:0.##} s · interval {data.interval:0.##} s"));
+                text.AppendLine(ArenaText.Pair($"生命 {data.hp:0.#} · 移速 {data.speed:0.##}（实际 {walk:0.#}）· 半径 {data.radius:0.##}",
+                    $"HP {data.hp:0.#} · speed {data.speed:0.##} (actual {walk:0.#}) · radius {data.radius:0.##}"));
+                text.AppendLine(ArenaText.Pair($"伤害 {data.damage:0.#} · 蓄势 {data.windup:0.##} 秒 · 间隔 {data.interval:0.##} 秒",
+                    $"damage {data.damage:0.#} · wind-up {data.windup:0.##} s · interval {data.interval:0.##} s"));
                 switch (selected)
                 {
                     case EnemyKind.Spitter:
-                        text.AppendLine(ArenaText.Pair(                            $"keeps {data.rangedNear:0.#}–{data.rangedFar:0.#} away · spit speed {data.projectileSpeed:0.#} cells/s",                            $"keeps {data.rangedNear:0.#}–{data.rangedFar:0.#} away · spit speed {data.projectileSpeed:0.#} cells/s"));
+                        text.AppendLine(ArenaText.Pair($"保持距离 {data.rangedNear:0.#}–{data.rangedFar:0.#} · 弹速 {data.projectileSpeed:0.#} 格/秒",
+                            $"keeps {data.rangedNear:0.#}–{data.rangedFar:0.#} away · spit speed {data.projectileSpeed:0.#} cells/s"));
                         break;
                     case EnemyKind.Rammer:
-                        text.AppendLine(ArenaText.Pair(                            $"trigger {data.triggerDistance:0.#} · charge {data.chargeDistance:0.#} cells at {data.chargeSpeed:0.#} (actual {data.chargeSpeed * rush:0.#} cells/s) · stun {data.chargeStun:0.##} s",                            $"trigger {data.triggerDistance:0.#} · charge {data.chargeDistance:0.#} cells at {data.chargeSpeed:0.#} (actual {data.chargeSpeed * rush:0.#} cells/s) · stun {data.chargeStun:0.##} s"));
+                        text.AppendLine(ArenaText.Pair($"触发距离 {data.triggerDistance:0.#} · 冲锋 {data.chargeDistance:0.#} 格 · 速度 {data.chargeSpeed:0.#}（实际 {data.chargeSpeed * rush:0.#} 格/秒）· 眩晕 {data.chargeStun:0.##} 秒",
+                            $"trigger {data.triggerDistance:0.#} · charge {data.chargeDistance:0.#} cells at {data.chargeSpeed:0.#} (actual {data.chargeSpeed * rush:0.#} cells/s) · stun {data.chargeStun:0.##} s"));
                         break;
                     case EnemyKind.Spire:
-                        text.AppendLine(ArenaText.Pair(                            $"sentry range {data.pulseRadius:0.#} · light wave {data.waveSpeed:0.#} cells/s · laser delay {data.laserDelay:0.##} s · length {data.laserLength:0.#} · half width {data.laserHalfWidth:0.##}",                            $"sentry range {data.pulseRadius:0.#} · light wave {data.waveSpeed:0.#} cells/s · laser delay {data.laserDelay:0.##} s · length {data.laserLength:0.#} · half width {data.laserHalfWidth:0.##}"));
+                        text.AppendLine(ArenaText.Pair($"哨戒范围 {data.pulseRadius:0.#} · 光波 {data.waveSpeed:0.#} 格/秒 · 激光延迟 {data.laserDelay:0.##} 秒 · 长 {data.laserLength:0.#} · 半宽 {data.laserHalfWidth:0.##}",
+                            $"sentry range {data.pulseRadius:0.#} · light wave {data.waveSpeed:0.#} cells/s · laser delay {data.laserDelay:0.##} s · length {data.laserLength:0.#} · half width {data.laserHalfWidth:0.##}"));
                         break;
                     case EnemyKind.Stomper:
-                        text.AppendLine(ArenaText.Pair(                            $"trigger {data.triggerDistance:0.#} · cone length {data.pulseRadius:0.#} · width {data.coneAngle:0}°",                            $"trigger {data.triggerDistance:0.#} · cone length {data.pulseRadius:0.#} · width {data.coneAngle:0}°"));
+                        text.AppendLine(ArenaText.Pair($"触发距离 {data.triggerDistance:0.#} · 扇形长 {data.pulseRadius:0.#} · 角度 {data.coneAngle:0}°",
+                            $"trigger {data.triggerDistance:0.#} · cone length {data.pulseRadius:0.#} · width {data.coneAngle:0}°"));
                         break;
                     case EnemyKind.Bloater:
-                        text.AppendLine(ArenaText.Pair($"blast radius {data.pulseRadius:0.#}",$"blast radius {data.pulseRadius:0.#}"));
+                        text.AppendLine(ArenaText.Pair($"爆炸半径 {data.pulseRadius:0.#}", $"blast radius {data.pulseRadius:0.#}"));
                         break;
                 }
             }
@@ -259,17 +274,18 @@ namespace AnomalyArena
                     float d = Query.Flat(enemy.Position - gm.player.Position).sqrMagnitude;
                     if (d < best) { best = d; nearest = enemy; }
                 }
-            text.AppendLine(ArenaText.Pair($"{living} alive",$"{living} alive"));
+            text.AppendLine(ArenaText.Pair($"场上 {living} 只", $"{living} alive"));
             if (nearest)
             {
-                string state = nearest.Charging ? ArenaText.Pair("charging","charging")
-                    : nearest.WindingUp ? ArenaText.Pair($"winding up {nearest.WindupSecondsRemaining:0.00} s",$"winding up {nearest.WindupSecondsRemaining:0.00} s")
-                    : nearest.CooldownRemaining > 0f ? ArenaText.Pair($"cooldown {nearest.CooldownRemaining:0.00} s",$"cooldown {nearest.CooldownRemaining:0.00} s")
-                    : ArenaText.Pair("approaching","approaching");
+                string state = nearest.Charging ? ArenaText.Pair("冲锋中", "charging")
+                    : nearest.WindingUp ? ArenaText.Pair($"蓄力中 {nearest.WindupSecondsRemaining:0.00} 秒", $"winding up {nearest.WindupSecondsRemaining:0.00} s")
+                    : nearest.CooldownRemaining > 0f ? ArenaText.Pair($"冷却 {nearest.CooldownRemaining:0.00} 秒", $"cooldown {nearest.CooldownRemaining:0.00} s")
+                    : ArenaText.Pair("接近中", "approaching");
                 string kind = Name(nearest.definition ? nearest.definition.kind : selected);
-                text.AppendLine(ArenaText.Pair($"nearest: {kind} · {Mathf.Sqrt(best):0.0} away · {state}",$"nearest: {kind} · {Mathf.Sqrt(best):0.0} away · {state}"));
+                text.AppendLine(ArenaText.Pair($"最近一只：{kind} · 距离 {Mathf.Sqrt(best):0.0} · {state}", $"nearest: {kind} · {Mathf.Sqrt(best):0.0} away · {state}"));
             }
-            text.AppendLine(ArenaText.Pair(                "Tune: select the asset under V2/Data/Enemies, edit it, press F6 to respawn.",                "Tune: select the asset under V2/Data/Enemies, edit it, press F6 to respawn."));
+            text.AppendLine(ArenaText.Pair("改数值：在 Project 里选 V2/Data/Enemies 下的资产，改完按 F6 重生。",
+                "Tune: select the asset under V2/Data/Enemies, edit it, press F6 to respawn."));
             return text.ToString();
         }
     }

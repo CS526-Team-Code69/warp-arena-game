@@ -6,14 +6,18 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>A charge is heard from the frame it starts, its pitch follows the charge, a release or a cancel cuts it in the frame it
+    /// happens, full rings once and the shot weighs what the charge held; a spray and the Gatling's barrels last exactly as long as the trigger; element hits are held
+    /// down so they cannot cover the guns. These check the state and the voices, not how anything sounds: nobody here can listen.</summary>
     [TestFixture]
     public class V5WeaponAudioTest
     {
-        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity";
+        const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
 
         [TearDown]
         public void RestoreClock() => Time.timeScale = 1f;
+
+        // ───── The charge ─────
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task ChargedRifle_PressStartsTheLoop_ItsPitchFollowsTheCharge_ReleaseCutsItInTheSameFrame()
@@ -56,7 +60,7 @@ namespace AnomalyArena
             int notYet = audio.Plays(V5Sfx.ChargeFull) - before;
             rifle.charge = 1f;
             audio.Tick();
-
+            // Longer than the clip's own shortest gap, so only the logic can keep it to one.
             await RealSeconds(.25f);
             audio.Tick();
             int whileHeld = audio.Plays(V5Sfx.ChargeFull) - before;
@@ -133,6 +137,8 @@ namespace AnomalyArena
             Assert.That(audio.Plays(V5Sfx.ChargeFull), Is.EqualTo(full), "it never holds at full, so it does not ring");
         }
 
+        // ───── The trigger ─────
+
         [TestCase(WeaponForm.Flamethrower, 0, V5Sfx.LoopFlame)]
         [TestCase(WeaponForm.CryoCannon, 1, V5Sfx.LoopBlizzard)]
         [TestCase(WeaponForm.Minigun, 0, V5Sfx.LoopMinigun)]
@@ -178,6 +184,8 @@ namespace AnomalyArena
             Assert.That(audio.Plays(V5Sfx.MinigunSpindown), Is.EqualTo(spindowns + 1), "the release runs the barrels down");
         }
 
+        // ───── Reloads and the empty click ─────
+
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task ReverseShot_EmptyClip_ReloadIsHeard_PressingFireClicks_TheEndIsHeard()
         {
@@ -199,6 +207,8 @@ namespace AnomalyArena
             Assert.That(clicked, Is.EqualTo(1), "pressing fire with an empty clip clicks");
             Assert.That(audio.Plays(V5Sfx.ReloadDone), Is.EqualTo(done + 1), "the end of the reload is heard");
         }
+
+        // ───── The elements ─────
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task ElementHit_AThrongOfHits_IsHeldDown_ATrickleIsNotAHit()
@@ -244,6 +254,8 @@ namespace AnomalyArena
             }
         }
 
+        // ───── The files ─────
+
         [Test, LoadScene(Scene), Category("Integration"), Timeout(40000)]
         public async Task EveryEntry_HasItsClip_AndABlowStartsAtOnce()
         {
@@ -254,7 +266,7 @@ namespace AnomalyArena
                 var clip = audio.ClipOf(sfx);
                 Assert.That(clip, Is.Not.Null, sfx + " has its file");
                 Assert.That(clip.channels, Is.EqualTo(1), sfx + " is mono");
-
+                // Two wind-ups swell up from nothing on purpose; the loops have no start.
                 if (sfx is V5Sfx.EnergyRise or V5Sfx.ScepterRaise || sfx.ToString().StartsWith("Loop")) continue;
                 Assert.That(StartMilliseconds(clip), Is.LessThanOrEqualTo(10f), sfx + " reaches a tenth of its peak within 10 ms");
             }
@@ -275,6 +287,8 @@ namespace AnomalyArena
             Assert.That(Impact(), Is.EqualTo("bank-weapon-impact"), "a weapon's impact");
             Assert.That(Music(), Is.EqualTo("combat-music"), "the music stays the saved clip");
         }
+
+        // ───── Helpers ─────
 
         static float[] Samples(AudioClip clip)
         {

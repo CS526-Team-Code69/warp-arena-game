@@ -3,7 +3,10 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>Ground marks of the Nash Prophet's 2026-10-25 moves, flat line renderers like V2BossGroundMarks so no scene objects are
+    /// needed: each void pillar's circle filling from its rim, then the standing pillar as a bright disc under a beam; the gravity pull as a
+    /// tether whose dashes run from the player into the Prophet; and, while a summon keeps it invulnerable, a ward ring round it with a line
+    /// to every summon the player can see (a cloaked Shade stays hidden). WorldMap adds it to the Prophet when a trial starts.</summary>
     public sealed class V2ProphetTrialMarks : MonoBehaviour
     {
         [Tooltip("Rim of a void pillar's warning circle, at full size from the start.")]
@@ -26,7 +29,7 @@ namespace AnomalyArena
         [Min(1f), Tooltip("Width of the ward ring while it flashes, as a multiple of the line width.")] public float wardFlashWidth = 3f;
         [Min(.01f), Tooltip("Width of rims, tether dashes and ward lines, cells.")] public float lineWidth = .14f;
         const int Segments = 72;
-
+        // Heights above the ground: fills under rims, the ward and the tether above both, so nothing flickers where they cross.
         const float FillHeight = .05f, RimHeight = .055f, LineHeight = .065f;
 
         Enemy enemy;
@@ -55,6 +58,7 @@ namespace AnomalyArena
             if (wardRing) wardRing.enabled = false;
         }
 
+        /// <summary>The sprite material the enemy's own warning uses: it takes vertex colours (as V2BossGroundMarks does).</summary>
         void FindMaterial()
         {
             var telegraph = GetComponent<V2EnemyTelegraphPresentation>();
@@ -62,7 +66,7 @@ namespace AnomalyArena
             if (source == null) return;
             material = source.sharedMaterial;
             sortingLayer = source.sortingLayerID;
-            sortingOrder = source.sortingOrder - 1;                             
+            sortingOrder = source.sortingOrder - 1; // under the attack warnings
         }
 
         void DrawPillars(bool show)
@@ -88,14 +92,14 @@ namespace AnomalyArena
                 Circle(rims[i], pillar.centre, pillar.radius, RimHeight);
                 rims[i].widthMultiplier = lineWidth;
                 rims[i].startColor = rims[i].endColor = pillarRimColor;
-
+                // While it warns, a band hugging the rim as wide as the filled part; standing, the whole disc.
                 float band = Mathf.Max(.02f, pillar.radius * pillar.Warning01);
                 Circle(fills[i], pillar.centre, pillar.radius - band * .5f, FillHeight);
                 fills[i].widthMultiplier = band;
                 fills[i].startColor = fills[i].endColor = standing ? pillarColor : pillarFillColor;
                 if (V5Vfx.On)
                 {
-
+                    // The V5 art: light instead of flat paint, and a real column rising from the disc.
                     fills[i].sharedMaterial = V5Vfx.I.TrailMaterial;
                     beams[i].sharedMaterial = V5Vfx.I.TrailMaterial;
                     fills[i].startColor = fills[i].endColor = standing ? new Color(.42f, .16f, .85f, .55f) : new Color(.3f, .08f, .55f, .4f);
@@ -108,7 +112,7 @@ namespace AnomalyArena
                 var beam = beams[i];
                 beam.SetPosition(0, new Vector3(pillar.centre.x, FillHeight, pillar.centre.z));
                 beam.SetPosition(1, new Vector3(pillar.centre.x, pillarBeamHeight, pillar.centre.z));
-                beam.widthMultiplier = pillar.radius * 2f;                         
+                beam.widthMultiplier = pillar.radius * 2f; // as wide as the pillar
                 beam.startColor = pillarBeamColor;
                 beam.endColor = new Color(pillarBeamColor.r, pillarBeamColor.g, pillarBeamColor.b, 0f);
                 if (V5Vfx.On)
@@ -125,7 +129,7 @@ namespace AnomalyArena
             Vector3 from = player ? Query.Flat(player.Position) : Vector3.zero, along = show ? Query.Flat(enemy.Position) - from : Vector3.zero;
             float length = along.magnitude - (show ? enemy.Radius : 0f);
             bool on = show && enemy.GravityPulling && player && player.IsAlive && length > 0f;
-
+            // Lines are only made once the material is known (show), so none is left without it.
             if (on) while (dashes.Count < pullDashes) dashes.Add(Make("GravityPullDash (" + (dashes.Count + 1) + ")", 2, false, true));
             Vector3 direction = on ? along.normalized : Vector3.zero;
             float spacing = on ? length / pullDashes : 0f;
@@ -133,7 +137,7 @@ namespace AnomalyArena
             for (int i = 0; i < dashes.Count; i++)
             {
                 var dash = dashes[i];
-
+                // Each dash covers half of its slot and the slots run toward the Prophet, so the tether reads as drawn in.
                 float start = i * spacing + shift;
                 dash.enabled = on && i < pullDashes && start < length;
                 if (!dash.enabled) continue;
@@ -184,6 +188,7 @@ namespace AnomalyArena
             for (int i = lines; i < wardLines.Count; i++) wardLines[i].enabled = false;
         }
 
+        /// <param name="flat">Lies on the ground; otherwise the line turns toward the camera (the pillar beam).</param>
         LineRenderer Make(string name, int points, bool loop, bool flat)
         {
             var go = new GameObject(name);
@@ -215,6 +220,7 @@ namespace AnomalyArena
             Flatten(line);
         }
 
+        /// <summary>The body turns every frame; keep each ribbon facing straight up.</summary>
         static void Flatten(LineRenderer line) => line.transform.rotation = Quaternion.LookRotation(Vector3.up, Vector3.forward);
     }
 }

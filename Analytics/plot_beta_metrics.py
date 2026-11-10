@@ -12,6 +12,9 @@ Writes up to three PNGs into --out-dir:
 demo-*.csv in the same columns as the sheets, and charts it. Use it to preview the charts.
 
 Needs matplotlib for the charts. Parsing and aggregation use only the standard library.
+
+Damage rows of the story mode (mode "story", the V2 day campaign) are left out; a CSV without the mode column
+is all open mode. upgrade_pick and supply_pick rows come from the open mode only.
 """
 
 import argparse
@@ -99,6 +102,11 @@ def keep(row, include_test=False):
     return include_test or row.get("edition", "").lower() != "test"
 
 
+def is_story(row):
+    """A row the story mode sent (mode "story"); an empty or missing mode is the open mode."""
+    return row.get("mode", "").strip().lower() == "story"
+
+
 # ---------------------------------------------------------------- aggregation
 
 def card_kind(card_id):
@@ -168,9 +176,12 @@ def base_kind(source):
 
 
 def aggregate_damage(rows, include_test=False):
-    agg = {"total": 0.0, "sources": {}, "dot": {}, "by_bucket": {b: {} for b in BUCKETS}, "runs": set()}
+    agg = {"total": 0.0, "sources": {}, "dot": {}, "by_bucket": {b: {} for b in BUCKETS}, "runs": set(), "story_rows": 0}
     for row in rows:
         if not keep(row, include_test) or row.get("event") != "wave_damage":
+            continue
+        if is_story(row):
+            agg["story_rows"] += 1
             continue
         source = row.get("source") or "other"
         pct = _num(row.get("damage_pct"), 0.0)
@@ -245,6 +256,8 @@ def format_damage(agg):
              "  %-24s %9s %8s %10s" % ("Source", "% max HP", "Share", "Burn/poi.")]
     for source, pct in sorted(agg["sources"].items(), key=lambda kv: (-kv[1], kv[0])):
         lines.append("  %-24s %9.0f %7.1f%% %10.0f" % (label_of(source), pct, _pct(pct, agg["total"]), agg["dot"].get(source, 0.0)))
+    if agg.get("story_rows"):
+        lines.append("  Story-mode rows left out: %d" % agg["story_rows"])
     return "\n".join(lines)
 
 

@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-
+    /// <summary>Saved short-sound voices and explicit event bank. No runtime AudioSource or clip construction.</summary>
     public class V2Audio : MonoBehaviour
     {
         public static V2Audio Instance { get; private set; }
@@ -12,13 +12,13 @@ namespace AnomalyArena
         [Header("Saved short SFX bank")]
         public ArenaAudioClip[] clips;
         public AudioSource[] weaponVoices, uiVoices;
-        [Tooltip("Dedicated saved warning voice, protected from continuous weapon audio.")] public AudioSource[] warningVoices;
-        [Min(1f), Tooltip("World sounds beyond this player distance are silent.")] public float worldAudibleRange = 24f;
-        [Range(0f, 1f), Tooltip("Master gain for short weapon sounds; the original three channels retain their gains.")] public float weaponGain = .6f;
-        [Range(0f, 1f), Tooltip("Master gain for short UI sounds.")] public float uiGain = .6f;
-        [Range(0f, .15f), Tooltip("Small pitch variation per playback; independent from gameplay randomness.")] public float pitchVariation = .035f;
-        [Tooltip("Shared minimum interval for hover and focus sounds.")] public float uiFocusMinInterval = .06f;
-        [Tooltip("Fade-out at the end of a short playback window to avoid abrupt cuts.")] public float windowFadeOut = .025f;
+        [Tooltip("独立保存的危险预警声道，避免被连续枪声挤掉。")] public AudioSource[] warningVoices;
+        [Min(1f), Tooltip("世界事件离玩家超过此距离不发声。")] public float worldAudibleRange = 24f;
+        [Range(0f, 1f), Tooltip("短武器音总增益；原三条来源声道保留各自音量。")] public float weaponGain = .6f;
+        [Range(0f, 1f), Tooltip("UI短音总增益。")] public float uiGain = .6f;
+        [Range(0f, .15f), Tooltip("播放时的轻微音调变化，不消耗玩法随机数。")] public float pitchVariation = .035f;
+        [Tooltip("Hover与focus短音的共享最小间隔。")] public float uiFocusMinInterval = .06f;
+        [Tooltip("短播放窗口结束时的淡出，避免硬切截断。")] public float windowFadeOut = .025f;
         float nextShot, nextVoid;
         float nextFocus;
         float[] nextCue;
@@ -41,7 +41,7 @@ namespace AnomalyArena
             for (int i = 0; i < weaponAssignments.Length; i++) if (weaponVoices[i]) weaponBaseVolumes[i] = weaponVoices[i].volume;
             for (int i = 0; i < uiAssignments.Length; i++) if (uiVoices[i]) uiBaseVolumes[i] = uiVoices[i].volume;
             for (int i = 0; i < warningAssignments.Length; i++) if (warningVoices[i]) warningBaseVolumes[i] = warningVoices[i].volume;
-
+            // The 2026-10-30 sound rework lives beside this bank and needs nothing saved in the scene (V5WeaponAudio).
             if (!GetComponent<V5WeaponAudio>()) gameObject.AddComponent<V5WeaponAudio>();
         }
         void Update()
@@ -73,6 +73,7 @@ namespace AnomalyArena
             TryPlay((ArenaSoundCue)(int)cue, true, 1f, cue is ArenaUiSound.Confirm or ArenaUiSound.Cancel);
         }
 
+        /// <summary>The sting layered on a taken card: higher and fuller for rarer cards, lower for Void.</summary>
         public void PlayCardPick(CardRarity rarity)
         {
             float pitch = rarity switch
@@ -83,6 +84,7 @@ namespace AnomalyArena
             if (ArenaRarity.Rank(rarity) >= ArenaRarity.Rank(CardRarity.Exceptional)) TryPlay(ArenaSoundCue.PickupXp, true, pitch * 1.25f, true);
         }
 
+        /// <summary>Called at actual world-event anchors, never by a visual flash or a per-frame timer.</summary>
         public void PlayWorld(ArenaSoundCue cue, Vector3 at)
         {
             if (combatPaused) return;
@@ -147,7 +149,7 @@ namespace AnomalyArena
                 else if (assignments[i] == cue) concurrent++;
             }
             if (concurrent >= Mathf.Max(1, entry.maxConcurrent)) return false;
-
+            // A confirm may replace a decorative UI voice; weapon sounds never create extra voices.
             if (free < 0 && mayReplaceUi)
                 for (int i = 0; i < voices.Length; i++)
                     if (voices[i] && assignments[i] is ArenaSoundCue.UiHover or ArenaSoundCue.UiSelect) { voices[i].Stop(); free = i; break; }
@@ -183,7 +185,7 @@ namespace AnomalyArena
             if (shotSource) shotSource.Pause(); if (voidSource) voidSource.Pause(); if (waveSource) waveSource.Pause();
             if (weaponVoices != null) foreach (var voice in weaponVoices) if (voice) voice.Pause();
             if (warningVoices != null) foreach (var voice in warningVoices) if (voice) voice.Pause();
-
+            // Saved UI voices remain available for Resume/Restart while the battlefield is paused.
         }
         public void ResumeAll()
         {

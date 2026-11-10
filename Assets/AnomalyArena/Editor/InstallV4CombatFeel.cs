@@ -10,13 +10,16 @@ using UnityEngine.SceneManagement;
 
 namespace AnomalyArena.EditorTools
 {
-
+    /// <summary>
+    /// V4 combat feel: imports the V4 VFX textures, writes the V4 numbers into the saved data assets and
+    /// saves the black-hole layers, hit-spark textures and the status/aura quad pool into each V2 scene.
+    /// Safe to run again: existing V4 objects are reused, never duplicated.
+    /// </summary>
     public static class InstallV4CombatFeel
     {
         static readonly string[] Scenes =
         {
-            "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity",
-            "Assets/AnomalyArena/Scenes/ArenaV2_EN.unity"
+            "Assets/AnomalyArena/Scenes/ArenaV2.unity"
         };
 
         const string TextureFolder = "Assets/AnomalyArena/Art/V4/VFX/Textures";
@@ -162,7 +165,8 @@ namespace AnomalyArena.EditorTools
 
             var bulwark = Load<SkillDefinition>(bulwarkPath);
             Undo.RecordObject(bulwark, "V4 Bulwark shield share");
-
+            // The shield share per level stays as saved in the asset (five levels since 2026-10-26); writing the old three V4 values
+            // here would leave levels 4-5 repeating level 3.
             bulwark.shieldScalesWithMaxHp = true;
             EditorUtility.SetDirty(bulwark);
             receipt.bulwarkShieldShare = bulwark.strength;
@@ -280,6 +284,7 @@ namespace AnomalyArena.EditorTools
             return entry;
         }
 
+        /// <summary>Dark outline on the offscreen edge notices so the purple black-hole marker reads on sand and on dark ground.</summary>
         static int EnsureEdgeOutlines(GameObject[] roots)
         {
             int count = 0;
@@ -301,6 +306,7 @@ namespace AnomalyArena.EditorTools
             return count;
         }
 
+        /// <summary>The armory became a pick-one-of-three: clone the last saved card and reuse the draft screen's three-column layout.</summary>
         static int EnsureThreeArmoryChoices(GameObject[] roots)
         {
             var screens = roots.SelectMany(root => root.GetComponentsInChildren<V2UiScreen>(true)).ToArray();
