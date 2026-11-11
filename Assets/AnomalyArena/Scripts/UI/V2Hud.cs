@@ -101,6 +101,7 @@ namespace AnomalyArena
             AddTitleLanguageOption();
             AddTitleSettingsButton();
             KeepScreensOverTheRun();
+            gameObject.AddComponent<ArenaCodex>().Initialize(this);
             PlaceControlsTables();
             V2SlotFeedback.Add(handSlots, V2SlotFeedback.Kind.Hand);
             V2SlotFeedback.Add(autoSlots, V2SlotFeedback.Kind.Auto);
@@ -904,7 +905,7 @@ namespace AnomalyArena
         // The pause screen's table sits under the paused line; V5MenuSkin puts the buttons under PauseTableBottom.
         public const float PauseTableTop = 150f, PauseTableRow = 28f;
         public static float PauseTableBottom => PauseTableTop + ControlRows().Length * PauseTableRow;
-        public static readonly string[] PauseButtons = { "ResumeRun", "RestartRun", "HowToPlay", "QuitToTitle" };
+        public static readonly string[] PauseButtons = { "ResumeRun", "RestartRun", "HowToPlay", "Codex", "QuitToTitle" };
         V2ControlsTable pauseControls;
         UnityEngine.UI.Text tutorialLabel;
         bool tutorialPending;
@@ -943,8 +944,8 @@ namespace AnomalyArena
                 float left = 44f, top = PauseTableBottom + 24f;
                 foreach (var name in PauseButtons)
                 {
-                    if (content.Find(name) is RectTransform button) PlaceTopLeft(button, left, top, 237f, 65f);
-                    left += 255f;
+                    if (content.Find(name) is RectTransform button) PlaceTopLeft(button, left, top, 186f, 65f);
+                    left += 204f;
                 }
                 if (screen.summary) PlaceTopLeft(screen.summary.rectTransform, 44f, top + 80f, 1012f, 60f);
             }

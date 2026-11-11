@@ -131,7 +131,7 @@ namespace AnomalyArena
         {
             if(hand<0||hand>=Hand.Length)return null;
             float chance=form switch{WeaponForm.Rifle=>startingRifleVariantAChance,WeaponForm.Knife=>startingKnifeVariantAChance,WeaponForm.RocketLauncher=>startingRocketVariantAChance,_=>.5f};
-            var old=Hand[hand];Hand[hand]=CreateWeapon(form,UnityEngine.Random.value<Mathf.Clamp01(chance)?0:1,1);return old;
+            var old=Hand[hand];Hand[hand]=CreateWeapon(form,UnityEngine.Random.value<Mathf.Clamp01(chance)?0:1,1);if(form==WeaponForm.Pistol)ArenaCodexProgress.DiscoverWeapon(form);return old;
         }
         /// <summary>V2 day campaign (since 2026-11-10): an auto weapon of a chosen form put straight into one auto slot, as GiveToHand does
         /// for a hand (the base's study window sells weapons by form). Returns what it replaced.</summary>
@@ -340,7 +340,7 @@ namespace AnomalyArena
         /// <summary>The weapon's theoretical DPS, one hit's damage times hits a second (what its card shows: HitDamage / CycleSeconds).</summary>
         public float TheoreticalDps(RunWeapon w){float cycle=CycleSeconds(w);return cycle>0f?HitDamage(w)/cycle:0f;}
         public float CycleSeconds(RunWeapon w){var d=roster.Get(w.form);return d==null?0f:(w.variant==0?d.cooldownA:d.cooldownB)*CooldownScale(w);}
-        void Reveal(RunWeapon w){if(w.revealed)return;w.revealed=true;if(!w.IsAnomalous)return;PlayerPrefs.SetInt("anomaly."+(int)w.form+"."+w.variant,1);Revealed?.Invoke(w);}
+        void Reveal(RunWeapon w){if(w.revealed)return;w.revealed=true;ArenaCodexProgress.DiscoverWeapon(w.form);if(!w.IsAnomalous)return;PlayerPrefs.SetInt("anomaly."+(int)w.form+"."+w.variant,1);Revealed?.Invoke(w);}
         public void Tick(float dt)
         {
             float distance=Query.Flat(player.Position-lastPosition).magnitude;lastPosition=player.Position;
