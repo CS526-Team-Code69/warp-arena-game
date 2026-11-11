@@ -383,7 +383,8 @@ namespace AnomalyArena
 
         void SkinPaused(V2UiScreen screen, RectTransform content)
         {
-            const float w = 1040f, buttonW = 226f, buttonGap = 18f;
+            const float w = 1040f, buttonGap = 18f;
+            float buttonW = (w - 80f - buttonGap * (V2Hud.PauseButtons.Length - 1)) / V2Hud.PauseButtons.Length;
             float top = V2Hud.PauseTableBottom + 24f, h = top + 64f + 16f + 128f + 24f;
             var panel = MakePanel(screen.gameObject, content, new Vector2(w, h));
             panel.heightWithoutSummary = top + 64f + 40f;
@@ -396,7 +397,7 @@ namespace AnomalyArena
             // The paused line; V2Hud puts the controls table under it.
             Style(screen.body, 40f, 106f, w - 80f, 36f, 18, TextAnchor.MiddleCenter);
             if (screen.body) screen.body.color = SoftText;
-            float left = (w - V2Hud.PauseButtons.Length * (buttonW + buttonGap) + buttonGap) * .5f;
+            float left = 40f;
             foreach (var name in V2Hud.PauseButtons)
             {
                 if (content.Find(name) is RectTransform go && go.GetComponent<Button>() is { } button)

@@ -33,7 +33,7 @@ namespace AnomalyArena
 
         void ReadShownKeys(Keyboard keyboard)
         {
-            if (V2Tutorial.HoldsInput || ArenaSettingsPanel.HoldsInput) return;
+            if (V2Tutorial.HoldsInput || ArenaSettingsPanel.HoldsInput || hud && hud.v2Hud && hud.v2Hud.GetComponent<ArenaCodex>() is { IsOpen: true }) return;
             bool digitRead = false;
             foreach (var (key, code) in ShownKeys)
             {

@@ -190,6 +190,7 @@ namespace AnomalyArena
             if (place < 0) for (int i = 0; i < Slots.Length; i++) if (Slots[i].Empty) { place = i; break; }
             if (place < 0 || place >= Slots.Length) return false;
             Slots[place].Definition = definition; Slots[place].Level = definition.greaterVoid ? 1 : Mathf.Clamp(level, 1, MaxLevel); Slots[place].CooldownLeft = 0f;
+            ArenaCodexProgress.DiscoverSkill(id);
             if (id == SkillId.Blink) Array.Clear(blinkRecharge, 0, blinkRecharge.Length);
             progression?.UnlockEnergy(); OnChanged(); return true;
         }

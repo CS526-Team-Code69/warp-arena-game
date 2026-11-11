@@ -327,6 +327,7 @@ namespace AnomalyArena
             }
 
             definition = data;
+            ArenaCodexProgress.DiscoverEnemy(data.kind);
             Elite = elite;
             Mini = mini;
             Affix = data.canAffix ? affix : ElementKind.None;
