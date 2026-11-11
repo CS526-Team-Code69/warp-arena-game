@@ -66,8 +66,26 @@ namespace AnomalyArena
         /// <summary>PlayerController.InputGate while a campaign runs: on Day 0 (its walk and its night) only what the tutorial lets through.</summary>
         bool TutorialLets(PlayerAct act)
         {
-            if (!this || !Running || Active != this || Day != 0 || Stage is not (CampaignStage.Tutorial or CampaignStage.Night)) return true;
-            return SpotlightTutorial.Lets(act, tutForced ? tutStep : TutorialStep.None, tutLastDone);
+            if (!this ||
+                !Running ||
+                Active != this ||
+                Day != 0 ||
+                Stage is not (CampaignStage.Tutorial or CampaignStage.Night))
+            {
+                return true;
+            }
+
+            // This step now teaches secondary fire.
+            if (tutForced && tutStep == TutorialStep.Switch)
+            {
+                if (act == PlayerAct.Fire) return true;
+                if (act == PlayerAct.Switch) return false;
+            }
+
+            return SpotlightTutorial.Lets(
+                act,
+                tutForced ? tutStep : TutorialStep.None,
+                tutLastDone);
         }
 
         Vector3 PlayerPoint() => gm && gm.player ? gm.player.Position : BaseCentre;
@@ -124,7 +142,7 @@ namespace AnomalyArena
             return Dot((works & PlayerAct.Move) != 0 ? ArenaText.Pair("WASD 移动", "WASD move") : "",
                 (works & PlayerAct.Fire) != 0 ? ArenaText.Pair("左键开火", "Left click fire") : "",
                 (works & PlayerAct.Sprint) != 0 ? ArenaText.Pair("Shift 冲刺", "Shift sprint") : "",
-                (works & PlayerAct.Switch) != 0 && switchTaught ? ArenaText.Pair("右键换手", "Right click switch hands") : "");
+                (works & PlayerAct.Switch) != 0 && switchTaught ? ArenaText.Pair("右键换手", "Right click fire") : "");
         }
 
         static string MouseKey => ArenaText.Pair("左键", "LMB");
@@ -294,8 +312,33 @@ namespace AnomalyArena
                     if (tutForced && pickups.Count == 0) PassStep(BeginHomeward);
                     break;
                 case TutorialStep.Switch:
-                    if (tutForced && gm.runWeapons && gm.runWeapons.ActiveIndex != switchFrom) PassStep(ResumeHomeward);
+                {
+                if (!tutForced) break;
+
+                var weapons = gm.runWeapons;
+
+                if (!weapons ||
+                    weapons.Hand == null ||
+                    weapons.Hand.Length < 2 ||
+                    weapons.Hand[1] == null)
+                {
                     break;
+                }
+
+                var secondary = weapons.Hand[1];
+                float secondaryCooldown = secondary.cooldown;
+
+                bool fired = SpotlightTutorial.Fired(
+                    tutCooldown,
+                    secondaryCooldown);
+
+                tutCooldown = secondaryCooldown;
+
+                if (fired)
+                    PassStep(ResumeHomeward);
+
+                break;
+            }
                 case TutorialStep.SecondCrate:
                     if (TickHomeward(dt, pp)) return;
                     break;
@@ -418,17 +461,46 @@ namespace AnomalyArena
         void MaybeTeachSwitch()
         {
             if (switchTaught || cratesOpened < 2 || !Running) return;
+
             var weapons = gm ? gm.runWeapons : null;
-            if (!weapons || weapons.Hand.Length < 2 || weapons.Hand[0] == null || weapons.Hand[1] == null) return;
+
+            if (!weapons ||
+                weapons.Hand == null ||
+                weapons.Hand.Length < 2 ||
+                weapons.Hand[0] == null ||
+                weapons.Hand[1] == null)
+            {
+                return;
+            }
+
             switchTaught = true;
-            switchFrom = weapons.ActiveIndex;
-            string key = ArenaText.Pair("右键", "RMB"), phrase = ArenaText.Pair("换到另一只手的武器", "Switch to your other weapon");
+            // Record weapon 2's cooldown before teaching its use.
+            tutCooldown = weapons.Hand[1].cooldown;
+
+            string key = ArenaText.Pair("右键", "RMB");
+            string phrase = ArenaText.Pair(
+                "使用副武器，无需切换",
+                "Use your secondary weapon");
+
             if (Day == 0 && Stage == CampaignStage.Tutorial)
             {
-                Objective(ArenaText.Pair("换到另一只手上的武器", "Switch to the weapon in your other hand"), null);
-                Teach(TutorialStep.Switch, PlayerPoint, 3.2f, key, phrase);
+                Objective(
+                    ArenaText.Pair(
+                        "你获得了副武器！点击鼠标右键使用。",
+                        "You picked up a secondary weapon! Right-click to fire."),
+                    null);
+
+                Teach(
+                    TutorialStep.Switch,
+                    PlayerPoint,
+                    3.2f,
+                    key,
+                    phrase);
             }
-            else StartLateHint(LateHint.Switch, key, phrase);
+            else
+            {
+                StartLateHint(LateHint.Switch, key, phrase);
+            }
         }
 
         /// <summary>The forced right-button step is done: the way home goes on.</summary>
