@@ -524,12 +524,6 @@ namespace AnomalyArena
                     if (c.EarnedDark > seenDark) Emit(CampaignSfx.CollectDarkMatter, pp);
                     if (c.EarnedEnergy > seenEnergy) Emit(CampaignSfx.CollectAlienEnergy, pp);
                 }
-                // A click to fire where no weapon fires (the night, and the afternoon without a fight), so it does not seem broken.
-                var mouse = Mouse.current;
-                var ui = c.Ui;
-                if (gm.RunPhase == ArenaUiState.Night && gm.CanPlayerMove && p && p.IsAlive && mouse != null && mouse.leftButton.wasPressedThisFrame
-                    && !(ui && ui.ConfirmOpen) && !c.CratePanelOpen)
-                    Emit(CampaignSfx.NightNoCombat, null);
             }
             // Mining: a strike at once and then every mineStrikeSeconds while E is held on a node.
             if (c.MiningAt(out var node))

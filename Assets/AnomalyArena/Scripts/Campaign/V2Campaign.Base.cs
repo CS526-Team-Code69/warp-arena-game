@@ -214,8 +214,63 @@ namespace AnomalyArena
             lightGo.transform.SetParent(baseRoot, false);
             lightGo.transform.localPosition = new Vector3(0f, 6f, 0f);
             baseLight = lightGo.AddComponent<Light>();
-            baseLight.type = LightType.Point; baseLight.range = rules.baseLightRadius * 1.4f; baseLight.intensity = 0f;
+            baseLight.type = LightType.Point; baseLight.range = rules.baseLightRadius * 1.15f; baseLight.intensity = 0f;
             baseLight.color = new Color(.75f, .9f, 1f);
+            BuildBaseFloodlights();
+        }
+
+        // ───── The base's night light ─────
+
+        readonly List<Light> baseFloodlights = new();
+        LightWaveRing baseLightEdge;
+
+        /// <summary>Four floodlights at the base's corners and a ring on the ground at the edge of the base's light, lit at night: the
+        /// player sees where the light ends, and the shadows waiting just outside it.</summary>
+        void BuildBaseFloodlights()
+        {
+            baseFloodlights.Clear();
+            for (int i = 0; i < 4; i++)
+            {
+                var post = new GameObject("Floodlight").transform;
+                post.SetParent(baseRoot, false);
+                post.localPosition = new Vector3(i % 2 == 0 ? -1f : 1f, 0f, i < 2 ? -1f : 1f) * (BaseHalf + 1.1f);
+                if (art && art.lampPrefab && Art.Enabled)
+                {
+                    var model = Instantiate(art.lampPrefab, post);
+                    StripColliders(model);
+                    FitHeight(model.transform, 2.6f);
+                }
+                else if (!Art.Enabled)
+                {
+                    var look = Whitebox.Build("lamp", post, "FloodlightWhitebox");
+                    if (look) look.localScale = Vector3.one * 1.6f;
+                }
+                else
+                {
+                    Box(post, "Post", new Vector3(0f, 1f, 0f), new Vector3(.22f, 2f, .22f), new Color(.3f, .3f, .32f));
+                    Box(post, "Head", new Vector3(0f, 2.2f, 0f), new Vector3(.6f, .45f, .6f), new Color(.8f, .93f, 1f)).shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                }
+                var lampGo = new GameObject("FloodlightLight");
+                lampGo.transform.SetParent(post, false);
+                lampGo.transform.localPosition = new Vector3(0f, 3f, 0f);
+                var light = lampGo.AddComponent<Light>();
+                light.type = LightType.Point; light.range = rules.baseLightRadius * .6f; light.intensity = 0f; light.color = new Color(1f, .93f, .8f);
+                baseFloodlights.Add(light);
+            }
+            baseLightEdge = LightWaveRing.Create(baseRoot, "BaseLightEdge");
+            baseLightEdge.sparkleRate = 0f;
+        }
+
+        /// <summary>The base's lights go on for the night and off for the day.</summary>
+        void SetBaseLights(bool on)
+        {
+            // Low lights: they warm the ground by the base and its posts; the reach of the base's light shows by the darkness cut away
+            // and the thin line at its edge (LightEdgeWidth), not by brightness.
+            if (baseLight) baseLight.intensity = on ? 1.2f : 0f;
+            foreach (var light in baseFloodlights) if (light) light.intensity = on ? 1.4f : 0f;
+            if (!baseLightEdge) return;
+            if (on) baseLightEdge.Draw(BaseCentre, rules.baseLightRadius, LightEdgeWidth, new Color(1f, .93f, .78f, LightEdgeAlpha), LightEdgeGlow);
+            else baseLightEdge.Hide();
         }
 
         void BuildShip()
@@ -1160,7 +1215,7 @@ namespace AnomalyArena
             bool atDoor = Query.Flat(p.Position - DoorPoint).magnitude < 3.2f;
             if (atDoor && ShieldLevel > 0)
             {
-                prompt = CanTopUpShield ? ArenaText.Pair($"按 E 紧急补充护盾（能量 {rules.ShieldTopUpCost(Day)}）", $"E: emergency shield top-up ({rules.ShieldTopUpCost(Day)} energy)")
+                prompt = CanTopUpShield ? ArenaText.Pair($"按 {ArenaKeys.InteractKey} 紧急补充护盾（能量 {rules.ShieldTopUpCost(Day)}）", $"{ArenaKeys.InteractKey}: emergency shield top-up ({rules.ShieldTopUpCost(Day)} energy)")
                     : ArenaText.Pair("护盾补充冷却中", "Shield top-up cooling down");
                 if (EPressed && !TryTopUpShield()) ui.Flash(ArenaText.Pair("能量不够，或护盾已满", "Not enough energy, or the shield is full"));
             }

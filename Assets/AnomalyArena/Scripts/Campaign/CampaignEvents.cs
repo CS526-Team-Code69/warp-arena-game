@@ -33,6 +33,8 @@ namespace AnomalyArena
         /// tutorial_step, a Day 0 step passed: the TutorialStep's name, and the seconds since the step began;
         /// crate, a weapon crate opened: "&lt;crate kind&gt;:&lt;weapon form&gt;" for the weapon taken, or the crate kind with ":left" (nothing
         /// taken), ":empty" (nothing new in it) or ":no_room"; the place of the weapon on the panel, 1 to 3, or 0 when none was taken;
+        /// crate_offer, one weapon on a crate's panel as it opens (one record for each weapon shown): "&lt;crate kind&gt;:&lt;weapon form&gt;",
+        /// and its place on the panel, 1 to 3; with the crate records it says how often a weapon was taken when it was on offer;
         /// hole_check, the black hole's timed check: start, passed, failed_timeout, failed_death or failed_night (put away for the night),
         /// and the share of the required damage dealt, 0 to 1;
         /// prophet, the Nash Prophet beaten in the void trial: no detail, and the day number;
@@ -40,7 +42,8 @@ namespace AnomalyArena
         /// void_crystal, E pressed at the void crystals on Day 0's way home: no detail, 0.</summary>
         public static event Action<string, string, float, int> Milestone;
 
-        public const string MilestoneTutorialStep = "tutorial_step", MilestoneCrate = "crate", MilestoneHoleCheck = "hole_check",
+        public const string MilestoneTutorialStep = "tutorial_step", MilestoneCrate = "crate", MilestoneCrateOffer = "crate_offer",
+            MilestoneHoleCheck = "hole_check",
             MilestoneProphet = "prophet", MilestoneVoidPurchase = "void_purchase", MilestoneVoidCrystal = "void_crystal";
         public const string HoleCheckStart = "start", HoleCheckPassed = "passed", HoleCheckFailedTimeout = "failed_timeout",
             HoleCheckFailedDeath = "failed_death", HoleCheckFailedNight = "failed_night";

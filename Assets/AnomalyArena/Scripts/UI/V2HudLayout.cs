@@ -286,14 +286,18 @@ namespace AnomalyArena
         const float NameGap = 4f, SmallestSideGlyph = 24f, FrameEdge = 16f, KeyRowElement = 20f, KeyRowGlyphWidth = 30f, KeyRowGap = 2f, KeyRowHeight = 20f;
         // The font's first line takes its full height (about 1.44 × size) and later lines that × the spacing, so two lines of size 14 need 36.
         const float DetailDrop = 2f, ChineseLineSpacing = .8f, OneLineNameHeight = 25f;
-        const int TitleShrink = 2, SmallestDetail = 8;
+        // How far below its group's smallest title size a name may go before it loses a line. The boxes are measured for the Chinese
+        // names, which fit at the larger sizes; the longest English ones need the smaller ones ("Mirror Image" in a skill slot and
+        // "Launch Yourself · Mk 10" in a hand slot fit at size 9). With 2, "Shockwave" showed as "Shockwa" and a weapon lost its Mk.
+        const int TitleShrink = 6, SmallestDetail = 8;
 
         /// <summary>LayOutSlot gives the title only what the glyph leaves: 14 wide in an auto slot, so "空栏位" showed as "空", and 84 in a
         /// hand slot, so "步枪 · 蓄力射击" showed as "步枪 ·". Here the title gets two lines and the room for the longest Chinese name; the
         /// glyph takes what is left beside it, or moves up to the key row where nothing useful is left. The detail line runs to the frame and
         /// tightens its text (V2UiSlot.DetailLine). Until 2026-11-10 only the Chinese scene did this and the English scene kept the boxes its
         /// publication step fitted (EnglishPublication.FitEnglishText); one scene now serves both languages, so every scene lays its slots
-        /// out this way, in either language. Whether every English name keeps to these boxes still has to be looked at in the editor.</summary>
+        /// out this way, in either language. The longest English names need smaller sizes in these boxes than the
+        /// Chinese ones (TitleShrink); HudSlotNameFitTest holds every name of both languages to its box.</summary>
         void FitChineseNames()
         {
             if (hud.handSlots != null) foreach (var slot in hud.handSlots) FitChineseSlot(slot, hand, WeaponNameEms, weaponIconSize, false);

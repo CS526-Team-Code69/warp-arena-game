@@ -247,7 +247,7 @@ namespace AnomalyArena
             if (core.view) core.view.Rotate(0f, 90f * dt, 0f, Space.World);
             if (Random.value < dt * 10f) Fx.Pop(core.position + Vector3.up * Random.Range(.5f, 1.6f), new Color(.75f, .3f, 1f), .6f);
             float d = Query.Flat(core.position - p.Position).magnitude;
-            prompt = d < 2.2f ? ArenaText.Pair("按 E 拾取暗物质核心", "E: take the dark matter core") : ArenaText.Pair("拾取暗物质核心", "Take the dark matter core");
+            prompt = d < 2.2f ? ArenaText.Pair($"按 {ArenaKeys.InteractKey} 拾取暗物质核心", $"{ArenaKeys.InteractKey}: take the dark matter core") : ArenaText.Pair("拾取暗物质核心", "Take the dark matter core");
             if (d < 2.2f && EPressed)
             {
                 if (core.view) Destroy(core.view.gameObject);

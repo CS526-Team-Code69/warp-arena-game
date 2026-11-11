@@ -22,6 +22,7 @@ namespace AnomalyArena
         bool filled;
         Font filledWith;
         bool filledForCampaign;
+        int filledForKeys;
 
         public static V2ControlsTable Create(Transform parent, float rowHeight, float keyWidth, int fontSize)
         {
@@ -39,10 +40,12 @@ namespace AnomalyArena
         {
             // A V2 campaign run has its own rows (V2Hud.ControlRows): refill when one starts or ends, not only for a new font.
             bool campaign = V2Hud.CampaignControls;
-            if (filled && font == filledWith && campaign == filledForCampaign) return;
+            // The rows name the keys as they are now: a key changed in the settings (ArenaKeys) fills them again too.
+            if (filled && font == filledWith && campaign == filledForCampaign && filledForKeys == ArenaKeys.Revision) return;
             filled = true;
             filledWith = font;
             filledForCampaign = campaign;
+            filledForKeys = ArenaKeys.Revision;
             var rows = V2Hud.ControlRows();
             for (int i = 0; i < rows.Length; i++)
             {

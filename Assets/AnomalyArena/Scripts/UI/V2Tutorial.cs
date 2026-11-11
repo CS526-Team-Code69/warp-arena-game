@@ -39,10 +39,10 @@ namespace AnomalyArena
 
         static (string title, string line, Func<Demo> demo)[] ClassicPages() => new (string, string, Func<Demo>)[]
         {
-            (ArenaText.Pair("移动", "MOVE"), ArenaText.Pair("WASD 移动。", "WASD to move."), () => new MoveDemo()),
+            (ArenaText.Pair("移动", "MOVE"), ArenaText.Pair($"{ArenaKeys.MoveKeys} 移动。", $"{ArenaKeys.MoveKeys} to move."), () => new MoveDemo()),
             AimPage(),
-            (ArenaText.Pair("冲刺", "SPRINT"), ArenaText.Pair("边移动边按住 Shift 冲刺，会消耗体力。体力用光后，回满才能再冲刺。", "Hold Shift while moving to sprint. It drains stamina; once empty, it must refill fully first."), () => new SprintDemo()),
-            (ArenaText.Pair("换武器和技能", "SWAP & SKILLS"), ArenaText.Pair("右键切换两个手持栏位，1 / 2 / 3 释放技能。", "Right click swaps the two hand slots. 1, 2, 3 cast skills."), () => new SkillDemo()),
+            (ArenaText.Pair("冲刺", "SPRINT"), ArenaText.Pair("边移动边按住 " + ArenaKeys.SprintKey + " 冲刺，会消耗体力。体力用光后，回满才能再冲刺。", "Hold " + ArenaKeys.SprintKey + " while moving to sprint. It drains stamina; once empty, it must refill fully first."), () => new SprintDemo()),
+            (ArenaText.Pair("换武器和技能", "SWAP & SKILLS"), ArenaText.Pair($"右键切换两个手持栏位，{ArenaKeys.SkillKeys} 释放技能。", $"Right click swaps the two hand slots. {ArenaKeys.SkillKeysWith(", ")} cast skills."), () => new SkillDemo()),
             (ArenaText.Pair("利用地形", "USE THE ARENA"), ArenaText.Pair("把敌人打飞去撞墙，或者推进黑洞。", "Knock enemies into walls and black holes."), () => new TerrainDemo()),
             (ArenaText.Pair("收起选卡面板", "PUT THE PANEL AWAY"),
                 ArenaText.Pair("整备时按 Tab 收起选卡面板，可以走动、站上传送门；再按 Tab 回到面板。", "Between waves, Tab puts the card panel away so you can walk and reach a portal. Tab again brings it back."),
@@ -62,17 +62,17 @@ namespace AnomalyArena
                     ArenaText.Pair($"飞船坠落在一颗异星上。用 {days} 天修好它、加满燃料，然后逃离这里。", $"Your ship crashed on an alien planet. Spend {days} days repairing it and filling its tank, then escape."),
                     () => new StrandedDemo(days)),
                 (ArenaText.Pair("移动和冲刺", "MOVE & SPRINT"),
-                    ArenaText.Pair("WASD 移动；边移动边按住 Shift 冲刺。体力用光后，回满才能再冲刺。", "WASD to move. Hold Shift while moving to sprint. Once stamina is empty, it must refill fully first."),
+                    ArenaText.Pair($"{ArenaKeys.MoveKeys} 移动；边移动边按住 {ArenaKeys.SprintKey} 冲刺。体力用光后，回满才能再冲刺。", $"{ArenaKeys.MoveKeys} to move. Hold {ArenaKeys.SprintKey} while moving to sprint. Once stamina is empty, it must refill fully first."),
                     () => new MoveSprintDemo()),
                 AimPage(),
                 (ArenaText.Pair("换武器和技能", "SWAP & SKILLS"),
-                    ArenaText.Pair("右键切换两个手持栏位；在能量研究区学会技能后，按 1 / 2 / 3 释放。", "Right click swaps the two hand slots. Skills learned at the Energy Lab are cast with 1, 2, 3."),
+                    ArenaText.Pair($"右键切换两个手持栏位；在能量研究区学会技能后，按 {ArenaKeys.SkillKeys} 释放。", $"Right click swaps the two hand slots. Skills learned at the Energy Lab are cast with {ArenaKeys.SkillKeysWith(", ")}."),
                     () => new SkillDemo()),
                 (ArenaText.Pair("采集资源", "GATHER"),
-                    ArenaText.Pair("下午按住 E 采合金矿，路上的武器箱按 E 打开；夜里按 F 放下矿灯，在灯光里按住 E 采暗物质。", "Afternoon: hold E on alloy ore, and E opens a weapon crate on the way. Night: F sets a lamp; hold E in its light on dark matter."),
+                    ArenaText.Pair($"下午按住 {ArenaKeys.InteractKey} 采合金矿，路上的武器箱按 {ArenaKeys.InteractKey} 打开；夜里按 {ArenaKeys.LampKey} 放下矿灯，在灯光里按住 {ArenaKeys.InteractKey} 采暗物质。", $"Afternoon: hold {ArenaKeys.InteractKey} on alloy ore, and {ArenaKeys.InteractKey} opens a weapon crate on the way. Night: {ArenaKeys.LampKey} sets a lamp; hold {ArenaKeys.InteractKey} in its light on dark matter."),
                     () => new GatherDemo()),
                 (ArenaText.Pair("基地和升级", "BASE & UPGRADES"),
-                    ArenaText.Pair("下午或夜里在基地门口按 E：建造各区、在研习窗口里买升级、修飞船，买下立刻生效。", "Afternoon or night, E at the base door: build rooms, study upgrades, repair the ship. Each takes effect at once."),
+                    ArenaText.Pair($"下午或夜里在基地门口按 {ArenaKeys.InteractKey}：建造各区、在研习窗口里买升级、修飞船，买下立刻生效。", $"Afternoon or night, {ArenaKeys.InteractKey} at the base door: build rooms, study upgrades, repair the ship. Each takes effect at once."),
                     () => new BaseDemo()),
                 PausePage(),
             };
@@ -105,7 +105,7 @@ namespace AnomalyArena
 
         static string Footnote() => InCampaign
             ? ArenaText.Pair("看左上角的目标，跟着蓝色标记走。其他按键用到时屏幕上会有提示。", "Read the goal at the top left and follow the blue marker. Other keys show on screen when needed.")
-            : ArenaText.Pair("波次中的选卡面板上按 Esc 可以稍后再选，之后按 T 打开。其他按键用到时屏幕上会有提示。", "On a mid-wave card panel, Esc picks later and T opens it again. Other keys are shown on screen when needed.");
+            : ArenaText.Pair($"波次中的选卡面板上按 Esc 可以稍后再选，之后按 {ArenaKeys.CardPickKey} 打开。其他按键用到时屏幕上会有提示。", $"On a mid-wave card panel, Esc picks later and {ArenaKeys.CardPickKey} opens it again. Other keys are shown on screen when needed.");
 
         Font font;
         float heldScale = 1f;
@@ -337,6 +337,10 @@ namespace AnomalyArena
                 var text = NewText(cap.rectTransform, "Label", 18, Soft, FontStyle.Bold, TextAnchor.MiddleCenter);
                 text.font = font;
                 text.text = label;
+                // A key the player chose may have a longer name than the cap was drawn for ("PgUp" on a letter's cap): it shrinks to fit.
+                text.resizeTextForBestFit = true;
+                text.resizeTextMinSize = 9;
+                text.resizeTextMaxSize = 18;
                 Stretch(text.rectTransform);
                 return new Key { cap = cap, text = text };
             }
@@ -419,10 +423,10 @@ namespace AnomalyArena
             Key w, a, s, d;
             protected override void Build()
             {
-                w = Cap("W", new Vector2(-280f, -40f));
-                a = Cap("A", new Vector2(-328f, -88f));
-                s = Cap("S", new Vector2(-280f, -88f));
-                d = Cap("D", new Vector2(-232f, -88f));
+                w = Cap(ArenaKeys.Name(GameAction.MoveUp), new Vector2(-280f, -40f));
+                a = Cap(ArenaKeys.Name(GameAction.MoveLeft), new Vector2(-328f, -88f));
+                s = Cap(ArenaKeys.Name(GameAction.MoveDown), new Vector2(-280f, -88f));
+                d = Cap(ArenaKeys.Name(GameAction.MoveRight), new Vector2(-232f, -88f));
                 player = Dot(Player, 34f, Vector2.zero);
             }
 
@@ -506,7 +510,7 @@ namespace AnomalyArena
                 trail = new Image[4];
                 for (int i = 0; i < trail.Length; i++) trail[i] = Dot(Player, 34f - i * 3f, Vector2.zero);
                 player = Dot(Player, 34f, Vector2.zero);
-                shift = Cap("Shift", new Vector2(-300f, -100f), 84f);
+                shift = Cap(ArenaKeys.SprintKey, new Vector2(-300f, -100f), 84f);
                 Bar(new Color(1f, 1f, 1f, .08f), new Vector2(220f, 10f), new Vector2(60f, -120f));
                 fill = Bar(new Color(1f, .82f, .3f), new Vector2(220f, 10f), new Vector2(60f, -120f));
                 fill.rectTransform.pivot = new Vector2(0f, .5f);
@@ -559,9 +563,9 @@ namespace AnomalyArena
                 (left, right) = Mouse(new Vector2(-320f, -100f));
                 Label(ArenaText.Pair("右键切换", "right click: swap"), 14, Faint, new Vector2(-300f, -146f), 130f);
                 Label(ArenaText.Pair("技能键", "skill keys"), 14, Faint, new Vector2(298f, -146f), 130f);
-                one = Cap("1", new Vector2(250f, -110f));
-                two = Cap("2", new Vector2(298f, -110f));
-                three = Cap("3", new Vector2(346f, -110f));
+                one = Cap(ArenaKeys.Name(GameAction.Skill1), new Vector2(250f, -110f));
+                two = Cap(ArenaKeys.Name(GameAction.Skill2), new Vector2(298f, -110f));
+                three = Cap(ArenaKeys.Name(GameAction.Skill3), new Vector2(346f, -110f));
             }
 
             public override void Tick(float time)
@@ -883,12 +887,12 @@ namespace AnomalyArena
                 trail = new Image[4];
                 for (int i = 0; i < trail.Length; i++) trail[i] = Dot(Player, 34f - i * 3f, Corners[0]);
                 player = Dot(Player, 34f, Corners[0]);
-                w = Cap("W", new Vector2(-300f, -52f));
-                a = Cap("A", new Vector2(-348f, -100f));
-                s = Cap("S", new Vector2(-300f, -100f));
-                d = Cap("D", new Vector2(-252f, -100f));
+                w = Cap(ArenaKeys.Name(GameAction.MoveUp), new Vector2(-300f, -52f));
+                a = Cap(ArenaKeys.Name(GameAction.MoveLeft), new Vector2(-348f, -100f));
+                s = Cap(ArenaKeys.Name(GameAction.MoveDown), new Vector2(-300f, -100f));
+                d = Cap(ArenaKeys.Name(GameAction.MoveRight), new Vector2(-252f, -100f));
                 Label(ArenaText.Pair("移动", "move"), 14, Faint, new Vector2(-300f, -146f), 130f);
-                shift = Cap("Shift", new Vector2(-150f, -100f), 84f);
+                shift = Cap(ArenaKeys.SprintKey, new Vector2(-150f, -100f), 84f);
                 Label(ArenaText.Pair("按住冲刺", "hold to sprint"), 14, Faint, new Vector2(-150f, -146f), 130f);
                 Bar(new Color(1f, 1f, 1f, .08f), new Vector2(220f, 10f), new Vector2(150f, -120f));
                 fill = Bar(new Color(1f, .82f, .3f), new Vector2(220f, 10f), new Vector2(40f, -120f));
@@ -1014,8 +1018,8 @@ namespace AnomalyArena
                     Label(ArenaText.Pair("异星合金 +3", "alien alloy +3"), 16, AlloyColour, Ore, 200f),
                     Label(ArenaText.Pair("暗物质 +1", "dark matter +1"), 16, DarkText, Dark[0], 200f),
                 };
-                e = Cap("E", new Vector2(-300f, -110f));
-                f = Cap("F", new Vector2(-200f, -110f));
+                e = Cap(ArenaKeys.InteractKey, new Vector2(-300f, -110f));
+                f = Cap(ArenaKeys.LampKey, new Vector2(-200f, -110f));
                 // Wider than the 100 between the keys: its English nearly fills 100 in bold, and the two centred texts still stay apart.
                 Label(ArenaText.Pair("按住采集", "hold to mine"), 14, Faint, new Vector2(-300f, -146f), 120f);
                 Label(ArenaText.Pair("放下矿灯", "set a lamp"), 14, Faint, new Vector2(-200f, -146f), 100f);
@@ -1133,13 +1137,13 @@ namespace AnomalyArena
                 Bar(new Color(.15f, .85f, 1f), new Vector2(34f, 14f), Centre + new Vector2(0f, -60f));
                 Label(ArenaText.Pair("基地", "BASE"), 16, Soft, Centre, 100f);
                 player = Dot(Player, 30f, Approach);
-                e = Cap("E", new Vector2(-335f, -100f));
+                e = Cap(ArenaKeys.InteractKey, new Vector2(-335f, -100f));
                 Label(ArenaText.Pair("在门口按", "at the door"), 14, Faint, new Vector2(-335f, -146f), 110f);
                 phases = new[] { Caption(ArenaText.Pair("下午或夜里", "AFTERNOON OR NIGHT"), 20, Soft, 128f), Caption(ArenaText.Pair("上午", "MORNING"), 20, Soft, 128f) };
                 captions = new[]
                 {
-                    Caption(ArenaText.Pair("在门口按 E 进入基地", "E at the door: enter the base"), 14, Faint, 102f),
-                    Caption(ArenaText.Pair("护盾解锁后，在门口按 E 用异星能量补充", "Once the shield is unlocked, E at the door tops it up with alien energy"), 14, Faint, 102f),
+                    Caption(ArenaText.Pair($"在门口按 {ArenaKeys.InteractKey} 进入基地", $"{ArenaKeys.InteractKey} at the door: enter the base"), 14, Faint, 102f),
+                    Caption(ArenaText.Pair($"护盾解锁后，在门口按 {ArenaKeys.InteractKey} 用异星能量补充", $"Once the shield is unlocked, {ArenaKeys.InteractKey} at the door tops it up with alien energy"), 14, Faint, 102f),
                 };
 
                 (sheet, fade) = Sheet(new Vector2(480f, 290f), SheetAt);

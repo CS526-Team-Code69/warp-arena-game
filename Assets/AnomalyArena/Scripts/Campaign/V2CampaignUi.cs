@@ -289,10 +289,37 @@ namespace AnomalyArena
         {
             ApplyFont();
             flashText.text = text;
-            // The plate fits the line (a long one wraps inside 1100).
-            flashBack.rectTransform.sizeDelta = new Vector2(Mathf.Clamp(flashText.preferredWidth + 48f, 320f, 1100f), 64f);
+            PlaceFlash();
             flashUntil = Time.unscaledTime + seconds;
             flashBack.gameObject.SetActive(!string.IsNullOrEmpty(text));
+        }
+
+        const float FlashRise = 150f, FlashHeight = 64f, FlashGap = 12f, FlashMargin = 14f, FlashBrush = 14f;
+
+        /// <summary>The flash's plate fits its line (a long one wraps inside 1100) and stands in the middle of the screen. A plate wide
+        /// enough to reach the goal panels at the top left while they stand at its height would lie over the goal's lines, as a night
+        /// death's long line did: it stands to their right instead, no wider than the screen leaves there, and grows for the second line
+        /// its text then takes. One that would only brush the panels' lower edge stays in the middle.</summary>
+        void PlaceFlash()
+        {
+            var plate = flashBack.rectTransform;
+            float width = Mathf.Clamp(flashText.preferredWidth + 48f, 320f, 1100f), x = 0f;
+            float panels = hud.gameObject.activeInHierarchy ? PanelsHeight() : 0f;
+            if (panels > 0f)
+            {
+                // Canvas units from the bottom-left, as in PlaceGoalPanels.
+                float half = root.rect.width * .5f, plateTop = root.rect.height * .5f + FlashRise + FlashHeight * .5f;
+                float panelsTop = root.rect.height + ObjectiveTop - goalDrop, right = ObjectiveLeft + ObjectiveWidth + FlashGap;
+                bool level = plateTop - FlashHeight < panelsTop && plateTop > panelsTop - panels + FlashBrush;
+                if (level && half - width * .5f < right)
+                {
+                    width = Mathf.Min(width, Mathf.Max(320f, root.rect.width - right - FlashMargin));
+                    x = right + width * .5f - half;
+                }
+            }
+            plate.sizeDelta = new Vector2(width, FlashHeight);
+            plate.sizeDelta = new Vector2(width, Mathf.Max(FlashHeight, flashText.preferredHeight + 12f));
+            plate.anchoredPosition = new Vector2(x, FlashRise);
         }
         public void ClearFlash() => flashUntil = 0f;
 
@@ -538,6 +565,7 @@ namespace AnomalyArena
             // Over the base panel the subtitle stands in the strip the panel keeps free for it, above its ways out.
             subtitleRoot.anchoredPosition = new Vector2(0f, baseScreen.gameObject.activeSelf ? BaseSubtitleBottom : SubtitleBottom);
             flashBack.gameObject.SetActive(now < flashUntil && !string.IsNullOrEmpty(flashText.text));
+            if (flashBack.gameObject.activeSelf) PlaceFlash(); // the goal panels may grow or step down while the line shows
             if (whiteOutLength > 0f)
             {
                 whiteOutClock += Time.unscaledDeltaTime;

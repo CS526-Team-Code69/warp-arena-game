@@ -38,6 +38,8 @@ namespace AnomalyArena
         /// <summary>For automated checks: a crate's panel is open; how many crates lie on the map.</summary>
         public bool CratePanelOpen => crateOpen != null;
         public int CratesOnMap => crates.Count;
+        /// <summary>For automated checks: the weapons on the open crate's panel, in the panel's order; empty while no panel is open.</summary>
+        public WeaponForm[] CrateOfferForms => crateOpen == null ? System.Array.Empty<WeaponForm>() : crateOffers.ConvertAll(w => w.form).ToArray();
 
         /// <summary>Called as each afternoon begins, after the day's ore is placed (BeginDusk): yesterday's crate goes, today's lies on the
         /// ore trail, and the hero says it is time to look for ore and for crates that survived (subtitles only, after the base's line).</summary>
@@ -118,7 +120,7 @@ namespace AnomalyArena
             var p = gm.player;
             if (crate == null || !p || !p.IsAlive || crateOpen != null || knockedOut) return false;
             if (Query.Flat(p.Position - crate.position).magnitude > rules.crateReach || NearestNode(p.Position, rules.mineRange) != null) return false;
-            promptText = ArenaText.Pair("按 E 打开武器箱", "E: open the weapon crate");
+            promptText = ArenaText.Pair($"按 {ArenaKeys.InteractKey} 打开武器箱", $"{ArenaKeys.InteractKey}: open the weapon crate");
             return EPressed;
         }
 
@@ -156,6 +158,11 @@ namespace AnomalyArena
             // no line under its heading: a name and a Mk each, the rest unknown until one is taken.
             string sub = "";
             ui.ShowCrate(heading, sub, options, crate.kind != CrateKind.TutorialFirst, TakeFromCrate, LeaveCrate);
+            // Each weapon on the panel is recorded as the panel opens, with its place: the crate's own record names only the weapon
+            // taken, and how often a weapon is passed over can be counted only against how often it was shown. A panel is recorded
+            // once: it closes through a pick or the leave button, both remove the crate, and every opening rolls its own weapons.
+            for (int i = 0; i < crateOffers.Count; i++)
+                CampaignEvents.RaiseMilestone(CampaignEvents.MilestoneCrateOffer, crate.kind + ":" + crateOffers[i].form, i + 1, Day);
         }
 
         /// <summary>Up to three new anomaly weapons the player does not own and has room for, from the armory's own roll (new weapons only;

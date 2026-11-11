@@ -32,7 +32,7 @@ namespace AnomalyArena
 
         /// <summary>The void colour on screen: "black" has to stay visible on a dark panel, so a void card is a black line in a violet glow.</summary>
         public static readonly Color VoidGlow = new(.62f, .34f, 1f);
-        static readonly Color VoidText = new(.86f, .79f, 1f);
+        static readonly Color VoidText = ArenaRarity.VoidInk;
         static readonly Color SoftText = new(.86f, .90f, .96f), FaintText = new(.62f, .72f, .85f);
         static readonly Color AccentCyan = new(.47f, .89f, 1f);
         // By ArenaRarity.Rank: white, green, blue, purple, orange, black.
@@ -185,8 +185,9 @@ namespace AnomalyArena
         }
 
         // The title is the look the other screens follow; only its buttons join the new set. Since 2026-11-10 (one game in two languages)
-        // these are the three entries and the open mode's map choices in Start's own skin, and the Language option and the map pick's back
-        // button in the plain one (V2Hud makes them all in its Awake, before this runs). The art switch keeps its saved look.
+        // these are the three entries and the open mode's map choices in Start's own skin, and the Settings button, the Language option and
+        // the map pick's back button in the plain one (V2Hud makes them all in its Awake, before this runs). The saved art switch is
+        // not shown any more (the art mode is chosen in the settings).
         void SkinTitle(V2UiScreen screen)
         {
             foreach (var name in V2Hud.TitlePrimaryButtons)
@@ -404,6 +405,13 @@ namespace AnomalyArena
                     Place(go, left, top, buttonW, 64f);
                 }
                 left += buttonW + buttonGap;
+            }
+            // The settings button stands alone in the panel's top-right corner, beside the centred heading, clear of the controls
+            // table and of the row of four under it.
+            if (content.Find(V2Hud.PauseSettingsButton) is RectTransform settings && settings.GetComponent<Button>() is { } settingsButton)
+            {
+                SkinButton(settingsButton, false, 18);
+                Place(settings, w - 40f - 176f, 34f, 176f, 44f);
             }
             top += 64f + 16f;
             panel.summaryTop = top;

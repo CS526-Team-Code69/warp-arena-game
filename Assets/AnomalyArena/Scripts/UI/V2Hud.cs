@@ -6,7 +6,7 @@ namespace AnomalyArena
     /// Retained uGUI view. All objects and references are saved in the scene by the editor installer.
     /// It reads real run data and dispatches commands; it never owns the wave or build clocks.
     /// </summary>
-    public class V2Hud : MonoBehaviour
+    public partial class V2Hud : MonoBehaviour
     {
         [Header("Run and independent interstellar art")]
         [Tooltip("A MonoBehaviour implementing IArenaUiSource, normally the GameManager.")]
@@ -99,6 +99,7 @@ namespace AnomalyArena
             SimplifyTitle();
             AddTitleEntries();
             AddTitleLanguageOption();
+            AddTitleSettingsButton();
             KeepScreensOverTheRun();
             PlaceControlsTables();
             V2SlotFeedback.Add(handSlots, V2SlotFeedback.Kind.Hand);
@@ -123,13 +124,17 @@ namespace AnomalyArena
 
         // ───── The title (one game in two languages) ─────
         // From the top: the story mode (the saved Start, which V2Campaign routes to the V2 day campaign),
-        // the open mode (the classic 15-wave run, after a map pick) and the tutorial (the story mode's pages); under them
-        // the whitebox / illustrated switch, the key hints along the bottom, and the Language option in the top-right corner. The made
-        // buttons are copies of saved ones, so they keep their look and V5MenuSkin skins them by name.
+        // the open mode (the classic 15-wave run, after a map pick) and the tutorial (the story mode's pages); the Settings
+        // button in the top-left corner (volume, art mode and keys: V2Hud.Settings.cs) and the Language option in the top-right one.
+        // The made buttons are copies of saved ones, so they keep their look and V5MenuSkin skins them by name.
 
         // Until 2026-11-10 the Chinese scene hid these and the English scene showed them. One scene serves both languages now: the
-        // tagline stays off (the 10-26 title) and the two saved language buttons give way to the Language option.
-        static readonly string[] TitleHidden = { "InterstellarSubtitle", "ChineseTeam", "EnglishShowcase" };
+        // tagline stays off (the 10-26 title) and the two saved language buttons give way to the Language option. The saved line of
+        // key hints along the bottom ("Controls") and the saved art switch under the entries ("ToggleArt") are not shown either: the
+        // keys can be changed in the settings, so a fixed line would not stay true, and the art mode is chosen there too. Both stay
+        // in the scene: the entries are still laid out against the hints' place (StackMiddle), and the map pick's back button is a
+        // copy of the art switch.
+        static readonly string[] TitleHidden = { "InterstellarSubtitle", "ChineseTeam", "EnglishShowcase", "Controls", "ToggleArt" };
 
         /// <summary>The title's Content, or null in a scene without one.</summary>
         RectTransform TitleContent()
@@ -169,7 +174,7 @@ namespace AnomalyArena
         /// <summary>Paths under the title's Content that take Start's skin (V5MenuSkin), and those that take the plain button's.</summary>
         public static readonly string[] TitlePrimaryButtons =
             { TitleStoryButton, TitleOpenButton, TitleTutorialButton, MapSelect + "/MapDunes", MapSelect + "/MapRuins", MapSelect + "/MapRandom" };
-        public static readonly string[] TitleSecondaryButtons = { TitleLanguageButton, MapSelect + "/MapBack" };
+        public static readonly string[] TitleSecondaryButtons = { TitleSettingsButton, TitleLanguageButton, MapSelect + "/MapBack" };
 
         // Heights in canvas units: the two starts as tall as the saved Start (76), the tutorial and the map pick's choices a little lower,
         // so the starts stay the first thing the eye finds. The art switch and the back button keep the saved art switch's height.
@@ -225,7 +230,7 @@ namespace AnomalyArena
 
             var stack = new System.Collections.Generic.List<(RectTransform part, float height)>
                 { (start, start.sizeDelta.y), (titleOpen, start.sizeDelta.y), (titleTutorial, TitleTutorialHeight) };
-            if (titleArt) stack.Add((titleArt, titleArt.sizeDelta.y));
+            // The art switch is not in the stack any more: the art mode is chosen in the settings (V2Hud.Settings.cs).
             LayStack(stack, gap, StackMiddle(content, start, stack, gap), start);
 
             AddMapSelect(content, start, gap);
@@ -296,7 +301,7 @@ namespace AnomalyArena
 
         void ShowTitleEntries()
         {
-            foreach (var part in new[] { titleStory, titleOpen, titleTutorial, titleArt, titleLanguage })
+            foreach (var part in new[] { titleStory, titleOpen, titleTutorial, titleSettings, titleLanguage })
                 if (part && part.gameObject.activeSelf == mapSelectOpen) part.gameObject.SetActive(!mapSelectOpen);
             if (mapSelect && mapSelect.gameObject.activeSelf != mapSelectOpen) mapSelect.gameObject.SetActive(mapSelectOpen);
         }
@@ -343,9 +348,10 @@ namespace AnomalyArena
             titleLanguageLabel = rect.GetComponentInChildren<UnityEngine.UI.Text>(true);
         }
 
-        /// <summary>The middle of the band between the logo's foot and the key hints' top. The logo is anchored to the top edge and the hints
-        /// to the bottom edge, so the band's middle sits at the same height from the centre whatever the canvas height; on the 1440 x 810
-        /// reference the title's stack leaves about 20 units above and below. Without those two parts the stack keeps Start where it is.</summary>
+        /// <summary>The middle of the band between the logo's foot and the top of the saved key hints (no longer shown, they still mark
+        /// where the entries' band ends). The logo is anchored to the top edge and the hints to the bottom edge, so the band's middle
+        /// sits at the same height from the centre whatever the canvas height; on the 1440 x 810 reference the three entries leave
+        /// about 58 units above and below, the map pick about 15. Without those two parts the stack keeps Start where it is.</summary>
         static float StackMiddle(Transform content, RectTransform start, System.Collections.Generic.List<(RectTransform part, float height)> stack, float gap)
         {
             float total = -gap;
@@ -396,6 +402,7 @@ namespace AnomalyArena
             TitleLabel(titleTutorialLabel, ArenaText.Pair("教学", "Tutorial"), entryLargest, EntrySmallest, refit);
             // The same word in both languages on purpose.
             TitleLabel(titleLanguageLabel, ArenaText.Pair("Language", "Language"), LanguageLargest, LanguageSmallest, refit);
+            TitleLabel(titleSettingsLabel, ArenaText.Pair("设置", "Settings"), LanguageLargest, LanguageSmallest, refit);
             if (mapLine)
             {
                 if (mapLine.font != titleFittedFont && titleFittedFont) mapLine.font = titleFittedFont;
@@ -788,16 +795,16 @@ namespace AnomalyArena
                     SetText(screen.heading, s.isGreaterReward ? ArenaText.Text("ui.greater.heading")
                         : s.hideXp ? ArenaText.Pair($"升级 {s.draftIndex} / {Mathf.Max(1, s.draftCount)}", $"UPGRADE {s.draftIndex} / {Mathf.Max(1, s.draftCount)}")
                         : ArenaText.Text("ui.draft.counter", s.draftIndex, Mathf.Max(1, s.draftCount)));
-                    SetBody(screen.body, s.isGreaterReward ? ArenaText.Pair("从三个高阶虚空技能里选一个（可以不选），没有后续升级。按 1 / 2 / 3 选择。", "Pick one of three Greater Void skills (or none); they have no further levels. 1 / 2 / 3 select.")
-                        : s.hideXp ? ArenaText.Pair("三选一。按 1 / 2 / 3 选择；R 重抽三项（每波一次）。", "Pick one of three. 1 / 2 / 3 select; R rerolls all three (once per wave).") + WalkHint()
-                        : ArenaText.Pair("三张卡每种一张：属性卡、武器卡（给一把已经揭晓的武器一个还没拿过的强化方向）、技能卡（一个新技能，或者给已有技能升级；卡的颜色代表它给的等级）。按 1 / 2 / 3 选择；R 重抽三张（每波一次）。", "Three cards, one of each: a stat card, a weapon card (an upgrade direction a revealed weapon has not taken yet) and a skill card (a new skill, or a higher level for one you own; its colour shows the level it gives). 1 / 2 / 3 select; R rerolls all three (once per wave).") + WalkHint());
+                    SetBody(screen.body, s.isGreaterReward ? ArenaText.Pair("从三个高阶虚空技能里选一个（可以不选），没有后续升级。按 " + ArenaKeys.SkillKeys + " 选择。", "Pick one of three Greater Void skills (or none); they have no further levels. " + ArenaKeys.SkillKeys + " select.")
+                        : s.hideXp ? ArenaText.Pair("三选一。按 " + ArenaKeys.SkillKeys + " 选择；R 重抽三项（每波一次）。", "Pick one of three. " + ArenaKeys.SkillKeys + " select; R rerolls all three (once per wave).") + WalkHint()
+                        : ArenaText.Pair("三张卡每种一张：属性卡、武器卡（给一把已经揭晓的武器一个还没拿过的强化方向）、技能卡（一个新技能，或者给已有技能升级；卡的颜色代表它给的等级）。按 " + ArenaKeys.SkillKeys + " 选择；R 重抽三张（每波一次）。", "Three cards, one of each: a stat card, a weapon card (an upgrade direction a revealed weapon has not taken yet) and a skill card (a new skill, or a higher level for one you own; its colour shows the level it gives). " + ArenaKeys.SkillKeys + " select; R rerolls all three (once per wave).") + WalkHint());
                     if (screen.reroll) screen.reroll.interactable = s.rerolls > 0;
                     SetText(screen.rerollLabel, ArenaText.Text("ui.reroll.counter", s.rerolls));
                     break;
                 case ArenaUiState.LevelUp:
                     cards = s.draftCards;
                     SetText(screen.heading, ArenaText.Pair($"升级 · 选一张（还剩 {s.bankedDrafts} 次）", $"LEVEL UP · PICK ONE ({s.bankedDrafts} LEFT)"));
-                    SetBody(screen.body, ArenaText.Pair("按 1 / 2 / 3 选择；R 重抽（每波一次）；Esc 稍后再选，战斗中按 T 可再打开。", "1 / 2 / 3 select; R rerolls (once per wave); Esc picks later, T opens this again in combat."));
+                    SetBody(screen.body, ArenaText.Pair($"按 {ArenaKeys.SkillKeys} 选择；R 重抽（每波一次）；Esc 稍后再选，战斗中按 {ArenaKeys.CardPickKey} 可再打开。", $"{ArenaKeys.SkillKeys} select; R rerolls (once per wave); Esc picks later, {ArenaKeys.CardPickKey} opens this again in combat."));
                     if (screen.reroll) screen.reroll.interactable = s.rerolls > 0;
                     SetText(screen.rerollLabel, ArenaText.Text("ui.reroll.counter", s.rerolls));
                     break;
@@ -826,6 +833,7 @@ namespace AnomalyArena
                     SetText(screen.body, s.hideXp ? ArenaText.Pair("战场已暂停。", "The battlefield is paused.")
                         : ArenaText.Pair("战场与整备倒计时已暂停。", "The battlefield and the build clock are paused."));
                     if (pauseControls) pauseControls.Fill(screen.body ? screen.body.font : null);
+                    RenderPauseSettings(screen.body ? screen.body.font : null);
                     if (tutorialLabel)
                     {
                         tutorialLabel.text = ArenaText.Pair("教程", "HOW TO PLAY");
@@ -847,23 +855,24 @@ namespace AnomalyArena
         /// <summary>The keys of a run, with what they do in the game now (the pages and this table follow the game): document 3.2's rows, with
         /// two wider than the document's (1 / 2 / 3 picks on every panel, E also works inside the trial) and T saying when it answers. Space and Enter are not here:
         /// they only close the weapon card, and the card says so itself. The input, the action, and what the action's brackets add. Built when asked, because
-        /// ArenaText answers only once its tables are ready.</summary>
+        /// ArenaText answers only once its tables are ready, and because the rows name the keys as they are now: the ones an action is on
+        /// can be changed in the settings (ArenaKeys).</summary>
         public static (string input, string action, string note)[] ControlRows() => CampaignControls ? CampaignControlRows() : ClassicControlRows();
 
         /// <summary>The classic run's rows, whatever is running: the tutorial's classic pages show them.</summary>
         public static (string input, string action, string note)[] ClassicControlRows() => new[]
         {
-            ("WASD", ArenaText.Pair("移动", "Move"), ""),
+            (ArenaKeys.MoveKeys, ArenaText.Pair("移动", "Move"), ""),
             (ArenaText.Pair("鼠标", "Mouse"), ArenaText.Pair("瞄准", "Aim"), ""),
             (ArenaText.Pair("左键", "Left mouse button"), ArenaText.Pair("使用当前手持武器", "Use the held weapon"),
                 ArenaText.Pair("（按住蓄力或连射，取决于武器）", "(hold to charge or to keep firing, depending on the weapon)")),
             (ArenaText.Pair("右键", "Right mouse button"), ArenaText.Pair("切换两个手持栏位", "Swap the two hand slots"), ""),
-            ("Shift", ArenaText.Pair("冲刺", "Sprint"), ""),
-            ("1 / 2 / 3", ArenaText.Pair("释放技能；面板打开时选对应的一项", "Cast a skill; pick that option while a panel is open"), ""),
-            ("E", ArenaText.Pair("互动（能用的东西会在你站上去时提示）", "Interact (a thing that takes E says so once you stand on it)"), ""),
+            (ArenaKeys.SprintKey, ArenaText.Pair("冲刺", "Sprint"), ""),
+            (ArenaKeys.SkillKeys, ArenaText.Pair("释放技能；面板打开时选对应的一项", "Cast a skill; pick that option while a panel is open"), ""),
+            (ArenaKeys.InteractKey, ArenaText.Pair("互动（能用的东西会在你站上去时提示）", $"Interact (a thing that takes {ArenaKeys.InteractKey} says so once you stand on it)"), ""),
             ("Esc", ArenaText.Pair("暂停 / 继续；波次中的选卡面板上 = 稍后再选", "Pause / resume; on a mid-wave card panel, pick later"), ""),
             ("R", ArenaText.Pair("结算时重开；选卡面板打开时重抽", "Restart on the result screen; reroll while a card panel is open"), ""),
-            ("T", ArenaText.Pair("波次中有存着的选卡时打开（屏幕上会提示）", "During a wave, open a card pick you kept for later (the screen tells you)"), ""),
+            (ArenaKeys.CardPickKey, ArenaText.Pair("波次中有存着的选卡时打开（屏幕上会提示）", "During a wave, open a card pick you kept for later (the screen tells you)"), ""),
             ("Tab", ArenaText.Pair("整备时收起面板，再按回到面板", "Put the build panel away in the build phase; press again to bring it back"), ""),
         };
 
@@ -876,18 +885,18 @@ namespace AnomalyArena
         /// campaign runs.</summary>
         internal static (string input, string action, string note)[] CampaignControlRows() => new[]
         {
-            ("WASD", ArenaText.Pair("移动", "Move"), ""),
+            (ArenaKeys.MoveKeys, ArenaText.Pair("移动", "Move"), ""),
             (ArenaText.Pair("鼠标", "Mouse"), ArenaText.Pair("瞄准", "Aim"), ""),
             (ArenaText.Pair("左键", "Left mouse button"), ArenaText.Pair("使用当前手持武器", "Use the held weapon"),
                 ArenaText.Pair("（按住蓄力或连射，取决于武器）", "(hold to charge or to keep firing, depending on the weapon)")),
             (ArenaText.Pair("右键", "Right mouse button"), ArenaText.Pair("切换两个手持栏位", "Swap the two hand slots"), ""),
-            ("Shift", ArenaText.Pair("冲刺", "Sprint"), ""),
-            ("1 / 2 / 3", ArenaText.Pair("释放技能；面板打开时选对应的一项", "Cast a skill; pick that option while a panel is open"), ""),
-            (ArenaText.Pair("按住 E", "Hold E"), ArenaText.Pair("采矿（夜里要站在矿灯的光里）", "Mine (at night, only in a lamp's light)"), ""),
+            (ArenaKeys.SprintKey, ArenaText.Pair("冲刺", "Sprint"), ""),
+            (ArenaKeys.SkillKeys, ArenaText.Pair("释放技能；面板打开时选对应的一项", "Cast a skill; pick that option while a panel is open"), ""),
+            (ArenaText.Pair($"按住 {ArenaKeys.InteractKey}", $"Hold {ArenaKeys.InteractKey}"), ArenaText.Pair("采矿（夜里要站在矿灯的光里）", "Mine (at night, only in a lamp's light)"), ""),
             // Since 2026-11-06 the campaign's day is a morning, an afternoon and a night. The black hole's hidden gate is left out here: it
             // is a secret until it opens, and its own label says E.
-            ("E", ArenaText.Pair("在基地门口：下午和夜里进入基地，上午用能量补充基地护盾", "At the base door: enter the base in the afternoon or at night; in the morning, top up its shield with energy"), ""),
-            ("F", ArenaText.Pair("放下一盏矿灯", "Set down a mining lamp"), ""),
+            (ArenaKeys.InteractKey, ArenaText.Pair("在基地门口：下午和夜里进入基地，上午用能量补充基地护盾", "At the base door: enter the base in the afternoon or at night; in the morning, top up its shield with energy"), ""),
+            (ArenaKeys.LampKey, ArenaText.Pair("放下一盏矿灯", "Set down a mining lamp"), ""),
             ("Esc", ArenaText.Pair("暂停 / 继续", "Pause / resume"), ""),
             ("R", ArenaText.Pair("结算时重开", "Restart on the result screen"), ""),
         };
@@ -921,6 +930,7 @@ namespace AnomalyArena
                 var content = screen.transform.Find("Content");
                 if (!content) continue;
                 AddTutorialButton(content);
+                AddPauseSettingsButton(content);
                 pauseControls = V2ControlsTable.Create(content, PauseTableRow, 190f, 18);
                 var rect = pauseControls.Rect;
                 rect.anchorMin = new Vector2(0f, 1f);

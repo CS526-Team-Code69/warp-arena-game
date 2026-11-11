@@ -29,7 +29,9 @@ namespace AnomalyArena
     /// Builds a stone wall's mesh for any rectangle, so what is drawn fills exactly what blocks (system doc 11.2): the foot of the wall lies on the rectangle's edges and
     /// the stones never reach past them. The stones are laid out on a lattice in the rectangle's own coordinates, so for a map wall (world coordinates) two touching
     /// walls keep their courses and a piece cut from a wall (TyrantTerrain) keeps the same stones in the same places; only the top course varies, from a noise field, and
-    /// the bottom stays whole. Only the faces the fixed game camera can see are built.
+    /// the bottom stays whole. The wall is a closed solid seen from anywhere above the ground: all four sides, every step between two stones of different height and
+    /// the floor of every chipped corner are built, whichever of them the camera faces. The camera's direction is a setting, and a face left out because one
+    /// direction never showed it is a hole into the hollow inside as soon as the view turns.
     /// Colours go in the vertices: RGB the stone's tint, A how much light reaches that corner.
     /// </summary>
     public static class V5TerrainWalls
@@ -157,9 +159,10 @@ namespace AnomalyArena
 
         /// <summary>
         /// Builds a wall over rect. rect's position only picks the stones (map walls pass their world rect), the mesh is always centred on it. axis 0 runs the courses
-        /// along x, 1 along z.
+        /// along x, 1 along z. readable keeps the mesh's vertices and triangles in memory for a check that reads them; a wall in the game gives them up once they are
+        /// with the graphics card.
         /// </summary>
-        public static V5WallShape Build(V5WallStyle style, Rect rect, int axis)
+        public static V5WallShape Build(V5WallStyle style, Rect rect, int axis, bool readable = false)
         {
             var look = LookOf(style);
             Points.Clear(); Normals.Clear(); Colors.Clear(); Uvs.Clear(); Triangles.Clear(); Stones.Clear();
@@ -178,7 +181,7 @@ namespace AnomalyArena
             foreach (var stone in Stones) Top(look, stone, rect, centre, shape);
             Sides(look, rect, centre);
             Risers(look, centre);
-            shape.mesh = Finish();
+            shape.mesh = Finish(readable);
             return shape;
         }
 
@@ -246,7 +249,7 @@ namespace AnomalyArena
             shape.tallest = Mathf.Max(shape.tallest, stone.top);
         }
 
-        /// <summary>The dark bed under the stones, the rectangle itself. It shows only where a stone's corner is chipped away.</summary>
+        /// <summary>The dark bed inside the wall, the rectangle itself. The stones close over it; it can show only through a joint too thin to be given a face.</summary>
         static void Plinth(Look look, Rect rect, Vector2 c)
         {
             var dark = look.bed;
@@ -262,6 +265,7 @@ namespace AnomalyArena
             int seed = Mathf.RoundToInt(s.hash * 1000000f);
             float outerY = s.top - look.drop;
             float innerY = s.top + (Hash(seed, 11) - .4f) * look.rise;
+            Vector2 uv = new(Hash(seed, 40), Hash(seed, 41));
             int n = 0;
             for (int corner = 0; corner < 4; corner++)
             {
@@ -274,10 +278,12 @@ namespace AnomalyArena
                 bool alongXFirst = corner is 0 or 2;
                 Ring(ref n, look, rect, c, shape, alongXFirst ? x + intoX * cut : x, alongXFirst ? z : z + intoZ * cut, intoX, intoZ, bevel, outerY, innerY);
                 Ring(ref n, look, rect, c, shape, alongXFirst ? x : x + intoX * cut, alongXFirst ? z + intoZ * cut : z, intoX, intoZ, bevel, outerY, innerY);
+                // The floor of the chip, level with the stone's edge and as dark as the bed. Without it the top has a hole at this corner, and the view goes
+                // through it down into the wall.
+                Triangle(OuterRing[n - 2], new Vector3(x - c.x, outerY, z - c.y), OuterRing[n - 1], Vector3.up, look.bed, look.bed, look.bed, uv, look.uvTile);
             }
 
             Color tint = StoneTint(look, s.hash, seed, s.level, 1f);
-            Vector2 uv = new(Hash(seed, 40), Hash(seed, 41));
             for (int i = 0; i < n; i++)
             {
                 int next = (i + 1) % n;
@@ -333,7 +339,12 @@ namespace AnomalyArena
         /// <summary>The outer faces of the wall. Each side's height follows the stones on that edge, in runs of one height.</summary>
         static void Sides(Look look, Rect rect, Vector2 c)
         {
+            // South, north, east, west. Each side runs in the direction for which Cross(up, direction) points out of the wall: that is what turns the fronts of
+            // its stones outward.
             OuterFace(look, Vector3.right, rect.yMin, c, 0);
+            OuterFace(look, Vector3.left, rect.yMax, c, 1);
+            OuterFace(look, Vector3.forward, rect.xMax, c, 2);
+            OuterFace(look, Vector3.back, rect.xMin, c, 3);
         }
 
         static void OuterFace(Look look, Vector3 along, float plane, Vector2 c, int side)
@@ -362,7 +373,8 @@ namespace AnomalyArena
             }
         }
 
-        /// <summary>Faces where a stone stands taller than its neighbour on the side the camera sees, so the broken top reads as steps.</summary>
+        /// <summary>Faces where a stone stands taller than a neighbour, on whichever of its four sides that neighbour lies, so the broken top reads as steps and no step
+        /// is left open.</summary>
         static void Risers(Look look, Vector2 c)
         {
             for (int a = 0; a < Stones.Count; a++)
@@ -374,6 +386,12 @@ namespace AnomalyArena
                     if (low.top >= high.top) continue;
                     if (Mathf.Abs(low.z1 - high.z0) < .001f && Overlap(high.x0, high.x1, low.x0, low.x1, out float x0, out float x1))
                         Face(look, Vector3.right, high.z0, c, 0, x0, x1, low.top - look.drop, high.top - look.drop);
+                    if (Mathf.Abs(low.z0 - high.z1) < .001f && Overlap(high.x0, high.x1, low.x0, low.x1, out x0, out x1))
+                        Face(look, Vector3.left, high.z1, c, 1, -x1, -x0, low.top - look.drop, high.top - look.drop);
+                    if (Mathf.Abs(low.x0 - high.x1) < .001f && Overlap(high.z0, high.z1, low.z0, low.z1, out float z0, out float z1))
+                        Face(look, Vector3.forward, high.x1, c, 2, z0, z1, low.top - look.drop, high.top - look.drop);
+                    if (Mathf.Abs(low.x1 - high.x0) < .001f && Overlap(high.z0, high.z1, low.z0, low.z1, out z0, out z1))
+                        Face(look, Vector3.back, high.x0, c, 3, -z1, -z0, low.top - look.drop, high.top - look.drop);
                 }
             }
         }
@@ -382,13 +400,14 @@ namespace AnomalyArena
         {
             from = Mathf.Max(a0, b0);
             to = Mathf.Min(a1, b1);
-            return to - from > .01f;
+            // However short the shared stretch is, it is a step: one left out is a slit into the wall.
+            return to - from > .001f;
         }
 
         /// <summary>A vertical stretch of masonry from s0 to s1 along the side and y0 to y1 up it, laid in courses. s is the rect's coordinate along the direction along.</summary>
         static void Face(Look look, Vector3 along, float plane, Vector2 c, int side, float s0, float s1, float y0, float y1)
         {
-            if (y1 - y0 < .04f || s1 - s0 < .02f) return;
+            if (y1 - y0 < .04f || s1 - s0 < .001f) return;
             Vector3 outward = Vector3.Cross(Vector3.up, along);
             // Where s = 0, y = 0 lies on the plane, in the mesh's coordinates.
             Vector3 origin = side < 2 ? new Vector3(-c.x, 0f, plane - c.y) : new Vector3(plane - c.x, 0f, -c.y);
@@ -408,6 +427,17 @@ namespace AnomalyArena
                     FaceStone(look, origin, along, outward, a, b, low, high, tint, seed);
                 }
             }
+
+            // The joints round each stone lie a little behind the plane, so along the face's own edge the joint would stand open: a slit into the wall at the foot
+            // of a step and where two faces meet in an inner corner. A strip as dark as the bed, from the joint out to the plane, closes it at the foot and at
+            // both ends. The upper edge needs none: it lies under the edge of the stone above it, where only a look from below could reach. A face that stands
+            // on the ground needs none at its foot.
+            Vector3 At(float s, float y, float o) => origin + along * s + Vector3.up * y + outward * o;
+            float joint = -look.faceRecess;
+            var dark = look.bed;
+            if (y0 > .001f) QuadFlat(At(s0, y0, joint), At(s1, y0, joint), At(s1, y0, 0f), At(s0, y0, 0f), dark, dark, dark, dark, Vector2.zero, look.uvTile, along);
+            QuadFlat(At(s0, y0, 0f), At(s0, y1, 0f), At(s0, y1, joint), At(s0, y0, joint), dark, dark, dark, dark, Vector2.zero, look.uvTile, along);
+            QuadFlat(At(s1, y0, joint), At(s1, y1, joint), At(s1, y1, 0f), At(s1, y0, 0f), dark, dark, dark, dark, Vector2.zero, look.uvTile, along);
         }
 
         static void FaceStone(Look look, Vector3 origin, Vector3 along, Vector3 outward, float a, float b, float low, float high, Color tint, int seed)
@@ -428,7 +458,8 @@ namespace AnomalyArena
                 QuadFlat(OuterRing[i], OuterRing[next], InnerRing[next], InnerRing[i],
                     With(tint, OuterLight[i]), With(tint, OuterLight[next]), With(tint, InnerLight[next]), With(tint, InnerLight[i]), uv, look.uvTile, along);
             }
-            var lean = (outward + new Vector3((Hash(seed, 42) - .5f) * look.tilt, (Hash(seed, 43) - .5f) * look.tilt, 0f)).normalized;
+            // Each stone leans a little along its face and up or down, so neighbours catch the light differently on every side of the wall.
+            var lean = (outward + along * ((Hash(seed, 42) - .5f) * look.tilt) + up * ((Hash(seed, 43) - .5f) * look.tilt)).normalized;
             int first = Points.Count;
             for (int i = 0; i < 4; i++)
             {
@@ -495,7 +526,7 @@ namespace AnomalyArena
             Triangles.Add(first); Triangles.Add(first + 1); Triangles.Add(first + 2);
         }
 
-        static Mesh Finish()
+        static Mesh Finish(bool readable)
         {
             var mesh = new Mesh { name = "V5 stone wall" };
             mesh.indexFormat = Points.Count > 65000 ? UnityEngine.Rendering.IndexFormat.UInt32 : UnityEngine.Rendering.IndexFormat.UInt16;
@@ -504,7 +535,7 @@ namespace AnomalyArena
             mesh.SetColors(Colors);
             mesh.SetUVs(0, Uvs);
             mesh.SetTriangles(Triangles, 0, true);
-            mesh.UploadMeshData(true);
+            mesh.UploadMeshData(!readable);
             return mesh;
         }
 

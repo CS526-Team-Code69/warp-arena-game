@@ -55,23 +55,33 @@ MonoBehaviour:
   duskDarkness: 0.55
   afternoonLight: 0.25
   lampRadius: 6.5
-  baseLightRadius: 11
+  baseLightRadius: 15
   playerGlowRadius: 2.4
   freeLampsPerNight: 3
   lampHp: 4
   regions: {x: 6, y: 4}
   killsPerShadow: 4
-  overrunShadows: 3
-  maxShadowsPerRegion: 6
-  maxShadows: 40
+  overrunShadows: 5
+  maxShadowsPerRegion: 8
+  maxShadows: 72
+  ambientShadows: 1
+  ambientShadowsPerDay: 0
   tutorialShadows: 4
+  tutorialShadowKeep: 5
   shadowSpeed: 3.4
-  overrunShadowSpeed: 4.4
-  shadowSense: 9
+  shadowChaseFactor: 1.12
+  shadowSense: 26
+  shadowTerritory: 16
+  lampGatherBand: 3.5
   shadowHitShare: 0.15
   shadowHitInterval: 0.9
   nightDeathLoss: 1
   nightDeathSeconds: 2.8
+  holeFeedGoal: 10
+  holePullFactor: 1.1
+  holeLurePack: 4
+  holeLureInterval: 5
+  holeLureAlive: 6
   baseHp: 300
   baseHpGrowth: 1.5
   shieldShare: 0.15

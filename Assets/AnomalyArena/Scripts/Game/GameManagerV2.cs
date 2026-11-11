@@ -20,7 +20,9 @@ namespace AnomalyArena
         ArenaUiState pendingSupplyChoice;
         bool supplyChoiceOpened;
         public void MarkSupplyLanded(){if(RunPhase==ArenaUiState.SupplyDrop)SupplyDropReady=true;}
-        public bool IsCombatActive => State==GameState.Playing&&RunPhase is ArenaUiState.WaveActive or ArenaUiState.VoidTrial or ArenaUiState.FinalBoss;
+        /// <summary>Weapons, skills and the battlefield run. The campaign's night and plain afternoon count too: there is nothing to fight
+        /// (the night's shadows cannot be hurt), but a held weapon that would not fire only looked broken.</summary>
+        public bool IsCombatActive => State==GameState.Playing&&RunPhase is ArenaUiState.WaveActive or ArenaUiState.VoidTrial or ArenaUiState.FinalBoss or ArenaUiState.Night;
         public bool CanPlayerMove => State==GameState.Playing&&(RunPhase is ArenaUiState.WaveIntro or ArenaUiState.WaveActive or ArenaUiState.VoidTrial or ArenaUiState.FinalBoss or ArenaUiState.Night||BuildWalking||BuildCrateWalking);
         /// <summary>Build phase with the panel put away (Tab): the player walks the empty arena and may step onto an open portal.</summary>
         public bool BuildWalking => buildWalking&&RunPhase is ArenaUiState.Armory or ArenaUiState.Draft or ArenaUiState.Ready;
@@ -150,7 +152,9 @@ namespace AnomalyArena
             if(RunPhase==ArenaUiState.WaveActive&&progression.BankedDrafts>levelUpSeen){levelUpSeen=progression.BankedDrafts;OpenLevelUp();}
             if(IsCombatActive)
             {
-                Elapsed+=Time.deltaTime;progression.Tick(PlayerDeltaTime);ElementStatus.TickAll(WorldDeltaTime,PlayerDeltaTime);SkillLoadout.TickAll(PlayerDeltaTime);runWeapons.Tick(PlayerDeltaTime);orbs?.Tick(WorldDeltaTime);
+                // The run's clock counts the fights, not the campaign's night and plain afternoon (where weapons work too since 2026-11-10).
+                if(RunPhase!=ArenaUiState.Night)Elapsed+=Time.deltaTime;
+                progression.Tick(PlayerDeltaTime);ElementStatus.TickAll(WorldDeltaTime,PlayerDeltaTime);SkillLoadout.TickAll(PlayerDeltaTime);runWeapons.Tick(PlayerDeltaTime);orbs?.Tick(WorldDeltaTime);
                 slipLeft=Mathf.Max(0,slipLeft-PlayerDeltaTime);if(eligibilityWave!=waves.WaveIndex)UpdatePenetrationEligibility();
             }
             else if(RunPhase==ArenaUiState.TrialReturn){TickTrialReturn();if(CampaignRunning)CampaignAfterTrialReturn();}
@@ -452,7 +456,7 @@ namespace AnomalyArena
                 snapshot.state=RunPhase;snapshot.buildWalking=BuildWalking;snapshot.supplyLanded=SupplyDropReady;snapshot.isGreaterReward=greaterDraft;snapshot.illustrated=Art.Enabled;snapshot.hp=player?player.Hp:50;snapshot.maxHp=player?player.maxHp:50;snapshot.stamina=player?player.stamina.Value:1;snapshot.staminaExhausted=player&&player.stamina.Exhausted;
                 if(progression){snapshot.level=progression.Level;snapshot.xp=progression.Xp;snapshot.xpNeeded=progression.XpRequired;snapshot.energy=progression.Energy;snapshot.maxEnergy=progression.Stats.maxEnergy;snapshot.energyUnlocked=progression.EnergyUnlocked;snapshot.voidEnergy=progression.VoidEnergy;snapshot.voidLevel=progression.VoidBadge;snapshot.maxLevel=progression.Rules?progression.Rules.maxLevel:12;snapshot.bankedDrafts=progression.BankedDrafts;snapshot.rerolls=progression.RerollsRemaining;}
                 var status=player?ElementStatus.For(player):null;snapshot.shield=status?status.Shield:0;snapshot.playerStatuses=status?ArenaText.Pair($"火焰 {status.Fire:0.#} · 毒素 {status.Poison:0.#} · 冰冻 {status.Frost:0.#} · 雷电 {status.Lightning:0.#}", $"Fire {status.Fire:0.#} · Poison {status.Poison:0.#} · Frost {status.Frost:0.#} · Lightning {status.Lightning:0.#}"):"";
-                snapshot.wave=waves?Mathf.Max(1,waves.WaveIndex+1):1;snapshot.maxWaves=waves?waves.WaveCount:14;snapshot.waveTime=waves?waves.TimeLeft:0;snapshot.buildTime=buildTimeLeft;snapshot.selectionUnlimited=selectionTimeLimit<=0f;snapshot.kills=waves?waves.Kills:0;snapshot.charge01=runWeapons?runWeapons.Charge01:0;snapshot.hint=BuildWalking?ArenaText.Pair("整备走动中 · Tab 返回选卡", "WALKING · TAB BACK TO THE CARDS"):BuildCrateWalking?ArenaText.Pair("整备中可以走动 · 点击头顶的箱子打开", "YOU CAN WALK · CLICK THE CRATE ABOVE YOU"):RunPhase==ArenaUiState.WaveActive&&progression&&progression.BankedDrafts>0?(CampaignRunning?ArenaText.Pair($"待选升级 ×{progression.BankedDrafts} · 按 T 选择", $"UPGRADES TO PICK ×{progression.BankedDrafts} · PRESS T"):ArenaText.Pair($"可选卡 ×{progression.BankedDrafts} · 按 T 选卡", $"CARD PICKS ×{progression.BankedDrafts} · PRESS T")):runWeapons&&runWeapons.Active!=null?runWeapons.Active.Label:"";
+                snapshot.wave=waves?Mathf.Max(1,waves.WaveIndex+1):1;snapshot.maxWaves=waves?waves.WaveCount:14;snapshot.waveTime=waves?waves.TimeLeft:0;snapshot.buildTime=buildTimeLeft;snapshot.selectionUnlimited=selectionTimeLimit<=0f;snapshot.kills=waves?waves.Kills:0;snapshot.charge01=runWeapons?runWeapons.Charge01:0;snapshot.hint=BuildWalking?ArenaText.Pair("整备走动中 · Tab 返回选卡", "WALKING · TAB BACK TO THE CARDS"):BuildCrateWalking?ArenaText.Pair("整备中可以走动 · 点击头顶的箱子打开", "YOU CAN WALK · CLICK THE CRATE ABOVE YOU"):RunPhase==ArenaUiState.WaveActive&&progression&&progression.BankedDrafts>0?(CampaignRunning?ArenaText.Pair($"待选升级 ×{progression.BankedDrafts} · 按 {ArenaKeys.CardPickKey} 选择", $"UPGRADES TO PICK ×{progression.BankedDrafts} · PRESS {ArenaKeys.CardPickKey}"):ArenaText.Pair($"可选卡 ×{progression.BankedDrafts} · 按 {ArenaKeys.CardPickKey} 选卡", $"CARD PICKS ×{progression.BankedDrafts} · PRESS {ArenaKeys.CardPickKey}")):runWeapons&&runWeapons.Active!=null?runWeapons.Active.Label:"";
                 snapshot.waveTimeExpired=waves&&waves.Phase==WavePhase.WaveActive&&waves.TimeExpired;snapshot.waveBatch=waves?waves.BatchIndex:0;snapshot.waveLiving=waves?waves.LivingCount:0;snapshot.wavePending=waves?waves.PendingCount:0;
                 snapshot.draftCount=greaterDraft?1:buildDraftCount;snapshot.draftIndex=greaterDraft?1:Mathf.Clamp(buildDraftCount-snapshot.bankedDrafts+1,1,Mathf.Max(1,buildDraftCount));snapshot.buildSummary=buildSummary.Trim();
                 snapshot.bossImmunities="";

@@ -155,7 +155,7 @@ namespace AnomalyArena
                     // The label offers E only while E works (on the portal, free to act, in a wave or walking the build phase).
                     bool canEnter = world.CanEnterPortal(gm.player, hole);
                     string text = campaign ? CampaignHoleText(world, hole, canEnter)
-                        : hole.Phase == HolePhase.Portal ? ArenaText.Text(canEnter ? "ui.hole.enter" : "ui.hole.portal") + "\n" + ArenaText.Text("ui.hole.remaining", hole.WavesLeft)
+                        : hole.Phase == HolePhase.Portal ? (canEnter ? PortalEnterText() : ArenaText.Text("ui.hole.portal")) + "\n" + ArenaText.Text("ui.hole.remaining", hole.WavesLeft)
                         : world.CanFeed && hole.Phase == HolePhase.Active ? $"{hole.Feeds} / {hole.feedsToOpen}" : "";
                     if (label.text != text) label.text = text;
                     // The campaign's gate is smaller than the hole it was: its label sits lower, clear of the base bar at the screen's top
@@ -228,13 +228,22 @@ namespace AnomalyArena
             for (int i = edges; i < edgeLabels.Length; i++) edgeLabels[i].gameObject.SetActive(false);
         }
 
+        /// <summary>The open mode's portal while the interact key enters it: the text table's lines ("E · ENTER", then what entering
+        /// costs). The table names the key the game always had; when the player has put interacting on another key (ArenaKeys), that
+        /// key's name stands in for the leading E.</summary>
+        static string PortalEnterText()
+        {
+            string text = ArenaText.Text("ui.hole.enter"), key = ArenaKeys.InteractKey;
+            return key != "E" && text.StartsWith("E ", System.StringComparison.Ordinal) ? key + text.Substring(1) : text;
+        }
+
         /// <summary>The V2 day campaign's black hole: how many it has swallowed of what opens it, then over the hidden gate the E that takes
         /// the player in while it does (a question follows), else what the gate is.</summary>
         static string CampaignHoleText(WorldMap world, BlackHole hole, bool canEnter) => hole.Phase switch
         {
             HolePhase.Active => hole.campaignLabel ?? (world.CanFeed ? $"{hole.Feeds} / {hole.feedsToOpen}" : ""),
             // 2026-11-10: the portal carries no text of its own; only standing on it shows the key that enters.
-            HolePhase.Portal => canEnter ? ArenaText.Pair("按 E 进入", "E · ENTER") : "",
+            HolePhase.Portal => canEnter ? ArenaText.Pair($"按 {ArenaKeys.InteractKey} 进入", $"{ArenaKeys.InteractKey} · ENTER") : "",
             _ => ""
         };
 
@@ -250,7 +259,7 @@ namespace AnomalyArena
                 bool show = i == 0 && on;
                 if (show)
                 {
-                    string text = ArenaText.Pair("E · 传送", "E · TRAVEL");
+                    string text = ArenaText.Pair($"{ArenaKeys.InteractKey} · 传送", $"{ArenaKeys.InteractKey} · TRAVEL");
                     if (label.text != text) label.text = text;
                     show = PlaceWorld(label.rectTransform, portal.Centre + gm.cam.transform.up * (portal.size * .5f + 1f), gm.cam);
                 }

@@ -71,7 +71,7 @@ namespace AnomalyArena
 
         RectTransform lampBox, mineBar;
         Image lampIcon, mineFill;
-        Text lampCount, mineLabel;
+        Text lampCount, lampKey, mineLabel;
         static readonly Color AlloyBar = new(.36f, .62f, .9f), DarkBar = new(.56f, .3f, .86f), LampColour = new(1f, .9f, .55f);
 
         void BuildFeedback()
@@ -84,8 +84,10 @@ namespace AnomalyArena
             Anchor(lampCount.rectTransform, new Vector2(0f, .5f), new Vector2(52f, 0f), new Vector2(64f, 36f), new Vector2(0f, .5f));
             var cap = Box("Key", lampBox, new Vector2(1f, .5f), new Vector2(-10f, 0f), new Vector2(40f, 30f), new Vector2(1f, .5f), new Color(.16f, .22f, .32f, 1f));
             Outline(cap.gameObject);
-            var key = Label("Text", cap, "F", 18, Color.white, TextAnchor.MiddleCenter);
-            StretchFull(key.rectTransform);
+            // The key that sets a lamp down, as the player has it (ArenaKeys); a longer name than a letter shrinks to stay in the cap.
+            lampKey = Label("Text", cap, ArenaKeys.LampKey, 18, Color.white, TextAnchor.MiddleCenter);
+            lampKey.resizeTextForBestFit = true; lampKey.resizeTextMinSize = 9; lampKey.resizeTextMaxSize = 18;
+            StretchFull(lampKey.rectTransform);
             lampBox.gameObject.SetActive(false);
 
             // The mining bar, bottom centre just over the weapon's name: what is being mined written inside it, filling while E is held.
@@ -132,6 +134,7 @@ namespace AnomalyArena
             int left = campaign.LampStock;
             lampCount.text = "×" + left;
             lampCount.color = left > 0 ? Soft : Warn;
+            if (lampKey.text != ArenaKeys.LampKey) lampKey.text = ArenaKeys.LampKey;
         }
 
         // ───── The mining bar and what was just gained ─────

@@ -32,7 +32,7 @@ public static class V2CampaignCheck
     // Since 2026-11-10: the black hole's check (the day it is failed on purpose; passed on a later day), the study window's captures
     // and what one visit bought through its entries.
     static int holeFailDay = -1, studyStage, voidStudyStage;
-    static bool holeFailNoted, holePassNoted, giftNoted;
+    static bool holeFailNoted, holePassNoted, giftNoted, holeFeedNoted;
     static float holeAngle, holdSince;
     static string holdKey;
     static readonly Dictionary<string, int> studyBought = new();
@@ -69,7 +69,7 @@ public static class V2CampaignCheck
         step = 0; day = 0; wait = 0f; ended = false; shots.Clear(); raiderSince.Clear(); raidShot = false; lastStage = CampaignStage.Off; campaign = null;
         shipTabOpened = sideBroken = darkNodeShot = nightDeathDone = deathWalletCheck = holeNoted = false; diedAtNight = -1;
         shopDay = grantDay = -1; boughtResearch = boughtNewWeapons = boughtUpgrades = 0;
-        holeFailDay = -1; studyStage = voidStudyStage = 0; holeFailNoted = holePassNoted = giftNoted = false; holeAngle = 0f; holdKey = null; studyBought.Clear();
+        holeFailDay = -1; studyStage = voidStudyStage = 0; holeFailNoted = holePassNoted = giftNoted = holeFeedNoted = false; holeAngle = 0f; holdKey = null; studyBought.Clear();
         startedAt = stepSince = lastAct = Time.realtimeSinceStartup;
         EditorApplication.LockReloadAssemblies();
         EditorApplication.update -= Tick; EditorApplication.update += Tick;
@@ -659,6 +659,22 @@ public static class V2CampaignCheck
             // Where the hole is on screen, until its first-sight cutscene has played.
             Teleport(gm, hole.Centre + new Vector3(-ring, 0f, 0f));
             return !Held("hole-sight" + campaign.Day, 16f);
+        }
+        // Since 2026-11-10 the hole is fed first. The check stands near it until the afternoon's pack has come out, notes the side
+        // quest as it stands, then feeds the hole through the campaign's debug call (luring by hand is looked at on its own).
+        if (!campaign.HoleAwake)
+        {
+            Teleport(gm, hole.Centre + new Vector3(-ring, 0f, 0f));
+            if (!Held("hole-feed" + campaign.Day, 4f)) return true;
+            if (!holeFeedNoted)
+            {
+                holeFeedNoted = true;
+                Note($"black hole fed first on day {campaign.Day}: {campaign.HoleFed}/{campaign.HoleFeedGoal} swallowed, {campaign.HoleLureAlive} of its pack out, pull {hole.pullSpeed:0.0} against a walk of {gm.player.moveSpeed:0.0}, afternoon phase {gm.RunPhase}");
+                Shot("16a-hole-feeding");
+            }
+            campaign.DebugFeedHole(campaign.HoleFeedGoal);
+            Note($"the hole is fed through the debug call: awake {campaign.HoleAwake}, pack left {campaign.HoleLureAlive}");
+            return true;
         }
         var target = campaign.HoleTarget;
         if (!target || !target.gameObject.activeInHierarchy)

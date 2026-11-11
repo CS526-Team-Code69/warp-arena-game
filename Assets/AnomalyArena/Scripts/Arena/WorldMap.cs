@@ -283,7 +283,7 @@ namespace AnomalyArena
                     lastCell = index;
                     gridTimer = 0.2f;
                 }
-                if (Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame) TryEnterPortal(GM.player);
+                if (ArenaKeys.Pressed(GameAction.Interact)) TryEnterPortal(GM.player);
                 if (TrialActive) TickDecoy(ref trialDecoyLife, trialDecoy, trialDecoyBlast, trialDecoyOwner, dt);
                 else TickDecoy(ref decoyLife, decoy, decoyBlast, decoyOwner, dt);
             }

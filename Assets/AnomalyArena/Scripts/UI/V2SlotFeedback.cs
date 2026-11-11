@@ -174,8 +174,31 @@ namespace AnomalyArena
                 : ArenaText.Pair($"手持{number}", $"HAND {number}");
         }
 
+        /// <summary>A skill slot names the key that casts it, the key the player has that skill on (ArenaKeys), written again when the
+        /// key or the language changes. The saved label would write the fixed "[1]" back over it, so its localizer goes.</summary>
+        void BuildSkillKey()
+        {
+            var key = transform.Find("SlotKey");
+            keyLabel = key ? key.GetComponent<Text>() : null;
+            if (key && key.GetComponent<UnityEngine.Localization.Components.LocalizeStringEvent>() is { } localizer)
+            {
+                localizer.enabled = false;
+                Destroy(localizer);
+            }
+        }
+
+        void RenderSkillKey()
+        {
+            // Three skill keys; a saved scene with more skill slots keeps its own label on the others.
+            if (!keyLabel || index > 2 || !ArenaText.Ready || shownKey == ArenaKeys.Revision) return;
+            shownKey = ArenaKeys.Revision;
+            string key = ArenaKeys.Name(GameAction.Skill1 + index);
+            keyLabel.text = ArenaText.Pair($"技能{index + 1} [{key}]", $"SKILL {index + 1} [{key}]");
+        }
+
         void RenderSkill(float dt)
         {
+            RenderSkillKey();
             float target = Mathf.Clamp01(model.cooldown01);
             shownClock = target >= shownClock ? target : Mathf.Lerp(shownClock, target, 1f - Mathf.Exp(-dt * ClockFollow));
             if (target <= 0f && shownClock < .004f) shownClock = 0f;
@@ -243,6 +266,7 @@ namespace AnomalyArena
                     edgeImage.fillClockwise = true;
                 }
                 if (kind == Kind.Hand) BuildHandParts();
+                if (kind == Kind.Skill) BuildSkillKey();
                 ShrinkPicture(slot.weaponIcon);
                 ShrinkPicture(slot.contentIcon);
                 ShrinkPicture(slot.icon);

@@ -1,0 +1,22 @@
+received_at,event,run_id,session_id,edition,build,day,stage,kind,detail,value
+2026-11-10 22:40:00,v2_event,a,s1,en,1.0.0+test,0,tutorial,crate_offer,TutorialFirst:Rifle,1
+2026-11-10 22:40:00,v2_event,a,s1,en,1.0.0+test,0,tutorial,crate_offer,TutorialFirst:Knife,2
+2026-11-10 22:40:00,v2_event,a,s1,en,1.0.0+test,0,tutorial,crate_offer,TutorialFirst:Railgun,3
+2026-11-10 22:41:00,v2_event,a,s1,en,1.0.0+test,0,tutorial,crate,TutorialFirst:Rifle,1
+2026-11-10 22:42:00,v2_event,a,s1,en,1.0.0+test,0,tutorial,crate_offer,TutorialSecond:Knife,1
+2026-11-10 22:42:00,v2_event,a,s1,en,1.0.0+test,0,tutorial,crate_offer,TutorialSecond:Railgun,2
+2026-11-10 22:42:00,v2_event,a,s1,en,1.0.0+test,0,tutorial,crate_offer,TutorialSecond:Minigun,3
+2026-11-10 22:43:00,v2_event,a,s1,en,1.0.0+test,0,tutorial,crate,TutorialSecond:left,0
+2026-11-10 22:44:00,v2_event,a,s1,en,1.0.0+test,1,dusk,crate_offer,Afternoon:Knife,1
+2026-11-10 22:44:00,v2_event,a,s1,en,1.0.0+test,1,dusk,crate_offer,Afternoon:Railgun,2
+2026-11-10 22:45:00,v2_event,a,s1,en,1.0.0+test,1,dusk,crate,Afternoon:Railgun,2
+2026-11-10 22:46:00,v2_event,b,s2,zh,1.0.0+test,1,dusk,crate_offer,Afternoon:Rifle,1
+2026-11-10 22:46:00,v2_event,b,s2,zh,1.0.0+test,1,dusk,crate_offer,Afternoon:Minigun,2
+2026-11-10 22:46:00,v2_event,b,s2,zh,1.0.0+test,1,dusk,crate_offer,Afternoon:OrbitBlades,3
+2026-11-10 22:47:00,v2_event,b,s2,zh,1.0.0+test,1,dusk,crate,Afternoon:no_room,3
+2026-11-10 22:48:00,v2_event,b,s2,zh,1.0.0+test,2,dusk,crate,Afternoon:empty,0
+2026-11-10 22:49:00,v2_event,b,s2,zh,1.0.0+test,3,dusk,crate,Afternoon:PlasmaLauncher,2
+2026-11-10 22:50:00,v2_event,c,s3,test,1.0.0+test,1,dusk,crate_offer,Afternoon:Rifle,1
+2026-11-10 22:51:00,v2_event,c,s3,test,1.0.0+test,1,dusk,crate,Afternoon:Rifle,1
+2026-11-10 22:52:00,v2_event,a,s1,en,1.0.0+test,1,dusk,hole_check,start,0.1
+2026-11-10 22:53:00,v2_event,a,s1,en,1.0.0+test,2,dusk,crate,broken,0

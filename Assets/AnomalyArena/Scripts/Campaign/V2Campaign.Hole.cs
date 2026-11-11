@@ -8,8 +8,10 @@ namespace AnomalyArena
     /// The black hole's side quest on the campaign map (since 2026-11-06; a timed damage check since 2026-11-10). The campaign's one black
     /// hole (V2Campaign.Map.cs) stands out by day and in the afternoon and is gone at night. It has no marker at the screen's edge: the
     /// afternoon's ore trail, purple shards on the ground and its hum lead to it (V2Campaign.Guide.cs). The first time the player sees it
-    /// by day or in the afternoon, the classic first-sight cutscene plays (WorldMap.TickHoleIntro: three monsters spiral in); the hole no
-    /// longer counts what it swallows (BlackHole.countsFeeds), so nothing after it speaks of feeding it.
+    /// by day or in the afternoon, the classic first-sight cutscene plays (WorldMap.TickHoleIntro: three monsters spiral in).
+    /// Then the hole is fed first (V2Campaign.HoleFeed.cs): the side quest reads "lure monsters into the black hole", the campaign keeps
+    /// its own count of what the hole swallows (BlackHole.countsFeeds stays off, so the hole never opens by feeding alone), and with
+    /// rules.holeFeedGoal swallowed the hole wakes for the rest of the run. Until then it takes no hits.
     /// The side quest then reads "break the black hole in time". The first hit the player lands on the hole (any weapon, blast or burn
     /// finds it: BlackHoleTarget) starts rules.holeCheckSeconds, in which its damage must reach the day's requirement (by default half the
     /// Nash Prophet's HP, HoleRequirement). From rules.holeCounterDelay on the Prophet answers through the hole with its own moves, void
@@ -26,11 +28,11 @@ namespace AnomalyArena
         // How the check shows over the hole (presentation, not balance numbers): a bar of blocks this wide, its damage row and its time
         // row this tall, floating this far above the hole's world label along the view's up; the pillars' column height and width share.
         const float CheckBarWidth = 6f, CheckBarRow = .42f, CheckTimeRow = .14f, CheckBarAboveLabel = 1.6f;
-        const float PillarColumnHeight = 6f, PillarColumnShare = .55f;
+        const float PillarColumnHeight = 9f, PillarColumnShare = .4f;
         // The ring's shots start this far outside the hole's kill core: inside it a shot is swallowed at once (EnemyBolt).
         const float HoleRingMuzzle = .6f;
         static readonly Color CheckBarBack = new(.07f, .03f, .11f), CheckBarDamage = new(.72f, .38f, 1f), CheckBarTime = new(.86f, .86f, .92f);
-        static readonly Color PillarRimColour = new(.3f, .09f, .48f), PillarFillColour = new(.64f, .3f, 1f), PillarColumnColour = new(.82f, .62f, 1f);
+        static readonly Color PillarFillColour = new(.64f, .3f, 1f);
 
         WorldMap questMap;
         bool holeSeen, holeFailedToday, holeCheckAnnounced;
@@ -38,7 +40,6 @@ namespace AnomalyArena
         readonly HoleCheck holeCheck = new();
         BlackHoleTarget holeTarget;
         Transform holeCheckView, checkBar, checkDamage, checkTime;
-        readonly List<Transform> pillarViews = new();
         int labelPercent = -1, labelSeconds = -1;
         string sideQuestText;
 
@@ -59,7 +60,10 @@ namespace AnomalyArena
             questMap = map;
             holeSeen = false;
             ResetHoleCheck();
+            ResetHoleFeeding();
             holeCheckDay = -1;
+            map.HoleFed -= OnHoleFed;
+            map.HoleFed += OnHoleFed;
             map.campaignTick = TickHoleQuest;
             map.campaignHoleIntroAllowed = HoleIntroAllowed;
             map.campaignPortalAllowed = HoleGateAllowed;
@@ -71,6 +75,7 @@ namespace AnomalyArena
             if (!hole) return;
             hole.countsFeeds = false;
             hole.campaignLabel = "";
+            ApplyCampaignHolePull(hole);
             var playerStatus = gm && gm.player ? ElementStatus.For(gm.player) : null;
             holeTarget = BlackHoleTarget.Create(hole.transform, hole.KillRadiusNominal, playerStatus ? playerStatus.Rules : null);
             holeTarget.DamageTaken += OnHoleDamaged;
@@ -91,8 +96,10 @@ namespace AnomalyArena
             {
                 questMap.ClearCampaignHooks();
                 questMap.VoidTrialWon -= OnVoidTrialWon;
+                questMap.HoleFed -= OnHoleFed;
                 var hole = questMap.CampaignHole;
                 if (hole) { hole.countsFeeds = true; hole.campaignLabel = null; }
+                RestoreClassicHolePull(hole);
                 StopHoleAnswers(questMap);
             }
             if (holeTarget)
@@ -103,9 +110,9 @@ namespace AnomalyArena
             holeTarget = null;
             if (holeCheckView) Destroy(holeCheckView.gameObject);
             holeCheckView = checkBar = checkDamage = checkTime = null;
-            pillarViews.Clear();
             questMap = null;
             ResetHoleCheck();
+            ResetHoleFeeding();
             SetSideQuestText(null);
             if (ui) ui.SetGoalsHidden(false);
             V2BlackHolePresentation.AttackProgress = null;
@@ -122,7 +129,9 @@ namespace AnomalyArena
         void OnHoleIntroFinished()
         {
             holeSeen = true;
-            ui.Flash(ArenaText.Pair($"黑洞里有东西。攻击它：第一次打中后计时 {Mathf.RoundToInt(rules.holeCheckSeconds)} 秒，打出足够的伤害就能把它激怒。",
+            // Fed first: the side quest's line says how (V2Campaign.HoleFeed.cs); the flash only names what was just seen.
+            if (!HoleAwake) ui.Flash(ArenaText.Pair("黑洞会吞掉靠近它的怪物", "The black hole swallows the monsters that come near it"), 3f);
+            else ui.Flash(ArenaText.Pair($"黑洞里有东西。攻击它：第一次打中后计时 {Mathf.RoundToInt(rules.holeCheckSeconds)} 秒，打出足够的伤害就能把它激怒。",
                 $"Something lies within the black hole. Attack it: from the first hit you have {Mathf.RoundToInt(rules.holeCheckSeconds)} s to deal enough damage to enrage it."), 4.5f);
         }
 
@@ -201,7 +210,9 @@ namespace AnomalyArena
             // The check counts while the hole is out (by day, in the afternoon or during a base visit from it), still a hole, and the
             // day's check is not over; it takes hits only by day or in the afternoon, outside the cutscene.
             bool holeOut = shown && hole.Phase == HolePhase.Active && Day > 0;
-            bool counting = holeOut && !holeFailedToday && holeCheck.State is HoleCheckState.Idle or HoleCheckState.Running;
+            // Fed first (V2Campaign.HoleFeed.cs): until it is awake the hole has no check and takes no hits.
+            TickHoleFeeding(map, hole, p, holeOut && daylight);
+            bool counting = holeOut && HoleAwake && !holeFailedToday && holeCheck.State is HoleCheckState.Idle or HoleCheckState.Running;
             if (holeCheck.State == HoleCheckState.Passed && hole.Phase == HolePhase.Active) PassHoleCheck(map, hole);
             else if (holeCheck.State == HoleCheckState.Running) TickHoleCheck(map, hole, p, holeOut);
             ShowHoleTarget(counting && daylight && !map.HoleIntroPlaying && holeCheck.State is HoleCheckState.Idle or HoleCheckState.Running);
@@ -228,7 +239,7 @@ namespace AnomalyArena
             var map = questMap;
             if (!Running || !map || amount <= 0f || info.dealer == null || info.dealer.Owner is not PlayerController) return;
             var hole = map.CampaignHole;
-            if (!hole || hole.Phase != HolePhase.Active || holeFailedToday) return;
+            if (!hole || hole.Phase != HolePhase.Active || holeFailedToday || !HoleAwake) return;
             bool starting = holeCheck.State == HoleCheckState.Idle;
             if (starting) ApplyCheckTiming();
             holeCheck.Hit(amount, starting ? HoleRequirement() : holeCheck.Required, rules.holeCheckSeconds);
@@ -350,6 +361,7 @@ namespace AnomalyArena
             // The open portal needs no instruction (2026-11-10): the line only says it is open; standing on it shows the E (V2WorldLabels).
             bool portal = hole.Phase != HolePhase.Active;
             string text = portal ? ArenaText.Pair("虚空传送门已打开", "The void portal is open")
+                : !HoleAwake ? FeedQuestLine()
                 : holeFailedToday ? ArenaText.Pair("限时击破黑洞：今天没能激怒它，明天再来", "Break the black hole in time: not enraged today, come back tomorrow")
                 : ArenaText.Pair("限时击破黑洞", "Break the black hole in time");
             if (!shown && !holeFailedToday)
@@ -364,7 +376,9 @@ namespace AnomalyArena
             if (holeCheck.State != HoleCheckState.Running)
             {
                 labelPercent = labelSeconds = -1;
-                if (hole.campaignLabel != "") hole.campaignLabel = "";
+                // While it is fed the hole shows its count; awake and at rest, nothing.
+                string resting = HoleAwake ? "" : FeedLabel();
+                if (hole.campaignLabel != resting) hole.campaignLabel = resting;
                 return;
             }
             int percent = Mathf.FloorToInt(holeCheck.Progress * 100f), seconds = Mathf.CeilToInt(holeCheck.SecondsLeft);
@@ -413,57 +427,26 @@ namespace AnomalyArena
             part.localPosition = new Vector3(-CheckBarWidth * .5f + CheckBarWidth * share * .5f, at.y, at.z);
         }
 
-        /// <summary>The Prophet's answered pillars on the ground, outside the trial: a dark rim of the deadly circle, a fill growing over
-        /// the warning, then a column while the pillar stands.</summary>
+        // The Prophet's answered pillars are drawn by one V2VoidPillarFx under the check's view: made with the first pillars, gone
+        // with that view when the quest lets go of the map.
+        V2VoidPillarFx holePillars;
+
+        /// <summary>The Prophet's answered pillars, outside the trial: each one's circle, clock, strike and standing column
+        /// (V2VoidPillarFx), with the campaign's own column height and core width. A pillar that is over thins out. In the trial
+        /// none of the map's show (the trial's own are its marks'): they go at once.</summary>
         void DrawHolePillars(WorldMap map)
         {
             var pillars = map && !map.TrialActive && map.hollow ? map.hollow.VoidPillars : null;
-            int count = pillars?.Count ?? 0;
-            while (holeCheckView && pillarViews.Count < count) pillarViews.Add(MakePillarView(pillarViews.Count));
-            for (int i = 0; i < pillarViews.Count; i++)
+            if (!holePillars)
             {
-                var view = pillarViews[i];
-                if (!view) continue;
-                bool on = i < count;
-                if (view.gameObject.activeSelf != on) view.gameObject.SetActive(on);
-                if (!on) continue;
-                var pillar = pillars[i];
-                view.position = Query.Flat(pillar.centre);
-                float across = pillar.radius * 2f, warned = pillar.Standing ? 1f : pillar.Warning01;
-                var rim = view.GetChild(0);
-                var fill = view.GetChild(1);
-                var column = view.GetChild(2);
-                rim.localScale = new Vector3(across, .01f, across);
-                fill.localScale = new Vector3(across * warned, .015f, across * warned);
-                if (column.gameObject.activeSelf != pillar.Standing) column.gameObject.SetActive(pillar.Standing);
-                column.localScale = new Vector3(across * PillarColumnShare, PillarColumnHeight * .5f, across * PillarColumnShare);
+                if (pillars == null || pillars.Count == 0 || !holeCheckView) return;
+                holePillars = V2VoidPillarFx.Create(holeCheckView, "HolePillars");
+                holePillars.columnHeight = PillarColumnHeight;
+                holePillars.coreShare = PillarColumnShare;
             }
-        }
 
-        Transform MakePillarView(int index)
-        {
-            var root = new GameObject("HolePillar (" + (index + 1) + ")").transform;
-            root.SetParent(holeCheckView, false);
-            Disc(root, "Rim", .02f, PillarRimColour);
-            Disc(root, "Fill", .04f, PillarFillColour);
-            var column = Disc(root, "Column", PillarColumnHeight * .5f, PillarColumnColour);
-            column.gameObject.SetActive(false);
-            root.gameObject.SetActive(false);
-            return root;
-        }
-
-        /// <summary>A cylinder without a collider (the Unity cylinder is 2 high at scale 1, so y is its middle's height).</summary>
-        Transform Disc(Transform parent, string name, float y, Color colour)
-        {
-            var go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            go.name = name;
-            Destroy(go.GetComponent<Collider>());
-            go.transform.SetParent(parent, false);
-            go.transform.localPosition = new Vector3(0f, y, 0f);
-            var r = go.GetComponent<Renderer>();
-            if (gm && gm.litMaterial) r.sharedMaterial = gm.Mat(colour);
-            Flat(r);
-            return go.transform;
+            if (pillars == null) holePillars.Clear();
+            else holePillars.Draw(pillars);
         }
 
         static Renderer Flat(Renderer r)

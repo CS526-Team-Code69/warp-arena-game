@@ -5,9 +5,11 @@ namespace AnomalyArena
 {
     /// <summary>
     /// The night's darkness: one screen-wide image under the HUD whose alpha is computed on the CPU from the ground point under each
-    /// texel (192 x 108, refreshed 30 times a second, bilinear-scaled to the screen). Light circles (lamps, the base, the player's glow,
-    /// glints of nodes and shadow eyes) cut it away; regions crowded with shadows are a little darker (the danger cue: darkness and
-    /// sound, no marks on the ground). It needs no shader, so it behaves the same in the editor and on the web. The void trial lies off
+    /// texel (192 x 108, refreshed 30 times a second, bilinear-scaled to the screen). Light circles cut it away. A lamp's light and the
+    /// base's are flat discs: evenly lit up to their radius (where the campaign draws a ring on the ground), with only a dim band past it,
+    /// so what looks lit is lit. Nothing is painted over lit ground: there the scene shows as its own lights light it, so no film lies
+    /// over it. The player's glow and the glints of nodes and shadow eyes fade softly. Regions crowded with shadows are a
+    /// little darker. It needs no shader, so it behaves the same in the editor and on the web. The void trial lies off
     /// the map, where no night falls: while it runs the darkness is not drawn (since 2026-11-06, when the trial opened in the campaign).
     /// </summary>
     public sealed class V2Darkness : MonoBehaviour
@@ -22,6 +24,11 @@ namespace AnomalyArena
         readonly Color32[] pixels = new Color32[W * H];
         readonly float[] gx = new float[W * H], gz = new float[W * H], lit = new float[W * H];
         readonly Vector4[] lights = new Vector4[MaxLights];
+        readonly bool[] flat = new bool[MaxLights];
+        // The step from lit to unlit at a flat disc's radius is this wide, in cells, so that the edge shows no stairs.
+        const float EdgeSoft = .7f;
+        // A flat disc's dim band past its radius, in cells, and how lit that band is at the radius (it fades to nothing at its end).
+        const float Penumbra = 2f, PenumbraLight = .22f;
         int lightCount;
         float level, pulse, nextUpdate;
         int cols = 1, rows = 1;
@@ -65,9 +72,12 @@ namespace AnomalyArena
             lightCount = 0;
         }
 
-        public void AddLight(Vector3 at, float radius, float intensity)
+        /// <summary>A light for this frame. flatDisc: evenly lit up to radius with a dim band past it (a lamp, the base); otherwise it
+        /// fades softly from the centre to radius (a glow, a glint).</summary>
+        public void AddLight(Vector3 at, float radius, float intensity, bool flatDisc = false)
         {
             if (lightCount >= MaxLights || radius <= 0f || intensity <= 0f) return;
+            flat[lightCount] = flatDisc;
             lights[lightCount++] = new Vector4(at.x, at.z, radius, Mathf.Clamp01(intensity));
         }
 
@@ -84,7 +94,7 @@ namespace AnomalyArena
             if (!cam) return;
             GroundPoints(cam);
             System.Array.Clear(lit, 0, lit.Length);
-            for (int i = 0; i < lightCount; i++) Splat(cam, lights[i]);
+            for (int i = 0; i < lightCount; i++) Splat(cam, lights[i], flat[i]);
             for (int i = 0; i < pixels.Length; i++)
             {
                 float extra = RegionExtra(gx[i], gz[i]);
@@ -121,15 +131,23 @@ namespace AnomalyArena
         }
 
         /// <summary>Adds one light circle to the lit buffer, visiting only the texels its ground bounds cover on screen.</summary>
-        void Splat(Camera cam, Vector4 light)
+        void Splat(Camera cam, Vector4 light, bool flatDisc)
         {
             float lx = light.x, lz = light.y, radius = light.z, intensity = light.w;
+            float reach = flatDisc ? radius + Penumbra : radius;
             int x0 = W, x1 = -1, y0 = H, y1 = -1;
             for (int c = 0; c < 4; c++)
             {
-                Vector3 corner = new(lx + (c % 2 == 0 ? -radius : radius), 0f, lz + (c < 2 ? -radius : radius));
+                Vector3 corner = new(lx + (c % 2 == 0 ? -reach : reach), 0f, lz + (c < 2 ? -reach : reach));
                 Vector3 vp = cam.WorldToViewportPoint(corner);
-                if (vp.z < 0f) return;
+                if (vp.z < 0f)
+                {
+                    // A corner behind the camera's plane. A small glow there is off the screen; a lamp's or the base's wide disc may
+                    // still reach onto it, so every texel is tested for it.
+                    if (!flatDisc) return;
+                    x0 = 0; x1 = W - 1; y0 = 0; y1 = H - 1;
+                    break;
+                }
                 x0 = Mathf.Min(x0, Mathf.FloorToInt(vp.x * W)); x1 = Mathf.Max(x1, Mathf.CeilToInt(vp.x * W));
                 y0 = Mathf.Min(y0, Mathf.FloorToInt(vp.y * H)); y1 = Mathf.Max(y1, Mathf.CeilToInt(vp.y * H));
             }
@@ -140,9 +158,22 @@ namespace AnomalyArena
                 {
                     int i = y * W + x;
                     float dx = gx[i] - lx, dz = gz[i] - lz;
-                    float q = (dx * dx + dz * dz) * inv;
-                    if (q >= 1f) continue;
-                    float f = (1f - q) * (1f - q * .35f) * intensity;
+                    float f;
+                    if (flatDisc)
+                    {
+                        float d = Mathf.Sqrt(dx * dx + dz * dz);
+                        if (d >= reach) continue;
+                        // 1 inside the ring and 0 outside it, over a soft step at the ring.
+                        float inside = Mathf.Clamp01((radius - d) / EdgeSoft + .5f);
+                        float outer = intensity * PenumbraLight * (d > radius ? 1f - (d - radius) / Penumbra : 1f);
+                        f = Mathf.Lerp(outer, intensity, inside);
+                    }
+                    else
+                    {
+                        float q = (dx * dx + dz * dz) * inv;
+                        if (q >= 1f) continue;
+                        f = (1f - q) * (1f - q * .35f) * intensity;
+                    }
                     if (f > lit[i]) lit[i] = f;
                 }
         }

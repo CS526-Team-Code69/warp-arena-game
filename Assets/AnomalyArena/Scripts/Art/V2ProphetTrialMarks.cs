@@ -3,21 +3,13 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-    /// <summary>Ground marks of the Nash Prophet's 2026-10-25 moves, flat line renderers like V2BossGroundMarks so no scene objects are
-    /// needed: each void pillar's circle filling from its rim, then the standing pillar as a bright disc under a beam; the gravity pull as a
-    /// tether whose dashes run from the player into the Prophet; and, while a summon keeps it invulnerable, a ward ring round it with a line
-    /// to every summon the player can see (a cloaked Shade stays hidden). WorldMap adds it to the Prophet when a trial starts.</summary>
+    /// <summary>Marks of the Nash Prophet's 2026-10-25 moves in the void trial, made at runtime so no scene objects are needed: its void
+    /// pillars through V2VoidPillarFx (each one's circle, clock, strike and standing column); and, as flat line renderers like
+    /// V2BossGroundMarks, the gravity pull as a tether whose dashes run from the player into the Prophet and, while a summon keeps it
+    /// invulnerable, a ward ring round it with a line to every summon the player can see (a cloaked Shade stays hidden). WorldMap adds
+    /// it to the Prophet when a trial starts.</summary>
     public sealed class V2ProphetTrialMarks : MonoBehaviour
     {
-        [Tooltip("Rim of a void pillar's warning circle, at full size from the start.")]
-        public Color pillarRimColor = new(.75f, .45f, 1f, .95f);
-        [Tooltip("Fill of a warning circle; it closes from the rim to the centre as the pillar nears.")]
-        public Color pillarFillColor = new(.35f, .1f, .5f, .55f);
-        [Tooltip("Disc of a standing pillar: a player whose centre is inside it dies.")]
-        public Color pillarColor = new(.9f, .6f, 1f, .7f);
-        [Tooltip("Beam of a standing pillar at its foot; it fades out toward the top.")]
-        public Color pillarBeamColor = new(.95f, .85f, 1f, .6f);
-        [Min(0f), Tooltip("Height of a standing pillar's beam, cells.")] public float pillarBeamHeight = 7f;
         [Tooltip("Dashes of the gravity pull's tether between the player and the Prophet.")]
         public Color pullColor = new(.7f, .45f, 1f, .85f);
         [Min(1), Tooltip("Dashes along the pull tether.")] public int pullDashes = 8;
@@ -27,35 +19,47 @@ namespace AnomalyArena
         [Min(0f), Tooltip("Cells between the Prophet's body and its ward ring.")] public float wardGap = .6f;
         [Min(0f), Tooltip("Seconds the ward ring flashes wider after it turns a hit away.")] public float wardFlashSeconds = .2f;
         [Min(1f), Tooltip("Width of the ward ring while it flashes, as a multiple of the line width.")] public float wardFlashWidth = 3f;
-        [Min(.01f), Tooltip("Width of rims, tether dashes and ward lines, cells.")] public float lineWidth = .14f;
+        [Min(.01f), Tooltip("Width of the tether dashes and the ward lines, cells.")] public float lineWidth = .14f;
         const int Segments = 72;
-        // Heights above the ground: fills under rims, the ward and the tether above both, so nothing flickers where they cross.
-        const float FillHeight = .05f, RimHeight = .055f, LineHeight = .065f;
+        // Height of the ward and the tether above the ground: over the pillars' ground marks (V2VoidPillarFx), so nothing flickers
+        // where they cross.
+        const float LineHeight = .065f;
 
         Enemy enemy;
         Material material;
         int sortingLayer, sortingOrder, seenBlocks;
         float flashLeft;
         LineRenderer wardRing;
-        readonly List<LineRenderer> rims = new(), fills = new(), beams = new(), dashes = new(), wardLines = new();
+        V2VoidPillarFx pillarFx;
+        readonly List<LineRenderer> dashes = new(), wardLines = new();
+
+        /// <summary>The view this Prophet's void pillars are drawn with; null until its first pillars in a trial.</summary>
+        public V2VoidPillarFx Pillars => pillarFx;
 
         void LateUpdate()
         {
             if (!enemy) enemy = GetComponent<Enemy>();
             var world = WorldMap.Active;
             bool show = enemy && enemy.IsAlive && enemy.definition && enemy.definition.kind == EnemyKind.Hollow && world && world.TrialActive;
+            // Before the lines' material is looked for: a pillar kills, so it is drawn whether or not the lines can be.
+            DrawPillars(show);
             if (show && !material) FindMaterial();
             if (!material) show = false;
-            DrawPillars(show);
             DrawPull(show);
             DrawWard(show);
         }
 
         void OnDisable()
         {
-            foreach (var list in new[] { rims, fills, beams, dashes, wardLines })
+            foreach (var list in new[] { dashes, wardLines })
                 foreach (var line in list) if (line) line.enabled = false;
             if (wardRing) wardRing.enabled = false;
+            if (pillarFx) pillarFx.Clear();
+        }
+
+        void OnDestroy()
+        {
+            if (pillarFx) Destroy(pillarFx.gameObject);
         }
 
         /// <summary>The sprite material the enemy's own warning uses: it takes vertex colours (as V2BossGroundMarks does).</summary>
@@ -69,58 +73,24 @@ namespace AnomalyArena
             sortingOrder = source.sortingOrder - 1; // under the attack warnings
         }
 
+        /// <summary>The trial's pillars through their own view. It stands at the scene's root, not under the Prophet: the body turns
+        /// every frame, and whatever recolours or hides the body's renderers would reach the view's too. With the trial over or the
+        /// Prophet down the pillars go at once.</summary>
         void DrawPillars(bool show)
         {
-            var pillars = show ? enemy.VoidPillars : null;
-            int count = pillars?.Count ?? 0;
-            while (rims.Count < count)
+            if (!show)
             {
-                int number = rims.Count + 1;
-                rims.Add(Make("VoidPillarRim (" + number + ")", Segments, true, true));
-                fills.Add(Make("VoidPillarFill (" + number + ")", Segments, true, true));
-                beams.Add(Make("VoidPillarBeam (" + number + ")", 2, false, false));
+                if (pillarFx) pillarFx.Clear();
+                return;
             }
 
-            for (int i = 0; i < rims.Count; i++)
+            if (!pillarFx)
             {
-                bool on = i < count;
-                bool standing = on && pillars[i].Standing;
-                rims[i].enabled = fills[i].enabled = on;
-                beams[i].enabled = standing;
-                if (!on) continue;
-                var pillar = pillars[i];
-                Circle(rims[i], pillar.centre, pillar.radius, RimHeight);
-                rims[i].widthMultiplier = lineWidth;
-                rims[i].startColor = rims[i].endColor = pillarRimColor;
-                // While it warns, a band hugging the rim as wide as the filled part; standing, the whole disc.
-                float band = Mathf.Max(.02f, pillar.radius * pillar.Warning01);
-                Circle(fills[i], pillar.centre, pillar.radius - band * .5f, FillHeight);
-                fills[i].widthMultiplier = band;
-                fills[i].startColor = fills[i].endColor = standing ? pillarColor : pillarFillColor;
-                if (V5Vfx.On)
-                {
-                    // The V5 art: light instead of flat paint, and a real column rising from the disc.
-                    fills[i].sharedMaterial = V5Vfx.I.TrailMaterial;
-                    beams[i].sharedMaterial = V5Vfx.I.TrailMaterial;
-                    fills[i].startColor = fills[i].endColor = standing ? new Color(.42f, .16f, .85f, .55f) : new Color(.3f, .08f, .55f, .4f);
-                    if (standing)
-                    {
-                        V5Vfx.I.PillarTick(pillar.centre, pillar.radius);
-                    }
-                }
-                if (!standing) continue;
-                var beam = beams[i];
-                beam.SetPosition(0, new Vector3(pillar.centre.x, FillHeight, pillar.centre.z));
-                beam.SetPosition(1, new Vector3(pillar.centre.x, pillarBeamHeight, pillar.centre.z));
-                beam.widthMultiplier = pillar.radius * 2f; // as wide as the pillar
-                beam.startColor = pillarBeamColor;
-                beam.endColor = new Color(pillarBeamColor.r, pillarBeamColor.g, pillarBeamColor.b, 0f);
-                if (V5Vfx.On)
-                {
-                    beam.startColor = new Color(.6f, .34f, 1f, .5f);
-                    beam.endColor = new Color(.6f, .34f, 1f, 0f);
-                }
+                if (enemy.VoidPillars.Count == 0) return;
+                pillarFx = V2VoidPillarFx.Create(null, "ProphetVoidPillars");
             }
+
+            pillarFx.Draw(enemy.VoidPillars);
         }
 
         void DrawPull(bool show)
@@ -130,7 +100,7 @@ namespace AnomalyArena
             float length = along.magnitude - (show ? enemy.Radius : 0f);
             bool on = show && enemy.GravityPulling && player && player.IsAlive && length > 0f;
             // Lines are only made once the material is known (show), so none is left without it.
-            if (on) while (dashes.Count < pullDashes) dashes.Add(Make("GravityPullDash (" + (dashes.Count + 1) + ")", 2, false, true));
+            if (on) while (dashes.Count < pullDashes) dashes.Add(Make("GravityPullDash (" + (dashes.Count + 1) + ")", 2, false));
             Vector3 direction = on ? along.normalized : Vector3.zero;
             float spacing = on ? length / pullDashes : 0f;
             float shift = on ? Mathf.Repeat(Time.time * pullDashSpeed, spacing) : 0f;
@@ -153,7 +123,7 @@ namespace AnomalyArena
         void DrawWard(bool show)
         {
             bool on = show && enemy.ProphetWarded;
-            if (on && !wardRing) wardRing = Make("ProphetWardRing", Segments, true, true);
+            if (on && !wardRing) wardRing = Make("ProphetWardRing", Segments, true);
             if (enemy && enemy.WardBlockSequence != seenBlocks)
             {
                 seenBlocks = enemy.WardBlockSequence;
@@ -174,7 +144,7 @@ namespace AnomalyArena
                     foreach (var summon in waves.Alive)
                     {
                         if (!summon || !summon.WardsProphet(enemy) || summon.Cloaked) continue;
-                        if (lines == wardLines.Count) wardLines.Add(Make("ProphetWardLine (" + (lines + 1) + ")", 2, false, true));
+                        if (lines == wardLines.Count) wardLines.Add(Make("ProphetWardLine (" + (lines + 1) + ")", 2, false));
                         var line = wardLines[lines++];
                         line.SetPosition(0, centre + Vector3.up * LineHeight);
                         line.SetPosition(1, Query.Flat(summon.Position) + Vector3.up * LineHeight);
@@ -188,8 +158,8 @@ namespace AnomalyArena
             for (int i = lines; i < wardLines.Count; i++) wardLines[i].enabled = false;
         }
 
-        /// <param name="flat">Lies on the ground; otherwise the line turns toward the camera (the pillar beam).</param>
-        LineRenderer Make(string name, int points, bool loop, bool flat)
+        /// <summary>A line that lies flat on the ground (the tether's dashes, the ward's ring and lines).</summary>
+        LineRenderer Make(string name, int points, bool loop)
         {
             var go = new GameObject(name);
             go.transform.SetParent(transform, false);
@@ -200,7 +170,7 @@ namespace AnomalyArena
             line.sharedMaterial = material;
             line.sortingLayerID = sortingLayer;
             line.sortingOrder = sortingOrder;
-            line.alignment = flat ? LineAlignment.TransformZ : LineAlignment.View;
+            line.alignment = LineAlignment.TransformZ; // flat on the ground, not turned toward the camera
             line.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             line.receiveShadows = false;
             line.numCapVertices = 0;

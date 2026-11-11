@@ -69,6 +69,30 @@ namespace AnomalyArena
             Assert.That(game.player.ReceiveDamage(new DamageInfo { amount = 99999f, source = DamageSource.Wall }), Is.True, "the player dies at night");
             await Until(KnockedOut, 5f, "the campaign catches the death at night");
             Assert.That(nightDeaths, Is.EqualTo(1), "a death at night is a night death");
+
+            // The fall's long line stands clear of the goal's lines: its plate used to lie over the goal panel's note line.
+            var flash = campaign.Ui.transform.Find("Flash") as RectTransform;
+            var goal = campaign.Ui.transform.Find("Hud/ObjectiveBack") as RectTransform;
+            Assume.That(flash && goal, Is.True, "the campaign's interface still has its flash plate and its goal panel");
+            await Until(() => flash.gameObject.activeInHierarchy && goal.gameObject.activeInHierarchy, 3f, "the fall's line and the goal panel both show");
+            await Awaitable.NextFrameAsync();
+            await Awaitable.NextFrameAsync();
+            Assert.That(Covered(flash, goal), Is.LessThan(15f), "the fall's line does not lie over the goal's lines (it may brush the panel's lower edge)");
+        }
+
+        /// <summary>How much of the panel's height the plate lies over, in canvas units; 0 when they stand apart.</summary>
+        static float Covered(RectTransform plate, RectTransform panel)
+        {
+            Rect a = WorldRect(plate), b = WorldRect(panel);
+            if (a.xMax <= b.xMin || a.xMin >= b.xMax) return 0f;
+            return Mathf.Max(0f, Mathf.Min(a.yMax, b.yMax) - Mathf.Max(a.yMin, b.yMin)) / Mathf.Max(1e-5f, panel.lossyScale.y);
+        }
+
+        static Rect WorldRect(RectTransform rect)
+        {
+            var corners = new Vector3[4];
+            rect.GetWorldCorners(corners);
+            return Rect.MinMaxRect(corners[0].x, corners[0].y, corners[2].x, corners[2].y);
         }
 
         static async Task Until(Func<bool> completed, float timeout, string operation)

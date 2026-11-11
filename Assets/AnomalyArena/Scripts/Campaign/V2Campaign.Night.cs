@@ -8,11 +8,12 @@ namespace AnomalyArena
     /// Afternoon and night (V2 doc section 4; the stages keep the names Dusk and Night in code, the screen says afternoon and night since
     /// 2026-11-06). Afternoon: rest and mining time, the light fades, and the day's alloy ore surfaces across the campaign map: a limited
     /// amount each day (kills drop none), most of it a trail that leads from the base toward the black hole a node or two at a time and
-    /// lies closer together the nearer the hole, and a few small nodes scattered sparsely in the map's other directions. Night: no
-    /// fighting; the ground is dark except near lights (placed mining lamps, the base, the player's own faint glow). Each region gets shadow
-    /// monsters in proportion to the morning's kills there; they shy from light, hunt a player standing in the dark, and in a region with too
-    /// many of them they break lamps and follow into the light, so a player who killed a lot somewhere cannot mine there. Danger shows only
-    /// as darkness and sound (no marks on the ground). The night's nodes are dark matter (and rules.nightOreNodes ore nodes, 0 since
+    /// lies closer together the nearer the hole, and a few small nodes scattered sparsely in the map's other directions. Night: the
+    /// ground is dark except in lights (placed mining lamps, the base, the player's own faint glow); a lamp's light and the base's end at
+    /// a ring drawn on the ground, and what stands inside the ring is lit. Weapons and skills work but hurt no shadow. Every region holds
+    /// shadow monsters, more where the morning's kills fell (V2Campaign.Shadows.cs): they wait at a light's edge, hunt a player in the
+    /// dark a little faster than the player walks, and a crowd of them goes into a lamp's light and puts it out, so a player who killed
+    /// a lot somewhere cannot mine there. The night's nodes are dark matter (and rules.nightOreNodes ore nodes, 0 since
     /// 2026-11-06), mined only in lamp light; afternoon ore left unmined lies there too and needs the light as well.
     /// The base door opens in the afternoon and at night. With CampaignRules.openEndedEvenings (the rule since 2026-11-06) neither has a
     /// clock: the base panel's "into the night" ends the afternoon and its "wait for dawn" ends the night, and mining everything out moves
@@ -37,12 +38,13 @@ namespace AnomalyArena
 
         sealed class Lamp
         {
-            public Vector3 position; public float hp; public int region; public Transform view; public Light light;
-        }
-
-        sealed class Shadow
-        {
-            public Vector3 position, home, wander; public int region; public Transform view; public float hitAt, wanderAt, bob; public bool overrun;
+            public Vector3 position; public float hp; public int region; public Transform view; public Light light; public LightWaveRing ring;
+            /// <summary>Shadows at its edge or inside it now, and whether a crowd of them has gone in (it shelters no more).</summary>
+            public int crowd; public bool smothered;
+            /// <summary>When a crowd first stood at it (it goes in a moment later), or 0 while there is none.</summary>
+            public float crowdSince;
+            /// <summary>The lamp radius its ring and light were last drawn for (the ship's night light can widen it during a night).</summary>
+            public float drawnRadius;
         }
 
         readonly List<Node> nodes = new();
@@ -61,7 +63,7 @@ namespace AnomalyArena
         void ResetNight()
         {
             ClearNight(true);
-            regionKills.Clear(); regionShadows.Clear();
+            regionKills.Clear(); regionKindKills.Clear(); regionShadows.Clear();
             lampStock = 0; nightAlloy = nightDark = 0; knockedOut = false;
             baseVisitFrom = CampaignStage.Off;
         }
@@ -105,6 +107,7 @@ namespace AnomalyArena
             if (enemy.SuppressRewards || enemy.IsTrialSummon || enemy.DeathCause == DeathCause.FellIntoGap || enemy.IsBoss) return;
             int region = RegionOf(enemy.Position);
             regionKills[region] = (regionKills.TryGetValue(region, out int n) ? n : 0) + 1;
+            NoteKillKind(region, enemy);
             DropCurrencies(enemy);
         }
 
@@ -220,16 +223,21 @@ namespace AnomalyArena
             if (!EveningsOpenEnded && stageClock >= stageLength) BeginNight();
         }
 
+        // The night's own light, as shares of the map's night ambient and night sun. It is what shows wherever the darkness is cut away
+        // (in a lamp's light, in the base's): high enough that ground there reads as lit ground with nothing painted over it. Everything
+        // else is dark because the darkness image covers it, not because the scene is unlit.
+        const float NightAmbientShare = 1.15f, NightSunShare = .85f;
+
         void LerpLighting(float t)
         {
             var biome = WorldMap.Active ? WorldMap.Active.biome : null;
             if (!biome) return;
-            RenderSettings.ambientLight = Color.Lerp(biome.dayAmbient, biome.ambient * .55f, t);
+            RenderSettings.ambientLight = Color.Lerp(biome.dayAmbient, biome.ambient * NightAmbientShare, t);
             var sun = RenderSettings.sun;
             if (!sun) foreach (var light in FindObjectsByType<Light>(FindObjectsInactive.Exclude)) if (light.type == LightType.Directional && light.enabled) { sun = light; break; }
             if (!sun) return;
             sun.color = Color.Lerp(biome.daySun, Color.Lerp(biome.nightSun, new Color(1f, .55f, .35f), (1f - t) * .6f), t);
-            sun.intensity = Mathf.Lerp(biome.daySunIntensity, biome.nightSunIntensity * .45f, t);
+            sun.intensity = Mathf.Lerp(biome.daySunIntensity, biome.nightSunIntensity * NightSunShare, t);
         }
 
         void ApplyDaylight()
@@ -238,7 +246,7 @@ namespace AnomalyArena
             if (biome) biome.ApplyLighting(false);
             darknessLevel = 0f;
             darkness?.SetActive(false);
-            if (baseLight) baseLight.intensity = 0f;
+            SetBaseLights(false);
         }
 
         // ───── Night ─────
@@ -252,7 +260,7 @@ namespace AnomalyArena
             DismissStragglers();
             LerpLighting(1f);
             darknessLevel = rules.nightDarkness;
-            if (baseLight) baseLight.intensity = 2.2f;
+            SetBaseLights(true);
             SpawnShadows();
             SpawnNightOre(Day, SpawnDarkClusters());
             Say(Line.S02);
@@ -260,8 +268,8 @@ namespace AnomalyArena
             NightObjective();
         }
 
-        /// <summary>The night's goal (from day 1; the tutorial night has its own), with a marker on the nearest dark matter left: on the large
-        /// map a night's few clusters lie far apart in the dark. Once it is all mined the marker points to the base door.</summary>
+        /// <summary>The night's goal (from day 1; the tutorial night has its own), with a marker on the nearest dark matter left (the night's
+        /// clusters lie in regions that touch, PlaceDarkClusters). Once it is all mined the marker points to the base door.</summary>
         void NightObjective()
         {
             if (Stage != CampaignStage.Night || Day <= 0) return;
@@ -337,7 +345,7 @@ namespace AnomalyArena
         {
             var p = gm.player;
             if (!p || mining != null || Query.Flat(p.Position - DoorPoint).magnitude >= 3.2f) return false;
-            prompt = ArenaText.Pair("按 E 进入基地", "E: enter the base");
+            prompt = ArenaText.Pair($"按 {ArenaKeys.InteractKey} 进入基地", $"{ArenaKeys.InteractKey}: enter the base");
             if (!EPressed) return false;
             OpenBase();
             return true;
@@ -353,7 +361,7 @@ namespace AnomalyArena
             // Named only while there is something to lose.
             string atRisk = risk.alloy + risk.energy + risk.dark <= 0 ? ""
                 : ArenaText.Pair($"倒下会丢：合金 {risk.alloy} · 能量 {risk.energy} · 暗物质 {risk.dark}（进基地就存下）", $"A death loses: alloy {risk.alloy} · energy {risk.energy} · dark matter {risk.dark} (the base keeps it)");
-            return Dot(ArenaText.Pair("夜里不能战斗", "No fighting at night"), atRisk,
+            return Dot(ArenaText.Pair("武器伤不到影子", "Weapons cannot hurt shadows"), atRisk,
                 EveningsOpenEnded ? ArenaText.Pair("回基地等待天亮", "Wait for dawn at the base")
                     : ArenaText.Pair($"今晚：合金 +{nightAlloy} · 暗物质 +{nightDark}", $"Tonight: alloy +{nightAlloy} · dark matter +{nightDark}"));
         }
@@ -399,10 +407,29 @@ namespace AnomalyArena
             lightGo.transform.SetParent(root, false);
             lightGo.transform.localPosition = new Vector3(0f, 2.2f, 0f);
             lamp.light = lightGo.AddComponent<Light>();
-            lamp.light.type = LightType.Point; lamp.light.range = LampRadius * 1.5f; lamp.light.intensity = 3f; lamp.light.color = new Color(1f, .9f, .7f);
+            lamp.light.type = LightType.Point; lamp.light.range = LampRadius * 1.15f; lamp.light.intensity = LampLightFull; lamp.light.color = new Color(1f, .9f, .7f);
             lamp.view = root;
             lamps.Add(lamp);
+            lamp.ring = LightWaveRing.Create(root, "LampEdge");
+            lamp.ring.sparkleRate = 0f;
+            DrawLampEdge(lamp);
             Fx.Ring(at, LampRadius, new Color(1f, .9f, .6f), .45f);
+        }
+
+        /// <summary>The ring on the ground at the edge of a lamp's light: what stands inside it is lit, can be mined, and is out of the
+        /// shadows' reach. It turns violet once a crowd of shadows has gone in.</summary>
+        // A lamp's own light only warms the ground round it (the darkness cut away is what shows its reach): full and worn down.
+        const float LampLightFull = 1.5f, LampLightWorn = .5f;
+        // The line at a light's edge: thin and faint, so it marks where the light ends without glowing; a crowd's warning shows stronger.
+        const float LightEdgeWidth = .16f, LightEdgeAlpha = .5f, LightEdgeGlow = .7f;
+
+        void DrawLampEdge(Lamp lamp)
+        {
+            bool crowded = lamp.smothered || lamp.crowdSince > 0f;
+            lamp.drawnRadius = LampRadius;
+            if (lamp.light) lamp.light.range = LampRadius * 1.15f;
+            if (lamp.ring) lamp.ring.Draw(lamp.position, LampRadius, crowded ? LightEdgeWidth * 2.2f : LightEdgeWidth,
+                crowded ? new Color(.75f, .3f, 1f, .9f) : new Color(1f, .9f, .7f, LightEdgeAlpha), crowded ? 1.1f : LightEdgeGlow);
         }
 
         void TickLamps(float dt)
@@ -410,7 +437,10 @@ namespace AnomalyArena
             for (int i = lamps.Count - 1; i >= 0; i--)
             {
                 var lamp = lamps[i];
-                if (lamp.light) lamp.light.intensity = Mathf.Lerp(.8f, 3f, lamp.hp / rules.lampHp) * (1f + .08f * Mathf.Sin(Time.time * 13f + i));
+                if (!Mathf.Approximately(lamp.drawnRadius, LampRadius)) DrawLampEdge(lamp);
+                // A lamp with a crowd at it flickers hard: before they go in, and while they wear it down.
+                bool crowded = lamp.smothered || lamp.crowdSince > 0f;
+                if (lamp.light) lamp.light.intensity = Mathf.Lerp(LampLightWorn, LampLightFull, lamp.hp / rules.lampHp) * (1f + (crowded ? .45f : .05f) * Mathf.Sin(Time.time * (crowded ? 31f : 9f) + i));
                 if (lamp.hp > 0f) continue;
                 Fx.Burst(lamp.position + Vector3.up, Vector3.zero, new Color(1f, .8f, .4f), 10, 6f, 360f, .3f);
                 if (lamp.view) Destroy(lamp.view.gameObject);
@@ -419,25 +449,17 @@ namespace AnomalyArena
             }
         }
 
-        /// <summary>How lit a ground point is by the lamps and the base (0..1). The player's own glow does not count: it neither scares
-        /// shadows nor lets the player mine.</summary>
-        float LampLight(Vector3 p, bool includeBase = true)
+        /// <summary>The ground point lies in a lamp's light or the base's: inside the ring drawn on the ground, where a node can be
+        /// mined. A lamp a crowd of shadows has gone into is covered and lights nothing. The player's own glow does not count: it neither
+        /// holds shadows back nor lets the player mine.</summary>
+        bool InLampLight(Vector3 p)
         {
-            float lit = 0f;
+            if (InBaseLight(p)) return true;
+            float radius = LampRadius;
             foreach (var lamp in lamps)
-            {
-                float d = Query.Flat(p - lamp.position).magnitude / LampRadius;
-                if (d < 1f) lit = Mathf.Max(lit, 1f - d * d);
-            }
-            if (includeBase)
-            {
-                float b = Query.Flat(p - BaseCentre).magnitude / rules.baseLightRadius;
-                if (b < 1f) lit = Mathf.Max(lit, 1f - b * b);
-            }
-            return lit;
+                if (!lamp.smothered && Query.Flat(p - lamp.position).sqrMagnitude <= radius * radius) return true;
+            return false;
         }
-
-        bool InLampLight(Vector3 p) => LampLight(p) > .05f;
         bool InBaseLight(Vector3 p) => Query.Flat(p - BaseCentre).magnitude < rules.baseLightRadius;
 
         // ───── Nodes and mining ─────
@@ -650,18 +672,32 @@ namespace AnomalyArena
             if (Day == 0) return centres;
             var regionsLeft = new List<int>();
             for (int r = 0; r < RegionCount; r++) regionsLeft.Add(r);
+            int cols = Mathf.Max(1, rules.regions.x);
+            var taken = new List<int>();
             while (centres.Count < rules.darkClusters && regionsLeft.Count > 0)
             {
+                // The night's clusters lie in regions that touch, so that after one is mined the next is a short walk on. Two regions
+                // picked from the whole map could lie at its two ends, and the goal's marker then pointed right across it.
                 int pick = Random.Range(0, regionsLeft.Count);
+                if (taken.Count > 0)
+                {
+                    var touching = new List<int>();
+                    for (int i = 0; i < regionsLeft.Count; i++)
+                        foreach (int other in taken)
+                            if (CampaignRules.RegionsTouch(regionsLeft[i], other, cols)) { touching.Add(i); break; }
+                    if (touching.Count > 0) pick = touching[Random.Range(0, touching.Count)];
+                }
                 int region = regionsLeft[pick]; regionsLeft.RemoveAt(pick);
                 var centre = RegionCentre(region, out var half);
                 // A region whose ground cannot take a cluster gives its turn to another.
                 for (int attempt = 0; attempt < 8; attempt++)
                 {
                     Vector3 at = FindOpen(centre + new Vector3(Random.Range(-half.x * .7f, half.x * .7f), 0f, Random.Range(-half.y * .7f, half.y * .7f)), 1.2f, 6f);
-                    if (!OreSpotOk(at, 1.2f)) continue;
+                    // Dark matter lies outside the base's light: a lamp has to be carried to it.
+                    if (!OreSpotOk(at, 1.2f) || Query.Flat(at - BaseCentre).magnitude < rules.baseLightRadius + 4f) continue;
                     AddCluster(at);
                     centres.Add(at);
+                    taken.Add(region);
                     break;
                 }
             }
@@ -843,11 +879,11 @@ namespace AnomalyArena
             };
             if (!lit)
             {
-                prompt = ArenaText.Pair("太黑了：先按 F 放一盏矿灯", "Too dark: press F to place a lamp first");
+                prompt = ArenaText.Pair($"太黑了：先按 {ArenaKeys.LampKey} 放一盏矿灯", $"Too dark: press {ArenaKeys.LampKey} to place a lamp first");
                 mining = null; mineProgress = 0f;
                 return;
             }
-            if (!EHeld) { prompt = ArenaText.Pair($"按住 E 采集 {what}", $"Hold E to mine {what}"); mining = null; mineProgress = 0f; return; }
+            if (!EHeld) { prompt = ArenaText.Pair($"按住 {ArenaKeys.InteractKey} 采集 {what}", $"Hold {ArenaKeys.InteractKey} to mine {what}"); mining = null; mineProgress = 0f; return; }
             if (mining != node) { mining = node; mineProgress = 0f; }
             mineProgress += dt / Mathf.Max(.05f, rules.mineSeconds);
             prompt = ""; // the mining bar shows the progress (V2CampaignUi.Feedback.cs)
@@ -882,128 +918,7 @@ namespace AnomalyArena
             NightObjective();
         }
 
-        // ───── Shadows ─────
-
-        void SpawnShadows()
-        {
-            regionShadows.Clear();
-            int total = 0;
-            if (Day == 0)
-            {
-                // The tutorial night shows a few shadows far from the base and from its dark matter.
-                for (int i = 0; i < rules.tutorialShadows; i++)
-                {
-                    float a = (i + .5f) * Mathf.PI * 2f / Mathf.Max(1, rules.tutorialShadows);
-                    AddShadow(FindOpen(BaseCentre + new Vector3(Mathf.Cos(a) * 34f, 0f, Mathf.Sin(a) * 24f), .6f), false);
-                }
-                return;
-            }
-            var order = new List<int>(regionKills.Keys);
-            order.Sort((a, b) => regionKills[b].CompareTo(regionKills[a]));
-            foreach (int region in order)
-            {
-                int count = Mathf.Min(rules.maxShadowsPerRegion, Mathf.FloorToInt(regionKills[region] / Mathf.Max(1f, rules.killsPerShadow)));
-                count = Mathf.Min(count, rules.maxShadows - total);
-                if (count <= 0) continue;
-                regionShadows[region] = count;
-                total += count;
-                var centre = RegionCentre(region, out var half);
-                bool overrun = count >= rules.overrunShadows;
-                for (int i = 0; i < count; i++)
-                {
-                    Vector3 at = centre + new Vector3(Random.Range(-half.x * .8f, half.x * .8f), 0f, Random.Range(-half.y * .8f, half.y * .8f));
-                    if (InBaseLight(at)) at = BaseCentre + Query.Flat(at - BaseCentre).normalized * (rules.baseLightRadius + 3f);
-                    var s = AddShadow(at, overrun);
-                    s.region = region;
-                }
-            }
-        }
-
-        Shadow AddShadow(Vector3 at, bool overrun)
-        {
-            var s = new Shadow { position = at, home = at, wander = at, overrun = overrun, region = RegionOf(at), bob = Random.value * 6f };
-            var root = new GameObject("Shadow").transform;
-            root.SetParent(worldRoot, false);
-            root.position = at;
-            var looks = art && Art.Enabled ? art.shadowPrefabs : null;
-            if (looks != null && looks.Length > 0 && looks[Random.Range(0, looks.Length)] is { } look && look)
-            {
-                var model = Instantiate(look, root);
-                StripColliders(model);
-                FitHeight(model.transform, Random.Range(1.8f, 2.2f));
-            }
-            else if (!Art.Enabled)
-            {
-                // The whitebox table's three shadows (2026-11-10): a tall thin one, a squat broad one, a small quick-looking one.
-                Whitebox.Build(Random.Range(0, 3) switch { 0 => "shadow.a", 1 => "shadow.b", _ => "shadow.c" }, root, "ShadowWhitebox");
-            }
-            else
-            {
-                // The illustrated art without its shadow models: the old cube bodies, told apart by build and tint.
-                int lookIndex = Random.Range(0, 3);
-                Vector3 size = lookIndex switch { 0 => new Vector3(.75f, 1.9f, .75f), 1 => new Vector3(1.15f, 1.3f, 1.15f), _ => new Vector3(.6f, 1.2f, .6f) };
-                Color tint = lookIndex switch { 0 => new Color(.04f, .03f, .07f), 1 => new Color(.09f, .03f, .12f), _ => new Color(.02f, .05f, .09f) };
-                var r = Box(root, "Body", new Vector3(0f, size.y * .5f, 0f), size, tint);
-                Box(root, "EyeL", new Vector3(-.15f, size.y - .3f, size.z * .5f + .01f), new Vector3(.12f, .06f, .05f), new Color(.75f, .3f, 1f));
-                Box(root, "EyeR", new Vector3(.15f, size.y - .3f, size.z * .5f + .01f), new Vector3(.12f, .06f, .05f), new Color(.75f, .3f, 1f));
-            }
-            s.view = root;
-            shadows.Add(s);
-            return s;
-        }
-
-        void TickShadows(float dt)
-        {
-            var p = gm.player;
-            if (!p) return;
-            Vector3 pp = Query.Flat(p.Position);
-            bool playerLit = InLampLight(pp);
-            foreach (var s in shadows)
-            {
-                Vector3 target = s.wander;
-                float speed = s.overrun ? rules.overrunShadowSpeed : rules.shadowSpeed;
-                float toPlayer = Query.Flat(pp - s.position).magnitude;
-                Lamp prey = null;
-                if (s.overrun)
-                {
-                    float best = rules.shadowSense * 2f;
-                    foreach (var lamp in lamps)
-                    {
-                        if (lamp.region != s.region && !Overrun(lamp.region)) continue;
-                        float d = Query.Flat(lamp.position - s.position).magnitude;
-                        if (d < best) { best = d; prey = lamp; }
-                    }
-                }
-                bool hunting = toPlayer < rules.shadowSense && (s.overrun || !playerLit) && !InBaseLight(pp);
-                if (hunting) target = pp;
-                else if (prey != null) target = prey.position;
-                else if (Time.time >= s.wanderAt || Query.Flat(s.wander - s.position).magnitude < .5f)
-                {
-                    s.wanderAt = Time.time + Random.Range(2f, 4f);
-                    s.wander = s.home + new Vector3(Random.Range(-8f, 8f), 0f, Random.Range(-8f, 8f));
-                    target = s.wander;
-                }
-                Vector3 step = Query.Flat(target - s.position);
-                if (step.magnitude > .05f) step = step.normalized * Mathf.Min(step.magnitude, speed * dt);
-                Vector3 next = s.position + step;
-                // Shadows shy from light: outside an overrun region they never step into a lamp's light; none enter the base light.
-                if (InBaseLight(next) || !s.overrun && InLampLight(next)) next = s.position - step * .5f;
-                if (WorldMap.Active) next = WorldMap.Active.ClampPoint(next, .5f);
-                s.position = next;
-                if (s.view)
-                {
-                    s.bob += dt * 3f;
-                    s.view.position = s.position + Vector3.up * (.15f + .1f * Mathf.Sin(s.bob));
-                    if (step.sqrMagnitude > 1e-5f) s.view.rotation = Quaternion.Slerp(s.view.rotation, Quaternion.LookRotation(step.normalized), dt * 8f);
-                }
-                if (prey != null && Query.Flat(prey.position - s.position).magnitude < 1.2f) prey.hp -= dt;
-                if (toPlayer < .9f + p.Radius && Time.time >= s.hitAt && (s.overrun || !playerLit) && !InBaseLight(pp))
-                {
-                    s.hitAt = Time.time + rules.shadowHitInterval;
-                    HitPlayerAtNight(s);
-                }
-            }
-        }
+        // ───── Shadows (how they rise and move: V2Campaign.Shadows.cs) ─────
 
         /// <summary>A shadow's touch costs a share of the player's max HP; the touch that empties it kills (since 2026-11-06 the night kills:
         /// the player falls, loses tonight's haul and wakes at the base for the next day, see NightDeath).</summary>
@@ -1095,8 +1010,9 @@ namespace AnomalyArena
             darkness.SetActive(show || enhancementPulse > 0f);
             if (!show && enhancementPulse <= 0f) return;
             darkness.BeginFrame(darknessLevel, Mathf.Clamp01(enhancementPulse) * .35f);
-            foreach (var lamp in lamps) darkness.AddLight(lamp.position, LampRadius, Mathf.Clamp01(.55f + .45f * lamp.hp / rules.lampHp));
-            darkness.AddLight(BaseCentre, rules.baseLightRadius, 1f);
+            // A lamp's light and the base's are flat discs that end at their ring; a lamp a crowd wears down dims.
+            foreach (var lamp in lamps) darkness.AddLight(lamp.position, LampRadius, Mathf.Clamp01(.55f + .45f * lamp.hp / rules.lampHp), true);
+            darkness.AddLight(BaseCentre, rules.baseLightRadius, 1f, true);
             Vector3 eye = gm.player ? Query.Flat(gm.player.Position) : BaseCentre;
             if (gm.player) darkness.AddLight(gm.player.Position, rules.playerGlowRadius, .7f);
             foreach (var node in nodes)
@@ -1107,9 +1023,9 @@ namespace AnomalyArena
                 float pulse = .25f + .2f * Mathf.Sin(node.glint * (node.kind == NodeKind.Ore ? 2.3f : 1.6f));
                 darkness.AddLight(node.position, node.kind == NodeKind.Ore ? 1f : 1.4f, node.kind == NodeKind.Core ? .9f : pulse);
             }
-            // The shadows' eyes glint faintly in the dark.
+            // The shadows' eyes glint faintly in the dark; one that has noticed the player shows more of itself.
             foreach (var s in shadows)
-                if (Query.Flat(s.position - eye).sqrMagnitude <= DarknessLightReach * DarknessLightReach) darkness.AddLight(s.position, .55f, .28f);
+                if (Query.Flat(s.position - eye).sqrMagnitude <= DarknessLightReach * DarknessLightReach) darkness.AddLight(s.position, s.alert ? 1.4f : .55f, s.alert ? .55f : .28f);
             if (regionDarkness == null || regionDarkness.Length != RegionCount) regionDarkness = new float[RegionCount];
             var extra = regionDarkness;
             for (int r = 0; r < extra.Length; r++) extra[r] = rules.crowdedDarkness * Mathf.Clamp01(ShadowsIn(r) / (float)rules.overrunShadows);

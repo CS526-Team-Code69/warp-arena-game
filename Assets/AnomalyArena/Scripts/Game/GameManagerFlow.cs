@@ -33,11 +33,13 @@ namespace AnomalyArena
 
         void ReadShownKeys(Keyboard keyboard)
         {
-            if (V2Tutorial.HoldsInput) return;
+            if (V2Tutorial.HoldsInput || ArenaSettingsPanel.HoldsInput) return;
             bool digitRead = false;
             foreach (var (key, code) in ShownKeys)
             {
-                if (!keyboard[key].wasPressedThisFrame) continue;
+                // A key the player moved in the settings is read where they put it (ArenaKeys: the skill keys and T); the fixed
+                // menu keys are read as they are.
+                if (!keyboard[ArenaKeys.Physical(key)].wasPressedThisFrame) continue;
                 // One digit a frame: one card or one skill per press, as before.
                 bool digit = code is >= KeyCode.Alpha1 and <= KeyCode.Alpha3;
                 if (digit && digitRead) continue;

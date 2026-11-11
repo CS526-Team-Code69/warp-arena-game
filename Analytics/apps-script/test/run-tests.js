@@ -18,8 +18,9 @@ const CAUSES = [
   'enemy', 'tyrant', 'backfire', 'wall_slam', 'status', 'black_hole',
   'void_trial', 'unknown', 'victory', 'restart', 'quit_to_title'
 ];
-const ALL_SHEETS = ['runs', 'Summary', 'upgrade_picks', 'supply_picks', 'damage', 'Upgrade picks', 'Supply picks', 'Damage sources',
-  'v2_days', 'v2_purchases', 'v2_events'];
+const DATA_SHEETS = ['runs', 'upgrade_picks', 'supply_picks', 'damage', 'v2_days', 'v2_purchases', 'v2_events'];
+// The tabs of a new spreadsheet after setup(): the Dashboard first, the data tabs, then calc, which is hidden.
+const SHEETS_AFTER_SETUP = ['Dashboard'].concat(DATA_SHEETS, ['calc']);
 const UPGRADE_HEADER = ['received_at', 'event', 'run_id', 'session_id', 'edition', 'build',
   'context', 'wave', 'level', 'offer_1', 'offer_2', 'offer_3', 'picked', 'picked_kind', 'weapon_offered', 'rerolled'];
 const SUPPLY_HEADER = ['received_at', 'event', 'run_id', 'session_id', 'edition', 'build',
@@ -65,13 +66,24 @@ class MockRange {
       if (!r || r.length !== this.numCols) throw new Error('Column count does not match range ' + this.getA1Notation());
     }
   }
+  // A cell under a merged range, other than its first, shows nothing: writing there is a mistake of the layout.
+  checkShown() {
+    for (const a1 of this.sheet.merges) {
+      const m = /^([A-Z]+)(\d+):/.exec(a1);
+      if (this.meets(a1) && (this.numRows > 1 || this.numCols > 1 || this.row !== Number(m[2]) || this.col !== colNumber(m[1]))) {
+        throw new Error('Writing ' + this.getA1Notation() + ' under the merged cells ' + a1);
+      }
+    }
+  }
   setValues(values) {
     this.checkShape(values);
+    this.checkShown();
     values.forEach((r, i) => r.forEach((v, j) => this.sheet.setCell(this.row + i, this.col + j, v, '')));
     return this;
   }
   setFormulas(formulas) {
     this.checkShape(formulas);
+    this.checkShown();
     formulas.forEach((r, i) => r.forEach((f, j) => this.sheet.setCell(this.row + i, this.col + j, '', f)));
     return this;
   }
@@ -87,11 +99,46 @@ class MockRange {
     }
     return out;
   }
-  setFontWeight() {
+  // Formats are kept per cell, so that a test can read them and a snapshot of the sheet holds them.
+  format(name, value) {
+    for (let i = 0; i < this.numRows; i++) {
+      for (let j = 0; j < this.numCols; j++) {
+        const key = (this.row + i) + ',' + (this.col + j);
+        (this.sheet.formats[key] = this.sheet.formats[key] || {})[name] = value;
+      }
+    }
     return this;
   }
-  setNumberFormat(format) {
-    this.numberFormat = format;
+  setFontWeight(weight) { return this.format('weight', weight); }
+  setFontSize(size) { return this.format('size', size); }
+  setFontColor(colour) { return this.format('colour', colour); }
+  setFontStyle(style) { return this.format('style', style); }
+  setWrap(wrap) { return this.format('wrap', wrap); }
+  setVerticalAlignment(alignment) { return this.format('valign', alignment); }
+  setNumberFormat(format) { return this.format('number', format); }
+  // Whether this range and a range in A1 notation share a cell.
+  meets(a1) {
+    const m = /^([A-Z]+)(\d+):([A-Z]+)(\d+)$/.exec(a1);
+    return this.row <= Number(m[4]) && Number(m[2]) <= this.row + this.numRows - 1 &&
+      this.col <= colNumber(m[3]) && colNumber(m[1]) <= this.col + this.numCols - 1;
+  }
+  // Merging over a part of other merged cells is an error in Sheets.
+  merge() {
+    const a1 = this.getA1Notation();
+    for (const other of this.sheet.merges) {
+      if (other !== a1 && this.meets(other)) throw new Error('Cannot merge ' + a1 + ' over ' + other);
+    }
+    if (this.sheet.merges.indexOf(a1) < 0) this.sheet.merges.push(a1);
+    return this;
+  }
+  breakApart() {
+    this.sheet.merges = this.sheet.merges.filter((other) => !this.meets(other));
+    return this;
+  }
+  setBackground(colour) {
+    for (let i = 0; i < this.numRows; i++) {
+      for (let j = 0; j < this.numCols; j++) this.sheet.backgrounds[(this.row + i) + ',' + (this.col + j)] = colour;
+    }
     return this;
   }
   getA1Notation() {
@@ -131,7 +178,7 @@ class MockChartBuilder {
   }
   addRange(range) {
     if (!(range instanceof MockRange)) throw new Error('addRange expects a Range');
-    this.spec.ranges.push(range.getA1Notation());
+    this.spec.ranges.push(range.sheet.name + '!' + range.getA1Notation()); // a chart may read another sheet
     return this;
   }
   setNumHeaders(n) { this.spec.numHeaders = n; return this; }
@@ -159,7 +206,7 @@ class MockChartBuilder {
   }
 }
 
-// Only the column builder has setStacked / setTitle / axis titles, as in Apps Script.
+// Only the column builder has setStacked / setTitle / axis titles / colours / the legend, as in Apps Script.
 class MockColumnChartBuilder extends MockChartBuilder {
   constructor(base) {
     super(base.sheet);
@@ -169,6 +216,16 @@ class MockColumnChartBuilder extends MockChartBuilder {
   setTitle(t) { this.spec.title = t; return this; }
   setXAxisTitle(t) { this.spec.xTitle = t; return this; }
   setYAxisTitle(t) { this.spec.yTitle = t; return this; }
+  setColors(colours) {
+    if (!Array.isArray(colours) || !colours.every((c) => /^#[0-9a-fA-F]{6}$/.test(c))) throw new Error('setColors expects CSS colours');
+    this.spec.colours = colours.slice();
+    return this;
+  }
+  setLegendPosition(position) {
+    if (['TOP', 'RIGHT', 'BOTTOM', 'NONE'].indexOf(position) < 0) throw new Error('setLegendPosition expects a Charts.Position');
+    this.spec.legend = position;
+    return this;
+  }
 }
 
 // The pie builder has setTitle but no stacking or axis titles.
@@ -181,14 +238,22 @@ class MockPieChartBuilder extends MockChartBuilder {
 }
 
 class MockSheet {
-  constructor(env, name) {
+  constructor(env, name, ss) {
     this.env = env;
+    this.ss = ss;
     this.name = name;
     this.cells = []; // cells[row - 1][col - 1] = { value, formula }
     this.charts = [];
     this.frozenRows = 0;
     this.appendsWithoutLock = 0;
     this.columnFormats = {}; // column number -> number format
+    this.backgrounds = {}; // "row,column" -> background colour
+    this.formats = {}; // "row,column" -> { weight, size, colour, style, wrap, valign, number }
+    this.merges = []; // merged cells, in A1 notation
+    this.columnWidths = {}; // column number -> px
+    this.rowHeights = {}; // row number -> px
+    this.gridlinesHidden = false;
+    this.hidden = false;
   }
   getName() { return this.name; }
   setName(n) { this.name = n; return this; }
@@ -226,10 +291,41 @@ class MockSheet {
     this.cells.splice(row - 1, 0, []);
     return this;
   }
+  // clear() takes the formats with the contents. Merged cells, sizes, gridlines and a hidden tab stay as they are: what
+  // must not survive a rebuild has to be undone by the script itself.
   clear() {
     this.cells = [];
+    this.backgrounds = {};
+    this.formats = {};
     return this;
   }
+  getMaxRows() { return 1000; }
+  getMaxColumns() { return 26; }
+  setSizes(sizes, first, count, px) {
+    for (const v of [first, count, px]) {
+      if (!Number.isInteger(v) || v < 1) throw new Error('Bad size argument: ' + v);
+    }
+    for (let i = first; i < first + count; i++) sizes[i] = px;
+    return this;
+  }
+  setColumnWidth(column, width) { return this.setSizes(this.columnWidths, column, 1, width); }
+  setColumnWidths(first, count, width) { return this.setSizes(this.columnWidths, first, count, width); }
+  setRowHeight(row, height) { return this.setSizes(this.rowHeights, row, 1, height); }
+  setRowHeights(first, count, height) { return this.setSizes(this.rowHeights, first, count, height); }
+  setHiddenGridlines(hidden) {
+    this.gridlinesHidden = hidden === true;
+    return this;
+  }
+  hideSheet() {
+    if (!this.ss.sheets.some((s) => s !== this && !s.hidden)) throw new Error('Cannot hide the only visible sheet');
+    this.hidden = true;
+    return this;
+  }
+  showSheet() {
+    this.hidden = false;
+    return this;
+  }
+  isSheetHidden() { return this.hidden; }
   setFrozenRows(n) { this.frozenRows = n; }
   getCharts() { return this.charts.slice(); }
   removeChart(chart) {
@@ -256,6 +352,7 @@ class MockSpreadsheet {
     this.env = env;
     this.id = id;
     this.sheets = [];
+    this.active = null;
   }
   getId() { return this.id; }
   getUrl() { return 'https://docs.example.invalid/' + this.id; }
@@ -263,9 +360,29 @@ class MockSpreadsheet {
   getSheetByName(name) { return this.sheets.find((s) => s.name === name) || null; }
   insertSheet(name) {
     if (this.getSheetByName(name)) throw new Error('A sheet with the name "' + name + '" already exists.');
-    const s = new MockSheet(this.env, name);
+    const s = new MockSheet(this.env, name, this);
     this.sheets.push(s);
+    this.active = s;
     return s;
+  }
+  deleteSheet(sheet) {
+    const i = this.sheets.indexOf(sheet);
+    if (i < 0) throw new Error('Not a sheet of this spreadsheet');
+    if (this.sheets.length === 1) throw new Error('Cannot delete the only sheet');
+    this.sheets.splice(i, 1);
+    if (this.active === sheet) this.active = this.sheets[0];
+  }
+  setActiveSheet(sheet) {
+    if (this.sheets.indexOf(sheet) < 0) throw new Error('Not a sheet of this spreadsheet');
+    this.active = sheet;
+    return sheet;
+  }
+  // Positions count from 1, as in Apps Script.
+  moveActiveSheet(position) {
+    if (!this.active) throw new Error('No active sheet');
+    if (!Number.isInteger(position) || position < 1 || position > this.sheets.length) throw new Error('Bad position: ' + position);
+    this.sheets.splice(this.sheets.indexOf(this.active), 1);
+    this.sheets.splice(position - 1, 0, this.active);
   }
 }
 
@@ -332,6 +449,7 @@ function makeEnv(opts) {
       },
     },
     Logger: { log(m) { env.logs.push(String(m)); } },
+    Charts: { Position: { TOP: 'TOP', RIGHT: 'RIGHT', BOTTOM: 'BOTTOM', NONE: 'NONE' } },
     console: { log() {}, warn() {}, error(m) { env.errors.push(String(m)); } },
   };
   vm.createContext(sandbox);
@@ -395,40 +513,229 @@ function isDate(v) {
   return Object.prototype.toString.call(v) === '[object Date]' && !isNaN(v.getTime());
 }
 
-// Minimal evaluator for the Summary formulas, used to check them against real rows.
-function criteriaOf(formula) {
-  const out = {};
-  const re = /runs!\$([A-Z]):\$\1,("([^"]*)"|-?\d+)/g;
+// ---------------------------------------------------------------------------
+// What the formulas give: a small evaluator for the formulas of "calc" and the sentences of "Dashboard"
+// ---------------------------------------------------------------------------
+
+// One criterion of COUNTIFS and its kin against a cell: a number, TRUE, "text" with * and ? wildcards, "<>text", ">n" and ">=n".
+// A date counts as its time in milliseconds.
+function criterionMatches(cell, crit) {
+  if (crit === true) return cell === true;
+  if (typeof crit === 'number') return typeof cell === 'number' && cell === crit;
+  const wild = (pattern) => new RegExp('^' + pattern.split(/([*?])/).map((s) => (
+    s === '*' ? '.*' : s === '?' ? '.' : s.replace(/[.+^${}()|[\]\\]/g, '\\$&'))).join('') + '$', 'i');
+  const compare = /^(>=|>)(-?\d+(?:\.\d+)?)$/.exec(crit);
+  if (compare) {
+    const n = isDate(cell) ? cell.getTime() : cell;
+    return typeof n === 'number' && (compare[1] === '>' ? n > Number(compare[2]) : n >= Number(compare[2]));
+  }
+  if (crit.startsWith('<>')) return !wild(crit.slice(2)).test(String(cell));
+  return typeof cell === 'string' && wild(crit).test(cell);
+}
+
+// One COUNTIFS / SUMIFS / MINIFS term over whole columns of one data sheet (any column letters). As a whole-column reference
+// does, it reads the header row and the empty rows under the data too.
+function ifsTerm(term, env) {
+  const m = /^(COUNTIFS|SUMIFS|MINIFS)\((.*)\)$/.exec(term);
+  if (!m) throw new Error('Unexpected term: ' + term);
+  const args = m[2].match(/\w+!\$[A-Z]+:\$[A-Z]+|"[^"]*"|TRUE|-?\d+(?:\.\d+)?/g);
+  assert.strictEqual(args.join(','), m[2], 'every argument is understood: ' + term);
+  const refOf = (arg) => {
+    const r = /^(\w+)!\$([A-Z]+):\$\2$/.exec(arg);
+    if (!r) throw new Error('Not a whole column: ' + arg + ' in ' + term);
+    return { sheet: r[1], col: colNumber(r[2]) };
+  };
+  const valueRef = m[1] === 'COUNTIFS' ? null : refOf(args[0]);
+  const pairs = [];
+  for (let i = valueRef ? 1 : 0; i < args.length; i += 2) {
+    const raw = args[i + 1];
+    pairs.push([refOf(args[i]), raw === 'TRUE' ? true : raw.startsWith('"') ? raw.slice(1, -1) : Number(raw)]);
+  }
+  assert.ok(pairs.length > 0, term);
+  const names = new Set(pairs.map((p) => p[0].sheet).concat(valueRef ? [valueRef.sheet] : []));
+  assert.strictEqual(names.size, 1, 'one data sheet per term: ' + term);
+  const sheet = sheetOf(env, pairs[0][0].sheet);
+  const picked = [];
+  for (let r = 1; r <= sheet.getLastRow() + 3; r++) {
+    if (!pairs.every(([ref, crit]) => criterionMatches(sheet.getCell(r, ref.col).value, crit))) continue;
+    const v = valueRef ? sheet.getCell(r, valueRef.col).value : 1;
+    picked.push(isDate(v) ? v.getTime() : v);
+  }
+  const numbers = picked.filter((v) => typeof v === 'number');
+  if (m[1] === 'COUNTIFS') return picked.length;
+  if (m[1] === 'SUMIFS') return numbers.reduce((a, b) => a + b, 0);
+  return numbers.length ? Math.min.apply(null, numbers) : 0;
+}
+
+// COUNTIFS(...)+COUNTIFS(...)+...: the terms added up.
+function ifsSum(body, env) {
+  return body.split(/\+(?=[A-Z]+IFS\()/).reduce((sum, term) => sum + ifsTerm(term, env), 0);
+}
+
+// The one formula of calc that counts distinct runs: story runs that sent run_start.
+const STARTED_FORMULA = '=IFERROR(ROWS(UNIQUE(FILTER(runs!$C$2:$C,runs!$B$2:$B="run_start",runs!$E$2:$E<>"test",' +
+  'COUNTIFS(runs!$C$2:$C,runs!$C$2:$C,runs!$Q$2:$Q,"story")>0))),0)';
+// The one formula of calc whose result has no fixed size: the first purchase of each run. The mock does not work it out;
+// spillFirstPurchases() writes what it reads.
+const FIRST_PURCHASES_FORMULA = '=IFERROR(FILTER({v2_purchases!$C$2:$C,v2_purchases!$G$2:$G,v2_purchases!$K$2:$K,v2_purchases!$I$2:$I},' +
+  'v2_purchases!$C$2:$C<>"",v2_purchases!$E$2:$E<>"test",IFERROR(MATCH(v2_purchases!$C$2:$C,v2_purchases!$C$2:$C,0),0)=ROW(v2_purchases!$C$2:$C)-1),{"","","",""})';
+
+// What a cell shows: its value, or what its formula gives.
+function shown(env, sheetName, row, col) {
+  const cell = sheetOf(env, sheetName).getCell(row, col);
+  return cell.formula ? evalFormula(env, sheetName, cell.formula) : cell.value;
+}
+
+// The same by address: "B5" or "$B$5".
+function shownAt(env, sheetName, a1) {
+  const m = /^\$?([A-Z]+)\$?(\d+)$/.exec(a1);
+  if (!m) throw new Error('Not a cell: ' + a1);
+  return shown(env, sheetName, Number(m[2]), colNumber(m[1]));
+}
+
+// A sentence of the Dashboard: "text" pieces, cells of calc and TEXT(cell,"0%"), joined by &.
+function sentence(env, body) {
+  const pieces = body.match(/"(?:[^"]|"")*"|TEXT\(calc!\$[A-Z]+\$\d+,"[^"]*"\)|calc!\$[A-Z]+\$\d+/g) || [];
+  assert.strictEqual(pieces.join('&'), body, 'every piece of the sentence is understood: ' + body);
+  return pieces.map((piece) => {
+    if (piece.startsWith('"')) return piece.slice(1, -1).replace(/""/g, '"');
+    let m = /^TEXT\(calc!(\$[A-Z]+\$\d+),"0%"\)$/.exec(piece);
+    if (m) return Math.round(shownAt(env, 'calc', m[1]) * 100) + '%';
+    m = /^calc!(\$[A-Z]+\$\d+)$/.exec(piece);
+    if (!m) throw new Error('Unexpected piece: ' + piece);
+    return String(shownAt(env, 'calc', m[1]));
+  }).join('');
+}
+
+// Every shape of formula the two tabs hold. A formula of another shape throws, so nothing is passed unread.
+function evalFormula(env, sheetName, formula) {
+  const f = formula.replace(/^=/, '');
+  const here = (letters, row) => shown(env, sheetName, Number(row), colNumber(letters));
   let m;
-  while ((m = re.exec(formula))) out[m[1]] = m[3] !== undefined ? m[3] : Number(m[2]);
+  if (f.startsWith('"')) return sentence(env, f);
+  if (formula === FIRST_PURCHASES_FORMULA) return ''; // an empty list until spillFirstPurchases() fills it
+  if (formula === STARTED_FORMULA) {
+    const rows = runsSheet(env).dataRows();
+    const story = new Set(rows.filter((r) => r[COL.mode] === 'story').map((r) => r[COL.run_id]));
+    return new Set(rows.filter((r) => r[COL.event] === 'run_start' && r[COL.edition] !== 'test' && story.has(r[COL.run_id]))
+      .map((r) => r[COL.run_id])).size;
+  }
+  // =IFERROR(C81/B81,0): a share, 0 while there is nothing to divide by.
+  if ((m = /^IFERROR\(([A-Z]+)(\d+)\/([A-Z]+)(\d+),0\)$/.exec(f))) {
+    const whole = here(m[3], m[4]);
+    return whole ? here(m[1], m[2]) / whole : 0;
+  }
+  // =SUM(B18:J27)
+  if ((m = /^SUM\(([A-Z]+)(\d+):([A-Z]+)(\d+)\)$/.exec(f))) {
+    let sum = 0;
+    for (let r = Number(m[2]); r <= Number(m[4]); r++) {
+      for (let c = colNumber(m[1]); c <= colNumber(m[3]); c++) {
+        const v = shown(env, sheetName, r, c);
+        if (typeof v === 'number') sum += v;
+      }
+    }
+    return sum;
+  }
+  // =INDEX(SORT($A$81:$D$97,4,FALSE),1,1): one value of the table sorted by a column, largest first; equal rows keep their order.
+  if ((m = /^INDEX\(SORT\(\$([A-Z]+)\$(\d+):\$([A-Z]+)\$(\d+),(\d+),FALSE\),(\d+),(\d+)\)$/.exec(f))) {
+    const rows = [];
+    for (let r = Number(m[2]); r <= Number(m[4]); r++) {
+      const row = [];
+      for (let c = colNumber(m[1]); c <= colNumber(m[3]); c++) row.push(shown(env, sheetName, r, c));
+      rows.push(row);
+    }
+    const by = Number(m[5]) - 1;
+    const sorted = rows.map((row, i) => [row, i]).sort((a, b) => (b[0][by] - a[0][by]) || (a[1] - b[1])).map((pair) => pair[0]);
+    return sorted[Number(m[6]) - 1][Number(m[7]) - 1];
+  }
+  // =COUNTIFS($N$5:$N,"?*",$P$5:$P,"Armament"): columns of the tab itself, from a row down.
+  if ((m = /^COUNTIFS\((\$[A-Z]+\$\d+:\$[A-Z]+,.*)\)$/.exec(f))) {
+    const args = m[1].match(/\$[A-Z]+\$\d+:\$[A-Z]+|"[^"]*"/g);
+    assert.strictEqual(args.join(','), m[1], 'every argument is understood: ' + f);
+    const pairs = [];
+    for (let i = 0; i < args.length; i += 2) {
+      const r = /^\$([A-Z]+)\$(\d+):\$\1$/.exec(args[i]);
+      pairs.push({ col: colNumber(r[1]), from: Number(r[2]), crit: args[i + 1].slice(1, -1) });
+    }
+    assert.ok(pairs.every((p) => p.from === pairs[0].from), 'the columns start on the same row: ' + f);
+    const sheet = sheetOf(env, sheetName);
+    let n = 0;
+    for (let r = pairs[0].from; r <= sheet.getLastRow() + 3; r++) {
+      if (pairs.every((p) => criterionMatches(sheet.getCell(r, p.col).value, p.crit))) n++;
+    }
+    return n;
+  }
+  // =IF(ISNUMBER($B$9),COUNTIFS(...,">="&$B$9),0): nothing is counted while the cell holds text.
+  if ((m = /^IF\(ISNUMBER\((\$[A-Z]+\$\d+)\),(.*),0\)$/.exec(f))) {
+    const since = shownAt(env, sheetName, m[1]);
+    if (typeof since !== 'number') return 0;
+    return ifsSum(m[2].split('"&' + m[1]).join(since + '"'), env);
+  }
+  // =IF(COUNTIFS(...)=0,"text",MINIFS(...)): the text while nothing is counted.
+  if ((m = /^IF\((COUNTIFS\(.*\))=0,"([^"]*)",(MINIFS\(.*\))\)$/.exec(f))) return ifsTerm(m[1], env) === 0 ? m[2] : ifsTerm(m[3], env);
+  // =COUNTIFS(...)-$B$10
+  if ((m = /^(COUNTIFS\(.*\))-(\$[A-Z]+\$\d+)$/.exec(f))) return ifsTerm(m[1], env) - shownAt(env, sheetName, m[2]);
+  return ifsSum(f, env);
+}
+
+// The first purchase of each run as FIRST_PURCHASES_FORMULA reads "v2_purchases": the first row of each run_id, when that row
+// is not a test row. Written where the formula's result would spill, from N5 down.
+function spillFirstPurchases(env) {
+  const calc = sheetOf(env, 'calc');
+  assert.strictEqual(calc.getCell(5, 14).formula, FIRST_PURCHASES_FORMULA);
+  const rows = sheetOf(env, 'v2_purchases').dataRows();
+  const ids = rows.map((r) => r[2]);
+  const firsts = rows.filter((r, i) => r[2] !== '' && r[4] !== 'test' && ids.indexOf(r[2]) === i).map((r) => [r[2], r[6], r[10], r[8]]);
+  firsts.forEach((row, i) => row.forEach((v, j) => calc.setCell(5 + i, 14 + j, v, '')));
+  return firsts;
+}
+
+// A table of calc by the start of its title: where it stands, and its header.
+function tableOf(env, titleStart) {
+  const calc = sheetOf(env, 'calc');
+  for (let r = 2; r <= calc.getLastRow(); r++) {
+    const title = calc.getCell(r, 1).value;
+    if (typeof title !== 'string' || !title.startsWith(titleStart)) continue;
+    const header = [];
+    for (let c = 1; calc.getCell(r + 1, c).value !== ''; c++) header.push(calc.getCell(r + 1, c).value);
+    let last = r + 1;
+    while (calc.getCell(last + 1, 1).value !== '' || calc.getCell(last + 1, 1).formula) last++;
+    return { title: title, top: r + 1, first: r + 2, last: last, width: header.length, header: header };
+  }
+  throw new Error('No table "' + titleStart + '" in calc');
+}
+
+// The numbers of a table that are not 0, as { 'row label/column label': n }. Every cell must show a number.
+function gridOf(env, table) {
+  const out = {};
+  for (let r = table.first; r <= table.last; r++) {
+    for (let c = 2; c <= table.width; c++) {
+      const v = shown(env, 'calc', r, c);
+      assert.strictEqual(typeof v, 'number', table.title + ': a number at row ' + r + ', column ' + c);
+      if (v) out[shown(env, 'calc', r, 1) + '/' + table.header[c - 1]] = v;
+    }
+  }
   return out;
 }
 
-function matches(cell, criterion) {
-  if (typeof criterion === 'number') return typeof cell === 'number' && cell === criterion;
-  if (criterion.startsWith('<>')) return String(cell).toLowerCase() !== criterion.slice(2).toLowerCase();
-  return typeof cell === 'string' && cell.toLowerCase() === criterion.toLowerCase();
+// What a range of a chart shows ("calc!A17:J27"), row by row.
+function rangeShown(env, a1) {
+  const m = /^(\w+)!([A-Z]+)(\d+):([A-Z]+)(\d+)$/.exec(a1);
+  if (!m) throw new Error('Not a range: ' + a1);
+  const out = [];
+  for (let r = Number(m[3]); r <= Number(m[5]); r++) {
+    const row = [];
+    for (let c = colNumber(m[2]); c <= colNumber(m[4]); c++) row.push(shown(env, m[1], r, c));
+    out.push(row);
+  }
+  return out;
 }
 
-function evalCountifs(formula, runs) {
-  const crit = criteriaOf(formula);
-  const rows = [];
-  for (let i = 1; i <= runs.getLastRow(); i++) rows.push(runs.rowValues(i)); // includes the header, like $B:$B
-  return rows.filter((r) => Object.keys(crit).every((c) => matches(r[c.charCodeAt(0) - 65], crit[c]))).length;
-}
-
-function evalDistinct(formula, runs) {
-  const m = /^=IFERROR\(ROWS\(UNIQUE\(FILTER\(runs!\$C\$2:\$C,runs!\$B\$2:\$B="(\w+)",runs!\$E\$2:\$E<>"test",COUNTIFS\(runs!\$C\$2:\$C,runs!\$C\$2:\$C,runs!\$Q\$2:\$Q,"story"\)=0(?:,COUNTIFS\(runs!\$C\$2:\$C,runs!\$C\$2:\$C,runs!\$B\$2:\$B,"(\w+)"\)=0)?\)\)\),0\)$/.exec(formula);
-  if (!m) throw new Error('Unexpected distinct formula: ' + formula);
-  const rows = runs.dataRows();
-  // A run_id with any row in the story mode is left out whole.
-  const story = new Set(rows.filter((r) => r[COL.mode] === 'story').map((r) => r[COL.run_id]));
-  // The optional COUNTIFS(...)=0 term drops every run_id that has a row with that event, in any edition.
-  const excluded = new Set(m[2] ? rows.filter((r) => r[COL.event] === m[2]).map((r) => r[COL.run_id]) : []);
-  const ids = new Set(rows
-    .filter((r) => r[COL.event] === m[1] && r[COL.edition] !== 'test' && !story.has(r[COL.run_id]) && !excluded.has(r[COL.run_id]))
-    .map((r) => r[COL.run_id]));
-  return ids.size;
+// Everything a sheet holds, as text: its cells (values and formulas), formats, merged cells, sizes, charts and whether it shows.
+function snapshot(sheet) {
+  return JSON.stringify({ name: sheet.name, cells: sheet.cells, backgrounds: sheet.backgrounds, formats: sheet.formats,
+    merges: sheet.merges.slice().sort(), widths: sheet.columnWidths, heights: sheet.rowHeights, gridlines: sheet.gridlinesHidden,
+    hidden: sheet.hidden, charts: sheet.charts.map((c) => c.spec), frozen: sheet.frozenRows });
 }
 
 // ---------------------------------------------------------------------------
@@ -673,61 +980,28 @@ test('doGet reports status and row count', () => {
   assert.ok(json2.status.indexOf('running') >= 0);
 });
 
-test('setup creates the header, stores the id, builds the Summary grid and one chart', () => {
+test('setup makes the data tabs with their headers, stores the id, and builds "Dashboard" first and "calc" hidden', () => {
   const env = makeEnv();
   env.gs.setup();
-  assert.deepStrictEqual(env.ss.getSheets().map((s) => s.name), ALL_SHEETS, 'empty Sheet1 is reused as "runs"');
+  assert.deepStrictEqual(env.ss.getSheets().map((s) => s.name), SHEETS_AFTER_SETUP, 'empty Sheet1 is reused as "runs"; the Dashboard comes first');
   const runs = runsSheet(env);
   assert.deepStrictEqual(runs.rowValues(1), HEADER);
   assert.strictEqual(runs.frozenRows, 1);
   assert.strictEqual(env.props.SPREADSHEET_ID, env.ss.id);
 
-  const summary = env.ss.getSheetByName('Summary');
-  assert.deepStrictEqual(summary.rowValues(1), ['Wave'].concat(CAUSES));
-  let formulaCount = 0;
-  BUCKETS.forEach((label, i) => {
-    const row = i + 2;
-    assert.strictEqual(summary.getCell(row, 1).value, label);
-    CAUSES.forEach((cause, j) => {
-      const f = summary.getCell(row, j + 2).formula;
-      assert.ok(f.startsWith('=COUNTIFS('), 'formula at ' + label + '/' + cause);
-      formulaCount++;
-      const crit = criteriaOf(f);
-      const expected = { B: 'run_end', E: '<>test', Q: '<>story', H: cause };
-      if (label === 'Boss') expected.K = 'final_boss';
-      else { expected.K = '<>final_boss'; expected.L = i + 1; }
-      assert.deepStrictEqual(crit, expected, f);
-    });
-    assert.strictEqual(summary.getCell(row, CAUSES.length + 2).formula, '', 'nothing right of the grid');
-  });
-  assert.strictEqual(formulaCount, 15 * 11);
-
-  // Totals block below the grid.
-  const labels = {};
-  for (let r = 17; r <= summary.getLastRow(); r++) labels[summary.getCell(r, 1).value] = r;
-  const started = summary.getCell(labels['Runs started'], 2).formula;
-  const ended = summary.getCell(labels['Runs ended'], 2).formula;
-  const unfinished = summary.getCell(labels['Unfinished (tab closed)'], 2).formula;
-  assert.ok(started.indexOf('runs!$C$2:$C') > 0 && started.indexOf('runs!$B$2:$B="run_start"') > 0 && started.indexOf('runs!$E$2:$E<>"test"') > 0, started);
-  assert.ok(ended.indexOf('runs!$B$2:$B="run_end"') > 0, ended);
-  for (const f of [started, ended, unfinished]) assert.ok(f.startsWith('=IFERROR('), f);
-  assert.strictEqual(unfinished, '=IFERROR(ROWS(UNIQUE(FILTER(runs!$C$2:$C,runs!$B$2:$B="run_start",runs!$E$2:$E<>"test",' +
-    'COUNTIFS(runs!$C$2:$C,runs!$C$2:$C,runs!$Q$2:$Q,"story")=0,' +
-    'COUNTIFS(runs!$C$2:$C,runs!$C$2:$C,runs!$B$2:$B,"run_end")=0))),0)');
-  for (const f of [started, ended]) assert.ok(f.indexOf('runs!$Q$2:$Q,"story")=0') > 0, 'story runs left out: ' + f);
-  for (const f of [started, ended, unfinished]) assert.ok(f.indexOf('COUNTUNIQUE') < 0, 'COUNTUNIQUE counts an empty FILTER (#N/A) as 1: ' + f);
-
-  assert.strictEqual(summary.charts.length, 1);
-  const spec = summary.charts[0].spec;
-  assert.strictEqual(spec.type, 'COLUMN');
-  assert.strictEqual(spec.stacked, true);
-  assert.strictEqual(spec.title, 'How runs end, by wave');
-  assert.deepStrictEqual(spec.ranges, ['A1:L16']);
-  assert.strictEqual(spec.numHeaders, 1);
-  assert.ok(spec.position.col > 12, 'chart sits right of the grid');
+  assert.deepStrictEqual(env.ss.getSheets().filter((s) => s.hidden).map((s) => s.name), ['calc'], 'calc is the one hidden tab');
+  assert.strictEqual(env.ss.active.name, 'Dashboard', 'the Dashboard is the tab shown after setup');
+  assert.strictEqual(env.ss.getSheetByName('Dashboard').charts.length, 9);
+  assert.strictEqual(env.ss.getSheetByName('calc').charts.length, 0, 'calc holds tables only');
+  for (const name of DATA_SHEETS) {
+    const sheet = env.ss.getSheetByName(name);
+    assert.strictEqual(sheet.getLastRow(), 1, name + ': the header and no row');
+    assert.strictEqual(sheet.charts.length, 0, name);
+    assert.deepStrictEqual(sheet.merges, [], name);
+  }
 });
 
-test('setup is safe to run twice: one chart, one Summary, rows in "runs" kept', () => {
+test('setup is safe to run twice: the same tabs, nine charts, rows in "runs" kept', () => {
   const env = readyEnv();
   post(env, startEvent());
   post(env, endEvent());
@@ -735,13 +1009,10 @@ test('setup is safe to run twice: one chart, one Summary, rows in "runs" kept', 
   const before = runsSheet(env).dataRows().map((r) => r.slice(1));
   env.gs.setup();
   env.gs.setup();
-  assert.deepStrictEqual(env.ss.getSheets().map((s) => s.name), ALL_SHEETS);
-  const summary = env.ss.getSheetByName('Summary');
-  assert.strictEqual(summary.charts.length, 1);
-  assert.deepStrictEqual(summary.charts[0].spec.ranges, ['A1:L16']);
+  assert.deepStrictEqual(env.ss.getSheets().map((s) => s.name), SHEETS_AFTER_SETUP);
+  assert.strictEqual(env.ss.getSheetByName('Dashboard').charts.length, 9);
   assert.deepStrictEqual(runsSheet(env).rowValues(1), HEADER);
   assert.deepStrictEqual(runsSheet(env).dataRows().map((r) => r.slice(1)), before);
-  assert.ok(summary.getCell(16, 12).formula.startsWith('=COUNTIFS('));
 });
 
 test('setup keeps data that was already in row 1 of "runs"', () => {
@@ -762,45 +1033,6 @@ test('setup in a standalone script creates a spreadsheet that doPost then uses',
   assert.deepStrictEqual(post(env, endEvent()).json, { ok: true });
   assert.strictEqual(runsSheet(env, env.created).getLastRow(), 2);
   assert.ok(env.logs.some((l) => l.indexOf(env.created.id) >= 0), 'setup logs the spreadsheet URL');
-});
-
-test('Summary formulas count the right rows (wave buckets, causes, test rows, totals)', () => {
-  const env = readyEnv();
-  const id = (n) => n.toString(16).padStart(32, '0');
-  const events = [
-    startEvent({ run_id: id(1) }), endEvent({ run_id: id(1), wave: 9 }),
-    startEvent({ run_id: id(2), edition: 'zh' }), endEvent({ run_id: id(2), edition: 'zh', wave: 9 }),
-    startEvent({ run_id: id(3) }), endEvent({ run_id: id(3), cause: 'backfire', wave: 3 }),
-    startEvent({ run_id: id(4) }), endEvent({ run_id: id(4), outcome: 'victory', cause: 'victory', stage: 'final_boss', wave: 14 }),
-    startEvent({ run_id: id(5) }), endEvent({ run_id: id(5), cause: 'tyrant', enemy: 'Tyrant', stage: 'final_boss', wave: 14 }),
-    startEvent({ run_id: id(6) }), endEvent({ run_id: id(6), cause: 'enemy', stage: 'wave', wave: 14 }),
-    startEvent({ run_id: id(7) }), endEvent({ run_id: id(7), outcome: 'abandoned', cause: 'restart', stage: 'build', wave: 5 }),
-    startEvent({ run_id: id(8), edition: 'test' }), endEvent({ run_id: id(8), edition: 'test', wave: 9 }),
-    startEvent({ run_id: id(9) }), // closed the tab
-    startEvent({ run_id: id(10) }), startEvent({ run_id: id(10) }), // duplicate start, still one run, unfinished
-    endEvent({ run_id: id(11), cause: 'status', wave: 6 }), // its run_start was lost
-    startEvent({ run_id: id(12) }), endEvent({ run_id: id(12), outcome: 'victory', cause: 'victory', stage: 'wave', wave: 9 }),
-  ];
-  for (const ev of events) assert.strictEqual(post(env, ev).json.ok, true);
-
-  const runs = runsSheet(env);
-  const summary = env.ss.getSheetByName('Summary');
-  const expected = {
-    'W9/enemy': 2, 'W3/backfire': 1, 'Boss/victory': 2, 'Boss/tyrant': 1, 'W14/enemy': 1, 'W5/restart': 1, 'W6/status': 1,
-  };
-  BUCKETS.forEach((label, i) => {
-    CAUSES.forEach((cause, j) => {
-      const got = evalCountifs(summary.getCell(i + 2, j + 2).formula, runs);
-      assert.strictEqual(got, expected[label + '/' + cause] || 0, label + '/' + cause);
-    });
-  });
-  const started = evalDistinct(summary.getCell(18, 2).formula, runs);
-  const ended = evalDistinct(summary.getCell(19, 2).formula, runs);
-  const unfinished = evalDistinct(summary.getCell(20, 2).formula, runs);
-  assert.strictEqual(started, 10);
-  assert.strictEqual(ended, 9);
-  // Runs 9 and 10 never ended; run 11 ended without a start, so started minus ended would give 1.
-  assert.strictEqual(unfinished, 2);
 });
 
 // ---------------------------------------------------------------------------
@@ -827,40 +1059,6 @@ function damageEvent(rows, overrides) {
   return betaBase('wave_damage', Object.assign({ rows: rows }, overrides));
 }
 function sheetOf(env, name) { return env.ss.getSheetByName(name); }
-
-// Minimal COUNTIFS / SUMIFS evaluator for the beta summaries: equality, "<>x", ">0" and "*" wildcards.
-function betaMatches(cell, criterion) {
-  if (criterion === true) return cell === true;
-  if (typeof criterion === 'number') return cell === criterion;
-  if (criterion.startsWith('<>')) return String(cell).toLowerCase() !== criterion.slice(2).toLowerCase();
-  if (criterion.startsWith('>')) return typeof cell === 'number' && cell > Number(criterion.slice(1));
-  const re = new RegExp('^' + criterion.split('*').map((s) => s.replace(/[.+?^${}()|[\]\\]/g, '\\$&')).join('.*') + '$', 'i');
-  return typeof cell === 'string' && re.test(cell);
-}
-function evalBetaFormula(formula, env) {
-  const terms = formula.replace(/^=/, '').split(/\+(?=COUNTIFS)/);
-  let total = 0;
-  for (const term of terms) {
-    const m = /^(COUNTIFS|SUMIFS)\((.*)\)$/.exec(term);
-    if (!m) throw new Error('Unexpected formula: ' + formula);
-    const args = m[2].match(/(\w+)!\$([A-Z]):\$\2|"[^"]*"|TRUE/g);
-    let sumCol = null;
-    let i = 0;
-    if (m[1] === 'SUMIFS') { sumCol = args[0]; i = 1; }
-    const pairs = [];
-    for (; i < args.length; i += 2) {
-      const crit = args[i + 1] === 'TRUE' ? true : args[i + 1].slice(1, -1);
-      pairs.push([args[i], crit]);
-    }
-    const colIndex = (ref) => ref.split('$')[1].charCodeAt(0) - 65;
-    const sheet = sheetOf(env, pairs[0][0].split('!')[0]);
-    for (let r = 2; r <= sheet.getLastRow(); r++) {
-      const row = sheet.rowValues(r);
-      if (pairs.every(([ref, crit]) => betaMatches(row[colIndex(ref)], crit))) total += sumCol ? Number(row[colIndex(sumCol)]) || 0 : 1;
-    }
-  }
-  return total;
-}
 
 test('upgrade_pick is stored in "upgrade_picks" with its kind and weapon count worked out', () => {
   const env = readyEnv();
@@ -945,68 +1143,6 @@ test('a beta event creates its sheet with the header when setup has not run', ()
   assert.deepStrictEqual(sheet.rowValues(1), SUPPLY_HEADER);
   assert.strictEqual(sheet.getLastRow(), 2);
   assert.strictEqual(sheet.columnFormats[9], '@', 'offer columns are plain text');
-});
-
-test('setup builds the three beta summaries with their charts', () => {
-  const env = readyEnv();
-  const upgrades = sheetOf(env, 'Upgrade picks');
-  assert.deepStrictEqual(upgrades.rowValues(1), ['Upgrade direction', 'Offered', 'Picked', 'Pick rate']);
-  assert.deepStrictEqual([2, 3, 4, 5, 6, 7, 8].map((r) => upgrades.getCell(r, 1).value),
-    ['Power', 'Tempo', 'Reach', 'Infusion', 'Twist', 'Tame', 'All weapon upgrades']);
-  assert.deepStrictEqual([11, 12, 13].map((r) => upgrades.getCell(r, 1).value), ['Weapon', 'Skill', 'Stat']);
-  assert.deepStrictEqual(upgrades.charts.map((c) => [c.spec.type, c.spec.ranges]),
-    [['COLUMN', ['A1:A7', 'D1:D7']], ['COLUMN', ['A10:A13', 'D10:D13']]]);
-
-  const supply = sheetOf(env, 'Supply picks');
-  assert.deepStrictEqual([2, 3, 4, 5, 6].map((r) => supply.getCell(r, 1).value), ['take_free', 'merge', 'replace', 'skip', 'timeout']);
-  assert.ok(supply.getCell(1, 5).formula.indexOf("where L = 'replace'") > 0);
-  assert.deepStrictEqual(supply.charts.map((c) => c.spec.type), ['PIE', 'BAR']);
-
-  const damage = sheetOf(env, 'Damage sources');
-  assert.ok(damage.getCell(1, 1).formula.startsWith('=IFERROR(QUERY(FILTER(damage!$A$2:$O,damage!$O$2:$O<>"story"),'));
-  assert.ok(damage.getCell(1, 8).formula.indexOf('pivot Col10') > 0);
-  assert.deepStrictEqual(damage.charts.map((c) => c.spec.type), ['BAR', 'COLUMN']);
-  assert.strictEqual(damage.charts[1].spec.options.isStacked, 'percent');
-  assert.deepStrictEqual(damage.charts[1].spec.ranges, ['H1:AV16']);
-
-  env.gs.setup();
-  assert.strictEqual(sheetOf(env, 'Upgrade picks').charts.length, 2, 'setup twice keeps one set of charts');
-  assert.strictEqual(sheetOf(env, 'Damage sources').charts.length, 2);
-});
-
-test('beta summary formulas count the right rows', () => {
-  const env = readyEnv();
-  const events = [
-    upgradeEvent(), // Rifle Power (picked), Minigun Tempo offered
-    upgradeEvent({ picked: 'Skill:FlameWake' }),
-    upgradeEvent({ offer_1: 'Stat:Damage', offer_2: 'Skill:Blink', offer_3: 'Stat:MaxHp', picked: 'Stat:MaxHp' }),
-    upgradeEvent({ edition: 'test' }),
-    supplyEvent(), supplyEvent({ replaced: 'Rifle' }), supplyEvent({ action: 'skip', replace_cancels: 2 }),
-    supplyEvent({ action: 'take_free', edition: 'test' }),
-    damageEvent([{ source: 'Grunt', wave: 1, damage: 10, damage_pct: 20, hits: 1 },
-      { source: 'Spitter', dot: true, wave: 2, damage: 5, damage_pct: 10, hits: 3 }]),
-    damageEvent([{ source: 'Grunt', wave: 2, damage: 5, damage_pct: 10, hits: 1 }], { edition: 'test' }),
-  ];
-  for (const ev of events) assert.strictEqual(post(env, ev).json.ok, true);
-
-  const up = sheetOf(env, 'Upgrade picks');
-  const rate = (row) => [evalBetaFormula(up.getCell(row, 2).formula, env), evalBetaFormula(up.getCell(row, 3).formula, env)];
-  assert.deepStrictEqual(rate(2), [2, 1], 'Power offered twice, picked once (test row left out)');
-  assert.deepStrictEqual(rate(3), [2, 0], 'Tempo');
-  assert.deepStrictEqual(rate(8), [4, 1], 'all weapon upgrades');
-  assert.deepStrictEqual(rate(11), [4, 1], 'Weapon cards');
-  assert.deepStrictEqual(rate(12), [3, 1], 'Skill cards');
-  assert.deepStrictEqual(rate(13), [2, 1], 'Stat cards');
-  assert.strictEqual(evalBetaFormula(up.getCell(15, 2).formula, env), 2, 'picks with a weapon on offer');
-  assert.strictEqual(evalBetaFormula(up.getCell(16, 2).formula, env), 1, 'of which a weapon was picked');
-
-  const sp = sheetOf(env, 'Supply picks');
-  assert.deepStrictEqual([2, 3, 4, 5, 6].map((r) => evalBetaFormula(sp.getCell(r, 2).formula, env)), [0, 0, 2, 1, 0]);
-  assert.strictEqual(evalBetaFormula(sp.getCell(9, 2).formula, env), 4, 'replace screen cancels: 1 + 1 + 2');
-
-  const dm = sheetOf(env, 'Damage sources');
-  assert.strictEqual(evalBetaFormula(dm.getCell(2, 5).formula.replace(/^=IF\(\$A2="","",(.*)\)$/, '=$1').replace('$A2', '"Spitter"'), env), 10,
-    'burn / poison part of Spitter damage');
 });
 
 // ---------------------------------------------------------------------------
@@ -1122,6 +1258,8 @@ test('bad story-mode events are rejected and write nothing', () => {
     [v2Event({ detail: '' }), 'bad detail'],
     [v2Event({ kind: 'tutorial_step', detail: '' }), 'bad detail'],
     [v2Event({ kind: 'crate', detail: undefined }), 'bad detail'],
+    [v2Event({ kind: 'crate_offer', detail: '' }), 'bad detail'],
+    [v2Event({ kind: 'crate_offers', detail: 'Afternoon:Railgun' }), 'bad kind'],
     [v2Event({ kind: 'void_purchase', detail: '%%' }), 'bad detail'],
   ];
   for (const [body, error] of cases) {
@@ -1158,7 +1296,7 @@ test('setup makes the three story-mode sheets, keeps their rows, and doGet count
   for (const ev of [v2DayEvent(), v2PurchaseEvent(), v2Event(), v2Event({ kind: 'prophet', detail: '' })]) post(env, ev);
   const before = sheetOf(env, 'v2_events').dataRows().map((r) => r.slice(1));
   env.gs.setup();
-  assert.deepStrictEqual(env.ss.getSheets().map((s) => s.name), ALL_SHEETS, 'setup twice adds no sheet');
+  assert.deepStrictEqual(env.ss.getSheets().map((s) => s.name), SHEETS_AFTER_SETUP, 'setup twice adds no sheet');
   assert.deepStrictEqual(sheetOf(env, 'v2_events').dataRows().map((r) => r.slice(1)), before);
   const json = JSON.parse(env.gs.doGet({}).getContent());
   assert.deepStrictEqual(json.v2_rows, { v2_days: 1, v2_purchases: 1, v2_events: 2 });
@@ -1225,46 +1363,673 @@ test('wave_damage takes the mode of its event; story rows keep their stage and d
   assert.strictEqual(sheet.columnFormats[15], '@', 'mode is plain text');
 });
 
-test('the open-mode Summary leaves story runs out, also one whose start went out as open; rows without a mode count as open', () => {
+// ---------------------------------------------------------------------------
+// "Dashboard" and "calc": the two tabs setup() builds
+// ---------------------------------------------------------------------------
+
+const OLD_SUMMARIES = ['Summary', 'Upgrade picks', 'Supply picks', 'Damage sources', 'Story endings', 'Story spending', 'Story weapons',
+  'Story damage'];
+const DAY_LABELS = ['Day 0', 'Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5', 'Day 6', 'Day 7', 'Day 8+'];
+const END_LABELS = ['Enemy', 'Tyrant King', 'Own weapon', 'Wall slam', 'Burn / poison', 'Base destroyed', 'Victory', 'Left the run', 'Other'];
+const ROOM_LABELS = ['Armament Bay', 'Energy Lab', 'Ship', 'Control Center', 'Other rooms'];
+const DAMAGE_LABELS = ['Grunt', 'Tyrant King', 'Own weapon', 'Wall slam', 'Brute', 'Spitter', 'Shadow (night)', 'Skitter', 'Other enemies'];
+const OPEN_LABELS = ['Enemy', 'Tyrant King', 'Own weapon', 'Wall slam', 'Burn / poison', 'Black hole', 'Void trial', 'Unknown', 'Victory',
+  'Restart', 'Quit to title'];
+const STORY_WEAPONS = ['Rifle', 'Knife', 'RocketLauncher', 'GravGun', 'ScatterCannon', 'PhaseDagger', 'PlasmaLauncher', 'Flamethrower',
+  'CryoCannon', 'ArcCoil', 'SporeLauncher', 'Railgun', 'Minigun', 'SwarmLauncher', 'OrbitBlades', 'SentryDrone', 'ShieldRing'];
+const DOT = ' \u00B7 ';
+const EXAMPLE_LABEL = 'EXAMPLE (simulated data, not real players)';
+const END_COLOURS = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e34948', '#e87ba4', '#008300', '#b1afa8', '#5f5e5a'];
+const ROOM_COLOURS = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#b1afa8'];
+const DAMAGE_COLOURS = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#6250d6', '#e34948', '#b1afa8'];
+const OPEN_COLOURS = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e34948', '#6250d6', '#9c3d8c', '#5f5e5a', '#008300', '#b1afa8', '#d6d4cc'];
+
+// The nine charts of the Dashboard in the order setup() adds them: where each stands (the cell under its top left corner),
+// its size in pixels, and the ranges of calc it reads. A card is 600 px wide: six columns of 100 px from B, or from I.
+const CHARTS = [
+  { name: 'card 1, live', type: 'COLUMN', stacked: true, row: 8, col: 2, width: 600, height: 294, ranges: ['calc!A17:J27'],
+    title: 'How story runs end, by day', colours: END_COLOURS },
+  { name: 'card 1, example', type: 'COLUMN', stacked: true, row: 23, col: 2, width: 600, height: 294, ranges: ['calc!A30:J39'],
+    title: 'Example: how story runs end, by day', colours: END_COLOURS },
+  { name: 'card 2, live', type: 'COLUMN', stacked: true, row: 8, col: 9, width: 600, height: 294, ranges: ['calc!A42:F51'],
+    title: 'Resources spent per day, by room', colours: ROOM_COLOURS },
+  { name: 'card 2, example', type: 'COLUMN', stacked: true, row: 23, col: 9, width: 600, height: 294, ranges: ['calc!A62:F70'],
+    title: 'Example: resources spent per day, by room', colours: ROOM_COLOURS },
+  { name: 'card 3, live', type: 'BAR', stacked: false, row: 41, col: 2, width: 600, height: 378, ranges: ['calc!A100:A117', 'calc!B100:B117'],
+    title: 'Take rate per weapon, when a crate offers it', colours: ['#2a78d6'] },
+  { name: 'card 3, example', type: 'BAR', stacked: false, row: 60, col: 2, width: 600, height: 378, ranges: ['calc!A130:A147', 'calc!D130:D147'],
+    title: 'Example: take rate per weapon, when a crate offers it', colours: ['#2a78d6'] },
+  { name: 'card 4, live', type: 'COLUMN', stacked: true, percent: true, row: 41, col: 9, width: 600, height: 378, ranges: ['calc!A150:J160'],
+    title: 'Damage to the player per day, by source', colours: DAMAGE_COLOURS },
+  { name: 'card 4, example', type: 'COLUMN', stacked: true, percent: true, row: 60, col: 9, width: 600, height: 378, ranges: ['calc!A163:J172'],
+    title: 'Example: damage to the player per day, by source', colours: DAMAGE_COLOURS },
+  { name: 'open mode', type: 'COLUMN', stacked: true, row: 81, col: 2, width: 1240, height: 294, ranges: ['calc!A175:L190'],
+    title: 'How open-mode runs end, by wave', colours: OPEN_COLOURS },
+];
+const LIVE_CHARTS = CHARTS.filter((c) => !/example/.test(c.name));
+// The text rows of the Dashboard, each one merged cell: the title, the line on what the page is and the totals, then for each
+// band of two cards its headers, captions and labels, and the open mode's header and caption.
+const TEXT_ROWS = ['B1:N1', 'B2:N2', 'B3:N3',
+  'B5:G5', 'I5:N5', 'B6:G6', 'I6:N6', 'B7:G7', 'I7:N7', 'B22:G22', 'I22:N22',
+  'B38:G38', 'I38:N38', 'B39:G39', 'I39:N39', 'B40:G40', 'I40:N40', 'B59:G59', 'I59:N59',
+  'B79:N79', 'B80:N80'];
+
+const idOf = (n) => n.toString(16).padStart(32, '0');
+const rowsFrom = (first, last) => Array.from({ length: last - first + 1 }, (_, i) => first + i);
+const dashboardOf = (env) => sheetOf(env, 'Dashboard');
+const calcOf = (env) => sheetOf(env, 'calc');
+// What a text row of the Dashboard says, by its first cell.
+const says = (env, a1) => shownAt(env, 'Dashboard', a1);
+const chartSpecs = (env) => dashboardOf(env).charts.map((c) => c.spec);
+
+function storyEnd(n, overrides) {
+  return endEvent(Object.assign({ run_id: idOf(n), mode: 'story', stage: 'day', wave: 3, cause: 'enemy' }, overrides));
+}
+
+test('crate_offer is a v2_event kind: one row for each weapon a crate offered, stored as crate rows are', () => {
   const env = readyEnv();
-  const id = (n) => n.toString(16).padStart(32, '0');
-  const story = { mode: 'story' };
+  for (const ev of [
+    v2Event({ kind: 'crate_offer', detail: 'Afternoon:Railgun', value: 1 }),
+    v2Event({ kind: 'crate_offer', detail: ' Afternoon:Minigun ', value: '2' }),
+    v2Event({ kind: 'crate', detail: 'Afternoon:Minigun', value: 2 }),
+  ]) assert.deepStrictEqual(post(env, ev).json, { ok: true });
+  const sheet = sheetOf(env, 'v2_events');
+  assert.deepStrictEqual(sheet.dataRows().map((r) => r.slice(1)), [
+    ['v2_event', RUN_ID, SESSION_ID, 'en', '1.0.0+3fa2b1c9', 2, 'dusk', 'crate_offer', 'Afternoon:Railgun', 1],
+    ['v2_event', RUN_ID, SESSION_ID, 'en', '1.0.0+3fa2b1c9', 2, 'dusk', 'crate_offer', 'Afternoon:Minigun', 2],
+    ['v2_event', RUN_ID, SESSION_ID, 'en', '1.0.0+3fa2b1c9', 2, 'dusk', 'crate', 'Afternoon:Minigun', 2],
+  ]);
+  for (const detail of ['', undefined, '%%']) {
+    assert.deepStrictEqual(post(env, v2Event({ kind: 'crate_offer', detail: detail })).json, { ok: false, error: 'bad detail' });
+  }
+  assert.strictEqual(sheet.getLastRow(), 4, 'an offer that names no weapon writes nothing');
+});
+
+test('setup deletes the eight summary tabs of earlier layouts; data rows and every other tab stay as they are', () => {
+  const env = makeEnv();
+  for (const ev of [
+    startEvent({ mode: 'story', stage: 'tutorial', wave: 0 }), storyEnd(0, { run_id: RUN_ID }), endEvent({ run_id: idOf(2) }),
+    upgradeEvent(), supplyEvent(),
+    damageEvent([{ source: 'shadow', stage: 'night', wave: 2, damage: 3, damage_pct: 6, hits: 2 }], { mode: 'story' }),
+    v2DayEvent(), v2PurchaseEvent(),
+    v2Event({ kind: 'crate_offer', detail: 'Afternoon:Railgun', value: 1 }), v2Event({ kind: 'crate', detail: 'Afternoon:Railgun', value: 1 }),
+  ]) assert.deepStrictEqual(post(env, ev).json, { ok: true });
+
+  // The eight summary tabs as an earlier setup() left them: formulas and a chart each.
+  for (const name of OLD_SUMMARIES) {
+    const old = env.ss.insertSheet(name);
+    old.getRange(1, 1, 1, 2).setFormulas([['=COUNTA(runs!A:A)', '=SUM(damage!L:L)']]);
+    old.insertChart(old.newChart().asColumnChart().addRange(old.getRange(1, 1, 1, 2)).build());
+  }
+  // Tabs this script does not own: those of a still older layout, which it stopped writing, and one somebody made by hand.
+  const oldRuns = env.ss.insertSheet('v2_runs');
+  oldRuns.appendRow(['received_at', 'event', 'run_id']);
+  oldRuns.appendRow(['2026-11-06', 'v2_run_start', idOf(1)]);
+  const oldSummary = env.ss.insertSheet('V2 Summary');
+  oldSummary.getRange(1, 1, 1, 2).setFormulas([['=COUNTA(v2_runs!A:A)', '=SUM(v2_runs!L:L)']]);
+  oldSummary.insertChart(oldSummary.newChart().asColumnChart().addRange(oldSummary.getRange(1, 1, 1, 2)).build());
+  env.ss.insertSheet('Notes').getRange(1, 1).setValue('my own notes');
+  const KEPT = ['Sheet1', 'v2_runs', 'V2 Summary', 'Notes'];
+
+  const before = {};
+  for (const name of KEPT) before[name] = snapshot(sheetOf(env, name));
+  const rowsBefore = {};
+  for (const name of DATA_SHEETS) rowsBefore[name] = JSON.stringify(sheetOf(env, name).dataRows());
+  assert.ok(DATA_SHEETS.every((name) => sheetOf(env, name).getLastRow() > 1), 'every data tab holds a row');
+
+  for (let run = 1; run <= 2; run++) {
+    env.gs.setup();
+    const names = env.ss.getSheets().map((s) => s.name);
+    for (const name of OLD_SUMMARIES) assert.ok(names.indexOf(name) < 0, 'run ' + run + ': "' + name + '" is gone');
+    assert.strictEqual(names[0], 'Dashboard', 'run ' + run + ': the Dashboard comes first');
+    assert.deepStrictEqual(names.slice().sort(), ['Dashboard', 'calc'].concat(DATA_SHEETS, KEPT).sort(), 'run ' + run + ': no other tab added or removed');
+    for (const name of DATA_SHEETS) {
+      assert.strictEqual(JSON.stringify(sheetOf(env, name).dataRows()), rowsBefore[name], 'run ' + run + ': rows of "' + name + '" untouched');
+      assert.strictEqual(sheetOf(env, name).hidden, false, name + ' stays in sight');
+    }
+    for (const name of KEPT) assert.strictEqual(snapshot(sheetOf(env, name)), before[name], 'run ' + run + ': "' + name + '" as it was');
+  }
+});
+
+test('the Dashboard is a fixed grid: set sizes, no gridlines, and nothing but titles, captions and labels in merged rows', () => {
+  const env = readyEnv();
+  const sheet = dashboardOf(env);
+
+  // Columns: a margin, six of 100 px (card 1), a gutter, six of 100 px (card 2), a margin.
+  assert.deepStrictEqual(sheet.columnWidths, { 1: 20, 2: 100, 3: 100, 4: 100, 5: 100, 6: 100, 7: 100, 8: 40,
+    9: 100, 10: 100, 11: 100, 12: 100, 13: 100, 14: 100, 15: 20 });
+  const heights = {};
+  for (let r = 1; r <= 94; r++) heights[r] = 21;
+  Object.assign(heights, { 1: 38, 5: 28, 38: 28, 79: 28, 6: 36, 39: 36 }); // the title, the headers, the two-line captions
+  assert.deepStrictEqual(sheet.rowHeights, heights);
+  assert.strictEqual(sheet.gridlinesHidden, true);
+  assert.strictEqual(sheet.frozenRows, 0);
+
+  // Every text is the first cell of a merged row, and the sheet holds nothing else: no table, no note beside a chart.
+  assert.deepStrictEqual(sheet.merges.slice().sort(), TEXT_ROWS.slice().sort());
+  const filled = [];
+  sheet.cells.forEach((row, i) => row.forEach((cell, j) => {
+    if (cell.value !== '' || cell.formula) filled.push(colLetter(j + 1) + (i + 1));
+  }));
+  assert.deepStrictEqual(filled.sort(), TEXT_ROWS.map((a1) => a1.split(':')[0]).sort());
+  for (const a1 of filled) {
+    const cell = sheet.getCell(Number(a1.slice(1)), colNumber(a1[0]));
+    if (cell.formula) assert.ok(/^="/.test(cell.formula) && !/[A-Za-z_]+!/.test(cell.formula.replace(/calc!/g, '')), a1 + ' is a sentence over calc: ' + cell.formula);
+  }
+
+  // The fixed texts.
+  assert.strictEqual(says(env, 'B1'), 'WARP ARENA' + DOT + 'analytics dashboard');
+  assert.ok(/^Story mode: the four metrics of the design document\. .* an example drawn from simulated runs\.$/.test(says(env, 'B2')));
+  assert.deepStrictEqual(['B5', 'I5', 'B38', 'I38', 'B79'].map((a1) => says(env, a1)), ['1' + DOT + 'How runs end',
+    '2' + DOT + 'Where the resources go', '3' + DOT + 'Weapon choice', '4' + DOT + 'What hurts the player', 'Open mode (15 waves)']);
+  assert.deepStrictEqual(['B22', 'I22', 'B59', 'I59'].map((a1) => says(env, a1)), [EXAMPLE_LABEL, EXAMPLE_LABEL, EXAMPLE_LABEL, EXAMPLE_LABEL]);
+  assert.strictEqual(says(env, 'B6'), 'Runs ended on each day and in the final battle, by cause.');
+  assert.strictEqual(says(env, 'I39'), 'Share of each day\'s damage to the player, by source.');
+
+  // The sentences that count, while no player has sent a row.
+  assert.strictEqual(says(env, 'B3'), 'Story runs started 0' + DOT + 'ended 0' + DOT + 'purchases 0' + DOT + 'crates opened 0');
+  assert.strictEqual(says(env, 'I6'), 'First purchase of a run: Armament 0' + DOT + 'Energy 0' + DOT + 'Ship 0' + DOT + 'Control 0' + DOT +
+    'Other 0. Chart: each day\'s spending by room.');
+  assert.strictEqual(says(env, 'B7'), 'LIVE DATA' + DOT + 'story runs ended: 0');
+  assert.strictEqual(says(env, 'I7'), 'LIVE DATA' + DOT + 'purchases: 0');
+  assert.strictEqual(says(env, 'B39'), 'Taken by place: 1st 0%' + DOT + '2nd 0%' + DOT + '3rd 0%' + DOT +
+    'crates left 0%. Chart: how often each weapon is taken when a crate offers it.');
+  assert.strictEqual(says(env, 'B40'), 'LIVE DATA' + DOT + 'weapons offered: 0' + DOT + 'taken: 0');
+  assert.strictEqual(says(env, 'I40'), 'LIVE DATA' + DOT + 'hits on the player: 0');
+  assert.strictEqual(says(env, 'B80'), 'Runs ended on each wave, by cause. Total: 0.');
+
+  // The grounds and the type: dark headers in white, blue "LIVE DATA" rows, orange example rows, grey italic captions.
+  const ground = (row, first, last) => Array.from(new Set(rowsFrom(first, last).map((c) => sheet.backgrounds[row + ',' + c] || ''))).join(',');
+  const type = (a1) => sheet.formats[a1.slice(1) + ',' + colNumber(a1[0])] || {};
+  for (const [row, first, last] of [[5, 2, 7], [5, 9, 14], [38, 2, 7], [38, 9, 14], [79, 2, 14]]) {
+    assert.strictEqual(ground(row, first, last), '#1F2937', 'header in row ' + row);
+    assert.deepStrictEqual(type(colLetter(first) + row), { weight: 'bold', size: 12, colour: '#FFFFFF', valign: 'middle' });
+  }
+  for (const row of [7, 40]) for (const [first, last] of [[2, 7], [9, 14]]) assert.strictEqual(ground(row, first, last), '#DBEAFE', 'live label in row ' + row);
+  for (const row of [22, 59]) for (const [first, last] of [[2, 7], [9, 14]]) assert.strictEqual(ground(row, first, last), '#f6b26b', 'example label in row ' + row);
+  for (const a1 of ['B7', 'I7', 'B40', 'I40', 'B22', 'I22', 'B59', 'I59']) assert.deepStrictEqual(type(a1), { weight: 'bold', size: 9, valign: 'middle' }, a1);
+  for (const a1 of ['B6', 'I6', 'B39', 'I39', 'B80']) {
+    assert.deepStrictEqual(type(a1), { colour: '#6B7280', style: 'italic', size: 9, wrap: true, valign: 'top' }, a1);
+  }
+  assert.deepStrictEqual(type('B1'), { weight: 'bold', size: 18, valign: 'middle' });
+  assert.deepStrictEqual(type('B2'), { colour: '#6B7280' });
+  assert.strictEqual(ground(8, 1, 15), '', 'no ground under a chart');
+  assert.strictEqual(Object.keys(sheet.backgrounds).length, 12 * 6 + 13, 'four headers, four live and four example labels of six cells, one header of thirteen');
+});
+
+test('the Dashboard has nine charts: four live, an example under each, one for the open mode; anchors, sizes and ranges on calc', () => {
+  const env = readyEnv();
+  const specs = chartSpecs(env);
+  assert.strictEqual(specs.length, 9, '4 live + 4 example + 1 open');
+  CHARTS.forEach((want, i) => {
+    const spec = specs[i];
+    assert.deepStrictEqual([spec.type, spec.stacked, spec.ranges, spec.numHeaders], [want.type, want.stacked, want.ranges, 1], want.name);
+    assert.deepStrictEqual(spec.position, { row: want.row, col: want.col, offsetX: 0, offsetY: 0 }, want.name + ': its top left corner on a cell');
+    assert.deepStrictEqual([spec.options.width, spec.options.height], [want.width, want.height], want.name + ': its size');
+    assert.strictEqual(spec.title, want.title, want.name);
+    assert.deepStrictEqual(spec.colours, want.colours, want.name + ': one fixed colour list');
+    assert.strictEqual(spec.options.isStacked, want.percent ? 'percent' : undefined, want.name);
+    assert.ok(spec.ranges.every((range) => range.startsWith('calc!')), want.name + ': reads calc only');
+    assert.strictEqual(spec.legend, want.type === 'BAR' ? 'NONE' : undefined, want.name + ': one series needs no legend');
+  });
+
+  // A chart covers its card's columns and the rows under its label, and nothing else: no text row, no other chart.
+  const texts = TEXT_ROWS.map((a1) => Number(/\d+/.exec(a1)[0]));
+  const rectangles = CHARTS.map((c) => ({ name: c.name, top: c.row, bottom: c.row + c.height / 21 - 1, left: c.col, right: c.col + (c.width === 600 ? 5 : 12) }));
+  for (const r of rectangles) {
+    assert.ok(Number.isInteger(r.bottom), r.name + ': a whole number of 21 px rows');
+    assert.ok(texts.every((row) => row < r.top || row > r.bottom), r.name + ': no text row under it');
+    assert.ok(texts.indexOf(r.top - 1) >= 0, r.name + ': right under its label or caption');
+    for (const o of rectangles) {
+      if (o !== r) assert.ok(o.bottom < r.top || o.top > r.bottom || o.right < r.left || o.left > r.right, r.name + ' is clear of ' + o.name);
+    }
+    assert.ok(r.left >= 2 && r.right <= 14 && r.bottom <= 94, r.name + ': inside the margins');
+  }
+
+  // A live chart and the example under it: the same kind, the same colours, the same series by name and order.
+  for (let i = 0; i < 8; i += 2) {
+    const [live, example] = [specs[i], specs[i + 1]];
+    assert.deepStrictEqual([example.type, example.stacked, example.colours, example.options.isStacked, example.legend, example.xTitle, example.yTitle],
+      [live.type, live.stacked, live.colours, live.options.isStacked, live.legend, live.xTitle, live.yTitle], CHARTS[i].name);
+    assert.strictEqual(example.title, 'Example: ' + live.title.charAt(0).toLowerCase() + live.title.slice(1));
+    assert.deepStrictEqual([example.position.col, example.position.row > live.position.row], [live.position.col, true], 'the example stands under the live chart');
+    const series = (spec) => spec.ranges.length > 1 ? rangeShown(env, spec.ranges[spec.ranges.length - 1])[0] : rangeShown(env, spec.ranges[0])[0].slice(1);
+    assert.deepStrictEqual(series(example), series(live), CHARTS[i].name + ': the series of the example are those of the live chart');
+    if (live.type === 'COLUMN') assert.strictEqual(series(live).length, live.colours.length, CHARTS[i].name + ': a colour for each series');
+  }
+  assert.deepStrictEqual(rangeShown(env, 'calc!A17:J27')[0], ['Day'].concat(END_LABELS));
+  assert.deepStrictEqual(rangeShown(env, 'calc!A42:F51')[0], ['Day'].concat(ROOM_LABELS));
+  assert.deepStrictEqual(rangeShown(env, 'calc!A150:J160')[0], ['Day'].concat(DAMAGE_LABELS));
+  assert.deepStrictEqual(rangeShown(env, 'calc!A175:L190')[0], ['Wave'].concat(OPEN_LABELS));
+  assert.strictEqual(OPEN_LABELS.length, CAUSES.length, 'a series for every cause of the open mode');
+});
+
+test('no chart can come up empty: every live chart reads a table of fixed size that holds a header and zeros before any row arrives', () => {
+  const env = readyEnv();
+  const calc = calcOf(env);
+  const cellsOf = (a1) => {
+    const m = /^calc!([A-Z]+)(\d+):([A-Z]+)(\d+)$/.exec(a1);
+    const out = [];
+    for (let r = Number(m[2]); r <= Number(m[4]); r++) for (let c = colNumber(m[1]); c <= colNumber(m[3]); c++) out.push(calc.getCell(r, c));
+    return out;
+  };
+  for (const chart of LIVE_CHARTS) {
+    chart.ranges.forEach((range, n) => {
+      const rows = rangeShown(env, range);
+      rows[0].forEach((v) => assert.ok(typeof v === 'string' && v !== '', chart.name + ': a header cell in ' + range));
+      rows.slice(1).forEach((row) => row.forEach((v, j) => {
+        // The first column of a chart's first range names the rows; every other cell is a number.
+        if (n === 0 && j === 0) assert.ok(typeof v === 'string' && v !== '', chart.name + ': a row name in ' + range);
+        else assert.strictEqual(v, 0, chart.name + ': 0 in ' + range);
+      }));
+      // No cell is filled by a formula that stands in another cell: a result that spills has no rows while there is no data.
+      for (const cell of cellsOf(range)) {
+        assert.ok(cell.value !== '' || cell.formula, chart.name + ': no empty cell in ' + range);
+        assert.ok(!/\b(QUERY|FILTER|UNIQUE|ARRAYFORMULA)\(/.test(cell.formula), chart.name + ': ' + cell.formula);
+        if (/\bSORT\(/.test(cell.formula)) assert.ok(/^=INDEX\(SORT\(/.test(cell.formula), 'one value picked out of the sorted table: ' + cell.formula);
+      }
+    });
+  }
+  assert.deepStrictEqual(rangeShown(env, 'calc!A17:J27').slice(1).map((r) => r[0]), DAY_LABELS.concat(['Final boss']));
+  assert.deepStrictEqual(rangeShown(env, 'calc!A42:F51').slice(1).map((r) => r[0]), DAY_LABELS);
+  assert.deepStrictEqual(rangeShown(env, 'calc!A100:A117').slice(1).map((r) => r[0]), STORY_WEAPONS, 'the 17 weapons, in the list\'s order while none is taken');
+  assert.deepStrictEqual(rangeShown(env, 'calc!A150:J160').slice(1).map((r) => r[0]), DAY_LABELS.concat(['Final boss']));
+  assert.deepStrictEqual(rangeShown(env, 'calc!A175:L190').slice(1).map((r) => r[0]), BUCKETS);
+
+  // The ranges do not move when rows arrive and setup() runs again.
+  for (const ev of [
+    storyEnd(1), v2PurchaseEvent({ run_id: idOf(1) }), v2Event({ kind: 'crate_offer', detail: 'Afternoon:Railgun', value: 1 }),
+    damageEvent([{ source: 'Bloater', stage: 'day', wave: 55, damage: 3, damage_pct: 6, hits: 2 }], { mode: 'story' }), endEvent({ run_id: idOf(2) }),
+  ]) assert.strictEqual(post(env, ev).json.ok, true);
+  env.gs.setup();
+  assert.deepStrictEqual(chartSpecs(env).map((spec) => spec.ranges), CHARTS.map((c) => c.ranges));
+});
+
+test('calc: a first row that says what the tab is, tables one under another with a one-cell title each, the growing list right of them', () => {
+  const env = readyEnv();
+  const calc = calcOf(env);
+  assert.ok(/^calc: the tables the charts of "Dashboard" read\. setup\(\) rebuilds this tab/.test(calc.getCell(1, 1).value));
+  assert.deepStrictEqual(calc.rowValues(1).slice(1).filter((v) => v !== ''), [], 'one cell in row 1');
+
+  // Titles down column A, each with an empty row above it, its header under it and its rows under that.
+  const titles = [];
+  for (let r = 2; r <= calc.getLastRow(); r++) {
+    const v = calc.getCell(r, 1).value;
+    if (typeof v === 'string' && /^(LIVE|EXAMPLE) /.test(v)) titles.push([r, v]);
+  }
+  assert.deepStrictEqual(titles.map((t) => [t[0], t[1].split(':')[0]]), [
+    [3, 'LIVE totals'], [16, 'LIVE 1'], [29, 'EXAMPLE 1'], [41, 'LIVE 2'], [53, 'LIVE 2'], [61, 'EXAMPLE 2'], [72, 'EXAMPLE 2'],
+    [79, 'LIVE 3'], [99, 'LIVE 3'], [119, 'LIVE 3'], [125, 'LIVE 3'], [129, 'EXAMPLE 3'], [149, 'LIVE 4'], [162, 'EXAMPLE 4'], [174, 'LIVE open mode'],
+  ]);
+  const filledIn = (r, first, last) => rowsFrom(first, last).filter((c) => calc.getCell(r, c).value !== '' || calc.getCell(r, c).formula).length;
+  titles.forEach(([r, title], i) => {
+    const table = tableOf(env, title);
+    assert.strictEqual(filledIn(r - 1, 1, 12), 0, title + ': an empty row above the title');
+    assert.strictEqual(filledIn(r, 2, 12), 0, title + ': the title is one cell');
+    assert.ok(table.header.length >= 2 && table.header.every((h) => typeof h === 'string'), title + ': a header row');
+    for (let row = table.first; row <= table.last; row++) assert.strictEqual(filledIn(row, 1, table.width), table.width, title + ': row ' + row + ' is full');
+    assert.strictEqual(table.last + 2, i + 1 < titles.length ? titles[i + 1][0] : calc.getLastRow() + 2, title + ': the next table starts two rows under its last row');
+  });
+
+  // The tables keep to columns A to L; M stays empty; N to Q hold the one list that grows, and nothing stands under its formula.
+  const outside = [];
+  calc.cells.forEach((row, i) => row.forEach((cell, j) => {
+    if ((cell.value !== '' || cell.formula) && j + 1 > 12) outside.push(colLetter(j + 1) + (i + 1));
+  }));
+  assert.deepStrictEqual(outside.sort(), ['N3', 'N4', 'N5', 'O4', 'P4', 'Q4']);
+  assert.deepStrictEqual(calc.rowValues(4).slice(13, 17), ['run_id', 'day', 'room', 'item']);
+  assert.strictEqual(calc.getCell(5, 14).formula, FIRST_PURCHASES_FORMULA);
+  assert.deepStrictEqual(Object.keys(calc.backgrounds), [], 'no colours on a tab nobody looks at');
+  assert.deepStrictEqual(calc.merges, []);
+});
+
+test('the example tables of calc are the constants of Code.gs: plain numbers, a catch-all column of zeros where the live chart has one', () => {
+  const env = readyEnv();
+  const examples = JSON.parse(JSON.stringify(env.gs.STORY_EXAMPLES));
+  const calc = calcOf(env);
+  const valuesOf = (table) => calc.getRange(table.top, 1, table.last - table.top + 1, table.width).getValues();
+  const withZeros = (table, label) => [table.header.concat([label])].concat(table.rows.map((row) => row.concat([0])));
+
+  const endings = tableOf(env, 'EXAMPLE 1:');
+  const spending = tableOf(env, 'EXAMPLE 2: the same table');
+  const first = tableOf(env, 'EXAMPLE 2: simulated runs by the room');
+  const weapons = tableOf(env, 'EXAMPLE 3:');
+  const damage = tableOf(env, 'EXAMPLE 4:');
+  assert.deepStrictEqual(valuesOf(endings), withZeros(examples.endings, 'Other'));
+  assert.deepStrictEqual(valuesOf(spending), withZeros(examples.spending, 'Other rooms'));
+  assert.deepStrictEqual(valuesOf(first), [examples.spending.firstHeader].concat(examples.spending.firstRows));
+  assert.deepStrictEqual(valuesOf(weapons), [examples.weapons.header].concat(examples.weapons.rows));
+  assert.deepStrictEqual(valuesOf(damage), [examples.damage.header].concat(examples.damage.rows));
+  for (const table of [endings, spending, first, weapons, damage]) {
+    for (let r = table.top; r <= table.last; r++) {
+      for (let c = 1; c <= table.width; c++) assert.strictEqual(calc.getCell(r, c).formula, '', table.title + ': no formula in an example');
+    }
+  }
+  // The example charts read exactly these tables.
+  assert.deepStrictEqual(CHARTS.filter((c) => /example/.test(c.name)).map((c) => c.ranges), [
+    ['calc!A' + endings.top + ':J' + endings.last], ['calc!A' + spending.top + ':F' + spending.last],
+    ['calc!A' + weapons.top + ':A' + weapons.last, 'calc!D' + weapons.top + ':D' + weapons.last], ['calc!A' + damage.top + ':J' + damage.last],
+  ]);
+  // The series of the live charts carry the names of the example's columns.
+  assert.deepStrictEqual(examples.endings.header.slice(1).concat(['Other']), END_LABELS);
+  assert.deepStrictEqual(examples.spending.header.slice(1).concat(['Other rooms']), ROOM_LABELS);
+  assert.deepStrictEqual(examples.damage.header.slice(1), DAMAGE_LABELS);
+  assert.deepStrictEqual(examples.weapons.rows.map((row) => row[0]).sort(), STORY_WEAPONS.slice().sort(), 'the same 17 weapons');
+
+  // The numbers hang together as the aggregation gives them; the zeros of the catch-all columns are true of them.
+  const sum = (row) => row.slice(1).reduce((a, b) => a + b, 0);
+  assert.strictEqual(examples.endings.rows.reduce((a, row) => a + sum(row), 0), examples.endings.runs.ended, 'every ended run is in the endings table once');
+  assert.strictEqual(examples.endings.runs.started - examples.endings.runs.ended, examples.endings.runs.unfinished);
+  assert.strictEqual(examples.spending.firstRows.reduce((a, row) => a + row[1], 0), examples.spending.runs, 'one first purchase for each run that bought');
+  const rates = examples.weapons.rows.map((row) => row[3]);
+  assert.deepStrictEqual(rates.slice().sort((a, b) => b - a), rates, 'the most taken weapon first');
+  for (const [weapon, offered, taken, rate] of examples.weapons.rows) {
+    assert.ok(taken <= offered && Math.abs(rate - taken / offered) < 0.0006, weapon + ': the take rate is taken over offered');
+  }
+  for (const row of examples.damage.rows) assert.ok(Math.abs(sum(row) - 100) < 0.5, row[0] + ': the shares of a day add up to 100');
+
+  // An example never reaches a data tab.
+  for (const name of DATA_SHEETS) assert.strictEqual(sheetOf(env, name).getLastRow(), 1, name + ': the header and no row');
+});
+
+test('a second setup() gives the same two tabs; what was typed, merged, charted, resized, moved or shown is put back', () => {
+  const env = readyEnv();
+  const OWN = ['Dashboard', 'calc'];
+  const before = OWN.map((name) => snapshot(sheetOf(env, name)));
+  env.gs.setup();
+  assert.deepStrictEqual(OWN.map((name) => snapshot(sheetOf(env, name))), before, 'the same cells, formats, sizes and charts after a second setup');
+  assert.strictEqual(chartSpecs(env).filter((spec) => /^Example: /.test(spec.title)).length, 4, 'still four example charts');
+
+  const dash = dashboardOf(env);
+  dash.getRange(30, 3).setValue('a note of mine');
+  dash.getRange(96, 2, 1, 3).merge();
+  dash.insertChart(dash.newChart().asColumnChart().addRange(dash.getRange(1, 2)).build());
+  dash.setColumnWidth(3, 250);
+  dash.setRowHeight(8, 60);
+  dash.setHiddenGridlines(false);
+  const calc = calcOf(env);
+  calc.getRange(20, 3).setValue(999);
+  calc.getRange(200, 1).setValue('a table of mine');
+  calc.showSheet();
+  env.ss.setActiveSheet(dash);
+  env.ss.moveActiveSheet(env.ss.getSheets().length);
+  assert.notDeepStrictEqual(env.ss.getSheets().map((s) => s.name), SHEETS_AFTER_SETUP);
+
+  env.gs.setup();
+  assert.deepStrictEqual(OWN.map((name) => snapshot(sheetOf(env, name))), before, 'both tabs as setup() builds them');
+  assert.deepStrictEqual(env.ss.getSheets().map((s) => s.name), SHEETS_AFTER_SETUP, 'the Dashboard is first again');
+  assert.strictEqual(calcOf(env).hidden, true, 'calc is hidden again');
+  for (const name of DATA_SHEETS) assert.strictEqual(sheetOf(env, name).getLastRow(), 1, name + ': still no row');
+});
+
+test('card 1 counts story run_end rows by day and cause group; the final battle (stages final_boss and ending) is a row of its own', () => {
+  const env = readyEnv();
+  const start = (n, overrides) => startEvent(Object.assign({ run_id: idOf(n), mode: 'story', stage: 'tutorial', wave: 0 }, overrides));
   const events = [
-    startEvent({ run_id: id(1) }), endEvent({ run_id: id(1), wave: 3 }), // open: ends in wave 3
-    startEvent({ run_id: id(2), mode: 'story', stage: 'tutorial', wave: 0 }),
-    endEvent({ run_id: id(2), mode: 'story', stage: 'day', wave: 3 }), // story: day 3 is not wave 3
-    startEvent({ run_id: id(3) }), endEvent(Object.assign({ run_id: id(3), wave: 3 }, story)), // marked as a campaign run late
-    startEvent({ run_id: id(4), mode: 'story' }), // a story run left by closing the tab is not an open unfinished run
-    startEvent({ run_id: id(5) }), // an open run left by closing the tab
+    start(1), storyEnd(1), // Day 3, enemy, by day
+    start(2), storyEnd(2, { stage: 'night', cause: 'base_destroyed' }), // Day 3, the base fell at night
+    start(3), storyEnd(3, { outcome: 'victory', cause: 'victory', stage: 'ending', wave: 7 }), // won: the ending of the final battle
+    start(4), storyEnd(4, { stage: 'final_boss', cause: 'tyrant', enemy: 'Tyrant', wave: 7 }), // lost to the final boss
+    start(5), storyEnd(5, { outcome: 'abandoned', cause: 'quit_to_title', stage: 'dawn', wave: 9 }), // left in overtime
+    start(6), storyEnd(6, { stage: 'tutorial', wave: 0 }), // Day 0
+    start(7, { edition: 'test' }), storyEnd(7, { edition: 'test' }), // a test run
+    startEvent({ run_id: idOf(8) }), endEvent({ run_id: idOf(8), wave: 3 }), // an open-mode run that ended in wave 3
+    start(9), // a story run left by closing the tab
+    startEvent({ run_id: idOf(10) }), storyEnd(10, { stage: 'dusk', cause: 'status', wave: 2 }), // marked as a story run late
+    start(11), storyEnd(11, { outcome: 'abandoned', cause: 'restart', stage: 'night' }), // the other way of leaving, Day 3
+    start(12), storyEnd(12, { cause: 'black_hole', wave: 4 }), // three causes no group lists
+    start(13), storyEnd(13, { cause: 'void_trial', stage: 'void_trial', wave: 4 }),
+    start(14), storyEnd(14, { cause: 'lava', wave: 1 }), // stored as "unknown"
+    start(15), storyEnd(15, { cause: 'black_hole', stage: 'final_boss', wave: 7 }), // a black hole in the final fight
+    start(16), storyEnd(16, { outcome: 'abandoned', cause: 'quit_to_title', stage: 'ending', wave: 7 }), // left during the ending
+  ];
+  for (const ev of events) assert.strictEqual(post(env, ev).json.ok, true);
+
+  const table = tableOf(env, 'LIVE 1:');
+  assert.deepStrictEqual(table.header, ['Day'].concat(END_LABELS));
+  assert.deepStrictEqual(gridOf(env, table), {
+    'Day 0/Enemy': 1, 'Day 1/Other': 1, 'Day 2/Burn / poison': 1, 'Day 3/Enemy': 1, 'Day 3/Base destroyed': 1, 'Day 3/Left the run': 1,
+    'Day 4/Other': 2, 'Day 8+/Left the run': 1,
+    'Final boss/Tyrant King': 1, 'Final boss/Victory': 1, 'Final boss/Left the run': 1, 'Final boss/Other': 1,
+  }, 'every story run that ended is in the table once: the final battle is on no day (Day 7 stays empty), test and open-mode rows are left out');
+
+  // The formulas themselves, as the sheet gets them.
+  const calc = calcOf(env);
+  const story = 'COUNTIFS(runs!$B:$B,"run_end",runs!$E:$E,"<>test",runs!$Q:$Q,"story",';
+  const byDay = 'runs!$K:$K,"<>final_boss",runs!$K:$K,"<>ending",runs!$L:$L,';
+  assert.strictEqual(calc.getCell(21, 2).formula, '=' + story + 'runs!$H:$H,"enemy",' + byDay + '3)', 'Day 3 / Enemy');
+  assert.strictEqual(calc.getCell(26, 9).formula, '=' + story + 'runs!$H:$H,"restart",' + byDay + '">7")+' +
+    story + 'runs!$H:$H,"quit_to_title",' + byDay + '">7")', 'overtime / Left the run: both ways of leaving');
+  assert.strictEqual(calc.getCell(27, 3).formula, '=' + story + 'runs!$H:$H,"tyrant",runs!$K:$K,"final_boss")+' +
+    story + 'runs!$H:$H,"tyrant",runs!$K:$K,"ending")', 'Final boss / Tyrant King: both stages of the final battle');
+  const others = ['enemy', 'tyrant', 'backfire', 'wall_slam', 'status', 'base_destroyed', 'victory', 'restart', 'quit_to_title']
+    .map((cause) => 'runs!$H:$H,"<>' + cause + '",').join('');
+  assert.strictEqual(calc.getCell(18, 10).formula, '=' + story + others + byDay + '0)', 'Day 0 / Other: every cause no group lists');
+
+  // The totals and the sentences that show them.
+  assert.strictEqual(calc.getCell(5, 2).formula, STARTED_FORMULA);
+  assert.strictEqual(calc.getCell(6, 2).formula, '=SUM(B18:J27)');
+  assert.strictEqual(says(env, 'B7'), 'LIVE DATA' + DOT + 'story runs ended: 13');
+  assert.strictEqual(says(env, 'B3'), 'Story runs started 14' + DOT + 'ended 13' + DOT + 'purchases 0' + DOT + 'crates opened 0',
+    'started: runs 1 to 6 and 9 to 16, also the one whose start went out as open; the test run is not counted');
+  assert.strictEqual(says(env, 'B80'), 'Runs ended on each wave, by cause. Total: 1.', 'the open-mode run is on the open-mode chart only');
+});
+
+test('card 2 adds up each day\'s spending by room and counts the room of each run\'s first purchase', () => {
+  const env = readyEnv();
+  const buy = (n, overrides) => v2PurchaseEvent(Object.assign({ run_id: idOf(n), day: 1, detail: '', alloy: 0, energy: 0, dark: 0 }, overrides));
+  const events = [
+    buy(1, { room: 'Armament', item: 'new_weapon', alloy: 100, energy: 20 }), // run 1 buys a weapon first
+    buy(2, { room: 'Control', item: 'room_upgrade', alloy: 60, energy: 10 }), // run 2 upgrades a room first
+    buy(1, { room: 'Control', item: 'repair', alloy: 30 }),
+    buy(1, { day: 2, room: 'Ship', item: 'ship_part', alloy: 50, dark: 5 }),
+    buy(2, { day: 2, room: 'Hangar', item: 'crane', alloy: 11 }), // a room this script does not list yet
+    buy(2, { day: 9, room: 'Energy', item: 'lamp', energy: 7 }), // overtime
+    buy(3, { edition: 'test', room: 'Armament', item: 'new_weapon', alloy: 999 }),
+    buy(4, { day: 0, room: 'Hangar', item: 'crane', alloy: 5 }), // run 4's first purchase is in that room
+    buy(4, { day: 0, room: 'Ship', item: 'fuel', energy: 2 }),
+  ];
+  for (const ev of events) assert.strictEqual(post(env, ev).json.ok, true);
+
+  const table = tableOf(env, 'LIVE 2: resources spent');
+  assert.deepStrictEqual(table.header, ['Day'].concat(ROOM_LABELS));
+  assert.deepStrictEqual(gridOf(env, table), {
+    'Day 0/Ship': 2, 'Day 0/Other rooms': 5, 'Day 1/Armament Bay': 120, 'Day 1/Control Center': 100, 'Day 2/Ship': 55, 'Day 2/Other rooms': 11,
+    'Day 8+/Energy Lab': 7,
+  }, 'alloy, energy and dark matter added up; the test run and the header row left out');
+  const calc = calcOf(env);
+  const bought = 'v2_purchases!$B:$B,"v2_purchase",v2_purchases!$E:$E,"<>test",';
+  assert.strictEqual(calc.getCell(45, 2).formula, '=' + ['L', 'M', 'N'].map((c) => (
+    'SUMIFS(v2_purchases!$' + c + ':$' + c + ',' + bought + 'v2_purchases!$K:$K,"Armament",v2_purchases!$G:$G,2)')).join('+'), 'Day 2 / Armament Bay: the three currencies');
+  assert.ok(calc.getCell(51, 6).formula.endsWith(bought + 'v2_purchases!$K:$K,"<>Armament",v2_purchases!$K:$K,"<>Energy",' +
+    'v2_purchases!$K:$K,"<>Ship",v2_purchases!$K:$K,"<>Control",v2_purchases!$G:$G,">7")'), 'overtime / other rooms: ' + calc.getCell(51, 6).formula);
+
+  // The first purchase of each run: its first row, not its largest or its last; test rows left out.
+  const firsts = tableOf(env, 'LIVE 2: runs by the room');
+  assert.deepStrictEqual(rowsFrom(firsts.first, firsts.last).map((r) => calc.getCell(r, 1).value), ROOM_LABELS);
+  assert.strictEqual(calc.getCell(55, 2).formula, '=COUNTIFS($N$5:$N,"?*",$P$5:$P,"Armament")');
+  assert.strictEqual(calc.getCell(59, 2).formula, '=COUNTIFS($N$5:$N,"?*",$P$5:$P,"<>Armament",$P$5:$P,"<>Energy",$P$5:$P,"<>Ship",$P$5:$P,"<>Control")');
+  assert.deepStrictEqual(rowsFrom(55, 59).map((r) => shown(env, 'calc', r, 2)), [0, 0, 0, 0, 0], 'no run counted while the list is empty');
+  assert.deepStrictEqual(spillFirstPurchases(env), [[idOf(1), 1, 'Armament', 'new_weapon'], [idOf(2), 1, 'Control', 'room_upgrade'],
+    [idOf(4), 0, 'Hangar', 'crane']]);
+  assert.deepStrictEqual(rowsFrom(55, 59).map((r) => shown(env, 'calc', r, 2)), [1, 0, 0, 1, 1]);
+  assert.strictEqual(says(env, 'I6'), 'First purchase of a run: Armament 1' + DOT + 'Energy 0' + DOT + 'Ship 0' + DOT + 'Control 1' + DOT +
+    'Other 1. Chart: each day\'s spending by room.');
+  assert.strictEqual(says(env, 'I7'), 'LIVE DATA' + DOT + 'purchases: 8');
+  assert.strictEqual(says(env, 'B3'), 'Story runs started 0' + DOT + 'ended 0' + DOT + 'purchases 8' + DOT + 'crates opened 0');
+});
+
+test('card 3 counts offers and takes per weapon from the first recorded offer on, and ranks the weapons by take rate', () => {
+  const offer = (n, detail, value, overrides) => v2Event(Object.assign({ run_id: idOf(n), kind: 'crate_offer', detail: detail, value: value }, overrides));
+  const settle = (n, detail, value, overrides) => v2Event(Object.assign({ run_id: idOf(n), kind: 'crate', detail: detail, value: value }, overrides));
+  // A crate opened before any offer was recorded: the Railgun taken from a panel nobody knows.
+  const old = (env) => {
+    assert.strictEqual(post(env, settle(9, 'Afternoon:Railgun', 1)).json.ok, true);
+    const events = sheetOf(env, 'v2_events');
+    events.setCell(events.getLastRow(), 1, new Date(Date.now() - 86400000), '');
+  };
+  const counts = (env) => {
+    const table = tableOf(env, 'LIVE 3: each weapon');
+    const out = {};
+    rowsFrom(table.first, table.last).forEach((r) => {
+      const pair = [shown(env, 'calc', r, 2), shown(env, 'calc', r, 3)];
+      if (pair[0] || pair[1]) out[shown(env, 'calc', r, 1)] = pair;
+    });
+    return out;
+  };
+
+  const early = readyEnv();
+  old(early);
+  assert.strictEqual(shownAt(early, 'calc', 'B9'), 'no offers recorded yet');
+  assert.deepStrictEqual(counts(early), {}, 'without offers no take is counted');
+  assert.strictEqual(says(early, 'B40'), 'LIVE DATA' + DOT + 'weapons offered: 0' + DOT + 'taken: 0');
+  assert.strictEqual(says(early, 'B3'), 'Story runs started 0' + DOT + 'ended 0' + DOT + 'purchases 0' + DOT + 'crates opened 1');
+
+  const env = readyEnv();
+  old(env);
+  const events = [
+    offer(8, 'Afternoon:Railgun', 1, { edition: 'test' }),
+    offer(1, 'TutorialFirst:Railgun', 1), offer(1, 'TutorialFirst:Minigun', 2), offer(1, 'TutorialFirst:ArcCoil', 3),
+    settle(1, 'TutorialFirst:Minigun', 2),
+    offer(1, 'Afternoon:Railgun', 1), offer(1, 'Afternoon:Knife', 2),
+    settle(1, 'Afternoon:left', 0),
+    offer(2, 'Afternoon:Railgun', 1),
+    settle(2, 'Afternoon:Railgun', 1),
+    settle(2, 'Afternoon:empty', 0),
+    offer(2, 'Afternoon:Minigun', 1), offer(2, 'Afternoon:Railgun', 2), offer(2, 'Afternoon:Laser', 3), // a weapon the script does not list
+    settle(2, 'Afternoon:no_room', 2),
+    settle(8, 'Afternoon:Knife', 1, { edition: 'test' }),
+  ];
+  for (const ev of events) assert.strictEqual(post(env, ev).json.ok, true);
+
+  const calc = calcOf(env);
+  assert.strictEqual(typeof shownAt(env, 'calc', 'B9'), 'number', 'the time of the first recorded offer');
+  assert.deepStrictEqual(counts(env), { Railgun: [4, 1], Minigun: [2, 1], ArcCoil: [1, 0], Knife: [1, 0] },
+    'offered and taken; the Railgun of the crate without offers and the test rows are not counted');
+  const offered = 'v2_events!$I:$I,"crate_offer",v2_events!$E:$E,"<>test"';
+  const settled = 'v2_events!$I:$I,"crate",v2_events!$E:$E,"<>test",';
+  const railgun = 81 + STORY_WEAPONS.indexOf('Railgun');
+  assert.strictEqual(calc.getCell(railgun, 1).value, 'Railgun');
+  assert.strictEqual(calc.getCell(railgun, 2).formula, '=COUNTIFS(' + offered + ',v2_events!$J:$J,"*:Railgun")');
+  assert.strictEqual(calc.getCell(railgun, 3).formula, '=IF(ISNUMBER($B$9),COUNTIFS(' + settled + 'v2_events!$J:$J,"*:Railgun",v2_events!$A:$A,">="&$B$9),0)');
+  assert.strictEqual(calc.getCell(railgun, 4).formula, '=IFERROR(C' + railgun + '/B' + railgun + ',0)');
+  assert.strictEqual(calc.getCell(9, 2).formula, '=IF(COUNTIFS(' + offered + ')=0,"no offers recorded yet",MINIFS(v2_events!$A:$A,' + offered + '))');
+  assert.deepStrictEqual([10, 11, 12].map((r) => calc.getCell(r, 2).formula), ['=SUM(B81:B97)', '=SUM(C81:C97)', '=COUNTIFS(' + offered + ')-$B$10']);
+  assert.deepStrictEqual([10, 11, 12].map((r) => shown(env, 'calc', r, 2)), [8, 2, 1], 'eight offers of listed weapons, two taken, one offer of a weapon the list lacks');
+
+  // The chart's table: the most taken weapon first; weapons with the same rate keep the list's order.
+  assert.strictEqual(calc.getCell(101, 1).formula, '=INDEX(SORT($A$81:$D$97,4,FALSE),1,1)');
+  assert.strictEqual(calc.getCell(117, 2).formula, '=INDEX(SORT($A$81:$D$97,4,FALSE),17,4)');
+  const ranked = rangeShown(env, 'calc!A101:B117');
+  assert.deepStrictEqual(ranked.slice(0, 3), [['Minigun', 0.5], ['Railgun', 0.25], ['Rifle', 0]]);
+  assert.deepStrictEqual(ranked.map((row) => row[0]).sort(), STORY_WEAPONS.slice().sort(), 'every weapon once');
+  assert.deepStrictEqual(ranked.slice(2).map((row) => row[0]), STORY_WEAPONS.filter((w) => w !== 'Minigun' && w !== 'Railgun'));
+
+  // By place on the panel, and the crates left: the pick that did not fit is not a take; a crate with nothing new inside and
+  // Day 0's first crate could not be left.
+  assert.deepStrictEqual([121, 122, 123].map((r) => [shown(env, 'calc', r, 2), shown(env, 'calc', r, 3)]), [[4, 1], [3, 1], [2, 0]]);
+  assert.strictEqual(calc.getCell(122, 3).formula, '=IF(ISNUMBER($B$9),COUNTIFS(' + settled + 'v2_events!$K:$K,2,v2_events!$J:$J,"<>*:no_room",v2_events!$A:$A,">="&$B$9),0)');
+  assert.deepStrictEqual([2, 3].map((c) => shown(env, 'calc', 127, c)), [3, 1], 'three crates could be left (left, taken, no room), one was');
+  assert.strictEqual(calc.getCell(127, 2).formula, '=IF(ISNUMBER($B$9),COUNTIFS(' + settled + 'v2_events!$J:$J,"<>TutorialFirst:*",v2_events!$J:$J,"<>*:empty",v2_events!$A:$A,">="&$B$9),0)');
+  assert.strictEqual(says(env, 'B39'), 'Taken by place: 1st 25%' + DOT + '2nd 33%' + DOT + '3rd 0%' + DOT +
+    'crates left 33%. Chart: how often each weapon is taken when a crate offers it.');
+  assert.strictEqual(says(env, 'B40'), 'LIVE DATA' + DOT + 'weapons offered: 8' + DOT + 'taken: 2');
+  assert.strictEqual(says(env, 'B3'), 'Story runs started 0' + DOT + 'ended 0' + DOT + 'purchases 0' + DOT + 'crates opened 6',
+    'every crate row but the test one, also the crate from before the offers were recorded');
+});
+
+test('card 4 adds up the damage to the player by day and source group from story rows; the final fight is a row of its own', () => {
+  const env = readyEnv();
+  const events = [
+    damageEvent([
+      { source: 'shadow', stage: 'night', wave: 2, damage: 3, damage_pct: 6, hits: 2 },
+      { source: 'Spitter', dot: true, stage: 'day', wave: 2, damage: 25, damage_pct: 50, hits: 3 },
+      { source: 'Spitter', stage: 'day', wave: 3, damage: 5, damage_pct: 10, hits: 1 },
+      { source: 'Grunt_elite', stage: 'day', wave: 2, damage: 4, damage_pct: 8, hits: 1 }, // an elite counts with its kind
+      { source: 'Splitter', stage: 'day', wave: 2, damage: 2, damage_pct: 4, hits: 1 }, // not a Spitter: a kind no group lists
+      { source: '', stage: 'dusk', wave: 3, damage: 1, damage_pct: 2, hits: 1 }, // stored as "other"
+      { source: 'Tyrant', stage: 'final_boss', wave: 7, damage: 15, damage_pct: 30, hits: 2 },
+      { source: 'backfire', stage: 'final_boss', wave: 7, damage: 2, damage_pct: 5, hits: 1 },
+      { source: 'wall_slam', stage: 'day', wave: 9, damage: 2, damage_pct: 3, hits: 1 }, // overtime
+      { source: 'backfire', stage: 'tutorial', wave: 0, damage: 1, damage_pct: 1, hits: 1 },
+    ], { mode: 'story' }),
+    damageEvent([{ source: 'Spitter', dot: true, wave: 2, damage: 5, damage_pct: 10, hits: 3 }]), // open mode
+    damageEvent([{ source: 'Spitter', dot: true, stage: 'day', wave: 2, damage: 45, damage_pct: 90, hits: 3 }], { mode: 'story', edition: 'test' }),
+  ];
+  for (const ev of events) assert.strictEqual(post(env, ev).json.ok, true);
+
+  const table = tableOf(env, 'LIVE 4:');
+  assert.deepStrictEqual(table.header, ['Day'].concat(DAMAGE_LABELS));
+  const grid = gridOf(env, table);
+  assert.deepStrictEqual(grid, {
+    'Day 0/Own weapon': 1, 'Day 2/Grunt': 8, 'Day 2/Spitter': 50, 'Day 2/Shadow (night)': 6, 'Day 2/Other enemies': 4,
+    'Day 3/Spitter': 10, 'Day 3/Other enemies': 2, 'Day 8+/Wall slam': 3, 'Final boss/Tyrant King': 30, 'Final boss/Own weapon': 5,
+  }, 'summed as % of max HP; the open-mode row and the test row are left out, the final fight is on no day');
+  assert.strictEqual(Object.keys(grid).reduce((sum, key) => sum + grid[key], 0), 119, 'every story row is in the table once');
+
+  const calc = calcOf(env);
+  const story = 'damage!$B:$B,"wave_damage",damage!$E:$E,"<>test",damage!$O:$O,"story",';
+  assert.strictEqual(calc.getCell(153, 2).formula, '=SUMIFS(damage!$M:$M,' + story + 'damage!$J:$J,"Grunt",damage!$G:$G,"<>final_boss",damage!$H:$H,2)+' +
+    'SUMIFS(damage!$M:$M,' + story + 'damage!$J:$J,"Grunt_elite",damage!$G:$G,"<>final_boss",damage!$H:$H,2)', 'Day 2 / Grunt: the kind and its elite');
+  assert.strictEqual(calc.getCell(160, 3).formula, '=SUMIFS(damage!$M:$M,' + story + 'damage!$J:$J,"Tyrant",damage!$G:$G,"final_boss")+' +
+    'SUMIFS(damage!$M:$M,' + story + 'damage!$J:$J,"Tyrant_elite",damage!$G:$G,"final_boss")', 'Final boss / Tyrant King');
+  const others = ['Grunt', 'Grunt_elite', 'Tyrant', 'Tyrant_elite', 'backfire', 'wall_slam', 'Brute', 'Brute_elite', 'Spitter', 'Spitter_elite',
+    'shadow', 'Skitter', 'Skitter_elite'].map((source) => 'damage!$J:$J,"<>' + source + '",').join('');
+  assert.strictEqual(calc.getCell(159, 10).formula, '=SUMIFS(damage!$M:$M,' + story + others + 'damage!$G:$G,"<>final_boss",damage!$H:$H,">7")',
+    'overtime / Other enemies: every source no group lists');
+  assert.strictEqual(calc.getCell(13, 2).formula, '=SUMIFS(damage!$N:$N,' + story.slice(0, -1) + ')');
+  assert.strictEqual(says(env, 'I40'), 'LIVE DATA' + DOT + 'hits on the player: 14');
+});
+
+test('the open-mode table counts run_end rows by wave and cause, the final boss apart, without test rows', () => {
+  const env = readyEnv();
+  const events = [
+    startEvent({ run_id: idOf(1) }), endEvent({ run_id: idOf(1), wave: 9 }),
+    startEvent({ run_id: idOf(2), edition: 'zh' }), endEvent({ run_id: idOf(2), edition: 'zh', wave: 9 }),
+    startEvent({ run_id: idOf(3) }), endEvent({ run_id: idOf(3), cause: 'backfire', wave: 3 }),
+    startEvent({ run_id: idOf(4) }), endEvent({ run_id: idOf(4), outcome: 'victory', cause: 'victory', stage: 'final_boss', wave: 14 }),
+    startEvent({ run_id: idOf(5) }), endEvent({ run_id: idOf(5), cause: 'tyrant', enemy: 'Tyrant', stage: 'final_boss', wave: 14 }),
+    startEvent({ run_id: idOf(6) }), endEvent({ run_id: idOf(6), cause: 'enemy', stage: 'wave', wave: 14 }),
+    startEvent({ run_id: idOf(7) }), endEvent({ run_id: idOf(7), outcome: 'abandoned', cause: 'restart', stage: 'build', wave: 5 }),
+    startEvent({ run_id: idOf(8), edition: 'test' }), endEvent({ run_id: idOf(8), edition: 'test', wave: 9 }),
+    startEvent({ run_id: idOf(9) }), // closed the tab
+    endEvent({ run_id: idOf(11), cause: 'status', wave: 6 }), // its run_start was lost
+    startEvent({ run_id: idOf(12) }), endEvent({ run_id: idOf(12), outcome: 'victory', cause: 'victory', stage: 'wave', wave: 9 }),
+  ];
+  for (const ev of events) assert.strictEqual(post(env, ev).json.ok, true);
+
+  const table = tableOf(env, 'LIVE open mode:');
+  assert.deepStrictEqual(table.header, ['Wave'].concat(OPEN_LABELS));
+  assert.deepStrictEqual(rowsFrom(table.first, table.last).map((r) => calcOf(env).getCell(r, 1).value), BUCKETS);
+  assert.deepStrictEqual(gridOf(env, table), {
+    'W3/Own weapon': 1, 'W5/Restart': 1, 'W6/Burn / poison': 1, 'W9/Enemy': 2, 'W14/Enemy': 1, 'Boss/Tyrant King': 1, 'Boss/Victory': 2,
+  }, 'a wave 14 death is not a final boss death; every victory is in the Boss row');
+  const calc = calcOf(env);
+  const open = '=COUNTIFS(runs!$B:$B,"run_end",runs!$E:$E,"<>test",runs!$Q:$Q,"<>story",';
+  assert.strictEqual(calc.getCell(178, 2).formula, open + 'runs!$H:$H,"enemy",runs!$K:$K,"<>final_boss",runs!$L:$L,3)', 'W3 / Enemy');
+  assert.strictEqual(calc.getCell(190, 10).formula, open + 'runs!$H:$H,"victory",runs!$K:$K,"final_boss")', 'Boss / Victory');
+  CAUSES.forEach((cause, j) => assert.ok(calc.getCell(176, j + 2).formula.indexOf('runs!$H:$H,"' + cause + '"') > 0, OPEN_LABELS[j] + ' counts ' + cause));
+  assert.strictEqual(calc.getCell(14, 2).formula, '=SUM(B176:L190)');
+  assert.strictEqual(says(env, 'B80'), 'Runs ended on each wave, by cause. Total: 9.');
+  assert.strictEqual(says(env, 'B7'), 'LIVE DATA' + DOT + 'story runs ended: 0', 'no open-mode run on a story card');
+});
+
+test('the open-mode table leaves story rows out; rows written before the mode column existed count as open', () => {
+  const env = readyEnv();
+  const events = [
+    startEvent({ run_id: idOf(1) }), endEvent({ run_id: idOf(1), wave: 3 }), // open: ends in wave 3
+    startEvent({ run_id: idOf(2), mode: 'story', stage: 'tutorial', wave: 0 }),
+    endEvent({ run_id: idOf(2), mode: 'story', stage: 'day', wave: 3 }), // story: day 3 is not wave 3
+    startEvent({ run_id: idOf(3) }), endEvent({ run_id: idOf(3), wave: 3, mode: 'story' }), // marked as a campaign run late
   ];
   for (const ev of events) assert.strictEqual(post(env, ev).json.ok, true);
   // A row written before the mode column existed: 16 cells, no mode.
   const runs = runsSheet(env);
-  runs.appendRow([new Date(), 'run_end', id(6), SESSION_ID, 'en', 'old', 'defeat', 'enemy', 'Grunt', false, 'wave', 3, 100, 2, 10, 'Rifle']);
-  runs.appendRow([new Date(), 'run_start', id(6), SESSION_ID, 'en', 'old', '', '', '', false, 'wave', 1, 0, 1, 0, 'Rifle']);
+  runs.appendRow([new Date(), 'run_end', idOf(6), SESSION_ID, 'en', 'old', 'defeat', 'enemy', 'Grunt', false, 'wave', 3, 100, 2, 10, 'Rifle']);
 
-  const summary = env.ss.getSheetByName('Summary');
-  const enemyCol = CAUSES.indexOf('enemy') + 2;
-  assert.strictEqual(evalCountifs(summary.getCell(4, enemyCol).formula, runs), 2, 'W3 / enemy: runs 1 and 6 only');
-  assert.strictEqual(evalDistinct(summary.getCell(18, 2).formula, runs), 3, 'started: runs 1, 5 and 6');
-  assert.strictEqual(evalDistinct(summary.getCell(19, 2).formula, runs), 2, 'ended: runs 1 and 6');
-  assert.strictEqual(evalDistinct(summary.getCell(20, 2).formula, runs), 1, 'unfinished: run 5');
-  assert.ok(summary.getCell(22, 1).value.indexOf('story') >= 0, 'the note says story runs are left out');
-});
-
-test('the damage summary reads open-mode rows only, and its queries name the right columns', () => {
-  const env = readyEnv();
-  post(env, damageEvent([{ source: 'Spitter', dot: true, wave: 2, damage: 5, damage_pct: 10, hits: 3 }]));
-  post(env, damageEvent([{ source: 'Spitter', dot: true, stage: 'night', wave: 2, damage: 25, damage_pct: 50, hits: 3 }], { mode: 'story' }));
-  const dm = sheetOf(env, 'Damage sources');
-  assert.strictEqual(evalBetaFormula(dm.getCell(2, 5).formula.replace(/^=IF\(\$A2="","",(.*)\)$/, '=$1').replace('$A2', '"Spitter"'), env), 10,
-    'burn / poison part of Spitter damage, story rows left out');
-  for (const [cell, used] of [[dm.getCell(1, 1), ['edition', 'source', 'damage_pct', 'hits']], [dm.getCell(1, 8), ['edition', 'bucket', 'source', 'damage_pct']]]) {
-    const f = cell.formula;
-    assert.ok(f.startsWith('=IFERROR(QUERY(FILTER(damage!$A$2:$O,damage!$O$2:$O<>"story"),"'), f);
-    const names = Array.from(new Set((f.match(/Col\d+/g) || []).map((c) => DAMAGE_HEADER[Number(c.slice(3)) - 1]))).sort();
-    assert.deepStrictEqual(names, used.slice().sort(), f);
-  }
+  assert.deepStrictEqual(gridOf(env, tableOf(env, 'LIVE open mode:')), { 'W3/Enemy': 2 }, 'runs 1 and 6 only');
+  assert.deepStrictEqual(gridOf(env, tableOf(env, 'LIVE 1:')), { 'Day 3/Enemy': 2 }, 'the two story endings are on card 1');
+  assert.strictEqual(says(env, 'B80'), 'Runs ended on each wave, by cause. Total: 2.');
 });
 
 test('appsscript.json is a V8 web app open to anonymous callers', () => {

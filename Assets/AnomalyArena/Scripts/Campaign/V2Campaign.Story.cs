@@ -62,9 +62,9 @@ namespace AnomalyArena
             // Since 2026-11-06 the screen calls this stage the afternoon; the English line stays as recorded.
             Line.D01 => (true, ArenaText.Pair("下午。怪物在夜里会被异星力量增强，趁天黑前补充物资。", "Dusk. Alien power strengthens the monsters at night. Gather what you can before dark.")),
             Line.K01 => (true, ArenaText.Pair("生命体征消失。已将你带回基地，今晚的收获全部遗失。", "Vital signs lost. You have been brought back to the base. Tonight's haul is lost.")),
-            Line.N01 => (true, ArenaText.Pair("按 F 放下一盏矿灯。灯光里才能采集。", "Press F to set down a mining lamp. You can only mine in its light.")),
-            Line.N02 => (true, ArenaText.Pair("暗物质只在夜里出现。站在灯光里按住 E 采集。", "Dark matter only shows at night. Hold E in the lamp light to mine it.")),
-            Line.N03 => (true, ArenaText.Pair("影子怪物怕光。上午杀敌越多的地方，夜里影子越多。回基地门口按 E，选择等待天亮。", "Shadows fear the light. Where you killed the most by day, more shadows walk at night. Press E at the base door to wait for dawn.")),
+            Line.N01 => (true, ArenaText.Pair($"按 {ArenaKeys.LampKey} 放下一盏矿灯。灯光里才能采集。", $"Press {ArenaKeys.LampKey} to set down a mining lamp. You can only mine in its light.")),
+            Line.N02 => (true, ArenaText.Pair($"暗物质只在夜里出现。站在灯光里按住 {ArenaKeys.InteractKey} 采集。", $"Dark matter only shows at night. Hold {ArenaKeys.InteractKey} in the lamp light to mine it.")),
+            Line.N03 => (true, ArenaText.Pair("影子怪物怕光。上午杀敌越多的地方，夜里影子越多。回基地门口按 " + ArenaKeys.InteractKey + "，选择等待天亮。", "Shadows fear the light. Where you killed the most by day, more shadows walk at night. Press " + ArenaKeys.InteractKey + " at the base door to wait for dawn.")),
             Line.B01 => (true, ArenaText.Pair("基地储备已开放。用合金和能量建造武装区与能量研究区。", "Base reserves released. Build the Armament Bay and the Energy Lab with alloy and energy.")),
             _ => (false, "")
         };
@@ -84,6 +84,8 @@ namespace AnomalyArena
             string text = line.text;
             if (args != null && args.Length > 0) text = string.Format(text, args);
             PlayVoice(voice);
+            // The speaking itself lasts as long as the recording (a line without one: a short while); the subtitle stays up longer to be read.
+            speechUntil = Time.unscaledTime + (voice ? voice.length + .3f : Mathf.Min(3.5f, 1.2f + .06f * text.Length));
             ui.Subtitle(Speaker(line.system), text, line.system, Mathf.Max(2.2f + .085f * text.Length, voice ? voice.length + .4f : 0f));
         }
 
@@ -93,12 +95,20 @@ namespace AnomalyArena
 
         IEnumerator SayingWhenQuiet(Line id, System.Func<bool> still, float maxWait)
         {
+            quietLinesWaiting++;
             // One frame first: the line it follows may be said later in the same frame.
             yield return null;
             float giveUp = Time.realtimeSinceStartup + maxWait;
             while (ui && ui.SubtitleShowing && Time.realtimeSinceStartup < giveUp) yield return null;
+            quietLinesWaiting = Mathf.Max(0, quietLinesWaiting - 1);
             if (Running && (still == null || still())) Say(id);
         }
+
+        int quietLinesWaiting;
+        float speechUntil;
+        /// <summary>Someone is still talking: a line is being spoken, or one waits for the subtitle on screen to end. Day 0 holds its next
+        /// step back meanwhile, so that what the hero says comes before what the player then does.</summary>
+        bool SpeechBusy => quietLinesWaiting > 0 || Time.unscaledTime < speechUntil;
 
         // ───── Voice (D9: English in both editions; lines without a recording show the subtitle only) ─────
 

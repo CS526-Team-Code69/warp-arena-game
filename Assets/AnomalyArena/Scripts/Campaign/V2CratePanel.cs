@@ -136,7 +136,8 @@ namespace AnomalyArena
                 // Two weapons sit side by side under the middle; one sits in the middle.
                 float step = 372f, first = -(count - 1) * step * .5f;
                 v.root.anchoredPosition = new Vector2(first + i * step, -138f);
-                v.number.text = (i + 1).ToString();
+                // The key that takes this weapon: the skill key of the same place, as the player has it (ArenaKeys).
+                v.number.text = ArenaKeys.Name(GameAction.Skill1 + i);
                 v.title.text = o.title ?? "";
                 v.title.color = o.tint;
                 v.kind.text = o.kind ?? "";
@@ -151,8 +152,8 @@ namespace AnomalyArena
             iconsIllustrated = Art.Enabled;
             skip.gameObject.SetActive(canLeave);
             skipLabel.text = ArenaText.Pair("不拿", "LEAVE IT");
-            hint.text = canLeave ? ArenaText.Pair("按 1 / 2 / 3 或点击选择 · Esc 不拿", "1 / 2 / 3 or click to take one · Esc to leave it")
-                : ArenaText.Pair("按 1 / 2 / 3 或点击选择", "1 / 2 / 3 or click to take one");
+            hint.text = canLeave ? ArenaText.Pair($"按 {ArenaKeys.SkillKeys} 或点击选择 · Esc 不拿", $"{ArenaKeys.SkillKeys} or click to take one · Esc to leave it")
+                : ArenaText.Pair($"按 {ArenaKeys.SkillKeys} 或点击选择", $"{ArenaKeys.SkillKeys} or click to take one");
             openedAt = Time.unscaledTime;
             screen.gameObject.SetActive(true);
             screen.SetAsLastSibling();
@@ -183,9 +184,9 @@ namespace AnomalyArena
             if (skip.interactable != ready) skip.interactable = ready;
             var keys = Keyboard.current;
             if (!ready || keys == null) return;
-            if (keys.digit1Key.wasPressedThisFrame || keys.numpad1Key.wasPressedThisFrame) Pick(0);
-            else if (keys.digit2Key.wasPressedThisFrame || keys.numpad2Key.wasPressedThisFrame) Pick(1);
-            else if (keys.digit3Key.wasPressedThisFrame || keys.numpad3Key.wasPressedThisFrame) Pick(2);
+            if (ArenaKeys.Pressed(GameAction.Skill1) || keys.numpad1Key.wasPressedThisFrame) Pick(0);
+            else if (ArenaKeys.Pressed(GameAction.Skill2) || keys.numpad2Key.wasPressedThisFrame) Pick(1);
+            else if (ArenaKeys.Pressed(GameAction.Skill3) || keys.numpad3Key.wasPressedThisFrame) Pick(2);
             else if (keys.escapeKey.wasPressedThisFrame && mayLeave) Leave();
         }
 

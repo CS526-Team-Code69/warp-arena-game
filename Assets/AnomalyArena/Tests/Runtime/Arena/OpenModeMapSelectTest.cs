@@ -19,7 +19,7 @@ namespace AnomalyArena
     public class OpenModeMapSelectTest
     {
         const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
-        static readonly string[] TitleEntries = { V2Hud.TitleStoryButton, V2Hud.TitleOpenButton, V2Hud.TitleTutorialButton, "ToggleArt", V2Hud.TitleLanguageButton };
+        static readonly string[] TitleEntries = { V2Hud.TitleStoryButton, V2Hud.TitleOpenButton, V2Hud.TitleTutorialButton, V2Hud.TitleSettingsButton, V2Hud.TitleLanguageButton };
         readonly List<Biome> madeMaps = new();
 
         [SetUp]
@@ -118,14 +118,15 @@ namespace AnomalyArena
             Canvas.ForceUpdateCanvases();
             var line = content.Find(V2Hud.MapSelect + "/MapLine");
             var stack = new[] { line }.Concat(V2Hud.MapButtons.Select(name => MapButton(content, name))).Select(part => Box(part, hud.transform)).ToArray();
-            var keys = Box(content.Find("Controls"), hud.transform);
+            var canvas = ((RectTransform)hud.transform).rect;
 
             Assert.That(labels.Select(label => label.text), Is.EqualTo(new[] { dunes, ruins, random, back }), "the Dunes, the Ruins, a random map, back");
             Assert.That(labels.Where(label => label.cachedTextGenerator.characterCountVisible < label.text.Length).Select(label => label.text), Is.Empty,
                 "every word shows in full");
             Assert.That(stack.Zip(stack.Skip(1), (upper, lower) => upper.yMin >= lower.yMax), Has.All.True,
                 "the line, then each button under the last, none overlapping");
-            Assert.That(stack.Where(box => box.Overlaps(keys)), Is.Empty, "and none over the key hints");
+            // The line of key hints that lay under the pick is no longer shown; the pick still ends above the canvas' foot.
+            Assert.That(stack.Where(box => box.yMin < canvas.yMin || box.yMax > canvas.yMax), Is.Empty, "and none off the canvas");
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(60000)]

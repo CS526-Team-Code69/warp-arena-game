@@ -79,7 +79,8 @@ namespace AnomalyArena
             surface.color = surface.sprite
                 ? slot.active ? Color.white : new Color(.65f, .75f, .85f, 1f)
                 : slot.active ? new Color(.10f, .31f, .39f, .96f) : new Color(.04f, .08f, .13f, .94f);
-            title.color = ArenaRarity.ColorFor(slot.rarity);
+            // The name's colour shows the rarity; a void name is written in a colour that reads on the dark slot.
+            title.color = ArenaRarity.InkFor(slot.rarity);
             cooldown.fillAmount = Mathf.Clamp01(slot.cooldown01);
             V2Hud.SetElementIcon(icon, art, slot.elementIndex);
             V2Hud.SetWeaponIcon(weaponIcon, art, slot.formIndex);

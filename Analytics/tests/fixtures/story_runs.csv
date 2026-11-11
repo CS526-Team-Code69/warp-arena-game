@@ -1,0 +1,25 @@
+received_at,event,run_id,session_id,edition,build,outcome,cause,enemy,elite,stage,wave,run_seconds,level,kills,starting_weapon,mode
+2026-11-10 22:00:00,run_start,a,s1,en,1.0.0+test,,,,FALSE,tutorial,0,0,1,0,Pistol,story
+2026-11-10 22:01:00,run_end,a,s1,en,1.0.0+test,defeat,enemy,Brute,TRUE,day,3,500,2,40,Pistol,story
+2026-11-10 22:02:00,run_start,b,s2,en,1.0.0+test,,,,FALSE,tutorial,0,0,1,0,Pistol,story
+2026-11-10 22:03:00,run_end,b,s2,en,1.0.0+test,abandoned,quit_to_title,,FALSE,tutorial,0,60,1,0,Pistol,story
+2026-11-10 22:04:00,run_start,c,s3,zh,1.0.0+test,,,,FALSE,tutorial,0,0,1,0,Pistol,story
+2026-11-10 22:05:00,run_end,c,s3,zh,1.0.0+test,victory,victory,,FALSE,ending,7,2400,9,400,Pistol,story
+2026-11-10 22:06:00,run_start,d,s4,en,1.0.0+test,,,,FALSE,tutorial,0,0,1,0,Pistol,story
+2026-11-10 22:07:00,run_end,d,s4,en,1.0.0+test,defeat,tyrant,Tyrant,FALSE,final_boss,7,2300,9,380,Pistol,story
+2026-11-10 22:08:00,run_start,e,s5,en,1.0.0+test,,,,FALSE,wave,1,0,1,0,Pistol,open
+2026-11-10 22:09:00,run_end,e,s5,en,1.0.0+test,defeat,base_destroyed,,FALSE,day,3,700,3,90,Pistol,story
+2026-11-10 22:10:00,run_start,f,s6,en,1.0.0+test,,,,FALSE,tutorial,0,0,1,0,Pistol,story
+2026-11-10 22:11:00,run_start,g,s7,en,1.0.0+test,,,,FALSE,wave,1,0,1,0,Rifle,open
+2026-11-10 22:12:00,run_end,g,s7,en,1.0.0+test,defeat,enemy,Grunt,FALSE,wave,3,200,2,30,Rifle,open
+2026-11-10 22:13:00,run_start,h,s8,test,1.0.0+test,,,,FALSE,tutorial,0,0,1,0,Pistol,story
+2026-11-10 22:14:00,run_end,h,s8,test,1.0.0+test,defeat,enemy,Grunt,FALSE,day,1,100,1,5,Pistol,story
+2026-11-10 22:15:00,run_end,a,s1,en,1.0.0+test,defeat,enemy,Grunt,FALSE,day,5,900,2,40,Pistol,story
+2026-11-10 22:16:00,run_start,i,s9,en,1.0.0+test,,,,FALSE,tutorial,0,0,1,0,Pistol,story
+2026-11-10 22:17:00,run_end,i,s9,en,1.0.0+test,defeat,status,Spitter,FALSE,day,3,640,2,50,Pistol,story
+2026-11-10 22:18:00,run_start,j,s10,en,1.0.0+test,,,,FALSE,tutorial,0,0,1,0,Pistol,story
+2026-11-10 22:19:00,run_end,j,s10,en,1.0.0+test,defeat,void_trial,,FALSE,void_trial,4,800,3,60,Pistol,story
+2026-11-10 22:20:00,run_start,k,s11,en,1.0.0+test,,,,FALSE,tutorial,0,0,1,0,Pistol,story
+2026-11-10 22:21:00,run_end,k,s11,en,1.0.0+test,defeat,teleported,,FALSE,dusk,2,300,1,20,Pistol,story
+2026-11-10 22:22:00,run_start,l,s12,en,1.0.0+test,,,,FALSE,wave,1,0,1,0,Knife,
+2026-11-10 22:23:00,run_end,l,s12,en,1.0.0+test,defeat,enemy,Brute,FALSE,wave,2,150,1,12,Knife,

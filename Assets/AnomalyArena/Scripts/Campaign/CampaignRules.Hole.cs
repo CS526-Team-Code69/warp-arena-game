@@ -39,6 +39,18 @@ namespace AnomalyArena
         [Min(0f), Tooltip("How far from the player the other pillars of an answer land, in pillar radii; above 2 leaves gaps between them to step through.")]
         public float holePillarSpread = 2.2f;
 
+        [Header("Black hole: fed first (since 2026-11-10)")]
+        [Min(0), Tooltip("Monsters the black hole must swallow, lured into its pull by the player, before it can be attacked. 0 skips the feeding.")]
+        public int holeFeedGoal = 10;
+        [Min(.1f), Tooltip("The campaign hole's pull as a share of the player's walking speed: a little above 1, so a walk loses ground slowly and a sprint gets out, and the player can stand in the pull to lure monsters in.")]
+        public float holePullFactor = 1.1f;
+        [Min(0), Tooltip("In the afternoon no monsters are out, so the hole calls packs of this many while it is being fed and the player is near it.")]
+        public int holeLurePack = 4;
+        [Min(.5f), Tooltip("Seconds between two such packs.")]
+        public float holeLureInterval = 5f;
+        [Min(0), Tooltip("Most monsters of those packs alive at once.")]
+        public int holeLureAlive = 6;
+
         [Header("Void currencies (since 2026-11-10)")]
         [Min(0), Tooltip("Void energy the won void trial gives in the campaign (the gift of the void).")]
         public int voidEnergyReward = 100;
@@ -88,6 +100,12 @@ namespace AnomalyArena
             for (int i = 0; i < count; i++) parts[i] = each + (i < rest ? 1 : 0);
             return parts;
         }
+
+        /// <summary>The campaign hole's pull against a player who walks at this speed.</summary>
+        public static float HolePull(float factor, float walkSpeed) => Mathf.Max(.1f, factor) * Mathf.Max(0f, walkSpeed);
+
+        /// <summary>How many monsters the next pack brings: a full pack, or what the most alive at once still leaves room for.</summary>
+        public static int HoleLureCount(int pack, int mostAlive, int alive) => Mathf.Clamp(Mathf.Min(pack, mostAlive - alive), 0, Mathf.Max(0, pack));
 
         /// <summary>Damage the black hole's check asks for: fixedDamage when set, else share of the Nash Prophet's HP; at least 1.</summary>
         public static float HoleCheckRequirement(float fixedDamage, float share, float prophetHp) =>

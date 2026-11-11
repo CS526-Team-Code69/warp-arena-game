@@ -37,6 +37,13 @@ namespace AnomalyArena
             _ => Color.white
         };
 
+        /// <summary>The pale violet a void card's name is written in.</summary>
+        public static readonly Color VoidInk = new(.86f, .79f, 1f);
+
+        /// <summary>A rarity's colour for a name written on a dark ground. Void's own colour is black and cannot be read there, so a void
+        /// name takes the void cards' pale violet.</summary>
+        public static Color InkFor(CardRarity rarity) => rarity == CardRarity.Void ? VoidInk : ColorFor(rarity);
+
         /// <summary>Design document 6.7: a weapon slot is coloured by the upgrades the weapon has already taken (0 white, 1 green, 2 blue,
         /// 3 orange; void element is black). The built-in element of the Flamethrower, Cryo Cannon, Arc Cannon and Venom Launcher is not an
         /// upgrade, and neither is the armory Mk tier, so a Mk 4 weapon with one upgrade is green, not orange. With added Infusion the

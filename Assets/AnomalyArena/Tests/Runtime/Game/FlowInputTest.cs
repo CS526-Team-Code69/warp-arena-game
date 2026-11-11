@@ -97,7 +97,7 @@ namespace AnomalyArena
         // ───── The title's three entries (one game in two languages) ─────
 
         /// <summary>From the top the story mode, the open mode
-        /// and the tutorial, in the language the game started in, every word whole, as wide as one another, the art switch under them.</summary>
+        /// and the tutorial, in the language the game started in, every word whole, as wide as one another.</summary>
         [TestCase(StartupLanguage.Chinese, "开始游戏-剧情模式", "开始游戏-开放模式", "教学")]
         [TestCase(StartupLanguage.English, "Start Game - Story Mode", "Start Game - Open Mode", "Tutorial")]
         [BuildScene(SceneCn), Category("Integration"), Timeout(60000)]
@@ -116,13 +116,13 @@ namespace AnomalyArena
             var hud = Object.FindAnyObjectByType<V2Hud>();
             ((RectTransform)hud.transform).sizeDelta = hud.GetComponentInParent<UnityEngine.UI.CanvasScaler>().referenceResolution;
             Canvas.ForceUpdateCanvases();
-            var boxes = entries.Append((RectTransform)content.Find("ToggleArt")).Select(part => Box(part, hud.transform)).ToArray();
+            var boxes = entries.Select(part => Box(part, hud.transform)).ToArray();
 
             Assert.That(ArenaText.IsChinese, Is.EqualTo(language == StartupLanguage.Chinese), "the game started in the language it was asked to");
             Assert.That(labels.Select(label => label.text), Is.EqualTo(new[] { story, open, tutorial }), "story, open, tutorial");
             Assert.That(labels.Where(label => label.cachedTextGenerator.characterCountVisible < label.text.Length).Select(label => label.text), Is.Empty,
                 "every entry's words show in full");
-            Assert.That(boxes.Zip(boxes.Skip(1), (upper, lower) => upper.yMin >= lower.yMax), Has.All.True, "each entry under the last, the art switch under them");
+            Assert.That(boxes.Zip(boxes.Skip(1), (upper, lower) => upper.yMin >= lower.yMax), Has.All.True, "each entry under the last");
             Assert.That(boxes.Take(3).Select(box => box.width), Has.All.EqualTo(boxes[0].width).Within(.5f), "the three entries as wide as one another");
         }
 
@@ -188,21 +188,22 @@ namespace AnomalyArena
                 ? ArenaUiCommand.StartCampaign : ArenaUiCommand.Start;
 
         [Test, LoadScene(SceneCn), Category("Integration"), Timeout(30000)]
-        public async Task Title_ShowsTheEntriesTheArtSwitchTheKeyHintsAndLanguage_NotTheOldLanguageButtons()
+        public async Task Title_ShowsTheEntriesSettingsAndLanguage_NotTheKeyHintsTheArtSwitchOrTheOldLanguageButtons()
         {
             var game = await ReadyScene();
             Assume.That(game.RunPhase, Is.EqualTo(ArenaUiState.Title));
             await Awaitable.NextFrameAsync();
             var content = GameObject.Find("V2Canvas/TitleScreen/Content");
             Assume.That(content, Is.Not.Null, "the saved title screen");
-            // No tagline; since 2026-11-06 the whitebox / illustrated switch; since 2026-11-10 three entries and the
-            // Language option in place of the two saved language buttons, in either language (one scene for both).
-            foreach (var hidden in new[] { "InterstellarSubtitle", "ChineseTeam", "EnglishShowcase", V2Hud.MapSelect })
+            // No tagline; since 2026-11-10 three entries and the Language option in place of the two saved language buttons, in
+            // either language (one scene for both), and the Settings button in place of the art switch under the entries and of the
+            // line of key hints along the bottom (the art mode and the keys are in the settings).
+            foreach (var hidden in new[] { "InterstellarSubtitle", "ChineseTeam", "EnglishShowcase", "Controls", "ToggleArt", V2Hud.MapSelect })
             {
                 var element = content.transform.Find(hidden);
                 Assert.That(element == null || !element.gameObject.activeInHierarchy, Is.True, hidden + " is not shown");
             }
-            foreach (var shown in new[] { V2Hud.TitleStoryButton, V2Hud.TitleOpenButton, V2Hud.TitleTutorialButton, "Controls", "ToggleArt", V2Hud.TitleLanguageButton })
+            foreach (var shown in new[] { V2Hud.TitleStoryButton, V2Hud.TitleOpenButton, V2Hud.TitleTutorialButton, V2Hud.TitleSettingsButton, V2Hud.TitleLanguageButton })
                 Assert.That(content.transform.Find(shown).gameObject.activeInHierarchy, Is.True, shown + " is shown");
         }
 
@@ -219,7 +220,7 @@ namespace AnomalyArena
         /// <summary>The title's third entry opens the story mode's pages over the title, though no campaign runs there yet: the background
         /// first, then how to play. No text on any page, the footnote included, names a card or Tab (the story mode has no card picks and no
         /// build phase), and every page's line fits its box. The pages cover the title's buttons while open, and closing them leaves the
-        /// title as it was. On the reference canvas the title's buttons and its key hints do not overlap.</summary>
+        /// title as it was. On the reference canvas the title's buttons (the entries and the two corner ones) do not overlap.</summary>
         static async Task TitleTutorialOpensTheStoryPages(string word)
         {
             var game = await ReadyScene();
@@ -238,7 +239,7 @@ namespace AnomalyArena
             Assert.That(V2Tutorial.IsOpen && V2Tutorial.HoldsInput, Is.True, "a click opens the pages, which hold the game's keys");
             Assert.That(Time.timeScale, Is.Zero, "the game holds still under them");
             await Awaitable.NextFrameAsync();
-            foreach (var name in new[] { V2Hud.TitleStoryButton, V2Hud.TitleOpenButton, V2Hud.TitleTutorialButton, "ToggleArt", V2Hud.TitleLanguageButton })
+            foreach (var name in new[] { V2Hud.TitleStoryButton, V2Hud.TitleOpenButton, V2Hud.TitleTutorialButton, V2Hud.TitleSettingsButton, V2Hud.TitleLanguageButton })
             {
                 var hit = TopHit((RectTransform)content.Find(name), out _);
                 Assert.That(hit && hit.GetComponentInParent<V2Tutorial>(), Is.True, $"the pages cover {name}, so a click there stays on them");
@@ -276,12 +277,11 @@ namespace AnomalyArena
             // size back a few frames later, so everything is measured at once.
             var hud = Object.FindAnyObjectByType<V2Hud>();
             ((RectTransform)hud.transform).sizeDelta = hud.GetComponentInParent<UnityEngine.UI.CanvasScaler>().referenceResolution;
-            Rect open = Box(content.Find(V2Hud.TitleOpenButton), hud.transform), help = Box(tutorial, hud.transform), art = Box(content.Find("ToggleArt"), hud.transform);
+            Rect open = Box(content.Find(V2Hud.TitleOpenButton), hud.transform), help = Box(tutorial, hud.transform);
             Assert.That(help.yMax, Is.LessThanOrEqualTo(open.yMin), "the tutorial entry is under the open mode");
-            Assert.That(art.yMax, Is.LessThanOrEqualTo(help.yMin), "and over the art switch");
             Assert.That(help.width, Is.EqualTo(open.width).Within(.5f), "as wide as the starts");
-            var shown = content.Cast<Transform>().Where(part => part.gameObject.activeInHierarchy
-                && (part.GetComponent<UnityEngine.UI.Button>() || part.name == "Controls")).ToArray();
+            // The three entries and the two corner buttons (Settings top left, Language top right).
+            var shown = content.Cast<Transform>().Where(part => part.gameObject.activeInHierarchy && part.GetComponent<UnityEngine.UI.Button>()).ToArray();
             for (int i = 0; i < shown.Length; i++)
                 for (int j = i + 1; j < shown.Length; j++)
                     Assert.That(Box(shown[i], hud.transform).Overlaps(Box(shown[j], hud.transform)), Is.False, $"{shown[i].name} overlaps {shown[j].name}");
@@ -351,7 +351,7 @@ namespace AnomalyArena
             foreach (var key in new[] { "ui.nextwave", "ui.return.reward", "ui.ready.body", "ui.controls", "ui.hole.enter", "ui.hole.enter.build" })
                 Assert.That(ArenaText.Text(key), Does.Not.Contain("空格").IgnoreCase.And.Not.Contain("回车").IgnoreCase, key);
             // Since 2026-11-10 the title's keys no longer explain the portal: the portal shows its own E once the player stands on it.
-            Assert.That(ArenaText.Text("ui.controls"), Does.Contain("Esc 暂停").IgnoreCase.And.Not.Contain("传送门"), "the title lists the pause key and says nothing of the portal");
+            Assert.That(ArenaText.Text("ui.controls"), Does.Contain("Esc 暂停").IgnoreCase.And.Not.Contain("传送门"), "the saved line of key hints (no longer shown on the title) lists the pause key and says nothing of the portal");
             Assert.That(ArenaText.Text("ui.hole.enter"), Does.Contain("护盾清 0").IgnoreCase, "the portal says entering empties the shield");
         }
 
@@ -365,7 +365,7 @@ namespace AnomalyArena
 
             foreach (var key in new[] { "ui.nextwave", "ui.return.reward", "ui.ready.body", "ui.controls", "ui.hole.enter.build" })
                 Assert.That(ArenaText.Text(key).ToUpperInvariant(), Does.Not.Contain("SPACE").And.Not.Contain("ENTER /").And.Not.Contain("/ ENTER"), key);
-            Assert.That(ArenaText.Text("ui.controls"), Does.Contain("ESC PAUSE").And.Not.Contain("PORTAL"), "the title lists the pause key and says nothing of the portal");
+            Assert.That(ArenaText.Text("ui.controls"), Does.Contain("ESC PAUSE").And.Not.Contain("PORTAL"), "the saved line of key hints (no longer shown on the title) lists the pause key and says nothing of the portal");
         }
 
         // ───── One mid-wave pick, then the fight; early start asks only for unpicked cards ─────

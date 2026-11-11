@@ -157,5 +157,37 @@ namespace AnomalyArena
             Assert.That(sum, Is.EqualTo(20));
             Assert.That(CampaignRules.Split(5, 0), Is.Empty);
         }
+
+        [Test]
+        public void HolePull_IsALittleFasterThanTheWalk_AndSlowerThanTheSprint()
+        {
+            const float walk = 6f, sprint = walk * 2f;
+            var rules = ScriptableObject.CreateInstance<CampaignRules>();
+
+            float pull = CampaignRules.HolePull(rules.holePullFactor, walk);
+            Object.DestroyImmediate(rules);
+
+            Assert.That(pull, Is.GreaterThan(walk), "a walking player in the pull loses ground");
+            Assert.That(pull, Is.LessThan(walk * 1.25f), "but slowly");
+            Assert.That(pull, Is.LessThan(sprint), "and a sprint gets out");
+        }
+
+        [TestCase(4, 6, 0, ExpectedResult = 4, TestName = "No pack monster alive: a full pack")]
+        [TestCase(4, 6, 4, ExpectedResult = 2, TestName = "Four alive of six at most: two more")]
+        [TestCase(4, 6, 6, ExpectedResult = 0, TestName = "As many alive as may be: none")]
+        [TestCase(4, 6, 9, ExpectedResult = 0, TestName = "More alive than may be: none")]
+        [TestCase(0, 6, 0, ExpectedResult = 0, TestName = "A pack of none brings none")]
+        public int HoleLureCount_FillsUpToTheMostAlive(int pack, int mostAlive, int alive) => CampaignRules.HoleLureCount(pack, mostAlive, alive);
+
+        [Test]
+        public void HoleFeedGoal_ByDefault_IsTenMonsters()
+        {
+            var rules = ScriptableObject.CreateInstance<CampaignRules>();
+
+            int goal = rules.holeFeedGoal;
+            Object.DestroyImmediate(rules);
+
+            Assert.That(goal, Is.EqualTo(10));
+        }
     }
 }

@@ -3,7 +3,7 @@ using UnityEngine.InputSystem;
 
 namespace AnomalyArena
 {
-    /// <summary>Player: WASD to move, Shift to sprint (uses stamina), mouse to aim, left button to use the hand weapon, right button to switch hand slots.</summary>
+    /// <summary>Player: the move keys and the sprint key (ArenaKeys: W A S D and Shift unless changed in the settings; sprinting uses stamina), mouse to aim, left button to use the hand weapon, right button to switch hand slots.</summary>
     public class PlayerController : Combatant
     {
         [Header("Sprint")] public Stamina stamina = new Stamina();
@@ -59,10 +59,10 @@ namespace AnomalyArena
             moveFollowsScreen = false;
             if (walking && kb != null)
             {
-                if (kb.wKey.isPressed) moveInput.y += 1f;
-                if (kb.sKey.isPressed) moveInput.y -= 1f;
-                if (kb.dKey.isPressed) moveInput.x += 1f;
-                if (kb.aKey.isPressed) moveInput.x -= 1f;
+                if (ArenaKeys.Held(GameAction.MoveUp)) moveInput.y += 1f;
+                if (ArenaKeys.Held(GameAction.MoveDown)) moveInput.y -= 1f;
+                if (ArenaKeys.Held(GameAction.MoveRight)) moveInput.x += 1f;
+                if (ArenaKeys.Held(GameAction.MoveLeft)) moveInput.x -= 1f;
                 if (moveInput.sqrMagnitude > 1f) moveInput.Normalize();
                 moveFollowsScreen = true;
             }
@@ -83,7 +83,7 @@ namespace AnomalyArena
         /// <summary>Sprint: while Shift is held and the player is moving, speed ×2 and stamina drains; it recovers when not sprinting.</summary>
         void TickSprint(bool playing, Keyboard kb)
         {
-            bool held = debugSprintHeld ?? (kb != null && (kb.leftShiftKey.isPressed || kb.rightShiftKey.isPressed));
+            bool held = debugSprintHeld ?? ArenaKeys.Held(GameAction.Sprint);
             bool moving = moveInput.sqrMagnitude > 0.01f || debugSprintHeld == true;
             bool want = playing && held && moving && State == CharacterState.Normal && !WalkHeld;
             float recovery = GM.runWeapons ? GM.runWeapons.StaminaRecoveryMultiplier : 1f;

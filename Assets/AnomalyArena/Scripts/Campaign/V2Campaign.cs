@@ -266,7 +266,7 @@ namespace AnomalyArena
                 Day++; WaveOfDay = 0; Stage = CampaignStage.Day;
                 if (Day > rules.days) Overtime = true;
                 CampaignEvents.RaiseDayStarted(Day, Overtime);
-                regionKills.Clear();
+                regionKills.Clear(); regionKindKills.Clear();
                 BeginDayNumbers(); // the energy bar fills, the day's kill energy is ready (V2Campaign.Days.cs)
                 ApplyDaylight();
                 Say(Line.S07);
@@ -404,13 +404,14 @@ namespace AnomalyArena
         // ───── Helpers ─────
 
         static Keyboard Keys => Keyboard.current;
-        /// <summary>For automated checks: replaces the E and F keys (held E; one E or F press, used up when read).</summary>
+        /// <summary>For automated checks: replaces the interact and lamp keys (ArenaKeys: E and F unless changed in the settings):
+        /// interact held, or one press of either, used up when read.</summary>
         [System.NonSerialized] public bool debugHoldE, debugPressE, debugPressF;
         // While a yes / no question is open no key reaches the campaign (its answer is Enter, Esc or a click).
         bool QuestionOpen => ui && ui.ConfirmOpen;
-        bool EHeld => !QuestionOpen && (debugHoldE || Keys != null && Keys.eKey.isPressed);
-        bool EPressed => !QuestionOpen && (Take(ref debugPressE) || Keys != null && Keys.eKey.wasPressedThisFrame);
-        bool FPressed => !QuestionOpen && (Take(ref debugPressF) || Keys != null && Keys.fKey.wasPressedThisFrame);
+        bool EHeld => !QuestionOpen && (debugHoldE || ArenaKeys.Held(GameAction.Interact));
+        bool EPressed => !QuestionOpen && (Take(ref debugPressE) || ArenaKeys.Pressed(GameAction.Interact));
+        bool FPressed => !QuestionOpen && (Take(ref debugPressF) || ArenaKeys.Pressed(GameAction.Lamp));
         static bool Take(ref bool flag) { bool was = flag; flag = false; return was; }
         public V2CampaignUi Ui => ui;
         /// <summary>For automated checks: currency as if mined or dropped.</summary>

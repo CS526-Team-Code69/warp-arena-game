@@ -1,0 +1,12 @@
+received_at,event,run_id,session_id,edition,build,stage,wave,bucket,source,dot,damage,damage_pct,hits,mode
+2026-11-10 22:30:00,wave_damage,a,s1,en,1.0.0+test,day,1,D01,Grunt,FALSE,10,20,2,story
+2026-11-10 22:30:00,wave_damage,a,s1,en,1.0.0+test,day,1,D01,backfire,FALSE,5,10,1,story
+2026-11-10 22:31:00,wave_damage,a,s1,en,1.0.0+test,night,1,D01,shadow,FALSE,5,10,1,story
+2026-11-10 22:32:00,wave_damage,a,s1,en,1.0.0+test,day,3,D03,Spire_elite,FALSE,15,30,3,story
+2026-11-10 22:32:00,wave_damage,a,s1,en,1.0.0+test,day,3,D03,Spitter,TRUE,5,10,5,story
+2026-11-10 22:33:00,wave_damage,b,s2,en,1.0.0+test,final_boss,7,D07,Tyrant,FALSE,60,60,6,story
+2026-11-10 22:33:00,wave_damage,b,s2,en,1.0.0+test,day,7,D07,wall_slam,FALSE,20,20,1,story
+2026-11-10 22:34:00,wave_damage,c,s3,en,1.0.0+test,wave,2,W02,Grunt,FALSE,50,50,5,open
+2026-11-10 22:35:00,wave_damage,d,s4,en,1.0.0+test,wave,2,W02,Grunt,FALSE,50,50,5,
+2026-11-10 22:36:00,wave_damage,e,s5,test,1.0.0+test,day,1,D01,Grunt,FALSE,99,99,9,story
+2026-11-10 22:37:00,wave_damage,a,s1,en,1.0.0+test,day,2,D02,Grunt,FALSE,0,0,0,story

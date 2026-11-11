@@ -26,7 +26,7 @@ namespace AnomalyArena
         Cutscene,
         // Mid-wave card pick (a level gained during a wave): the world freezes while the player chooses or decides to pick later.
         LevelUp,
-        // V2 day campaign (V2Campaign): the night (walk and mine, no fighting), the base panel (world frozen), a story beat (title card, CG).
+        // V2 day campaign (V2Campaign): the night (walk and mine; weapons work, but the night's shadows cannot be hurt), the base panel (world frozen), a story beat (title card, CG).
         Night,
         Base,
         Story

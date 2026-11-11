@@ -612,7 +612,8 @@ namespace AnomalyArena
             Send(JsonUtility.ToJson(e));
         }
 
-        /// <summary>The key under which a milestone is sent at most once a run, or null when every one is sent (crates, void purchases):
+        /// <summary>The key under which a milestone is sent at most once a run, or null when every one is sent (crates, each weapon a
+        /// crate offers, void purchases):
         /// a tutorial step once for each step, the Prophet and the void crystals once, and the black hole's check once a day for its start,
         /// once for its pass and once for any of its failures.</summary>
         public static string MilestoneOnce(string kind, string detail, int day) => kind switch

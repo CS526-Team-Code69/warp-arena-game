@@ -197,6 +197,7 @@ namespace AnomalyArena
         [TestCase("hole_check", "failed_timeout", 3, ExpectedResult = "hole_check:3:failed")]
         [TestCase("hole_check", "failed_night", 3, ExpectedResult = "hole_check:3:failed")]
         [TestCase("crate", "Afternoon:Railgun", 2, ExpectedResult = null)]
+        [TestCase("crate_offer", "Afternoon:Railgun", 2, ExpectedResult = null)]
         [TestCase("void_purchase", "armor", 5, ExpectedResult = null)]
         public string MilestoneOnce_RepeatingKinds_ShareOneKeyPerRunOrPerDay(string kind, string detail, int day)
             => RunAnalytics.MilestoneOnce(kind, detail, day);
@@ -368,7 +369,8 @@ namespace AnomalyArena
 
         /// <summary>CampaignEvents.Milestone raised by hand on a classic run, as above: each sends one v2_event row with the day being
         /// counted and the stage; a second result of the black hole's check on the same day, a second press at the void crystals and an
-        /// empty kind send nothing, the next day's check is sent again, and the run's last day carries how the run ended.</summary>
+        /// empty kind send nothing, a weapon offered again by a second crate is sent again, the next day's check is sent again, and the
+        /// run's last day carries how the run ended.</summary>
         [Test, LoadScene(Scene), Timeout(90000)]
         public async Task CampaignMilestones_SendV2EventRows_RepeatOnlyWhereAllowed()
         {
@@ -384,7 +386,10 @@ namespace AnomalyArena
             RaiseCampaign("RaiseMilestone", "void_crystal", "", 0f, 2);
             RaiseCampaign("RaiseMilestone", "", "nothing", 1f, 2);
             RaiseCampaign("RaisePhase", "dusk", 2);
+            RaiseCampaign("RaiseMilestone", "crate_offer", "Afternoon:Minigun", 1f, 2);
+            RaiseCampaign("RaiseMilestone", "crate_offer", "Afternoon:Railgun", 2f, 2);
             RaiseCampaign("RaiseMilestone", "crate", "Afternoon:Railgun", 2f, 2);
+            RaiseCampaign("RaiseMilestone", "crate_offer", "Afternoon:Minigun", 1f, 2);
             RaiseCampaign("RaiseMilestone", "crate", "Afternoon:left", 0f, 2);
             RaiseCampaign("RaiseDayStarted", 3, false);
             RaiseCampaign("RaiseMilestone", "hole_check", "start", .5f, 3);
@@ -396,7 +401,10 @@ namespace AnomalyArena
                 (2, "day", "hole_check", "start", .25),
                 (2, "day", "hole_check", "failed_timeout", .75),
                 (2, "day", "void_crystal", "", 0d),
+                (2, "dusk", "crate_offer", "Afternoon:Minigun", 1d),
+                (2, "dusk", "crate_offer", "Afternoon:Railgun", 2d),
                 (2, "dusk", "crate", "Afternoon:Railgun", 2d),
+                (2, "dusk", "crate_offer", "Afternoon:Minigun", 1d),
                 (2, "dusk", "crate", "Afternoon:left", 0d),
                 (3, "day", "hole_check", "start", .5),
             }), "one row each, in order");

@@ -77,27 +77,49 @@ namespace AnomalyArena
         [Range(0f, 1f), Tooltip("With open-ended evenings, how far the afternoon's light turns toward dusk's end (0 = full daylight, 1 = duskDarkness and the evening light): the afternoon is a rest and mining time in daylight, and the dark comes when the player goes into the night.")]
         public float afternoonLight = .25f;
         [Min(1f), Tooltip("Radius of a placed mining lamp, in cells.")] public float lampRadius = 6.5f;
-        [Min(1f)] public float baseLightRadius = 11f;
+        [Min(1f), Tooltip("Radius of the base's light at night, in cells: its floodlights light this circle and no shadow comes into it.")] public float baseLightRadius = 15f;
         [Min(0f), Tooltip("The player's own faint glow: shows the feet, does not scare shadows, does not allow mining.")] public float playerGlowRadius = 2.4f;
         [Min(0), Tooltip("Mining lamps the base hands out each night.")] public int freeLampsPerNight = 3;
-        [Min(1f), Tooltip("Seconds a lamp holds out against one shadow in a region overrun by shadows.")] public float lampHp = 4f;
+        [Min(1f), Tooltip("How long a lamp lasts once a crowd of shadows has gone into its light: this many seconds against two of them, less against more.")] public float lampHp = 4f;
 
         [Header("Night: shadow monsters")]
         [Tooltip("Columns and rows of regions the map is cut into for the kills-to-shadows rule.")] public Vector2Int regions = new(6, 4);
-        [Min(1f), Tooltip("Day kills in a region per shadow that region gets at night.")] public float killsPerShadow = 4f;
-        [Min(1), Tooltip("A region with this many shadows is overrun: its shadows break lamps there and chase into the light.")] public int overrunShadows = 3;
-        [Min(1)] public int maxShadowsPerRegion = 6;
-        [Min(1)] public int maxShadows = 40;
+        [Min(1f), Tooltip("Day kills in a region per shadow those kills raise there at night; each is the dark double of a monster killed there.")] public float killsPerShadow = 4f;
+        [Min(1), Tooltip("Shadows that make a crowd: that many at one lamp go into its light together and put it out, and a region holding that many sounds and looks its darkest.")] public int overrunShadows = 5;
+        [Min(1), Tooltip("Most shadows the kills raise in one region.")] public int maxShadowsPerRegion = 8;
+        [Min(1), Tooltip("Most shadows on the whole map.")] public int maxShadows = 72;
+        [Min(0f), Tooltip("Shadows every region holds at night whatever was killed there, so the whole map has them.")] public float ambientShadows = 1f;
+        [Min(0f), Tooltip("More of those for each day after the first (the sum is rounded). 0: the neighbouring regions' shadows alone must not make a crowd at a lamp, or no place is safe to mine.")] public float ambientShadowsPerDay = 0f;
         [Min(0)] public int tutorialShadows = 4;
-        [Min(0f)] public float shadowSpeed = 3.4f;
-        [Min(0f)] public float overrunShadowSpeed = 4.4f;
-        [Min(0f), Tooltip("Cells within which a shadow notices a player standing in the dark.")] public float shadowSense = 9f;
+        [Min(0f), Tooltip("Cells from the player at which the tutorial night's shadows stop: they follow and watch, and never touch.")] public float tutorialShadowKeep = 5f;
+        [Min(0f), Tooltip("A shadow's speed while it only roams.")] public float shadowSpeed = 3.4f;
+        [Min(.1f), Tooltip("A hunting shadow's speed as a share of the player's walking speed: above 1, so only a sprint opens the distance.")] public float shadowChaseFactor = 1.12f;
+        [Min(0f), Tooltip("Cells within which a shadow notices the player and comes: to the edge of the light the player stands in, or all the way in the dark.")] public float shadowSense = 26f;
+        [Min(1f), Tooltip("Cells from the place a shadow rose at within which it hunts: a player farther from that place is left alone, and a shadow on the hunt turns back. It keeps the danger in and beside the regions where the kills fell, so the regions far from them can still be mined.")] public float shadowTerritory = 16f;
+        [Min(0f), Tooltip("Cells past a lamp's edge within which a shadow counts toward the crowd at that lamp.")] public float lampGatherBand = 3.5f;
         [Range(0f, 1f), Tooltip("Share of the player's max HP one shadow touch takes.")] public float shadowHitShare = .15f;
         [Min(.1f)] public float shadowHitInterval = .9f;
         [Range(0f, 1f), Tooltip("Share of tonight's haul (everything mined or picked up since dusk, or since the last base visit that night) lost when the player dies at night; 1 = all of it, the rule since 2026-11-06. The base's stock, the rooms and the ship stay, and the next day starts as usual.")]
         public float nightDeathLoss = 1f;
         [Min(.5f), Tooltip("Seconds the fallen player lies in the dark (the death animation plays) before waking at the base.")]
         public float nightDeathSeconds = 2.8f;
+
+        /// <summary>Shadows a region holds at night whatever was killed there, on this day.</summary>
+        public int AmbientShadows(int day) => Mathf.Max(0, Mathf.RoundToInt(ambientShadows + ambientShadowsPerDay * Mathf.Max(0, day - 1)));
+        /// <summary>Shadows this many kills raise in their region.</summary>
+        public int KillShadows(int kills) => Mathf.Clamp(Mathf.FloorToInt(kills / Mathf.Max(1f, killsPerShadow)), 0, maxShadowsPerRegion);
+        /// <summary>A hunting shadow's speed against a player who walks at this speed: a little faster, never slower than it roams.</summary>
+        public float ShadowChaseSpeed(float playerWalkSpeed) => Mathf.Max(shadowSpeed, playerWalkSpeed * shadowChaseFactor);
+        /// <summary>This many shadows at one lamp are a crowd: they go into its light.</summary>
+        public bool Crowd(int shadows) => shadows >= overrunShadows;
+        /// <summary>A shadow hunts a player it can sense who stands inside its territory, the ground round the place it rose at.</summary>
+        public bool ShadowHunts(float shadowToPlayer, float homeToPlayer) => shadowToPlayer <= shadowSense && homeToPlayer <= shadowTerritory;
+        /// <summary>Two regions of a grid cols wide touch: side by side or corner to corner, never one and the same.</summary>
+        public static bool RegionsTouch(int a, int b, int cols)
+        {
+            cols = Mathf.Max(1, cols);
+            return a != b && Mathf.Abs(a % cols - b % cols) <= 1 && Mathf.Abs(a / cols - b / cols) <= 1;
+        }
 
         [Header("Base")]
         [Min(1f), Tooltip("Base max HP at durability level 1; each level multiplies it by baseHpGrowth (explosive growth, like the enemy pressure).")]
