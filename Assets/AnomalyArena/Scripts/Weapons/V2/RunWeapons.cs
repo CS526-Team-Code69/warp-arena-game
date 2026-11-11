@@ -310,18 +310,9 @@ namespace AnomalyArena
             if(w!=null){if(w.hooked&&!BattlefieldFrozen(w.hooked.gameObject))Fling(w);CancelInput(w);}
             ActiveIndex=1-ActiveIndex;
         }
-        public void HandleInput(bool pressed, bool held, bool released, int handIndex = -1)
+        public void HandleInput(bool pressed,bool held,bool released)
         {
-           // Player has control of two hand slot weapons with their own triggers. - H.
-            if (handIndex < -1) return;
-
-            if (handIndex >= 0 &&
-                (Hand == null || handIndex >= Hand.Length))
-            {
-                return;
-            }
-           var w = handIndex == -1 ? Active : Hand[handIndex];
-            
+            var w=Active;
             if(!CanUseHand){CancelInput(w,true);return;}
             inputHeld=held;if(w==null||HandHookBusy)return;
             if(pressed&&w.form==WeaponForm.PlasmaLauncher&&w.variant==0&&w.Has(UpgradeAxis.Twist)&&w.stickyActor&&!BattlefieldFrozen(w.stickyActor.gameObject)&&w.stickyActor.TryManualDetonate())return;

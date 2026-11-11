@@ -46,81 +46,39 @@ namespace AnomalyArena
 
         static bool Lets(PlayerAct act) => InputGate == null || InputGate(act);
 
-       void Update()
+        void Update()
         {
             if (!IsAlive || GM == null) return;
-
             UpdateAim();
 
             bool playing = GM.CanPlayerMove;
             bool walking = playing && Lets(PlayerAct.Move);
-
             var kb = Keyboard.current;
             var mouse = Mouse.current;
-
             moveInput = Vector2.zero;
             moveFollowsScreen = false;
-
             if (walking && kb != null)
             {
                 if (kb.wKey.isPressed) moveInput.y += 1f;
                 if (kb.sKey.isPressed) moveInput.y -= 1f;
                 if (kb.dKey.isPressed) moveInput.x += 1f;
                 if (kb.aKey.isPressed) moveInput.x -= 1f;
-
-                if (moveInput.sqrMagnitude > 1f)
-                    moveInput.Normalize();
-
+                if (moveInput.sqrMagnitude > 1f) moveInput.Normalize();
                 moveFollowsScreen = true;
             }
-
-            if (walking && debugMoveHeld.HasValue)
-            {
-                moveInput = Vector2.ClampMagnitude(
-                    debugMoveHeld.Value, 1f);
-
-                moveFollowsScreen = false;
-            }
+            if (walking && debugMoveHeld.HasValue) { moveInput = Vector2.ClampMagnitude(debugMoveHeld.Value, 1f); moveFollowsScreen = false; }
 
             TickSprint(playing && Lets(PlayerAct.Sprint), kb);
-
-            if (!playing || mouse == null || !GM.CanUseCombatInput)
-                return;
-            // Each hand's weapon is handled separately, so that each weapon can be fired from one while the other is in cooldown.
+            if (!playing || mouse == null || !GM.CanUseCombatInput) return;
             var inventory = GM.runWeapons;
-            if (!inventory) return;
-
-            if (ActionsBlocked)
-            {
-                // HandleInput cancels each weapon through CanUseHand.
-                // Do not simulate a release that could fire a charged shot.
-                inventory.HandleInput(false, false, false, handIndex: 0);
-                inventory.HandleInput(false, false, false, handIndex: 1);
-                return;
-            }
-
-            if (!Lets(PlayerAct.Fire))
-            {
-                inventory.HandleInput(false, false, false, handIndex: 0);
-                inventory.HandleInput(false, false, false, handIndex: 1);
-                return;
-            }
-
-            // Weapon 1: left mouse button.
-            inventory.HandleInput(
-                mouse.leftButton.wasPressedThisFrame,
-                mouse.leftButton.isPressed,
-                mouse.leftButton.wasReleasedThisFrame,
-                handIndex: 0);
-
-            // Weapon 2: right mouse button.
-            inventory.HandleInput(
-                mouse.rightButton.wasPressedThisFrame,
-                mouse.rightButton.isPressed,
-                mouse.rightButton.wasReleasedThisFrame,
-                handIndex: 1);
-
-       }
+            if (ActionsBlocked) { inventory.HandleInput(false, false, true); return; }
+            if (mouse.rightButton.wasPressedThisFrame && Lets(PlayerAct.Switch)) inventory.Switch();
+            // No unarmed attack: an empty hand slot does nothing. Held back by the gate, the weapon sees the button up (a "release" here
+            // would fire a charged shot).
+            if (inventory.Active == null) return;
+            if (Lets(PlayerAct.Fire)) inventory.HandleInput(mouse.leftButton.wasPressedThisFrame, mouse.leftButton.isPressed, mouse.leftButton.wasReleasedThisFrame);
+            else inventory.HandleInput(false, false, false);
+        }
 
         /// <summary>Sprint: while Shift is held and the player is moving, speed ×2 and stamina drains; it recovers when not sprinting.</summary>
         void TickSprint(bool playing, Keyboard kb)
