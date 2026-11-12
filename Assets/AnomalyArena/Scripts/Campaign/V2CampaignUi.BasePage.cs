@@ -116,14 +116,21 @@ namespace AnomalyArena
                     "Deposit alloy"),
                 RepairStationAction.DepositAlloy);
 
+             // The current campaign stores fuel in synthesis batches.
+            // Convert those batches into deposited fuel cells for display.
+            int depositedFuel = Mathf.Clamp(
+                campaign.Fuel * campaign.DarkPerFuel,
+                0,
+                100);
+
             AddRepairStationButton(
                 1,
                 ArenaText.Pair(
                     "反物质燃料存入",
                     "ANTIMATTER FUEL DEPOSIT"),
                 ArenaText.Pair(
-                    "为飞船加注燃料 · 容量 100",
-                    "Load rocket fuel · Capacity: 100"),
+                    $"燃料：{depositedFuel}/100",
+                    $"Fuel: {depositedFuel}/100"),
                 RepairStationAction.DepositFuel);
 
             AddRepairStationButton(
@@ -160,8 +167,6 @@ namespace AnomalyArena
             string description,
             RepairStationAction action)
         {
-            // Five buttons occupy 546 units of the existing
-            // 550-unit action column.
             const float buttonHeight = 98f;
             const float buttonGap = 14f;
 
@@ -172,11 +177,31 @@ namespace AnomalyArena
                     0f,
                     -index * (buttonHeight + buttonGap)),
                 new Vector2(ActionsWidth, buttonHeight),
-                () =>
+             () =>
+            {
+                if (action == RepairStationAction.DepositFuel)
+                {
+                    bool deposited = campaign.TrySynthesiseFuel();
+
+                    if (!deposited)
+                    {
+                        Flash(campaign.FuelFull
+                        ? ArenaText.Pair(
+                            "燃料已满：100/100",
+                            "FUEL READY · 100/100")
+                        : ArenaText.Pair(
+                            $"燃料：{campaign.Fuel}/100",
+                            $"Fuel: {campaign.Fuel}/100"));
+                    }
+                }
+                else
                 {
                     RepairStationActionRequested?.Invoke(action);
-                },
-                false);
+                }
+
+                RefreshBasePanel(true);
+            },
+              false);
 
             var rect = (RectTransform)button.transform;
 
@@ -665,8 +690,10 @@ namespace AnomalyArena
             rect.anchorMax = new Vector2(0f, .5f);
             rect.pivot = new Vector2(0f, .5f);
             rect.anchoredPosition = new Vector2(x, 0f);
-            rect.sizeDelta = new Vector2(iconSize, iconSize);
-            rect.localScale = Vector3.one;
+            rect.sizeDelta = i == 2
+                ? new Vector2(51.6891f, 51.5f)
+                : new Vector2(iconSize, iconSize);
+                rect.localScale = Vector3.one;
 
             icon.type = Image.Type.Simple;
             icon.preserveAspect = true;

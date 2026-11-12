@@ -48,11 +48,15 @@ namespace AnomalyArena
         int fuel;
         public bool EngineFixed => engineFixed;
         public bool ArmorFixed => armorFixed;
+        // anti-matter fuel tracker connected to rocket base UI. - H.
         public int Fuel => fuel;
-        /// <summary>Fuel units that fill the tank and the dark matter one takes: since 2026-11-10 a full tank is 100 dark matter (CampaignRules.fuelTankDark).</summary>
-        public int FuelUnits => rules.FuelUnitsFull;
-        public int DarkPerFuel => rules.DarkPerFuel;
+
+        // One antimatter equals one fuel cell.
+        public int FuelUnits => 100;
+        public int DarkPerFuel => 1;
         public bool FuelFull => fuel >= FuelUnits;
+        public bool CanSynthesiseFuel => Running && !BaseDestroyed && !FuelFull && Dark > 0;
+   
         float shieldTopUpAt;
 
         Transform worldRoot, baseRoot, shipRoot;
@@ -1153,8 +1157,7 @@ namespace AnomalyArena
         bool ShipWorks(int level) => rooms[(int)CampaignRoom.Ship].level >= level && !rooms[(int)CampaignRoom.Ship].damaged;
         public bool CanRepairEngine => !engineFixed && ShipWorks(1);
         public bool CanRepairArmor => !armorFixed && ShipWorks(2);
-        public bool CanSynthesiseFuel => !FuelFull && ShipWorks(3);
-
+            
         public bool TryRepairEngine()
         {
             if (!CanRepairEngine || !TrySpend(rules.engineRepair)) return false;
@@ -1173,9 +1176,27 @@ namespace AnomalyArena
 
         public bool TrySynthesiseFuel()
         {
-            if (!CanSynthesiseFuel || !TrySpend(new CampaignCost(0, 0, DarkPerFuel))) return false;
-            fuel++; RefreshShip();
-            Bought("fuel", $"{fuel}/{FuelUnits}", CampaignRoom.Ship, new CampaignCost(0, 0, DarkPerFuel));
+            if (!CanSynthesiseFuel) return false;
+
+            int remainingCapacity = FuelUnits - fuel;
+            int amount = Mathf.Min(Dark, remainingCapacity);
+
+            if (amount <= 0) return false;
+
+            // The existing Dark inventory holds the nighttime resource.
+            var cost = new CampaignCost(0, 0, amount);
+
+            if (!TrySpend(cost)) return false;
+
+            fuel += amount;
+            RefreshShip();
+
+            Bought(
+                "fuel",
+                $"Deposited {amount}; tank {fuel}/{FuelUnits}",
+                CampaignRoom.Ship,
+                cost);
+
             return true;
         }
 
