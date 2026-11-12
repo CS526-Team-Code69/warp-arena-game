@@ -938,20 +938,29 @@ namespace AnomalyArena
 
         // While the scene loads, activates and configures one pooled enemy of each kind once and parks it again, so the first
         // batch that brings a kind does not also pay that kind's one-time setup in the frame it spawns.
+        /// <summary>True while PrewarmPool wakes and parks enemies at load. Nothing the player has not met is recorded then: the
+        /// collection lists a monster only once one has really appeared.</summary>
+        public static bool Prewarming { get; private set; }
+
         void PrewarmPool()
         {
             if (preparedEnemies == null) return;
             BuildPoolIndex();
-            foreach (var pair in poolByDefinition)
+            Prewarming = true;
+            try
             {
-                Enemy sample = null;
-                foreach (var enemy in pair.Value)
-                    if (enemy && !enemy.gameObject.activeSelf && !enemy.CorpseActive && !aliveSet.Contains(enemy)) { sample = enemy; break; }
-                if (!sample) continue;
-                sample.gameObject.SetActive(true);
-                sample.Configure(pair.Key, 1f, false);
-                sample.gameObject.SetActive(false);
+                foreach (var pair in poolByDefinition)
+                {
+                    Enemy sample = null;
+                    foreach (var enemy in pair.Value)
+                        if (enemy && !enemy.gameObject.activeSelf && !enemy.CorpseActive && !aliveSet.Contains(enemy)) { sample = enemy; break; }
+                    if (!sample) continue;
+                    sample.gameObject.SetActive(true);
+                    sample.Configure(pair.Key, 1f, false);
+                    sample.gameObject.SetActive(false);
+                }
             }
+            finally { Prewarming = false; }
         }
 
         void AddToPool(Enemy enemy, EnemyDefinition data)

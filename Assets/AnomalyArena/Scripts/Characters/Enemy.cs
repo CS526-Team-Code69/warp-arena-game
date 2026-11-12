@@ -327,7 +327,7 @@ namespace AnomalyArena
             }
 
             definition = data;
-            ArenaCodexProgress.DiscoverEnemy(data.kind);
+            if (!WaveManager.Prewarming) ArenaCodexProgress.DiscoverEnemy(data.kind);
             if (GM && GM.waves) GM.waves.OnEnemyConfigured(this);
             Elite = elite;
             Mini = mini;
