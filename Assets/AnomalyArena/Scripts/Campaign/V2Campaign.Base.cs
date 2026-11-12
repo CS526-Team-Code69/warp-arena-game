@@ -1169,11 +1169,17 @@ namespace AnomalyArena
             return true;
         }
 
+        /// <summary>Synthesises as many fuel units as the dark matter held pays for, up to a full tank, in one press. Each unit still
+        /// costs DarkPerFuel from the rules.</summary>
         public bool TrySynthesiseFuel()
         {
-            if (!CanSynthesiseFuel || !TrySpend(new CampaignCost(0, 0, DarkPerFuel))) return false;
-            fuel++; RefreshShip();
-            Bought("fuel", $"{fuel}/{FuelUnits}", CampaignRoom.Ship, new CampaignCost(0, 0, DarkPerFuel));
+            if (!CanSynthesiseFuel) return false;
+            int units = Mathf.Min(FuelUnits - fuel, Dark / DarkPerFuel);
+            if (units <= 0) return false;
+            var cost = new CampaignCost(0, 0, units * DarkPerFuel);
+            if (!TrySpend(cost)) return false;
+            fuel += units; RefreshShip();
+            Bought("fuel", $"{fuel}/{FuelUnits}", CampaignRoom.Ship, cost);
             return true;
         }
 

@@ -178,7 +178,7 @@ namespace AnomalyArena
                         actions.Add((ArenaText.Pair("修复装甲", "Repair the armor"), r.armorRepair, c.TryRepairArmor,
                             current.level < 2 ? ArenaText.Pair("飞船发射区 2 级才能修装甲", "Needs Ship Launch Bay level 2") : Why(r.armorRepair), c.CanRepairArmor));
                     if (!c.FuelFull)
-                        actions.Add((ArenaText.Pair($"合成反物质燃料 +1（{c.Fuel}/{c.FuelUnits}）", $"Synthesize antimatter fuel +1 ({c.Fuel}/{c.FuelUnits})"), new CampaignCost(0, 0, c.DarkPerFuel), c.TrySynthesiseFuel,
+                        actions.Add((ArenaText.Pair($"合成反物质燃料（{c.Fuel}/{c.FuelUnits}）", $"Synthesize antimatter fuel ({c.Fuel}/{c.FuelUnits})"), new CampaignCost(0, 0, c.DarkPerFuel), c.TrySynthesiseFuel,
                             current.level < 3 ? ArenaText.Pair("飞船发射区 3 级才能合成燃料", "Needs Ship Launch Bay level 3") : ArenaText.Pair("暗物质不够", "Not enough dark matter"), c.CanSynthesiseFuel));
                     actions.Add((ArenaText.Pair($"制造矿灯（现有 {c.LampStock}）", $"Craft a mining lamp ({c.LampStock} held)"), new CampaignCost(r.lampCost), c.TryCraftLamp,
                         current.damaged ? ArenaText.Pair("飞船发射区损坏", "The Ship Launch Bay is broken") : ArenaText.Pair("合金不够", "Not enough alloy"), c.LampsCraftable));
@@ -346,24 +346,33 @@ namespace AnomalyArena
         {
             var strip = new CurrencyStrip();
             float step = named ? StripStepNamed : StripStepPlain;
-            var row = MakeRect("Currencies", parent, anchor, anchor, position, new Vector2(step * 3f, named ? 60f : 48f));
+            // One icon size for all three, so they read as equals. The dark-matter picture has more empty margin than the other two,
+            // so it is drawn larger by that margin to look the same size.
+            float iconSize = named ? 44f : 36f, textLeft = iconSize + 10f;
+            var row = MakeRect("Currencies", parent, anchor, anchor, position, new Vector2(step * 3f, named ? 64f : 52f));
             row.pivot = new Vector2(1f, 1f);
             for (int i = 0; i < 3; i++)
             {
                 float x = i * step;
-                strip.icons[i] = Icon(row, new Vector2(0f, .5f), new Vector2(x, 0f), named ? 46f : 36f);
+                var icon = Icon(row, new Vector2(0f, .5f), new Vector2(x, 0f), iconSize);
+                if (i == 2) icon.rectTransform.sizeDelta = Vector2.one * (iconSize * DarkIconScale);
+                icon.preserveAspect = true;
+                strip.icons[i] = icon;
                 strip.amounts[i] = Label("Amount" + i, row, "", named ? 30 : 24, Color.white, TextAnchor.MiddleLeft);
                 strip.amounts[i].fontStyle = FontStyle.Bold;
                 strip.amounts[i].horizontalOverflow = HorizontalWrapMode.Overflow;
                 // Named: the amount on top and the currency's name under it, both beside the icon, so a name is never read as the next icon's.
-                Anchor(strip.amounts[i].rectTransform, new Vector2(0f, .5f), new Vector2(x + (named ? 56f : 44f), named ? 9f : 0f), new Vector2(120f, 36f), new Vector2(0f, .5f));
+                Anchor(strip.amounts[i].rectTransform, new Vector2(0f, .5f), new Vector2(x + textLeft, named ? 9f : 0f), new Vector2(step - textLeft, 36f), new Vector2(0f, .5f));
                 if (!named) continue;
                 strip.names[i] = Label("Name" + i, row, "", 15, Faint, TextAnchor.MiddleLeft);
                 strip.names[i].horizontalOverflow = HorizontalWrapMode.Overflow;
-                Anchor(strip.names[i].rectTransform, new Vector2(0f, .5f), new Vector2(x + 56f, -17f), new Vector2(step - 60f, 20f), new Vector2(0f, .5f));
+                Anchor(strip.names[i].rectTransform, new Vector2(0f, .5f), new Vector2(x + textLeft, -17f), new Vector2(step - textLeft, 20f), new Vector2(0f, .5f));
             }
             return strip;
         }
+
+        /// <summary>How much larger the dark-matter icon is drawn than the other two so that all three look the same size.</summary>
+        const float DarkIconScale = 51.7f / 44f;
 
         void RefreshCurrencyStrip(CurrencyStrip strip)
         {
