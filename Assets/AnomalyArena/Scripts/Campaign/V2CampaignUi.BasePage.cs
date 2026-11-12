@@ -20,19 +20,194 @@ namespace AnomalyArena
         // (BodyBottom from the page's top) and the ways out.
         const float PageWidth = 1520f, PageHeight = 860f, PageHeader = 74f, PageTop = 98f;
         const float TabsWidth = 320f, RoomTabHeight = 112f, RoomTabGap = 14f;
-        const float MiddleLeft = 352f, MiddleWidth = 716f, PictureHeight = 316f, BodyBottom = 648f;
+        const float MiddleLeft = 0f, MiddleWidth = 1040f, PictureHeight = 280f, BodyBottom = 648f;
         const float ActionsWidth = 420f, ActionHeight = 84f, ActionGap = 14f, ActionHeightTight = 70f, ActionGapTight = 10f;
         const float LeaveHeight = 64f, LeaveWidth = 440f, LeaveGap = 20f;
         const float StripStepNamed = 200f, StripStepPlain = 132f;
         static readonly Color PageBack = new(.02f, .04f, .08f, 1f);
 
-        CampaignRoom tab = CampaignRoom.Control;
+        CampaignRoom tab = CampaignRoom.Ship;
         RectTransform basePage, tabColumn, actionColumn, leaveRow, roomSideBack;
         Text baseHeading, roomTitle, roomSide, roomBody;
         RawImage roomPicture;
         CurrencyStrip baseStrip;
         readonly List<GameObject> actionButtons = new();
         int panelVersion = -1;
+
+       // new buttons in the repair station. - H.
+        public enum RepairStationAction
+        {
+            DepositAlloy,
+            DepositFuel,
+            DepositCore,
+            UpgradeLaserTurret,
+            UpgradeJetpack
+        }
+        // Gameplay handlers will use this to record the player's selection. - H.
+        public event Action<RepairStationAction> RepairStationActionRequested;
+        // UI fix - H.
+        void FitRepairStation()
+        {
+            if (!basePage || !baseScreen) return;
+
+            Rect available = baseScreen.rect;
+
+            if (available.width <= 0f || available.height <= 0f)
+                return;
+
+            const float margin = 24f;
+
+            float scaleX =
+                Mathf.Max(1f, available.width - margin * 2f) / PageWidth;
+
+            float scaleY =
+                Mathf.Max(1f, available.height - margin * 2f) / PageHeight;
+
+            float scale = Mathf.Min(1f, Mathf.Min(scaleX, scaleY));
+
+            basePage.anchorMin = new Vector2(.5f, .5f);
+            basePage.anchorMax = new Vector2(.5f, .5f);
+            basePage.pivot = new Vector2(.5f, .5f);
+            basePage.anchoredPosition = Vector2.zero;
+            basePage.localScale = Vector3.one * scale;
+        }
+
+        // Builds five buttons for the repair station. - H.
+        void BuildRepairStationButtons()
+        {
+            // Remove the old buttons before rebuilding.
+            foreach (var button in actionButtons)
+            {
+                if (!button) continue;
+
+                button.SetActive(false);
+                Destroy(button);
+            }
+
+            actionButtons.Clear();
+
+            // One station, no room tabs.
+            tabColumn.gameObject.SetActive(false);
+            roomSideBack.gameObject.SetActive(false);
+
+            baseHeading.text = ArenaText.Pair(
+                "维修站",
+                "REPAIR STATION");
+
+            roomTitle.text = ArenaText.Pair(
+                "火箭维修站",
+                "ROCKET REPAIR STATION");
+
+            roomBody.text = ArenaText.Pair(
+                "白天：保卫飞船并采集合金。\n" +
+                "夜晚：采集反物质，为飞船提供燃料。\n" +
+                "击败首领，取回反应堆核心。\n" +
+                "激光炮塔和喷气背包每次解锁或升级需要 50 合金。",
+
+                "DAY: Defend the rocket and gather alloy.\n" +
+                "NIGHT: Gather antimatter for rocket fuel.\n\n" +
+                "Main Objective: Recover the reactor core and fuel your rocket.\n");
+              
+            AddRepairStationButton(
+                0,
+                ArenaText.Pair("合金储库", "ALLOY VAULT"),
+                ArenaText.Pair(
+                    "存入携带的全部合金",
+                    "Deposit alloy"),
+                RepairStationAction.DepositAlloy);
+
+            AddRepairStationButton(
+                1,
+                ArenaText.Pair(
+                    "反物质燃料存入",
+                    "ANTIMATTER FUEL DEPOSIT"),
+                ArenaText.Pair(
+                    "为飞船加注燃料 · 容量 100",
+                    "Load rocket fuel · Capacity: 100"),
+                RepairStationAction.DepositFuel);
+
+            AddRepairStationButton(
+                2,
+                ArenaText.Pair(
+                    "反应堆核心安装",
+                    "REACTOR CORE MISSING"),
+                ArenaText.Pair(
+                    "安装从首领处取得的核心",
+                    "Reactor Core required for launch"),
+                RepairStationAction.DepositCore);
+
+            AddRepairStationButton(
+                3,
+                ArenaText.Pair("激光炮塔", "LASER TURRET"),
+                ArenaText.Pair(
+                    "解锁或升级 · 50 合金",
+                    "Unlock · 50 alien energy"),
+                RepairStationAction.UpgradeLaserTurret);
+
+            AddRepairStationButton(
+                4,
+                ArenaText.Pair("修复喷气背包", "JETPACK FIX"),
+                ArenaText.Pair(
+                    "解锁或升级 · 50 合金",
+                    "Unlock · 50 alien energy"),
+                RepairStationAction.UpgradeJetpack);
+        }
+
+        // Adds the buttons and the descriptions. - H 
+        void AddRepairStationButton(
+            int index,
+            string title,
+            string description,
+            RepairStationAction action)
+        {
+            // Five buttons occupy 546 units of the existing
+            // 550-unit action column.
+            const float buttonHeight = 98f;
+            const float buttonGap = 14f;
+
+            var button = MakeButton(
+                actionColumn,
+                title + "\n<size=16>" + description + "</size>",
+                new Vector2(
+                    0f,
+                    -index * (buttonHeight + buttonGap)),
+                new Vector2(ActionsWidth, buttonHeight),
+                () =>
+                {
+                    RepairStationActionRequested?.Invoke(action);
+                },
+                false);
+
+            var rect = (RectTransform)button.transform;
+
+            rect.anchorMin = new Vector2(1f, 1f);
+            rect.anchorMax = new Vector2(1f, 1f);
+            rect.pivot = new Vector2(1f, 1f);
+
+            var label = button.GetComponentInChildren<Text>();
+
+            if (label)
+            {
+                label.supportRichText = true;
+                label.alignment = TextAnchor.MiddleCenter;
+                label.horizontalOverflow = HorizontalWrapMode.Wrap;
+                label.verticalOverflow = VerticalWrapMode.Truncate;
+                label.resizeTextForBestFit = true;
+                label.resizeTextMinSize = 16;
+                label.resizeTextMaxSize = 24;
+                label.lineSpacing = 1.1f;
+
+                Stretch(
+                    label.rectTransform,
+                    16f,
+                    10f,
+                    16f,
+                    10f);
+            }
+
+            button.interactable = true;
+            actionButtons.Add(button.gameObject);
+        }
 
         void BuildBasePanel()
         {
@@ -75,11 +250,19 @@ namespace AnomalyArena
         {
             ApplyFont();
             panelVersion = -1;
-            tab = CampaignRoom.Control;
+            tab = CampaignRoom.Ship;
             baseScreen.gameObject.SetActive(true);
             RefreshBasePanel(true);
         }
 
+        // Retained for compatibility with existing callers.
+        public void ShowTab(CampaignRoom room)
+        {
+            if (!BaseOpen) return;
+
+            tab = CampaignRoom.Ship;
+            RefreshBasePanel(true);
+    }
         public void HideBase() { baseScreen.gameObject.SetActive(false); }
 
         /// <summary>Shows the base page again on the tab it had (after a bought weapon's card was closed).</summary>
@@ -88,14 +271,6 @@ namespace AnomalyArena
             ApplyFont();
             panelVersion = -1;
             baseScreen.gameObject.SetActive(true);
-            RefreshBasePanel(true);
-        }
-
-        /// <summary>Opens one room's tab of the open base page, as its tab button does (also for automated checks).</summary>
-        public void ShowTab(CampaignRoom room)
-        {
-            if (!BaseOpen) return;
-            tab = room;
             RefreshBasePanel(true);
         }
 
@@ -110,129 +285,190 @@ namespace AnomalyArena
             }
             RefreshBasePanel(true);
         }
-
-        void RefreshBasePanel(bool rebuild)
+        
+       // Only one tab called the repair station
+       void RefreshBasePanel(bool rebuild)
         {
+            FitRepairStation();
+
             var c = campaign;
             var r = c.rules;
-            baseHeading.text = c.BaseAfterTutorial ? ArenaText.Pair("基地 · 第一次进入", "BASE · FIRST VISIT")
-                : c.BaseAtDawn ? ArenaText.Pair($"基地 · 第 {c.Day} 晚过后，天亮了", $"BASE · DAWN AFTER NIGHT {c.Day}")
-                : c.BaseFromDusk ? ArenaText.Pair($"基地 · 第 {c.Day} 天下午", $"BASE · DAY {c.Day}, AFTERNOON")
-                : ArenaText.Pair($"基地 · 第 {c.Day} 天夜里", $"BASE · NIGHT {c.Day}");
+
+            baseHeading.text = ArenaText.Pair(
+                "维修站",
+                "REPAIR STATION");
+
+            tab = CampaignRoom.Ship;
             RefreshCurrencyStrip(baseStrip);
+
             int version = Hash(c);
-            if (!rebuild && version == panelVersion) return;
+
+            if (!rebuild && version == panelVersion)
+                return;
+
             panelVersion = version;
 
-            // Tabs: the room's icon, its name, its state.
-            foreach (Transform child in tabColumn) Destroy(child.gameObject);
-            for (int i = 0; i < 4; i++)
-            {
-                var room = (CampaignRoom)i;
-                var state = c.Room(room);
-                string level = room == CampaignRoom.Control ? ArenaText.Pair($"耐久 {c.Durability} · 护盾 {c.ShieldLevel}", $"Hull {c.Durability} · Shield {c.ShieldLevel}")
-                    : state.level <= 0 ? ArenaText.Pair("未建造", "Not built") : ArenaText.Pair($"{state.level} / 3 级", $"Level {state.level} / 3");
-                if (state.damaged) level += ArenaText.Pair(" · <color=#ff7a5a>损坏</color>", " · <color=#ff7a5a>BROKEN</color>");
-                AddRoomTab(i, room, V2Campaign.RoomName(room), level);
-            }
+            // Hide room navigation and use the rocket preview.
+            tabColumn.gameObject.SetActive(false);
 
-            // Picture, name, the side of the base, the lines that matter.
-            ShowRoomPicture(Picture(tab));
-            ShowRoomBlocks(tab, !Art.Enabled && !roomPicture.texture);
-            var current = c.Room(tab);
-            roomTitle.text = V2Campaign.RoomName(tab) + (current.damaged ? ArenaText.Pair("（损坏）", " (BROKEN)") : "");
-            roomTitle.color = current.damaged ? Warn : Accent;
-            roomSide.text = SideNote(tab);
-            roomSideBack.gameObject.SetActive(roomSide.text.Length > 0);
-            roomBody.text = RoomText(tab);
+            ShowRoomPicture(Picture(CampaignRoom.Ship));
+            ShowRoomBlocks(CampaignRoom.Ship, false);
 
-            // Actions: a title each, and the price with the currencies' icons.
-            foreach (var go in actionButtons) Destroy(go);
+            roomTitle.text = ArenaText.Pair(
+                "火箭维修站",
+                "ROCKET REPAIR STATION");
+
+            roomTitle.color = Accent;
+            roomSide.text = "";
+            roomSideBack.gameObject.SetActive(false);
+
+            // Existing fuel is stored in synthesis batches.
+            // Display the equivalent fuel amount without changing that logic.
+            int loadedFuel = c.Fuel * c.DarkPerFuel;
+            int fuelCapacity = c.FuelUnits * c.DarkPerFuel;
+
+            roomBody.text = ArenaText.Pair(
+                $"外壳：{Mathf.CeilToInt(c.BaseHp)} / " +
+                $"{Mathf.CeilToInt(c.BaseMaxHp)}\n" +
+                $"引擎：{(c.EngineFixed ? "已修复" : "待修复")}   " +
+                $"装甲：{(c.ArmorFixed ? "已修复" : "待修复")}\n" +
+                $"燃料：{loadedFuel} / {fuelCapacity}\n" +
+                "收集合金以维修飞船，在夜间收集燃料原料。",
+
+                $"Hull: {Mathf.CeilToInt(c.BaseHp)} / " +
+                $"{Mathf.CeilToInt(c.BaseMaxHp)}\n" +
+                $"Engine: {(c.EngineFixed ? "repaired" : "needs repair")}   " +
+                $"Armor: {(c.ArmorFixed ? "repaired" : "needs repair")}\n" +
+                $"Fuel: {loadedFuel} / {fuelCapacity}\n" +
+                "Gather alloy for repairs and collect fuel material at night.");
+
+            BuildRepairStationButtons();
             actionButtons.Clear();
-            var actions = new List<(string label, CampaignCost? cost, Func<bool> act, string fail, bool enabled)>();
-            if (current.damaged)
-                actions.Add((tab == CampaignRoom.Control ? ArenaText.Pair("手动修复总控区", "Repair Central Control by hand") : ArenaText.Pair("修复这个区", "Repair this room"),
-                    new CampaignCost(c.RepairCost(tab)), () => c.TryRepairRoom(tab),
-                    tab != CampaignRoom.Control && !c.ControlWorks ? ArenaText.Pair("先修复总控区", "Repair Central Control first") : ArenaText.Pair("合金不够", "Not enough alloy"), true));
-            switch (tab)
+            
+            string unavailable = ArenaText.Pair(
+                "当前无法使用此服务",
+                "This service is currently unavailable");
+
+            // Hull repair.
+            bool hullDamaged = c.BaseHp < c.BaseMaxHp - .5f;
+                      
+            // Preserve the existing day/night exit flow.
+            foreach (Transform child in leaveRow)
             {
-                case CampaignRoom.Control:
-                    if (c.DurabilityCost is { } dc)
-                        actions.Add((ArenaText.Pair($"耐久升到 {c.Durability + 1} 级（基地生命 {Mathf.RoundToInt(c.BaseMaxHpAt(c.Durability + 1))}）", $"Hull to level {c.Durability + 1} (base HP {Mathf.RoundToInt(c.BaseMaxHpAt(c.Durability + 1))})"),
-                            dc, c.TryUpgradeDurability, Why(dc), c.ControlWorks));
-                    if (c.ShieldCost is { } sc)
-                        actions.Add((c.ShieldLevel == 0 ? ArenaText.Pair("解锁基地护盾", "Unlock the base shield") : ArenaText.Pair($"护盾升到 {c.ShieldLevel + 1} 级", $"Shield to level {c.ShieldLevel + 1}"),
-                            sc, c.TryUpgradeShield, Why(sc), c.ControlWorks));
-                    if (c.BaseHp < c.BaseMaxHp - .5f)
-                        actions.Add((ArenaText.Pair("修复外壳（回满）", "Repair the hull (to full)"), new CampaignCost(c.HullRepairCost), c.TryRepairHull,
-                            ArenaText.Pair("合金不够，或总控损坏", "Not enough alloy, or Central Control is broken"), c.ControlWorks));
-                    // The last day's overload is bought in the study window (V2CampaignUi.Study.cs), which says what it does.
-                    if (c.OverloadOpen) actions.Add((ArenaText.Pair("决战过载", "Final overload"), null, () => { OpenStudy("ctl.overload"); return true; }, "", true));
-                    break;
-                case CampaignRoom.Ship:
-                    if (c.NextLevelCost(tab) is { } shipCost) actions.Add((UpgradeLabel(tab), shipCost, () => c.TryUpgradeRoom(tab), UpgradeFail(tab, shipCost), c.ControlWorks && !current.damaged));
-                    if (!c.EngineFixed)
-                        actions.Add((ArenaText.Pair("修复引擎", "Repair the engine"), r.engineRepair, c.TryRepairEngine,
-                            current.level < 1 ? ArenaText.Pair("飞船发射区 1 级才能修引擎", "Needs Ship Launch Bay level 1") : Why(r.engineRepair), c.CanRepairEngine));
-                    if (!c.ArmorFixed)
-                        actions.Add((ArenaText.Pair("修复装甲", "Repair the armor"), r.armorRepair, c.TryRepairArmor,
-                            current.level < 2 ? ArenaText.Pair("飞船发射区 2 级才能修装甲", "Needs Ship Launch Bay level 2") : Why(r.armorRepair), c.CanRepairArmor));
-                    if (!c.FuelFull)
-                        actions.Add((ArenaText.Pair($"合成反物质燃料 +1（{c.Fuel}/{c.FuelUnits}）", $"Synthesize antimatter fuel +1 ({c.Fuel}/{c.FuelUnits})"), new CampaignCost(0, 0, c.DarkPerFuel), c.TrySynthesiseFuel,
-                            current.level < 3 ? ArenaText.Pair("飞船发射区 3 级才能合成燃料", "Needs Ship Launch Bay level 3") : ArenaText.Pair("暗物质不够", "Not enough dark matter"), c.CanSynthesiseFuel));
-                    actions.Add((ArenaText.Pair($"制造矿灯（现有 {c.LampStock}）", $"Craft a mining lamp ({c.LampStock} held)"), new CampaignCost(r.lampCost), c.TryCraftLamp,
-                        current.damaged ? ArenaText.Pair("飞船发射区损坏", "The Ship Launch Bay is broken") : ArenaText.Pair("合金不够", "Not enough alloy"), c.LampsCraftable));
-                    if (c.CanIgnite) actions.Add((ArenaText.Pair("启动点火程序", "Start the ignition sequence"), null, () => { c.Ignite(); return true; }, "", true));
-                    break;
-                default:
-                    if (c.NextLevelCost(tab) is { } cost) actions.Add((UpgradeLabel(tab), cost, () => c.TryUpgradeRoom(tab), UpgradeFail(tab, cost), c.ControlWorks && !current.damaged));
-                    // What the Armament Bay and the Energy Lab sell is bought in the study window (V2CampaignUi.Study.cs), which shows
-                    // every item with its rarity and numbers; the button names none of them (they show once unlocked).
-                    if (current.level >= 1)
-                        actions.Add((ArenaText.Pair("研习", "Study"), null, () => { OpenStudy(tab == CampaignRoom.Armament ? "arm.upgrade" : "eng.body"); return true; }, "", true));
-                    break;
-            }
-            for (int i = 0; i < actions.Count; i++)
-            {
-                var (label, price, act, fail, enabled) = actions[i];
-                actionButtons.Add(AddAction(i, actions.Count, label, price, act, fail, enabled));
+                child.gameObject.SetActive(false);
+                Destroy(child.gameObject);
             }
 
-            // The ways out.
-            foreach (Transform child in leaveRow) Destroy(child.gameObject);
             var leaves = new List<(string label, Action act)>();
+
             if (c.NightTimeLeft(out float seconds))
             {
-                // Since 2026-11-06 the afternoon and the night have no clock (open-ended evenings): these buttons are the only way on. An
-                // afternoon visit goes back out, into the night, or skips the night; a night visit goes back out or waits for dawn.
-                string left = c.EveningsOpenEnded ? "" : ArenaText.Pair($"（还剩 {Mathf.CeilToInt(seconds)} 秒）", $" ({Mathf.CeilToInt(seconds)} s left)");
-                string dawn = c.Day >= r.days ? (c.CanIgnite ? ArenaText.Pair("：启动点火程序", ": start the ignition") : ArenaText.Pair($"：飞船还不能起飞，开始第 {c.Day + 1} 天", $": the ship cannot leave yet, start day {c.Day + 1}"))
-                    : ArenaText.Pair($"：开始第 {c.Day + 1} 天", $": start day {c.Day + 1}");
+                string left = c.EveningsOpenEnded
+                    ? ""
+                    : ArenaText.Pair(
+                        $"（还剩 {Mathf.CeilToInt(seconds)} 秒）",
+                        $" ({Mathf.CeilToInt(seconds)} s left)");
+
+                string dawn = c.Day >= r.days
+                    ? c.CanIgnite
+                        ? ArenaText.Pair(
+                            "：启动点火程序",
+                            ": start the ignition")
+                        : ArenaText.Pair(
+                            $"：飞船还不能起飞，开始第 {c.Day + 1} 天",
+                            $": the ship cannot leave yet, start day {c.Day + 1}")
+                    : ArenaText.Pair(
+                        $"：开始第 {c.Day + 1} 天",
+                        $": start day {c.Day + 1}");
+
                 if (c.BaseFromDusk)
                 {
-                    leaves.Add((ArenaText.Pair($"回到下午{left}", $"Back to the afternoon{left}"), c.LeaveBase));
-                    leaves.Add((ArenaText.Pair("入夜", "Into the night"), c.EnterNight));
-                    leaves.Add((ArenaText.Pair("跳过夜晚，等待天亮", "Skip the night, wait for dawn") + dawn, c.WaitForDawn));
+                    leaves.Add((
+                        ArenaText.Pair(
+                            $"回到下午{left}",
+                            $"Back to the afternoon{left}"),
+                        c.LeaveBase));
+
+                    leaves.Add((
+                        ArenaText.Pair("入夜", "Into the night"),
+                        c.EnterNight));
+
+                    leaves.Add((
+                        ArenaText.Pair(
+                            "跳过夜晚，等待天亮",
+                            "Skip the night, wait for dawn") + dawn,
+                        c.WaitForDawn));
                 }
                 else
                 {
-                    leaves.Add((ArenaText.Pair($"回到夜里{left}", $"Back into the night{left}"), c.LeaveBase));
-                    leaves.Add((ArenaText.Pair("等待天亮", "Wait for dawn") + dawn, c.WaitForDawn));
+                    leaves.Add((
+                        ArenaText.Pair(
+                            $"回到夜里{left}",
+                            $"Back into the night{left}"),
+                        c.LeaveBase));
+
+                    leaves.Add((
+                        ArenaText.Pair(
+                            "等待天亮",
+                            "Wait for dawn") + dawn,
+                        c.WaitForDawn));
                 }
             }
-            else if (c.Day == 0 && !c.BaseAtDawn) leaves.Add((ArenaText.Pair("出发（夜幕降临）", "Head out (night falls)"), c.LeaveBase));
-            else if (c.Day >= r.days && c.CanIgnite) leaves.Add((ArenaText.Pair("启动点火程序", "Start the ignition sequence"), c.Ignite));
-            else leaves.Add((c.Day >= r.days ? ArenaText.Pair($"燃料未满 · 开始第 {c.Day + 1} 天", $"Tank not full · start day {c.Day + 1}") : ArenaText.Pair($"出发：开始第 {c.Day + 1} 天", $"Head out: start day {c.Day + 1}"), c.LeaveBase));
+            else if (c.Day == 0 && !c.BaseAtDawn)
+            {
+                leaves.Add((
+                    ArenaText.Pair(
+                        "出发（夜幕降临）",
+                        "Head out (night falls)"),
+                    c.LeaveBase));
+            }
+            else if (c.Day >= r.days && c.CanIgnite)
+            {
+                leaves.Add((
+                    ArenaText.Pair(
+                        "启动点火程序",
+                        "Start the ignition sequence"),
+                    c.Ignite));
+            }
+            else
+            {
+                leaves.Add((
+                    c.Day >= r.days
+                        ? ArenaText.Pair(
+                            $"燃料未满 · 开始第 {c.Day + 1} 天",
+                            $"Tank not full · start day {c.Day + 1}")
+                        : ArenaText.Pair(
+                            $"出发：开始第 {c.Day + 1} 天",
+                            $"Head out: start day {c.Day + 1}"),
+                    c.LeaveBase));
+            }
+
             for (int i = 0; i < leaves.Count; i++)
             {
                 var (label, act) = leaves[i];
-                var b = MakeButton(leaveRow, label, new Vector2((i - (leaves.Count - 1) * .5f) * (LeaveWidth + LeaveGap), 0f), new Vector2(LeaveWidth, LeaveHeight), () => act(), true);
-                var rect = (RectTransform)b.transform;
-                rect.anchorMin = rect.anchorMax = new Vector2(.5f, 0f); rect.pivot = new Vector2(.5f, 0f);
-                var text = b.GetComponentInChildren<Text>();
-                text.resizeTextMinSize = 14; text.resizeTextMaxSize = 24;
+
+                var button = MakeButton(
+                    leaveRow,
+                    label,
+                    new Vector2(
+                        (i - (leaves.Count - 1) * .5f) *
+                        (LeaveWidth + LeaveGap),
+                        0f),
+                    new Vector2(LeaveWidth, LeaveHeight),
+                    () => act(),
+                    true);
+
+                var rect = (RectTransform)button.transform;
+
+                rect.anchorMin = rect.anchorMax = new Vector2(.5f, 0f);
+                rect.pivot = new Vector2(.5f, 0f);
+
+                var text = button.GetComponentInChildren<Text>();
+                text.resizeTextMinSize = 14;
+                text.resizeTextMaxSize = 24;
             }
         }
+        
 
         // ───── The page's parts ─────
 
@@ -260,23 +496,67 @@ namespace AnomalyArena
             var line = Label("State", rect, state, 18, Soft, TextAnchor.UpperLeft);
             Stretch(line.rectTransform, left, RoomTabHeight * .5f + 4f, 10f, 10f);
         }
+   // Only the repair station.
+       GameObject AddAction(
+        int index,
+        int count,
+        string title,
+        CampaignCost? price,
+        Func<bool> act,
+        string fail,
+        bool enabled)
+    {
+        float gap = count > 6 ? 8f : ActionGapTight;
+        float available = BodyBottom - PageTop;
 
-        /// <summary>One action: its title, and under it the price with the currencies' icons (none for a free one).</summary>
-        GameObject AddAction(int index, int count, string title, CampaignCost? price, Func<bool> act, string fail, bool enabled)
+        float height = Mathf.Min(
+            ActionHeight,
+            (available - Mathf.Max(0, count - 1) * gap) /
+            Mathf.Max(1, count));
+
+        var button = MakeButton(
+            actionColumn,
+            title,
+            new Vector2(0f, -index * (height + gap)),
+            new Vector2(ActionsWidth, height),
+            () => Act(act, fail),
+            false);
+
+        var rect = (RectTransform)button.transform;
+
+        rect.anchorMin = rect.anchorMax = new Vector2(1f, 1f);
+        rect.pivot = new Vector2(1f, 1f);
+
+        button.interactable = enabled;
+
+        bool priced = price is { } cost && !cost.IsFree;
+
+        var label = button.GetComponentInChildren<Text>();
+        label.resizeTextMinSize = 13;
+        label.resizeTextMaxSize = 22;
+
+        Stretch(
+            label.rectTransform,
+            14f,
+            6f,
+            14f,
+            priced ? height * .46f : 6f);
+
+        if (priced)
         {
-            bool tight = count > 6;
-            float height = tight ? ActionHeightTight : ActionHeight, gap = tight ? ActionGapTight : ActionGap;
-            var b = MakeButton(actionColumn, title, new Vector2(0f, -index * (height + gap)), new Vector2(ActionsWidth, height), () => Act(act, fail), false);
-            var rect = (RectTransform)b.transform;
-            rect.anchorMin = rect.anchorMax = new Vector2(1f, 1f); rect.pivot = new Vector2(1f, 1f);
-            b.interactable = enabled;
-            bool priced = price is { } cost && !cost.IsFree;
-            var label = b.GetComponentInChildren<Text>();
-            label.resizeTextMinSize = 13; label.resizeTextMaxSize = 22;
-            Stretch(label.rectTransform, 14f, 6f, 14f, priced ? height * .46f : 6f);
-            if (priced) AddPrice(rect, price.Value, height * .25f, enabled);
-            return b.gameObject;
+            AddPrice(rect, price.Value, height * .25f, enabled);
+
+            var priceRow = rect.Find("Price");
+
+            if (priceRow)
+            {
+                priceRow.localScale =
+                    Vector3.one * Mathf.Min(1f, height / 76f);
+            }
         }
+
+        return button.gameObject;
+    }
 
         /// <summary>A price along the bottom of a button: each currency it asks, as its icon and the amount (red while the stock is
         /// short of it), centred. A currency whose icon is missing shows its name instead.</summary>
@@ -340,30 +620,105 @@ namespace AnomalyArena
             public readonly Text[] amounts = new Text[3], names = new Text[3];
         }
 
-        /// <summary>The three currencies in a row (energy, alloy, dark matter), each as its icon and its amount, with its name after it
-        /// where named; the row's top-right corner sits at position from the anchor.</summary>
-        CurrencyStrip BuildCurrencyStrip(RectTransform parent, Vector2 anchor, Vector2 position, bool named)
+   // equal sized icons. - H.
+    CurrencyStrip BuildCurrencyStrip(
+    RectTransform parent,
+    Vector2 anchor,
+    Vector2 position,
+    bool named)
+    {
+        const float iconSize = 44f;
+        const float iconTextGap = 10f;
+
+        var strip = new CurrencyStrip();
+
+        float step = named ? StripStepNamed : StripStepPlain;
+        float rowHeight = named ? 64f : 52f;
+        float textOffset = iconSize + iconTextGap;
+
+        var row = MakeRect(
+            "Currencies",
+            parent,
+            anchor,
+            anchor,
+            position,
+            new Vector2(step * 3f, rowHeight));
+
+        row.pivot = new Vector2(1f, 1f);
+
+        for (int i = 0; i < 3; i++)
         {
-            var strip = new CurrencyStrip();
-            float step = named ? StripStepNamed : StripStepPlain;
-            var row = MakeRect("Currencies", parent, anchor, anchor, position, new Vector2(step * 3f, named ? 60f : 48f));
-            row.pivot = new Vector2(1f, 1f);
-            for (int i = 0; i < 3; i++)
-            {
-                float x = i * step;
-                strip.icons[i] = Icon(row, new Vector2(0f, .5f), new Vector2(x, 0f), named ? 46f : 36f);
-                strip.amounts[i] = Label("Amount" + i, row, "", named ? 30 : 24, Color.white, TextAnchor.MiddleLeft);
-                strip.amounts[i].fontStyle = FontStyle.Bold;
-                strip.amounts[i].horizontalOverflow = HorizontalWrapMode.Overflow;
-                // Named: the amount on top and the currency's name under it, both beside the icon, so a name is never read as the next icon's.
-                Anchor(strip.amounts[i].rectTransform, new Vector2(0f, .5f), new Vector2(x + (named ? 56f : 44f), named ? 9f : 0f), new Vector2(120f, 36f), new Vector2(0f, .5f));
-                if (!named) continue;
-                strip.names[i] = Label("Name" + i, row, "", 15, Faint, TextAnchor.MiddleLeft);
-                strip.names[i].horizontalOverflow = HorizontalWrapMode.Overflow;
-                Anchor(strip.names[i].rectTransform, new Vector2(0f, .5f), new Vector2(x + 56f, -17f), new Vector2(step - 60f, 20f), new Vector2(0f, .5f));
-            }
-            return strip;
+            float x = i * step;
+
+            // Identical dimensions and alignment for every icon.
+            var icon = Icon(
+                row,
+                new Vector2(0f, .5f),
+                new Vector2(x, 0f),
+                iconSize);
+
+            strip.icons[i] = icon;
+
+            var rect = icon.rectTransform;
+
+            rect.anchorMin = new Vector2(0f, .5f);
+            rect.anchorMax = new Vector2(0f, .5f);
+            rect.pivot = new Vector2(0f, .5f);
+            rect.anchoredPosition = new Vector2(x, 0f);
+            rect.sizeDelta = new Vector2(iconSize, iconSize);
+            rect.localScale = Vector3.one;
+
+            icon.type = Image.Type.Simple;
+            icon.preserveAspect = true;
+            icon.useSpriteMesh = false;
+            icon.raycastTarget = false;
+
+            // Resource amount.
+            var amount = Label(
+                "Amount" + i,
+                row,
+                "",
+                named ? 30 : 24,
+                Color.white,
+                TextAnchor.MiddleLeft);
+
+            strip.amounts[i] = amount;
+
+            amount.fontStyle = FontStyle.Bold;
+            amount.horizontalOverflow = HorizontalWrapMode.Overflow;
+
+            Anchor(
+                amount.rectTransform,
+                new Vector2(0f, .5f),
+                new Vector2(x + textOffset, named ? 9f : 0f),
+                new Vector2(step - textOffset, 36f),
+                new Vector2(0f, .5f));
+
+            if (!named) continue;
+
+            // Resource name.
+            var name = Label(
+                "Name" + i,
+                row,
+                "",
+                15,
+                Faint,
+                TextAnchor.MiddleLeft);
+
+            strip.names[i] = name;
+
+            name.horizontalOverflow = HorizontalWrapMode.Overflow;
+
+            Anchor(
+                name.rectTransform,
+                new Vector2(0f, .5f),
+                new Vector2(x + textOffset, -17f),
+                new Vector2(step - textOffset, 20f),
+                new Vector2(0f, .5f));
         }
+
+        return strip;
+    }
 
         void RefreshCurrencyStrip(CurrencyStrip strip)
         {

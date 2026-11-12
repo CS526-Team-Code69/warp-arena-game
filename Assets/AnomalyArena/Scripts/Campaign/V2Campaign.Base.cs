@@ -3,7 +3,9 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-    /// <summary>What a room sells besides armor levels, weapon damage and new weapons: one random upgrade of this kind, applied at once.</summary>
+
+    
+        /// <summary>What a room sells besides armor levels, weapon damage and new weapons: one random upgrade of this kind, applied at once.</summary>
     public enum CampaignUpgrade { Stat, Skill, Infusion, Tame, Twist }
 
     /// <summary>
