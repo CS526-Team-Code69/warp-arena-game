@@ -208,15 +208,21 @@ namespace AnomalyArena
         public bool BetweenWaves { get; private set; }
         public int Remaining => LivingCount + PendingCount;
         public IReadOnlyList<Enemy> Alive => alive;
+        // The Chanters among Alive, so the aura check scans a handful instead of the whole crowd.
+        public IReadOnlyList<Enemy> AliveChanters => aliveChanters;
         public int Kills { get; private set; }
 
         readonly List<Enemy> alive = new List<Enemy>();
+        readonly List<Enemy> aliveChanters = new List<Enemy>();
+        // Same members as alive, for constant-time membership checks on the spawn path.
+        readonly HashSet<Enemy> aliveSet = new HashSet<Enemy>();
         float spawnTimer;
         bool running;
 
         static GameManager GM => GameManager.Instance;
 
         void Awake() => ApplyV5Defaults();
+        void Start() => PrewarmPool();
         void OnValidate() => ApplyV5Defaults();
                                                                                                                                                                          
         void ApplyV5Defaults()
@@ -452,6 +458,14 @@ namespace AnomalyArena
 
         void IssueBatchMarkers()
         {
+            BeginSpareCache();
+            try { PlaceBatchMarkers(); }
+            finally { spareCacheActive = false; }
+            spawnTimer = Mathf.Max(.02f, batchSpawnRetry);
+        }
+
+        void PlaceBatchMarkers()
+        {
             float affixShare = OrdinaryAffixShare(WaveIndex);
             unplaceable.Clear();
             while (batchSpawnsRemaining > 0 && !TimeExpired && TimeLeft > 0f)
@@ -480,7 +494,6 @@ namespace AnomalyArena
                 if (quota == 0) basicRemaining--; else if (quota == 1) specialRemaining--; else eliteRemaining--;
                 batchSpawnsRemaining--;
             }
-            spawnTimer = Mathf.Max(.02f, batchSpawnRetry);
         }
 
         bool IsSwarm(EnemyDefinition data) => EnemyRoles.IsMelee(data.kind);
@@ -575,15 +588,44 @@ namespace AnomalyArena
         }
         bool HasSpawnCapacity(EnemyDefinition data)
         {
-            if (preparedEnemies == null) return false;
-            int slots = 0, incoming = 0;
-            foreach (var enemy in preparedEnemies)
+            if (spareCacheActive) return data && spareSlots.TryGetValue(data, out int spare) && spare > 0;
+            var pool = PoolOf(data);
+            if (pool == null) return false;
+            int incoming = 0;
+            foreach (var marker in preparedMarkers) if (marker && marker.gameObject.activeSelf && ReferenceEquals(marker.definition, data)) incoming++;
+            return FreeSlots(pool, data) > incoming;
+        }
+
+        // Pooled enemies of this definition a spawn can take: parked ones and corpses that may be recycled.
+        int FreeSlots(List<Enemy> pool, EnemyDefinition data)
+        {
+            int slots = 0;
+            var world = WorldMap.Active;
+            foreach (var enemy in pool)
             {
-                if (!enemy || enemy.definition != data || alive.Contains(enemy) || enemy.CorpseCarried) continue;
-                if (!enemy.gameObject.activeSelf && !enemy.CorpseActive || enemy.CorpseActive && (!WorldMap.Active || !WorldMap.Active.IsBattlefieldFrozen(enemy.gameObject))) slots++;
+                if (!enemy || !ReferenceEquals(enemy.definition, data) || aliveSet.Contains(enemy) || enemy.CorpseCarried) continue;
+                if (!enemy.gameObject.activeSelf && !enemy.CorpseActive || enemy.CorpseActive && (!world || !world.IsBattlefieldFrozen(enemy.gameObject))) slots++;
             }
-            foreach (var marker in preparedMarkers) if (marker && marker.gameObject.activeSelf && marker.definition == data) incoming++;
-            return slots > incoming;
+            return slots;
+        }
+
+        // While IssueBatchMarkers places a batch nothing spawns or dies, so each kind's spare slots (free slots minus pending
+        // markers) are counted once at its start and lowered as markers are placed, instead of rescanning on every roll.
+        readonly Dictionary<EnemyDefinition, int> spareSlots = new();
+        bool spareCacheActive;
+
+        void BeginSpareCache()
+        {
+            spareSlots.Clear();
+            spareCacheActive = false;
+            if (preparedEnemies == null) return;
+            EnsurePoolIndex();
+            foreach (var pair in poolByDefinition) spareSlots[pair.Key] = FreeSlots(pair.Value, pair.Key);
+            if (preparedMarkers != null)
+                foreach (var marker in preparedMarkers)
+                    if (marker && marker.gameObject.activeSelf && marker.definition && spareSlots.TryGetValue(marker.definition, out int spare))
+                        spareSlots[marker.definition] = spare - 1;
+            spareCacheActive = true;
         }
         EnemyDefinition RollBatchEnemy(int group)
         {
@@ -646,6 +688,7 @@ namespace AnomalyArena
                 {
                     if (!TryFindV2SpawnPoint(data, out var point)) return false;
                     marker.Begin(point, data, elite, affix);
+                    if (spareCacheActive && spareSlots.TryGetValue(data, out int spare)) spareSlots[data] = spare - 1;
                     seenThisWave.Add(data.kind);
                     return true;
                 }
@@ -679,13 +722,14 @@ namespace AnomalyArena
                                                                                                                                          
         Enemy SpawnPrepared(EnemyDefinition data, Vector3 at, bool elite, ElementKind affix = ElementKind.None, bool mini = false, bool ignoreClock = false)
         {
-            if (!data || preparedEnemies == null) return null;
+            var pool = PoolOf(data);
+            if (pool == null) return null;
             if (!trialSuspended && (Phase is not (WavePhase.WaveActive or WavePhase.FinalBoss)
                 || !ignoreClock && Phase == WavePhase.WaveActive && (TimeExpired || TimeLeft <= 0f))) return null;
-            foreach (var enemy in preparedEnemies)
+            foreach (var enemy in pool)
             {
-                                                                                                     
-                if (!enemy || enemy.gameObject.activeSelf || enemy.CorpseActive || alive.Contains(enemy) || enemy.definition != data) continue;
+
+                if (!enemy || enemy.gameObject.activeSelf || enemy.CorpseActive || aliveSet.Contains(enemy) || !ReferenceEquals(enemy.definition, data)) continue;
                 enemy.transform.position = new Vector3(at.x, 0f, at.z);
                 enemy.gameObject.SetActive(true);
                 enemy.Configure(data, HpMultiplier, elite, affix, mini);
@@ -696,9 +740,9 @@ namespace AnomalyArena
             }
             Enemy oldest = null;
             int oldestOrder = int.MaxValue;
-            foreach (var enemy in preparedEnemies)
+            foreach (var enemy in pool)
             {
-                if (!enemy || enemy.definition != data || !enemy.CorpseActive || enemy.CorpseCarried || alive.Contains(enemy)
+                if (!enemy || !ReferenceEquals(enemy.definition, data) || !enemy.CorpseActive || enemy.CorpseCarried || aliveSet.Contains(enemy)
                     || WorldMap.Active && WorldMap.Active.IsBattlefieldFrozen(enemy.gameObject)) continue;
                 int order = corpseOrder.TryGetValue(enemy, out int recorded) ? recorded : 0;
                 if (order < oldestOrder) { oldest = enemy; oldestOrder = order; }
@@ -715,10 +759,78 @@ namespace AnomalyArena
         {
             enemy.Eliminated -= OnEnemyEliminated;
             enemy.Eliminated += OnEnemyEliminated;
-            if (!alive.Contains(enemy)) alive.Add(enemy);
+            if (aliveSet.Add(enemy)) alive.Add(enemy);
+            if (enemy.definition && enemy.definition.kind == EnemyKind.Chanter && !aliveChanters.Contains(enemy)) aliveChanters.Add(enemy);
             EnemySpawned?.Invoke(enemy);
         }
         public void TrackBoss(Enemy enemy) => Track(enemy);
+
+        // Configure can change an enemy's kind while it stays in Alive: keep AliveChanters equal to the Chanters in Alive,
+        // and move a pooled enemy to the pool group of its new definition.
+        public void OnEnemyConfigured(Enemy enemy)
+        {
+            if (!enemy) return;
+            bool chanter = enemy.definition && enemy.definition.kind == EnemyKind.Chanter && aliveSet.Contains(enemy);
+            if (chanter) { if (!aliveChanters.Contains(enemy)) aliveChanters.Add(enemy); }
+            else aliveChanters.Remove(enemy);
+            if (poolByDefinition != null && pooledAs.TryGetValue(enemy, out var grouped) && !ReferenceEquals(grouped, enemy.definition))
+            {
+                poolByDefinition[grouped].Remove(enemy);
+                pooledAs.Remove(enemy);
+                if (enemy.definition) AddToPool(enemy, enemy.definition);
+            }
+        }
+
+        // preparedEnemies grouped by definition, in array order, so spawning and capacity checks scan one kind instead of the whole pool.
+        Dictionary<EnemyDefinition, List<Enemy>> poolByDefinition;
+        readonly Dictionary<Enemy, EnemyDefinition> pooledAs = new();
+        Enemy[] indexedPool;
+
+        List<Enemy> PoolOf(EnemyDefinition data)
+        {
+            if (!data || preparedEnemies == null) return null;
+            EnsurePoolIndex();
+            return poolByDefinition.TryGetValue(data, out var pool) ? pool : null;
+        }
+
+        void EnsurePoolIndex()
+        {
+            if (poolByDefinition == null || !ReferenceEquals(indexedPool, preparedEnemies)) BuildPoolIndex();
+        }
+
+        void BuildPoolIndex()
+        {
+            poolByDefinition = new Dictionary<EnemyDefinition, List<Enemy>>();
+            pooledAs.Clear();
+            indexedPool = preparedEnemies;
+            foreach (var enemy in preparedEnemies)
+                if (enemy && enemy.definition && !pooledAs.ContainsKey(enemy)) AddToPool(enemy, enemy.definition);
+        }
+
+        // While the scene loads, activates and configures one pooled enemy of each kind once and parks it again, so the first
+        // batch that brings a kind does not also pay that kind's one-time setup in the frame it spawns.
+        void PrewarmPool()
+        {
+            if (preparedEnemies == null) return;
+            BuildPoolIndex();
+            foreach (var pair in poolByDefinition)
+            {
+                Enemy sample = null;
+                foreach (var enemy in pair.Value)
+                    if (enemy && !enemy.gameObject.activeSelf && !enemy.CorpseActive && !aliveSet.Contains(enemy)) { sample = enemy; break; }
+                if (!sample) continue;
+                sample.gameObject.SetActive(true);
+                sample.Configure(pair.Key, 1f, false);
+                sample.gameObject.SetActive(false);
+            }
+        }
+
+        void AddToPool(Enemy enemy, EnemyDefinition data)
+        {
+            if (!poolByDefinition.TryGetValue(data, out var pool)) poolByDefinition[data] = pool = new List<Enemy>();
+            pool.Add(enemy);
+            pooledAs[enemy] = data;
+        }
 
                      
                                                                                                                             
@@ -894,6 +1006,8 @@ namespace AnomalyArena
             if (!summon || summon.IsBoss) return;
             summon.DiscardWithoutReward();
             alive.Remove(summon);
+            aliveSet.Remove(summon);
+            aliveChanters.Remove(summon);
             corpseOrder.Remove(summon);
         }
 
@@ -1011,6 +1125,8 @@ namespace AnomalyArena
             foreach (var marker in preparedMarkers) marker.gameObject.SetActive(false);
             foreach (var bolt in preparedBolts) bolt.gameObject.SetActive(false);
             alive.Clear();
+            aliveSet.Clear();
+            aliveChanters.Clear();
             batchSpawnsRemaining = 0; corpseOrder.Clear(); pendingSplits.Clear();
             Enemy.ClearRadiationZones(); radiationClock = 0f;
             GM.ClearTransients();
@@ -1034,7 +1150,7 @@ namespace AnomalyArena
         public void ClearTrialSummons()
         {
             for (int i = alive.Count - 1; i >= 0; i--)
-                if (alive[i] && alive[i].IsTrialSummon) { alive[i].DiscardWithoutReward(); alive.RemoveAt(i); }
+                if (alive[i] && alive[i].IsTrialSummon) { alive[i].DiscardWithoutReward(); aliveChanters.Remove(alive[i]); aliveSet.Remove(alive[i]); alive.RemoveAt(i); }
         }
 
         void Update()
@@ -1047,6 +1163,8 @@ namespace AnomalyArena
         {
             var e = c as Enemy;
             alive.Remove(e);
+            aliveSet.Remove(e);
+            aliveChanters.Remove(e);
             Kills++;
             if (e) corpseOrder[e] = ++deathSequence;
             EnemyEliminated?.Invoke(e);

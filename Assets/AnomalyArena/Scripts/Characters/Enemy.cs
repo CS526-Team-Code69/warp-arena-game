@@ -194,7 +194,7 @@ namespace AnomalyArena
             if (!definition || !IsAlive || IsBoss || definition.kind == EnemyKind.Chanter || !GM || !GM.waves)
                 return false;
             float limit = ChantRadius * ChantRadius;
-            var others = GM.waves.Alive;
+            var others = GM.waves.AliveChanters;
             for (int i = 0; i < others.Count; i++)
             {
                 var chanter = others[i];
@@ -280,6 +280,7 @@ namespace AnomalyArena
             }
 
             definition = data;
+            if (GM && GM.waves) GM.waves.OnEnemyConfigured(this);
             Elite = elite;
             Mini = mini;
             Affix = data.canAffix ? affix : ElementKind.None;
