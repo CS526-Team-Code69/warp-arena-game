@@ -114,8 +114,9 @@ namespace AnomalyArena
                 if (sparks[i]) sparks[i].enabled = false;
             Show(frame, true);
             Show(ring, power >= .5f);
-            Show(rays, power >= .75f);
-            Show(screenTint, power >= .75f);
+            // The fifth interface pass keeps its light effects restrained: no rays and no wash over the whole screen.
+            Show(rays, power >= .75f && !V5HudKit.On);
+            Show(screenTint, power >= .75f && !V5HudKit.On);
             Tick(0f);
         }
 
@@ -184,6 +185,9 @@ namespace AnomalyArena
             if (!ghostHolder) return;
             var copy = Instantiate(card.gameObject, ghostHolder, false);
             copy.name = "Picked Card";
+            // A card of the fifth pass's pick screens carries its chosen pointer and its lights (V5PickCard): the copy leaves them behind.
+            foreach (var piece in new[] { "V5Pointer", "V5Lights" })
+                if (copy.transform.Find(piece) is { } part) part.gameObject.SetActive(false);
             // The holder is inactive, so nothing on the copy wakes up before its buttons and scripts are removed.
             var parts = copy.GetComponentsInChildren<Component>(true);
             for (int i = parts.Length - 1; i >= 0; i--)

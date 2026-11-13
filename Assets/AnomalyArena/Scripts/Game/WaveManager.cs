@@ -380,6 +380,17 @@ namespace AnomalyArena
             BeginV2Wave(Mathf.Clamp(index, 0, WaveCount - 1));
         }
 
+        /// <summary>A continued save: the run goes on after the wave of this 0-based index (-1: before the first) with this many kills, as
+        /// if the waves before it had been fought, between waves as at every save; the next wave (BeginNextWave, BeginWaveAt) or the final
+        /// boss follows.</summary>
+        public void RestoreProgress(int waveIndex, int kills)
+        {
+            running = true; pendingSplits.Clear(); Enemy.ClearRadiationZones(); radiationClock = 0f;
+            WaveIndex = Mathf.Clamp(waveIndex, -1, Mathf.Max(-1, WaveCount - 1));
+            Kills = Mathf.Max(0, kills);
+            if (WaveIndex >= 0) { Phase = WavePhase.WaitingBuild; BetweenWaves = true; TimeLeft = 0f; }
+        }
+
         static float OrdinaryAffixShare(int index) => index < 4 ? 0f : index < 7 ? .1f : index < 10 ? .15f : .25f;
 
         // Design document 9.2: at the start of each wave the experience of every non-swarm kind (plain and elite) is fixed from its HP budget,

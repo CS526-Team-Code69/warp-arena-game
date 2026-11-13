@@ -13,7 +13,7 @@ namespace AnomalyArena
     /// existing final boss) and the ending that sends the ship home are story cutscenes staged in whitebox (V2Cutscene), played by
     /// PlayCutscene.
     /// The lines are the drafts of the asset plan's appendix A (to be rewritten); lines without a recording show as subtitles
-    /// only (D9: voice in English, subtitles per edition). T07 to T09 and D02 (2026-11-10) have none yet.
+    /// only (D9: voice in English, subtitles per edition).
     /// </summary>
     public sealed partial class V2Campaign
     {
@@ -78,6 +78,9 @@ namespace AnomalyArena
         };
 
         public static string Speaker(bool system) => system ? ArenaText.Pair("基地系统", "BASE SYSTEM") : ArenaText.Pair("我", "ME");
+
+        /// <summary>The words said as the night falls (S02) in the language shown: the story layer's night banner carries them.</summary>
+        public static string NightFallWords => LineText(Line.S02).text;
 
         void Say(Line id, params object[] args) => SayWith(id, VoiceClip(id), args);
 
@@ -275,6 +278,7 @@ namespace AnomalyArena
             baseVisitFrom = CampaignStage.Off;
             gm.CampaignSetPhase(ArenaUiState.Night);
             PlacePlayer(DoorPoint);
+            SaveStoryPhase(SavePhase.Night); // the night's save, before its shadows and dark matter (V2Campaign.Save.cs)
             BeginNight();
         }
 
@@ -311,6 +315,8 @@ namespace AnomalyArena
         /// </summary>
         IEnumerator PlayCutscene(CutsceneShot[] shots, bool memory)
         {
+            // A page without cutscenes (BuildEdition.PlaysCutscenes) goes on at once, as if the player had skipped.
+            if (!BuildEdition.PlaysCutscenes) yield break;
             if (!cutscene) cutscene = V2Cutscene.Create();
             ui.BeginCg(memory);
             for (int i = 0; i < shots.Length && !ui.CgSkipped; i++)
@@ -358,7 +364,7 @@ namespace AnomalyArena
 
         /// <summary>The picture a shot shows in place of its whitebox staging while the illustrated art is on: the art's picture for the
         /// shot's id, else, for the memory, the illustrated memory picture of that moment with its foreground layer. None in whitebox, and
-        /// none on the course's English builds (BuildEdition), whose cutscenes are always staged in whitebox.</summary>
+        /// none on the course's English builds (BuildEdition): the Beta plays no cutscenes and the Alpha has no story.</summary>
         Texture PictureFor(string id, out Texture front)
         {
             front = null;
@@ -376,11 +382,14 @@ namespace AnomalyArena
         {
             Stage = CampaignStage.Story;
             gm.CampaignSetPhase(ArenaUiState.Story);
-            // The base view pales into the memory, then its nine shots (V2Cutscene.Memory).
-            ui.WhiteOut(1.2f);
-            PlayCutsceneSound(CampaignSfx.MemoryCgTransition);
-            float paleUntil = Time.realtimeSinceStartup + 1.2f;
-            while (Time.realtimeSinceStartup < paleUntil) yield return null;
+            // The base view pales into the memory, then its nine shots (V2Cutscene.Memory); a page without cutscenes goes straight on.
+            if (BuildEdition.PlaysCutscenes)
+            {
+                ui.WhiteOut(1.2f);
+                PlayCutsceneSound(CampaignSfx.MemoryCgTransition);
+                float paleUntil = Time.realtimeSinceStartup + 1.2f;
+                while (Time.realtimeSinceStartup < paleUntil) yield return null;
+            }
             yield return PlayCutscene(V2Cutscene.Memory, true);
             BeginTutorialNight();
         }

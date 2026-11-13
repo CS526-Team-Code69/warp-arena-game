@@ -27,6 +27,9 @@ namespace AnomalyArena
         Image tipBack;
         Outline tipEdge;
         Text keyLabel, phraseLabel;
+        // The fifth pass's tip (V5HudKit.On): it fades as a whole, and is dressed again when the art switch changes.
+        CanvasGroup tipGroup;
+        bool? fifthArt;
         Func<Vector3> target;
         Vector3 lastTarget;
         float worldRadius, dimAlpha, shownFor, passClock = -1f;
@@ -83,6 +86,7 @@ namespace AnomalyArena
             phraseLabel = Label("Phrase", tip, 22, Color.white, TextAnchor.MiddleLeft);
             phraseLabel.rectTransform.anchorMin = phraseLabel.rectTransform.anchorMax = new Vector2(0f, .5f);
             phraseLabel.rectTransform.pivot = new Vector2(0f, .5f);
+            if (V5HudKit.On) tipGroup = tip.gameObject.AddComponent<CanvasGroup>();
             layer.gameObject.SetActive(false);
         }
 
@@ -135,6 +139,7 @@ namespace AnomalyArena
                 if (passClock >= FlashSeconds + FadeSeconds) { Hide(); return; }
             }
             lastTarget = target();
+            if (tipGroup && fifthArt != Art.Enabled) DressFifth(Art.Enabled);
             Place(cam, fade, flash);
         }
 
@@ -179,10 +184,33 @@ namespace AnomalyArena
             x = Mathf.Clamp(x, 16f, Mathf.Max(16f, area.width - 16f - size.x));
             float y = Mathf.Clamp(c.y - size.y * .5f, 16f, Mathf.Max(16f, area.height - 16f - size.y));
             SetRect(tip, new Vector2(x, y), size);
+            if (tipGroup)
+            {
+                tipGroup.alpha = Mathf.Max(fade, flash);
+                return;
+            }
             tipBack.color = new Color(TipPlate.r, TipPlate.g, TipPlate.b, TipPlate.a * Mathf.Max(fade, flash));
             tipEdge.effectColor = new Color(edgeColour.r, edgeColour.g, edgeColour.b, .8f * Mathf.Max(fade, flash));
             keyLabel.color = new Color(.08f, .1f, .14f, Mathf.Max(fade, flash));
             phraseLabel.color = new Color(1f, 1f, 1f, Mathf.Max(fade, flash));
+        }
+
+        /// <summary>The fifth pass's tip: the gunmetal plate and the light keycap with the art on; in whitebox the flat plate with the thin
+        /// edge and a flat button. The words are cream, the key's name dark on the light cap.</summary>
+        void DressFifth(bool art)
+        {
+            fifthArt = art;
+            const float css = V5HudKit.StoryCss;
+            var capImage = keyCap.GetComponent<Image>();
+            V5TitleKit.Dress(tipBack, art ? V5TitleKit.Piece("plate") : null, art ? Color.white : WhiteboxSkin.PlateFill, art ? V5HudKit.PlateDensity(10f, css) : 0f);
+            tipEdge.enabled = !art;
+            tipEdge.effectColor = WhiteboxSkin.Edge;
+            tipEdge.effectDistance = new Vector2(WhiteboxSkin.EdgeWidth, -WhiteboxSkin.EdgeWidth);
+            V5TitleKit.Dress(capImage, art ? V5TitleKit.Piece("keycap") : null, art ? Color.white : WhiteboxSkin.ButtonFill, art ? V5HudKit.PieceDensity(css) : 0f);
+            // The keycap's picture carries its own lower edge; the flat button keeps the drop shadow.
+            if (capImage.TryGetComponent<Shadow>(out var capShadow)) capShadow.enabled = !art;
+            keyLabel.color = art ? V5HudKit.KeyInk : V5TitleKit.Ink;
+            phraseLabel.color = V5TitleKit.Ink;
         }
 
         // ───── Building blocks ─────

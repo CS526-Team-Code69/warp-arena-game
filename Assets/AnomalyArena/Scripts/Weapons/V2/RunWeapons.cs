@@ -119,6 +119,16 @@ namespace AnomalyArena
         public event Action<RunWeapon> Revealed;
         void Awake(){player=GetComponent<PlayerController>();progression=GetComponent<RunProgression>();lastPosition=transform.position;}
         public void ResetRun(){ClearWaveEffects();Hand=new RunWeapon[2];Auto=new RunWeapon[AutoSlotCount];Offers=new RunWeapon[ArmoryOfferCount];ActiveIndex=0;}
+        /// <summary>A continued save: the weapons go back into their hand and auto slots (null: an empty slot) with full clips, no offer
+        /// waits, and the saved hand is the one in use (the other while that one is empty).</summary>
+        public void RestoreSlots(RunWeapon[] hand,RunWeapon[] auto,int activeIndex)
+        {
+            ResetRun();
+            for(int i=0;hand!=null&&i<hand.Length&&i<Hand.Length;i++)Hand[i]=Refilled(hand[i]);
+            for(int i=0;auto!=null&&i<auto.Length&&i<Auto.Length;i++)Auto[i]=Refilled(auto[i]);
+            ActiveIndex=activeIndex is 0 or 1&&Hand[activeIndex]!=null?activeIndex:Hand[0]==null&&Hand[1]!=null?1:0;
+        }
+        RunWeapon Refilled(RunWeapon w){if(w==null)return null;w.upgradeOf=null;w.rounds=ClipSize(w.form,w.variant);return w;}
         public void GiveStarting(WeaponForm form)
         {
             float chance=form switch{WeaponForm.Rifle=>startingRifleVariantAChance,WeaponForm.Knife=>startingKnifeVariantAChance,WeaponForm.RocketLauncher=>startingRocketVariantAChance,_=>.5f};
@@ -157,6 +167,9 @@ namespace AnomalyArena
         /// offered or drawn; an Energy Ring made then is always the Deflect. With the bar it is drawn as usual. The Sentry Drone is a fair
         /// coin from the start, since the Gunner no longer costs Energy (Q86, Q103).</summary>
         public bool DrainOfferable=>!progression||progression.EnergyUnlocked;
+        /// <summary>The element a weapon of this form is born with: the four elemental forms' own, none for the others (the title's
+        /// collection shows it too).</summary>
+        internal static ElementKind BuiltInElement(WeaponForm form)=>form switch{WeaponForm.Flamethrower=>ElementKind.Fire,WeaponForm.CryoCannon=>ElementKind.Frost,WeaponForm.ArcCoil=>ElementKind.Lightning,WeaponForm.SporeLauncher=>ElementKind.Poison,_=>ElementKind.None};
         RunWeapon CreateWeapon(WeaponForm form,int v,int wave)
         {
             if(form==WeaponForm.ShieldRing&&!DrainOfferable)v=0;
@@ -164,7 +177,7 @@ namespace AnomalyArena
             // never shows "?" and taking it raises no reveal toast.
             bool plain=!RunWeapon.IsAnomalousForm(form);if(plain)v=0;
             var w=new RunWeapon{form=form,variant=v,rounds=ClipSize(form,v),revealed=plain};
-            w.element=form switch{WeaponForm.Flamethrower=>ElementKind.Fire,WeaponForm.CryoCannon=>ElementKind.Frost,WeaponForm.ArcCoil=>ElementKind.Lightning,WeaponForm.SporeLauncher=>ElementKind.Poison,_=>ElementKind.None};
+            w.element=BuiltInElement(form);
             w.builtInElement=w.element!=ElementKind.None;if(w.builtInElement)w.axes=UpgradeAxis.Infusion;
             // New forms arrive at the wave's standard tier instead of random numeric axes; in the V2 day campaign an anomaly weapon arrives
             // at the Armament Bay's Mk instead (NewWeaponMk, since 2026-11-10).

@@ -33,10 +33,10 @@ namespace AnomalyArena
     public sealed partial class CampaignRules
     {
         [Header("Each day's monsters (since 2026-11-10)")]
-        [Tooltip("The kinds day 1, 2, 3 ... may bring; a day past the table takes its last entry. Day d still fights the wave table's wave (WaveNumber): its numbers and its pace stay, only its kinds are these. Day 1 the plain melee monster; day 2 adds the Spitter and the Warden; day 3 the Spire and the Chanter; day 4 the Bloater and the Rammer; day 5 the Stomper; day 6 the Shade instead of the Stomper; day 7 every kind (the Skitter, the Splitter and the Brute only then).")]
+        [Tooltip("The kinds day 1, 2, 3 ... may bring; a day past the table takes its last entry. Day d still fights the wave table's wave (WaveNumber): its numbers and its pace stay, only its kinds are these. Day 1 the three basic kinds (the plain melee monster, the Spitter and the Warden), day 2 the same; day 3 adds the Spire and the Chanter; day 4 the Bloater and the Rammer; day 5 the Stomper; day 6 the Shade instead of the Stomper; day 7 every kind (the Skitter, the Splitter and the Brute only then).")]
         public DayKinds[] dayKinds =
         {
-            new(EnemyKind.Grunt),
+            new(EnemyKind.Grunt, EnemyKind.Spitter, EnemyKind.Warden),
             new(EnemyKind.Grunt, EnemyKind.Spitter, EnemyKind.Warden),
             new(EnemyKind.Grunt, EnemyKind.Spitter, EnemyKind.Warden, EnemyKind.Spire, EnemyKind.Chanter),
             new(EnemyKind.Grunt, EnemyKind.Spitter, EnemyKind.Warden, EnemyKind.Spire, EnemyKind.Chanter, EnemyKind.Bloater, EnemyKind.Rammer),

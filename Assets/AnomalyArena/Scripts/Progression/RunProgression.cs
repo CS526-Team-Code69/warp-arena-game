@@ -84,6 +84,31 @@ namespace AnomalyArena
             OnChanged();
         }
 
+        /// <summary>For a save (ArenaSaves): stat cards drawn in a row below their wave band's high tier (the rarity pity), the wave the
+        /// draws are banded by, and the picks banked in order (true: stat cards only).</summary>
+        public int StatCardPity => statsWithoutHighTier;
+        public int DraftWave => draftWave;
+        public bool[] BankedPickKinds => drafts.ToArray();
+
+        /// <summary>A continued save: the run's progress as it was saved. Nothing is healed, refilled or announced as a level gained; the
+        /// caller pushes the stats to the player and sets the HP afterwards.</summary>
+        public void Restore(int level, float xp, RunStats stats, float energy, bool energyUnlocked, bool voidEnergy, bool voidBadge,
+            int statCardPity, int bandWave, bool[] bankedPicks)
+        {
+            Level = Rules ? Mathf.Clamp(level, 1, Mathf.Max(1, Rules.maxLevel)) : Mathf.Max(1, level);
+            Xp = Mathf.Max(0f, xp);
+            if (stats != null) Stats = stats.Copy();
+            EnergyUnlocked = energyUnlocked;
+            Energy = Mathf.Clamp(energy, 0f, Stats.maxEnergy);
+            VoidEnergy = voidEnergy; VoidBadge = voidBadge;
+            LastLevelHpGain = LastLevelEnergyGain = 0f;
+            regenerationClock = 0f; statsWithoutHighTier = Mathf.Max(0, statCardPity); draftWave = Mathf.Max(0, bandWave);
+            drafts.Clear();
+            if (bankedPicks != null) foreach (bool statOnly in bankedPicks) drafts.Enqueue(statOnly);
+            CurrentCards = Array.Empty<DraftCard>();
+            OnChanged();
+        }
+
         public void GainXp(float amount)
         {
             if (amount <= 0f || XpIgnored != null && XpIgnored()) return;

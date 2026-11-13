@@ -7,8 +7,8 @@ namespace AnomalyArena
 {
     /// <summary>
     /// The collection: the weapons, skills and monsters the player has met, kept from one run to the next (ArenaCodexProgress). A
-    /// button in the title's bottom-right corner and one in the pause screen's row open it over the whole screen; Back or Esc closes
-    /// it. An entry not met yet shows only "???". Retired weapons (WeaponRoster.IsRetired) are never offered, so they are left out.
+    /// button in the pause screen's row opens it over the whole screen; Back or Esc closes it. The whole game's title shows the
+    /// same lists in a window of its own (V5Title), through the helpers here. An entry not met yet shows only "???". Retired weapons (WeaponRoster.IsRetired) are never offered, so they are left out.
     /// V2Hud adds it on every page but the Alpha's (BuildEdition), whose title offers only Start Game and the tutorial.
     /// </summary>
     [DisallowMultipleComponent]
@@ -78,6 +78,8 @@ namespace AnomalyArena
                 var content = screen.transform.Find("Content");
                 if (!content || content.Find(ButtonName)) continue;
                 bool onTitle = screen.state == ArenaUiState.Title;
+                // The whole game's title has the collection in its menu (V5Title).
+                if (onTitle && content.Find(V5Title.RootName)) continue;
                 // A copy of a button of the same screen, so it looks like its neighbours; its own click and words replace the copied ones.
                 if (content.Find(onTitle ? "StartRun" : "RestartRun") is not RectTransform source) continue;
                 var copy = Instantiate(source.gameObject, content);
@@ -185,7 +187,6 @@ namespace AnomalyArena
             for (int i = list.childCount - 1; i >= 0; i--) Destroy(list.GetChild(i).gameObject);
             foreach (var (tab, image) in tabs) if (image) image.color = tab == page ? TabOn : TabOff;
             int found = 0, total = 0;
-            var gm = GameManager.Instance;
             switch (page)
             {
                 case Page.Weapons:
@@ -200,11 +201,8 @@ namespace AnomalyArena
                     break;
                 case Page.Skills:
                     title.text = ArenaText.Pair("技能图鉴", "Skills");
-                    var catalog = gm && gm.skills ? gm.skills.Catalog : null;
-                    foreach (SkillId id in Enum.GetValues(typeof(SkillId)))
+                    foreach (var (id, data) in ListedSkills())
                     {
-                        var data = catalog ? catalog.Find(id) : null;
-                        if (catalog && !data) continue; // not in this game's catalogue
                         bool met = ArenaCodexProgress.SkillDiscovered(id);
                         total++; if (met) found++;
                         AddEntry(met, ArenaTerms.Skill(id), met && data ? data.Description(1) : "",
@@ -213,14 +211,12 @@ namespace AnomalyArena
                     break;
                 default:
                     title.text = ArenaText.Pair("怪物图鉴", "Monsters");
-                    var roster = gm && gm.waves ? gm.waves.roster : null;
-                    foreach (EnemyKind kind in Enum.GetValues(typeof(EnemyKind)))
+                    foreach (var kind in ListedMonsters())
                     {
-                        if (roster != null && !InRoster(roster, kind)) continue;
                         bool met = ArenaCodexProgress.EnemyDiscovered(kind);
                         total++; if (met) found++;
                         AddEntry(met, ArenaText.Text("enemy." + kind), met ? $"<color=#9ad8ff>{Role(kind)}</color>\n{MonsterNote(kind)}" : "",
-                            Art.Enabled ? EnemySprite(kind) : null, !Art.Enabled ? Whitebox.Colour(WhiteboxCharacter.LookIdFor(kind)) : (Color?)null);
+                            Art.Enabled ? EnemySprite(hud.art, kind) : null, !Art.Enabled ? MonsterColour(kind) : (Color?)null);
                     }
                     break;
             }
@@ -241,17 +237,56 @@ namespace AnomalyArena
         {
             if (!RunWeapon.IsAnomalousForm(form)) return WeaponGuide.How(form, 0);
             var lines = new List<string>();
-            int missing = 0;
-            for (int variant = 0; variant < 2; variant++)
-                if (ArenaCodexProgress.AnomalyRevealed(form, variant))
-                    lines.Add($"<b>{ArenaTerms.WeaponAnomaly(form, variant)}</b>{ArenaText.Pair("：", ": ")}{WeaponGuide.How(form, variant)}");
-                else missing++;
-            if (missing == 1) lines.Add(ArenaText.Pair("它还有一种异常形态没有出现过。", "One of its anomalies has not turned up yet."));
-            if (missing == 2) lines.Add(ArenaText.Pair("它的两种异常形态都还没有出现过。", "Neither of its anomalies has turned up yet."));
+            var revealed = RevealedAnomalies(form, out int missing);
+            foreach (var (name, how) in revealed) lines.Add($"<b>{name}</b>{ArenaText.Pair("：", ": ")}{how}");
+            if (missing > 0) lines.Add(MissingAnomalies(missing));
             return string.Join("\n", lines);
         }
 
-        static string Role(EnemyKind kind) =>
+        /// <summary>The anomalies of a weapon that have turned up (RunWeapons.Reveal keeps them), each by name with how it fights, and how
+        /// many of its two have not.</summary>
+        public static List<(string name, string how)> RevealedAnomalies(WeaponForm form, out int missing)
+        {
+            var revealed = new List<(string, string)>();
+            missing = 0;
+            for (int variant = 0; variant < 2; variant++)
+                if (ArenaCodexProgress.AnomalyRevealed(form, variant)) revealed.Add((ArenaTerms.WeaponAnomaly(form, variant), WeaponGuide.How(form, variant)));
+                else missing++;
+            return revealed;
+        }
+
+        /// <summary>The line for a weapon's anomalies that have not turned up (one or both); empty for none.</summary>
+        public static string MissingAnomalies(int missing) => missing switch
+        {
+            1 => ArenaText.Pair("它还有一种异常形态没有出现过。", "One of its anomalies has not turned up yet."),
+            >= 2 => ArenaText.Pair("它的两种异常形态都还没有出现过。", "Neither of its anomalies has turned up yet."),
+            _ => "",
+        };
+
+        /// <summary>The skills the collection lists: those in this game's catalogue (every skill when no catalogue is at hand), with their data.</summary>
+        public static IEnumerable<(SkillId id, SkillDefinition data)> ListedSkills()
+        {
+            var gm = GameManager.Instance;
+            var catalog = gm && gm.skills ? gm.skills.Catalog : null;
+            foreach (SkillId id in Enum.GetValues(typeof(SkillId)))
+            {
+                var data = catalog ? catalog.Find(id) : null;
+                if (catalog && !data) continue; // not in this game's catalogue
+                yield return (id, data);
+            }
+        }
+
+        /// <summary>The monsters the collection lists: those in this game's roster (every kind when no roster is at hand).</summary>
+        public static IEnumerable<EnemyKind> ListedMonsters()
+        {
+            var gm = GameManager.Instance;
+            var roster = gm && gm.waves ? gm.waves.roster : null;
+            foreach (EnemyKind kind in Enum.GetValues(typeof(EnemyKind)))
+                if (roster == null || InRoster(roster, kind)) yield return kind;
+        }
+
+        /// <summary>A monster's role, in the collection's words.</summary>
+        public static string Role(EnemyKind kind) =>
             EnemyRoles.IsBoss(kind) ? ArenaText.Pair("首领", "Boss")
             : EnemyRoles.IsSupport(kind) ? ArenaText.Pair("辅助", "Support")
             : EnemyRoles.IsSpecial(kind) ? ArenaText.Pair("特殊", "Special")
@@ -259,7 +294,7 @@ namespace AnomalyArena
             : ArenaText.Pair("远程", "Ranged");
 
         /// <summary>What a monster does, in a sentence or two.</summary>
-        static string MonsterNote(EnemyKind kind) => kind switch
+        public static string MonsterNote(EnemyKind kind) => kind switch
         {
             EnemyKind.Grunt => ArenaText.Pair("最常见的怪，走到跟前出拳。单只不难对付，成群围上来时要留好退路。",
                 "The most common monster. It walks up and punches. One is easy; a crowd can box you in, so keep a way out."),
@@ -319,13 +354,17 @@ namespace AnomalyArena
             row.GetComponent<LayoutElement>().preferredHeight = Mathf.Max(116f, body.preferredHeight + 36f);
         }
 
-        Sprite EnemySprite(EnemyKind kind)
+        /// <summary>A monster's picture in the art set, if it has one.</summary>
+        public static Sprite EnemySprite(V2ArtSet art, EnemyKind kind)
         {
-            if (!hud.art || hud.art.enemyImages == null) return null;
-            foreach (var entry in hud.art.enemyImages)
+            if (!art || art.enemyImages == null) return null;
+            foreach (var entry in art.enemyImages)
                 if (string.Equals(entry.id, kind.ToString(), StringComparison.OrdinalIgnoreCase)) return entry.sprite;
             return null;
         }
+
+        /// <summary>A monster's colour in whitebox: its whitebox look's.</summary>
+        public static Color MonsterColour(EnemyKind kind) => Whitebox.Colour(WhiteboxCharacter.LookIdFor(kind));
 
         static Sprite SpriteAt(Sprite[] sprites, int index) => sprites != null && index >= 0 && index < sprites.Length ? sprites[index] : null;
 

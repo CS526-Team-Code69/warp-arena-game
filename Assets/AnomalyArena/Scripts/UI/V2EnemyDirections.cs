@@ -23,7 +23,36 @@ namespace AnomalyArena
         int[] counts;
         Vector2[] sums;
         float refresh;
-        void Awake() { counts = new int[8]; sums = new Vector2[8]; }
+        // The fifth pass's markers sit nearer the screen's sides than the saved ones did, and below the plates along the top.
+        const float FifthSideInset = 40f;
+        /// <summary>The fifth pass's top inset in the open mode; while the story runs V5BattleHud keeps the markers lower, under its goal
+        /// plate.</summary>
+        internal const float FifthTopInset = 190f;
+        V5BattleEdge[] edges;
+
+        void Awake()
+        {
+            counts = new int[8]; sums = new Vector2[8];
+            if (V5HudKit.On) BuildFifthEdges();
+        }
+
+        /// <summary>The fifth pass's markers (V5BattleEdge): an orange triangle pointing off the screen beside a small plate with the count.
+        /// The saved arrow and count keep their words but are not drawn.</summary>
+        void BuildFifthEdges()
+        {
+            if (indicators == null) return;
+            edges = new V5BattleEdge[indicators.Length];
+            for (int i = 0; i < indicators.Length; i++)
+            {
+                var view = indicators[i];
+                if (view == null || !view.root) continue;
+                if (view.arrow) view.arrow.enabled = false;
+                if (view.count) view.count.enabled = false;
+                edges[i] = V5BattleEdge.Create(view.root, "V5Edge");
+            }
+            horizontalInset = FifthSideInset;
+            topInset = FifthTopInset;
+        }
         void OnDisable() => HideAll();
         void HideAll()
         {
@@ -73,6 +102,7 @@ namespace AnomalyArena
                     view.arrow.rectTransform.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg - 90f);
                 }
                 if (view.count) view.count.text = ArenaText.Pair("敌×" + counts[i], "×" + counts[i]);
+                if (edges != null && i < edges.Length && edges[i]) edges[i].Show("×" + counts[i], V5TitleKit.Ink, V5TitleKit.Orange, direction);
             }
         }
     }

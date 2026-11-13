@@ -131,6 +131,8 @@ namespace AnomalyArena
         public void DiscardWithoutReward(){eliminated=true;State=CharacterState.Dead;if(rb){rb.linearVelocity=Vector3.zero;rb.isKinematic=true;}gameObject.SetActive(false);}
         public void ClearWaveState(){stunTimer=0;movementModifiers.Clear();knockVel=pushVel=slideVel=Vector3.zero;protectTimer=0;throwImpact=null;if(IsAlive)SetState(CharacterState.Normal);if(rb&&!rb.isKinematic)rb.linearVelocity=Vector3.zero;if(elementStatus)elementStatus.ClearStatuses();}
         public void ProtectFor(float seconds)=>protectTimer=Mathf.Max(protectTimer,seconds);
+        /// <summary>A continued save: the HP as it was saved, at least 1 and at most the maximum (push the maximum first).</summary>
+        public void RestoreHp(float hp)=>Hp=Mathf.Clamp(hp,1f,Mathf.Max(1f,maxHp));
         public void CancelDisplacement(){knockVel=pushVel=slideVel=Vector3.zero;throwImpact=null;if(IsAlive)SetState(CharacterState.Normal);if(rb&&!rb.isKinematic)rb.linearVelocity=Vector3.zero;}
         public void BounceFromWall(Vector3 at,Vector3 away,float bounceDistance,bool takeDamage)
         {rb.position=at;transform.position=at;if(State is CharacterState.Dashing or CharacterState.Hooked)SetState(CharacterState.Normal);if(takeDamage)TakeWallDamage(away);if(IsAlive)Knockback(away,bounceDistance,KnockKind.Push);}

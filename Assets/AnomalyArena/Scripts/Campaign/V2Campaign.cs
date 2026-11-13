@@ -44,6 +44,10 @@ namespace AnomalyArena
         public int LampStock => lampStock;
         /// <summary>The afternoon and the night have no clock (CampaignRules.openEndedEvenings, the rule since 2026-11-06).</summary>
         public bool EveningsOpenEnded => rules && rules.openEndedEvenings;
+        /// <summary>Seconds the current stage has run (its clock waits where the stage waits) and how long it is planned to last; the
+        /// story layer's day dial reads them.</summary>
+        public float StageClock => stageClock;
+        public float StageLength => stageLength;
 
         GameManager gm;
         V2CampaignUi ui;
@@ -110,7 +114,22 @@ namespace AnomalyArena
         /// <summary>ArenaUiCommand.StartCampaign on the title: a black "Day 0" card, then the starting pistol and the walk from the crash site.</summary>
         public void Begin()
         {
-            if (Running || !gm || !rules) return;
+            if (!StartRun()) return;
+            gm.ClaimSaveSlot(SaveMode.Story); // a slot the title bound for this run takes its saves (ArenaSaves)
+            PlacePlayer(CrashSite);
+            Stage = CampaignStage.TitleCard; stageClock = 0f; stageLength = 3.2f;
+            ui.ShowTitleCard(ArenaText.Pair("第 0 天", "DAY 0"), ArenaText.Pair("坠落之后", "After the fall"), stageLength);
+            // The black card's own sting (2026-11-10); the wave sound stands in while it is not installed.
+            if (!CampaignAudio.Play(CampaignSfx.DayTitleStinger)) V3WorldAudio.Instance?.Play(ArenaWorldCue.WaveEnd, gm.player.Position, .7f);
+            gm.CampaignHoldTitle();
+        }
+
+        /// <summary>What every run starts from, a new one (Begin) or a continued save (BeginFromSave, V2Campaign.Save.cs): the run's state
+        /// made new, the hooks, the campaign's map (laid from a continued save's seed when one is pinned) and the base and the ship on it.
+        /// False when no run can start.</summary>
+        bool StartRun()
+        {
+            if (Running || !gm || !rules) return false;
             Active = this; Running = true; Day = 0; WaveOfDay = 0; Overtime = false; BaseDestroyed = false; EndingDone = false;
             armoryRoundsLeft = 0; ArmoryRoundActive = false; armoryMode = ArmoryMode.Rooms; activeUpgrade = null;
             ResetEconomy(); ResetBase(); ResetNight();
@@ -120,12 +139,7 @@ namespace AnomalyArena
             SetupCampaignMap(); mapSetUp = true;
             trailTarget = HoleCentre; // the afternoon's ore trail heads here (V2Campaign.Night.cs PlanTrail)
             BuildWorld();
-            PlacePlayer(CrashSite);
-            Stage = CampaignStage.TitleCard; stageClock = 0f; stageLength = 3.2f;
-            ui.ShowTitleCard(ArenaText.Pair("第 0 天", "DAY 0"), ArenaText.Pair("坠落之后", "After the fall"), stageLength);
-            // The black card's own sting (2026-11-10); the wave sound stands in while it is not installed.
-            if (!CampaignAudio.Play(CampaignSfx.DayTitleStinger)) V3WorldAudio.Instance?.Play(ArenaWorldCue.WaveEnd, gm.player.Position, .7f);
-            gm.CampaignHoldTitle();
+            return true;
         }
 
         void InstallHooks()
@@ -316,6 +330,7 @@ namespace AnomalyArena
                 return true;
             }
             DropKillEnergyLeft(); // what no kill dropped of the day's kill energy (V2Campaign.Days.cs)
+            SaveStoryPhase(SavePhase.Afternoon); // the afternoon's save, before its upkeep, ore and crate (V2Campaign.Save.cs)
             BeginDusk();
             return true;
         }
@@ -389,16 +404,17 @@ namespace AnomalyArena
                 s.banner = Overtime ? ArenaText.Pair($"第 {Day} 天 · 超出预定天数", $"DAY {Day} · OVERTIME") : Dot(ArenaText.Pair($"第 {Day} 天", $"DAY {Day}"), ArenaText.Pair("上午", "MORNING"), AttackText(WaveOfDay + 1));
             // Since 2026-11-10 the campaign writes nothing on the HUD's hint line (it keeps the weapon's name): its notes stand in the
             // goal panel (CurrentNote), and the lamps left in their own box.
+            // The story mode has no levels: its results name the day and the kills.
             if (gm.State == GameState.Won)
             {
                 s.resultTitle = ArenaText.Pair("即将重返地球", "EARTH IS WITHIN REACH");
-                s.resultDetails = ArenaText.Pair($"第 {Day} 天 · 等级 {s.level} · 消灭 {s.kills} 个敌人\n飞船带着暗物质核心跃迁回家", $"Day {Day} · Level {s.level} · {s.kills} kills\nThe ship jumps home with the dark matter core");
+                s.resultDetails = ArenaText.Pair($"第 {Day} 天 · 消灭 {s.kills} 个敌人\n飞船带着暗物质核心跃迁回家", $"Day {Day} · {s.kills} kills\nThe ship jumps home with the dark matter core");
             }
             else if (gm.State == GameState.Lost)
             {
                 s.resultTitle = BaseDestroyed ? ArenaText.Pair("基地被摧毁", "THE BASE IS DESTROYED") : ArenaText.Pair("探索者陨落", "EXPLORER LOST");
-                s.resultDetails = ArenaText.Pair($"第 {Day} 天 · 等级 {s.level} · 消灭 {s.kills} 个敌人\n飞船修复：引擎{(engineFixed ? "✓" : "×")} 装甲{(armorFixed ? "✓" : "×")} 燃料 {fuel}/{FuelUnits}",
-                    $"Day {Day} · Level {s.level} · {s.kills} kills\nShip: engine {(engineFixed ? "✓" : "×")} armor {(armorFixed ? "✓" : "×")} fuel {fuel}/{FuelUnits}");
+                s.resultDetails = ArenaText.Pair($"第 {Day} 天 · 消灭 {s.kills} 个敌人\n飞船修复：引擎{(engineFixed ? "✓" : "×")} 装甲{(armorFixed ? "✓" : "×")} 燃料 {fuel}/{FuelUnits}",
+                    $"Day {Day} · {s.kills} kills\nShip: engine {(engineFixed ? "✓" : "×")} armor {(armorFixed ? "✓" : "×")} fuel {fuel}/{FuelUnits}");
             }
         }
 

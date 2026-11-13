@@ -42,7 +42,7 @@ namespace AnomalyArena
         [Range(0f, 1f), Tooltip("Level of every one-shot sound, times its own gain in CampaignArt.sounds and V3WorldAudio's master gain.")]
         public float effectsGain = .85f;
         [Range(0f, 1f), Tooltip("Level of every looping sound, times its own gain in CampaignArt.sounds and V3WorldAudio's master gain.")]
-        public float loopsGain = .7f;
+        public float loopsGain = 1f;
         [Min(0f), Tooltip("A one-shot placed in the world plays at full level within this many cells of the player.")]
         public float fullWithin = 10f;
         [Min(1f), Tooltip("A one-shot placed in the world is silent this many cells from the player and farther.")]

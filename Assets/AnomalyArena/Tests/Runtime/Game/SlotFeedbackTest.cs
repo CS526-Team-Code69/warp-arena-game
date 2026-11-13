@@ -45,7 +45,15 @@ namespace AnomalyArena
             weapons.Hand[other] = null;
             await Refreshed(hud);
             AssertInUse(hud, held);
-            Assert.That(game.UiSnapshot.hint, Is.EqualTo(weapons.Active.Label), "the line over the charge bar names the weapon in hand");
+            Assert.That(game.UiSnapshot.hint, Is.EqualTo(weapons.Active.Label), "the saved line over the charge bar names the weapon in hand");
+            if (V5HudKit.On)
+            {
+                // The fifth pass names it on its slot only: the hint plate at the top has nothing to show, and the saved line is not drawn.
+                var snapshot = game.UiSnapshot;
+                Assert.That(snapshot.hintLead + snapshot.hintKey + snapshot.hintTail, Is.Empty, "the hint plate has no prompt while the hint only names the weapon");
+                Assert.That(hud.gameplayRoot.transform.Find("V5Hint").gameObject.activeSelf, Is.False, "so it does not show");
+                Assert.That(hud.hintLabel.enabled, Is.False, "and the saved line over the charge bar is not drawn");
+            }
             Assert.That(Key(hud, other), Is.EqualTo(ArenaText.Pair($"手持{other + 1}", $"HAND {other + 1}")), "right click does nothing with the other slot empty, so it names no button");
 
             weapons.Hand[other] = new RunWeapon { form = WeaponForm.Knife, variant = 0, revealed = true };

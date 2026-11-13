@@ -63,6 +63,7 @@ namespace AnomalyArena
             actionColumn.pivot = new Vector2(1f, 1f);
             leaveRow = MakeRect("Leave", basePage, new Vector2(0f, 0f), new Vector2(1f, 0f), Vector2.zero, new Vector2(0f, LeaveHeight));
             leaveRow.pivot = new Vector2(.5f, 0f);
+            if (V5HudKit.On) BuildBase5(); // the fifth pass's page over this one, which stays built and hidden (V5BasePage.cs)
             baseScreen.gameObject.SetActive(false);
         }
 
@@ -225,6 +226,8 @@ namespace AnomalyArena
                 var text = b.GetComponentInChildren<Text>();
                 text.resizeTextMinSize = 14; text.resizeTextMaxSize = 24;
             }
+            // The fifth pass draws its page from the same lists, so its buttons do what these do (V5BasePage.cs).
+            if (V5HudKit.On) RefreshBase5(actions, leaves);
         }
 
         // ───── The page's parts ─────

@@ -38,10 +38,17 @@ namespace AnomalyArena
         /// <summary>V2 day campaign since 2026-11-06: kills give no XP (every upgrade is bought at the base), so the level line shows the
         /// level alone and V2Hud hides the XP bar and the banked-pick markers. The HUD also words its texts without cards while it is set.</summary>
         public bool hideXp;
-        /// <summary>V2 day campaign since 2026-11-10: the bottom row's auto-weapon slots and skill slots stay hidden until the run holds
-        /// its first auto weapon or skill (empty slots told of things the story had not shown yet). Always false in the open mode.</summary>
+        /// <summary>The bottom row's auto-weapon slots and skill slots stay hidden until the run holds its first auto weapon or skill: empty
+        /// slots told of things the run had not shown yet. Set in the story, and in the open mode while the fifth pass's battle HUD draws
+        /// the dock (V5HudKit.On); always false on the English Alpha, which keeps every slot from the start.</summary>
         public bool hideAutoSlots, hideSkillSlots;
+        /// <summary>The saved HUD's line over the hands: a prompt (a card pick kept for later, the build phase's walk, the crate to click),
+        /// else the name of the weapon in hand.</summary>
         public string hint = "";
+        /// <summary>The same prompt for the fifth pass's hint plate at the top of the screen (V5BattleHud), in three parts: the words before
+        /// the key it names, that key as ArenaKeys names it (drawn as a keycap; empty when the prompt names none) and the words after it.
+        /// All three are empty while the hint only names the weapon in hand, which its slot in the dock shows.</summary>
+        public string hintLead = "", hintKey = "", hintTail = "";
         public string playerStatuses = "";
         public string bossImmunities = "";
         public string resultTitle = "RUN ENDED";

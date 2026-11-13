@@ -35,7 +35,8 @@ namespace AnomalyArena
             if (!map || !rules) return;
             if (map.CampaignMapApplied) map.RestoreLayout(); // a second campaign in the same scene starts from the saved map
             var size = CampaignMapSize;
-            int seed = MapSeed = Random.Range(1, int.MaxValue);
+            // A continued save lays its terrain from its own seed again (pinnedMapSeed, V2Campaign.Save.cs).
+            int seed = MapSeed = pinnedMapSeed > 0 ? pinnedMapSeed : Random.Range(1, int.MaxValue);
             var hole = map.PrimaryHole;
             var plan = TerrainPlan(size, seed, hole ? hole.GravityRadius : 6.5f, map.HasWallTemplates);
             var layout = CampaignTerrain.Build(map.ClassicLayout, plan, out string report);

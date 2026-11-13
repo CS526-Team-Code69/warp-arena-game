@@ -15,7 +15,7 @@ namespace AnomalyArena
     {
         // ───── The task panel's text ─────
 
-        const float NoteSeconds = 8f, PromptOnlyMinHeight = 48f;
+        const float NoteSeconds = 8f, PromptOnlyMinHeight = 38f;
         static readonly Color PromptColour = new(1f, .86f, .5f), NoteColour = new(.74f, .82f, .94f);
         string objectiveWay, promptBody = "", noteBody = "", promptOverride = "";
         int promptOverrideFrame = -10;
@@ -48,9 +48,17 @@ namespace AnomalyArena
             if (note.Length > 0)
             {
                 if (text.Length > 0) text.Append("\n");
-                text.Append("<size=19><color=#").Append(ColorUtility.ToHtmlStringRGB(NoteColour)).Append(">").Append(note).Append("</color></size>");
+                text.Append("<size=15><color=#").Append(ColorUtility.ToHtmlStringRGB(NoteColour)).Append(">").Append(note).Append("</color></size>");
             }
             bool any = text.Length > 0;
+            if (V5HudKit.On)
+            {
+                // The fifth pass's goal plate lays out the parts itself (V5StoryGoal.cs); the old text stays up to date, hidden.
+                objectiveText.text = text.ToString();
+                storyGoal = goal; storyWay = way; storyPrompt = prompt; storyNote = note;
+                LayOutStoryGoal();
+                return;
+            }
             objectiveBack.gameObject.SetActive(any);
             objectiveText.text = text.ToString();
             if (any)
@@ -78,15 +86,15 @@ namespace AnomalyArena
         {
             // The lamps left, in their own box beside the currencies (top right, to their left: the void currencies' row lies under
             // them), with the key that sets one down.
-            lampBox = Box("Lamps", hud, new Vector2(1f, 1f), new Vector2(-464f, -20f), new Vector2(176f, 44f), new Vector2(1f, 1f), Panel);
-            lampIcon = Icon(lampBox, new Vector2(0f, .5f), new Vector2(12f, 0f), 34f);
-            lampCount = Label("Count", lampBox, "", 22, Soft, TextAnchor.MiddleLeft);
-            Anchor(lampCount.rectTransform, new Vector2(0f, .5f), new Vector2(52f, 0f), new Vector2(64f, 36f), new Vector2(0f, .5f));
-            var cap = Box("Key", lampBox, new Vector2(1f, .5f), new Vector2(-10f, 0f), new Vector2(40f, 30f), new Vector2(1f, .5f), new Color(.16f, .22f, .32f, 1f));
+            lampBox = Box("Lamps", hud, new Vector2(1f, 1f), new Vector2(-24f - CurrencyWidth - 10f, -20f), new Vector2(160f, CurrencyHeight), new Vector2(1f, 1f), Panel);
+            lampIcon = Icon(lampBox, new Vector2(0f, .5f), new Vector2(10f, 0f), 30f);
+            lampCount = Label("Count", lampBox, "", 19, Soft, TextAnchor.MiddleLeft);
+            Anchor(lampCount.rectTransform, new Vector2(0f, .5f), new Vector2(46f, 0f), new Vector2(58f, 32f), new Vector2(0f, .5f));
+            var cap = Box("Key", lampBox, new Vector2(1f, .5f), new Vector2(-9f, 0f), new Vector2(36f, 28f), new Vector2(1f, .5f), new Color(.16f, .22f, .32f, 1f));
             Outline(cap.gameObject);
             // The key that sets a lamp down, as the player has it (ArenaKeys); a longer name than a letter shrinks to stay in the cap.
-            lampKey = Label("Text", cap, ArenaKeys.LampKey, 18, Color.white, TextAnchor.MiddleCenter);
-            lampKey.resizeTextForBestFit = true; lampKey.resizeTextMinSize = 9; lampKey.resizeTextMaxSize = 18;
+            lampKey = Label("Text", cap, ArenaKeys.LampKey, 16, Color.white, TextAnchor.MiddleCenter);
+            lampKey.resizeTextForBestFit = true; lampKey.resizeTextMinSize = 9; lampKey.resizeTextMaxSize = 16;
             StretchFull(lampKey.rectTransform);
             lampBox.gameObject.SetActive(false);
 
@@ -124,6 +132,7 @@ namespace AnomalyArena
             bool show = campaign.LampCounterShown;
             if (lampBox.gameObject.activeSelf != show) lampBox.gameObject.SetActive(show);
             if (!show) return;
+            if (V5HudKit.On) { RefreshStoryLamps(); return; } // the fifth pass's lamp box (V5StoryWallet.cs)
             // The art's lamp icon; with the art off (or no icon installed) a plain circle in the lamp's yellow: the whitebox lamp's side
             // view is a thin post, too small to read at this size.
             var sprite = Art.Enabled && campaign.art ? campaign.art.lamp : null;
@@ -192,13 +201,14 @@ namespace AnomalyArena
             if (mining)
             {
                 mineFill.fillAmount = progress;
-                mineFill.color = dark ? DarkBar : AlloyBar;
+                mineFill.color = dark ? MineDarkColour : MineAlloyColour;
                 if (mineLabel.text != what) mineLabel.text = what;
             }
             for (int i = 0; i < currencyPulse.Length; i++)
             {
                 if (currencyPulse[i] <= 0f) continue;
                 currencyPulse[i] = Mathf.Max(0f, currencyPulse[i] - dt / PulseSeconds);
+                if (V5HudKit.On) { StoryPulseLabel(currencyLabels[i], WalletColour(i), currencyPulse[i]); continue; }
                 currencyLabels[i].rectTransform.localScale = Vector3.one * (1f + .4f * currencyPulse[i]);
                 currencyLabels[i].color = Color.Lerp(Soft, Accent, currencyPulse[i]);
             }

@@ -142,10 +142,12 @@ namespace AnomalyArena
 
         void V2Update()
         {
+            StartPendingContinue(); // a continued save's run starts here (GameManager.Save.cs)
             StartPendingOpenMode();
             var kb=Keyboard.current;
             if(Mouse.current==null||!Mouse.current.leftButton.isPressed)menuMouseReleased=true;
-            // Only the keys the game shows do anything; Space and Enter only close the weapon card (document 2.2, GameManagerFlow.cs).
+            // Only the keys the game shows do anything; Space and Enter close the weapon card, and Space is the void dash once the
+            // void trial is won (document 2.2, GameManagerFlow.cs).
             if(kb!=null)ReadShownKeys(kb);
             if(RunPhase==ArenaUiState.WaveIntro&&waves.Phase==WavePhase.WaveActive)SetPhase(ArenaUiState.WaveActive);
             // A level gained during the wave opens its card pick at once; a pick put off with Esc or its button waits for T or the next level.
@@ -161,6 +163,7 @@ namespace AnomalyArena
             else if(RunPhase==ArenaUiState.WaveEnd&&Time.unscaledTime>=waveEndAt)OpenBuild();
             else if(RunPhase is ArenaUiState.Armory or ArenaUiState.Draft or ArenaUiState.Ready or ArenaUiState.ReplaceWeapon or ArenaUiState.ReplaceSkill||BuildCrateWalking)
             {if(BuildTimeFlows)TickBuildPhase();if(!greaterDraft&&selectionTimeLimit>0f){buildTimeLeft=Mathf.Max(0,buildTimeLeft-Time.unscaledDeltaTime);if(buildTimeLeft<=0){RunAnalytics.SupplyResolved(this,RunAnalytics.SupplyTimeout);BeginNextV2Wave(true);}}}
+            TickVoidDashNotice(); // the void dash's notice once play is back after the win (GameManagerFlow.cs)
             Cursor.visible=true;
         }
         /// <summary>Build phase clock (BuildTimeFlows): the player's statuses, void energy and HP regeneration, and the skill and weapon timers
@@ -171,8 +174,8 @@ namespace AnomalyArena
         {
             if(State!=GameState.Playing)return;
             // Resolve both deaths once at frame end; the agreed final-boss double KO is a win.
-            if(finalWaveCleared){State=GameState.Won;RunAnalytics.RunEnded(this,RunPhase==ArenaUiState.Paused?resumePhase:RunPhase);ClearTransients();skills.ClearWaveEffects();SetPhase(ArenaUiState.Result);}
-            else if(!player.IsAlive&&!(CampaignRunning&&campaign.CatchesPlayerDeath())||CampaignRunning&&campaign.BaseDestroyed){LoseCause=player.DeathCause;State=GameState.Lost;RunAnalytics.RunEnded(this,RunPhase==ArenaUiState.Paused?resumePhase:RunPhase);ClearTransients();skills.ClearWaveEffects();SetPhase(ArenaUiState.Result);}
+            if(finalWaveCleared){State=GameState.Won;RunEndedForSaves();RunAnalytics.RunEnded(this,RunPhase==ArenaUiState.Paused?resumePhase:RunPhase);ClearTransients();skills.ClearWaveEffects();SetPhase(ArenaUiState.Result);}
+            else if(!player.IsAlive&&!(CampaignRunning&&campaign.CatchesPlayerDeath())||CampaignRunning&&campaign.BaseDestroyed){LoseCause=player.DeathCause;State=GameState.Lost;RunEndedForSaves();RunAnalytics.RunEnded(this,RunPhase==ArenaUiState.Paused?resumePhase:RunPhase);ClearTransients();skills.ClearWaveEffects();SetPhase(ArenaUiState.Result);}
         }
         void OnV2WaveEnded(int wave)
         {
@@ -207,6 +210,7 @@ namespace AnomalyArena
                 else if(count>0)buildSummary+=ArenaText.Pair($"\n已自动处理{count}组待选卡", $"\n{count} pending drafts resolved automatically");}
             snapshot.earlyStartConfirmation=false;pendingDraft=pendingOffer=-1;
             player.Heal(player.maxHp);player.stamina.Refill();player.ClearWaveState();BeginWaveDrafts();
+            if(!CampaignRunning)SaveOpenRun(); // the open mode saves just before every wave and the Tyrant (GameManager.Save.cs)
             if(CampaignRunning){SetPhase(ArenaUiState.WaveIntro);campaign.StartNextWave();V2Audio.Instance?.PlayWave();}
             else if(waves.WaveIndex+1>=waves.WaveCount){SetPhase(ArenaUiState.FinalBoss);waves.BeginFinalBoss();}
             else{SetPhase(ArenaUiState.WaveIntro);waves.BeginNextWave();V2Audio.Instance?.PlayWave();}
@@ -219,6 +223,7 @@ namespace AnomalyArena
         // down again (SetPhase) and the build goes on as entered from that panel.
         public void EnterVoidTrial(){trialResumePhase=RunPhase==ArenaUiState.SupplyDrop?pendingSupplyChoice:RunPhase;SetPhase(ArenaUiState.VoidTrial);skills.FreezeBattlefieldForTrial(true);runWeapons.FreezeBattlefieldForTrial(true);orbs?.FreezeForTrial(true);}
         public void CompleteVoidTrial(){if(!player.IsAlive){if(CampaignRunning)CampaignTrialEndsUnrewarded();return;} // the Hollow can die in the same frame as the player: the run is lost, not rewarded
+            voidDashNoticePending=true; // a win gives the void dash, which says so once play is back (GameManagerFlow.cs)
             // V2 day campaign (since 2026-11-10): the win pays the void currencies instead (V2Campaign.Void.cs, on WorldMap.VoidTrialWon), so
             // it gives no void energy regeneration, no extra level and no greater void pick; the player is healed and play returns as it
             // does after that pick.
@@ -318,23 +323,31 @@ namespace AnomalyArena
         void FillWeaponIntro()
         {
             var w=introWeapon;if(w==null)return;
-            string kind=w.IsAuto?ArenaText.Pair("自动武器","Auto weapon"):ArenaText.Pair("手持武器","Hand weapon");
-            // Since 2026-11-06 the card has no damage section (hit damage, use interval). The Drain's shield wait is not damage and stays
-            // (Q99; 2026-11-06 it had gone with the damage section by mistake): it follows the attack's description.
-            // Document 5.2: the card always states the element, "none" included.
-            string element=ArenaText.Pair("　属性：","   Element: ")+ArenaTerms.Element(w.element);
             snapshot.weaponIntroTitle=w.Label;
-            // V2 day campaign (since 2026-11-06): a weapon unlocked at the base says it is an anomaly weapon; the starting Pistol is not one
-            // and has no trait. The classic card keeps its two sections.
-            string anomaly=CampaignRunning&&w.IsAnomalous?$"\n<color=#c9a6ff>{ArenaText.Pair("异常武器：攻击方式和特性都与众不同，多用几次才能摸清它的脾气。","Anomaly weapon: its attack and trait are out of the ordinary. Use it a few times to get a feel for it.")}</color>":"";
+            // The card opens with its lead (WeaponCardLead), then how the weapon attacks. It has no damage section (hit damage, use
+            // interval); the Drain's shield wait is not damage, so it stays and follows the attack's description.
+            string lead=WeaponCardLead(w.IsAuto,w.element,CampaignRunning&&w.IsAnomalous,BuildEdition.Current);
             string trait=w.IsAnomalous?$"\n\n<b><color=#ff8a73>{ArenaText.Pair("特性","Trait")}</color></b>\n{WeaponGuide.Backfire(w.form,w.variant)}":"";
             float wait=w.form==WeaponForm.ShieldRing&&w.variant==1?runWeapons.DrainShieldWait(w):0f;
             string drainWait=wait>0f?"\n"+ArenaText.Pair($"{wait:0.#} 秒没受到敌人攻击后生成能量盾",$"Energy Shield after {wait:0.#} s without an enemy hit"):"";
-            snapshot.weaponIntroBody=$"<color=#9ad8ff>{kind}</color>{element}{anomaly}\n\n<b><color=#ffd36e>{ArenaText.Pair("攻击方式","How it attacks")}</color></b>\n{WeaponGuide.How(w.form,w.variant)}{drainWait}{trait}";
+            snapshot.weaponIntroBody=$"{lead}<b><color=#ffd36e>{ArenaText.Pair("攻击方式","How it attacks")}</color></b>\n{WeaponGuide.How(w.form,w.variant)}{drainWait}{trait}";
             snapshot.weaponIntroHint=ArenaText.Pair("点击任意处、按空格或回车继续","Click anywhere or press Space or Enter to continue");
             snapshot.weaponIntroContinue=ArenaText.Pair("继续","CONTINUE");
             snapshot.weaponIntroForm=(int)w.form;
         }
+        /// <summary>The lines a weapon card opens with, a blank line after them: on the English Alpha, whether the weapon is held or
+        /// fires by itself and its element ("none" included); in the story, for an anomaly weapon, the note that it is one (the pistol is
+        /// none and has no trait). Elsewhere the slots and the collection already tell hand or auto and the element, so the card starts
+        /// with how the weapon attacks.</summary>
+        public static string WeaponCardLead(bool auto,ElementKind element,bool anomalyNote,BuildEdition.Edition edition)
+        {
+            var lines=new System.Collections.Generic.List<string>(2);
+            if(edition==BuildEdition.Edition.EnglishAlpha)
+                lines.Add($"<color=#9ad8ff>{(auto?ArenaText.Pair("自动武器","Auto weapon"):ArenaText.Pair("手持武器","Hand weapon"))}</color>{ArenaText.Pair("　属性：","   Element: ")}{ArenaTerms.Element(element)}");
+            if(anomalyNote)lines.Add($"<color=#c9a6ff>{ArenaText.Pair("异常武器：攻击方式和特性都与众不同，多用几次才能摸清它的脾气。","Anomaly weapon: its attack and trait are out of the ordinary. Use it a few times to get a feel for it.")}</color>");
+            return lines.Count>0?string.Join("\n",lines)+"\n\n":"";
+        }
+
         void UpdatePenetrationEligibility()
         {
             bool anyImmune=false, anyElement=false, allImmune=true;
@@ -387,7 +400,7 @@ namespace AnomalyArena
                     supplyChoiceOpened=true;SupplyDropReady=false;SetPhase(pendingSupplyChoice);pendingSupplyChoice=ArenaUiState.Title;break;
                 case ArenaUiCommand.ToggleArt:if(RunPhase==ArenaUiState.Title)ToggleArt();break;
                 case ArenaUiCommand.ChooseLoadout:
-                    if(RunPhase!=ArenaUiState.Loadout||index<0||index>2)return;runWeapons.GiveStarting(index==0?WeaponForm.RocketLauncher:index==1?WeaponForm.Rifle:WeaponForm.Knife);NotifyCardPicked(ArenaUiState.Loadout,index,CardRarity.Common);ShowWeaponIntro(runWeapons.Hand[0],CampaignRunning?(System.Action)campaign.AfterLoadout:()=>{State=GameState.Playing;BeginWaveDrafts();SetPhase(ArenaUiState.WaveIntro);waves.StartWaves();V2Audio.Instance?.PlayWave();RunAnalytics.RunStarted(this);});break;
+                    if(RunPhase!=ArenaUiState.Loadout||index<0||index>2)return;runWeapons.GiveStarting(index==0?WeaponForm.RocketLauncher:index==1?WeaponForm.Rifle:WeaponForm.Knife);NotifyCardPicked(ArenaUiState.Loadout,index,CardRarity.Common);ShowWeaponIntro(runWeapons.Hand[0],CampaignRunning?(System.Action)campaign.AfterLoadout:()=>{State=GameState.Playing;BeginWaveDrafts();OpenRunBegins();SetPhase(ArenaUiState.WaveIntro);waves.StartWaves();V2Audio.Instance?.PlayWave();RunAnalytics.RunStarted(this);});break;
                 case ArenaUiCommand.TakeArmory:
                     if(RunPhase!=ArenaUiState.Armory||index<0||index>=runWeapons.Offers.Length||runWeapons.Offers[index]==null)return;var offered=runWeapons.Offers[index];var offeredRarity=ArenaRarity.ForWeapon(offered);string taken=offered.FormName+(offered.upgradeOf!=null?" "+offered.MkLabel:"");if(runWeapons.TakeOffer(index)){RunAnalytics.SupplyResolved(this,offered.upgradeOf!=null?RunAnalytics.SupplyMerge:RunAnalytics.SupplyTakeFree,offered);buildSummary+=ArenaText.Pair("\n军械库：", "\nArmory: ")+taken;NotifyCardPicked(ArenaUiState.Armory,index,offeredRarity);ShowWeaponIntro(offered.upgradeOf??offered,OpenDraft);}else{pendingOffer=index;SetPhase(ArenaUiState.ReplaceWeapon);}break;
                 case ArenaUiCommand.SkipArmory:if(RunPhase==ArenaUiState.Armory){RunAnalytics.SupplyResolved(this,RunAnalytics.SupplySkip);OpenDraft();}break;
@@ -456,7 +469,7 @@ namespace AnomalyArena
                 snapshot.state=RunPhase;snapshot.buildWalking=BuildWalking;snapshot.supplyLanded=SupplyDropReady;snapshot.isGreaterReward=greaterDraft;snapshot.illustrated=Art.Enabled;snapshot.hp=player?player.Hp:50;snapshot.maxHp=player?player.maxHp:50;snapshot.stamina=player?player.stamina.Value:1;snapshot.staminaExhausted=player&&player.stamina.Exhausted;
                 if(progression){snapshot.level=progression.Level;snapshot.xp=progression.Xp;snapshot.xpNeeded=progression.XpRequired;snapshot.energy=progression.Energy;snapshot.maxEnergy=progression.Stats.maxEnergy;snapshot.energyUnlocked=progression.EnergyUnlocked;snapshot.voidEnergy=progression.VoidEnergy;snapshot.voidLevel=progression.VoidBadge;snapshot.maxLevel=progression.Rules?progression.Rules.maxLevel:12;snapshot.bankedDrafts=progression.BankedDrafts;snapshot.rerolls=progression.RerollsRemaining;}
                 var status=player?ElementStatus.For(player):null;snapshot.shield=status?status.Shield:0;snapshot.playerStatuses=status?ArenaText.Pair($"火焰 {status.Fire:0.#} · 毒素 {status.Poison:0.#} · 冰冻 {status.Frost:0.#} · 雷电 {status.Lightning:0.#}", $"Fire {status.Fire:0.#} · Poison {status.Poison:0.#} · Frost {status.Frost:0.#} · Lightning {status.Lightning:0.#}"):"";
-                snapshot.wave=waves?Mathf.Max(1,waves.WaveIndex+1):1;snapshot.maxWaves=waves?waves.WaveCount:14;snapshot.waveTime=waves?waves.TimeLeft:0;snapshot.buildTime=buildTimeLeft;snapshot.selectionUnlimited=selectionTimeLimit<=0f;snapshot.kills=waves?waves.Kills:0;snapshot.charge01=runWeapons?runWeapons.Charge01:0;snapshot.hint=BuildWalking?ArenaText.Pair("整备走动中 · Tab 返回选卡", "WALKING · TAB BACK TO THE CARDS"):BuildCrateWalking?ArenaText.Pair("整备中可以走动 · 点击头顶的箱子打开", "YOU CAN WALK · CLICK THE CRATE ABOVE YOU"):RunPhase==ArenaUiState.WaveActive&&progression&&progression.BankedDrafts>0?(CampaignRunning?ArenaText.Pair($"待选升级 ×{progression.BankedDrafts} · 按 {ArenaKeys.CardPickKey} 选择", $"UPGRADES TO PICK ×{progression.BankedDrafts} · PRESS {ArenaKeys.CardPickKey}"):ArenaText.Pair($"可选卡 ×{progression.BankedDrafts} · 按 {ArenaKeys.CardPickKey} 选卡", $"CARD PICKS ×{progression.BankedDrafts} · PRESS {ArenaKeys.CardPickKey}")):runWeapons&&runWeapons.Active!=null?runWeapons.Active.Label:"";
+                snapshot.wave=waves?Mathf.Max(1,waves.WaveIndex+1):1;snapshot.maxWaves=waves?waves.WaveCount:14;snapshot.waveTime=waves?waves.TimeLeft:0;snapshot.buildTime=buildTimeLeft;snapshot.selectionUnlimited=selectionTimeLimit<=0f;snapshot.kills=waves?waves.Kills:0;snapshot.charge01=runWeapons?runWeapons.Charge01:0;WriteHint();
                 snapshot.waveTimeExpired=waves&&waves.Phase==WavePhase.WaveActive&&waves.TimeExpired;snapshot.waveBatch=waves?waves.BatchIndex:0;snapshot.waveLiving=waves?waves.LivingCount:0;snapshot.wavePending=waves?waves.PendingCount:0;
                 snapshot.draftCount=greaterDraft?1:buildDraftCount;snapshot.draftIndex=greaterDraft?1:Mathf.Clamp(buildDraftCount-snapshot.bankedDrafts+1,1,Mathf.Max(1,buildDraftCount));snapshot.buildSummary=buildSummary.Trim();
                 snapshot.bossImmunities="";
@@ -493,10 +506,33 @@ namespace AnomalyArena
                 }
                 if(RunPhase==ArenaUiState.ReplaceWeapon&&pendingOffer>=0&&runWeapons.Offers[pendingOffer]!=null){var slots=runWeapons.Offers[pendingOffer].IsAuto?runWeapons.Auto:runWeapons.Hand;snapshot.replacementCount=slots.Length;for(int i=0;i<slots.Length;i++)WriteSlot(snapshot.replacementSlots[i],slots[i],false);}else if(RunPhase==ArenaUiState.ReplaceSkill){snapshot.replacementCount=3;for(int i=0;i<3;i++)WriteSkillSlot(snapshot.replacementSlots[i],skills.Slots[i]);}
                 snapshot.bossHp=snapshot.bossMaxHp=snapshot.bossShield=0;foreach(var e in waves.Alive)if(e&&e.IsBoss&&e.IsAlive){snapshot.bossHp=e.Hp;snapshot.bossMaxHp=e.maxHp;snapshot.bossShield=ElementStatus.For(e)?.Shield??0;break;}
-                if(CampaignRunning)campaign.FillSnapshot(snapshot);else{snapshot.campaignLabel="";snapshot.hideAutoSlots=snapshot.hideSkillSlots=false;}
+                // The fifth pass's dock (V5BattleHud) shows the auto slots once an auto weapon is held and the skill slots once a skill is
+                // learned, in the open mode as in the story (V2Campaign.FillSnapshot); the English Alpha keeps every slot from the start.
+                if(CampaignRunning)campaign.FillSnapshot(snapshot);else{snapshot.campaignLabel="";bool fifth=V5HudKit.On;snapshot.hideAutoSlots=fifth&&!HoldsAutoWeapon;snapshot.hideSkillSlots=fifth&&!(skills&&skills.OwnedCount>0);}
                 return snapshot;
             }
         }
+        /// <summary>The hint line as the saved HUD shows it over the hands (snapshot.hint), and the same prompt in three parts for the fifth
+        /// pass's plate at the top of the screen, which draws the key it names as a keycap: the words before the key, the key (ArenaKeys'
+        /// name for it) and the words after it. The parts stay empty where the line only names the weapon in hand: its slot in the dock
+        /// shows it. Both carry the same words; only Tab differs: the English line writes it in capitals, the keycap as ArenaKeys names it.</summary>
+        void WriteHint()
+        {
+            string lead="",key="",tail="",line;
+            if(BuildWalking){lead=ArenaText.Pair("整备走动中 · ", "WALKING · ");key=ArenaKeys.Label(Key.Tab);tail=ArenaText.Pair(" 返回选卡", " BACK TO THE CARDS");line=lead+ArenaText.Pair(key,key.ToUpperInvariant())+tail;}
+            else if(BuildCrateWalking)line=lead=ArenaText.Pair("整备中可以走动 · 点击头顶的箱子打开", "YOU CAN WALK · CLICK THE CRATE ABOVE YOU");
+            else if(RunPhase==ArenaUiState.WaveActive&&progression&&progression.BankedDrafts>0)
+            {
+                int picks=progression.BankedDrafts;key=ArenaKeys.CardPickKey;
+                lead=CampaignRunning?ArenaText.Pair($"待选升级 ×{picks} · 按 ", $"UPGRADES TO PICK ×{picks} · PRESS "):ArenaText.Pair($"可选卡 ×{picks} · 按 ", $"CARD PICKS ×{picks} · PRESS ");
+                tail=ArenaText.Pair(CampaignRunning?" 选择":" 选卡", "");
+                line=lead+key+tail;
+            }
+            else line=runWeapons&&runWeapons.Active!=null?runWeapons.Active.Label:"";
+            snapshot.hint=line;snapshot.hintLead=lead;snapshot.hintKey=key;snapshot.hintTail=tail;
+        }
+        /// <summary>An auto weapon sits in one of the auto slots.</summary>
+        bool HoldsAutoWeapon{get{if(!runWeapons)return false;foreach(var weapon in runWeapons.Auto)if(weapon!=null)return true;return false;}}
         void WriteArmoryOffer(ArenaUiCard card,RunWeapon w)
         {
             card.available=w!=null;card.formIndex=w==null?-1:(int)w.form;

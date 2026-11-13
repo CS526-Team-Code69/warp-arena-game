@@ -133,6 +133,20 @@ namespace AnomalyArena
             if (WorldMap.Active) WorldMap.Active.HoleChanged();
         }
 
+        /// <summary>A continued save: this map hole where it stood, with its feeds and its phase as they were saved (a hole saved while it
+        /// collapsed comes back as the portal it was turning into).</summary>
+        public void Restore(Vector3 at, int feeds, HolePhase phase, int openedWave, int wavesLeft)
+        {
+            transform.position = new Vector3(at.x, 0f, at.z);
+            Feeds = Mathf.Clamp(feeds, 0, Mathf.Max(0, feedsToOpen));
+            Phase = phase == HolePhase.Collapsing ? HolePhase.Portal : phase;
+            OpenedWave = openedWave;
+            WavesLeft = Mathf.Clamp(wavesLeft, 0, 3);
+            collapseTimer = 0f;
+            RefreshLook();
+            if (WorldMap.Active) WorldMap.Active.HoleChanged();
+        }
+
         /// <summary>A portal of the void trial (WorldMap.Trial.cs): the open-portal look at this point. It never swallows, pulls or counts and
         /// never runs out; WorldMap hides it when the trial ends.</summary>
         public void ShowAsTrialPortal(Vector3 at)

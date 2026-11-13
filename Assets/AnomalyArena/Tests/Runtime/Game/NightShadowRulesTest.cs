@@ -95,5 +95,43 @@ namespace AnomalyArena
         [TestCase(5, 6, ExpectedResult = false, TestName = "The end of one row and the start of the next do not touch")]
         [TestCase(8, 8, ExpectedResult = false, TestName = "A region does not touch itself")]
         public bool RegionsTouch_OnlyNeighboursOfTheGrid(int a, int b) => CampaignRules.RegionsTouch(a, b, 6);
+
+        [Test]
+        public void TutorialShadowHitScale_HurtsButLessThanANormalTouch() =>
+            Assert.That(rules.tutorialShadowHitScale, Is.GreaterThan(0f).And.LessThan(1f));
+
+        // ───── Keeping out of the light (V2Campaign.KeptOutOf), a lamp of radius 6.5 at the origin ─────
+
+        [Test]
+        public void KeptOutOf_AStepOutsideTheLight_IsUnchanged()
+        {
+            Vector3 from = new(10f, 0f, 0f), next = new(10f, 0f, 1f);
+
+            Assert.That(V2Campaign.KeptOutOf(Vector3.zero, 6.5f, from, next, 4f), Is.EqualTo(next));
+        }
+
+        [Test]
+        public void KeptOutOf_AStepIntoTheLightFromItsEdge_GoesRoundTheEdgeByTheWholeStep()
+        {
+            // On the edge, one cell nearly straight in, leaning a little to one side (as toward a player behind the light).
+            Vector3 from = new(6.5f, 0f, 0f), next = from + new Vector3(-.95f, 0f, .31f);
+
+            Vector3 kept = V2Campaign.KeptOutOf(Vector3.zero, 6.5f, from, next, 4f);
+
+            Assert.That(kept.magnitude, Is.EqualTo(6.5f).Within(1e-3f), "it stays on the edge");
+            Assert.That(Vector3.Distance(kept, from), Is.EqualTo(1f).Within(.05f), "by about the whole step, not only its sideways part");
+            Assert.That(kept.z, Is.GreaterThan(0f), "to the side the step leaned to");
+        }
+
+        [Test]
+        public void KeptOutOf_CaughtWellInside_BacksStraightOut()
+        {
+            Vector3 from = new(2f, 0f, 0f);
+
+            Vector3 kept = V2Campaign.KeptOutOf(Vector3.zero, 6.5f, from, from, 4f);
+
+            Assert.That(kept.x, Is.EqualTo(2f + 4f * 1.6f).Within(1e-4f));
+            Assert.That(kept.z, Is.EqualTo(0f).Within(1e-6f));
+        }
     }
 }

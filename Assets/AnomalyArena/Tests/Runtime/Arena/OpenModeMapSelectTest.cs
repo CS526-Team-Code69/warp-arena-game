@@ -11,16 +11,19 @@ using Object = UnityEngine.Object;
 
 namespace AnomalyArena
 {
-    /// <summary>The open mode's map pick (the course asks for a level select). The title's "Start Game - Open
-    /// Mode" opens it in place of the title's entries: the Dunes, the Ruins, a random map, and back to the title (also Esc). A picked map
-    /// starts the classic 15-wave run on a map of that family, reloading the scene when the map laid was another; a random pick keeps the map
-    /// laid at random, as before. The story mode never comes here.</summary>
+    /// <summary>The open mode's map pick (the course asks for a level select). On the whole game's title it comes after the new game's
+    /// mode and slot (V5Title): the open mode's card, then an empty slot's Start opens it in the window's frame in place of the slots: the
+    /// Dunes, the Ruins, a random map, and back (also Esc), which returns to the slots. A picked map starts the classic 15-wave run on a
+    /// map of that family, reloading the scene when the map laid was another; a random pick keeps the map laid at random, as before. The
+    /// slot is bound only once a map really starts the run, and a save it overwrites is deleted only then. The story mode never comes here. The save windows read made-up empty slots, and their calls to ArenaSaves are noted (V5Title's test
+    /// hooks).</summary>
     [TestFixture]
     public class OpenModeMapSelectTest
     {
         const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
-        static readonly string[] TitleEntries = { V2Hud.TitleStoryButton, V2Hud.TitleOpenButton, V2Hud.TitleTutorialButton, V2Hud.TitleSettingsButton, V2Hud.TitleLanguageButton };
+        const string NewGame = V5Title.RootName + "/Window/Pages/NewGame/";
         readonly List<Biome> madeMaps = new();
+        readonly List<string> saveCalls = new();
 
         [SetUp]
         public void SetUp()
@@ -28,6 +31,9 @@ namespace AnomalyArena
             V2Tutorial.ForgetShown();
             WorldMap.NextMapFamily = null;
             GameManager.ForgetOpenModeStartForTests();
+            saveCalls.Clear();
+            V5Title.SummariesForTests = EmptySlots;
+            V5Title.SaveCallsForTests = (call, mode, slot) => saveCalls.Add($"{call} {mode} {slot}");
         }
 
         [TearDown]
@@ -39,6 +45,8 @@ namespace AnomalyArena
             V2Tutorial.ForgetShown();
             WorldMap.NextMapFamily = null;
             GameManager.ForgetOpenModeStartForTests();
+            V5Title.SummariesForTests = null;
+            V5Title.SaveCallsForTests = null;
             TestStartLanguage.Reset();
             Time.timeScale = 1f;
         }
@@ -83,23 +91,31 @@ namespace AnomalyArena
         // ───── The pick on the title ─────
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(60000)]
-        public async Task OpenMode_Click_ShowsTheMapPickInPlaceOfTheEntries()
+        public async Task OpenMode_NewGameInAnEmptySlot_ShowsTheMapPickInTheWindow()
         {
             var game = await ReadyScene();
             var content = TitleContent();
 
-            await ClickUntil(Part(content, V2Hud.TitleOpenButton), () => Hud().MapSelectOpen, "the open mode opens the map pick");
+            await OpenTheMapPick();
             await Awaitable.NextFrameAsync();
 
             Assert.That(game.RunPhase, Is.EqualTo(ArenaUiState.Title), "no run starts before a map is picked");
-            Assert.That(TitleEntries.Where(name => Part(content, name).gameObject.activeInHierarchy), Is.Empty, "the title's entries make room for it");
+            Assert.That(saveCalls, Is.Empty, "nothing is bound before a map starts the run");
+            Assert.That(Part(content, V5Title.RootName + "/Window/Pages").gameObject.activeInHierarchy, Is.False, "the window's slots make room for it");
             Assert.That(V2Hud.MapButtons.Where(name => !MapButton(content, name).gameObject.activeInHierarchy), Is.Empty, "its four buttons show");
             Assert.That(EventSystem.current.currentSelectedGameObject, Is.SameAs(MapButton(content, "MapDunes").gameObject),
-                "the keyboard's selection starts on the first map, as the title's starts on its first entry");
+                "the keyboard's selection starts on the first map");
+            var window = Box(Part(content, V5Title.RootName + "/Window"), content);
+            foreach (var name in V2Hud.MapButtons)
+            {
+                var box = Box(MapButton(content, name), content);
+                Assert.That(box.xMin >= window.xMin - .5f && box.xMax <= window.xMax + .5f && box.yMin >= window.yMin - .5f && box.yMax <= window.yMax + .5f,
+                    Is.True, $"{name} is drawn in the window");
+            }
         }
 
-        [TestCase(StartupLanguage.Chinese, "沙丘", "遗迹", "随机", "返回标题")]
-        [TestCase(StartupLanguage.English, "Dunes", "Ruins", "Random", "Back to Title")]
+        [TestCase(StartupLanguage.Chinese, "沙丘", "遗迹", "随机", "返回")]
+        [TestCase(StartupLanguage.English, "Dunes", "Ruins", "Random", "Back")]
         [BuildScene(Scene), Category("Integration"), Timeout(60000)]
         public async Task MapPick_EachLanguage_ItsWordsTopDown_WholeAndApart(string language, string dunes, string ruins, string random, string back)
         {
@@ -125,38 +141,40 @@ namespace AnomalyArena
                 "every word shows in full");
             Assert.That(stack.Zip(stack.Skip(1), (upper, lower) => upper.yMin >= lower.yMax), Has.All.True,
                 "the line, then each button under the last, none overlapping");
-            // The line of key hints that lay under the pick is no longer shown; the pick still ends above the canvas' foot.
             Assert.That(stack.Where(box => box.yMin < canvas.yMin || box.yMax > canvas.yMax), Is.Empty, "and none off the canvas");
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(60000)]
-        public async Task MapPick_BackButton_ReturnsToTheEntries_TheSelectionOnTheOpenMode()
+        public async Task MapPick_BackButton_ReturnsToTheSlots_TheSelectionOnTheSlot()
         {
             var game = await ReadyScene();
             var content = TitleContent();
-            await ClickUntil(Part(content, V2Hud.TitleOpenButton), () => Hud().MapSelectOpen, "the open mode opens the map pick");
+            await OpenTheMapPick();
             await Awaitable.NextFrameAsync();
 
             Click(MapButton(content, "MapBack"));
             await Awaitable.NextFrameAsync();
+            await Awaitable.NextFrameAsync();
 
+            var slot = Part(content, NewGame + "Slot1");
             Assert.That(Hud().MapSelectOpen, Is.False, "the back button closes the map pick");
-            Assert.That(TitleEntries.Where(name => !Part(content, name).gameObject.activeInHierarchy), Is.Empty, "the title's entries are back");
-            Assert.That(EventSystem.current.currentSelectedGameObject, Is.SameAs(Part(content, V2Hud.TitleOpenButton).gameObject), "the selection is back on the open mode");
+            Assert.That(slot.gameObject.activeInHierarchy, Is.True, "the open mode's slots are back");
+            Assert.That(EventSystem.current.currentSelectedGameObject, Is.SameAs(slot.gameObject), "the selection is on the slot the new game was for");
             Assert.That(game.RunPhase, Is.EqualTo(ArenaUiState.Title), "on the title");
+            Assert.That(saveCalls, Is.Empty, "backing out binds nothing");
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(60000)]
-        public async Task MapPick_Esc_ReturnsToTheEntries()
+        public async Task MapPick_Esc_ReturnsToTheSlots()
         {
             var game = await ReadyScene();
             var content = TitleContent();
-            await ClickUntil(Part(content, V2Hud.TitleOpenButton), () => Hud().MapSelectOpen, "the open mode opens the map pick");
+            await OpenTheMapPick();
             using var keyboard = new TestKeyboard();
 
             await keyboard.TapUntil(KeyCode.Escape, () => !Hud().MapSelectOpen, "Esc closes the map pick");
 
-            Assert.That(Part(content, V2Hud.TitleOpenButton).gameObject.activeInHierarchy, Is.True, "the title's entries are back");
+            Assert.That(Part(content, NewGame + "Slot1").gameObject.activeInHierarchy, Is.True, "the open mode's slots are back");
             Assert.That(game.RunPhase, Is.EqualTo(ArenaUiState.Title), "on the title");
         }
 
@@ -166,7 +184,7 @@ namespace AnomalyArena
             var game = await ReadyScene();
             bool laidInFamily = WorldMap.Active.biome.InFamily(family);
             var content = TitleContent();
-            await ClickUntil(Part(content, V2Hud.TitleOpenButton), () => Hud().MapSelectOpen, "the open mode opens the map pick");
+            await OpenTheMapPick();
             await Awaitable.NextFrameAsync();
             var button = MapButton(content, V2Hud.MapButtons[choice]);
 
@@ -178,6 +196,7 @@ namespace AnomalyArena
                 "the scene reloads exactly when the map laid was of another family, and the scene it leaves starts nothing");
             Assert.That(WorldMap.Active.biome.InFamily(family), Is.True, $"the run is on a {family} map, not {WorldMap.Active.biome.displayName}");
             Assert.That(GameManager.Instance.CampaignRunning, Is.False, "it is the classic 15-wave run, not the story");
+            Assert.That(saveCalls, Is.EqualTo(new[] { "Bind Open 0" }), "the slot is bound once, when the map starts the run");
             await Until(() => V2Tutorial.IsOpen, 3f, "its first-time pages open on arrival, as after a start from the title");
         }
 
@@ -187,7 +206,7 @@ namespace AnomalyArena
             var game = await ReadyScene();
             var laid = WorldMap.Active.biome;
             var content = TitleContent();
-            await ClickUntil(Part(content, V2Hud.TitleOpenButton), () => Hud().MapSelectOpen, "the open mode opens the map pick");
+            await OpenTheMapPick();
             await Awaitable.NextFrameAsync();
 
             await ClickUntil(MapButton(content, "MapRandom"), () => game.RunPhase != ArenaUiState.Title, "the random pick is taken");
@@ -196,17 +215,71 @@ namespace AnomalyArena
             Assert.That(GameManager.Instance, Is.SameAs(game), "in the same scene");
             Assert.That(WorldMap.Active.biome, Is.SameAs(laid), "on the map laid at random, as before the pick existed");
             Assert.That(game.CampaignRunning, Is.False, "the classic run, not the story");
+            Assert.That(saveCalls, Is.EqualTo(new[] { "Bind Open 0" }), "the slot is bound once, when the map starts the run");
+        }
+
+        /// <summary>Overwriting an open-mode save: the confirmed question opens the map pick, and the old save stays until a map really starts
+        /// the run. Backing out (the back button, then Esc) leaves it as it was; only a map taken deletes it, then binds the slot.</summary>
+        [Test, LoadScene(Scene), Category("Integration"), Timeout(90000)]
+        public async Task OpenMode_OverwritingASave_KeepsItUntilAMapStartsTheRun()
+        {
+            var game = await ReadyScene();
+            var content = TitleContent();
+            var open = EmptySlots(SaveMode.Open);
+            open[0] = new SaveSummary { mode = SaveMode.Open, slot = 0, empty = false, wave = 7, waveCount = 15, mapFamily = 0, savedAtUnixSeconds = 9,
+                weapons = new[] { WeaponForm.Rifle } };
+            V5Title.SummariesForTests = mode => mode == SaveMode.Open ? open : EmptySlots(mode);
+            V5Title.ReloadForTests();
+            await Awaitable.NextFrameAsync();
+            await ClickUntil(Part(content, V5Title.RootName + "/Menu/NewGame"), () => V5Title.Active.Tab == V5Title.NewGameTab, "the new game's window");
+            await ClickUntil(Part(content, NewGame + "OpenMode"), () => Part(content, NewGame + "Top").gameObject.activeInHierarchy, "the open mode's card opens its slots");
+            await Settle();
+            var slot = Part(content, NewGame + "Slot1");
+            await ClickUntil(slot, () => slot.GetComponent<V5Plate>().Chosen, "the filled slot is chosen");
+
+            for (int attempt = 0; attempt < 2; attempt++)
+            {
+                await ConfirmOverwrite(content);
+                Assert.That(saveCalls, Is.Empty, "the old save stays while no map is taken");
+                if (attempt == 0) Click(MapButton(content, "MapBack"));
+                else
+                {
+                    using var keyboard = new TestKeyboard();
+                    await keyboard.TapUntil(KeyCode.Escape, () => !Hud().MapSelectOpen, "Esc closes the map pick");
+                }
+                await Awaitable.NextFrameAsync();
+                Assert.That(Hud().MapSelectOpen, Is.False, "back from the map pick");
+                Assert.That(saveCalls, Is.Empty, attempt == 0 ? "its back button leaves the old save as it was" : "and so does Esc");
+                Assert.That(Part(content, NewGame + "Slot1/Save").gameObject.activeInHierarchy, Is.True, "the slot still shows it");
+            }
+
+            await ConfirmOverwrite(content);
+            await ClickUntil(MapButton(content, "MapRandom"), () => game.RunPhase != ArenaUiState.Title, "a map starts the run");
+            Assert.That(saveCalls, Is.EqualTo(new[] { "Delete Open 0", "Bind Open 0" }), "only now the old save goes, then the slot is bound");
+        }
+
+        /// <summary>The chosen filled slot's Start, then the question's 确认覆盖: the map pick opens.</summary>
+        static async Task ConfirmOverwrite(Transform content)
+        {
+            var confirm = Part(content, V5Title.RootName + "/Window/Foot/Confirm");
+            await ClickUntil(Part(content, V5Title.RootName + "/Window/Foot/Go"), () => confirm.gameObject.activeInHierarchy, "the overwrite is asked");
+            await ClickUntil(confirm, () => Hud().MapSelectOpen, "the confirmed overwrite opens the map pick");
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(60000)]
-        public async Task StoryMode_Click_GoesStraightToTheCampaign_WithoutTheMapPick()
+        public async Task StoryMode_NewGameInAnEmptySlot_GoesStraightToTheCampaign_WithoutTheMapPick()
         {
             await ReadyScene();
             var content = TitleContent();
+            V5Title.ReloadForTests();
+            await Awaitable.NextFrameAsync();
 
-            await ClickUntil(Part(content, V2Hud.TitleStoryButton), () => V2Campaign.Active && V2Campaign.Active.Running, "the story mode starts the campaign");
+            await ClickUntil(Part(content, NewGame + "StoryMode"), () => Part(content, NewGame + "Top").gameObject.activeInHierarchy, "the story mode's card opens its slots");
+            await Settle();
+            await ClickUntil(Part(content, V5Title.RootName + "/Window/Foot/Go"), () => V2Campaign.Active && V2Campaign.Active.Running, "the story mode starts the campaign");
 
             Assert.That(Hud().MapSelectOpen, Is.False, "the story mode never shows the map pick");
+            Assert.That(saveCalls, Has.Member("Bind Story 0"), "its first empty slot is bound");
         }
 
         // ───── Helpers ─────
@@ -218,6 +291,26 @@ namespace AnomalyArena
         static RectTransform Part(Transform content, string name) => (RectTransform)content.Find(name);
 
         static RectTransform MapButton(Transform content, string name) => (RectTransform)content.Find(V2Hud.MapSelect + "/" + name);
+
+        static SaveSummary[] EmptySlots(SaveMode mode) => Enumerable.Range(0, ArenaSaves.SlotCount).Select(i => new SaveSummary { mode = mode, slot = i }).ToArray();
+
+        /// <summary>The new game's open mode, its first slot (empty here) chosen, then Start: the map pick opens in the window.</summary>
+        static async Task OpenTheMapPick()
+        {
+            var content = TitleContent();
+            V5Title.ReloadForTests();
+            await Awaitable.NextFrameAsync();
+            await ClickUntil(Part(content, NewGame + "OpenMode"), () => Part(content, NewGame + "Top").gameObject.activeInHierarchy, "the open mode's card opens its slots");
+            await Settle();
+            await ClickUntil(Part(content, V5Title.RootName + "/Window/Foot/Go"), () => Hud().MapSelectOpen, "an empty slot's Start opens the map pick");
+        }
+
+        /// <summary>Waits for the title's window to stop moving (its parts slide in).</summary>
+        static async Task Settle()
+        {
+            await Until(() => !V5Title.Active || V5Title.Active.Settled, 3f, "the title's window settles");
+            await Awaitable.NextFrameAsync();
+        }
 
         static async Task<GameManager> ReadyScene()
         {

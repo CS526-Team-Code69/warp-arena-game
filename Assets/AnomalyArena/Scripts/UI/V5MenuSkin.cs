@@ -162,6 +162,9 @@ namespace AnomalyArena
         {
             if (screen.state == ArenaUiState.Title) { SkinTitle(screen); return; }
             if (screen.transform.Find("Content") is not RectTransform content) return;
+            // On every page but the English Alpha's the pick screens are the fifth interface pass's (V5PickScreen); a screen it could not
+            // dress keeps the look below.
+            if (V5HudKit.On && V5PickScreen.Covers(screen.state) && V5PickScreen.Install(screen, content)) return;
             switch (screen.state)
             {
                 case ArenaUiState.Loadout:
@@ -190,6 +193,8 @@ namespace AnomalyArena
         // not shown any more (the art mode is chosen in the settings).
         void SkinTitle(V2UiScreen screen)
         {
+            // The whole game's title dresses itself (V5Title); these skins are the Alpha's title's.
+            if (screen.transform.Find("Content/" + V5Title.RootName)) return;
             foreach (var name in V2Hud.TitlePrimaryButtons)
                 if (screen.transform.Find("Content/" + name) is { } part && part.GetComponent<Button>() is { } button) SkinButton(button, true, 0);
             foreach (var name in V2Hud.TitleSecondaryButtons)

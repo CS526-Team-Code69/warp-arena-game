@@ -329,6 +329,7 @@ namespace AnomalyArena
                     : ArenaText.Pair("燃料还没满", "The tank isn't full");
                 ui.Flash(ArenaText.Pair($"{missing}，飞船飞不起来，得再撑一天。", $"{missing}, so the ship can't leave yet. Hold out one more day."), 3.5f);
             }
+            SaveStoryPhase(SavePhase.Morning); // the morning's save, before the new day's one-shot effects (V2Campaign.Save.cs)
             Stage = CampaignStage.Build; // StartNextWave begins a new day from this stage
             gm.CampaignStartDay();
         }
@@ -949,7 +950,8 @@ namespace AnomalyArena
         {
             var p = gm.player;
             if (!p.IsAlive || knockedOut) return;
-            float hit = Mathf.Max(1f, p.maxHp * rules.shadowHitShare);
+            // A tutorial night shadow's touch takes a share of a normal one (rules.tutorialShadowHitScale).
+            float hit = Mathf.Max(1f, p.maxHp * rules.shadowHitShare * (s.tutorial ? rules.tutorialShadowHitScale : 1f));
             gm.hud?.FlashDamage();
             gm.Shake(.18f);
             V3WorldAudio.Instance?.Play(ArenaWorldCue.PlayerHit, p.Position, .7f);

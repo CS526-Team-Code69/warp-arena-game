@@ -10,8 +10,8 @@ namespace AnomalyArena
     /// </summary>
     public sealed partial class V2CampaignUi
     {
-        // Under the currency row (its top at -20, 44 tall), as wide, a little lower.
-        const float VoidWalletTop = -70f, VoidWalletHeight = 36f, VoidWalletWidth = 430f;
+        // Under the currency row (its top at -20, CurrencyHeight tall), as wide, a little lower.
+        const float VoidWalletTop = -66f, VoidWalletHeight = 32f, VoidWalletWidth = CurrencyWidth;
         static readonly Color VoidWalletColour = new(.78f, .55f, 1f);
 
         RectTransform voidWallet;
@@ -36,6 +36,7 @@ namespace AnomalyArena
                 voidWalletEnergy = energy; voidWalletAlloy = alloy; voidWalletLanguage = language;
                 voidWalletText.text = ArenaText.Pair($"虚空能量 {energy}　虚空合金 {alloy}", $"Void energy {energy}   Void alloy {alloy}");
             }
+            if (V5HudKit.On) StoryVoidWallet(energy, alloy); // the fifth pass's void plate (V5StoryWallet.cs)
             if (!voidWallet.gameObject.activeSelf) voidWallet.gameObject.SetActive(true);
         }
 
@@ -43,9 +44,10 @@ namespace AnomalyArena
         {
             voidWallet = Box("VoidCurrencies", hud, new Vector2(1f, 1f), new Vector2(-24f, VoidWalletTop), new Vector2(VoidWalletWidth, VoidWalletHeight), new Vector2(1f, 1f), Panel);
             EdgeBar(voidWallet, VoidWalletColour);
-            voidWalletText = Label("Text", voidWallet, "", 17, VoidWalletColour, TextAnchor.MiddleCenter);
+            voidWalletText = Label("Text", voidWallet, "", 15, VoidWalletColour, TextAnchor.MiddleCenter);
             Stretch(voidWalletText.rectTransform, 14f, 2f, 8f, 2f);
             voidWalletEnergy = voidWalletAlloy = -1;
+            if (V5HudKit.On) RestyleStoryVoidWallet();
         }
     }
 }

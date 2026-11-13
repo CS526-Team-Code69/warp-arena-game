@@ -7,8 +7,9 @@ namespace AnomalyArena
 {
     /// <summary>
     /// Run flow beside GameManagerV2.cs. The keyboard answers only to the keys the game shows: Space, Enter and keypad
-    /// Enter only close the weapon card, which names them (document 2.2, 10-27), and the UI has no submit action, so every other step is a
-    /// click or a key printed on screen. A Void Trial won mid-wave hands the wave back after a short freeze in which the player absorbs
+    /// Enter close the weapon card, which names them (document 2.2, 10-27), and the UI has no submit action, so every other step is a
+    /// click or a key printed on screen. Space is also the void dash once the void trial is won, and the battle HUD's key hints then show
+    /// it (VoidDashUnlocked). A Void Trial won mid-wave hands the wave back after a short freeze in which the player absorbs
     /// the void's power (document 12.5).
     /// </summary>
     public partial class GameManager
@@ -21,11 +22,13 @@ namespace AnomalyArena
         {
             (Key.Escape, KeyCode.Escape), (Key.T, KeyCode.T), (Key.Tab, KeyCode.Tab), (Key.R, KeyCode.R),
             (Key.Digit1, KeyCode.Alpha1), (Key.Digit2, KeyCode.Alpha2), (Key.Digit3, KeyCode.Alpha3),
-            // Document 2.2 (10-27): the weapon card also closes with Space or Enter, and its hint names them; nothing else reads them.
+            // Document 2.2 (10-27): the weapon card also closes with Space or Enter, and its hint names them. Space is also the void
+            // dash once it is unlocked (TryVoidDash). No other script reads either key.
             (Key.Space, KeyCode.Space), (Key.Enter, KeyCode.Return), (Key.NumpadEnter, KeyCode.KeypadEnter),
         };
 
-        /// <summary>The keys the menus answer to (tests check that Space and Enter act on the weapon card only).</summary>
+        /// <summary>The keys the menus answer to (tests check that Space and Enter close the weapon card and do nothing else on a screen,
+        /// and that Space dashes only once the dash is unlocked).</summary>
         public static IEnumerable<KeyCode> ShownKeyCodes
         {
             get { foreach (var (_, code) in ShownKeys) yield return code; }
@@ -49,7 +52,8 @@ namespace AnomalyArena
         }
 
         /// <summary>What a key does in the current phase, the path the keyboard takes (open to tests). A key the game does not show
-        /// does nothing in any phase, the black-hole cutscene included; Space, Enter and keypad Enter act on the weapon card only.</summary>
+        /// does nothing in any phase, the black-hole cutscene included; Space, Enter and keypad Enter close the weapon card, and outside
+        /// it Space is the void dash once it is unlocked (TryVoidDash).</summary>
         public void PressKey(KeyCode key)
         {
             switch (key)
@@ -59,6 +63,8 @@ namespace AnomalyArena
                 case KeyCode.KeypadEnter:
                     // Document 2.2 (10-27): click anywhere, Space or Enter closes the weapon card (after the same input lock as a click).
                     if (RunPhase == ArenaUiState.WeaponIntro) ExecuteUiCommand(ArenaUiCommand.DismissWeaponIntro);
+                    // Outside the card Space is the void dash: the press that closes the card is not also a dash.
+                    else if (key == KeyCode.Space) TryVoidDash();
                     break;
                 case KeyCode.Escape:
                     if (RunPhase == ArenaUiState.Paused) ExecuteUiCommand(ArenaUiCommand.Resume);
@@ -85,6 +91,43 @@ namespace AnomalyArena
                     ChooseByNumber(key - KeyCode.Alpha1);
                     break;
             }
+        }
+
+        // ───── The void dash: Space once the void trial is won ─────
+
+        /// <summary>The void dash is the player's once the void trial is won: in the story with the void's gift (V2Campaign.ProphetBeaten,
+        /// which a fall in the same frame as the Prophet's does not pay), in the open mode with the trial's own reward (WorldMap.TrialWon).
+        /// Both are saved, so a continued run that had won the trial dashes too. The English Alpha has no dash: it stays the build that
+        /// was graded.</summary>
+        public bool VoidDashUnlocked => !BuildEdition.IsAlpha && (CampaignRunning ? campaign.ProphetBeaten : WorldMap.Active && WorldMap.Active.TrialWon);
+
+        /// <summary>Space outside the weapon card: the dash (PlayerController.TryVoidDash), only while the player can move, which no
+        /// open screen allows, and never in the frame a screen opened or closed, so a click or a key that put one away in that frame
+        /// does not also dash.</summary>
+        void TryVoidDash()
+        {
+            if (!VoidDashUnlocked || !CanPlayerMove || !player || Time.unscaledTime <= phaseOpenedAt) return;
+            player.TryVoidDash();
+        }
+
+        /// <summary>A void trial was won (CompleteVoidTrial): the dash it gives says so once play is back.</summary>
+        bool voidDashNoticePending;
+        const float VoidDashNoticeSeconds = 4f;
+
+        /// <summary>The dash's one-line notice, once, when play is back after the win: after its banner and frozen return, and after
+        /// whatever opens next (the extra level's pick, the build phase's panels, a wave's own banner), so it covers none of them. A
+        /// continued run that had won the trial knows the dash already and gets no notice.</summary>
+        void TickVoidDashNotice()
+        {
+            if (!voidDashNoticePending || !CanPlayerMove || RunPhase == ArenaUiState.WaveIntro || !player || !ArenaText.Ready) return;
+            // The extra level's pick opens as the wave comes back (V2Update): the notice waits for it.
+            if (RunPhase == ArenaUiState.WaveActive && progression && progression.BankedDrafts > levelUpSeen) return;
+            // The story pays the gift a moment after the win itself (V2Campaign.OnProphetBeaten); a win that pays nothing gives no dash.
+            if (!VoidDashUnlocked) return;
+            voidDashNoticePending = false;
+            string cost = player.voidDash.CostWords;
+            hud?.Toast(ArenaText.Pair($"获得虚空冲刺：按空格朝光标冲刺，消耗{cost}", $"Void Dash gained: press Space to dash toward the cursor, using {cost}"),
+                ElementCombat.ColorFor(ElementKind.Void), VoidDashNoticeSeconds);
         }
 
         // ───── What the bottom row flashes for ─────

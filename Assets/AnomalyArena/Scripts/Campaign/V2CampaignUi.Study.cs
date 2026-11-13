@@ -13,6 +13,8 @@ namespace AnomalyArena
     /// tiles are rebuilt. Mouse: click a tab or a tile, then Buy. Keys (shown at the bottom): arrows or WASD, Q / E for the tab, F to buy,
     /// Esc to close; a gamepad: d-pad or left stick, LB / RB, A, B. Space and Enter are never read here (only the weapon card reads them).
     /// The tiles come from V2Campaign.BuildStudy; this file only draws them and calls their buy.
+    /// On every page but the English Alpha (V5HudKit.On) the fifth interface pass draws the window over this one from the same tiles
+    /// (V5StudyWindow.cs); choosing, the keys and buying stay here.
     /// </summary>
     public sealed partial class V2CampaignUi
     {
@@ -45,7 +47,8 @@ namespace AnomalyArena
             if (!studyScreen) BuildStudyWindow();
             if (!string.IsNullOrEmpty(tabKey)) { studyTabKey = tabKey; studyEntryId = null; }
             ResumeStudy();
-            V2Audio.Instance?.PlayUI(ArenaUiSound.Select);
+            if (V5HudKit.On) V5UiSound.Play(V5UiSound.Ui.Panel);
+            else V2Audio.Instance?.PlayUI(ArenaUiSound.Select);
         }
 
         /// <summary>Shows the window again on the tab and tile it had (after a weapon's card, AnnounceWeapon).</summary>
@@ -129,6 +132,7 @@ namespace AnomalyArena
             var keys = studyKeys.rectTransform;
             keys.anchorMin = new Vector2(0f, 0f); keys.anchorMax = new Vector2(1f, 0f);
             keys.offsetMin = new Vector2(StudySide, 14f); keys.offsetMax = new Vector2(-StudySide, 50f);
+            if (V5HudKit.On) BuildStudy5(); // the fifth pass's page over this window, which stays built and hidden (V5StudyWindow.cs)
             studyScreen.gameObject.SetActive(false);
         }
 
@@ -189,27 +193,35 @@ namespace AnomalyArena
                 if (tab.locked) b.GetComponentInChildren<Text>().color = Faint;
                 y -= TabHeight + 6f;
             }
+            if (V5HudKit.On) BuildStudyTabs5();
         }
 
         void BuildStudyTiles()
         {
-            foreach (Transform child in studyContent) Destroy(child.gameObject);
+            // The fifth pass reuses its tiles (V5StudyWindow.cs): a plate under the pointer stays the same plate across a rebuild.
+            if (!V5HudKit.On) foreach (Transform child in studyContent) Destroy(child.gameObject);
             studyTiles.Clear();
             var tab = CurrentStudyTab;
             float width = studyViewport.rect.width;
-            studyColumns = Mathf.Max(1, Mathf.FloorToInt((width + TileGap) / (TileWidth + TileGap)));
+            studyColumns = Mathf.Max(1, Mathf.FloorToInt((width + StudyGapX) / (StudyTileW + StudyGapX)));
             int count = tab == null || tab.locked ? 0 : tab.entries.Count;
             studyEmpty.text = tab == null ? ArenaText.Pair("现在没有可研习的内容。", "Nothing to study now.")
                 : tab.locked ? tab.lockedNote : count == 0 ? tab.emptyNote ?? ArenaText.Pair("这里暂时没有内容。", "Nothing here yet.") : "";
             studyEmpty.gameObject.SetActive(!string.IsNullOrEmpty(studyEmpty.text));
             int rows = (count + studyColumns - 1) / studyColumns;
-            studyContent.sizeDelta = new Vector2(0f, Mathf.Max(0f, rows * (TileHeight + TileGap) - TileGap));
+            studyContent.sizeDelta = new Vector2(0f, Mathf.Max(0f, rows * (StudyTileH + StudyGapY) - StudyGapY + (rows > 0 ? 2f * StudyPad : 0f)));
             for (int i = 0; i < count; i++)
             {
                 var entry = tab.entries[i];
+                if (V5HudKit.On)
+                {
+                    LayStudy5Tile(i, entry);
+                    continue;
+                }
                 Vector2 at = new((i % studyColumns) * (TileWidth + TileGap), -(i / studyColumns) * (TileHeight + TileGap));
                 studyTiles.Add(BuildTile(entry, i, at));
             }
+            if (V5HudKit.On) HideStudy5Tiles(count);
             // Keep the tile chosen before (by its key), else the first one that can be bought, else the first.
             studySelected = count == 0 ? -1 : tab.entries.FindIndex(e => e.id == studyEntryId);
             if (count > 0 && studySelected < 0) studySelected = Mathf.Max(0, tab.entries.FindIndex(e => e.state == StudyState.Available));
@@ -268,6 +280,11 @@ namespace AnomalyArena
 
         void StyleTiles()
         {
+            if (V5HudKit.On)
+            {
+                StyleTiles5();
+                return;
+            }
             var tab = CurrentStudyTab;
             for (int i = 0; i < studyTiles.Count; i++)
             {
@@ -286,6 +303,7 @@ namespace AnomalyArena
 
         void ShowStudyDetail()
         {
+            if (V5HudKit.On) ShowStudyDetail5(); // the old panel below stays hidden and keeps its texts
             var tab = CurrentStudyTab;
             var entry = SelectedEntry;
             if (entry == null || entry.state == StudyState.Locked)
@@ -323,6 +341,7 @@ namespace AnomalyArena
             studyCurrencies.text = c.ProphetBeaten ? ArenaText.Pair($"虚空能量 {c.VoidEnergy}　虚空合金 {c.VoidAlloy}", $"Void energy {c.VoidEnergy}   Void alloy {c.VoidAlloy}") : "";
             studyKeys.text = ArenaText.Pair("方向键或 WASD 选择 · Q / E 换分类 · F 购买 · Esc 关闭　｜　手柄：十字键或左摇杆选择 · LB / RB 换分类 · A 购买 · B 关闭",
                 "Arrows or WASD: choose · Q / E: tab · F: buy · Esc: close   |   Gamepad: D-pad or left stick · LB / RB: tab · A: buy · B: close");
+            if (V5HudKit.On) RefreshStudyTexts5();
         }
 
         // ───── Choosing and buying ─────
@@ -336,7 +355,8 @@ namespace AnomalyArena
             studyTabKey = studyData[index].key;
             studyEntryId = null;
             studyContent.anchoredPosition = Vector2.zero;
-            V2Audio.Instance?.PlayUI(ArenaUiSound.Hover);
+            if (V5HudKit.On) V5UiSound.Play(V5UiSound.Ui.Tab);
+            else V2Audio.Instance?.PlayUI(ArenaUiSound.Hover);
             BuildStudyTabs();
             BuildStudyTiles();
             RefreshStudyTexts();
@@ -347,7 +367,9 @@ namespace AnomalyArena
             var tab = CurrentStudyTab;
             if (tab == null || tab.entries.Count == 0) return;
             index = Mathf.Clamp(index, 0, tab.entries.Count - 1);
-            if (index != studySelected || byClick) V2Audio.Instance?.PlayUI(ArenaUiSound.Hover);
+            // The fifth pass's tiles sound the pointer's arrival themselves (V5Plate): a click on one plays the choice's sound instead.
+            if (V5HudKit.On && byClick) V5UiSound.Play(V5UiSound.Ui.Tab, 1.12f, .7f);
+            else if (index != studySelected || byClick) V2Audio.Instance?.PlayUI(ArenaUiSound.Hover);
             studySelected = index;
             studyEntryId = tab.entries[index].id;
             StyleTiles();
@@ -368,7 +390,7 @@ namespace AnomalyArena
         void ScrollToSelected()
         {
             if (studySelected < 0) { studyContent.anchoredPosition = Vector2.zero; return; }
-            float top = (studySelected / studyColumns) * (TileHeight + TileGap), bottom = top + TileHeight;
+            float top = (studySelected / studyColumns) * (StudyTileH + StudyGapY), bottom = top + StudyTileH + 2f * StudyPad;
             float view = studyViewport.rect.height, y = studyContent.anchoredPosition.y;
             if (top < y) y = top;
             else if (bottom > y + view) y = bottom - view;
@@ -395,9 +417,10 @@ namespace AnomalyArena
         {
             if (!BaseOpen || !campaign || !campaign.Running || campaign.Stage != CampaignStage.Base) { HideStudy(); return; }
             // A subtitle shows in the strip along the bottom, over this key line: the line steps aside while it is on (2026-11-10).
-            bool keysShown = !SubtitleShowing;
+            bool keysShown = !SubtitleShowing && !V5HudKit.On; // the fifth pass shows the keys as keycaps along the foot instead
             if (studyKeys.gameObject.activeSelf != keysShown) studyKeys.gameObject.SetActive(keysShown);
             if (Time.unscaledTime >= studyRefreshAt) { studyRefreshAt = Time.unscaledTime + .25f; RefreshStudyTexts(); }
+            if (V5HudKit.On) TickStudy5();
             if (studyIllustrated != Art.Enabled) RebuildStudy(); // the tiles' icons follow the art switch (2026-11-10)
             // The press that opened the window does not act in it.
             if (Time.unscaledTime - studyOpenedAt < .15f) return;

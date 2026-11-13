@@ -51,7 +51,12 @@ namespace AnomalyArena
         static readonly Color Accent = new(.45f, .85f, 1f), Warn = new(1f, .45f, .3f), Good = new(.5f, 1f, .6f), SystemColour = new(.5f, .9f, 1f), PlayerColour = new(1f, .86f, .55f);
         static readonly Color SideQuestColour = new(.78f, .55f, 1f);
         // The goal's backing: its top edge, the height it keeps for one or two lines, and the gap to the side-quest line under it.
-        const float ObjectiveTop = -202f, ObjectiveMinHeight = 78f, SideQuestGap = 8f, SideQuestMinHeight = 48f, ObjectiveLeft = 14f, ObjectiveWidth = 620f;
+        // Narrow and small-lettered so the battle stays in view: a little over a quarter of the screen's width.
+        const float ObjectiveTop = -202f, ObjectiveMinHeight = 60f, SideQuestGap = 6f, SideQuestMinHeight = 38f, ObjectiveLeft = 14f, ObjectiveWidth = 460f;
+        const int ObjectiveSize = 19, SideQuestSize = 17;
+        // The currency row at the top right and the base bar at the top centre, kept short for the same reason.
+        const float CurrencyWidth = 384f, CurrencyHeight = 40f, CurrencyStep = 124f, BaseBarWidth = 420f, BaseBarHeight = 44f;
+        const int BaseTextLargest = 13, BaseTextSmallest = 10;
         // 2026-11-10 (v2-P52, three overlaps with the HUD's own texts): the goal panels step down under the HUD's banner while it shows,
         // this far below it and at this speed (canvas units a second); the base bar sits at least this far below the HUD's batch line
         // ("N alive · M pending"), and never higher than its old place.
@@ -88,42 +93,43 @@ namespace AnomalyArena
 
             hud = MakeRect("Hud", root, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             // Currencies, top right.
-            var currency = Box("Currencies", hud, new Vector2(1f, 1f), new Vector2(-24f, -20f), new Vector2(430f, 44f), new Vector2(1f, 1f), Panel);
+            var currency = Box("Currencies", hud, new Vector2(1f, 1f), new Vector2(-24f, -20f), new Vector2(CurrencyWidth, CurrencyHeight), new Vector2(1f, 1f), Panel);
             currencyIcons = new Image[3];
             currencyLabels = new Text[3];
             for (int i = 0; i < 3; i++)
             {
-                currencyIcons[i] = Icon(currency, new Vector2(0f, .5f), new Vector2(12f + i * 140f, 0f), 34f);
-                currencyLabels[i] = Label("Amount" + i, currency, "", 19, Soft, TextAnchor.MiddleLeft);
-                Anchor(currencyLabels[i].rectTransform, new Vector2(0f, .5f), new Vector2(50f + i * 140f, 0f), new Vector2(88f, 36f), new Vector2(0f, .5f));
+                currencyIcons[i] = Icon(currency, new Vector2(0f, .5f), new Vector2(10f + i * CurrencyStep, 0f), 30f);
+                currencyLabels[i] = Label("Amount" + i, currency, "", 17, Soft, TextAnchor.MiddleLeft);
+                Anchor(currencyLabels[i].rectTransform, new Vector2(0f, .5f), new Vector2(44f + i * CurrencyStep, 0f), new Vector2(78f, 32f), new Vector2(0f, .5f));
             }
-            currencyText = Label("Text", currency, "", 17, Soft, TextAnchor.MiddleCenter);
+            currencyText = Label("Text", currency, "", 15, Soft, TextAnchor.MiddleCenter);
             Stretch(currencyText.rectTransform, 8f, 4f, 8f, 4f);
             // Base bar, top centre under the wave label.
-            var bar = baseBar = Box("BaseBar", hud, new Vector2(.5f, 1f), new Vector2(0f, -112f), new Vector2(480f, 54f), new Vector2(.5f, 1f), Panel);
-            baseText = Label("Text", bar, "", 15, Soft, TextAnchor.UpperCenter);
-            Stretch(baseText.rectTransform, 8f, 2f, 8f, 26f);
-            var track = Box("Track", bar, new Vector2(.5f, 0f), new Vector2(0f, 10f), new Vector2(400f, 12f), new Vector2(.5f, 0f), new Color(.1f, .12f, .16f, 1f));
+            var bar = baseBar = Box("BaseBar", hud, new Vector2(.5f, 1f), new Vector2(0f, -BaseBarTop), new Vector2(BaseBarWidth, BaseBarHeight), new Vector2(.5f, 1f), Panel);
+            baseText = Label("Text", bar, "", BaseTextLargest, Soft, TextAnchor.UpperCenter);
+            Stretch(baseText.rectTransform, 8f, 2f, 8f, 20f);
+            var track = Box("Track", bar, new Vector2(.5f, 0f), new Vector2(0f, 8f), new Vector2(BaseBarWidth - 60f, 9f), new Vector2(.5f, 0f), new Color(.1f, .12f, .16f, 1f));
             baseHpFill = Fill(track, new Color(.95f, .6f, .25f));
             baseShieldFill = Fill(track, new Color(.45f, .85f, 1f, .85f));
             for (int i = 0; i < 4; i++)
             {
-                sidePips[i] = Box("Side" + i, bar, new Vector2(.5f, 0f), new Vector2(-232f + (i % 2) * 0f, 0f), new Vector2(12f, 12f), new Vector2(.5f, .5f), Color.white).GetComponent<Image>();
+                sidePips[i] = Box("Side" + i, bar, new Vector2(.5f, 0f), new Vector2(0f, 0f), new Vector2(10f, 10f), new Vector2(.5f, .5f), Color.white).GetComponent<Image>();
             }
             // Side pips sit like a compass at the bar's left: north on top, south at the bottom.
-            Place(sidePips[0].rectTransform, new Vector2(-228f, 40f)); Place(sidePips[2].rectTransform, new Vector2(-228f, 14f));
-            Place(sidePips[3].rectTransform, new Vector2(-241f, 27f)); Place(sidePips[1].rectTransform, new Vector2(-215f, 27f));
+            float pipX = 12f - BaseBarWidth * .5f;
+            Place(sidePips[0].rectTransform, new Vector2(pipX, 32f)); Place(sidePips[2].rectTransform, new Vector2(pipX, 10f));
+            Place(sidePips[3].rectTransform, new Vector2(pipX - 11f, 21f)); Place(sidePips[1].rectTransform, new Vector2(pipX + 11f, 21f));
             // Objective, left.
-            objectiveBack = Box("ObjectiveBack", hud, new Vector2(0f, 1f), new Vector2(14f, ObjectiveTop), new Vector2(620f, ObjectiveMinHeight), new Vector2(0f, 1f), new Color(0f, .02f, .06f, .78f)).GetComponent<Image>();
+            objectiveBack = Box("ObjectiveBack", hud, new Vector2(0f, 1f), new Vector2(ObjectiveLeft, ObjectiveTop), new Vector2(ObjectiveWidth, ObjectiveMinHeight), new Vector2(0f, 1f), new Color(0f, .02f, .06f, .78f)).GetComponent<Image>();
             EdgeBar(objectiveBack.rectTransform, Accent);
             objectiveBack.gameObject.SetActive(false);
-            objectiveText = Label("Objective", hud, "", 24, Color.white, TextAnchor.UpperLeft);
-            Anchor(objectiveText.rectTransform, new Vector2(0f, 1f), new Vector2(30f, ObjectiveTop - 8f), new Vector2(596f, 66f), new Vector2(0f, 1f));
+            objectiveText = Label("Objective", hud, "", ObjectiveSize, Color.white, TextAnchor.UpperLeft);
+            Anchor(objectiveText.rectTransform, new Vector2(0f, 1f), new Vector2(ObjectiveLeft + 16f, ObjectiveTop - 8f), new Vector2(ObjectiveWidth - 24f, 52f), new Vector2(0f, 1f));
             Shadow(objectiveText);
             // Side quest, under the goal in the same style (since 2026-11-06: the black hole's side quest).
-            sideQuestBack = Box("SideQuestBack", hud, new Vector2(0f, 1f), new Vector2(14f, ObjectiveTop - ObjectiveMinHeight - SideQuestGap), new Vector2(620f, SideQuestMinHeight), new Vector2(0f, 1f), new Color(0f, .02f, .06f, .78f)).GetComponent<Image>();
+            sideQuestBack = Box("SideQuestBack", hud, new Vector2(0f, 1f), new Vector2(ObjectiveLeft, ObjectiveTop - ObjectiveMinHeight - SideQuestGap), new Vector2(ObjectiveWidth, SideQuestMinHeight), new Vector2(0f, 1f), new Color(0f, .02f, .06f, .78f)).GetComponent<Image>();
             EdgeBar(sideQuestBack.rectTransform, SideQuestColour);
-            sideQuestText = Label("SideQuest", sideQuestBack.rectTransform, "", 22, Color.white, TextAnchor.MiddleLeft);
+            sideQuestText = Label("SideQuest", sideQuestBack.rectTransform, "", SideQuestSize, Color.white, TextAnchor.MiddleLeft);
             sideQuestText.fontStyle = FontStyle.Bold;
             Stretch(sideQuestText.rectTransform, 16f, 6f, 8f, 6f);
             Shadow(sideQuestText);
@@ -214,6 +220,7 @@ namespace AnomalyArena
             StretchFull(whiteOut.rectTransform);
             whiteOut.raycastTarget = false;
             BuildConfirm();
+            if (V5HudKit.On) BuildStoryHud(); // the story layer of the fifth pass (V5StoryHud.cs and the other V5Story files)
             HideAll();
         }
 
@@ -265,6 +272,7 @@ namespace AnomalyArena
             confirmYes = confirmNo = null; confirmHoldsRun = false;
             sideQuestBody = null;
             if (sideQuestBack) sideQuestBack.gameObject.SetActive(false);
+            if (V5HudKit.On) HideStoryHud();
         }
 
         public void ShowTitleCard(string title, string sub, float seconds)
@@ -286,6 +294,7 @@ namespace AnomalyArena
             subtitleSpeaker.rectTransform.anchoredPosition = new Vector2(0f, height + SubtitleSpeakerGap);
             subtitleUntil = Time.unscaledTime + seconds;
             subtitleRoot.gameObject.SetActive(true);
+            if (V5HudKit.On) StorySubtitle(line, system, seconds);
         }
 
         public void ClearSubtitle() { subtitleUntil = 0f; if (subtitleRoot) subtitleRoot.gameObject.SetActive(false); }
@@ -314,7 +323,7 @@ namespace AnomalyArena
             {
                 // Canvas units from the bottom-left, as in PlaceGoalPanels.
                 float half = root.rect.width * .5f, plateTop = root.rect.height * .5f + FlashRise + FlashHeight * .5f;
-                float panelsTop = root.rect.height + ObjectiveTop - goalDrop, right = ObjectiveLeft + ObjectiveWidth + FlashGap;
+                float panelsTop = root.rect.height + GoalTop - goalDrop, right = GoalLeft + GoalWidth + FlashGap;
                 bool level = plateTop - FlashHeight < panelsTop && plateTop > panelsTop - panels + FlashBrush;
                 if (level && half - width * .5f < right)
                 {
@@ -343,6 +352,7 @@ namespace AnomalyArena
         void PlaceSideQuest()
         {
             if (!sideQuestBack) return;
+            if (V5HudKit.On) { LayOutStoryGoal(); return; } // the strip stands inside the fifth pass's goal plate (V5StoryGoal.cs)
             bool any = !string.IsNullOrEmpty(sideQuestBody);
             sideQuestBack.gameObject.SetActive(any);
             if (!any) return;
@@ -367,20 +377,22 @@ namespace AnomalyArena
             if (panels > 0f && BannerRect(scale) is Rect banner)
             {
                 // The panels at their own place, in the banner's frame (canvas units from the bottom-left).
-                float top = root.rect.height + ObjectiveTop, bottom = top - panels;
-                if (banner.xMin < ObjectiveLeft + ObjectiveWidth && banner.xMax > ObjectiveLeft && banner.yMin < top && banner.yMax > bottom)
+                float top = root.rect.height + GoalTop, bottom = top - panels;
+                if (banner.xMin < GoalLeft + GoalWidth && banner.xMax > GoalLeft && banner.yMin < top && banner.yMax > bottom)
                     wanted = top - banner.yMin + BannerGap;
             }
             if (Mathf.Approximately(goalDrop, wanted)) return;
             goalDrop = Mathf.MoveTowards(goalDrop, wanted, GoalStepSpeed * Time.unscaledDeltaTime);
-            objectiveBack.rectTransform.anchoredPosition = new Vector2(ObjectiveLeft, ObjectiveTop - goalDrop);
+            objectiveBack.rectTransform.anchoredPosition = new Vector2(GoalLeft, GoalTop - goalDrop);
             objectiveText.rectTransform.anchoredPosition = new Vector2(ObjectiveLeft + 16f, ObjectiveTop - 8f - goalDrop);
-            if (sideQuestBack.gameObject.activeSelf) sideQuestBack.rectTransform.anchoredPosition = new Vector2(ObjectiveLeft, SideQuestTop - goalDrop);
+            // The fifth pass carries the side quest's strip inside the goal plate: it moves with the plate.
+            if (!V5HudKit.On && sideQuestBack.gameObject.activeSelf) sideQuestBack.rectTransform.anchoredPosition = new Vector2(ObjectiveLeft, SideQuestTop - goalDrop);
         }
 
         /// <summary>How far down from ObjectiveTop the goal panels shown reach (0 while neither shows).</summary>
         float PanelsHeight()
         {
+            if (V5HudKit.On) return objectiveBack.gameObject.activeSelf ? objectiveBack.rectTransform.sizeDelta.y : 0f; // the strip is inside the plate
             float reach = 0f;
             if (objectiveBack.gameObject.activeSelf) reach = objectiveBack.rectTransform.sizeDelta.y;
             if (sideQuestBack.gameObject.activeSelf) reach = Mathf.Max(reach, ObjectiveTop - SideQuestTop + sideQuestBack.rectTransform.sizeDelta.y);
@@ -590,10 +602,11 @@ namespace AnomalyArena
             // A weapon card (a weapon just bought at the base, GameManager.CampaignShowWeaponCard) fills the middle of the screen: a line
             // said meanwhile waits under it instead of covering the card's lower half (v2-P52), and shows again once the card is closed
             // if its time is not up.
-            bool subtitleShown = now <= subtitleUntil && !(gm && gm.RunPhase == ArenaUiState.WeaponIntro);
+            // The night's first words show in the night banner instead of a subtitle (V5StoryLines.cs).
+            bool subtitleShown = now <= subtitleUntil && !(gm && gm.RunPhase == ArenaUiState.WeaponIntro) && !storySubtitleInBanner;
             if (subtitleRoot.gameObject.activeSelf != subtitleShown) subtitleRoot.gameObject.SetActive(subtitleShown);
             // Over the base panel the subtitle stands in the strip the panel keeps free for it, above its ways out.
-            subtitleRoot.anchoredPosition = new Vector2(0f, baseScreen.gameObject.activeSelf ? BaseSubtitleBottom : SubtitleBottom);
+            subtitleRoot.anchoredPosition = new Vector2(0f, baseScreen.gameObject.activeSelf ? BaseSubtitleBottom : SubtitlePlayBottom);
             flashBack.gameObject.SetActive(now < flashUntil && !string.IsNullOrEmpty(flashText.text));
             if (flashBack.gameObject.activeSelf) PlaceFlash(); // the goal panels may grow or step down while the line shows
             if (whiteOutLength > 0f)
@@ -655,6 +668,7 @@ namespace AnomalyArena
                 ComposeGoal(); // the prompt of this frame, and a note whose time is up
             }
             TickFeedback(showHud);
+            if (V5HudKit.On) TickStoryHud();
             if (baseScreen.gameObject.activeSelf && Time.unscaledTime >= panelRefreshAt) { panelRefreshAt = Time.unscaledTime + .25f; RefreshBasePanel(false); }
         }
         float panelRefreshAt;
@@ -670,13 +684,15 @@ namespace AnomalyArena
                 icons &= (bool)sprite;
                 if (sprite && currencyIcons[i].sprite != sprite) currencyIcons[i].sprite = sprite;
             }
-            foreach (var icon in currencyIcons) icon.enabled = icons;
+            foreach (var icon in currencyIcons) icon.enabled = icons && !V5HudKit.On; // the fifth pass draws medals (V5StoryWallet.cs)
             currencyLabels[0].text = $"{c.Energy}"; currencyLabels[1].text = $"{c.Alloy}"; currencyLabels[2].text = $"{c.Dark}";
-            foreach (var label in currencyLabels) label.enabled = icons;
-            currencyText.text = icons ? "" : ArenaText.Pair($"能量 {c.Energy}　合金 {c.Alloy}　暗物质 {c.Dark}", $"Energy {c.Energy}   Alloy {c.Alloy}   Dark {c.Dark}");
-            baseText.text = ArenaText.Pair($"基地 {Mathf.CeilToInt(c.BaseHp)}/{Mathf.CeilToInt(c.BaseMaxHp)}", $"BASE {Mathf.CeilToInt(c.BaseHp)}/{Mathf.CeilToInt(c.BaseMaxHp)}")
+            foreach (var label in currencyLabels) label.enabled = icons || V5HudKit.On;
+            currencyText.text = icons || V5HudKit.On ? "" : ArenaText.Pair($"能量 {c.Energy}　合金 {c.Alloy}　暗物质 {c.Dark}", $"Energy {c.Energy}   Alloy {c.Alloy}   Dark {c.Dark}");
+            // One line in the short bar: the largest size at which the whole line fits, never wrapped into a second line.
+            ArenaTextFit.Show(baseText, ArenaText.Pair($"基地 {Mathf.CeilToInt(c.BaseHp)}/{Mathf.CeilToInt(c.BaseMaxHp)}", $"BASE {Mathf.CeilToInt(c.BaseHp)}/{Mathf.CeilToInt(c.BaseMaxHp)}")
                 + (c.ShieldLevel > 0 ? ArenaText.Pair($" · 护盾 {Mathf.CeilToInt(c.BaseShield)}", $" · SHIELD {Mathf.CeilToInt(c.BaseShield)}") : "")
-                + ArenaText.Pair($" · 飞船 引擎{(c.EngineFixed ? "✓" : "×")} 装甲{(c.ArmorFixed ? "✓" : "×")} 燃料{c.Fuel}/{c.FuelUnits}", $" · SHIP E{(c.EngineFixed ? "✓" : "×")} A{(c.ArmorFixed ? "✓" : "×")} F{c.Fuel}/{c.FuelUnits}");
+                + ArenaText.Pair($" · 飞船 引擎{(c.EngineFixed ? "✓" : "×")} 装甲{(c.ArmorFixed ? "✓" : "×")} 燃料{c.Fuel}/{c.FuelUnits}", $" · SHIP E{(c.EngineFixed ? "✓" : "×")} A{(c.ArmorFixed ? "✓" : "×")} F{c.Fuel}/{c.FuelUnits}"),
+                BaseTextLargest, BaseTextSmallest);
             SetFill(baseHpFill, c.BaseHp / Mathf.Max(1f, c.BaseMaxHp));
             SetFill(baseShieldFill, c.BaseShield / Mathf.Max(1f, c.BaseMaxHp));
             for (int side = 0; side < 4; side++)
@@ -687,8 +703,10 @@ namespace AnomalyArena
             promptBody = c.PromptText ?? "";
             RefreshNote();
             RefreshLampCounter();
-            baseBar.gameObject.SetActive(c.Stage is not (CampaignStage.FinalBoss or CampaignStage.Core or CampaignStage.Tutorial));
-            PlaceBaseBar();
+            // The fifth pass shows the base in the day plate (V5StoryDay.cs): the old bar stays hidden, its texts up to date.
+            baseBar.gameObject.SetActive(!V5HudKit.On && c.Stage is not (CampaignStage.FinalBoss or CampaignStage.Core or CampaignStage.Tutorial));
+            if (V5HudKit.On) RefreshStoryTexts();
+            else PlaceBaseBar();
         }
 
         void PlaceMarker()
@@ -709,6 +727,7 @@ namespace AnomalyArena
             // lower, under the HUD's batch line: the marker stays a little below wherever it is).
             float highest = rect.height * .8f;
             if (baseBar.gameObject.activeInHierarchy) highest = Mathf.Min(highest, rect.height + baseBar.anchoredPosition.y - baseBar.sizeDelta.y - 24f);
+            if (V5HudKit.On) highest = StoryMarkerCeiling(highest, rect.height);
             Vector2 clamped = new(Mathf.Clamp(p.x, 60f, rect.width - 60f), Mathf.Clamp(p.y, rect.height * .19f, Mathf.Max(rect.height * .19f, highest)));
             // The goal panels fill the top-left corner: a marker that would sit on them (a goal off screen up and to the left, or one
             // under them) moves down below them, so it covers neither their text nor its own distance; its arrow still points at the goal.
@@ -733,10 +752,10 @@ namespace AnomalyArena
             float distance = Query.Flat(marker.Value - gm.player.Position).magnitude;
             markerText.text = $"{distance:0} m";
             float wave = Mathf.Sin(Time.unscaledTime * 6f), ring = Mathf.Repeat(Time.unscaledTime * 1.1f, 1f);
-            markerIcon.color = new Color(Accent.r, Accent.g, Accent.b, .85f + .15f * wave);
+            markerIcon.color = new Color(MarkerColour.r, MarkerColour.g, MarkerColour.b, .85f + .15f * wave);
             markerIcon.rectTransform.localScale = Vector3.one * (1f + .12f * wave);
             markerPulse.rectTransform.localScale = Vector3.one * (1f + 1.8f * ring);
-            markerPulse.color = new Color(Accent.r, Accent.g, Accent.b, .7f * (1f - ring));
+            markerPulse.color = new Color(MarkerColour.r, MarkerColour.g, MarkerColour.b, .7f * (1f - ring));
             WriteObjective(distance < campaign.MarkerReach(marker.Value) ? ArenaText.Pair("就在这里", "right here")
                 : ArenaText.Pair($"{ScreenWay(dir)} · {distance:0} 米", $"{distance:0} m · {ScreenWay(dir)}"));
         }
@@ -769,6 +788,9 @@ namespace AnomalyArena
             if (!f || f == font) return;
             font = f;
             foreach (var t in GetComponentsInChildren<Text>(true)) t.font = font;
+            // The fifth pass's goal plate takes its height from its lines, which are taller in the game's font than in the built-in one it
+            // may have been laid out with: it is laid out again in the game's font.
+            if (V5HudKit.On && storyBuilt) LayOutStoryGoal();
         }
 
         RectTransform MakeRect(string name, Transform parent, Vector2 anchorMin, Vector2 anchorMax, Vector2 position, Vector2 size)

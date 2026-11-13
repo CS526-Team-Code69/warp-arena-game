@@ -105,6 +105,13 @@ namespace AnomalyArena
                 scaler.matchWidthOrHeight = matchWidthOrHeight;
                 Dirty(scaler);
             }
+            // While the game runs with the fifth pass's battle HUD, it lays the play screen out itself; the knobs below place the saved HUD.
+            if (Application.isPlaying && hud.TryGetComponent<V5BattleHud>(out var battle))
+            {
+                battle.LayOut();
+                appliedState = CurrentState();
+                return;
+            }
             XpHeader();
             ResourcePanel();
             WaveTexts();
@@ -277,7 +284,8 @@ namespace AnomalyArena
         // Run time only, so the boxes saved in the scenes stay as they are.
         void Awake()
         {
-            if (hud) FitChineseNames();
+            // The fifth pass's slots place their own parts (V5BattleSlot); when they were built first, this would undo that.
+            if (hud && !hud.TryGetComponent<V5BattleHud>(out _)) FitChineseNames();
         }
 
         // Longest names at a group's smallest title size: a hand weapon's second line ("蓄力射击 · Mk 6", the dot is a full character wide)

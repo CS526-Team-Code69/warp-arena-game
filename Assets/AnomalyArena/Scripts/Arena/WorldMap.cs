@@ -129,8 +129,9 @@ namespace AnomalyArena
             if (biomes != null && biomes.Length > 0)
             {
                 // Only the Dunes and the Ruins are in rotation (system doc 12.2); the open mode may ask for one of them.
-                int chosen = Biome.PickForRun(biomes, NextMapFamily);
-                NextMapFamily = null;
+                // A continued save lays its own map again (NextMapIndex, WorldMap.Save.cs); otherwise the pick, or a map at random.
+                int chosen = NextMapIndex >= 0 && NextMapIndex < biomes.Length ? NextMapIndex : Biome.PickForRun(biomes, NextMapFamily);
+                NextMapFamily = null; NextMapIndex = -1;
                 biome = biomes[chosen];
                 layout = biome.layout;
                 for (int i = 0; i < biomeWallGroups.Length; i++) biomeWallGroups[i].gameObject.SetActive(i == chosen);

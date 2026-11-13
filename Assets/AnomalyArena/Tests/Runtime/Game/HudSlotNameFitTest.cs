@@ -10,8 +10,9 @@ namespace AnomalyArena
 {
     /// <summary>The bottom row shows every weapon's and every skill's name whole in both languages. The slots' title boxes are measured
     /// for the Chinese names (V2HudLayout); a longer English name gets smaller instead of losing letters: "Shockwave" showed as
-    /// "Shockwa", "Pocket Void" as "Pocket", and "Launch Yourself · Mk 4" lost its Mk. A rarity's name colour reads on the dark slot,
-    /// Void's too, whose own colour is black.</summary>
+    /// "Shockwa", "Pocket Void" as "Pocket", and "Launch Yourself · Mk 4" lost its Mk. The fifth pass's slot (V5BattleSlot, every page
+    /// but the English Alpha's) names a weapon by its form alone, its kind and tier in the row under it, on one line that gets smaller
+    /// until it fits. A rarity's name colour reads on the dark slot, Void's too, whose own colour is black.</summary>
     [TestFixture]
     public class HudSlotNameFitTest
     {
@@ -41,9 +42,10 @@ namespace AnomalyArena
                     foreach (int mk in new[] { 1, 2, 10 })
                     {
                         var weapon = new RunWeapon { form = form, variant = variant, revealed = true, mk = mk };
-                        Check(weapon.IsAuto ? auto : hand, weapon.Label, hud.art, code, cut);
+                        Check(weapon.IsAuto ? auto : hand, new ArenaUiSlot { title = weapon.Label, formIndex = (int)form }, ArenaTerms.WeaponForm(form), hud.art, code, cut);
                     }
-                    foreach (SkillId id in Enum.GetValues(typeof(SkillId))) Check(skill, ArenaTerms.Skill(id), hud.art, code, cut);
+                    foreach (SkillId id in Enum.GetValues(typeof(SkillId)))
+                        Check(skill, new ArenaUiSlot { title = ArenaTerms.Skill(id), skillIndex = (int)id }, ArenaTerms.Skill(id), hud.art, code, cut);
                     Assert.That(cut, Is.Empty, "names cut short in the bottom row in " + code);
                 }
             }
@@ -86,11 +88,18 @@ namespace AnomalyArena
                 if (rarity != CardRarity.Void) Assert.That(ArenaRarity.InkFor(rarity), Is.EqualTo(ArenaRarity.ColorFor(rarity)), rarity.ToString());
         }
 
-        /// <summary>Shows the name in the slot as the HUD does and counts the characters the title's box holds.</summary>
-        static void Check(V2UiSlot slot, string name, V2ArtSet art, string code, List<string> cut)
+        /// <summary>Shows the name in the slot as the HUD does and counts the characters the title's box holds; on the fifth pass's slot,
+        /// checks it shows the name expected (a weapon's form, a skill's name) no wider than its box.</summary>
+        static void Check(V2UiSlot slot, ArenaUiSlot value, string expected, V2ArtSet art, string code, List<string> cut)
         {
-            slot.Render(new ArenaUiSlot { title = name }, art);
-            string shown = slot.title.text;
+            slot.Render(value, art);
+            string name = value.title, shown = slot.title.text;
+            if (slot.v5)
+            {
+                float width = slot.title.preferredWidth, room = slot.title.rectTransform.rect.width;
+                if (shown != expected || width > room + .5f) cut.Add($"{code} {slot.name} \"{name}\": shows \"{shown}\" {width:0.#} wide in {room:0.#}");
+                return;
+            }
             var settings = slot.title.GetGenerationSettings(slot.title.rectTransform.rect.size);
             var generator = new TextGenerator();
             generator.PopulateWithErrors(shown, settings, slot.gameObject);

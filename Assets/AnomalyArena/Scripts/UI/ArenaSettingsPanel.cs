@@ -7,8 +7,8 @@ using UnityEngine.UI;
 namespace AnomalyArena
 {
     /// <summary>
-    /// The settings panel: the sound volume, the art mode and the keys. The title's Settings button (top left) and the pause screen's
-    /// open it over whatever is showing, on a canvas of its own. A dark layer under it takes every click, so nothing behind it can be
+    /// The settings panel: the sound volume, the art mode and the keys. The pause screen's Settings button opens it over the run, on a
+    /// canvas of its own (the whole game's title shows the same settings, with the same rules and words, in a window of its own: V5Title). A dark layer under it takes every click, so nothing behind it can be
     /// pressed; while it is open, and on the frame it closes, the game reads none of its keys (GameManager's menu keys through
     /// HoldsInput, the actions through ArenaKeys.Suspended), so the Esc that closes it does not also resume a paused run and a key
     /// pressed for a binding does nothing else.
@@ -46,8 +46,9 @@ namespace AnomalyArena
 
         public static bool IsOpen => instance && instance.gameObject.activeSelf;
 
-        /// <summary>The game ignores its keys while the panel is open, and on the frame it closes, so the closing Esc does nothing else.</summary>
-        public static bool HoldsInput => IsOpen || Time.frameCount == closedFrame;
+        /// <summary>The game ignores its keys while the panel is open, and on the frame it closes, so the closing Esc does nothing else. The
+        /// title's settings window asks the same while one of its key rows waits (V5Title.HoldsKeys).</summary>
+        public static bool HoldsInput => IsOpen || Time.frameCount == closedFrame || V5Title.HoldsKeys;
 
         // The editor keeps statics from one play to the next (domain reload is off).
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -76,7 +77,7 @@ namespace AnomalyArena
         public static void Back()
         {
             if (!IsOpen) return;
-            if (instance.listening >= 0) { instance.StopListening(ArenaText.Pair("没有改动。", "Nothing changed.")); return; }
+            if (instance.listening >= 0) { instance.StopListening(NothingChanged); return; }
             V2Audio.Instance?.PlayUI(ArenaUiSound.Cancel);
             Close();
         }
@@ -230,19 +231,11 @@ namespace AnomalyArena
             {
                 case KeyBindResult.Refused:
                     // The row keeps waiting: the player presses another key, or Esc.
-                    messageText = ArenaKeys.WhyRefused(key) switch
-                    {
-                        KeyRefusal.MenuKey => ArenaText.Pair($"{ArenaKeys.Label(key)} 是菜单的固定键，不能用。换一个键，或按 Esc 取消。", $"{ArenaKeys.Label(key)} is one of the menus' fixed keys. Press another key, or Esc to cancel."),
-                        KeyRefusal.SystemKey => ArenaText.Pair($"{ArenaKeys.Label(key)} 会被浏览器或系统占用，不能用。换一个键，或按 Esc 取消。", $"{ArenaKeys.Label(key)} is taken by the browser or the system. Press another key, or Esc to cancel."),
-                        _ => ArenaText.Pair("这个键不能用。换一个键，或按 Esc 取消。", "That key can't be used. Press another key, or Esc to cancel."),
-                    };
+                    messageText = RefusalMessage(key);
                     V2Audio.Instance?.PlayUI(ArenaUiSound.Cancel);
                     return result;
-                case KeyBindResult.Swapped:
-                    StopListening(ArenaText.Pair($"「{ActionName(action)}」和「{ActionName(other)}」交换了按键。", $"\"{ActionName(action)}\" and \"{ActionName(other)}\" swapped keys."));
-                    break;
                 default:
-                    StopListening(ArenaText.Pair($"「{ActionName(action)}」现在是 {ArenaKeys.Name(action)}。", $"\"{ActionName(action)}\" is now {ArenaKeys.Name(action)}."));
+                    StopListening(BoundMessage(action, result, other));
                     break;
             }
             V2Audio.Instance?.PlayUI(ArenaUiSound.Confirm);
@@ -252,7 +245,7 @@ namespace AnomalyArena
         void ResetKeys()
         {
             ArenaKeys.ResetToDefaults();
-            StopListening(ArenaText.Pair("按键已恢复默认。", "The keys are back to their defaults."));
+            StopListening(KeysReset);
             V2Audio.Instance?.PlayUI(ArenaUiSound.Confirm);
         }
 
@@ -272,6 +265,33 @@ namespace AnomalyArena
             GameAction.CardPick => ArenaText.Pair("打开待选的升级", "Open a pending pick"),
             _ => action.ToString(),
         };
+
+        // ───── The words the title's settings window shares (V5Title) ─────
+
+        /// <summary>Why a key was not taken, and what to do instead.</summary>
+        public static string RefusalMessage(Key key) => ArenaKeys.WhyRefused(key) switch
+        {
+            KeyRefusal.MenuKey => ArenaText.Pair($"{ArenaKeys.Label(key)} 是菜单的固定键，不能用。换一个键，或按 Esc 取消。", $"{ArenaKeys.Label(key)} is one of the menus' fixed keys. Press another key, or Esc to cancel."),
+            KeyRefusal.SystemKey => ArenaText.Pair($"{ArenaKeys.Label(key)} 会被浏览器或系统占用，不能用。换一个键，或按 Esc 取消。", $"{ArenaKeys.Label(key)} is taken by the browser or the system. Press another key, or Esc to cancel."),
+            _ => ArenaText.Pair("这个键不能用。换一个键，或按 Esc 取消。", "That key can't be used. Press another key, or Esc to cancel."),
+        };
+
+        /// <summary>What a key taken did: two actions swapped keys, or the action is on the key now.</summary>
+        public static string BoundMessage(GameAction action, KeyBindResult result, GameAction other) => result == KeyBindResult.Swapped
+            ? ArenaText.Pair($"「{ActionName(action)}」和「{ActionName(other)}」交换了按键。", $"\"{ActionName(action)}\" and \"{ActionName(other)}\" swapped keys.")
+            : ArenaText.Pair($"「{ActionName(action)}」现在是 {ArenaKeys.Name(action)}。", $"\"{ActionName(action)}\" is now {ArenaKeys.Name(action)}.");
+
+        public static string NothingChanged => ArenaText.Pair("没有改动。", "Nothing changed.");
+
+        public static string KeysReset => ArenaText.Pair("按键已恢复默认。", "The keys are back to their defaults.");
+
+        /// <summary>The line beside the keys' heading: what to do, or, while a row waits, how to give up.</summary>
+        public static string KeysHint(bool listening) => listening ? ArenaText.Pair("按下你想用的键，按 Esc 取消", "Press the key you want, or Esc to cancel")
+            : ArenaText.Pair("点右边的键，再按下想用的键", "Click a key on the right, then press the key you want");
+
+        /// <summary>What cannot be changed at all.</summary>
+        public static string FixedNote => ArenaText.Pair("鼠标按键不能改：左键使用手上的武器，右键在两只手的武器之间切换。Esc、Tab、R、空格和回车是菜单专用键，不能分配给上面的动作。",
+            "Mouse buttons are fixed: left click uses the weapon in your hand, right click switches hands. Esc, Tab, R, Space and Enter are reserved for menus and can't be given to the actions above.");
 
         // ───── What it shows ─────
 
@@ -297,8 +317,7 @@ namespace AnomalyArena
                 : ArenaText.Pair("回到标题界面才能切换。", "You can only switch this on the title screen."));
 
             SetText(keysHeading, ArenaText.Pair("按键", "Keys"));
-            SetText(keysHint, listening >= 0 ? ArenaText.Pair("按下你想用的键，按 Esc 取消", "Press the key you want, or Esc to cancel")
-                : ArenaText.Pair("点右边的键，再按下想用的键", "Click a key on the right, then press the key you want"));
+            SetText(keysHint, KeysHint(listening >= 0));
             for (int i = 0; i < rowNames.Length; i++)
             {
                 SetText(rowNames[i], ActionName((GameAction)i));
@@ -308,8 +327,7 @@ namespace AnomalyArena
                 if (rowKeys[i].color != colour) rowKeys[i].color = colour;
             }
             SetText(message, messageText);
-            SetText(fixedNote, ArenaText.Pair("鼠标按键不能改：左键使用手上的武器，右键在两只手的武器之间切换。Esc、Tab、R、空格和回车是菜单专用键，不能分配给上面的动作。",
-                "Mouse buttons are fixed: left click uses the weapon in your hand, right click switches hands. Esc, Tab, R, Space and Enter are reserved for menus and can't be given to the actions above."));
+            SetText(fixedNote, FixedNote);
             SetText(resetLabel, ArenaText.Pair("恢复默认按键", "RESET KEYS"));
             SetText(closeLabel, ArenaText.Pair("关闭  [Esc]", "CLOSE  [Esc]"));
         }

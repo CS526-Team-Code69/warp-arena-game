@@ -31,6 +31,11 @@ namespace AnomalyArena
         public string detail;
         /// <summary>The price with its currency, ready to show.</summary>
         public string costText;
+        /// <summary>The same price as numbers in the three currencies, so the window can draw it as each currency's icon and amount; null
+        /// when there is nothing to pay (owned, at its top, not unlocked) or the price is in the void's currencies.</summary>
+        public CampaignCost? price;
+        /// <summary>The price in the void's two currencies (the Void room's tiles), 0 where there is none.</summary>
+        public int voidEnergyCost, voidAlloyCost;
         public StudyState state;
         /// <summary>Buys it; the effect applies at once. False when it could not be bought.</summary>
         public Func<bool> buy;

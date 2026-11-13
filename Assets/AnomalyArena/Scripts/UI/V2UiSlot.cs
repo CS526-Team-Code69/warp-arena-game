@@ -16,14 +16,17 @@ namespace AnomalyArena
         [System.NonSerialized] public int compactDetailSize;
         /// <summary>Added by V2Hud to the bottom row's slots.</summary>
         [System.NonSerialized] public V2SlotFeedback feedback;
+        /// <summary>The fifth pass's look of this slot (V5BattleSlot), once the battle HUD has restyled it: Render hands it the values then,
+        /// and the saved frame's whitebox skin is never made, so only the new plate dresses the slot.</summary>
+        [System.NonSerialized] public V5BattleSlot v5;
         string renderedTitle, renderedDetail;
         WhiteboxSkin.Entry surfaceSkin;
 
         const string Separator = " · ";
         // "等级 1" to "等级1", "20 能量" to "20能量", "攻速 +30%" to "攻速+30%"; a space between two parts or two words stays.
-        static readonly Regex SpaceBesideNumber = new(@"(?<=[^\x00-\xFF]) (?=[+\d])|(?<=\d) (?=[^\x00-\xFF])");
+        internal static readonly Regex SpaceBesideNumber = new(@"(?<=[^\x00-\xFF]) (?=[+\d])|(?<=\d) (?=[^\x00-\xFF])");
         // A space is two pixels at this size, so "等级1 35能量" read as level 135.
-        static readonly Regex SpaceBetweenNumbers = new(@"(?<=\d) (?=\d)");
+        internal static readonly Regex SpaceBetweenNumbers = new(@"(?<=\d) (?=\d)");
 
         string TitleLines(string name)
         {
@@ -70,6 +73,12 @@ namespace AnomalyArena
         public void Render(ArenaUiSlot slot, V2ArtSet art)
         {
             if (slot == null) return;
+            if (v5)
+            {
+                v5.Render(slot, art);
+                if (feedback) feedback.Bind(slot);
+                return;
+            }
             if (renderedTitle != slot.title) { renderedTitle = slot.title; title.text = TitleLines(slot.title); }
             if (renderedDetail != slot.detail) { renderedDetail = slot.detail; detail.text = DetailLine(slot.detail); }
             // 2026-11-10 (second round): in whitebox the drawn frame gives way to a plain rectangle with a thin edge (WhiteboxSkin); with no

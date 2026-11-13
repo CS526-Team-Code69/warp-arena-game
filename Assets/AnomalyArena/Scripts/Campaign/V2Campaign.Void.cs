@@ -7,7 +7,8 @@ namespace AnomalyArena
     /// The void currencies (2026-11-10, the implementation spec's section D). Beating the Nash Prophet in the void trial behind the black
     /// hole's gate gives the gift of the void: rules.voidEnergyReward void energy and rules.voidAlloyReward void alloy (instead of the
     /// classic run's extra level and greater void pick), and from the next afternoon on rules.voidOreNodes nodes of void alloy grow
-    /// each afternoon round where the hole stood (AfternoonVoidOre). Both currencies show on screen from the first one gained.
+    /// each afternoon round where the hole stood (AfternoonVoidOre). Both currencies show on screen from the first one gained. The gift
+    /// also brings the void dash (GameManager.VoidDashUnlocked reads ProphetBeaten).
     /// They buy, in the study window's Void room (CollectVoidStudy; the window itself is another part's): a void skill for
     /// rules.voidSkillCost void energy (Pocket Void, Void Walk or Singularity, no levels); a weapon's void enchant (its hits restore
     /// energy as the Void element's do, on top of its own element); the void Mk (the armament's Mk from rules.voidMkFrom to the next,
@@ -26,7 +27,7 @@ namespace AnomalyArena
 
         public int VoidEnergy => voidEnergy;
         public int VoidAlloy => voidAlloy;
-        /// <summary>The Nash Prophet has been beaten in this run (the Void room opens, the void alloy grows).</summary>
+        /// <summary>The Nash Prophet has been beaten in this run (the Void room opens, the void alloy grows, the void dash is the player's).</summary>
         public bool ProphetBeaten => prophetBeaten;
         public bool VoidArmor => voidArmor;
         public bool IsVoidEnchanted(RunWeapon weapon) => weapon != null && voidWeapons.Contains(weapon);
@@ -49,7 +50,8 @@ namespace AnomalyArena
             CampaignEvents.RaiseMilestone(CampaignEvents.MilestoneProphet, "", Day, Day);
             voidOreCentre = Query.Flat(holeAt);
             GainVoid(rules.voidEnergyReward, rules.voidAlloyReward);
-            // The gift shows on the return's banner (GameManagerFlow.BeginTrialReturn); no second line over it.
+            // The gift shows on the return's banner (GameManagerFlow.BeginTrialReturn); no second line over it. The void dash that
+            // comes with it says so once play is back (GameManagerFlow.TickVoidDashNotice).
         }
 
         void GainVoid(int energyAmount, int alloyAmount)
@@ -187,6 +189,7 @@ namespace AnomalyArena
                 detail = definition.Description(1) + ArenaText.Pair($"\n每次使用消耗 {definition.cost:0} 能量。虚空技能没有等级。", $"\nEach cast costs {definition.cost:0} energy. Void skills have no levels.")
                     + (replaced != null ? ArenaText.Pair($"\n技能栏已满，学会它会替换掉等级最低的{replaced}。", $"\nYour skill slots are full, so learning it replaces your lowest-level skill, {replaced}.") : ""),
                 costText = VoidCost(cost, 0),
+                voidEnergyCost = cost,
                 state = VoidState(owned, cost, 0),
                 buy = () => BuyVoidSkill(id, cost),
             });
@@ -240,6 +243,7 @@ namespace AnomalyArena
                 detail = ArenaText.Pair($"给这把武器附上虚空之力：它每次命中，都按造成伤害的 {share}% 给你回复能量（和虚空元素的比例相同）。武器原有的元素不变。这把武器被换下后，附魔仍然留在它身上。",
                     $"Enchant this weapon with the void: each hit restores energy equal to {share}% of the damage it deals, the same share as the Void element. The weapon keeps its own element, and the enchant stays on it even if it leaves your hands."),
                 costText = VoidCost(0, cost),
+                voidAlloyCost = cost,
                 state = VoidState(owned, 0, cost),
                 buy = () => BuyVoidEnchant(weapon, cost),
             });
@@ -270,6 +274,7 @@ namespace AnomalyArena
                 detail = ArenaText.Pair($"把所有异常武器的型号从 Mk {from} 升到 Mk {to}：手上的和以后拿到的都会一起升级，型号标记会变成黑色。型号要先升到 Mk {from} 才能买。",
                     $"Raises all your anomaly weapons from Mk {from} to Mk {to}, both the ones you hold and any you get later; their Mk mark turns black. Your weapons must reach Mk {from} first."),
                 costText = VoidCost(0, cost),
+                voidAlloyCost = cost,
                 state = owned ? StudyState.Owned : mk < from ? StudyState.Locked : VoidState(false, 0, cost),
                 buy = () => BuyVoidMk(from, to, cost),
             });
@@ -302,6 +307,7 @@ namespace AnomalyArena
                 after = voidArmor ? "" : ArenaText.Pair($"能量每秒 +{regen:0.#}", $"Energy +{regen:0.#}/s"),
                 detail = ArenaText.Pair($"给你的装甲附上虚空之力：之后能量会随时间自动恢复，每秒 {regen:0.#} 点，直到回满。", $"Enchant your armor with the void: your energy then regenerates by itself, {regen:0.#} per second, until it's full."),
                 costText = VoidCost(0, cost),
+                voidAlloyCost = cost,
                 state = VoidState(voidArmor, 0, cost),
                 buy = BuyVoidArmor,
             });

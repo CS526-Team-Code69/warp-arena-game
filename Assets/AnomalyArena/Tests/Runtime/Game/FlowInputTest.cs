@@ -48,6 +48,8 @@ namespace AnomalyArena
             languageSaved = false;
             languageBefore = null;
             TestStartLanguage.Reset();
+            V5Title.SummariesForTests = null;
+            V5Title.SaveCallsForTests = null;
             if (runtimeWaves)
             {
                 if (GameManager.Instance && GameManager.Instance.waves) GameManager.Instance.waves.waveSet = originalWaves;
@@ -70,13 +72,16 @@ namespace AnomalyArena
             Assume.That(modules, Is.Not.Empty, "the scene's event system reads an input action asset");
             keyboard = new TestKeyboard();
             var start = TitleStart(game);
-            SelectButton(start);
+            // The title's Start of a new story run, selected as the keyboard's navigation would select it.
+            await OpenNewGameSlots("StoryMode");
+            Select(V5().Find("Window/Foot/Go").GetComponent<UnityEngine.UI.Button>());
 
             await keyboard.TapFor(.8f, SpaceAndEnter);
 
             Assert.That(modules.Select(module => module.GetType().GetProperty("submit").GetValue(module)), Has.All.Null,
                 "no submit action, so Enter cannot press the selected button either");
             Assert.That(game.RunPhase, Is.EqualTo(ArenaUiState.Title), "Space and Enter do not start the run, even on the selected Start button");
+            Assert.That(V2Campaign.Active && V2Campaign.Active.Running, Is.False, "nor the story");
             // Document 2.2 (10-27): Space and Enter are read for the weapon card only, which names them (WeaponCard_SpaceOrEnter_ClosesIt).
             Assert.That(GameManager.ShownKeyCodes, Is.EquivalentTo(new[]
                 { KeyCode.Escape, KeyCode.T, KeyCode.Tab, KeyCode.R, KeyCode.Alpha1, KeyCode.Alpha2, KeyCode.Alpha3, KeyCode.Space, KeyCode.Return, KeyCode.KeypadEnter }),
@@ -94,92 +99,101 @@ namespace AnomalyArena
             await CommandUntil(game, start, () => start == ArenaUiCommand.StartCampaign ? V2Campaign.Active && V2Campaign.Active.Running : game.RunPhase == ArenaUiState.SupplyDrop);
         }
 
-        // ───── The title's three entries (one game in two languages) ─────
+        // ───── The title's menu (one game in two languages) ─────
 
-        /// <summary>From the top the story mode, the open mode
-        /// and the tutorial, in the language the game started in, every word whole, as wide as one another.</summary>
-        [TestCase(StartupLanguage.Chinese, "开始游戏-剧情模式", "开始游戏-开放模式", "教学")]
-        [TestCase(StartupLanguage.English, "Start Game - Story Mode", "Start Game - Open Mode", "Tutorial")]
+        /// <summary>From the top the new game, the tutorial, the collection and the settings (Continue joins above them once a save exists:
+        /// V5TitleWindowTest), in the language the game started in, every word whole, as wide as one another, on one left edge.</summary>
+        [TestCase(StartupLanguage.Chinese, "新游戏", "教学", "图鉴", "设置")]
+        [TestCase(StartupLanguage.English, "New Game", "Tutorial", "Collection", "Settings")]
         [BuildScene(SceneCn), Category("Integration"), Timeout(60000)]
-        public async Task Title_ThreeEntriesTopDown_InTheStartLanguage_WholeAndAsWide(string language, string story, string open, string tutorial)
+        public async Task Title_MenuItemsTopDown_InTheStartLanguage_WholeAndAsWide(string language, string newGame, string tutorial, string collection, string settings)
         {
             TestStartLanguage.Use(language);
+            V5Title.SummariesForTests = EmptySlots;
             await SceneManagerHelper.LoadSceneAsync(SceneCn);
             var game = await ReadyScene();
             Assume.That(game.RunPhase, Is.EqualTo(ArenaUiState.Title));
-            var content = GameObject.Find("V2Canvas/TitleScreen/Content").transform;
-            var entries = new[] { V2Hud.TitleStoryButton, V2Hud.TitleOpenButton, V2Hud.TitleTutorialButton }.Select(name => (RectTransform)content.Find(name)).ToArray();
-            var labels = entries.Select(entry => entry.GetComponentInChildren<UnityEngine.UI.Text>()).ToArray();
-            await Until(() => labels[0].text == story, 3f, "the entries' words in the start language");
+            V5Title.ReloadForTests();
+            var menu = V5().Find("Menu");
+            var items = new[] { "NewGame", "Tutorial", "Collection", "Settings" }.Select(name => (RectTransform)menu.Find(name)).ToArray();
+            var labels = items.Select(item => item.Find("Label").GetComponent<UnityEngine.UI.Text>()).ToArray();
+            await Until(() => labels[0].text == newGame, 3f, "the menu's words in the start language");
             await Awaitable.NextFrameAsync();
 
             var hud = Object.FindAnyObjectByType<V2Hud>();
             ((RectTransform)hud.transform).sizeDelta = hud.GetComponentInParent<UnityEngine.UI.CanvasScaler>().referenceResolution;
             Canvas.ForceUpdateCanvases();
-            var boxes = entries.Select(part => Box(part, hud.transform)).ToArray();
+            var boxes = items.Select(part => Box(part, hud.transform)).ToArray();
 
             Assert.That(ArenaText.IsChinese, Is.EqualTo(language == StartupLanguage.Chinese), "the game started in the language it was asked to");
-            Assert.That(labels.Select(label => label.text), Is.EqualTo(new[] { story, open, tutorial }), "story, open, tutorial");
+            Assert.That(menu.Find("Continue").gameObject.activeInHierarchy, Is.False, "no Continue without a save");
+            Assert.That(labels.Select(label => label.text), Is.EqualTo(new[] { newGame, tutorial, collection, settings }), "new game, tutorial, collection, settings");
             Assert.That(labels.Where(label => label.cachedTextGenerator.characterCountVisible < label.text.Length).Select(label => label.text), Is.Empty,
-                "every entry's words show in full");
-            Assert.That(boxes.Zip(boxes.Skip(1), (upper, lower) => upper.yMin >= lower.yMax), Has.All.True, "each entry under the last");
-            Assert.That(boxes.Take(3).Select(box => box.width), Has.All.EqualTo(boxes[0].width).Within(.5f), "the three entries as wide as one another");
+                "every item's words show in full");
+            Assert.That(boxes.Zip(boxes.Skip(1), (upper, lower) => upper.yMin >= lower.yMax), Has.All.True, "each item under the last");
+            Assert.That(boxes.Select(box => box.width), Has.All.EqualTo(boxes[0].width).Within(.5f), "as wide as one another");
+            Assert.That(boxes.Select(box => box.xMin), Has.All.EqualTo(boxes[0].xMin).Within(.5f), "on one left edge");
         }
 
-        /// <summary>The story mode is the V2 day campaign; the open mode goes through the map pick (OpenModeMapSelectTest), so no button sends
-        /// the classic run's Start; the tutorial sends no run command at all.</summary>
+        /// <summary>The story mode is the V2 day campaign: the saved Start, hidden on this title, still carries its command, and the new game's
+        /// story slots start through it; no button shown sends a run command (the open mode goes through the map pick, OpenModeMapSelectTest).</summary>
         [Test, LoadScene(SceneCn), Category("Integration"), Timeout(30000)]
-        public async Task Title_StoryEntryOpensTheV2Campaign_TheOpenEntryNeedsAMap()
+        public async Task Title_TheHiddenStartOpensTheV2Campaign_NoShownButtonSendsARunCommand()
         {
             var game = await ReadyScene();
             Assume.That(game.RunPhase, Is.EqualTo(ArenaUiState.Title));
             await Awaitable.NextFrameAsync();
             var content = GameObject.Find("V2Canvas/TitleScreen/Content").transform;
+            var start = content.Find(V2Hud.TitleStoryButton);
 
-            var buttons = Object.FindObjectsByType<ArenaUiButton>(FindObjectsInactive.Exclude);
-            Assert.That(buttons.Where(b => b.command == ArenaUiCommand.StartCampaign).Select(b => b.name), Is.EqualTo(new[] { V2Hud.TitleStoryButton }),
-                "one story entry, the saved Start, and it opens the V2 campaign");
-            Assert.That(buttons.Any(b => b.command == ArenaUiCommand.Start), Is.False, "no button starts the classic run without a map");
-            Assert.That(content.Find(V2Hud.TitleOpenButton).TryGetComponent<ArenaUiButton>(out _), Is.False, "the open entry opens the map pick instead");
-            Assert.That(content.Find(V2Hud.TitleTutorialButton).TryGetComponent<ArenaUiButton>(out _), Is.False, "the tutorial sends no run command");
+            Assert.That(start && !start.gameObject.activeInHierarchy, Is.True, "the saved Start is hidden: the menu and its window take its place");
+            Assert.That(start.GetComponent<ArenaUiButton>().command, Is.EqualTo(ArenaUiCommand.StartCampaign), "it opens the V2 campaign");
+            var shown = Object.FindObjectsByType<ArenaUiButton>(FindObjectsInactive.Exclude);
+            Assert.That(shown.Where(b => b.command is ArenaUiCommand.Start or ArenaUiCommand.StartCampaign).Select(b => b.name), Is.Empty,
+                "no button shown sends a run command");
+            Assert.That(V5().GetComponentsInChildren<ArenaUiButton>(true), Is.Empty, "the title's menu and window send none");
             await CommandUntil(game, ArenaUiCommand.StartCampaign, () => V2Campaign.Active && V2Campaign.Active.Running);
             Assert.That(V2Campaign.Active.Day, Is.EqualTo(0), "the campaign opens on day 0");
             Assert.That(V2Campaign.Active.rules.wavesPerDay, Is.EqualTo(1), "one wave a day");
         }
 
-        // ───── The Language option ─────
+        // ───── The language, in the settings window ─────
 
-        /// <summary>Top right, it reads "Language" in both languages, a click switches between Chinese
-        /// and English at once and saves the choice, and the title's words follow.</summary>
+        /// <summary>The language is a toggle in the title's settings window, each language named in its own words: a click on the other one
+        /// switches at once and saves the choice, and the title's words follow.</summary>
         [Test, LoadScene(SceneCn), Category("Integration"), Timeout(60000)]
-        public async Task LanguageOption_TopRight_ClickSwitchesAtOnceAndSavesTheChoice()
+        public async Task Language_InTheSettingsWindow_ClickSwitchesAtOnceAndSavesTheChoice()
         {
             var game = await ReadyScene();
             Assume.That(ArenaText.IsChinese, Is.True, "the run's scenes start in Chinese (TestStartLanguage)");
-            var content = GameObject.Find("V2Canvas/TitleScreen/Content").transform;
-            var option = (RectTransform)content.Find(V2Hud.TitleLanguageButton);
-            var label = option.GetComponentInChildren<UnityEngine.UI.Text>();
-            var story = content.Find(V2Hud.TitleStoryButton).GetComponentInChildren<UnityEngine.UI.Text>();
-            await Until(() => label.text == "Language", 3f, "the option reads Language");
-            var hud = Object.FindAnyObjectByType<V2Hud>();
-            var canvas = ((RectTransform)hud.transform).rect;
-            var box = Box(option, hud.transform);
+            V5Title.SummariesForTests = EmptySlots;
+            V5Title.ReloadForTests();
+            var title = V5();
+            await Awaitable.NextFrameAsync();
+            await ClickUntil((RectTransform)title.Find("Menu/Settings"), () => V5Title.Active.Tab == V5Title.SettingsTab, "the menu shows the settings");
+            await Until(() => V5Title.Active.Settled, 3f, "the settings window settles");
+            await Awaitable.NextFrameAsync();
+            var english = (RectTransform)title.Find("Window/Pages/Settings/Language/Toggle/English");
+            var chinese = (RectTransform)title.Find("Window/Pages/Settings/Language/Toggle/Chinese");
+            var first = title.Find("Menu/NewGame/Label").GetComponent<UnityEngine.UI.Text>();
+            Rect window = Box(title.Find("Window"), title), box = Box(english, title);
             languageBefore = PlayerPrefs.HasKey(ArenaLanguage.SavedChoiceKey) ? PlayerPrefs.GetString(ArenaLanguage.SavedChoiceKey) : null;
             languageSaved = true;
 
-            await ClickUntil(option, () => !ArenaText.IsChinese, "a click switches to English");
-            await Until(() => ArenaText.Ready && story.text == "Start Game - Story Mode", 5f, "the title's words follow at once");
+            await ClickUntil(english, () => !ArenaText.IsChinese, "a click switches to English");
+            await Until(() => ArenaText.Ready && first.text == "New Game", 5f, "the title's words follow at once");
             string savedEnglish = PlayerPrefs.GetString(ArenaLanguage.SavedChoiceKey, "");
             await Awaitable.NextFrameAsync(); // the title's canvas was off while the English text loaded; it takes clicks a frame after it is back
-            await ClickUntil(option, () => ArenaText.IsChinese, "a second click switches back to Chinese");
-            await Until(() => ArenaText.Ready && story.text == "开始游戏-剧情模式", 5f, "and the words follow back");
+            await ClickUntil(chinese, () => ArenaText.IsChinese, "a second click switches back to Chinese");
+            await Until(() => ArenaText.Ready && first.text == "新游戏", 5f, "and the words follow back");
 
-            Assert.That(box.center.x, Is.GreaterThan(canvas.center.x + canvas.width * .25f), "the option sits at the right");
-            Assert.That(box.center.y, Is.GreaterThan(canvas.center.y + canvas.height * .25f), "and at the top");
-            Assert.That(label.text, Is.EqualTo("Language"), "it reads Language in Chinese too");
+            Assert.That(box.xMin >= window.xMin && box.xMax <= window.xMax && box.yMin >= window.yMin && box.yMax <= window.yMax, Is.True, "the toggle is in the settings window");
+            Assert.That(english.Find("Label").GetComponent<UnityEngine.UI.Text>().text, Is.EqualTo("English"), "English is named in English");
+            Assert.That(chinese.Find("Label").GetComponent<UnityEngine.UI.Text>().text, Is.EqualTo("中文"), "and Chinese in Chinese");
             Assert.That(savedEnglish, Is.EqualTo(StartupLanguage.English), "the switch to English was saved");
             Assert.That(PlayerPrefs.GetString(ArenaLanguage.SavedChoiceKey, ""), Is.EqualTo(StartupLanguage.Chinese), "and the switch back too");
             Assert.That(game.RunPhase, Is.EqualTo(ArenaUiState.Title), "still on the title");
+            Assert.That(V5Title.Active.Tab, Is.EqualTo(V5Title.SettingsTab), "with the settings window still showing");
         }
 
         /// <summary>The command the title's Start carries: since 2026-11-06 it opens the V2 campaign in a scene that has one.</summary>
@@ -188,26 +202,26 @@ namespace AnomalyArena
                 ? ArenaUiCommand.StartCampaign : ArenaUiCommand.Start;
 
         [Test, LoadScene(SceneCn), Category("Integration"), Timeout(30000)]
-        public async Task Title_ShowsTheEntriesSettingsAndLanguage_NotTheKeyHintsTheArtSwitchOrTheOldLanguageButtons()
+        public async Task Title_ShowsTheMenuAndItsWindow_NotTheKeyHintsTheArtSwitchOrTheOldButtons()
         {
             var game = await ReadyScene();
             Assume.That(game.RunPhase, Is.EqualTo(ArenaUiState.Title));
             await Awaitable.NextFrameAsync();
             var content = GameObject.Find("V2Canvas/TitleScreen/Content");
             Assume.That(content, Is.Not.Null, "the saved title screen");
-            // No tagline; since 2026-11-10 three entries and the Language option in place of the two saved language buttons, in
-            // either language (one scene for both), and the Settings button in place of the art switch under the entries and of the
-            // line of key hints along the bottom (the art mode and the keys are in the settings).
-            foreach (var hidden in new[] { "InterstellarSubtitle", "ChineseTeam", "EnglishShowcase", "Controls", "ToggleArt", V2Hud.MapSelect })
+            // No tagline, no line of key hints (the keys are in the settings and the tutorial), no art switch, no saved language buttons, and
+            // none of the earlier title's own buttons: their jobs are the menu's items and its window's (V5Title).
+            foreach (var hidden in new[] { "InterstellarSubtitle", "ChineseTeam", "EnglishShowcase", "Controls", "ToggleArt", V2Hud.MapSelect, V2Hud.TitleStoryButton,
+                         V2Hud.TitleOpenButton, V2Hud.TitleTutorialButton, V2Hud.TitleSettingsButton, V2Hud.TitleLanguageButton, ArenaCodex.ButtonName })
             {
                 var element = content.transform.Find(hidden);
                 Assert.That(element == null || !element.gameObject.activeInHierarchy, Is.True, hidden + " is not shown");
             }
-            foreach (var shown in new[] { V2Hud.TitleStoryButton, V2Hud.TitleOpenButton, V2Hud.TitleTutorialButton, V2Hud.TitleSettingsButton, V2Hud.TitleLanguageButton })
-                Assert.That(content.transform.Find(shown).gameObject.activeInHierarchy, Is.True, shown + " is shown");
+            foreach (var shown in new[] { "Menu/NewGame", "Menu/Tutorial", "Menu/Collection", "Menu/Settings", "Window", "Pointer" })
+                Assert.That(content.transform.Find(V5Title.RootName + "/" + shown).gameObject.activeInHierarchy, Is.True, shown + " is shown");
         }
 
-        // ───── The title's tutorial entry (since 2026-11-06; "教学" since 2026-11-10) ─────
+        // ───── The title's tutorial (its window and the story pages) ─────
 
         [TestCase(StartupLanguage.Chinese, "教学"), TestCase(StartupLanguage.English, "Tutorial"), BuildScene(SceneCn), Category("Integration"), Timeout(60000)]
         public async Task TitleTutorial_EachLanguage_OpensTheStoryPages_AndClosingThemLeavesTheTitle(string language, string word)
@@ -217,31 +231,39 @@ namespace AnomalyArena
             await TitleTutorialOpensTheStoryPages(word);
         }
 
-        /// <summary>The title's third entry opens the story mode's pages over the title, though no campaign runs there yet: the background
-        /// first, then how to play. No text on any page, the footnote included, names a card or Tab (the story mode has no card picks and no
-        /// build phase), and every page's line fits its box. The pages cover the title's buttons while open, and closing them leaves the
-        /// title as it was. On the reference canvas the title's buttons (the entries and the two corner ones) do not overlap.</summary>
+        /// <summary>The menu's tutorial item shows the lessons in the window (the story's opening page left out); their Start opens the story
+        /// mode's pages over the title, though no campaign runs there yet: the background first, then how to play. No text on any page, the
+        /// footnote included, names a card or Tab (the story mode has no card picks and no build phase), and every page's line fits its box.
+        /// The pages cover the title while open, and closing them leaves the title as it was. On the reference canvas the menu's items do
+        /// not overlap one another or the window.</summary>
         static async Task TitleTutorialOpensTheStoryPages(string word)
         {
             var game = await ReadyScene();
             Assume.That(game.RunPhase, Is.EqualTo(ArenaUiState.Title));
             Assume.That(V2Campaign.Active && V2Campaign.Active.Running, Is.False, "no campaign runs on the title");
-            var content = GameObject.Find("V2Canvas/TitleScreen/Content").transform;
-            var tutorial = content.Find(V2Hud.TitleTutorialButton) as RectTransform;
-            Assert.That(tutorial && tutorial.gameObject.activeInHierarchy, Is.True, "the title shows the tutorial entry");
-            var label = tutorial.GetComponentInChildren<UnityEngine.UI.Text>();
-            await Until(() => label.text == word, 3f, "the tutorial entry is labelled in the start language");
-            Assert.That(tutorial.TryGetComponent<ArenaUiButton>(out _), Is.False, "the tutorial entry sends no run command");
+            var title = V5();
+            var tutorial = title.Find("Menu/Tutorial") as RectTransform;
+            Assert.That(tutorial && tutorial.gameObject.activeInHierarchy, Is.True, "the title's menu has the tutorial");
+            var label = tutorial.Find("Label").GetComponent<UnityEngine.UI.Text>();
+            await Until(() => label.text == word, 3f, "the tutorial item is labelled in the start language");
+            Assert.That(tutorial.TryGetComponent<ArenaUiButton>(out _), Is.False, "the tutorial item sends no run command");
             await Awaitable.NextFrameAsync();
+            await ClickUntil(tutorial, () => V5Title.Active.Tab == V5Title.TutorialTab, "the item shows the lessons");
+            await Until(() => V5Title.Active.Settled, 3f, "the window settles");
+            await Awaitable.NextFrameAsync();
+            var lessons = title.Find("Window/Pages/Tutorial");
+            Assert.That(lessons.Cast<Transform>().Count(lesson => lesson.gameObject.activeSelf && lesson.name.StartsWith("Lesson")), Is.EqualTo(6),
+                "six lessons: the story's opening page is the story mode's own");
+            var go = (RectTransform)title.Find("Window/Foot/Go");
             float titleTime = Time.timeScale;
 
-            Click(tutorial);
-            Assert.That(V2Tutorial.IsOpen && V2Tutorial.HoldsInput, Is.True, "a click opens the pages, which hold the game's keys");
+            Click(go);
+            Assert.That(V2Tutorial.IsOpen && V2Tutorial.HoldsInput, Is.True, "Start opens the pages, which hold the game's keys");
             Assert.That(Time.timeScale, Is.Zero, "the game holds still under them");
             await Awaitable.NextFrameAsync();
-            foreach (var name in new[] { V2Hud.TitleStoryButton, V2Hud.TitleOpenButton, V2Hud.TitleTutorialButton, V2Hud.TitleSettingsButton, V2Hud.TitleLanguageButton })
+            foreach (var name in new[] { "Menu/NewGame", "Menu/Tutorial", "Menu/Collection", "Menu/Settings", "Window/Foot/Go" })
             {
-                var hit = TopHit((RectTransform)content.Find(name), out _);
+                var hit = TopHit((RectTransform)title.Find(name), out _);
                 Assert.That(hit && hit.GetComponentInParent<V2Tutorial>(), Is.True, $"the pages cover {name}, so a click there stays on them");
             }
             var pages = Object.FindAnyObjectByType<V2Tutorial>().transform;
@@ -271,17 +293,14 @@ namespace AnomalyArena
             Assert.That(Time.timeScale, Is.EqualTo(titleTime), "and gives the title its own time back");
             await Awaitable.NextFrameAsync();
             Assert.That(game.RunPhase, Is.EqualTo(ArenaUiState.Title), "the title is still there");
-            Assert.That(tutorial.gameObject.activeInHierarchy, Is.True, "with its tutorial button");
+            Assert.That(V5Title.Active.Tab, Is.EqualTo(V5Title.TutorialTab), "with its lessons");
 
             // Measured on the reference canvas, as the bottom row is in V3SmokeTest: a batch run's window is not 16:9. The canvas takes its own
             // size back a few frames later, so everything is measured at once.
             var hud = Object.FindAnyObjectByType<V2Hud>();
             ((RectTransform)hud.transform).sizeDelta = hud.GetComponentInParent<UnityEngine.UI.CanvasScaler>().referenceResolution;
-            Rect open = Box(content.Find(V2Hud.TitleOpenButton), hud.transform), help = Box(tutorial, hud.transform);
-            Assert.That(help.yMax, Is.LessThanOrEqualTo(open.yMin), "the tutorial entry is under the open mode");
-            Assert.That(help.width, Is.EqualTo(open.width).Within(.5f), "as wide as the starts");
-            // The three entries and the two corner buttons (Settings top left, Language top right).
-            var shown = content.Cast<Transform>().Where(part => part.gameObject.activeInHierarchy && part.GetComponent<UnityEngine.UI.Button>()).ToArray();
+            Canvas.ForceUpdateCanvases();
+            var shown = title.Find("Menu").Cast<Transform>().Where(part => part.gameObject.activeInHierarchy).Append(title.Find("Window")).ToArray();
             for (int i = 0; i < shown.Length; i++)
                 for (int j = i + 1; j < shown.Length; j++)
                     Assert.That(Box(shown[i], hud.transform).Overlaps(Box(shown[j], hud.transform)), Is.False, $"{shown[i].name} overlaps {shown[j].name}");
@@ -636,6 +655,24 @@ namespace AnomalyArena
         }
 
         // ───── Helpers ─────
+
+        static SaveSummary[] EmptySlots(SaveMode mode) => Enumerable.Range(0, ArenaSaves.SlotCount).Select(i => new SaveSummary { mode = mode, slot = i }).ToArray();
+
+        /// <summary>The whole game's title (V5Title).</summary>
+        static Transform V5() => GameObject.Find("V2Canvas/TitleScreen/Content/" + V5Title.RootName).transform;
+
+        /// <summary>The new game's second step for a mode's card ("StoryMode" or "OpenMode"), on made-up empty slots; the save calls go nowhere.</summary>
+        static async Task OpenNewGameSlots(string card)
+        {
+            V5Title.SummariesForTests = EmptySlots;
+            V5Title.SaveCallsForTests = (_, _, _) => { };
+            V5Title.ReloadForTests();
+            await Awaitable.NextFrameAsync();
+            await ClickUntil((RectTransform)V5().Find("Window/Pages/NewGame/" + card), () => V5().Find("Window/Pages/NewGame/Top").gameObject.activeInHierarchy,
+                "the mode's card opens its slots");
+            await Until(() => V5Title.Active.Settled, 3f, "the window settles");
+            await Awaitable.NextFrameAsync();
+        }
 
         static async Task<GameManager> ReadyScene()
         {

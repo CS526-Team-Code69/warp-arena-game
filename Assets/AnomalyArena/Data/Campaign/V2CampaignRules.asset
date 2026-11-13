@@ -68,7 +68,7 @@ MonoBehaviour:
   ambientShadows: 1
   ambientShadowsPerDay: 0
   tutorialShadows: 4
-  tutorialShadowKeep: 5
+  tutorialShadowHitScale: 0.33
   shadowSpeed: 3.4
   shadowChaseFactor: 1.12
   shadowSense: 26
@@ -101,8 +101,8 @@ MonoBehaviour:
   daySpawnRing: 56
   nearSpawnRing: 30
   nearSpawnShare: 0.4
-  morningSeconds: 75
-  morningCrowd: 1.25
+  morningSeconds: 60
+  morningCrowd: 1
   monsterWalkScale: 0.944
   monsterWalkCap: 0.95
   holeFeedsToOpen: 20

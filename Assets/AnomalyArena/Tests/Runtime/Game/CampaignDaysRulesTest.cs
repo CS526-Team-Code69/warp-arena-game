@@ -28,7 +28,8 @@ namespace AnomalyArena
         // ───── Each day's kinds (the implementation spec's section F) ─────
 
         [TestCase(1, EnemyKind.Grunt, 60, 60)]
-        [TestCase(1, EnemyKind.Spitter, 15, 0)]
+        [TestCase(1, EnemyKind.Spitter, 15, 15)]
+        [TestCase(1, EnemyKind.Warden, 0, 6)]
         [TestCase(1, EnemyKind.Skitter, 20, 0)]
         [TestCase(2, EnemyKind.Warden, 6, 6)]
         [TestCase(2, EnemyKind.Chanter, 6, 0)]

@@ -31,6 +31,12 @@ namespace AnomalyArena
         {
             Assert.That(BuildEdition.Current, Is.EqualTo(BuildEdition.Edition.Full));
             Assert.That(BuildEdition.IsCourseBuild, Is.False);
+            Assert.That(BuildEdition.PlaysCutscenes, Is.True);
         }
+
+        [TestCase(BuildEdition.Edition.Full, ExpectedResult = true, TestName = "The whole game plays the story's cutscenes")]
+        [TestCase(BuildEdition.Edition.EnglishBeta, ExpectedResult = false, TestName = "The English Beta plays none")]
+        [TestCase(BuildEdition.Edition.EnglishAlpha, ExpectedResult = false, TestName = "The English Alpha, which has no story, plays none")]
+        public bool CutscenesOn_OnlyTheWholeGame(BuildEdition.Edition edition) => BuildEdition.CutscenesOn(edition);
     }
 }

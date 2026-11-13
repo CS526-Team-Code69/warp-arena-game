@@ -13,14 +13,21 @@ namespace AnomalyArena
     /// (V2Hud, after the title's ArenaUiCommand.Start); the story mode's Start (StartCampaign) opens none. The pause screen opens the pages
     /// of the run being played, and the title's tutorial button always opens the story mode's (ShowStory). The game is frozen while they
     /// are open. The keys follow the game's rules: a click turns the pages and Esc closes them, because Space and Enter answer only on the
-    /// weapon card (SourceKeysTest).
+    /// weapon card (SourceKeysTest). On every page but the English Alpha's they are drawn in the fifth pass's look, where the arrow keys
+    /// turn them too (V5Tutorial.cs); the Alpha keeps these pages as they are.
     /// </summary>
-    public sealed class V2Tutorial : MonoBehaviour
+    public sealed partial class V2Tutorial : MonoBehaviour
     {
         const float PanelW = 920f, PanelH = 620f, WindowW = 760f, WindowH = 320f;
-        static readonly Color Soft = new(.86f, .90f, .96f), Faint = new(.62f, .72f, .85f), Cyan = new(.50f, .86f, 1f);
+        // The inks, and the colour of a key, a slot or a row that is lit: the Alpha's pages keep these; the fifth pass's take the pass's
+        // cream and grey inks and its orange for what is pressed or chosen.
+        static readonly Color AlphaSoft = new(.86f, .90f, .96f), AlphaFaint = new(.62f, .72f, .85f), AlphaCyan = new(.50f, .86f, 1f);
+        static Color Soft => fifth ? V5TitleKit.Ink : AlphaSoft;
+        static Color Faint => fifth ? V5TitleKit.Ink2 : AlphaFaint;
+        static Color Cyan => fifth ? V5TitleKit.OrangeHi : AlphaCyan;
         static readonly Color Player = new(.35f, .78f, 1f), Enemy = new(.95f, .38f, .36f), Bullet = new(1f, .84f, .29f), Void = new(.62f, .38f, 1f);
-        static readonly Color KeyIdle = new(.55f, .65f, .80f, .55f), Floor = new(.03f, .06f, .12f, .96f), GridLine = new(.35f, .55f, .8f, .07f);
+        static readonly Color KeyIdle = new(.55f, .65f, .80f, .55f), Floor = new(.03f, .06f, .12f, .96f), AlphaGrid = new(.35f, .55f, .8f, .07f);
+        static Color GridLine => fifth ? FifthGrid : AlphaGrid;
 
         static V2Tutorial instance;
         static Sprite circle, ring, pill, panel, button, buttonPrimary;
@@ -36,6 +43,17 @@ namespace AnomalyArena
         // Built when they open: ArenaText answers only once its tables are ready. Both sets have PageCount pages, so the dots and the
         // tests keep their numbers.
         static (string title, string line, Func<Demo> demo)[] Pages() => InCampaign ? StoryPages() : ClassicPages();
+
+        /// <summary>The title of one of the story mode's pages (0 is the background, 1 to 6 how to play): the title's tutorial window lists
+        /// the pages after the first (V5Title).</summary>
+        public static string StoryPageTitle(int page)
+        {
+            var pages = StoryPages();
+            return page >= 0 && page < pages.Length ? pages[page].title : "";
+        }
+
+        /// <summary>The story's planned days (the title's save windows mark them).</summary>
+        public static int StoryDays => PlannedDays;
 
         static (string title, string line, Func<Demo> demo)[] ClassicPages() => new (string, string, Func<Demo>)[]
         {
@@ -125,6 +143,7 @@ namespace AnomalyArena
             shownOnArrival = false;
             closedFrame = -1;
             storyOnly = false;
+            fifth = false;
         }
 
         /// <summary>The run has entered the arena: the pages open if no run has seen them since the web page opened. Restarting reloads the
@@ -145,16 +164,23 @@ namespace AnomalyArena
         /// <summary>The story mode's pages, whatever is running: the title's tutorial button, since the title's Start opens the story mode.</summary>
         public static void ShowStory(Font font) => ShowPages(font, true);
 
-        static void ShowPages(Font font, bool story)
+        /// <summary>The story mode's pages from one of them (0 is the background): the title's lessons open the pages at their own.</summary>
+        public static void ShowStory(Font font, int page) => ShowPages(font, true, page);
+
+        static void ShowPages(Font font, bool story, int first = 0)
         {
             storyOnly = story;
             if (!instance) instance = Build();
-            instance.font = font ? font : Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            instance.font = font ? font : fifth ? V5TitleKit.Font : Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             foreach (var label in instance.GetComponentsInChildren<Text>(true)) label.font = instance.font;
-            if (!IsOpen) instance.heldScale = Time.timeScale;
+            if (!IsOpen)
+            {
+                instance.heldScale = Time.timeScale;
+                if (fifth) instance.TakeSelection();
+            }
             Time.timeScale = 0f;
             instance.gameObject.SetActive(true);
-            instance.Open(0);
+            instance.Open(Mathf.Clamp(first, 0, PageCount - 1));
         }
 
         public static void Close()
@@ -163,6 +189,7 @@ namespace AnomalyArena
             closedFrame = Time.frameCount;
             Time.timeScale = instance.heldScale;
             instance.gameObject.SetActive(false);
+            if (fifth) instance.ClosedFifth();
         }
 
         public static void Next()
@@ -174,13 +201,15 @@ namespace AnomalyArena
 
         static void Skip()
         {
-            V2Audio.Instance?.PlayUI(ArenaUiSound.Cancel);
+            if (fifth) V5UiSound.Play(V5UiSound.Ui.Back);
+            else V2Audio.Instance?.PlayUI(ArenaUiSound.Cancel);
             Close();
         }
 
         static void Turn()
         {
-            V2Audio.Instance?.PlayUI(ArenaUiSound.Select);
+            if (fifth) TurnSound();
+            else V2Audio.Instance?.PlayUI(ArenaUiSound.Select);
             Next();
         }
 
@@ -188,6 +217,7 @@ namespace AnomalyArena
         {
             flat.Follow();
             if (Keyboard.current is { } keyboard && keyboard.escapeKey.wasPressedThisFrame) { Skip(); return; }
+            if (fifth && !UpdateFifth()) return;
             pageTime += Time.unscaledDeltaTime;
             demo?.Tick(pageTime);
         }
@@ -210,6 +240,7 @@ namespace AnomalyArena
             footnote.text = Footnote();
             footnote.gameObject.SetActive(last);
             for (int i = 0; i < dots.Length; i++) dots[i].color = i == index ? Cyan : KeyIdle;
+            if (fifth) ShowFifth(index, last);
         }
 
         static V2Tutorial Build()
@@ -220,6 +251,9 @@ namespace AnomalyArena
             panel ??= Load("V5/UI/ui-panel", 112f);
             button ??= Load("V5/UI/ui-button", 40f);
             buttonPrimary ??= Load("V5/UI/ui-button-primary", 40f);
+            // Every page but the English Alpha's draws the pages in the fifth pass's look (V5Tutorial.cs); the Alpha keeps these.
+            fifth = V5HudKit.On;
+            if (fifth) return BuildFifth();
 
             var root = new GameObject("HowToPlay", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
             var canvas = root.GetComponent<Canvas>();
@@ -303,7 +337,7 @@ namespace AnomalyArena
 
         // ───── Demos: everything is drawn with UI images in the window, centred on (0, 0), and loops on unscaled time ─────
 
-        abstract class Demo
+        abstract partial class Demo
         {
             protected RectTransform window;
             protected Font font;
@@ -331,6 +365,7 @@ namespace AnomalyArena
 
             protected Key Cap(string label, Vector2 at, float width = 44f)
             {
+                if (fifth) return FifthCap(label, at, width);
                 var cap = NewImage(window, "Key " + label, pill, KeyIdle, Image.Type.Sliced, 2f);
                 cap.rectTransform.sizeDelta = new Vector2(width, 40f);
                 cap.rectTransform.anchoredPosition = at;
@@ -358,6 +393,7 @@ namespace AnomalyArena
             /// <summary>A small panel like the game's own, faded and moved as one.</summary>
             protected (RectTransform rect, CanvasGroup fade) Sheet(Vector2 size, Vector2 at)
             {
+                if (fifth) return FifthSheet(size, at);
                 var frame = NewImage(window, "Sheet", button, button ? Color.white : new Color(.12f, .22f, .34f), Image.Type.Sliced, 2f);
                 frame.rectTransform.sizeDelta = size;
                 frame.rectTransform.anchoredPosition = at;
@@ -376,6 +412,7 @@ namespace AnomalyArena
             /// <summary>A mouse with its two buttons, for the pages that use them.</summary>
             protected (Image left, Image right) Mouse(Vector2 at)
             {
+                if (fifth) return FifthMouse(at);
                 var body = NewImage(window, "Mouse", pill, KeyIdle, Image.Type.Sliced, 1f);
                 body.rectTransform.sizeDelta = new Vector2(38f, 56f);
                 body.rectTransform.anchoredPosition = at;
@@ -400,15 +437,20 @@ namespace AnomalyArena
 
             protected static float Loop(float time, float period) => Mathf.Repeat(time, period);
             protected static float Ease(float from, float to, float time) => Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(from, to, time));
-            protected static void Light(Image part, bool on) => part.color = on ? Cyan : KeyIdle;
+            protected static void Light(Image part, bool on) => part.color = on ? Cyan : fifth ? MouseIdle : KeyIdle;
         }
 
-        sealed class Key
+        sealed partial class Key
         {
             public Image cap;
             public Text text;
             public void Light(bool on)
             {
+                if (fifth)
+                {
+                    LightFifth(on);
+                    return;
+                }
                 // Pressed: a bright rim and label, and the cap sinks a little.
                 cap.color = on ? new Color(.6f, .95f, 1f, 1f) : KeyIdle;
                 text.color = on ? Cyan : Soft;
@@ -512,7 +554,7 @@ namespace AnomalyArena
                 player = Dot(Player, 34f, Vector2.zero);
                 shift = Cap(ArenaKeys.SprintKey, new Vector2(-300f, -100f), 84f);
                 Bar(new Color(1f, 1f, 1f, .08f), new Vector2(220f, 10f), new Vector2(60f, -120f));
-                fill = Bar(new Color(1f, .82f, .3f), new Vector2(220f, 10f), new Vector2(60f, -120f));
+                fill = Bar(StaminaColour, new Vector2(220f, 10f), new Vector2(60f, -120f));
                 fill.rectTransform.pivot = new Vector2(0f, .5f);
                 fill.rectTransform.anchoredPosition = new Vector2(-50f, -120f);
                 Label(ArenaText.Pair("体力", "STAMINA"), 13, Faint, new Vector2(60f, -100f));
@@ -534,7 +576,7 @@ namespace AnomalyArena
                 float stamina = t < 1.2f ? 1f : t < 2.4f ? Mathf.Lerp(1f, .12f, (t - 1.2f) / 1.2f) : Mathf.Lerp(.12f, 1f, (t - 2.4f) / 1.6f);
                 fill.rectTransform.sizeDelta = new Vector2(220f * stamina, 10f);
                 // Document 3.4: below the start threshold, when not sprinting, the bar is grey.
-                fill.color = !sprint && stamina < .3f ? new Color(.6f, .6f, .65f) : new Color(1f, .82f, .3f);
+                fill.color = !sprint && stamina < .3f ? new Color(.6f, .6f, .65f) : StaminaColour;
             }
         }
 
@@ -551,10 +593,10 @@ namespace AnomalyArena
                 for (int i = 0; i < enemies.Length; i++) enemies[i] = Dot(Enemy, 26f, Centre);
                 burst = Ring(Void, 10f, Centre);
                 Dot(Player, 34f, Centre);
-                slot1 = NewImage(window, "Hand 1", pill, KeyIdle, Image.Type.Sliced, 2f);
+                slot1 = SlotPlate("Hand 1");
                 slot1.rectTransform.sizeDelta = new Vector2(110f, 34f);
                 slot1.rectTransform.anchoredPosition = new Vector2(-30f, -120f);
-                slot2 = NewImage(window, "Hand 2", pill, KeyIdle, Image.Type.Sliced, 2f);
+                slot2 = SlotPlate("Hand 2");
                 slot2.rectTransform.sizeDelta = new Vector2(110f, 34f);
                 slot2.rectTransform.anchoredPosition = new Vector2(90f, -120f);
                 // A campaign run starts with the Pistol only; its anomaly weapons come from the base (since 2026-11-06).
@@ -574,8 +616,8 @@ namespace AnomalyArena
                 bool clicking = t is > .3f and < .55f || t is > 1.3f and < 1.55f;
                 Light(left, false); Light(right, clicking);
                 bool second = t is > .4f and < 1.4f;
-                slot1.color = second ? KeyIdle : Cyan;
-                slot2.color = second ? Cyan : KeyIdle;
+                ChooseSlot(slot1, !second);
+                ChooseSlot(slot2, second);
                 one.Light(t is > 2f and < 2.3f); two.Light(false); three.Light(false);
                 float wave = Mathf.InverseLerp(2.05f, 2.7f, t);
                 burst.enabled = wave is > 0f and < 1f;
@@ -673,7 +715,7 @@ namespace AnomalyArena
                 Color[] marks = { Cyan, Bullet, Void };
                 for (int i = 0; i < marks.Length; i++)
                 {
-                    var card = Part(sheet, pill, KeyIdle, new Vector2(116f, 170f), new Vector2(-130f + i * 130f, -20f));
+                    var card = CardPlate(sheet, new Vector2(116f, 170f), new Vector2(-130f + i * 130f, -20f));
                     Part(card.rectTransform, circle, marks[i], Vector2.one * 44f, new Vector2(0f, 34f));
                     Part(card.rectTransform, null, Faint, new Vector2(76f, 6f), new Vector2(0f, -22f));
                     Part(card.rectTransform, null, Faint, new Vector2(56f, 6f), new Vector2(0f, -40f));
@@ -726,8 +768,8 @@ namespace AnomalyArena
                 for (int i = 0; i < 5; i++)
                 {
                     float y = 84f - i * 28f;
-                    Part(sheet, pill, new Color(Cyan.r, Cyan.g, Cyan.b, .7f), new Vector2(150f, 24f), new Vector2(-170f, y));
-                    Label(rows[i].input, 13, Cyan, new Vector2(-170f, y), 150f, sheet);
+                    KeyChip(sheet, new Vector2(150f, 24f), new Vector2(-170f, y));
+                    Label(rows[i].input, 13, KeyChipInk, new Vector2(-170f, y), 150f, sheet);
                     Label(rows[i].action, 14, Soft, new Vector2(70f, y), 300f, sheet, TextAnchor.MiddleLeft);
                 }
                 string[] names =
@@ -738,9 +780,8 @@ namespace AnomalyArena
                 for (int i = 0; i < names.Length; i++)
                 {
                     var at = new Vector2(-198f + i * 132f, -100f);
-                    var plate = i == 0 ? buttonPrimary : button;
-                    Part(sheet, plate, plate ? Color.white : new Color(.12f, .22f, .34f), new Vector2(124f, 46f), at);
-                    Label(names[i], 13, Soft, at, 120f, sheet);
+                    PanelButton(sheet, i == 0, new Vector2(124f, 46f), at);
+                    Label(names[i], 13, PanelButtonInk(i == 0), at, 120f, sheet);
                 }
 
                 esc = Cap("Esc", new Vector2(-300f, -100f), 60f);
@@ -793,7 +834,7 @@ namespace AnomalyArena
             protected override void Build()
             {
                 // The alien ground along the bottom.
-                Bar(new Color(.2f, .14f, .28f, .9f), new Vector2(WindowW, 40f), new Vector2(0f, 20f - WindowH * .5f));
+                Bar(GroundColour, new Vector2(WindowW, 40f), new Vector2(0f, 20f - WindowH * .5f));
                 smoke = new Image[3];
                 for (int i = 0; i < smoke.Length; i++) smoke[i] = Dot(Color.clear, 26f, Wreck);
                 // The ship as the whitebox shows it: hull and nose, the engine at the back and the armor plates on top.
@@ -827,7 +868,7 @@ namespace AnomalyArena
             {
                 var mark = Part(status, circle, Broken, Vector2.one * 16f, new Vector2(-90f, y));
                 Label(name, 16, Soft, new Vector2(-20f, y), 110f, status, TextAnchor.MiddleLeft);
-                return (mark, Label("✓", 18, Cyan, new Vector2(8f, y), 40f, status));
+                return (mark, Label("✓", 18, DoneMark, new Vector2(8f, y), 40f, status));
             }
 
             public override void Tick(float time)
@@ -895,7 +936,7 @@ namespace AnomalyArena
                 shift = Cap(ArenaKeys.SprintKey, new Vector2(-150f, -100f), 84f);
                 Label(ArenaText.Pair("按住冲刺", "hold to sprint"), 14, Faint, new Vector2(-150f, -146f), 130f);
                 Bar(new Color(1f, 1f, 1f, .08f), new Vector2(220f, 10f), new Vector2(150f, -120f));
-                fill = Bar(new Color(1f, .82f, .3f), new Vector2(220f, 10f), new Vector2(40f, -120f));
+                fill = Bar(StaminaColour, new Vector2(220f, 10f), new Vector2(40f, -120f));
                 fill.rectTransform.pivot = new Vector2(0f, .5f);
                 Label(ArenaText.Pair("体力", "STAMINA"), 13, Faint, new Vector2(150f, -100f));
             }
@@ -927,7 +968,7 @@ namespace AnomalyArena
                 float stamina = sprint ? Mathf.Lerp(1f, .12f, along) : side >= 2 ? Mathf.Lerp(.12f, 1f, refill / (Sides[2] + Sides[3])) : 1f;
                 fill.rectTransform.sizeDelta = new Vector2(220f * stamina, 10f);
                 // Document 3.4: below the start threshold, when not sprinting, the bar is grey.
-                fill.color = !sprint && stamina < .3f ? new Color(.6f, .6f, .65f) : new Color(1f, .82f, .3f);
+                fill.color = !sprint && stamina < .3f ? new Color(.6f, .6f, .65f) : StaminaColour;
             }
         }
 
@@ -1161,15 +1202,24 @@ namespace AnomalyArena
                 for (int i = 0; i < Rooms.Length; i++)
                 {
                     float y = RowTop - i * RowStep;
-                    rows[i] = Part(sheet, pill, KeyIdle, new Vector2(452f, 34f), new Vector2(0f, y));
+                    rows[i] = RowPlate(sheet, new Vector2(452f, 34f), new Vector2(0f, y));
                     Part(sheet, circle, V2Campaign.RoomColour(Rooms[i]), Vector2.one * 14f, new Vector2(-206f, y));
                     Label(V2Campaign.RoomName(Rooms[i]), 14, Soft, new Vector2(-122f, y), 140f, sheet, TextAnchor.MiddleLeft);
                     // One line per row: in bold the two longest English texts come close to the box, so a wider one shrinks rather than wraps.
                     var sold = Label(sells[i], 13, Faint, new Vector2(78f, y), 290f, sheet, TextAnchor.MiddleLeft);
-                    sold.verticalOverflow = VerticalWrapMode.Truncate;
-                    sold.resizeTextForBestFit = true;
-                    sold.resizeTextMinSize = 10;
-                    sold.resizeTextMaxSize = 13;
+                    if (fifth)
+                    {
+                        // Best fit would take a Chinese run for one word (pitfall T-015): the size is picked by the width instead.
+                        sold.horizontalOverflow = HorizontalWrapMode.Overflow;
+                        V5TitleKit.FitWidth(sold, 13, 10);
+                    }
+                    else
+                    {
+                        sold.verticalOverflow = VerticalWrapMode.Truncate;
+                        sold.resizeTextForBestFit = true;
+                        sold.resizeTextMinSize = 10;
+                        sold.resizeTextMaxSize = 13;
+                    }
                 }
                 flash = Label(ArenaText.Pair("买下立刻生效", "Takes effect at once"), 15, Bullet, new Vector2(0f, -112f), 300f, sheet);
                 cursor = Ring(Soft, 24f, SheetAt);
@@ -1195,7 +1245,7 @@ namespace AnomalyArena
                 int row = Mathf.FloorToInt((t - Buying) / Each);
                 float local = t - Buying - row * Each;
                 bool buying = row >= 0 && row < Rooms.Length;
-                for (int i = 0; i < rows.Length; i++) rows[i].color = buying && i == row && local < .8f ? Cyan : KeyIdle;
+                for (int i = 0; i < rows.Length; i++) ChooseRow(rows[i], buying && i == row && local < .8f);
                 flash.color = new Color(Bullet.r, Bullet.g, Bullet.b, buying && local is > .3f and < .85f ? 1f : 0f);
                 // The pointer glides to each room's row and clicks it.
                 Vector2 point = row < 0 ? RowPoint(0) : row >= Rooms.Length ? RowPoint(Rooms.Length - 1)

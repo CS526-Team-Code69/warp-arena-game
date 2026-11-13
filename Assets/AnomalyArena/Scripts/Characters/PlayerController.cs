@@ -3,10 +3,13 @@ using UnityEngine.InputSystem;
 
 namespace AnomalyArena
 {
-    /// <summary>Player: the move keys and the sprint key (ArenaKeys: W A S D and Shift unless changed in the settings; sprinting uses stamina), mouse to aim, left button to use the hand weapon, right button to switch hand slots.</summary>
+    /// <summary>Player: the move keys and the sprint key (ArenaKeys: W A S D and Shift unless changed in the settings; sprinting uses stamina), mouse to aim, left button to use the hand weapon, right button to switch hand slots.
+    /// Once the void trial is won, Space (read in GameManagerFlow.cs, the one script that reads it) is the void dash toward the cursor,
+    /// paid from the same stamina (TryVoidDash).</summary>
     public class PlayerController : Combatant
     {
         [Header("Sprint")] public Stamina stamina = new Stamina();
+        [Header("Void dash")] public VoidDash voidDash = new VoidDash();
 
         // Interval between dust puffs while sprinting (seconds)
         const float SprintDustInterval = 0.07f;
@@ -93,6 +96,51 @@ namespace AnomalyArena
             if (dustTimer > 0f) return;
             dustTimer = SprintDustInterval;
             Fx.Pop(new Vector3(Position.x, 0.2f, Position.z), new Color(0.85f, 0.85f, 0.8f), 0.9f);
+        }
+
+        /// <summary>The void dash (VoidDash) toward the cursor's point on the ground. GameManager asks only once the dash is unlocked,
+        /// while the player can move and no screen is open (GameManagerFlow.cs). Refused, with nothing spent: stunned, frozen or
+        /// paralysed, hooked, in a rocket flight, held still, while the cooldown runs, on an exhausted stamina bar, or with a wall right
+        /// in front. A knockback or a throw in progress is cancelled, as Blink cancels it; the body moves as Blink moves it
+        /// (SkillWorldAPI.Teleport) and shows Blink's effect and sound.</summary>
+        public bool TryVoidDash()
+        {
+            if (!IsAlive || GM == null || !Lets(PlayerAct.Move) || !Lets(PlayerAct.Sprint)) return false;
+            if (State is not (CharacterState.Normal or CharacterState.Knocked or CharacterState.Thrown) || ActionsBlocked || WalkHeld) return false;
+            if (voidDash.CoolingDown || stamina.Exhausted || stamina.Value <= 0f) return false;
+            Vector3 from = Position, toward = Query.Flat(AimPoint - from);
+            // The cursor right on the player gives no way to go: the way the player last aimed then.
+            Vector3 direction = toward.sqrMagnitude > .01f ? toward.normalized : Query.Flat(aim).normalized;
+            if (direction.sqrMagnitude < .5f) return false;
+            Vector3 to = VoidDash.Reach(WorldMap.Active, from, direction, voidDash.distance, Radius);
+            to.y = from.y;
+            if (Query.Flat(to - from).magnitude < VoidDash.LeastMove) return false;
+            // Restore sets the bar to what is left and marks an empty one exhausted, the sprint's rule for a bar run empty.
+            stamina.Restore(voidDash.StaminaAfter(stamina.Value));
+            voidDash.Started();
+            CancelDisplacement();
+            if (SkillWorldAPI.Teleport != null) SkillWorldAPI.Teleport(this, to);
+            else
+            {
+                rb.position = to;
+                rb.linearVelocity = Vector3.zero;
+                transform.position = to;
+            }
+            ShowVoidDash(from, to);
+            return true;
+        }
+
+        /// <summary>Blink's look and sound for the dash: with the art on, the streak from the start to the end; in whitebox, the ring at
+        /// the end in Blink's colour.</summary>
+        void ShowVoidDash(Vector3 from, Vector3 to)
+        {
+            if (V5Vfx.On) V5Vfx.I.Blink(from, to);
+            else
+            {
+                var blink = GM.skills && GM.skills.Catalog ? GM.skills.Catalog.Find(SkillId.Blink) : null;
+                Fx.Ring(to, .4f, blink ? ElementCombat.ColorFor(blink.element) : Color.white, .35f);
+            }
+            V2Audio.Instance?.PlayWorld(ArenaSoundCue.Pulse, to);
         }
 
         void UpdateAim()

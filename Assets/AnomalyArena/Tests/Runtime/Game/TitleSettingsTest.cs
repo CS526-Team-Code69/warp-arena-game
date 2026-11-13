@@ -13,9 +13,10 @@ using Object = UnityEngine.Object;
 
 namespace AnomalyArena
 {
-    /// <summary>The title's settings, in the saved arena. The title shows neither the line of key hints nor the art switch under its
-    /// entries; a Settings button stands in the top-left corner, the Language option's counterpart. It opens the settings panel over
-    /// the title: the panel takes every click and holds the game's keys, and Esc or its Close button shuts it. In it the art mode
+    /// <summary>The settings, in the saved arena. The title shows neither the line of key hints nor the art switch: Settings is the last
+    /// item of its menu and shows its window (V5Title; V5TitleSettingsTest checks the window's own volume, art, language and keys). The
+    /// settings panel belongs to the pause screen; opened over the title it takes every click and holds the game's keys, and Esc or its
+    /// Close button shuts it. In it the art mode
     /// switches as the title's old switch did, the slider sets the volume and the volume is kept, and a row of the key list takes the
     /// next key pressed (a taken key swaps, a fixed key is refused, Esc gives up, Reset brings the defaults back). The pause screen
     /// opens the same panel: the art mode cannot be switched there, and the pause table and the bottom row name a changed key.
@@ -25,8 +26,8 @@ namespace AnomalyArena
     public class TitleSettingsTest
     {
         const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
-        static readonly string[] TitleButtons =
-            { V2Hud.TitleStoryButton, V2Hud.TitleOpenButton, V2Hud.TitleTutorialButton, V2Hud.TitleSettingsButton, V2Hud.TitleLanguageButton };
+        // The title's menu items that are always there (Continue shows only while a save exists).
+        static readonly string[] TitleItems = { "Menu/NewGame", "Menu/Tutorial", "Menu/Collection", "Menu/Settings" };
         // Every static field of Art (the switch, whether the first run took its default), saved before each test and put back after it.
         static readonly FieldInfo[] ArtState = typeof(Art).GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)
             .Where(f => !f.IsLiteral && !f.IsInitOnly && f.FieldType != typeof(MaterialPropertyBlock)).ToArray();
@@ -58,57 +59,61 @@ namespace AnomalyArena
         // ───── The title ─────
 
         [TestCase(StartupLanguage.Chinese, "设置"), TestCase(StartupLanguage.English, "Settings"), BuildScene(Scene), Category("Integration"), Timeout(60000)]
-        public async Task Title_EachLanguage_NoKeyHintsNoArtSwitch_ASettingsButtonTopLeftMirrorsLanguage(string language, string word)
+        public async Task Title_EachLanguage_SettingsIsTheMenusLastItem_ItsWindowHoldsTheVolumeArtLanguageAndKeys(string language, string word)
         {
             TestStartLanguage.Use(language);
             await SceneManagerHelper.LoadSceneAsync(Scene);
             var game = await ReadyScene();
             Assume.That(game.RunPhase, Is.EqualTo(ArenaUiState.Title));
             var content = TitleContent();
-            var settings = Part(content, V2Hud.TitleSettingsButton);
-            Assert.That(settings && settings.gameObject.activeInHierarchy, Is.True, "the title shows the Settings button");
-            var label = settings.GetComponentInChildren<Text>();
-            await Until(() => label.text == word, 3f, "the Settings button is labelled in the start language");
+            var title = Part(content, V5Title.RootName);
+            var settings = Part(title, "Menu/Settings");
+            Assert.That(settings && settings.gameObject.activeInHierarchy, Is.True, "the title's menu has Settings");
+            var label = settings.Find("Label").GetComponent<Text>();
+            await Until(() => label.text == word, 3f, "Settings is labelled in the start language");
             await Awaitable.NextFrameAsync();
+            await ClickUntil(settings, () => V5Title.Active.Tab == V5Title.SettingsTab, "a click shows the settings window");
+            await Until(() => V5Title.Active.Settled, 3f, "the window settles");
 
             // Measured on the reference canvas, as the title is in FlowInputTest: a batch run's window is not 16:9.
             var hud = Object.FindAnyObjectByType<V2Hud>();
             ((RectTransform)hud.transform).sizeDelta = hud.GetComponentInParent<CanvasScaler>().referenceResolution;
             Canvas.ForceUpdateCanvases();
-            var canvas = ((RectTransform)hud.transform).rect;
-            Rect box = Box(settings, hud.transform), other = Box(Part(content, V2Hud.TitleLanguageButton), hud.transform);
+            var box = Box(settings, hud.transform);
+            var items = Part(title, "Menu").Cast<Transform>().Where(item => item.gameObject.activeInHierarchy).Select(item => Box(item, hud.transform)).ToArray();
+            var page = Part(title, "Window/Pages/Settings");
 
-            foreach (var gone in new[] { "Controls", "ToggleArt" })
+            foreach (var gone in new[] { "Controls", "ToggleArt", V2Hud.TitleSettingsButton, V2Hud.TitleLanguageButton })
                 Assert.That(content.Find(gone) is { } part && part.gameObject.activeInHierarchy, Is.False, gone + " is not shown");
             Assert.That(content.GetComponentsInChildren<Text>().Select(text => text.text).Where(text => text.Contains("WASD")), Is.Empty,
-                "no text on the title lists the keys");
-            Assert.That(box.center.x, Is.LessThan(canvas.center.x - canvas.width * .25f), "the Settings button sits at the left");
-            Assert.That(box.center.y, Is.GreaterThan(canvas.center.y + canvas.height * .25f), "and at the top");
-            Assert.That(box.xMin - canvas.xMin, Is.EqualTo(canvas.xMax - other.xMax).Within(1f), "as far from its corner as Language is from the other");
-            Assert.That(box.yMax, Is.EqualTo(other.yMax).Within(1f), "at Language's height");
-            Assert.That(box.size.x, Is.EqualTo(other.size.x).Within(.5f), "as wide");
-            Assert.That(box.size.y, Is.EqualTo(other.size.y).Within(.5f), "and as tall");
+                "no text on the title lists the keys in a line");
+            Assert.That(items.All(item => item.yMin >= box.yMin - .5f), Is.True, "Settings is the menu's last item");
             Assert.That(label.cachedTextGenerator.characterCountVisible, Is.GreaterThanOrEqualTo(label.text.Length), "its word shows in full");
             Assert.That(settings.TryGetComponent<ArenaUiButton>(out _), Is.False, "it sends no run command");
+            Assert.That(Part(title, "Window/Head/Title").GetComponent<Text>().text, Is.EqualTo(word), "the window is the settings'");
+            foreach (var row in new[] { "Volume", "Art", "Language", "Keys", "Fixed" })
+                Assert.That(page.Find(row) && page.Find(row).gameObject.activeInHierarchy, Is.True, $"the settings show their {row}");
+            Assert.That(page.Find("Keys").childCount, Is.EqualTo(ArenaKeys.Count), "one row for each action's key");
         }
 
+        /// <summary>The settings panel is the pause screen's: opened over the title as it opens over a run, it takes every click and holds
+        /// the game's keys, and Esc or its Close button shuts it.</summary>
         [Test, LoadScene(Scene), Category("Integration"), Timeout(60000)]
-        public async Task SettingsButton_Click_OpensThePanelOverTheTitle_EscOrCloseShutsIt()
+        public async Task ThePanel_OverTheTitle_TakesEveryClick_EscOrCloseShutsIt()
         {
             var game = await ReadyScene();
             Assume.That(game.RunPhase, Is.EqualTo(ArenaUiState.Title));
-            var content = TitleContent();
-            var settings = Part(content, V2Hud.TitleSettingsButton);
+            var title = Part(TitleContent(), V5Title.RootName);
             await Awaitable.NextFrameAsync();
             float titleTime = Time.timeScale;
 
-            Click(settings);
-            Assert.That(ArenaSettingsPanel.IsOpen && ArenaSettingsPanel.HoldsInput, Is.True, "a click opens the panel, which holds the game's keys");
+            ArenaSettingsPanel.Open(null);
+            Assert.That(ArenaSettingsPanel.IsOpen && ArenaSettingsPanel.HoldsInput, Is.True, "the panel opens and holds the game's keys");
             Assert.That(ArenaKeys.Suspended, Is.True, "and no action's key is read behind it");
             await Awaitable.NextFrameAsync();
-            foreach (var name in TitleButtons)
+            foreach (var name in TitleItems)
             {
-                var hit = TopHit(Part(content, name), out _);
+                var hit = TopHit(Part(title, name), out _);
                 Assert.That(hit && hit.GetComponentInParent<ArenaSettingsPanel>(), Is.True, $"the panel covers {name}, so a click there stays on it");
             }
             Assert.That(game.RunPhase, Is.EqualTo(ArenaUiState.Title), "the title is still under it");
@@ -123,14 +128,14 @@ namespace AnomalyArena
             Assert.That(game.RunPhase, Is.EqualTo(ArenaUiState.Title), "the title is still there");
             Assert.That(Object.FindAnyObjectByType<V2Hud>().MapSelectOpen, Is.False, "as it was");
 
-            Click(settings);
+            ArenaSettingsPanel.Open(null);
             await Awaitable.NextFrameAsync();
             Click(PanelPart("Close"));
             Assert.That(ArenaSettingsPanel.IsOpen, Is.False, "the Close button closes it too");
             await Awaitable.NextFrameAsync();
-            foreach (var name in TitleButtons)
+            foreach (var name in TitleItems)
             {
-                var hit = TopHit(Part(content, name), out _);
+                var hit = TopHit(Part(title, name), out _);
                 Assert.That(hit && !hit.GetComponentInParent<ArenaSettingsPanel>(), Is.True, $"a click reaches {name} again");
             }
         }
@@ -142,7 +147,8 @@ namespace AnomalyArena
         {
             var game = await ReadyScene();
             Assume.That(game.RunPhase == ArenaUiState.Title && !Art.IllustratedOnly, Is.True, "the title of a scene with both looks");
-            Click(Part(TitleContent(), V2Hud.TitleSettingsButton));
+            // The panel as the pause screen opens it (the title has its own settings window).
+            ArenaSettingsPanel.Open(null);
             await Awaitable.NextFrameAsync();
             bool illustrated = Art.Enabled;
             RectTransform showing = PanelPart(illustrated ? "ArtIllustrated" : "ArtWhitebox"), other = PanelPart(illustrated ? "ArtWhitebox" : "ArtIllustrated");
@@ -174,7 +180,8 @@ namespace AnomalyArena
         public async Task Volume_TheSlider_SetsWhatIsHeardAtOnce_AndTheVolumeIsKept()
         {
             await ReadyScene();
-            Click(Part(TitleContent(), V2Hud.TitleSettingsButton));
+            // The panel as the pause screen opens it (the title has its own settings window).
+            ArenaSettingsPanel.Open(null);
             await Awaitable.NextFrameAsync();
             var slider = PanelPart("Volume").GetComponent<Slider>();
             Assert.That(slider.value, Is.EqualTo(ArenaVolume.Default).Within(.001f), "the slider opens on the default volume, with nothing saved");
@@ -199,7 +206,8 @@ namespace AnomalyArena
         public async Task Keys_ARowTakesTheNextKey_ATakenKeySwaps_AFixedKeyIsRefused_EscGivesUp_ResetBringsTheDefaultsBack()
         {
             await ReadyScene();
-            Click(Part(TitleContent(), V2Hud.TitleSettingsButton));
+            // The panel as the pause screen opens it (the title has its own settings window).
+            ArenaSettingsPanel.Open(null);
             await Awaitable.NextFrameAsync();
             RectTransform interact = PanelPart("KeyInteract/Key"), lamp = PanelPart("KeyLamp/Key");
             Text interactKey = interact.GetComponentInChildren<Text>(), lampKey = lamp.GetComponentInChildren<Text>(), message = PanelPart("Message").GetComponent<Text>();
@@ -245,6 +253,8 @@ namespace AnomalyArena
         {
             var game = await ReadyScene();
             await StartRun(game);
+            // The open mode's dock shows its skill slots only once a skill is learned: the bottom row needs one to name the changed key.
+            Assert.That(game.skills.Learn(SkillId.FrostNova), Is.True, "a skill learned, so the bottom row shows its skill slots");
             await CommandUntil(game, ArenaUiCommand.Pause, () => game.RunPhase == ArenaUiState.Paused);
             await Awaitable.NextFrameAsync();
             await Awaitable.NextFrameAsync();

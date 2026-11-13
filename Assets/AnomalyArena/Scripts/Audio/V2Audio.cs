@@ -43,6 +43,8 @@ namespace AnomalyArena
             for (int i = 0; i < warningAssignments.Length; i++) if (warningVoices[i]) warningBaseVolumes[i] = warningVoices[i].volume;
             // The 2026-10-30 sound rework lives beside this bank and needs nothing saved in the scene (V5WeaponAudio).
             if (!GetComponent<V5WeaponAudio>()) gameObject.AddComponent<V5WeaponAudio>();
+            // The fifth-pass interface sounds (the whole game's title), which the menus' cues use on every page but the Alpha's.
+            if (!GetComponent<V5UiSound>()) gameObject.AddComponent<V5UiSound>();
         }
         void Update()
         {
@@ -70,6 +72,8 @@ namespace AnomalyArena
                 if (Time.unscaledTime < nextFocus) return;
                 nextFocus = Time.unscaledTime + Mathf.Max(0f, uiFocusMinInterval);
             }
+            // Hover, a choice, a confirmation and going back on the fifth-pass sounds; the Alpha keeps its title's sounds as they are.
+            if (!BuildEdition.IsAlpha && V5UiSound.PlayCue(cue)) return;
             TryPlay((ArenaSoundCue)(int)cue, true, 1f, cue is ArenaUiSound.Confirm or ArenaUiSound.Cancel);
         }
 

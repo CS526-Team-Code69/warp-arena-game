@@ -50,8 +50,9 @@ namespace AnomalyArena
             Assume.That(hole, Is.Not.Null, "the arena has an active fixed hole");
             if (game.RunPhase != ArenaUiState.Cutscene)
             {
-                // Stand just outside the gravity ring so the hole is on screen.
-                Vector3 away = Query.Flat(game.player.Position - hole.Centre);
+                // Stand just outside the gravity ring, beside the hole across the screen: the map's wide rings put a point just outside
+                // them past the view up or down the screen, while across it the view reaches far enough.
+                Vector3 away = game.cam ? Query.Flat(game.cam.transform.right) : Query.Flat(game.player.Position - hole.Centre);
                 away = away.sqrMagnitude > .01f ? away.normalized : Vector3.forward;
                 V3CombatSmokeTest.Teleport(game.player, hole.Centre + away * (hole.GravityRadius + 3f));
                 Physics.SyncTransforms();

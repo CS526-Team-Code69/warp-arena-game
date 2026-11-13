@@ -27,6 +27,10 @@ namespace AnomalyArena
         const float PictureScale = .88f;
         static readonly Color InUse = new(.45f, .9f, 1f), Attack = new(1f, .92f, .68f), Cast = new(.86f, .78f, 1f), Clock = new(.62f, .52f, 1f, .3f);
         static readonly Color TagText = new(.02f, .07f, .12f);
+        // The fifth pass's slot (V5BattleSlot): the hand in use is marked by its warm plate, so its lit edge is the plate's orange; an
+        // attack lights the plate less, so a weapon that keeps firing does not keep the slot shimmering.
+        static readonly Color FifthInUse = V5TitleKit.Orange;
+        const float FifthAttackFill = .22f;
         static readonly Dictionary<(Vector2Int size, int cut, bool glow), (Sprite fill, Sprite edge)> Shapes = new();
 
         Kind kind;
@@ -40,7 +44,7 @@ namespace AnomalyArena
         Color flashColour;
         bool wasInUse;
         Vector2 builtFor;
-        bool builtIllustrated;
+        bool builtIllustrated, clockOnIcon;
         Image clockImage, flashImage, edgeImage;
         CanvasGroup group;
         GameObject tag;
@@ -58,6 +62,10 @@ namespace AnomalyArena
         /// <summary>The light running round a skill's edge: 0 to 1 while it goes round, -1 when it is not running.</summary>
         public float Spin => spinAge < 0f ? -1f : Mathf.Clamp01(spinAge / SpinSeconds);
         public float EdgeAlpha => appliedEdgeAlpha;
+        /// <summary>The "in use" tag and its line (made with the hand slot's other parts on its first frame): the fifth pass's slot
+        /// (V5BattleSlot) places and colours them at its bottom-right corner.</summary>
+        public RectTransform InUseTagRect => tag ? (RectTransform)tag.transform : null;
+        public Text InUseLabel => tagLabel;
 
         public static void Add(V2UiSlot[] slots, Kind kind)
         {
@@ -141,7 +149,7 @@ namespace AnomalyArena
                 spinAge = 0f;
                 shownClock = 1f;
             }
-            else Light(now - lastPulse < RapidGap ? RapidPeak : 1f, AttackSeconds, AttackFill, Attack);
+            else Light(now - lastPulse < RapidGap ? RapidPeak : 1f, AttackSeconds, slot.v5 ? FifthAttackFill : AttackFill, Attack);
             lastPulse = now;
         }
 
@@ -155,7 +163,10 @@ namespace AnomalyArena
 
         void RenderHand(bool inUse, float dt)
         {
-            if (tag.activeSelf != inUse) tag.SetActive(inUse);
+            // The fifth pass's slot moves the tag to its bottom-right corner when it next draws (V5BattleSlot.InUsePlaced); the tag waits
+            // for that, so it never shows for a moment where it was made, on the slot's top edge.
+            bool tagShown = inUse && (!slot.v5 || slot.v5.InUsePlaced);
+            if (tag.activeSelf != tagShown) tag.SetActive(tagShown);
             if (inUse)
             {
                 if (tagLabel.text.Length == 0) tagLabel.text = ArenaText.Pair("使用中", "IN USE");
@@ -229,7 +240,7 @@ namespace AnomalyArena
             else
             {
                 float lit = flash * flash;
-                colour = Color.Lerp(inUse ? InUse : flashColour, flashColour, lit);
+                colour = Color.Lerp(inUse ? slot.v5 ? FifthInUse : InUse : flashColour, flashColour, lit);
                 alpha = inUse ? 1f : lit;
             }
             if (Mathf.Approximately(alpha, appliedEdgeAlpha) && colour == appliedEdgeColour) return;
@@ -245,7 +256,9 @@ namespace AnomalyArena
             builtIllustrated = Art.Enabled;
             var whole = new Vector2Int(Mathf.RoundToInt(size.x), Mathf.RoundToInt(size.y));
             if (whole.x <= 0 || whole.y <= 0) return;
-            var (fill, edge) = ShapesFor(whole, builtIllustrated ? CutCorner : 0, builtIllustrated);
+            // The fifth pass's slot is cut at its plate's corner and draws no glow outside it (V5BattleSlot).
+            bool fifth = slot.v5;
+            var (fill, edge) = ShapesFor(whole, builtIllustrated ? fifth ? V5BattleSlot.CutUnits : CutCorner : 0, builtIllustrated && !fifth);
             if (!flashImage)
             {
                 // Under the slot's text and icons, in this order: the frame is this object's own image, so the first children draw straight over it.
@@ -267,11 +280,27 @@ namespace AnomalyArena
                 }
                 if (kind == Kind.Hand) BuildHandParts();
                 if (kind == Kind.Skill) BuildSkillKey();
-                ShrinkPicture(slot.weaponIcon);
-                ShrinkPicture(slot.contentIcon);
-                ShrinkPicture(slot.icon);
+                if (fifth && kind == Kind.Skill && slot.v5.ClockHolder)
+                {
+                    // The fifth pass turns a skill's cooldown over its octagon: a dark wash over the icon, inside the octagon's mask.
+                    clockOnIcon = true;
+                    clockImage.transform.SetParent(slot.v5.ClockHolder, false);
+                    clockImage.transform.SetAsLastSibling();
+                    var clock = clockImage.rectTransform;
+                    clock.anchorMin = Vector2.zero;
+                    clock.anchorMax = Vector2.one;
+                    clock.offsetMin = clock.offsetMax = Vector2.zero;
+                    clockImage.color = V5BattleKit.CooldownWash;
+                }
+                // The fifth pass's slot places its pictures itself.
+                if (!fifth)
+                {
+                    ShrinkPicture(slot.weaponIcon);
+                    ShrinkPicture(slot.contentIcon);
+                    ShrinkPicture(slot.icon);
+                }
             }
-            clockImage.sprite = fill;
+            clockImage.sprite = clockOnIcon ? V5BattleKit.Octagon : fill;
             flashImage.sprite = fill;
             edgeImage.sprite = edge;
             if (tag) tag.GetComponent<Image>().sprite = ShapesFor(new Vector2Int(TagWidth, TagHeight), builtIllustrated ? TagCut : 0, builtIllustrated).fill;
@@ -306,6 +335,8 @@ namespace AnomalyArena
             tag.transform.SetParent(transform, false);
             var back = tag.GetComponent<Image>();
             back.raycastTarget = false;
+            // The fifth pass says "in use" with the line alone, in orange at the slot's corner (V5BattleSlot places it).
+            if (slot.v5) back.enabled = false;
             back.sprite = ShapesFor(new Vector2Int(tagWidth, tagHeight), TagCut, true).fill;
             back.color = InUse;
             var rect = back.rectTransform;
@@ -335,7 +366,8 @@ namespace AnomalyArena
         {
             var image = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image)).GetComponent<Image>();
             image.transform.SetParent(transform, false);
-            image.transform.SetSiblingIndex(order);
+            // Over the fifth pass's plate (V5BattleSlot.LayersBelow), still under the slot's words and pictures.
+            image.transform.SetSiblingIndex(order + (slot.v5 ? slot.v5.LayersBelow : 0));
             image.raycastTarget = false;
             image.enabled = false;
             var rect = image.rectTransform;

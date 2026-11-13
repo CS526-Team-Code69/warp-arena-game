@@ -131,7 +131,7 @@ namespace AnomalyArena
         // ───── 5.2 Weapon card, 5.6 armory: the doc's words ─────
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(60000)]
-        public async Task WeaponCards_StateTheElementAndUseTheNewWords_InBothLanguages()
+        public async Task WeaponCards_GoStraightToTheAttackAndUseTheNewWords_InBothLanguages()
         {
             await Awaitable.NextFrameAsync();
             await Until(() => GameManager.Instance && ArenaText.Ready, 12f, "scene and localization initialize");
@@ -153,7 +153,7 @@ namespace AnomalyArena
             Assume.That(rifle != null && rifle.form == WeaponForm.Rifle && rifle.element == ElementKind.None, Is.True, "the Rifle has no element");
             string body = game.UiSnapshot.weaponIntroBody;
             Assert.That(body, Does.Contain("攻击方式").And.Contain("特性"), "the card's headings are the doc's words");
-            Assert.That(body, Does.Contain("属性：无属性"), "document 5.2: the card states the element, none included");
+            Assert.That(body, Does.Not.Contain("属性："), "the card goes straight to the attack: hand or auto and the element are on the Alpha's card only");
             Assert.That(body, Does.Not.Contain("反噬").And.Not.Contain("射击方式").And.Not.Contain("异常"), "no old words");
 
             // Armory: a new weapon and a stronger version of the held Rifle.
@@ -170,7 +170,7 @@ namespace AnomalyArena
                 locale.SelectLocale();
                 await Until(() => ArenaText.Ready && !ArenaText.IsChinese, 12f, "the English locale");
                 var english = game.UiSnapshot;
-                Assert.That(english.weaponIntroBody, Does.Contain("How it attacks").And.Contain("Trait").And.Contain("Element: None"), "the English card");
+                Assert.That(english.weaponIntroBody, Does.Contain("How it attacks").And.Contain("Trait").And.Not.Contain("Element:"), "the English card");
                 Assert.That(english.weaponIntroHint, Does.Contain("Space").And.Contain("Enter"), "the English hint names the keys");
                 string all = english.weaponIntroBody + english.loadoutChoices[0].body + english.armoryOffers[0].body + english.armoryOffers[1].body;
                 Assert.That(all, Does.Contain("pairing").And.Not.Contain("ackfire").And.Not.Contain("nomal"), "no old English words");
@@ -184,6 +184,29 @@ namespace AnomalyArena
                 Object.Destroy(locale.gameObject);
             }
         }
+
+        [TestCase(BuildEdition.Edition.EnglishAlpha, true, TestName = "The English Alpha's weapon card states hand or auto and the element")]
+        [TestCase(BuildEdition.Edition.EnglishBeta, false, TestName = "The English Beta's weapon card goes straight to the attack")]
+        [TestCase(BuildEdition.Edition.Full, false, TestName = "The whole game's weapon card goes straight to the attack")]
+        public void WeaponCardLead_ByEdition_StatesHandOrAutoAndTheElementOnTheAlphaOnly(BuildEdition.Edition edition, bool states)
+        {
+            string lead = GameManager.WeaponCardLead(false, ElementKind.None, false, edition);
+
+            Assert.That(lead.Contains(ArenaTerms.Element(ElementKind.None)), Is.EqualTo(states));
+        }
+
+        [Test]
+        public void WeaponCardLead_AnAnomalyWeaponInTheStory_KeepsItsNote_ThenABlankLine()
+        {
+            string lead = GameManager.WeaponCardLead(false, ElementKind.None, true, BuildEdition.Edition.Full);
+
+            Assert.That(lead, Does.Contain("c9a6ff").And.EndWith("\n\n"), "the anomaly note, a blank line before the attack");
+            Assert.That(lead, Does.Not.Contain(ArenaTerms.Element(ElementKind.None)), "no element line");
+        }
+
+        [Test]
+        public void WeaponCardLead_ThePistolOutsideTheAlpha_IsEmpty() =>
+            Assert.That(GameManager.WeaponCardLead(false, ElementKind.None, false, BuildEdition.Edition.Full), Is.Empty);
 
         // ───── Helpers ─────
 

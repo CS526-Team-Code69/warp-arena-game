@@ -170,6 +170,12 @@ namespace AnomalyArena
             ClearWaveEffects(); OnChanged();
         }
 
+        /// <summary>For a save (ArenaSaves): skill cards drawn in a row below their wave band's high tier (the skill cards' rarity pity).</summary>
+        public int SkillCardPity => skillCardsWithoutHighTier;
+
+        /// <summary>A continued save: the skill cards' rarity pity as it was saved (the skills themselves come back through Learn).</summary>
+        public void RestoreCardPity(int pity) => skillCardsWithoutHighTier = Mathf.Max(0, pity);
+
         /// <param name="level">The level the card gives (document 9.6; five levels since 2026-10-26: white 1, green 2,
         /// blue 3, purple 4, orange 5). A new skill starts there; an owned one rises to it, by at least one level and never above
         /// SkillDefinition.MaxLevel. Greater void skills have no levels.</param>

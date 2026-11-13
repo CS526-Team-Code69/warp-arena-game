@@ -91,8 +91,8 @@ namespace AnomalyArena
         [Min(1), Tooltip("Most shadows on the whole map.")] public int maxShadows = 72;
         [Min(0f), Tooltip("Shadows every region holds at night whatever was killed there, so the whole map has them.")] public float ambientShadows = 1f;
         [Min(0f), Tooltip("More of those for each day after the first (the sum is rounded). 0: the neighbouring regions' shadows alone must not make a crowd at a lamp, or no place is safe to mine.")] public float ambientShadowsPerDay = 0f;
-        [Min(0)] public int tutorialShadows = 4;
-        [Min(0f), Tooltip("Cells from the player at which the tutorial night's shadows stop: they follow and watch, and never touch.")] public float tutorialShadowKeep = 5f;
+        [Min(0), Tooltip("Shadows on the tutorial night (Day 0): they hunt wherever the player goes, a little slower than a walk.")] public int tutorialShadows = 4;
+        [Range(0f, 1f), Tooltip("A tutorial night shadow's touch as a share of a normal one (shadowHitShare): it hurts, so the first night shows what a touch does, but only a little.")] public float tutorialShadowHitScale = .33f;
         [Min(0f), Tooltip("A shadow's speed while it only roams.")] public float shadowSpeed = 3.4f;
         [Min(.1f), Tooltip("A hunting shadow's speed as a share of the player's walking speed: above 1, so only a sprint opens the distance.")] public float shadowChaseFactor = 1.12f;
         [Min(0f), Tooltip("Cells within which a shadow notices the player and comes: to the edge of the light the player stands in, or all the way in the dark.")] public float shadowSense = 26f;
@@ -141,8 +141,8 @@ namespace AnomalyArena
         [Min(0f), Tooltip("The far spawn ring: day monsters are born on a ring this many cells from the base centre (not on the far rim of the big map), then walk in. nearSpawnShare of them come from the near ring instead.")] public float daySpawnRing = 56f;
         [Min(0f), Tooltip("Cells from the base centre of the near spawn ring, which brings part of each morning close at once.")] public float nearSpawnRing = 30f;
         [Range(0f, 1f), Tooltip("Share of a morning's monsters born on the near ring; the rest come from the far one (daySpawnRing).")] public float nearSpawnShare = .4f;
-        [Min(0f), Tooltip("Seconds monsters keep coming each morning, the same every day (the open mode keeps its wave table's).")] public float morningSeconds = 75f;
-        [Min(0f), Tooltip("Each morning's concurrent monsters: the wave table's target times this.")] public float morningCrowd = 1.25f;
+        [Min(0f), Tooltip("Seconds monsters keep coming each morning, the same every day (the open mode keeps its wave table's).")] public float morningSeconds = 60f;
+        [Min(0f), Tooltip("Each morning's concurrent monsters: the wave table's target times this.")] public float morningCrowd = 1f;
         [Min(0f), Tooltip("Monsters walk at their table speed times this in the story (the open mode keeps WaveManager.movementSpeedMultiplier): a Grunt then walks at 0.85 of the player's 6 cells a second.")] public float monsterWalkScale = .944f;
         [Range(.1f, 1f), Tooltip("No monster walks faster than this share of the player's walking speed, so a black hole (BlackHole.PullOverWalk of it) always takes it.")] public float monsterWalkCap = .95f;
         [Min(0), Tooltip("Ore nodes among each night's nodes, each beside one of the night's dark matter clusters; the rest of the night's nodes are dark matter. 0 since 2026-11-06 (it was 1): its alloy went to the afternoon's scattered nodes (scatterNodes), and afternoon ore left unmined still lies there at night.")] public int nightOreNodes = 0;

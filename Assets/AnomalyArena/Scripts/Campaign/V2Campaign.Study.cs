@@ -49,6 +49,7 @@ namespace AnomalyArena
             foreach (var entry in voids)
             {
                 if (entry == null) continue;
+                StudyVoidPrice(entry);
                 string category = string.IsNullOrEmpty(entry.category) ? RoomTitle(StudyRoom.Void) : entry.category;
                 var tab = tabs.Find(t => t.key == "void." + category);
                 if (tab == null) tabs.Add(tab = new StudyTab { key = "void." + category, roomName = RoomTitle(StudyRoom.Void), name = category });
@@ -87,7 +88,7 @@ namespace AnomalyArena
             return new StudyEntry
             {
                 id = id, room = room, category = category, rarity = rarity, icon = icon, title = title, now = now ?? "", after = after ?? "",
-                detail = detail, costText = price is { } p && !owned ? PriceText(p) : "", state = state, buy = buy
+                detail = detail, costText = price is { } p && !owned ? PriceText(p) : "", price = owned ? null : price, state = state, buy = buy
             };
         }
 
@@ -96,6 +97,18 @@ namespace AnomalyArena
             id = id, room = room, category = category, rarity = CardRarity.Common, title = StudyHidden, now = "", after = "",
             detail = unlock, costText = "", state = StudyState.Locked, buy = null
         };
+
+        /// <summary>A Void tile's price as numbers, so the window can draw it as icons (the void currencies' part writes it in words only):
+        /// what each kind of Void tile costs, as its purchase charges it. A tile that carries its numbers already, or has no price, is left
+        /// as it is.</summary>
+        void StudyVoidPrice(StudyEntry entry)
+        {
+            if (entry.voidEnergyCost > 0 || entry.voidAlloyCost > 0 || entry.state == StudyState.Owned || string.IsNullOrEmpty(entry.costText) || entry.id == null) return;
+            if (entry.id.StartsWith("void.skill.", StringComparison.Ordinal)) entry.voidEnergyCost = rules.voidSkillCost;
+            else if (entry.id.StartsWith("void.enchant.", StringComparison.Ordinal)) entry.voidAlloyCost = rules.voidWeaponEnchantCost;
+            else if (entry.id == "void.mk") entry.voidAlloyCost = rules.voidMkCost;
+            else if (entry.id == "void.armor") entry.voidAlloyCost = rules.voidArmorCost;
+        }
 
         public static string PriceText(CampaignCost cost)
         {

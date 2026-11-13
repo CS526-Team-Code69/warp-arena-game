@@ -74,6 +74,7 @@ namespace AnomalyArena
             Assert.That(game.waves.LivingCount, Is.GreaterThan(0), "survivors exist at timer expiry");
             await ClearSurvivors(game);
             await Until(() => game.RunPhase == ArenaUiState.SupplyDrop && game.SupplyDropReady, 5f, "next weapon crate");
+            if (V5HudKit.On) AssertHintPlate(game, false, "the build phase's crate waits overhead: the plate at the top says to click it");
             await ClickUntil(game, ArenaUiCommand.OpenSupply, () => game.RunPhase == ArenaUiState.Armory);
             Assert.That(game.runWeapons.Offers.Where(w => w != null).Select(w => w.form), Is.Unique, "armory form uniqueness");
             Assert.That(game.runWeapons.Offers, Has.Length.EqualTo(RunWeapons.ArmoryOfferCount), "three armory offers");
@@ -88,6 +89,12 @@ namespace AnomalyArena
             await ClickUntil(game, ArenaUiCommand.DismissWeaponIntro, () => game.RunPhase == ArenaUiState.Ready);
             Assert.That(game.runWeapons.Hand.Count(w => w != null), Is.EqualTo(2), "second hand weapon equipped");
             Assert.That(game.RunPhase, Is.EqualTo(ArenaUiState.Ready), "manual next wave confirmation remains");
+            if (V5HudKit.On)
+            {
+                await CommandUntil(game, ArenaUiCommand.ToggleBuildWalk, () => game.BuildWalking);
+                AssertHintPlate(game, true, "walking the build phase, the plate at the top says how to go back to the cards");
+                Assert.That(HintPlate(game).Find("Key/Label").GetComponent<Text>().text, Is.EqualTo("Tab"), "with Tab as a keycap");
+            }
         }
 
         [Test, BuildScene(SceneCn), FocusGameView, Category("Integration"), Category("Acceptance"), Timeout(25000)]
@@ -113,11 +120,17 @@ namespace AnomalyArena
         {
             TestStartLanguage.Use(StartupLanguage.English);
             await SceneManagerHelper.LoadSceneAsync(SceneCn);
-            await ReadyScene();
+            var game = await ReadyScene();
             var hud = Object.FindAnyObjectByType<V2Hud>(FindObjectsInactive.Include);
             ((RectTransform)hud.transform).sizeDelta = hud.GetComponentInParent<CanvasScaler>().referenceResolution;
             var slots = hud.handSlots.Concat(hud.autoSlots).Concat(hud.skillSlots).Where(slot => slot).ToArray();
             Assert.That(slots, Has.Length.EqualTo(8), "two hand, three auto and three skill slots");
+            // The fifth pass's dock lays the slots shown out in one row of its own (V5BattleHud).
+            if (V5HudKit.On)
+            {
+                await AssertFifthDock(game, hud);
+                return;
+            }
             for (int i = 0; i < slots.Length; i++)
             {
                 var slot = slots[i];
@@ -131,9 +144,14 @@ namespace AnomalyArena
         [Test, LoadScene(SceneCn), Category("Integration"), Timeout(25000)]
         public async Task BottomRow_ChineseSlotParts_StayInsideTheirOwnBoxes()
         {
-            await ReadyScene();
+            var game = await ReadyScene();
             AssumeChineseEdition();
             var hud = Object.FindAnyObjectByType<V2Hud>(FindObjectsInactive.Include);
+            if (V5HudKit.On)
+            {
+                await AssertFifthDock(game, hud);
+                return;
+            }
             foreach (var slot in hud.handSlots.Concat(hud.autoSlots).Concat(hud.skillSlots)) AssertPartsKeepToTheirBoxes(slot, hud);
         }
 
@@ -148,6 +166,11 @@ namespace AnomalyArena
             await ReadyScene();
             AssumeChineseEdition();
             var hud = Object.FindAnyObjectByType<V2Hud>(FindObjectsInactive.Include);
+            if (V5HudKit.On)
+            {
+                FifthNamesShowInFull(hud);
+                return;
+            }
             string empty = ArenaText.Pair("空栏位", "Empty slot");
             var weapons = new List<(string name, bool inHand, bool inAuto)> { (empty, true, true) };
             foreach (WeaponForm form in Enum.GetValues(typeof(WeaponForm)))
@@ -191,6 +214,11 @@ namespace AnomalyArena
             var hud = Object.FindAnyObjectByType<V2Hud>(FindObjectsInactive.Include);
             var weapons = game.runWeapons;
             typeof(RunWeapons).GetField("meltdownHasteLeft", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(weapons, 4.2f);
+            if (V5HudKit.On)
+            {
+                FifthDetailsShowInFull(game, hud);
+                return;
+            }
             var cutOff = new List<string>();
             foreach (WeaponForm form in Enum.GetValues(typeof(WeaponForm)))
                 for (int variant = 0; variant < 2; variant++)
@@ -299,6 +327,265 @@ namespace AnomalyArena
                     if (other != text) Assert.That(area.Overlaps(Bounds(other.transform, hud.transform)), Is.False, $"{slot.name}/{text.name} is clear of {other.name}");
             }
         }
+
+        // ───── The fifth pass's dock (V5BattleHud, V5BattleSlot): every page but the English Alpha's ─────
+
+        // The dock's band in mock-up pixels from the screen's middle (x 300 to 1594 on the 1920-wide mock-up, whose middle is 960).
+        const float FifthBandLeft = 660f, FifthBandRight = 634f;
+
+        /// <summary>The open mode's dock shows no auto slot before the first auto weapon and no skill slot before the first skill: the hands
+        /// alone, in the middle. Given an auto weapon and a skill it lays every slot the run uses out again, in the middle. The slots shown
+        /// sit in one row inside the dock's band, none over another, and each one's parts keep inside it and clear of each other: the key
+        /// row, the name and the bottom row are three rows, and the picture or the octagon keeps clear of the key row and the bottom row
+        /// (the name may lie over the picture, as in the mock-up).</summary>
+        static async Task AssertFifthDock(GameManager game, V2Hud hud)
+        {
+            game.runWeapons.Auto[0] = game.runWeapons.Auto[1] = null;
+            game.skills.ResetRun();
+            hud.RefreshView();
+            await Awaitable.NextFrameAsync();
+            float middle = Bounds(hud.gameplayRoot.transform, hud.transform).center.x;
+            Assert.That(hud.autoSlots.Concat(hud.skillSlots).Where(slot => slot && slot.gameObject.activeSelf).Select(slot => slot.name), Is.Empty,
+                "no auto slot before the first auto weapon, no skill slot before the first skill");
+            var hands = hud.handSlots.Where(slot => slot && slot.gameObject.activeSelf).ToArray();
+            Assert.That(hands, Has.Length.EqualTo(2), "the two hands show");
+            Assert.That(RowMiddle(hands, hud), Is.EqualTo(middle).Within(1f), "the hands alone sit in the middle");
+
+            game.runWeapons.Auto[0] = new RunWeapon { form = WeaponForm.OrbitBlades, revealed = true };
+            Assume.That(game.skills.Learn(SkillId.GravityWell), Is.True, "a skill can be learned");
+            try
+            {
+                hud.RefreshView();
+                await Awaitable.NextFrameAsync();
+                var snapshot = game.UiSnapshot;
+                var used = hud.autoSlots.Take(snapshot.autoSlots.Length).Concat(hud.skillSlots.Take(snapshot.skillSlots.Length)).Where(slot => slot).ToArray();
+                Assert.That(used.Where(slot => !slot.gameObject.activeSelf).Select(slot => slot.name), Is.Empty,
+                    "the first auto weapon and the first skill bring every auto and skill slot the run uses");
+                AssertFifthRow(hud, middle);
+            }
+            finally
+            {
+                game.runWeapons.Auto[0] = null;
+                game.skills.ResetRun();
+                hud.RefreshView();
+            }
+        }
+
+        // Where the middle of a row of slots is, across.
+        static float RowMiddle(IEnumerable<V2UiSlot> slots, V2Hud hud)
+        {
+            var boxes = slots.Select(slot => Bounds(slot.transform, hud.transform)).ToArray();
+            return (boxes.Min(box => box.xMin) + boxes.Max(box => box.xMax)) * .5f;
+        }
+
+        static void AssertFifthRow(V2Hud hud, float middle)
+        {
+            var slots = hud.handSlots.Concat(hud.autoSlots).Concat(hud.skillSlots).Where(slot => slot && slot.gameObject.activeSelf).ToArray();
+            Assert.That(slots, Is.Not.Empty, "the dock shows slots");
+            Assert.That(RowMiddle(slots, hud), Is.EqualTo(middle).Within(1f), "the whole row sits in the middle again");
+            for (int i = 0; i < slots.Length; i++)
+            {
+                Rect box = Bounds(slots[i].transform, hud.transform);
+                Assert.That(box.xMin >= middle - FifthBandLeft * V5HudKit.HudCss - .5f && box.xMax <= middle + FifthBandRight * V5HudKit.HudCss + .5f, Is.True,
+                    $"{slots[i].name} stays in the dock's band");
+                for (int j = i + 1; j < slots.Length; j++)
+                    Assert.That(box.Overlaps(Bounds(slots[j].transform, hud.transform)), Is.False, $"{slots[i].name} overlaps {slots[j].name}");
+                AssertFifthPartsKeepToTheirBoxes(slots[i], hud);
+            }
+        }
+
+        static void AssertFifthPartsKeepToTheirBoxes(V2UiSlot slot, V2Hud hud)
+        {
+            Rect box = Bounds(slot.transform, hud.transform);
+            // Shown by its own switch: the play screen itself is hidden on the title, where these tests look at it.
+            Transform Shown(string path) => slot.transform.Find(path) is { } part && part.gameObject.activeSelf ? part : null;
+            Transform key = Shown("V5Key"), keyWord = Shown("V5KeyWord"), chip = Shown("V5Tier"), octagon = Shown("V5Octagon"), medal = Shown("V5Element"), inUse = Shown("InUseTag");
+            Transform name = slot.title.transform, words = slot.detail.transform, picture = slot.weaponIcon && slot.weaponIcon.gameObject.activeSelf ? slot.weaponIcon.transform : null;
+            foreach (var part in new[] { key, keyWord, chip, octagon, name, words })
+            {
+                if (!part) continue;
+                Rect area = Bounds(part, hud.transform);
+                Assert.That(area.xMin >= box.xMin - .5f && area.xMax <= box.xMax + .5f && area.yMin >= box.yMin - .5f && area.yMax <= box.yMax + .5f,
+                    Is.True, $"{slot.name}/{part.name} stays inside the slot");
+            }
+            var pairs = new (Transform a, Transform b)[]
+            {
+                (name, key), (name, keyWord), (name, chip), (name, words), (name, octagon), (key, keyWord), (chip, words),
+                (picture, key), (picture, keyWord), (picture, chip), (picture, words), (octagon, key), (octagon, keyWord), (octagon, chip),
+                (medal, words), (medal, chip), (inUse, words), (inUse, medal),
+            };
+            foreach (var (a, b) in pairs)
+                if (a && b) Assert.That(Bounds(a, hud.transform).Overlaps(Bounds(b, hud.transform)), Is.False, $"{slot.name}/{a.name} is clear of {b.name}");
+        }
+
+        /// <summary>The fifth pass's slot names a weapon by its form (its kind and tier are in the bottom row) and a skill by its name, on one
+        /// line made smaller until it fits its box; nothing is cut, in every slot of its kind.</summary>
+        static void FifthNamesShowInFull(V2Hud hud)
+        {
+            var cutOff = new List<string>();
+            foreach (WeaponForm form in Enum.GetValues(typeof(WeaponForm)))
+                foreach (int mk in new[] { 1, 6 })
+                    for (int variant = 0; variant < 2; variant++)
+                    {
+                        var weapon = new RunWeapon { form = form, variant = variant, revealed = variant == 0, mk = mk };
+                        foreach (var view in weapon.IsAuto ? hud.autoSlots : hud.handSlots)
+                            CollectFifthCutOffName(hud, view, new ArenaUiSlot { title = weapon.Label, formIndex = (int)form }, ArenaTerms.WeaponForm(form), cutOff);
+                    }
+            foreach (SkillId id in Enum.GetValues(typeof(SkillId)))
+                foreach (var view in hud.skillSlots)
+                    CollectFifthCutOffName(hud, view, new ArenaUiSlot { title = ArenaTerms.Skill(id), skillIndex = (int)id }, ArenaTerms.Skill(id), cutOff);
+            foreach (var view in hud.handSlots.Concat(hud.autoSlots).Concat(hud.skillSlots))
+                CollectFifthCutOffName(hud, view, new ArenaUiSlot(), ArenaText.Pair("空", "Empty"), cutOff);
+            Assert.That(cutOff, Is.Empty, $"{cutOff.Count} names are cut off, first ones: {string.Join("; ", cutOff.Take(12))}");
+
+            // The check itself notices a name too long for its box.
+            var noticed = new List<string>();
+            string longName = new string('M', 60);
+            CollectFifthCutOffName(hud, hud.skillSlots[0], new ArenaUiSlot { title = longName, skillIndex = 0 }, longName, noticed);
+            Assert.That(noticed, Is.Not.Empty, "a name too long for the box counts as cut off");
+        }
+
+        static void CollectFifthCutOffName(V2Hud hud, V2UiSlot view, ArenaUiSlot value, string expected, List<string> cutOff)
+        {
+            view.Render(value, hud.art);
+            float width = view.title.preferredWidth, room = view.title.rectTransform.rect.width;
+            if (view.title.text != expected || width > room + .5f)
+                cutOff.Add($"{view.name}: \"{value.title}\" shows \"{view.title.text}\" {width:0.#} wide in {room:0.#} at size {view.title.fontSize}");
+        }
+
+        /// <summary>The fifth pass's bottom row: the tier chip, then the kind, the element and what the weapon is doing now, the words that
+        /// matter least going first when the row is short of room; what is happening now always stays, and the row fits its box.</summary>
+        static void FifthDetailsShowInFull(GameManager game, V2Hud hud)
+        {
+            var weapons = game.runWeapons;
+            var cutOff = new List<string>();
+            foreach (WeaponForm form in Enum.GetValues(typeof(WeaponForm)))
+                for (int variant = 0; variant < 2; variant++)
+                    for (int moment = 0; moment < 3; moment++)
+                    {
+                        var weapon = new RunWeapon { form = form, variant = variant, revealed = true, mk = 6 };
+                        if (moment > 0)
+                        {
+                            if (!weapon.IsAuto) weapon.reload = 1.2f;
+                            if (form == WeaponForm.Minigun && variant == 0) weapon.turretLeft = 3.4f;
+                            weapon.chainStoredJumps = 9; weapon.knifeCaught = true; weapon.executeNextShot = .5f; weapon.executeAuraLeft = 3.2f; weapon.heat = 4f; weapon.charge = 99f;
+                        }
+                        if (moment == 1) { weapon.droneDownLeft = 3.2f; weapon.drainOverloadLeft = 3.2f; }
+                        if (moment == 2) weapon.drainShieldUp = true;
+                        var held = weapon.IsAuto ? weapons.Auto : weapons.Hand;
+                        held[1] = weapon;
+                        var snapshot = game.UiSnapshot;
+                        CollectFifthCutOffDetail(hud, weapon.IsAuto ? hud.autoSlots[1] : hud.handSlots[1], weapon.IsAuto ? snapshot.autoSlots[1] : snapshot.handSlots[1], true, cutOff);
+                        held[1] = null;
+                    }
+            foreach (SkillId id in Enum.GetValues(typeof(SkillId)))
+                foreach (int level in new[] { 1, SkillDefinition.MaxLevel })
+                {
+                    game.skills.ResetRun();
+                    Assume.That(game.skills.Learn(id, -1, level), Is.True, "the skill can be learned");
+                    CollectFifthCutOffDetail(hud, hud.skillSlots[0], game.UiSnapshot.skillSlots[0], false, cutOff);
+                    if (!FifthWords(hud.skillSlots[0]).Contains(ArenaText.Pair("能量", "Energy"))) cutOff.Add($"{id} level {level} lost its cost: {FifthWords(hud.skillSlots[0])}");
+                }
+            Assert.That(cutOff, Is.Empty, $"{cutOff.Count} bottom rows are cut off, first ones: {string.Join("; ", cutOff.Take(12))}");
+
+            // A weapon with nothing going on shows its tier and its kind, in each slot kind.
+            weapons.Hand[1] = new RunWeapon { form = WeaponForm.Rifle, revealed = true };
+            weapons.Auto[1] = new RunWeapon { form = WeaponForm.OrbitBlades, revealed = true };
+            var plain = game.UiSnapshot;
+            hud.handSlots[1].Render(plain.handSlots[1], hud.art);
+            hud.autoSlots[1].Render(plain.autoSlots[1], hud.art);
+            Assert.That(FifthChip(hud.handSlots[1]), Is.EqualTo("MK I"), "a first-tier weapon's chip");
+            Assert.That(FifthWords(hud.handSlots[1]), Is.EqualTo(ArenaTerms.WeaponAnomaly(WeaponForm.Rifle, 0)), "a hand slot shows the weapon's kind");
+            Assert.That(FifthWords(hud.autoSlots[1]), Is.EqualTo(ArenaTerms.WeaponAnomaly(WeaponForm.OrbitBlades, 0)), "an auto slot too");
+            weapons.Hand[1] = null;
+            weapons.Auto[1] = null;
+
+            // A skill's level is on its chip, its cost in the words, so the two numbers never run together.
+            game.skills.ResetRun();
+            Assume.That(game.skills.Learn(SkillId.GravityWell), Is.True, "a skill with a level");
+            hud.skillSlots[0].Render(game.UiSnapshot.skillSlots[0], hud.art);
+            Assert.That(FifthChip(hud.skillSlots[0]), Is.EqualTo("LV 1"), "the level on the chip");
+            Assert.That(FifthWords(hud.skillSlots[0]), Does.Contain(ArenaText.Pair("能量", "Energy")), "the cost in the words");
+        }
+
+        static void CollectFifthCutOffDetail(V2Hud hud, V2UiSlot view, ArenaUiSlot value, bool weapon, List<string> cutOff)
+        {
+            view.Render(value, hud.art);
+            string shown = FifthWords(view).Replace(" ", "");
+            var parts = value.detail.Split(" · ");
+            if (weapon && parts.Length > 3 && !shown.EndsWith(parts.Last().Replace(" ", ""), StringComparison.Ordinal))
+                cutOff.Add($"{view.name}: \"{value.detail}\" lost its last part: \"{shown}\"");
+            float width = view.detail.preferredWidth, room = view.detail.rectTransform.rect.width;
+            if (width > room + .5f) cutOff.Add($"{view.name}: \"{FifthWords(view)}\" {width:0.#} wide in {room:0.#} (from \"{value.detail}\")");
+        }
+
+        static string FifthWords(V2UiSlot view) => System.Text.RegularExpressions.Regex.Replace(view.detail.text, "<.*?>", "");
+
+        // ───── The fifth pass's hint plate at the top (V5BattleHud.Hint.cs) ─────
+
+        /// <summary>A plain wave has nothing for the plate (the weapon in hand is named on its slot). A card pick kept for later shows on
+        /// it with the card-pick key as a keycap, under the wave plate and clear of it, and the saved line over the hands is not drawn; the
+        /// plate goes once no pick waits.</summary>
+        [Test, LoadScene(SceneCn), Category("Integration"), Timeout(60000)]
+        public async Task HintPlate_ACardPickKeptForLater_ShowsAtTheTopWithItsKey()
+        {
+            Assume.That(V5HudKit.On, Is.True, "the fifth pass draws the battle screens");
+            var game = await ReadyScene();
+            await BeginCombat(game);
+            game.waves.enabled = false;
+            var hud = game.hud.v2Hud;
+            hud.RefreshView();
+            var plate = HintPlate(game);
+            Assert.That(plate, Is.Not.Null, "the battle HUD has its hint plate");
+            Assert.That(plate.gameObject.activeSelf, Is.False, "a plain wave has no prompt for it");
+            Assert.That(game.UiSnapshot.hint, Is.EqualTo(game.runWeapons.Active.Label), "the saved line still names the weapon in hand");
+
+            game.progression.GainXp(game.progression.XpRequired);
+            await Until(() => game.RunPhase == ArenaUiState.LevelUp, 3f, "a level gained mid-wave opens its pick");
+            await CommandUntil(game, ArenaUiCommand.Cancel, () => game.RunPhase == ArenaUiState.WaveActive);
+            Assume.That(game.progression.BankedDrafts, Is.EqualTo(1), "the pick is kept for later");
+            AssertHintPlate(game, true, "the pick kept for later shows at the top");
+            Assert.That(plate.Find("Key/Label").GetComponent<Text>().text, Is.EqualTo(ArenaKeys.CardPickKey), "the card-pick key");
+            Assert.That(plate.Find("Lead").GetComponent<Text>().text, Does.Contain("×1"), "and how many picks wait");
+
+            game.progression.ConsumeDraft();
+            await Until(() =>
+            {
+                hud.RefreshView();
+                return !plate.gameObject.activeSelf;
+            }, 2f, "the plate going once no pick waits");
+        }
+
+        static Transform HintPlate(GameManager game) => game.hud.v2Hud.gameplayRoot.transform.Find("V5Hint");
+
+        /// <summary>The plate shows the snapshot's prompt: its words, and its key as a keycap when it names one; it stands clear of the wave
+        /// plate (under it), the vitals, the wallet, the banners and the boss plate; the saved line over the hands keeps its words but is
+        /// not drawn.</summary>
+        static void AssertHintPlate(GameManager game, bool namesAKey, string what)
+        {
+            var hud = game.hud.v2Hud;
+            hud.RefreshView();
+            var snapshot = game.UiSnapshot;
+            var plate = HintPlate(game);
+            Assert.That(plate && plate.gameObject.activeInHierarchy, Is.True, what);
+            Assert.That(plate.Find("Lead").GetComponent<Text>().text, Is.EqualTo(snapshot.hintLead.TrimEnd()), "its words");
+            var key = plate.Find("Key");
+            Assert.That(key.gameObject.activeSelf, Is.EqualTo(namesAKey), namesAKey ? "with its key as a keycap" : "with no keycap");
+            if (namesAKey) Assert.That(key.Find("Label").GetComponent<Text>().text, Is.EqualTo(snapshot.hintKey), "the key the prompt names");
+            Assert.That(hud.hintLabel.enabled, Is.False, "the saved line over the hands is not drawn");
+            Assert.That(hud.hintLabel.text, Is.EqualTo(snapshot.hint), "though it keeps its words");
+            Rect box = Bounds(plate, hud.transform);
+            var wave = hud.gameplayRoot.transform.Find("V5WavePlate");
+            if (wave && wave.gameObject.activeSelf) Assert.That(box.yMax, Is.LessThanOrEqualTo(Bounds(wave, hud.transform).yMin + .5f), "under the wave plate");
+            foreach (var name in new[] { "V5WavePlate", "V5Vitals", "V5Wallet", "V5Banner", "V5Notice" })
+            {
+                var other = hud.gameplayRoot.transform.Find(name);
+                if (other && other.gameObject.activeSelf) Assert.That(box.Overlaps(Bounds(other, hud.transform)), Is.False, $"clear of {name}");
+            }
+            if (hud.bossRoot && hud.bossRoot.activeSelf) Assert.That(box.Overlaps(Bounds(hud.bossRoot.transform, hud.transform)), Is.False, "clear of the boss plate");
+        }
+
+        static string FifthChip(V2UiSlot view) => view.transform.Find("V5Tier") is { } chip && chip.gameObject.activeSelf ? chip.GetComponentInChildren<Text>().text : "";
 
         static Rect Bounds(Transform part, Transform space)
         {

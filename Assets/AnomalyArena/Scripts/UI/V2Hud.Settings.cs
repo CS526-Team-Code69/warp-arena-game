@@ -3,7 +3,8 @@ using UnityEngine;
 namespace AnomalyArena
 {
     /// <summary>
-    /// The two buttons that open the settings panel (ArenaSettingsPanel: volume, art mode, keys). On the title it stands in the
+    /// The two buttons that open the settings panel (ArenaSettingsPanel: volume, art mode, keys). The whole game's title shows its
+    /// settings in a window of its own (V5Title) and has no such button; the Alpha's title hides it. On the title it stands in the
     /// top-left corner, the counterpart of the Language option in the top-right one; it took the place of the art switch that stood
     /// under the entries and of the line of key hints along the bottom, which are both saved in the scene and no longer shown. On the
     /// pause screen it stands in the panel's top-right corner, beside the heading, clear of the row of four buttons under the table.
@@ -27,7 +28,7 @@ namespace AnomalyArena
         void AddTitleSettingsButton()
         {
             var content = TitleContent();
-            if (!content || content.Find(TitleSettingsButton)) return;
+            if (v5Title || !content || content.Find(TitleSettingsButton)) return;
             var original = content.Find("EnglishShowcase") ?? content.Find("ToggleArt");
             if (!original) return;
             var button = CopyAsPlainButton(original, TitleSettingsButton, OpenSettings);

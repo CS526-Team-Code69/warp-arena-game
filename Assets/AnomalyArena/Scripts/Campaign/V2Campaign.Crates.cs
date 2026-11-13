@@ -12,7 +12,7 @@ namespace AnomalyArena
     /// crate not opened is gone when the next afternoon brings a new one.
     /// E at a crate opens it at once (no lock, spec A): one of three new anomaly weapons the player does not own,
     /// rolled the way the open mode's armory rolls them (RunWeapons.RollArmory, new weapons only), on the crate's own panel
-    /// (V2CratePanel) while the run holds still. The weapon goes where the base's research puts one (CrateSlots: a free hand, else the
+    /// (V2CratePanel; on every page but the English Alpha's the fifth pass's window, V5PickCrate, over it) while the run holds still. The weapon goes where the base's research puts one (CrateSlots: a free hand, else the
     /// pistol's hand, else the hand not in use; an auto weapon only into a free auto slot), and its weapon card shows as after a purchase
     /// (GameManager.CampaignShowWeaponCard). A crate left gives nothing instead and is gone.
     /// </summary>
@@ -158,6 +158,9 @@ namespace AnomalyArena
             // no line under its heading: a name and a Mk each, the rest unknown until one is taken.
             string sub = "";
             ui.ShowCrate(heading, sub, options, crate.kind != CrateKind.TutorialFirst, TakeFromCrate, LeaveCrate);
+            // On every page but the English Alpha's the fifth pass draws the crate's window over the panel just opened (V5PickCrate): the
+            // panel stays open behind it, so everything that stands aside for a crate window still does.
+            if (V5HudKit.On) ShowCrateWindow(heading, crate.kind != CrateKind.TutorialFirst);
             // Each weapon on the panel is recorded as the panel opens, with its place: the crate's own record names only the weapon
             // taken, and how often a weapon is passed over can be counted only against how often it was shown. A panel is recorded
             // once: it closes through a pick or the leave button, both remove the crate, and every opening rolls its own weapons.
@@ -215,6 +218,61 @@ namespace AnomalyArena
                 tint = Color.white,
                 formIndex = (int)weapon.form
             };
+        }
+
+        /// <summary>The fifth pass's crate window over the open panel: the same weapons, taken or left through the same steps as the
+        /// panel's own pick and leave button (the panel is closed first, as they do).</summary>
+        void ShowCrateWindow(string heading, bool canLeave)
+        {
+            var panel = ui ? ui.GetComponentInChildren<V2CratePanel>(true) : null;
+            if (!panel) return;
+            var weapons = new List<V5PickCrate.Offer>();
+            foreach (var weapon in crateOffers) weapons.Add(DescribeForWindow(weapon));
+            // The line under the banner says only that a weapon's attack and trait are not known until it is taken: the rule the
+            // cards' "???" rows follow.
+            string line = ArenaText.Pair("拿到之前，不知道它的攻击方式和特性", "Its attack and trait stay unknown until you take it");
+            V5PickCrate.Over(panel, heading, line, weapons, canLeave,
+                index =>
+                {
+                    if (crateOpen == null) return;
+                    ui.CloseCrate();
+                    TakeFromCrate(index);
+                },
+                () =>
+                {
+                    if (crateOpen == null) return;
+                    ui.CloseCrate();
+                    LeaveCrate();
+                });
+        }
+
+        /// <summary>A weapon as the fifth pass's crate window shows it: its name and tier, and the weapon taking it would push out (and
+        /// whether that one has upgrades).</summary>
+        V5PickCrate.Offer DescribeForWindow(RunWeapon weapon)
+        {
+            var weapons = gm.runWeapons;
+            int slot = CrateSlots.SlotFor(weapon, weapons.Hand, weapons.Auto, weapons.ActiveIndex);
+            var slots = weapon.IsAuto ? weapons.Auto : weapons.Hand;
+            var there = slot >= 0 && slot < slots.Length ? slots[slot] : null;
+            return new V5PickCrate.Offer
+            {
+                name = weapon.FormName,
+                mk = Mathf.Max(1, weapon.mk),
+                formIndex = (int)weapon.form,
+                replaces = there == null ? "" : there.form == WeaponForm.Pistol ? ArenaText.Pair("小手枪", "pistol") : there.FormName,
+                replacedUpgrades = there != null && HasUpgrades(there),
+            };
+        }
+
+        /// <summary>A weapon carries upgrades (any direction taken; a built-in element is not one), which go with it when it is replaced.</summary>
+        static bool HasUpgrades(RunWeapon weapon)
+        {
+            for (int i = 0; i < 6; i++)
+            {
+                var axis = (UpgradeAxis)(1 << i);
+                if ((weapon.axes & axis) != 0 && !(axis == UpgradeAxis.Infusion && weapon.builtInElement)) return true;
+            }
+            return false;
         }
 
         void TakeFromCrate(int index)

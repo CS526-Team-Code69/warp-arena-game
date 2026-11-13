@@ -24,6 +24,8 @@ namespace AnomalyArena
             Fade(markerText, alpha);
             Fade(markerPulse, alpha);
             Fade(markerArrow, alpha);
+            // The day plate speaks of the map left behind too, and its place at the top centre is the trial's boss bar's.
+            if (storyDay) Fade(storyDay, alpha);
         }
 
         static void Fade(Component part, float alpha)

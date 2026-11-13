@@ -9,7 +9,8 @@ namespace AnomalyArena
     /// little faster than the player walks, so only a sprint opens the distance. Light holds shadows back: they wait at its edge. Once a
     /// crowd of them (rules.overrunShadows) waits at one lamp they go in together, put the lamp out and attack; the base's light is
     /// never put out. Weapons and skills work at night and pass through shadows: nothing hurts one.
-    /// The tutorial night's shadows only follow and watch: they keep rules.tutorialShadowKeep cells away and never touch.
+    /// The tutorial night's shadows hunt wherever the player goes, a little slower than a walk, and touch for a share of a normal hit
+    /// (rules.tutorialShadowHitScale), so the first night shows that a touch hurts; they never join a crowd at a lamp.
     /// </summary>
     public sealed partial class V2Campaign
     {
@@ -20,8 +21,9 @@ namespace AnomalyArena
             public bool moving, alert;
             /// <summary>The lamp at whose edge this shadow waits (it counts toward that lamp's crowd), or null.</summary>
             public Lamp waitingAt;
-            /// <summary>The tutorial night's kind: it follows and watches, never touches and never joins a crowd.</summary>
-            public bool watcher;
+            /// <summary>One of the tutorial night's: it hunts wherever the player goes, a little slower than a walk, touches lightly and
+            /// never joins a crowd.</summary>
+            public bool tutorial;
         }
 
         /// <summary>The morning's kills by region in the order they fell: the shadows those kills raise there copy their looks.</summary>
@@ -37,6 +39,8 @@ namespace AnomalyArena
         const float ShadowSpacing = 1.25f;
         // A crowd's touches land one after another, this many seconds apart, and not all in one instant.
         const float SwarmHitGap = .35f;
+        // A tutorial night shadow hunts at this share of the player's walk, so walking away always gets a new player back to the light.
+        const float TutorialChaseShare = .9f;
         // A crowd at a lamp shows itself this long before it goes in: the ring turns violet and the lamp flickers.
         const float CrowdWarning = 1.5f;
         float swarmHitAt;
@@ -55,11 +59,12 @@ namespace AnomalyArena
             regionShadows.Clear();
             if (Day == 0)
             {
-                // The tutorial night shows a few shadows far from the base and from its dark matter; they only follow and watch.
+                // The tutorial night shows a few shadows far from the base and from its dark matter; they come for the player like any
+                // night's (TickShadows), only slower and with a lighter touch.
                 for (int i = 0; i < rules.tutorialShadows; i++)
                 {
                     float a = (i + .5f) * Mathf.PI * 2f / Mathf.Max(1, rules.tutorialShadows);
-                    AddShadow(FindOpen(BaseCentre + new Vector3(Mathf.Cos(a) * 34f, 0f, Mathf.Sin(a) * 24f), .6f), null).watcher = true;
+                    AddShadow(FindOpen(BaseCentre + new Vector3(Mathf.Cos(a) * 34f, 0f, Mathf.Sin(a) * 24f), .6f), null).tutorial = true;
                 }
                 return;
             }
@@ -222,7 +227,7 @@ namespace AnomalyArena
             {
                 int crowd = 0;
                 foreach (var s in shadows)
-                    if (!s.watcher && Query.Flat(s.position - lamp.position).sqrMagnitude <= band * band) crowd++;
+                    if (!s.tutorial && Query.Flat(s.position - lamp.position).sqrMagnitude <= band * band) crowd++;
                 lamp.crowd = crowd;
                 if (lamp.smothered) continue;
                 if (!rules.Crowd(crowd))
@@ -253,8 +258,8 @@ namespace AnomalyArena
             {
                 Vector3 to = Query.Flat(pp - s.position);
                 float toPlayer = to.magnitude;
-                // Every shadow hunts inside its own territory only; the tutorial night's watchers follow wherever the player goes.
-                bool noticed = !away && p.IsAlive && (s.watcher ? toPlayer <= rules.shadowSense : rules.ShadowHunts(toPlayer, Query.Flat(pp - s.home).magnitude));
+                // Every shadow hunts inside its own territory only; the tutorial night's hunt wherever the player goes.
+                bool noticed = !away && p.IsAlive && (s.tutorial ? toPlayer <= rules.shadowSense : rules.ShadowHunts(toPlayer, Query.Flat(pp - s.home).magnitude));
                 s.waitingAt = null;
                 s.alert = noticed;
                 Vector3 target;
@@ -279,21 +284,15 @@ namespace AnomalyArena
                     float angle = Mathf.Atan2(from.z, from.x) + s.side * .12f;
                     target = centre + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * (radius + .9f);
                     speed = Query.Flat(target - s.position).magnitude > 2.5f ? chase : rules.shadowSpeed * .35f;
-                    if (!inBase && !s.watcher) s.waitingAt = shelter;
-                }
-                else if (s.watcher)
-                {
-                    // The tutorial night's shadow follows a few cells behind and never closes in.
-                    Vector3 back = toPlayer > .01f ? -to / toPlayer : Vector3.forward;
-                    target = pp + back * rules.tutorialShadowKeep;
-                    speed = Mathf.Min(chase, p.moveSpeed * .9f);
+                    if (!inBase && !s.tutorial) s.waitingAt = shelter;
                 }
                 else
                 {
                     // The player stands in the dark: straight for them, a little to its own side, so that several close in from all round.
+                    // The tutorial night's are a little slower than a walk.
                     Vector3 sideways = toPlayer > .01f ? new Vector3(-to.z, 0f, to.x) / toPlayer : Vector3.zero;
                     target = pp + sideways * (s.side * Mathf.Clamp(toPlayer * .35f, 0f, 3f));
-                    speed = chase;
+                    speed = s.tutorial ? Mathf.Min(chase, p.moveSpeed * TutorialChaseShare) : chase;
                 }
 
                 Vector3 step = Query.Flat(target - s.position);
@@ -305,7 +304,7 @@ namespace AnomalyArena
                 s.position = next;
 
                 // Inside a lamp a crowd went into, every shadow wears the lamp down.
-                if (!s.watcher)
+                if (!s.tutorial)
                     foreach (var lamp in lamps)
                         if (lamp.smothered && Query.Flat(lamp.position - s.position).sqrMagnitude <= lampSq) lamp.hp -= dt * CrowdDrain;
 
@@ -328,7 +327,7 @@ namespace AnomalyArena
                     }
                 }
 
-                if (!s.watcher && !sheltered && noticed && toPlayer < .9f + p.Radius && Time.time >= s.hitAt && Time.time >= swarmHitAt)
+                if (!sheltered && noticed && toPlayer < .9f + p.Radius && Time.time >= s.hitAt && Time.time >= swarmHitAt)
                 {
                     s.hitAt = Time.time + rules.shadowHitInterval;
                     swarmHitAt = Time.time + SwarmHitGap;
@@ -364,16 +363,22 @@ namespace AnomalyArena
             return next;
         }
 
-        static Vector3 KeptOutOf(Vector3 centre, float radius, Vector3 from, Vector3 next, float flee)
+        /// <summary>Where a step from one point to the next ends up beside one circle of light: unchanged outside it; from well inside,
+        /// straight out at flee x 1.6; from its edge, along the edge by the step's whole length, to the side the step leans to, so a
+        /// shadow making for something behind the light walks round it instead of pressing on one spot of the edge.</summary>
+        public static Vector3 KeptOutOf(Vector3 centre, float radius, Vector3 from, Vector3 next, float flee)
         {
             Vector3 d = Query.Flat(next - centre);
             if (d.sqrMagnitude >= radius * radius) return next;
             Vector3 was = Query.Flat(from - centre);
             Vector3 outward = was.sqrMagnitude > 1e-4f ? was.normalized : d.sqrMagnitude > 1e-4f ? d.normalized : Vector3.right;
-            // Caught well inside: it backs straight out, fast. At the edge: it stays on the edge, sliding along it.
             if (was.magnitude < radius - .3f) return from + outward * flee * 1.6f;
-            Vector3 along = d.sqrMagnitude > 1e-4f ? d.normalized : outward;
-            return centre + along * radius;
+            Vector3 step = Query.Flat(next - from);
+            Vector3 tangent = new(-outward.z, 0f, outward.x);
+            float lean = Vector3.Dot(step, tangent);
+            if (Mathf.Abs(lean) < 1e-5f) return centre + outward * radius;
+            Vector3 slid = Query.Flat(from + tangent * (Mathf.Sign(lean) * step.magnitude) - centre);
+            return centre + (slid.sqrMagnitude > 1e-6f ? slid.normalized : outward) * radius;
         }
 
         /// <summary>A crowd has gathered at this lamp: from now on its light holds no shadow back, and they wear it down.</summary>

@@ -43,5 +43,13 @@ namespace AnomalyArena
             Sprinting = false;
             Exhausted = false;
         }
+
+        /// <summary>A continued save: the stamina as it was saved (0-1), not sprinting; an empty bar is exhausted, as after a sprint that ran out.</summary>
+        public void Restore(float value)
+        {
+            Value = Mathf.Clamp01(value);
+            Sprinting = false;
+            Exhausted = Value <= 0f;
+        }
     }
 }

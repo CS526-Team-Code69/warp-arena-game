@@ -61,6 +61,7 @@ namespace AnomalyArena
             bool art = Art.Enabled;
             if (!art && !wordmark && logo) wordmark = MakeWordmark();
             if (wordmark && !wordmark.font) wordmark.font = WordmarkFont();
+            if (wordmark) FollowLogo();
             if (shownArt == art) return;
             shownArt = art;
             if (logo) logo.enabled = art;
@@ -68,6 +69,27 @@ namespace AnomalyArena
             if (warpArcs) warpArcs.enabled = art;
             foreach (var glow in softGlows ?? System.Array.Empty<UnityEngine.UI.Image>()) if (glow) glow.enabled = art;
             foreach (var mote in dust ?? System.Array.Empty<UnityEngine.UI.Image>()) if (mote) mote.enabled = art;
+        }
+
+        /// <summary>The wordmark stays over the logo's box, which the whole game's title moves onto its grid and sizes by the language
+        /// (V5Title): left-aligned when the box is anchored at its left, centred otherwise.</summary>
+        void FollowLogo()
+        {
+            if (!logo) return;
+            var box = logo.rectTransform;
+            var rect = wordmark.rectTransform;
+            if (rect.parent != box.parent)
+            {
+                rect.SetParent(box.parent, false);
+                rect.SetSiblingIndex(box.GetSiblingIndex() + 1);
+            }
+            if (rect.anchorMin != box.anchorMin) rect.anchorMin = box.anchorMin;
+            if (rect.anchorMax != box.anchorMax) rect.anchorMax = box.anchorMax;
+            if (rect.pivot != box.pivot) rect.pivot = box.pivot;
+            if (rect.anchoredPosition != box.anchoredPosition) rect.anchoredPosition = box.anchoredPosition;
+            if (rect.sizeDelta != box.sizeDelta) rect.sizeDelta = box.sizeDelta;
+            var anchor = box.pivot.x < .25f ? TextAnchor.MiddleLeft : TextAnchor.MiddleCenter;
+            if (wordmark.alignment != anchor) wordmark.alignment = anchor;
         }
 
         /// <summary>The wordmark's font is Unity's built-in one, not the game's. Its letters are several hundred pixels tall; in the

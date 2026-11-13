@@ -57,6 +57,12 @@ namespace AnomalyArena
         UnityEngine.UI.Image[] executeTicks;
         Color[] hpColors;
         bool[] executeBelow;
+        // The fifth pass's edge notices (V5BattleEdge) and the way each one placed this frame points; they sit below the plates along the top.
+        /// <summary>The fifth pass's top inset in the open mode; while the story runs V5BattleHud keeps the notices lower, under its goal
+        /// plate.</summary>
+        internal const float FifthTopInset = 190f;
+        V5BattleEdge[] fifthEdges;
+        Vector2[] edgeWays;
 
         void Awake()
         {
@@ -70,6 +76,36 @@ namespace AnomalyArena
             {
                 hpColors[i] = enemyLabels[i].hp ? enemyLabels[i].hp.color : Color.white;
                 if (enemyLabels[i].name) AddNameShadow(enemyLabels[i].name);
+            }
+            if (V5HudKit.On) BuildFifthEdges();
+        }
+
+        /// <summary>The fifth pass's edge notices (V5BattleEdge): a triangle in the notice's own colour pointing off the screen beside a
+        /// small plate with its words. The saved label keeps its words (with the arrow they start with) but is not drawn.</summary>
+        void BuildFifthEdges()
+        {
+            if (edgeLabels == null) return;
+            fifthEdges = new V5BattleEdge[edgeLabels.Length];
+            edgeWays = new Vector2[edgeLabels.Length];
+            for (int i = 0; i < edgeLabels.Length; i++)
+            {
+                if (!edgeLabels[i]) continue;
+                edgeLabels[i].enabled = false;
+                fifthEdges[i] = V5BattleEdge.Create(edgeLabels[i].transform, "V5Edge");
+            }
+            edgeTopInset = FifthTopInset;
+        }
+
+        /// <summary>The notices placed this frame (the first `placed` labels) as the fifth pass's markers: the words without the saved
+        /// arrow, the triangle in the notice's colour (violet for the void, light blue for experience) pointing the way that arrow did.</summary>
+        void ShowFifthEdges(int placed)
+        {
+            for (int i = 0; i < Mathf.Min(placed, fifthEdges.Length); i++)
+            {
+                var label = edgeLabels[i];
+                if (!label || !fifthEdges[i]) continue;
+                string text = label.text.Length > 2 && "◀▶▼▲".IndexOf(label.text[0]) >= 0 ? label.text.Substring(2) : label.text;
+                fifthEdges[i].Show(text, V5TitleKit.Ink, label.color, edgeWays[i], 16f);
             }
         }
 
@@ -226,6 +262,7 @@ namespace AnomalyArena
             }
             if (orbHintLabel && orbHintLabel.gameObject.activeSelf != orbLabelOn) orbHintLabel.gameObject.SetActive(orbLabelOn);
             for (int i = edges; i < edgeLabels.Length; i++) edgeLabels[i].gameObject.SetActive(false);
+            if (fifthEdges != null) ShowFifthEdges(edges);
         }
 
         /// <summary>The open mode's portal while the interact key enters it: the text table's lines ("E · ENTER", then what entering
@@ -409,6 +446,8 @@ namespace AnomalyArena
         void PlaceHoleEdge(UnityEngine.UI.Text label, Vector3 world, Camera cam, string value)
         {
             PlaceEdge(label, world, cam, value, false, holeEdgeScale * 1.08f); // at its largest pulse
+            // The fifth pass's notice keeps still (no continuous shimmer): the void's violet marks it.
+            if (fifthEdges != null) { label.color = holeEdgeColor; return; }
             float pulse = .5f + .5f * Mathf.Sin(Time.unscaledTime * holeEdgePulsePerSecond * Mathf.PI * 2f);
             label.color = Color.Lerp(holeEdgeColor, holeEdgeGlow, pulse);
             label.fontStyle = FontStyle.Bold;
@@ -430,6 +469,8 @@ namespace AnomalyArena
                 Mathf.Max(1f, Screen.height - (edgeBottomInset + edgeTopInset + 2f * half) * unit));
             Vector2 at = EdgePoint(FacingScreenPoint(cam, world), area, out bool onSide);
             string arrow = onSide ? at.x < area.center.x ? "◀ " : "▶ " : at.y < area.center.y ? "▼ " : "▲ ";
+            int fifth = fifthEdges != null ? Array.IndexOf(edgeLabels, label) : -1;
+            if (fifth >= 0) edgeWays[fifth] = onSide ? new Vector2(at.x < area.center.x ? -1f : 1f, 0f) : new Vector2(0f, at.y < area.center.y ? -1f : 1f);
             // Notices that point the same way stack instead of drawing over each other.
             float step = 30f * unit;
             for (int attempt = 0; attempt < 6; attempt++)

@@ -18,6 +18,7 @@ namespace AnomalyArena
         [Header("Scene-authored HUD")]
         public GameObject gameplayRoot;
         public UnityEngine.UI.Text hpLabel, staminaLabel, energyLabel, xpLabel, waveLabel;
+        UnityEngine.UI.Image xpHeaderBacking; // the level line's header backing (found on first use), hidden in the story mode
         public UnityEngine.UI.Text batchLabel;
         public UnityEngine.UI.Text statusLabel, immunityLabel, hintLabel, bannerLabel;
         public UnityEngine.UI.Text artLabel;
@@ -109,6 +110,15 @@ namespace AnomalyArena
             V2SlotFeedback.Add(handSlots, V2SlotFeedback.Kind.Hand);
             V2SlotFeedback.Add(autoSlots, V2SlotFeedback.Kind.Auto);
             V2SlotFeedback.Add(skillSlots, V2SlotFeedback.Kind.Skill);
+            // A fault while the battle HUD is built is logged, and what was built of it is taken back, so the saved HUD shows and works.
+            if (V5HudKit.On)
+                try { battle = V5BattleHud.Install(this); }
+                catch (System.Exception fault)
+                {
+                    Debug.LogException(fault);
+                    battle = null;
+                    V5BattleHud.Abandon(this);
+                }
             FlatBars();
             // The help texts of the choice screens and the weapon card show their key words (ArenaEmphasis), and the
             // weapon card's text is larger; it still shrinks to fit its box.
@@ -127,6 +137,8 @@ namespace AnomalyArena
         int weaponCardSmallest = 10;
 
         // ───── The title (one game in two languages) ─────
+        // On every page but the English Alpha's the title is V5Title: a menu and a window to its right (the saves, the tutorial, the
+        // collection, the settings), built in AddTitleEntries over the saved title's raw material. What follows is the Alpha's title.
         // From the top: the story mode (the saved Start, which V2Campaign routes to the V2 day campaign),
         // the open mode (the classic 15-wave run, after a map pick) and the tutorial (the story mode's pages); the Settings
         // button in the top-left corner (volume, art mode and keys: V2Hud.Settings.cs) and the Language option in the top-right one.
@@ -198,6 +210,13 @@ namespace AnomalyArena
         int entryLargest = 36;
         Font titleFittedFont;
         bool mapSelectOpen;
+        // The whole game's title (every page but the Alpha's).
+        V5Title v5Title;
+        // The battle HUD of the fifth interface pass (V5BattleHud), built over the saved one on every page but the English Alpha's.
+        V5BattleHud battle;
+
+        /// <summary>The frame the map pick last closed on: the title's own Esc leaves that frame's key alone.</summary>
+        internal int MapSelectClosedFrame { get; private set; } = -1;
 
         /// <summary>The open mode's map pick is showing in place of the title's entries.</summary>
         public bool MapSelectOpen => mapSelectOpen;
@@ -205,7 +224,7 @@ namespace AnomalyArena
         void AddTitleEntries()
         {
             var content = TitleContent();
-            if (!content || content.Find(TitleOpenButton) || content.Find(TitleStoryButton) is not RectTransform start) return;
+            if (!content || content.Find(TitleOpenButton) || content.Find(V5Title.RootName) || content.Find(TitleStoryButton) is not RectTransform start) return;
             titleStory = start;
             titleArt = content.Find("ToggleArt") as RectTransform;
             titleStoryLabel = start.GetComponentInChildren<UnityEngine.UI.Text>(true);
@@ -214,6 +233,17 @@ namespace AnomalyArena
             DropLocalizers(start);
             // The gap the saved title keeps between Start and the art switch, for the whole stack.
             float gap = titleArt ? Mathf.Clamp(Bottom(start) - Top(titleArt), 8f, 40f) : 22f;
+
+            // The whole game's title (V5Title, every page but the Alpha's): a menu and a window to its right take the entries' place. The
+            // saved Start stays hidden and still starts a new story run (V2Campaign routes it); the map pick is drawn in the window.
+            if (V5Title.UsedOnThisPage)
+            {
+                AddMapSelect(content, start, gap);
+                AddBuildLabel(content);
+                start.gameObject.SetActive(false);
+                v5Title = V5Title.Install(this, content);
+                return;
+            }
 
             // The open mode: a copy of Start that opens the map pick; the pick starts the run. Its own name keeps V2Campaign's routing of
             // the saved Start (Content/StartRun) off it.
@@ -320,19 +350,38 @@ namespace AnomalyArena
             RefreshView();
         }
 
-        /// <summary>Back to the title's entries (the back button, Esc, or a gamepad's east button); the selection goes back to the open mode.</summary>
+        /// <summary>Back to the title's entries (the back button, Esc, or a gamepad's east button); the selection goes back to the open mode
+        /// (on the whole game's title, to the slot the new game was for).</summary>
         public void CloseMapSelect()
         {
             if (!mapSelectOpen) return;
             mapSelectOpen = false;
+            MapSelectClosedFrame = Time.frameCount;
             V2Audio.Instance?.PlayUI(ArenaUiSound.Cancel);
             ShowTitleEntries();
-            Select(titleOpen);
+            if (v5Title) v5Title.FocusAfterMapPick();
+            else Select(titleOpen);
+            RefreshView();
+        }
+
+        /// <summary>The map pick goes without a sound: the title's menu moved to another window while it was open (V5Title).</summary>
+        internal void CloseMapSelectQuietly()
+        {
+            if (!mapSelectOpen) return;
+            mapSelectOpen = false;
+            MapSelectClosedFrame = Time.frameCount;
+            ShowTitleEntries();
             RefreshView();
         }
 
         void ShowTitleEntries()
         {
+            if (v5Title)
+            {
+                if (mapSelect && mapSelect.gameObject.activeSelf != mapSelectOpen) mapSelect.gameObject.SetActive(mapSelectOpen);
+                v5Title.ShowMapPick(mapSelectOpen);
+                return;
+            }
             foreach (var part in new[] { titleStory, titleOpen, titleTutorial, titleSettings, titleLanguage })
             {
                 // The Alpha page (BuildEdition) offers only Start Game and Tutorial: no story mode, no Language, no Settings.
@@ -363,7 +412,7 @@ namespace AnomalyArena
         void AddTitleLanguageOption()
         {
             var content = TitleContent();
-            if (!content || content.Find(TitleLanguageButton)) return;
+            if (v5Title || !content || content.Find(TitleLanguageButton)) return;
             var original = content.Find("EnglishShowcase") ?? content.Find("ToggleArt");
             if (!original) return;
             var button = CopyAsPlainButton(original, TitleLanguageButton, () =>
@@ -431,7 +480,8 @@ namespace AnomalyArena
         /// has (the loaded font reaches the saved labels only), and every label is fitted again when that font changes.</summary>
         void RenderTitle()
         {
-            if (!titleStoryLabel) return;
+            // The whole game's title writes its own words (V5Title).
+            if (v5Title || !titleStoryLabel) return;
             bool refit = titleStoryLabel.font != titleFittedFont;
             titleFittedFont = titleStoryLabel.font;
             TitleLabel(titleStoryLabel, ArenaText.Pair("开始游戏-剧情模式", "Start Game - Story Mode"), entryLargest, EntrySmallest, refit);
@@ -445,22 +495,35 @@ namespace AnomalyArena
             if (mapLine)
             {
                 if (mapLine.font != titleFittedFont && titleFittedFont) mapLine.font = titleFittedFont;
-                SetText(mapLine, BuildEdition.IsAlpha ? ArenaText.Pair("选择地图", "Choose a Map") : ArenaText.Pair("开放模式 · 选择地图", "Open Mode · Choose a Map"));
+                SetText(mapLine, MapLineWords());
             }
             if (buildLabel)
             {
                 if (buildLabel.font != titleFittedFont && titleFittedFont) buildLabel.font = titleFittedFont;
                 // Only the course's English builds name themselves; the whole game (the Chinese page) shows no line.
-                SetText(buildLabel, BuildEdition.IsAlpha ? ArenaText.Pair("Alpha 版本 · 白盒", "Alpha Build · Whitebox")
-                    : BuildEdition.IsCourseBuild ? ArenaText.Pair("Beta 版本", "Beta Build") : "");
+                SetText(buildLabel, BuildLabelWords());
             }
-            string[] mapWords =
-            {
-                ArenaText.Pair("沙丘", "Dunes"), ArenaText.Pair("遗迹", "Ruins"), ArenaText.Pair("随机", "Random"), ArenaText.Pair("返回标题", "Back to Title"),
-            };
             for (int i = 0; i < mapLabels.Length; i++)
-                TitleLabel(mapLabels[i], mapWords[i], i == mapLabels.Length - 1 ? LanguageLargest : entryLargest, EntrySmallest, refit);
+                TitleLabel(mapLabels[i], MapWord(i), i == mapLabels.Length - 1 ? LanguageLargest : entryLargest, EntrySmallest, refit);
         }
+
+        /// <summary>The map pick's line in the language showing.</summary>
+        internal static string MapLineWords() =>
+            BuildEdition.IsAlpha ? ArenaText.Pair("选择地图", "Choose a Map") : ArenaText.Pair("开放模式 · 选择地图", "Open Mode · Choose a Map");
+
+        /// <summary>A map pick button's word, in MapButtons' order: the Dunes, the Ruins, a random map, and back: on the whole game's title
+        /// (V5Title) back to the open mode's slots, on the Alpha's back to its title.</summary>
+        internal static string MapWord(int index) => index switch
+        {
+            0 => ArenaText.Pair("沙丘", "Dunes"),
+            1 => ArenaText.Pair("遗迹", "Ruins"),
+            2 => ArenaText.Pair("随机", "Random"),
+            _ => V5Title.UsedOnThisPage ? ArenaText.Pair("返回", "Back") : ArenaText.Pair("返回标题", "Back to Title"),
+        };
+
+        /// <summary>The line naming the page's build: only the course's English builds name themselves; the whole game shows none.</summary>
+        internal static string BuildLabelWords() => BuildEdition.IsAlpha ? ArenaText.Pair("Alpha 版本 · 白盒", "Alpha Build · Whitebox")
+            : BuildEdition.IsCourseBuild ? ArenaText.Pair("Beta 版本", "Beta Build") : "";
 
         void TitleLabel(UnityEngine.UI.Text label, string text, int largest, int smallest, bool refit)
         {
@@ -497,7 +560,8 @@ namespace AnomalyArena
         {
             foreach (var fill in new[] { hpFill, shieldFill, staminaFill, energyFill, xpFill, chargeFill, bossHpFill, bossShieldFill })
             {
-                if (!fill) continue;
+                // A bar the battle HUD dresses (V5BattleHud.Dresses) is left to it, so the two never dress the same image.
+                if (!fill || battle && battle.Dresses(fill)) continue;
                 flatBars.Add(fill, WhiteboxSkin.Look.Bar);
                 if (fill.transform.parent is { } parent && parent.name.EndsWith("Background") && parent.TryGetComponent(out UnityEngine.UI.Image back))
                     flatBars.Add(back, WhiteboxSkin.Look.Bar);
@@ -605,6 +669,8 @@ namespace AnomalyArena
             // The classic run's first-time pages: the open mode's map pick starts it (ChooseMap); the tests and the lab send Start.
             if ((command is ArenaUiCommand.Start or ArenaUiCommand.ChooseMap) && source != null && source.UiSnapshot.state == ArenaUiState.Title) tutorialPending = true;
             source?.ExecuteUiCommand(command, index);
+            // A map taken on the whole game's title: once the run really starts, the slot chosen for it is bound (V5Title.MapChosen).
+            if (command == ArenaUiCommand.ChooseMap && v5Title) v5Title.MapChosen();
         }
 
         public void RefreshView(){if(source!=null&&ArenaText.Ready)Render(source.UiSnapshot);}
@@ -681,7 +747,9 @@ namespace AnomalyArena
             bool gameplay = s.state is ArenaUiState.SupplyDrop or ArenaUiState.WaveIntro or ArenaUiState.WaveActive or ArenaUiState.WaveEnd
                 or ArenaUiState.VoidTrial or ArenaUiState.FinalBoss or ArenaUiState.TrialReturn or ArenaUiState.Cutscene or ArenaUiState.LevelUp or ArenaUiState.Night || s.buildWalking;
             gameplayRoot.SetActive(gameplay);
-            if (waveLabel) waveLabel.gameObject.SetActive(s.state != ArenaUiState.SupplyDrop);
+            // The battle HUD shows the wave in its own plate (the open mode) or leaves the top centre to the story's day plate: the saved
+            // wave line keeps its words but is not shown, nor is the batch line below.
+            if (waveLabel) waveLabel.gameObject.SetActive(s.state != ArenaUiState.SupplyDrop && !battle);
             if (themeBackground) themeBackground.gameObject.SetActive(s.state is ArenaUiState.Title or ArenaUiState.Loadout);
             SetText(hpLabel, ArenaText.Text("ui.hp", Mathf.CeilToInt(s.hp), Mathf.CeilToInt(s.maxHp)));
             SetFill(hpFill, s.hp, s.maxHp);
@@ -696,12 +764,16 @@ namespace AnomalyArena
             SetFill(energyFill, s.energy, s.maxEnergy);
             energyFill.color = s.voidEnergy ? ElementColors[6] : new Color(.22f, .68f, .93f);
             string level = s.level >= s.maxLevel ? ArenaText.Text("ui.level.max") : s.level.ToString();
-            // V2 day campaign (hideXp): kills give no XP and every upgrade is bought at the base, so the line shows the
-            // level alone and the XP bar and the banked-pick markers are hidden. The classic run keeps level, XP and picks.
+            // V2 day campaign (hideXp): kills give no XP and every upgrade is bought at the base, so the level line, the XP bar and the
+            // banked-pick markers are hidden. The classic run keeps level, XP and picks.
             SetText(xpLabel, s.hideXp ? ArenaText.Pair($"等级 {level}", $"LEVEL {level}")
                 : ArenaText.Text("ui.xp", level, Mathf.FloorToInt(s.xp), Mathf.CeilToInt(s.xpNeeded), s.bankedDrafts));
             // Document 9.3: once the Void Trial is won (its extra level), the level reads in void purple at any level.
             xpLabel.color = s.voidLevel ? ElementColors[6] : Color.white;
+            if (xpLabel.gameObject.activeSelf == s.hideXp) xpLabel.gameObject.SetActive(!s.hideXp);
+            // The header's own backing goes with them in the story mode, so no empty strip stays across the top of the screen.
+            if (!xpHeaderBacking && xpLabel.transform.parent) xpHeaderBacking = xpLabel.transform.parent.GetComponent<UnityEngine.UI.Image>();
+            if (xpHeaderBacking && xpHeaderBacking.enabled == s.hideXp) xpHeaderBacking.enabled = !s.hideXp;
             SetFill(xpFill, s.xp, s.xpNeeded);
             var xpBar = XpBar;
             if (xpBar && xpBar.activeSelf == s.hideXp) xpBar.SetActive(!s.hideXp);
@@ -721,7 +793,7 @@ namespace AnomalyArena
             {
                 // In the V2 campaign the count shows only while it has something to count (not on Day 0's walk or by the black hole in
                 // the afternoon, where no wave runs).
-                batchLabel.gameObject.SetActive(s.state == ArenaUiState.WaveActive && !(CampaignControls && s.waveLiving == 0 && s.wavePending == 0));
+                batchLabel.gameObject.SetActive(!battle && s.state == ArenaUiState.WaveActive && !(CampaignControls && s.waveLiving == 0 && s.wavePending == 0));
                 batchLabel.supportRichText = true; // alive in red, pending in yellow
                 SetText(batchLabel, s.waveTimeExpired
                     ? ArenaText.Pair($"已停止生成 · <color=#FF5F4F>剩余活敌 {s.waveLiving}</color>", $"SPAWNING STOPPED · <color=#FF5F4F>{s.waveLiving} ALIVE</color>")
@@ -742,11 +814,16 @@ namespace AnomalyArena
                     SetElementIcon(bossImmunityIcons[i], art, index);
                 }
             SetText(hintLabel, s.hint);
-            SetText(bannerLabel, transientTime > 0f ? transientText : s.banner);
+            string bannerText = transientTime > 0f ? transientText : s.banner;
+            SetText(bannerLabel, bannerText);
             SetText(artLabel, ArenaText.Text(s.illustrated ? "ui.art.illustrated" : "ui.art.whitebox"));
             chargeFill.gameObject.SetActive(s.charge01 > 0f);
             SetFill(chargeFill, s.charge01, 1f);
-            RenderSlots(handSlots, s.handSlots); RenderSlots(autoSlots, s.autoSlots, s.hideAutoSlots); RenderSlots(skillSlots, s.skillSlots, s.hideSkillSlots);
+            // The fifth pass's mid-wave card pick covers the bottom of the screen with its own row: the dock steps aside meanwhile.
+            bool levelUpPick = V5HudKit.On && s.state == ArenaUiState.LevelUp;
+            RenderSlots(handSlots, s.handSlots, levelUpPick); RenderSlots(autoSlots, s.autoSlots, s.hideAutoSlots || levelUpPick); RenderSlots(skillSlots, s.skillSlots, s.hideSkillSlots || levelUpPick);
+            // After the slots: the battle HUD lays the dock out from the slots shown.
+            if (battle) battle.Render(s, bannerText, transientTime > 0f);
             foreach (var screen in screens)
             {
                 // The mid-wave level-up pick reuses the Draft screen.
@@ -792,7 +869,8 @@ namespace AnomalyArena
             for (int i = 0; i < views.Length; i++)
             {
                 // Saved scenes may hold more slot views than the current rules use (three auto slots became two).
-                // A hidden group shows none of its slots (the story mode before its first auto weapon or skill, since 2026-11-10).
+                // A hidden group shows none of its slots: before the first auto weapon or skill (the story, and the open mode on the fifth
+                // pass), and the whole dock during the fifth pass's mid-wave card pick.
                 bool used = i < values.Length && !hidden;
                 if (views[i] && views[i].gameObject.activeSelf != used) views[i].gameObject.SetActive(used);
                 if (used && views[i]) views[i].Render(values[i], art);
@@ -807,7 +885,9 @@ namespace AnomalyArena
             {
                 screen.clock.gameObject.SetActive(build && !s.isGreaterReward);
                 SetText(screen.clock, build && !s.isGreaterReward ? s.selectionUnlimited ? ArenaText.Pair("选择不限时", "NO TIME LIMIT") : ArenaText.Text("ui.build.clock", Mathf.CeilToInt(s.buildTime).ToString("00")) : "");
-                screen.clock.color = !s.selectionUnlimited && s.buildTime <= 5f ? ElementColors[0] : ElementColors[2];
+                // The fifth pass's pick screens (V5PickScreen) show time in gold, its last seconds in orange.
+                screen.clock.color = screen.pick ? (!s.selectionUnlimited && s.buildTime <= 5f ? V5TitleKit.OrangeHi : V5TitleKit.Gold)
+                    : !s.selectionUnlimited && s.buildTime <= 5f ? ElementColors[0] : ElementColors[2];
             }
             if (screen.summary) SetText(screen.summary, s.buildSummary);
             if (screen.reroll) screen.reroll.gameObject.SetActive(!s.isGreaterReward);
@@ -827,21 +907,34 @@ namespace AnomalyArena
                     break;
                 case ArenaUiState.Loadout:
                     cards = s.loadoutChoices;
-                    // V2 day campaign: the game has no cards any more, so its text names none.
-                    SetBody(screen.body, s.hideXp
+                    // V2 day campaign: the game has no cards any more, so its text names none. The fifth pass's screens say it in one line
+                    // (their cards show the unknown attack and trait as "???").
+                    SetBody(screen.body, V5HudKit.On
+                        ? (s.hideXp ? ArenaText.Pair("选一种熟悉的外形：攻击方式和特性拿到手才揭晓。手动瞄准，利用地形。", "Pick one familiar form: its attack and trait show once you take it. Aim by hand; use the terrain.")
+                            : ArenaText.Pair("选一种熟悉的武器外形：攻击方式和特性拿到手才揭晓。手动瞄准，记得利用地形。", "Pick a weapon form you know: its attack and trait show once you take it. Aim by hand and use the terrain."))
+                        : s.hideXp
                         ? ArenaText.Pair("选择一种熟悉的外形。拿到之前不知道是哪种攻击方式和特性；选中的那一刻揭晓：游戏暂停，显示这件武器的说明。\n手动瞄准，利用地形。", "Pick one familiar form. Its attack and trait are unknown until you take it; the moment you choose, the game pauses and shows what the weapon does.\nAim manually; use the terrain.")
                         : ArenaText.Pair("选一种你熟悉的武器外形。它的攻击方式和特性要拿到手才知道：选中的那一刻，游戏会暂停并弹出它的武器卡。\n需要手动瞄准，记得利用地形。", "Pick a weapon form you know. Its attack and trait stay hidden until you take it: the moment you choose, the game pauses and its weapon card appears.\nAim by hand, and use the terrain."));
                     break;
                 case ArenaUiState.Armory:
                     cards = s.armoryOffers;
-                    SetBody(screen.body, ArenaText.Pair("三选一：拿一件新武器，或者把手上的某把武器升到更高型号（攻击方式、特性和已有的强化都不变）。也可以跳过。注意，新武器换下旧武器时，旧武器身上的强化会一起消失。", "Pick one of three: a new weapon, or a higher Mk for a weapon you hold (its attack, trait and upgrades stay). You can also skip. If a new weapon replaces an old one, the old one's upgrades go with it.") + WalkHint());
+                    // The fifth pass's line is one line: its keys are in the foot row, and a card whose weapon would push one out says so
+                    // (V5PickScreen).
+                    SetBody(screen.body, V5HudKit.On
+                        ? ArenaText.Pair("三选一：拿一件新武器，或把手上的武器升到更高型号（强化都保留）；也可以跳过。", "Pick one of three: a new weapon, or a higher Mk for one you hold (its upgrades stay). Or skip.")
+                        : ArenaText.Pair("三选一：拿一件新武器，或者把手上的某把武器升到更高型号（攻击方式、特性和已有的强化都不变）。也可以跳过。注意，新武器换下旧武器时，旧武器身上的强化会一起消失。", "Pick one of three: a new weapon, or a higher Mk for a weapon you hold (its attack, trait and upgrades stay). You can also skip. If a new weapon replaces an old one, the old one's upgrades go with it.") + WalkHint());
                     break;
                 case ArenaUiState.Draft:
                     cards = s.draftCards;
                     SetText(screen.heading, s.isGreaterReward ? ArenaText.Text("ui.greater.heading")
                         : s.hideXp ? ArenaText.Pair($"升级 {s.draftIndex} / {Mathf.Max(1, s.draftCount)}", $"UPGRADE {s.draftIndex} / {Mathf.Max(1, s.draftCount)}")
                         : ArenaText.Text("ui.draft.counter", s.draftIndex, Mathf.Max(1, s.draftCount)));
-                    SetBody(screen.body, s.isGreaterReward ? ArenaText.Pair("从三个高阶虚空技能里选一个，也可以都不要。它们没有后续等级。按 " + ArenaKeys.SkillKeys + " 选择。", "Pick one of three Greater Void skills, or none. They have no further levels. Press " + ArenaKeys.SkillKeys + " to choose.")
+                    // The fifth pass's lines are one line each; the keys (1 / 2 / 3, R, Tab, Esc) are in the foot row (V5PickScreen).
+                    SetBody(screen.body, V5HudKit.On
+                        ? (s.isGreaterReward ? ArenaText.Pair("三个高阶虚空技能选一个，也可以都不要；它们没有后续等级。", "Pick one of three Greater Void skills, or none. They have no further levels.")
+                            : s.hideXp ? ArenaText.Pair("三选一，每波可以重抽一次。", "Pick one of three; you can reroll once per wave.")
+                            : ArenaText.Pair("属性、武器、技能卡各一张：武器卡给武器加一个新的强化方向；技能卡学新技能或给技能升级，卡的颜色代表它给的等级。", "A stat, a weapon and a skill card: a weapon card adds a new upgrade direction; a skill card teaches or raises a skill, and its colour shows the level it gives."))
+                        : s.isGreaterReward ? ArenaText.Pair("从三个高阶虚空技能里选一个，也可以都不要。它们没有后续等级。按 " + ArenaKeys.SkillKeys + " 选择。", "Pick one of three Greater Void skills, or none. They have no further levels. Press " + ArenaKeys.SkillKeys + " to choose.")
                         : s.hideXp ? ArenaText.Pair("三选一。按 " + ArenaKeys.SkillKeys + " 选择；R 重抽三项（每波一次）。", "Pick one of three. " + ArenaKeys.SkillKeys + " select; R rerolls all three (once per wave).") + WalkHint()
                         : ArenaText.Pair("这三张卡分别是属性卡、武器卡和技能卡。武器卡给一把已揭晓的武器加一个还没有的强化方向；技能卡学一个新技能，或者给已有的技能升级，卡的颜色代表它给的等级。按 " + ArenaKeys.SkillKeys + " 选择，按 R 重抽三张（每波一次）。", "These are a stat card, a weapon card and a skill card. The weapon card gives a revealed weapon an upgrade direction it doesn't have yet; the skill card teaches a new skill or raises one you own, and its colour shows the level it gives. Press " + ArenaKeys.SkillKeys + " to choose, or R to reroll all three (once per wave).") + WalkHint());
                     if (screen.reroll) screen.reroll.interactable = s.rerolls > 0;
@@ -850,22 +943,31 @@ namespace AnomalyArena
                 case ArenaUiState.LevelUp:
                     cards = s.draftCards;
                     SetText(screen.heading, ArenaText.Pair($"升级 · 选一张（还剩 {s.bankedDrafts} 次）", $"LEVEL UP · PICK ONE ({s.bankedDrafts} LEFT)"));
-                    SetBody(screen.body, ArenaText.Pair($"按 {ArenaKeys.SkillKeys} 选择，按 R 重抽（每波一次）。按 Esc 可以稍后再选，之后在战斗中按 {ArenaKeys.CardPickKey} 重新打开。", $"Press {ArenaKeys.SkillKeys} to choose, or R to reroll (once per wave). Esc saves the pick for later; press {ArenaKeys.CardPickKey} in combat to open it again."));
+                    SetBody(screen.body, V5HudKit.On
+                        ? ArenaText.Pair($"选一张升级；按 Esc 稍后再选，之后在战斗中按 {ArenaKeys.CardPickKey} 重新打开。", $"Pick one upgrade. Esc saves it for later; press {ArenaKeys.CardPickKey} in combat to open it again.")
+                        : ArenaText.Pair($"按 {ArenaKeys.SkillKeys} 选择，按 R 重抽（每波一次）。按 Esc 可以稍后再选，之后在战斗中按 {ArenaKeys.CardPickKey} 重新打开。", $"Press {ArenaKeys.SkillKeys} to choose, or R to reroll (once per wave). Esc saves the pick for later; press {ArenaKeys.CardPickKey} in combat to open it again."));
                     if (screen.reroll) screen.reroll.interactable = s.rerolls > 0;
                     SetText(screen.rerollLabel, ArenaText.Text("ui.reroll.counter", s.rerolls));
                     break;
                 case ArenaUiState.ReplaceWeapon:
                     RenderReplacement(screen, s.replacementSlots, s.replacementCount);
-                    SetBody(screen.body, ArenaText.Pair("选一把要换掉的武器。强化是跟着武器走的，被换掉的武器，身上的强化也会一起消失。", "Choose the weapon to replace. Upgrades belong to the weapon, so the one you replace takes its upgrades with it."));
+                    SetBody(screen.body, V5HudKit.On
+                        ? ArenaText.Pair("选一把要换掉的武器。", "Choose the weapon to replace.")
+                        : ArenaText.Pair("选一把要换掉的武器。强化是跟着武器走的，被换掉的武器，身上的强化也会一起消失。", "Choose the weapon to replace. Upgrades belong to the weapon, so the one you replace takes its upgrades with it."));
                     break;
                 case ArenaUiState.ReplaceSkill:
                     RenderReplacement(screen, s.skillSlots, 3);
-                    SetBody(screen.body, s.hideXp
+                    SetBody(screen.body, V5HudKit.On
+                        ? (s.hideXp ? ArenaText.Pair("技能已满 3 个：选一个换掉，新技能从它带的等级开始。", "You hold 3 skills: pick one to replace. The new skill starts at the level it comes with.")
+                            : ArenaText.Pair("技能已满 3 个：选一个换掉，新技能从这张卡给的等级开始。", "You hold 3 skills: pick one to replace. The new skill starts at the level this card gives."))
+                        : s.hideXp
                         ? ArenaText.Pair("你已经有 3 个技能了，要学新技能，就得选一个旧技能替换掉。新技能从它带的等级开始。", "You already have 3 skills, so learning a new one means replacing an old one. The new skill starts at the level it comes with.")
                         : ArenaText.Pair("你已经有 3 个技能了，要学新技能，就得选一个旧技能替换掉。新技能从这张卡给的等级开始。", "You already have 3 skills, so learning a new one means replacing an old one. The new skill starts at the level this card gives."));
                     break;
                 case ArenaUiState.Ready:
-                    SetBody(screen.body, ArenaText.Pair("这一轮的整备都选完了。点击「开始下一波」继续。", "All build choices are done. Click START NEXT WAVE to continue.") + WalkHint());
+                    // The fifth pass shows Tab in its foot row instead of a second line.
+                    SetBody(screen.body, V5HudKit.On ? ArenaText.Pair("这一轮的整备都选完了，点「开始下一波」继续。", "All build choices are done. Click START NEXT WAVE to continue.")
+                        : ArenaText.Pair("这一轮的整备都选完了。点击「开始下一波」继续。", "All build choices are done. Click START NEXT WAVE to continue.") + WalkHint());
                     break;
                 case ArenaUiState.WeaponIntro:
                     SetText(screen.heading, s.weaponIntroTitle);
@@ -891,9 +993,11 @@ namespace AnomalyArena
                     SetText(screen.body, s.resultDetails);
                     break;
             }
-            if (cards == null || screen.choices == null) return;
-            for (int i = 0; i < screen.choices.Length; i++)
-                screen.choices[i].Render(i < cards.Length ? cards[i] : null, art);
+            if (cards != null && screen.choices != null)
+                for (int i = 0; i < screen.choices.Length; i++)
+                    screen.choices[i].Render(i < cards.Length ? cards[i] : null, art);
+            // The fifth pass's look draws what the saved objects do not have (chips, rows, keys) once their texts are set.
+            if (screen.pick) screen.pick.Show(s);
         }
 
         // ───── The tutorial and the pause screen's controls table (Wenbo Zhang's how-to-play branch) ─────
