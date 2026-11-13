@@ -859,41 +859,41 @@ Other external software, packages and assets (versions from the project's packag
 
 [image2]: gdd/image02.png
 
-[image3]: gdd/image03.png
+[image3]: gdd/image03-v2.png
 
-[image4]: gdd/image04.png
+[image4]: gdd/image04-v2.png
 
-[image5]: gdd/image05.png
+[image5]: gdd/image05-v2.png
 
-[image6]: gdd/image06.png
+[image6]: gdd/image06-v2.png
 
-[image7]: gdd/image07.png
+[image7]: gdd/image07-v2.png
 
-[image8]: gdd/image08.png
+[image8]: gdd/image08-v2.png
 
-[image9]: gdd/image09.png
+[image9]: gdd/image09-v2.png
 
-[image10]: gdd/image10.png
+[image10]: gdd/image10-v2.png
 
-[image11]: gdd/image11.png
+[image11]: gdd/image11-v2.png
 
-[image12]: gdd/image12.png
+[image12]: gdd/image12-v2.png
 
-[image13]: gdd/image13.png
+[image13]: gdd/image13-v2.png
 
-[image14]: gdd/image14.png
+[image14]: gdd/image14-v2.png
 
-[image15]: gdd/image15.png
+[image15]: gdd/image15-v2.png
 
-[image16]: gdd/image16.png
+[image16]: gdd/image16-v2.png
 
-[image17]: gdd/image17.png
+[image17]: gdd/image17-v2.png
 
-[image18]: gdd/image18.png
+[image18]: gdd/image18-v2.png
 
-[image19]: gdd/image19.png
+[image19]: gdd/image19-v2.png
 
-[image20]: gdd/image20.png
+[image20]: gdd/image20-v2.png
 
 [image21]: gdd/image21.png
 
@@ -909,14 +909,14 @@ Other external software, packages and assets (versions from the project's packag
 
 [image27]: gdd/image27.png
 
-[image28]: gdd/image28.png
+[image28]: gdd/image28-v2.png
 
-[image29]: gdd/image29.png
+[image29]: gdd/image29-v2.png
 
-[image30]: gdd/image30.png
+[image30]: gdd/image30-v2.png
 
 [image31]: gdd/image31.png
 
-[image32]: gdd/image32.png
+[image32]: gdd/image32-v2.png
 
 [image33]: gdd/image33.png

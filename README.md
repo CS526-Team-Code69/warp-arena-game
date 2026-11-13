@@ -6,9 +6,9 @@ WARP ARENA is a top-down survival game in which you have seven days to refuel a 
 
 | | |
 |---|---|
-| ![Title screen](Docs/images/title-whitebox.jpg) | ![Day 1 morning: monsters walk in on the base](Docs/images/story-morning.jpg) |
-| ![Night: a mining lamp's light, with shadows waiting at its edge](Docs/images/story-night.jpg) | ![The final battle against the Tyrant King](Docs/images/final-battle.jpg) |
-| ![The base page](Docs/images/base-page.jpg) | ![A weapon crate: a name, a Mk and ? ? ? for each weapon](Docs/images/weapon-crate.jpg) |
+| ![Title screen](Docs/images/title-v2.jpg) | ![Day 1 morning: monsters walk in on the base](Docs/images/story-morning-v2.jpg) |
+| ![Night: a mining lamp's light, with shadows waiting at its edge](Docs/images/story-night-v2.jpg) | ![The final battle against the Tyrant King](Docs/images/final-battle-v2.jpg) |
+| ![The base page](Docs/images/base-page-v2.jpg) | ![A weapon crate: a name, a Mk and ? ? ? for each weapon](Docs/images/weapon-crate-v2.jpg) |
 
 All screenshots are in whitebox, the game's default look.
 
