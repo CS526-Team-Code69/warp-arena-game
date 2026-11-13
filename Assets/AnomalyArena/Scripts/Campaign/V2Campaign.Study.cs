@@ -70,7 +70,7 @@ namespace AnomalyArena
             {
                 tab.locked = true;
                 tab.name = StudyHidden;
-                tab.lockedNote = ArenaText.Pair($"{RoomName(room)}升到 {level} 级后揭晓。", $"Shows once the {RoomName(room)} reaches level {level}.");
+                tab.lockedNote = ArenaText.Pair($"{RoomName(room)}升到 {level} 级后揭晓。", $"Revealed once the {RoomName(room)} reaches level {level}.");
                 return tab;
             }
             fill(tab);
@@ -109,13 +109,13 @@ namespace AnomalyArena
         string StudyShortOf(CampaignCost cost)
         {
             var missing = new List<string>();
-            if (Alloy < cost.alloy) missing.Add(ArenaText.Pair($"合金差 {cost.alloy - Alloy}", $"{cost.alloy - Alloy} alloy short"));
-            if (Energy < cost.energy) missing.Add(ArenaText.Pair($"能量差 {cost.energy - Energy}", $"{cost.energy - Energy} energy short"));
-            if (Dark < cost.dark) missing.Add(ArenaText.Pair($"暗物质差 {cost.dark - Dark}", $"{cost.dark - Dark} dark matter short"));
-            return missing.Count > 0 ? string.Join(ArenaText.Pair("，", ", "), missing) : ArenaText.Pair("现在不能买", "Not possible now");
+            if (Alloy < cost.alloy) missing.Add(ArenaText.Pair($"合金还差 {cost.alloy - Alloy}", $"{cost.alloy - Alloy} alloy short"));
+            if (Energy < cost.energy) missing.Add(ArenaText.Pair($"能量还差 {cost.energy - Energy}", $"{cost.energy - Energy} energy short"));
+            if (Dark < cost.dark) missing.Add(ArenaText.Pair($"暗物质还差 {cost.dark - Dark}", $"{cost.dark - Dark} dark matter short"));
+            return missing.Count > 0 ? string.Join(ArenaText.Pair("，", ", "), missing) : ArenaText.Pair("现在还买不了", "Can't buy this yet");
         }
 
-        string RoomBroken(CampaignRoom room) => ArenaText.Pair($"{RoomName(room)}损坏：先修复", $"The {RoomName(room)} is broken: repair it first");
+        string RoomBroken(CampaignRoom room) => ArenaText.Pair($"{RoomName(room)}已损坏，修好后才能买", $"The {RoomName(room)} is broken. Repair it first.");
 
         V2ArtSet StudyArt => gm && gm.hud && gm.hud.v2Hud ? gm.hud.v2Hud.art : null;
         static Sprite StudyIcon(Sprite[] sprites, int index) => sprites != null && index >= 0 && index < sprites.Length ? sprites[index] : null;
@@ -142,13 +142,13 @@ namespace AnomalyArena
             var mkPrice = rules.MkPrice(from);
             string who = rules.sharedWeaponMk ? ArenaText.Pair("全部异常武器", "Every anomaly weapon") : target != null ? target.FormName : ArenaText.Pair("异常武器", "Anomaly weapon");
             string mkDetail = rules.sharedWeaponMk
-                ? ArenaText.Pair("武装区的武器型号是全队共用的：买一次，手里的和以后拿到的异常武器都按这个型号算伤害。开局的小手枪不吃型号。",
-                    "The Armament Bay's Mk is shared: buy it once and every anomaly weapon, held now or taken later, deals that Mk's damage. The starting pistol takes no Mk.")
-                : ArenaText.Pair("每把武器单独升级：先升手里这把。开局的小手枪不能升级。", "Each weapon rises on its own, the one in hand first. The starting pistol cannot rise.");
+                ? ArenaText.Pair("武器型号对所有异常武器一起生效：升一次，手上的和以后拿到的异常武器都按新型号计算伤害。开局的小手枪不受型号影响。",
+                    "The weapon Mk covers all your anomaly weapons at once: raise it once, and every anomaly weapon you hold now or get later deals damage at that Mk. The starting pistol isn't affected.")
+                : ArenaText.Pair("每把武器的型号单独升级，先升手上这一把。开局的小手枪不能升级。", "Each weapon's Mk is raised on its own, starting with the one in your hand. The starting pistol can't be upgraded.");
             string milestones = string.Join(" / ", Array.ConvertAll(rules.weaponMkMilestones ?? Array.Empty<int>(), m => "Mk " + m));
-            mkDetail += "\n" + ArenaText.Pair($"到 {milestones} 时，各多 {rules.mkMilestoneDamage * 100f:0}% 固定伤害和 {rules.mkMilestonePenetration * 100f:0}% 无视 Boss 属性免疫的穿透（累计）。现在的穿透：{rules.MkPenetration(from) * 100f:0}%。",
-                $"At {milestones} each adds {rules.mkMilestoneDamage * 100f:0}% fixed damage and {rules.mkMilestonePenetration * 100f:0}% penetration through a boss's element immunity (summed). Penetration now: {rules.MkPenetration(from) * 100f:0}%.");
-            if (mkPrice == null) mkDetail += "\n" + ArenaText.Pair($"合金只能升到 Mk {rules.MaxAlloyMk}。", $"Alloy buys up to Mk {rules.MaxAlloyMk}.");
+            mkDetail += "\n" + ArenaText.Pair($"型号每到 {milestones}，额外加 {rules.mkMilestoneDamage * 100f:0}% 固定伤害和 {rules.mkMilestonePenetration * 100f:0}% 穿透（穿透能打穿 Boss 的属性免疫），可以叠加。现在的穿透是 {rules.MkPenetration(from) * 100f:0}%。",
+                $"At each of {milestones}, your weapons gain another {rules.mkMilestoneDamage * 100f:0}% fixed damage and {rules.mkMilestonePenetration * 100f:0}% penetration, which gets through a boss's element immunity. These stack. Penetration now: {rules.MkPenetration(from) * 100f:0}%.");
+            if (mkPrice == null) mkDetail += "\n" + ArenaText.Pair($"用合金最多只能升到 Mk {rules.MaxAlloyMk}。", $"Alloy can raise it only as far as Mk {rules.MaxAlloyMk}.");
             tab.entries.Add(StudyItem("mk", StudyRoom.Armament, category, StudyLadder(Mathf.Min(from + 1, rules.MaxAlloyMk), rules.MaxAlloyMk), StudyAxisIcon(UpgradeAxis.Power),
                 ArenaText.Pair($"{who} · 型号", $"{who} · Mk"),
                 $"Mk {from} ×{rules.MkDamage(from):0.##}", mkPrice != null ? $"Mk {from + 1} ×{rules.MkDamage(from + 1):0.##}" : "",
@@ -166,8 +166,8 @@ namespace AnomalyArena
                 ArenaText.Pair("装甲", "Armor"),
                 ArenaText.Pair($"{armor} 级 · 生命 {hp:0}", $"Lv {armor} · HP {hp:0}"),
                 armorPrice != null ? ArenaText.Pair($"{armor + 1} 级 · 生命 {hp + hpStep:0}", $"Lv {armor + 1} · HP {hp + hpStep:0}") : "",
-                ArenaText.Pair($"装甲每升一级：最大生命 +{hpStep:0}、最大能量 +{energyStep:0}，并回满生命。共 {rules.MaxArmorLevel} 级。现在最大能量 {maxEnergy:0}。",
-                    $"Each armor level: max HP +{hpStep:0} and max energy +{energyStep:0}, and full HP. {rules.MaxArmorLevel} levels in all. Max energy now {maxEnergy:0}."),
+                ArenaText.Pair($"装甲每升一级，最大生命 +{hpStep:0}、最大能量 +{energyStep:0}，并立刻回满生命。装甲一共 {rules.MaxArmorLevel} 级，你现在的最大能量是 {maxEnergy:0}。",
+                    $"Each armor level gives max HP +{hpStep:0} and max energy +{energyStep:0}, and heals you to full. There are {rules.MaxArmorLevel} levels in all. Your max energy is now {maxEnergy:0}."),
                 armorPrice, armorPrice == null, works ? null : RoomBroken(CampaignRoom.Armament), TryBuyPlayerLevel));
         }
 
@@ -187,7 +187,7 @@ namespace AnomalyArena
                 string id = "weapon." + form;
                 if (d.unlockWave > ResearchWave)
                 {
-                    tab.entries.Add(StudyUnknown(id, StudyRoom.Armament, tab.name, ArenaText.Pair("之后的日子才能研究。", "Can be researched on a later day.")));
+                    tab.entries.Add(StudyUnknown(id, StudyRoom.Armament, tab.name, ArenaText.Pair("要过几天才能研究。", "Can be researched on a later day.")));
                     continue;
                 }
                 bool owned = weapons.OwnsForm(form), auto = RunWeapon.IsAutoForm(form), rocket = form == WeaponForm.RocketLauncher;
@@ -198,21 +198,21 @@ namespace AnomalyArena
                 {
                     var gone = RocketReplaces;
                     place = gone == null ? ArenaText.Pair("放进空着的手。", "It goes into the free hand.")
-                        : ArenaText.Pair($"会换下{(gone.form == WeaponForm.Pistol ? "" : "没拿在手上的")}{gone.FormName}。", $"It replaces the {gone.FormName}{(gone.form == WeaponForm.Pistol ? "" : " not in hand")}.");
+                        : ArenaText.Pair($"会换下{(gone.form == WeaponForm.Pistol ? "" : "没拿在手上的")}{gone.FormName}。", $"It replaces the {gone.FormName}{(gone.form == WeaponForm.Pistol ? "" : " you aren't holding")}.");
                 }
                 else
                 {
                     int slot = SlotFor(form);
                     var replaced = !auto && slot >= 0 ? weapons.Hand[slot] : null;
-                    place = slot < 0 ? ArenaText.Pair(auto ? "自动武器栏已满。" : "手持武器栏已满。", auto ? "Every auto slot is taken." : "Both hands are taken.")
+                    place = slot < 0 ? ArenaText.Pair(auto ? "自动武器栏已满。" : "手持武器栏已满。", auto ? "All auto slots are full." : "Both hands are full.")
                         : replaced != null ? ArenaText.Pair($"会换下{replaced.FormName}。", $"It replaces the {replaced.FormName}.")
                         : ArenaText.Pair(auto ? "放进空着的自动武器栏。" : "放进空着的手。", auto ? "It goes into a free auto slot." : "It goes into the free hand.");
                     if (slot < 0 && blocked == null) blocked = place;
                 }
-                string detail = ArenaText.Pair($"异常武器（{(auto ? "自动" : "手持")}）：攻击方式和特性买到才揭晓。到手就是 Mk {newMk}。", $"An anomaly weapon ({(auto ? "auto" : "hand")}): how it attacks and its trait show once bought. It arrives at Mk {newMk}.")
+                string detail = ArenaText.Pair($"一把{(auto ? "自动" : "手持")}异常武器。它的攻击方式和特性要买到手才会揭晓，到手时是 Mk {newMk}。", $"An anomaly weapon for {(auto ? "an auto slot" : "your hand")}. Its attack and trait are revealed once you buy it. It arrives at Mk {newMk}.")
                     + "\n" + place;
                 tab.entries.Add(StudyItem(id, StudyRoom.Armament, tab.name, CampaignRules.WeaponRarity(d.unlockWave), StudyWeaponIcon(form), ArenaTerms.WeaponForm(form),
-                    owned ? ArenaText.Pair("已拥有", "Held") : ArenaText.Pair("未拥有", "Not held"), owned ? "" : $"Mk {newMk}",
+                    owned ? ArenaText.Pair("已拥有", "Owned") : ArenaText.Pair("未拥有", "Not owned"), owned ? "" : $"Mk {newMk}",
                     detail, price, owned, blocked, () => TryBuyWeaponForm(form)));
             }
         }
@@ -229,12 +229,12 @@ namespace AnomalyArena
                 var w = weapons.Hand[hand];
                 if (w == null || !w.IsAnomalous) continue;
                 bool owned = w.Has(axis);
-                string text = (w.revealed ? weapons.UpgradeDescription(w, axis) : ArenaText.Pair("这把武器的异常还没揭晓。", "This weapon's anomaly is not known yet."))
+                string text = (w.revealed ? weapons.UpgradeDescription(w, axis) : ArenaText.Pair("这把武器的异常还没揭晓。", "This weapon's anomaly hasn't been revealed yet."))
                     + "\n" + TameTwistBonusText(axis); // its attack speed or damage besides (since 2026-11-10, V2Campaign.Days.cs)
-                string blocked = !works ? RoomBroken(CampaignRoom.Armament) : !w.revealed ? ArenaText.Pair("先用它打一次，揭晓它的异常", "Fire it once to learn its anomaly first") : null;
+                string blocked = !works ? RoomBroken(CampaignRoom.Armament) : !w.revealed ? ArenaText.Pair("先用它攻击一次，揭晓它的异常", "Fire it once first to reveal its anomaly") : null;
                 var weapon = w;
                 tab.entries.Add(StudyItem($"{(axis == UpgradeAxis.Tame ? "tame" : "twist")}.{w.form}", StudyRoom.Armament, tab.name, ArenaRarity.ForWeaponCard(axis), StudyWeaponIcon(w.form),
-                    w.Label, owned ? ArenaText.Pair($"已{name}", $"{name} done") : ArenaText.Pair($"未{name}", $"No {name}"), owned ? "" : ArenaText.Pair($"已{name}", $"{name} done"),
+                    w.Label, owned ? ArenaText.Pair($"已{name}", $"Has {name}") : ArenaText.Pair($"未{name}", $"No {name} yet"), owned ? "" : ArenaText.Pair($"已{name}", $"Has {name}"),
                     text, price, owned, blocked, () => TryTameOrTwist(weapon, axis)));
             }
             if (tab.entries.Count == 0) tab.emptyNote = ArenaText.Pair("手上没有异常武器。", "No anomaly weapon in hand.");
@@ -253,13 +253,13 @@ namespace AnomalyArena
             tab.entries.Add(StudyItem("tier." + line, StudyRoom.Energy, tab.name, price != null ? opens : CardRarity.Legendary, art ? art.energyLab : null,
                 ResearchName(line),
                 ArenaText.Pair($"{tier} 阶", $"Tier {tier}"), price != null ? ArenaText.Pair($"{tier + 1} 阶", $"Tier {tier + 1}") : "",
-                ArenaText.Pair($"升阶以后解锁更稀有、更强的内容（共 {rules.MaxResearchTier} 阶）。", $"A higher tier unlocks rarer, stronger items ({rules.MaxResearchTier} tiers in all)."),
+                ArenaText.Pair($"研究每升一阶，就能解锁更稀有、更强的项目（一共 {rules.MaxResearchTier} 阶）。", $"Each tier unlocks rarer, stronger items ({rules.MaxResearchTier} tiers in all)."),
                 price, price == null, Works(CampaignRoom.Energy, (int)line + 1) ? null : RoomBroken(CampaignRoom.Energy), () => TryBuyResearchTier(line)));
         }
 
         static readonly CardRarity[] StudyRarities = { CardRarity.Common, CardRarity.Rare, CardRarity.Exceptional, CardRarity.Epic, CardRarity.Legendary };
 
-        string StudyTierNote(ResearchLine line, CardRarity rarity) => ArenaText.Pair($"{ResearchName(line)}升到 {rules.RarityTier(rarity)} 阶后揭晓。", $"Shows at {ResearchName(line)} tier {rules.RarityTier(rarity)}.");
+        string StudyTierNote(ResearchLine line, CardRarity rarity) => ArenaText.Pair($"{ResearchName(line)}升到 {rules.RarityTier(rarity)} 阶后揭晓。", $"Revealed at {ResearchName(line)} tier {rules.RarityTier(rarity)}.");
 
         void FillBody(StudyTab tab)
         {
@@ -326,12 +326,12 @@ namespace AnomalyArena
                 var rarity = ArenaRarity.ForSkill(definition, Mathf.Min(next, SkillDefinition.MaxLevel));
                 if (!learned && rules.SkillCategoryTier(definition.category) > tier)
                 {
-                    tab.entries.Add(StudyUnknown(key, StudyRoom.Energy, tab.name, ArenaText.Pair($"{ResearchName(ResearchLine.Skills)}升到 {rules.SkillCategoryTier(definition.category)} 阶后揭晓。", $"Shows at {ResearchName(ResearchLine.Skills)} tier {rules.SkillCategoryTier(definition.category)}.")));
+                    tab.entries.Add(StudyUnknown(key, StudyRoom.Energy, tab.name, ArenaText.Pair($"{ResearchName(ResearchLine.Skills)}升到 {rules.SkillCategoryTier(definition.category)} 阶后揭晓。", $"Revealed at {ResearchName(ResearchLine.Skills)} tier {rules.SkillCategoryTier(definition.category)}.")));
                     continue;
                 }
                 if (!top && rules.RarityTier(rarity) > tier) { tab.entries.Add(StudyUnknown(key, StudyRoom.Energy, tab.name, StudyTierNote(ResearchLine.Skills, rarity))); continue; }
                 string blocked = !works ? RoomBroken(CampaignRoom.Energy)
-                    : !learned && skills.OwnedCount >= skills.Slots.Length ? ArenaText.Pair($"技能栏已满（{skills.Slots.Length} 个）", $"Every skill slot is taken ({skills.Slots.Length})") : null;
+                    : !learned && skills.OwnedCount >= skills.Slots.Length ? ArenaText.Pair($"技能栏已满（一共 {skills.Slots.Length} 个）", $"All {skills.Slots.Length} skill slots are full") : null;
                 int shown = Mathf.Min(next, SkillDefinition.MaxLevel);
                 string detail = definition.Description(shown) + "\n" + ArenaText.Pair($"消耗 {definition.cost * costScale:0} 能量 · 冷却 {definition.Cooldown(shown) * cooldownScale:0.#} 秒",
                     $"{definition.cost * costScale:0} energy · {definition.Cooldown(shown) * cooldownScale:0.#} s cooldown");
@@ -354,10 +354,10 @@ namespace AnomalyArena
             // Since 2026-11-10 the floor follows a table by day (CampaignRules.infusionFloorByDay); the linear rule only without it.
             float perTier = rules.InfusionFloor(Mathf.Max(1, Day), 1, TyrantFight);
             string floorNote = rules.infusionFloorByDay is { Length: > 0 }
-                ? ArenaText.Pair($"附魔保底：你造成的燃烧和中毒每秒伤害不低于 {floor:0}（今天每阶 {perTier:0.#} × 附魔研究阶数，每天不同）。",
-                    $"Infusion floor: your burns and poisons deal at least {floor:0} a second (today {perTier:0.#} per infusion tier; it changes each day).")
-                : ArenaText.Pair($"附魔保底：你造成的燃烧和中毒每秒伤害不低于 {floor:0}（{rules.infusionFloorPerDay:0} × 天数 × 附魔研究阶数）。",
-                    $"Infusion floor: your burns and poisons deal at least {floor:0} a second ({rules.infusionFloorPerDay:0} × day × infusion tier).");
+                ? ArenaText.Pair($"附魔保底：你造成的燃烧和中毒，每秒伤害至少 {floor:0}。保底按附魔研究的阶数计算，今天每阶 {perTier:0.#}，每天都不一样。",
+                    $"Infusion floor: your burns and poisons always deal at least {floor:0} per second. The floor is {perTier:0.#} per Infusion research tier today, and it changes from day to day.")
+                : ArenaText.Pair($"附魔保底：你造成的燃烧和中毒，每秒伤害至少 {floor:0}（{rules.infusionFloorPerDay:0} × 天数 × 附魔研究阶数）。",
+                    $"Infusion floor: your burns and poisons always deal at least {floor:0} per second ({rules.infusionFloorPerDay:0} × day × Infusion research tier).");
             var held = new List<RunWeapon>();
             foreach (var w in weapons.Hand) if (w is { IsAnomalous: true, builtInElement: false }) held.Add(w);
             foreach (var w in weapons.Auto) if (w is { IsAnomalous: true, builtInElement: false }) held.Add(w);
@@ -374,14 +374,14 @@ namespace AnomalyArena
                     bool owned = own == element;
                     string rule = ArenaTerms.ElementRule(element);
                     string detail = (string.IsNullOrEmpty(rule) ? "" : rule + "\n")
-                        + (own != ElementKind.None && !owned ? ArenaText.Pair($"会替换现有的{ArenaTerms.Element(own)}。", $"It replaces its {ArenaTerms.Element(own)}.") + "\n" : "") + floorNote;
+                        + (own != ElementKind.None && !owned ? ArenaText.Pair($"会替换这把武器现有的{ArenaTerms.Element(own)}属性。", $"This replaces the weapon's current {ArenaTerms.Element(own)}.") + "\n" : "") + floorNote;
                     tab.entries.Add(StudyItem(id, StudyRoom.Energy, tab.name, choice.rarity, StudyElementIcon(element),
                         ArenaText.Pair($"{w.FormName} · {ArenaTerms.Element(element)}", $"{w.FormName} · {ArenaTerms.Element(element)}"),
                         ArenaTerms.Element(own), owned ? "" : ArenaTerms.Element(element),
                         detail, new CampaignCost(0, rules.RarityEnergy(choice.rarity)), owned, works ? null : RoomBroken(CampaignRoom.Energy), () => TryInfuse(weapon, element)));
                 }
             }
-            if (tab.entries.Count == before) tab.emptyNote = ArenaText.Pair("没有能附魔的异常武器（自带元素的武器不能附魔）。", "No anomaly weapon can take an infusion (weapons with a built-in element cannot).");
+            if (tab.entries.Count == before) tab.emptyNote = ArenaText.Pair("你没有能附魔的异常武器。自带元素的武器不能附魔。", "None of your anomaly weapons can be infused. Weapons with a built-in element can't take an infusion.");
         }
 
         // ───── Central Control: the final overload ─────
@@ -402,10 +402,10 @@ namespace AnomalyArena
                         art ? shield ? art.shield : art.durability : null,
                         shield ? ArenaText.Pair("暴君战开局护盾", "Tyrant fight: opening shield") : ArenaText.Pair("暴君战最终伤害", "Tyrant fight: final damage"),
                         $"+{bought * share * 100f:0}%", full ? "" : $"+{(bought + 1) * share * 100f:0}%",
-                        (shield ? ArenaText.Pair($"暴君战开始时，你获得最大生命 {share * 100f:0}% 的护盾（每次），超过平时的护盾上限；站几秒后会像平常的护盾一样慢慢消退。",
-                                $"When the Tyrant's fight begins you get shield worth {share * 100f:0}% of max HP per purchase, above the usual cap; it fades like any shield after a few seconds.")
-                            : ArenaText.Pair($"暴虐君王战中，武器和技能的伤害每次 +{share * 100f:0}%（累计）。", $"In the Tyrant's fight, weapon and skill damage +{share * 100f:0}% per purchase (summed)."))
-                        + "\n" + ArenaText.Pair($"护盾和伤害各最多换 {rules.overloadMaxBuys} 次，合金和能量都算。", $"Up to {rules.overloadMaxBuys} of each, alloy and energy alike."),
+                        (shield ? ArenaText.Pair($"暴君战开始时，每买一次，你开场就多得到相当于最大生命 {share * 100f:0}% 的护盾，可以超过平时的护盾上限。几秒后，它会像普通护盾一样慢慢消退。",
+                                $"When the Tyrant fight begins, each purchase gives you a shield worth {share * 100f:0}% of your max HP, even above the usual cap. After a few seconds it fades like any other shield.")
+                            : ArenaText.Pair($"暴君战中，每买一次，武器和技能的伤害就 +{share * 100f:0}%，可以叠加。", $"In the Tyrant fight, each purchase adds +{share * 100f:0}% to your weapon and skill damage. Purchases stack."))
+                        + "\n" + ArenaText.Pair($"护盾和伤害各最多买 {rules.overloadMaxBuys} 次，用合金买和用能量买都算在内。", $"You can buy the shield and the damage up to {rules.overloadMaxBuys} times each, whether you pay with alloy or energy."),
                         price, full, blocked, () => TryBuyOverload(s, e)));
                 }
         }

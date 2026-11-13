@@ -45,7 +45,10 @@ namespace AnomalyArena
             if (StartupForTests != null) return StartupCode = StartupLanguage.Normalize(StartupForTests(sceneName)) ?? StartupLanguage.English;
 #endif
             // The platform, not the UNITY_WEBGL symbol: the editor of this project is set to the WebGL target and defines it too.
-            return StartupCode = StartupLanguage.Resolve(SavedChoice, Application.platform == RuntimePlatform.WebGLPlayer, Application.absoluteURL);
+            // The Alpha page has no Language option (BuildEdition): a choice saved on the Beta page does not carry over, so it opens in
+            // English, or in Chinese on /zh/.
+            return StartupCode = StartupLanguage.Resolve(BuildEdition.IsAlpha ? null : SavedChoice, Application.platform == RuntimePlatform.WebGLPlayer,
+                Application.absoluteURL);
         }
 
         /// <summary>The title's Language option: Chinese to English or English to Chinese, at once, and saved. False while the text

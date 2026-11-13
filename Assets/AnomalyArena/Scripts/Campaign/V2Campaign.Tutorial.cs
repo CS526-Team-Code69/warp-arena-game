@@ -124,10 +124,10 @@ namespace AnomalyArena
             var works = SpotlightTutorial.Taught(tutLastDone);
             // In sentence case since 2026-11-10 (the note stands in the goal panel, not on the HUD's capital-letter line); the right button
             // joins once it was taught (the second crate opened), though it works from the first fight on.
-            return Dot((works & PlayerAct.Move) != 0 ? ArenaText.Pair($"{ArenaKeys.MoveKeys} 移动", $"{ArenaKeys.MoveKeys} move") : "",
-                (works & PlayerAct.Fire) != 0 ? ArenaText.Pair("左键开火", "Left click fire") : "",
-                (works & PlayerAct.Sprint) != 0 ? ArenaText.Pair($"{ArenaKeys.SprintKey} 冲刺", $"{ArenaKeys.SprintKey} sprint") : "",
-                (works & PlayerAct.Switch) != 0 && switchTaught ? ArenaText.Pair("右键换手", "Right click switch hands") : "");
+            return Dot((works & PlayerAct.Move) != 0 ? ArenaText.Pair($"{ArenaKeys.MoveKeys} 移动", $"{ArenaKeys.MoveKeys} to move") : "",
+                (works & PlayerAct.Fire) != 0 ? ArenaText.Pair("左键开火", "Left click to fire") : "",
+                (works & PlayerAct.Sprint) != 0 ? ArenaText.Pair($"{ArenaKeys.SprintKey} 冲刺", $"{ArenaKeys.SprintKey} to sprint") : "",
+                (works & PlayerAct.Switch) != 0 && switchTaught ? ArenaText.Pair("右键换手", "Right click to switch hands") : "");
         }
 
         static string MouseKey => ArenaText.Pair("左键", "LMB");
@@ -139,14 +139,14 @@ namespace AnomalyArena
             tutStart = Query.Flat(PlayerPoint());
             tutMarker = FindOpen(CrashSite + new Vector3(14f, 0f, 0f), 1f);
             Objective(ArenaText.Pair($"朝蓝色标记走 {rules.tutorialMoveMeters:0} 米", $"Walk {rules.tutorialMoveMeters:0} m toward the blue marker"), tutMarker);
-            Teach(TutorialStep.Move, PlayerPoint, 3f, ArenaKeys.MoveKeys, ArenaText.Pair("向标记移动", "Walk to marker"));
+            Teach(TutorialStep.Move, PlayerPoint, 3f, ArenaKeys.MoveKeys, ArenaText.Pair("向标记移动", "Walk to the marker"));
         }
 
         void TeachFire()
         {
             tutShots = 0;
             tutCooldown = gm.runWeapons && gm.runWeapons.Active != null ? gm.runWeapons.Active.cooldown : 0f;
-            Objective(ArenaText.Pair($"用小手枪开 {rules.tutorialShots} 枪，朝哪打都行", $"Fire the pistol {rules.tutorialShots} times, anywhere"), null);
+            Objective(ArenaText.Pair($"用小手枪开 {rules.tutorialShots} 枪，朝哪打都行", $"Fire the pistol {rules.tutorialShots} times, in any direction"), null);
             Teach(TutorialStep.Fire, PlayerPoint, 3f, MouseKey, ArenaText.Pair("按住开火", "Hold to fire"));
         }
 
@@ -155,7 +155,7 @@ namespace AnomalyArena
             Vector3 corner = FindOpen(TutorialCorner, 1.4f);
             tutOre = AddNode(NodeKind.Ore, corner, DayZeroOre(0)); // Day 0's alloy (V2Campaign.Days.cs, since 2026-11-10)
             if (tutOre.view) tutOre.view.localScale *= 1.4f;
-            Approach(TutorialStep.Mine, ArenaText.Pair("去角落里发光的地方看看", "Check the glow in the corner"), corner);
+            Approach(TutorialStep.Mine, ArenaText.Pair("去角落里发光的地方看看", "Check out the glow in the corner"), corner);
             Say(Line.T07);
         }
 
@@ -163,7 +163,7 @@ namespace AnomalyArena
         {
             Vector3 at = FindOpen(Vector3.Lerp(TutorialCorner, DoorPoint, .2f), 1.2f);
             tutFirstCrate = PlaceCrate(at, CrateKind.TutorialFirst);
-            Approach(TutorialStep.Crate, ArenaText.Pair("前面有个武器箱，过去看看", "There is a weapon crate ahead: take a look"), at);
+            Approach(TutorialStep.Crate, ArenaText.Pair("前面有个武器箱，过去看看", "There's a weapon crate ahead. Go take a look"), at);
             SayWhenQuiet(Line.T08, () => Stage == CampaignStage.Tutorial);
         }
 
@@ -197,7 +197,7 @@ namespace AnomalyArena
 
         void TeachCollect()
         {
-            Objective(ArenaText.Pair("走过去，捡起怪物掉落的异星能量", "Walk over the alien energy the monsters dropped"), null);
+            Objective(ArenaText.Pair("走过去，捡起怪物掉落的异星能量", "Walk over the alien energy the monsters dropped to pick it up"), null);
             Teach(TutorialStep.Collect, NearestPickup, 2.6f, ArenaKeys.MoveKeys, ArenaText.Pair("捡起能量", "Collect the energy"));
         }
 
@@ -233,13 +233,13 @@ namespace AnomalyArena
             switch (homeLeg)
             {
                 case HomeLeg.Ore:
-                    Objective(ArenaText.Pair("回基地。路边还有一处合金矿，可以自己采", "Head to the base. There is more ore by the way: mine it yourself"), tutSecondOre?.position);
+                    Objective(ArenaText.Pair("回基地。路边还有一处合金矿，可以顺手采掉", "Head back to the base. There's more ore along the way you can mine"), tutSecondOre?.position);
                     break;
                 case HomeLeg.Crate:
-                    Objective(ArenaText.Pair("路边有第二个武器箱：选中的会换下小手枪，也可以不拿", "A second weapon crate by the way: your pick replaces the pistol, or leave it"), tutSecondCrate?.position);
+                    Objective(ArenaText.Pair("路边还有一个武器箱。从里面拿武器会换下小手枪，不想换也可以不拿", "There's another weapon crate by the road. Taking a weapon from it replaces your pistol, but you can leave it"), tutSecondCrate?.position);
                     break;
                 default:
-                    Objective(ArenaText.Pair("回到基地门口", "Reach the base door"), DoorPoint);
+                    Objective(ArenaText.Pair("回到基地门口", "Go to the base door"), DoorPoint);
                     break;
             }
         }
@@ -274,7 +274,7 @@ namespace AnomalyArena
                     else if (Apart(pp, tutOre.position) < rules.tutorialTeachReach)
                     {
                         Vector3 ore = tutOre.position;
-                        Objective(ArenaText.Pair("站到矿石旁，把它采完", "Stand by the ore and mine it out"), ore);
+                        Objective(ArenaText.Pair("站到矿石旁边，把它采完", "Stand next to the ore and mine all of it"), ore);
                         Teach(TutorialStep.Mine, () => ore, 2.6f, ArenaKeys.InteractKey, ArenaText.Pair("按住采矿", "Hold to mine"));
                     }
                     break;
@@ -284,7 +284,7 @@ namespace AnomalyArena
                     {
                         if (Apart(pp, tutFirstCrate.position) >= rules.tutorialTeachReach) break;
                         Vector3 at = tutFirstCrate.position;
-                        Objective(ArenaText.Pair("站到武器箱旁，打开它", "Stand by the crate and open it"), at);
+                        Objective(ArenaText.Pair("站到武器箱旁边，打开它", "Stand next to the crate and open it"), at);
                         Teach(TutorialStep.Crate, () => at, 2.6f, ArenaKeys.InteractKey, ArenaText.Pair("打开武器箱", "Open the crate"));
                     }
                     else if (CrateUse(tutFirstCrate, out string text))
@@ -565,7 +565,7 @@ namespace AnomalyArena
             tutNightStep = 0; tutDarkMined = 0;
             // Everything is taught by now: only the night's two forced steps hold anything back.
             tutNext = null; tutLastDone = TutorialStep.Done;
-            Approach(TutorialStep.Lamp, ArenaText.Pair("去发紫光的暗物质那里", "Go to the purple dark matter"), cluster);
+            Approach(TutorialStep.Lamp, ArenaText.Pair("去那片发着紫光的暗物质旁边", "Go to the glowing purple dark matter"), cluster);
             Say(Line.S02);
             nightWhispers = true;
             StartCoroutine(TutorialNightLine());
@@ -588,7 +588,7 @@ namespace AnomalyArena
             {
                 case TutorialStep.Lamp when !tutForced:
                     if (Apart(PlayerPoint(), tutCluster) >= rules.tutorialTeachReach + 1f) break;
-                    Objective(ArenaText.Pair("在暗物质旁放下一盏矿灯", "Set a lamp down by the dark matter"), tutCluster);
+                    Objective(ArenaText.Pair("在暗物质旁放下一盏矿灯", "Set down a lamp next to the dark matter"), tutCluster);
                     Teach(TutorialStep.Lamp, () => tutCluster, 4.5f, ArenaKeys.LampKey, ArenaText.Pair("放下矿灯", "Place a lamp"));
                     break;
                 case TutorialStep.Lamp:
@@ -598,7 +598,7 @@ namespace AnomalyArena
                     else if (lampStock <= 0)
                     {
                         lampStock++;
-                        ui.Flash(ArenaText.Pair("基地补给了一盏矿灯：放在暗物质旁边", "The base sends one more lamp: set it by the dark matter"), 3f);
+                        ui.Flash(ArenaText.Pair("基地又送来一盏矿灯，把它放在暗物质旁边", "The base sent you another lamp. Set it down by the dark matter"), 3f);
                     }
                     break;
             }
@@ -619,7 +619,7 @@ namespace AnomalyArena
                 if (tutNightStep < 2) { tutNightStep = 2; TutorialDawnObjective(); }
                 return;
             }
-            Objective(ArenaText.Pair("站在灯光里采集暗物质", "Mine the dark matter while standing in the light"), null);
+            Objective(ArenaText.Pair("站在灯光里采集暗物质", "Stand in the lamplight and mine the dark matter"), null);
             Teach(TutorialStep.DarkMatter, () => tutCluster, 4.5f, ArenaKeys.InteractKey, ArenaText.Pair("按住采集", "Hold to mine"));
         }
 
@@ -632,7 +632,7 @@ namespace AnomalyArena
         }
 
         /// <summary>The tutorial night's last goal: back to the base door, then "wait for dawn" in the base panel starts day 1.</summary>
-        void TutorialDawnObjective() => Objective(ArenaText.Pair("回基地，选“等待天亮”开始第 1 天", "Return to the base and choose Wait for dawn to start day 1"), DoorPoint);
+        void TutorialDawnObjective() => Objective(ArenaText.Pair("回基地，选“等待天亮”开始第 1 天", "Go back to the base and choose \"Wait for dawn\" to start day 1"), DoorPoint);
 
         /// <summary>Day 0 is over (CrateLoop sees day 1): a spotlight still up goes and the inputs are all free.</summary>
         void ForgetTutorial()

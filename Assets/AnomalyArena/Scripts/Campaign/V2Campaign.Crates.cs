@@ -66,7 +66,7 @@ namespace AnomalyArena
             foreach (var node in nodes) if (node.trailIndex >= 0) trail.Add(node.position);
             float reach = SpotlightTutorial.Reach(trail, BaseCentre, dir);
             // No trail node could be placed: the trail's planned reach (V2Campaign.Night.cs PlanTrail) stands in for it.
-            if (reach <= 0f) reach = Mathf.Min(rules.trailReach + rules.trailReachPerDay * Mathf.Max(0, Day - 1), distance - 7f);
+            if (reach <= 0f) reach = Mathf.Min(rules.trailReach + rules.trailReachPerDay * Mathf.Max(0, Day - 1), distance - TrailHoleKeepOut);
             Vector3 p = BaseCentre + dir * Mathf.Max(rules.nodeBaseClearance, reach * rules.crateTrailShare);
             for (float r = 0f; r <= 10f; r += 1f)
                 foreach (var candidate in new[] { p + side * r, p - side * r, p - dir * r, p + dir * r })
@@ -120,7 +120,7 @@ namespace AnomalyArena
             var p = gm.player;
             if (crate == null || !p || !p.IsAlive || crateOpen != null || knockedOut) return false;
             if (Query.Flat(p.Position - crate.position).magnitude > rules.crateReach || NearestNode(p.Position, rules.mineRange) != null) return false;
-            promptText = ArenaText.Pair($"按 {ArenaKeys.InteractKey} 打开武器箱", $"{ArenaKeys.InteractKey}: open the weapon crate");
+            promptText = ArenaText.Pair($"按 {ArenaKeys.InteractKey} 打开武器箱", $"Press {ArenaKeys.InteractKey} to open the weapon crate");
             return EPressed;
         }
 
@@ -143,7 +143,7 @@ namespace AnomalyArena
             {
                 RemoveCrate(crate, true);
                 CampaignEvents.RaiseMilestone(CampaignEvents.MilestoneCrate, crate.kind + ":" + CampaignEvents.CrateEmpty, 0f, Day);
-                ui.Flash(ArenaText.Pair("箱子里没有用得上的新武器", "Nothing new in this crate"), 2.5f);
+                ui.Flash(ArenaText.Pair("箱子里没有你用得上的新武器", "There's nothing new for you in this crate"), 2.5f);
                 done?.Invoke(false);
                 return;
             }
@@ -247,8 +247,8 @@ namespace AnomalyArena
             CampaignEvents.RaiseMilestone(CampaignEvents.MilestoneCrate, crate.kind + ":" + weapon.form, index + 1, Day);
             V3WorldAudio.Instance?.Play(ArenaWorldCue.LevelUp, PlayerPoint());
             string message = crate.kind == CrateKind.TutorialFirst
-                ? ArenaText.Pair($"{weapon.FormName}在主手，小手枪在另一只手", $"The {weapon.FormName} is in your main hand, the pistol in the other")
-                : replaced == null ? ArenaText.Pair($"{weapon.FormName}放进了{(weapon.IsAuto ? "自动武器栏" : "空着的手")}", $"The {weapon.FormName} goes into the {(weapon.IsAuto ? "auto slot" : "free hand")}")
+                ? ArenaText.Pair($"{weapon.FormName}拿在主手上，小手枪换到了另一只手", $"The {weapon.FormName} is in your main hand, and the pistol is in the other")
+                : replaced == null ? ArenaText.Pair($"{weapon.FormName}放进了{(weapon.IsAuto ? "自动武器栏" : "空着的手")}", $"The {weapon.FormName} went into {(weapon.IsAuto ? "an auto slot" : "your free hand")}")
                 : ArenaText.Pair($"{weapon.FormName}换下了{replaced.FormName}", $"The {weapon.FormName} replaces the {replaced.FormName}");
             gm.CampaignShowWeaponCard(weapon, () =>
             {

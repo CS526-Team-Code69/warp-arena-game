@@ -48,7 +48,7 @@ MonoBehaviour:
     height: 4
   - serializedVersion: 2
     x: -24
-    y: -33
+    y: -32
     width: 4
     height: 3
   - serializedVersion: 2
@@ -88,7 +88,7 @@ MonoBehaviour:
     height: 4
   - serializedVersion: 2
     x: 8
-    y: 31
+    y: 29
     width: 4
     height: 3
   - serializedVersion: 2
@@ -123,7 +123,7 @@ MonoBehaviour:
     height: 3
   - serializedVersion: 2
     x: 72
-    y: -33
+    y: -31
     width: 4
     height: 3
   - serializedVersion: 2
@@ -143,7 +143,7 @@ MonoBehaviour:
     height: 4
   - serializedVersion: 2
     x: 72
-    y: 31
+    y: 28
     width: 4
     height: 3
   holeAnchors:
@@ -160,9 +160,9 @@ MonoBehaviour:
     radius: 6
   - centre: {x: -44, y: 40}
     radius: 7
-  - centre: {x: 56, y: -40}
+  - centre: {x: 55, y: -40}
     radius: 6
-  - centre: {x: -10, y: -30}
+  - centre: {x: -10, y: -29}
     radius: 5
   - centre: {x: 66, y: 10}
     radius: 6

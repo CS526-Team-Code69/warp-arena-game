@@ -35,7 +35,15 @@ namespace AnomalyArena
         public Vector3 Centre => transform.position;
         public float KillRadiusNominal=>size*.5f;
         public float KillRadius=>KillRadiusNominal*(Phase==HolePhase.Collapsing?Mathf.Clamp01(collapseTimer/1.5f):1f);
-        public float GravityRadius=>KillRadiusNominal+gravityCells;
+        /// <summary>A map hole's pull ring (the open mode's two, the story's one) is this many times gravityCells wide, so a step into it
+        /// leaves room to turn back. A hole made for a moment (a skill's, the Nash Prophet's) keeps its own width.</summary>
+        public const float MapRingScale = 2.5f;
+        /// <summary>A map hole pulls this many times as fast as the player walks: walking out of its ring loses ground slowly, a sprint
+        /// gets out, and every monster, which walks slower than the player, is taken.</summary>
+        public const float PullOverWalk = 1.1f;
+        public float GravityRadius=>KillRadiusNominal+gravityCells*(Temporary?1f:MapRingScale);
+        /// <summary>A map hole's pull for a player who walks at walkSpeed cells a second.</summary>
+        public static float MapPull(float walkSpeed) => Mathf.Max(.1f, PullOverWalk * walkSpeed);
 
         public void ResetHole()
         {
@@ -141,7 +149,7 @@ namespace AnomalyArena
         void RefreshLook()
         {
             if (killVisual) { killVisual.gameObject.SetActive(Phase == HolePhase.Active || Phase == HolePhase.Collapsing); killVisual.localScale = new Vector3(size, 0.05f, size); }
-            if (gravityVisual) { gravityVisual.gameObject.SetActive(Phase == HolePhase.Active); gravityVisual.localScale = new Vector3(size + gravityCells * 2f, 0.025f, size + gravityCells * 2f); }
+            if (gravityVisual) { gravityVisual.gameObject.SetActive(Phase == HolePhase.Active); gravityVisual.localScale = new Vector3(GravityRadius * 2f, 0.025f, GravityRadius * 2f); }
             if (portalVisual) portalVisual.gameObject.SetActive(Phase == HolePhase.Portal);
         }
     }

@@ -386,7 +386,7 @@ namespace AnomalyArena
             studyEntryId = entry.id;
             bool bought = entry.buy();
             if (!bought) CampaignAudio.Play(CampaignSfx.UpgradeDenied); // 2026-11-10: the purchase was refused
-            if (!bought && entry.state == StudyState.Unaffordable) Flash(ArenaText.Pair("现在买不了：原因见右边的说明", "Cannot buy it now: see the note on the right"));
+            if (!bought && entry.state == StudyState.Unaffordable) Flash(ArenaText.Pair("现在还买不了", "You can't buy this yet"));
             if (StudyOpen) RebuildStudy();
         }
 

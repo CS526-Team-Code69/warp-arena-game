@@ -211,7 +211,7 @@ public static class V2CampaignCheck
                 foreach (bool shield in new[] { true, false })
                     if (c.TryBuyOverload(shield, !shield)) { Note($"overload {(shield ? "shield" : "damage")}: shield buys {c.OverloadShieldBuys}, damage buys {c.OverloadDamageBuys} -> wallet {Wallet}"); any = true; }
         }
-        if (c.LampStock < 3 && c.TryCraftLamp()) Note("crafted a lamp");
+        while (c.LampStock < 3 && c.TryCraftLamp()) Note("crafted a lamp");
         if (c.BaseHp < c.BaseMaxHp - 1f && c.TryRepairHull()) Note("repaired the hull");
         return false;
     }
@@ -250,6 +250,7 @@ public static class V2CampaignCheck
                 var rules = Object.Instantiate(campaign.rules);
                 rules.duskSeconds = 9f;
                 rules.holeCheckSeconds = 10f;
+                if (!measure) rules.morningSeconds = 7f; // the story mornings take their length from the rules, not from the wave asset
                 campaign.rules = rules;
                 Art.Enabled = !whitebox;
                 Note($"boot: phase {gm.RunPhase}, scene {gm.gameObject.scene.name}, game view {Screen.width}x{Screen.height}, map {WorldMap.Active.biome?.displayName}, art {(campaign.art ? "set" : "none")}, shown as {(whitebox ? "whitebox" : "illustrated")}{(measure ? ", MEASURE: the waves keep their real length and a reference player kills; dusk 9 s and the black hole's check 10 s for this check only (copies, assets untouched)" : "; wave timers 7 s, dusk 9 s and the black hole's check 10 s for this check only (copies, assets untouched)")}");
@@ -450,6 +451,8 @@ public static class V2CampaignCheck
                     if (e.Raider)
                     {
                         raiders++;
+                        // The check's player stands still and never dodges: a raider that gets this close is cleared, as a player would.
+                        if (Query.Flat(e.Position - gm.player.Position).magnitude < 5f) { e.Kill(gm.player); continue; }
                         Vector3 rel = Query.Flat(e.Position - V2Campaign.BaseCentre);
                         bool atBase = Mathf.Abs(rel.x) < V2Campaign.BaseHalf + 2.5f && Mathf.Abs(rel.z) < V2Campaign.BaseHalf + 2.5f;
                         float now = Time.realtimeSinceStartup;
@@ -494,7 +497,9 @@ public static class V2CampaignCheck
                     if (!shots.Contains(baseShot)) { Shot(baseShot); wait = Time.realtimeSinceStartup + .6f; return; }
                     if (act)
                     {
-                        Note($"afternoon {day}: into the night from the base (ore left today {campaign.NodesLeft(V2Campaign.NodeKind.Ore)}, wallet {Wallet})");
+                        // Lamps are crafted (none are handed out after the tutorial night): a player makes them before going out.
+                        while (campaign.LampStock < 3 && campaign.TryCraftLamp()) Note("crafted a lamp before the night");
+                        Note($"afternoon {day}: into the night from the base (ore left today {campaign.NodesLeft(V2Campaign.NodeKind.Ore)}, lamps {campaign.LampStock}, wallet {Wallet})");
                         campaign.EnterNight();
                     }
                     return;

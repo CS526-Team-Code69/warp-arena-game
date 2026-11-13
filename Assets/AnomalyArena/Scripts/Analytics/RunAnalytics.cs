@@ -709,7 +709,9 @@ namespace AnomalyArena
         static string BuildLabel()
         {
             string guid = Application.buildGUID;
-            return string.IsNullOrEmpty(guid) ? Application.version : Application.version + "+" + guid.Substring(0, Mathf.Min(8, guid.Length));
+            string build = string.IsNullOrEmpty(guid) ? Application.version : Application.version + "+" + guid.Substring(0, Mathf.Min(8, guid.Length));
+            // One package serves every page (BuildEdition): the label says which one the row came from.
+            return build + (BuildEdition.IsAlpha ? "-alpha" : BuildEdition.IsCourseBuild ? "-beta" : "-full");
         }
 
         /// <summary>True for a page opened from this machine: localhost, 127.0.0.1, [::1], a host ending in .localhost or .test, or file://.

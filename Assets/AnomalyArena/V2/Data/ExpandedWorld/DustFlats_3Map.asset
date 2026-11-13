@@ -150,7 +150,7 @@ MonoBehaviour:
     radius: 6
   - centre: {x: -46, y: -40}
     radius: 7
-  - centre: {x: 56, y: 40}
+  - centre: {x: 55, y: 40}
     radius: 6
   - centre: {x: -10, y: 40}
     radius: 5

@@ -802,7 +802,7 @@ namespace AnomalyArena
             rooms[(int)room].level++;
             OnRoomLevelBought(room);
             Bought("room_upgrade", $"{room} level {rooms[(int)room].level}", room, cost.Value);
-            ui.Flash(ArenaText.Pair($"{RoomName(room)}升到 {rooms[(int)room].level} 级", $"{RoomName(room)} reached level {rooms[(int)room].level}"));
+            ui.Flash(ArenaText.Pair($"{RoomName(room)}升到了 {rooms[(int)room].level} 级", $"{RoomName(room)} upgraded to level {rooms[(int)room].level}"));
             return true;
         }
 
@@ -837,7 +837,7 @@ namespace AnomalyArena
             gm.progression.BuyLevel();
             Bought("player_level", $"level {gm.progression.Level}, armor {ArmorLevel}", CampaignRoom.Armament, cost.Value);
             ui.Flash(ArenaText.Pair($"装甲升到 {ArmorLevel} 级：最大生命 +{Mathf.RoundToInt(gm.progression.LastLevelHpGain)}、最大能量 +{Mathf.RoundToInt(gm.progression.LastLevelEnergyGain)}",
-                $"Armor level {ArmorLevel}: max HP +{Mathf.RoundToInt(gm.progression.LastLevelHpGain)}, max energy +{Mathf.RoundToInt(gm.progression.LastLevelEnergyGain)}"));
+                $"Armor upgraded to level {ArmorLevel}: max HP +{Mathf.RoundToInt(gm.progression.LastLevelHpGain)}, max energy +{Mathf.RoundToInt(gm.progression.LastLevelEnergyGain)}"));
             return true;
         }
 
@@ -918,7 +918,7 @@ namespace AnomalyArena
             if (!rules.sharedWeaponMk && target == null)
             {
                 V2Audio.Instance?.PlayUI(ArenaUiSound.Cancel);
-                ui.Flash(ArenaText.Pair("小手枪不能升级：先在武装区研究一把异常武器", "The pistol takes no Mk: research an anomaly weapon at the Armament Bay first"));
+                ui.Flash(ArenaText.Pair("小手枪不能升级型号。先在武装区研究一把异常武器。", "The pistol can't be upgraded. Research an anomaly weapon at the Armament Bay first."));
                 return false;
             }
             int before = NextMkFrom;
@@ -926,7 +926,7 @@ namespace AnomalyArena
             if (price == null)
             {
                 V2Audio.Instance?.PlayUI(ArenaUiSound.Cancel);
-                ui.Flash(ArenaText.Pair($"武器型号已经是合金能升到的最高级（Mk {before}）", $"The Mk is already the highest alloy buys (Mk {before})"));
+                ui.Flash(ArenaText.Pair($"武器型号已经到 Mk {before}，用合金最多只能升到这一级", $"Your weapons are already at Mk {before}, the highest alloy can buy"));
                 return false;
             }
             if (!TrySpend(price.Value)) return false;
@@ -948,7 +948,7 @@ namespace AnomalyArena
         {
             var weapons = gm ? gm.runWeapons : null;
             if (!NewWeaponForSale || !weapons || !gm.waves) return false;
-            if (WeaponSlotsFull) { ui.Flash(ArenaText.Pair("武器栏已满：没有空位放新武器", "Every weapon slot is taken: no room for a new weapon")); return false; }
+            if (WeaponSlotsFull) { ui.Flash(ArenaText.Pair("武器栏都满了，放不下新武器", "All your weapon slots are full; there's no room for a new weapon")); return false; }
             var cost = NewWeaponCost;
             if (!CanAfford(cost)) { TrySpend(cost); return false; }
             RunWeapon got = null;
@@ -974,10 +974,10 @@ namespace AnomalyArena
                         Bought("new_weapon", $"{weapon.form} Mk{weapon.mk} {(weapon.IsAuto ? "auto" : "hand")}{(pistol != null ? ", replaces Pistol" : "")}", CampaignRoom.Armament, cost);
                         V3WorldAudio.Instance?.Play(ArenaWorldCue.LevelUp, BaseCentre);
                         message = weapon.IsAuto
-                            ? ArenaText.Pair($"研究出新的异常武器：{weapon.FormName}（{weapon.MkLabel}，自动武器栏）", $"New anomaly weapon researched: {weapon.FormName} ({weapon.MkLabel}, auto slot)")
+                            ? ArenaText.Pair($"研究出了新的异常武器：{weapon.FormName}（{weapon.MkLabel}），已装进自动武器栏", $"New anomaly weapon researched: {weapon.FormName} ({weapon.MkLabel}), now in an auto slot")
                             : pistol != null
-                                ? ArenaText.Pair($"研究出新的异常武器：{weapon.FormName}（{weapon.MkLabel}），换下了{pistol.FormName}", $"New anomaly weapon researched: {weapon.FormName} ({weapon.MkLabel}); it replaces the {pistol.FormName}")
-                                : ArenaText.Pair($"研究出新的异常武器：{weapon.FormName}（{weapon.MkLabel}，手持武器栏）", $"New anomaly weapon researched: {weapon.FormName} ({weapon.MkLabel}, hand slot)");
+                                ? ArenaText.Pair($"研究出了新的异常武器：{weapon.FormName}（{weapon.MkLabel}），换下了{pistol.FormName}", $"New anomaly weapon researched: {weapon.FormName} ({weapon.MkLabel}), in place of the {pistol.FormName}")
+                                : ArenaText.Pair($"研究出了新的异常武器：{weapon.FormName}（{weapon.MkLabel}），已放进空着的手", $"New anomaly weapon researched: {weapon.FormName} ({weapon.MkLabel}), now in your free hand");
                         break;
                     }
                 }
@@ -989,7 +989,7 @@ namespace AnomalyArena
             }
             if (got == null)
             {
-                ui.Flash(ArenaText.Pair("暂时没有可研究的新武器", "No new weapon can be researched right now"));
+                ui.Flash(ArenaText.Pair("现在没有能研究的新武器", "There's no new weapon to research right now"));
                 return false;
             }
             AnnounceWeapon(got, message);
@@ -1085,8 +1085,8 @@ namespace AnomalyArena
             var rocket = weapons.Hand[hand];
             Bought("new_weapon", old != null ? $"RocketLauncher Mk1 hand, replaces {old.form}" : "RocketLauncher Mk1 hand", CampaignRoom.Armament, RocketCost);
             V3WorldAudio.Instance?.Play(ArenaWorldCue.LevelUp, BaseCentre);
-            AnnounceWeapon(rocket, old != null ? ArenaText.Pair($"解锁火箭筒（异常武器，Mk 1）：换下了{old.FormName}", $"Rocket launcher unlocked (an anomaly weapon, Mk 1): it replaces the {old.FormName}")
-                : ArenaText.Pair("解锁火箭筒（异常武器，Mk 1）：放进了空着的手", "Rocket launcher unlocked (an anomaly weapon, Mk 1): it goes into the free hand"));
+            AnnounceWeapon(rocket, old != null ? ArenaText.Pair($"解锁了火箭筒（异常武器，Mk 1），换下了{old.FormName}", $"Rocket Launcher unlocked (an anomaly weapon, Mk 1), in place of the {old.FormName}")
+                : ArenaText.Pair("解锁了火箭筒（异常武器，Mk 1），已放进空着的手", "Rocket Launcher unlocked (an anomaly weapon, Mk 1), now in your free hand"));
             return true;
         }
 
@@ -1221,8 +1221,8 @@ namespace AnomalyArena
             bool atDoor = Query.Flat(p.Position - DoorPoint).magnitude < 3.2f;
             if (atDoor && ShieldLevel > 0)
             {
-                prompt = CanTopUpShield ? ArenaText.Pair($"按 {ArenaKeys.InteractKey} 紧急补充护盾（能量 {rules.ShieldTopUpCost(Day)}）", $"{ArenaKeys.InteractKey}: emergency shield top-up ({rules.ShieldTopUpCost(Day)} energy)")
-                    : ArenaText.Pair("护盾补充冷却中", "Shield top-up cooling down");
+                prompt = CanTopUpShield ? ArenaText.Pair($"按 {ArenaKeys.InteractKey} 紧急补充护盾（消耗 {rules.ShieldTopUpCost(Day)} 能量）", $"Press {ArenaKeys.InteractKey} for an emergency shield top-up ({rules.ShieldTopUpCost(Day)} energy)")
+                    : ArenaText.Pair("护盾补充还在冷却", "The shield top-up is still cooling down");
                 if (EPressed && !TryTopUpShield()) ui.Flash(ArenaText.Pair("能量不够，或护盾已满", "Not enough energy, or the shield is full"));
             }
             else prompt = "";

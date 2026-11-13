@@ -313,7 +313,8 @@ namespace AnomalyArena
                 // Since 2026-11-06 ordinary enemies (the basics in EnemyRoles) show only their bar, so the name no longer covers the
                 // model; specials, elites and bosses keep their name. Status words (Chanted, Marked) still show on any enemy.
                 string kind = enemy.definition ? KindName(enemy.definition.kind) : "";
-                bool named = showOrdinaryEnemyNames || enemy.IsBoss || enemy.IsSpecial;
+                // The English builds in whitebox name every enemy's kind (OrdinaryNamesShown): there the bodies are plain shapes.
+                bool named = showOrdinaryEnemyNames || OrdinaryNamesShown(!Art.Enabled, BuildEdition.Current) || enemy.IsBoss || enemy.IsSpecial;
                 string name = enemy.IsBoss ? enemy.definition.kind == EnemyKind.Hollow ? ArenaText.Pair("纳什先知", "THE NASH PROPHET") : ArenaText.Pair("暴虐君王", "THE TYRANT KING")
                     : enemy.Elite ? kind + " · " + ArenaText.Text("ui.elite") + (enemy.Affix != ElementKind.None ? " · " + ArenaTerms.Element(enemy.Affix) : "") : named ? kind : "";
                 Color nameColor = enemy.IsBoss || enemy.Elite ? Color.white : CommonNameColor;
@@ -368,6 +369,11 @@ namespace AnomalyArena
         }
 
         static readonly Color CommonNameColor = new(.86f, .89f, .94f, .92f);
+
+        /// <summary>Whether ordinary enemies (the basics) name their kind above their bar: on the course's English builds (BuildEdition) in
+        /// whitebox, where every body is a plain shape and the name says what it is. The whole game (the Chinese page, the editor) keeps
+        /// names to specials, elites and bosses, so they do not cover the models.</summary>
+        public static bool OrdinaryNamesShown(bool whitebox, BuildEdition.Edition edition) => whitebox && edition != BuildEdition.Edition.Full;
         static readonly string[] kindNames = new string[Enum.GetValues(typeof(EnemyKind)).Length];
         static bool kindNamesChinese;
 
@@ -402,39 +408,65 @@ namespace AnomalyArena
         /// <summary>Danger marker: pulsing purple, bold and larger than the other edge notices.</summary>
         void PlaceHoleEdge(UnityEngine.UI.Text label, Vector3 world, Camera cam, string value)
         {
-            PlaceEdge(label, world, cam, value, false);
+            PlaceEdge(label, world, cam, value, false, holeEdgeScale * 1.08f); // at its largest pulse
             float pulse = .5f + .5f * Mathf.Sin(Time.unscaledTime * holeEdgePulsePerSecond * Mathf.PI * 2f);
             label.color = Color.Lerp(holeEdgeColor, holeEdgeGlow, pulse);
             label.fontStyle = FontStyle.Bold;
             label.rectTransform.localScale = Vector3.one * holeEdgeScale * (1f + .08f * pulse);
         }
 
-        void PlaceEdge(UnityEngine.UI.Text label, Vector3 world, Camera cam, string value, bool bright)
+        /// <summary>An edge notice pointing at world; scale is how large the notice is drawn (the hole's is larger), so that all of it
+        /// stays inside the notice area.</summary>
+        void PlaceEdge(UnityEngine.UI.Text label, Vector3 world, Camera cam, string value, bool bright, float scale = 1f)
         {
             label.fontStyle = FontStyle.Normal;
             label.rectTransform.localScale = Vector3.one;
-            Vector3 screen = cam.WorldToScreenPoint(world);
-            if (screen.z < 0f) { screen.x = Screen.width - screen.x; screen.y = Screen.height - screen.y; }
             float unit = canvasRect.lossyScale.x > 0f ? canvasRect.lossyScale.x : 1f;
-            screen.x = Mathf.Clamp(screen.x, 110f * unit, Screen.width - 110f * unit);
-            screen.y = Mathf.Clamp(screen.y, edgeBottomInset * unit, Screen.height - edgeTopInset * unit);
+            // The notice sits where the line from the middle of the notice area toward the place leaves the area, so it is on the edge that
+            // faces the place, and its arrow points out through that edge.
+            // The insets bound the whole notice, not only its middle: half its drawn height is kept clear above and below.
+            float half = label.rectTransform.rect.height * .5f * Mathf.Max(1f, scale);
+            var area = new Rect(110f * unit, (edgeBottomInset + half) * unit, Mathf.Max(1f, Screen.width - 220f * unit),
+                Mathf.Max(1f, Screen.height - (edgeBottomInset + edgeTopInset + 2f * half) * unit));
+            Vector2 at = EdgePoint(FacingScreenPoint(cam, world), area, out bool onSide);
+            string arrow = onSide ? at.x < area.center.x ? "◀ " : "▶ " : at.y < area.center.y ? "▼ " : "▲ ";
             // Notices that point the same way stack instead of drawing over each other.
             float step = 30f * unit;
             for (int attempt = 0; attempt < 6; attempt++)
             {
                 bool clash = false;
-                foreach (var p in placedEdges) if (Mathf.Abs(p.x - screen.x) < 170f * unit && Mathf.Abs(p.y - screen.y) < step * .9f) { clash = true; break; }
+                foreach (var p in placedEdges) if (Mathf.Abs(p.x - at.x) < 170f * unit && Mathf.Abs(p.y - at.y) < step * .9f) { clash = true; break; }
                 if (!clash) break;
-                screen.y += screen.y > Screen.height * .5f ? -step : step;
+                at.y += at.y > Screen.height * .5f ? -step : step;
             }
-            placedEdges.Add(new Vector2(screen.x, screen.y));
-            RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, screen, null, out var local);
+            placedEdges.Add(at);
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, at, null, out var local);
             label.rectTransform.position = canvasRect.TransformPoint(local);
-            string arrow = Mathf.Abs(screen.x - Screen.width * .5f) > Mathf.Abs(screen.y - Screen.height * .5f)
-                ? screen.x < Screen.width * .5f ? "◀ " : "▶ " : screen.y < Screen.height * .5f ? "▼ " : "▲ ";
             if (label.text != arrow + value) label.text = arrow + value;
             label.color = bright ? V2Hud.ElementColors[6] : new Color(.63f, .67f, .76f);
             label.gameObject.SetActive(true);
+        }
+
+        /// <summary>The screen point of world, for a notice that points at it. A perspective camera mirrors a point behind it. An
+        /// orthographic camera (the game's 2.5D view) does not: its screen point is right on either side of the camera, and mirroring it
+        /// turned a far place on the camera's side round to the opposite edge.</summary>
+        public static Vector2 FacingScreenPoint(Camera cam, Vector3 world)
+        {
+            Vector3 screen = cam.WorldToScreenPoint(world);
+            if (screen.z < 0f && !cam.orthographic) { screen.x = cam.pixelWidth - screen.x; screen.y = cam.pixelHeight - screen.y; }
+            return new Vector2(screen.x, screen.y);
+        }
+
+        /// <summary>Where the line from the middle of area toward point leaves area (point itself while it lies inside), and whether it
+        /// leaves through the left or the right side rather than the top or the bottom.</summary>
+        public static Vector2 EdgePoint(Vector2 point, Rect area, out bool onSide)
+        {
+            Vector2 middle = area.center, way = point - middle;
+            onSide = Mathf.Abs(way.x) * area.height >= Mathf.Abs(way.y) * area.width;
+            float reach = 1f;
+            if (Mathf.Abs(way.x) > 1e-4f) reach = Mathf.Min(reach, ((way.x > 0f ? area.xMax : area.xMin) - middle.x) / way.x);
+            if (Mathf.Abs(way.y) > 1e-4f) reach = Mathf.Min(reach, ((way.y > 0f ? area.yMax : area.yMin) - middle.y) / way.y);
+            return middle + way * reach;
         }
     }
 }

@@ -93,15 +93,18 @@ namespace AnomalyArena
             damageAge = new float[n];
             damageColor = new Color[n];
             for (int i = 0; i < n; i++) { damageAge[i] = 1f; damageLabels[i].gameObject.SetActive(false); }
-            if (themeBackground) themeBackground.texture = art ? art.themeBackground : null;
+            // The Alpha page is whitebox only (BuildEdition): it does not draw the title picture even under the whitebox cover.
+            if (themeBackground) themeBackground.texture = art && !Art.WhiteboxOnly ? art.themeBackground : null;
             // 2026-11-10: in whitebox the title art behind the title and the first weapon pick is covered by flat blocks.
             WhiteboxBackdrop.Attach(themeBackground);
             SimplifyTitle();
             AddTitleEntries();
             AddTitleLanguageOption();
             AddTitleSettingsButton();
+            ShowTitleEntries(); // the Alpha page's title hides what it does not offer
+            // The collection: on every page but the Alpha's, whose title offers only Start Game and the tutorial.
+            if (!BuildEdition.IsAlpha) gameObject.AddComponent<ArenaCodex>().Initialize(this);
             KeepScreensOverTheRun();
-            gameObject.AddComponent<ArenaCodex>().Initialize(this);
             PlaceControlsTables();
             V2SlotFeedback.Add(handSlots, V2SlotFeedback.Kind.Hand);
             V2SlotFeedback.Add(autoSlots, V2SlotFeedback.Kind.Auto);
@@ -175,7 +178,7 @@ namespace AnomalyArena
         /// <summary>Paths under the title's Content that take Start's skin (V5MenuSkin), and those that take the plain button's.</summary>
         public static readonly string[] TitlePrimaryButtons =
             { TitleStoryButton, TitleOpenButton, TitleTutorialButton, MapSelect + "/MapDunes", MapSelect + "/MapRuins", MapSelect + "/MapRandom" };
-        public static readonly string[] TitleSecondaryButtons = { TitleSettingsButton, TitleLanguageButton, MapSelect + "/MapBack" };
+        public static readonly string[] TitleSecondaryButtons = { TitleSettingsButton, TitleLanguageButton, MapSelect + "/MapBack", ArenaCodex.ButtonName };
 
         // Heights in canvas units: the two starts as tall as the saved Start (76), the tutorial and the map pick's choices a little lower,
         // so the starts stay the first thing the eye finds. The art switch and the back button keep the saved art switch's height.
@@ -186,7 +189,10 @@ namespace AnomalyArena
         // wide as the button.
         const int EntrySmallest = 18, LanguageLargest = 24, LanguageSmallest = 14, MapLineSize = 26;
 
-        UnityEngine.UI.Text titleStoryLabel, titleOpenLabel, titleTutorialLabel, titleLanguageLabel, mapLine;
+        UnityEngine.UI.Text titleStoryLabel, titleOpenLabel, titleTutorialLabel, titleLanguageLabel, mapLine, buildLabel;
+        // The line naming the page's build at the foot of the title.
+        const int BuildLabelSize = 22;
+        const float BuildLabelBottom = 26f;
         readonly UnityEngine.UI.Text[] mapLabels = new UnityEngine.UI.Text[4];
         RectTransform titleStory, titleOpen, titleTutorial, titleArt, titleLanguage, mapSelect;
         int entryLargest = 36;
@@ -223,7 +229,9 @@ namespace AnomalyArena
             var tutorial = CopyAsPlainButton(start, TitleTutorialButton, () =>
             {
                 V2Audio.Instance?.PlayUI(ArenaUiSound.Select);
-                V2Tutorial.ShowStory(appliedFont);
+                // The Alpha is the open mode alone (BuildEdition): its tutorial is the open mode's pages.
+                if (BuildEdition.IsAlpha) V2Tutorial.Show(appliedFont);
+                else V2Tutorial.ShowStory(appliedFont);
             });
             tutorial.transform.SetSiblingIndex(titleOpen.GetSiblingIndex() + 1);
             titleTutorial = (RectTransform)tutorial.transform;
@@ -231,10 +239,33 @@ namespace AnomalyArena
 
             var stack = new System.Collections.Generic.List<(RectTransform part, float height)>
                 { (start, start.sizeDelta.y), (titleOpen, start.sizeDelta.y), (titleTutorial, TitleTutorialHeight) };
+            // The Alpha page has no story mode (BuildEdition): its entry leaves the stack and stays hidden.
+            if (BuildEdition.IsAlpha) stack.RemoveAt(0);
             // The art switch is not in the stack any more: the art mode is chosen in the settings (V2Hud.Settings.cs).
             LayStack(stack, gap, StackMiddle(content, start, stack, gap), start);
 
             AddMapSelect(content, start, gap);
+            AddBuildLabel(content);
+            if (BuildEdition.IsAlpha) start.gameObject.SetActive(false);
+        }
+
+        /// <summary>A small line at the foot of the title naming the build the page serves (BuildEdition), so the Alpha and the Beta
+        /// pages cannot be taken for each other.</summary>
+        void AddBuildLabel(RectTransform content)
+        {
+            buildLabel = new GameObject("BuildLabel", typeof(RectTransform), typeof(CanvasRenderer), typeof(UnityEngine.UI.Text)).GetComponent<UnityEngine.UI.Text>();
+            buildLabel.rectTransform.SetParent(content, false);
+            buildLabel.font = titleStoryLabel ? titleStoryLabel.font : null;
+            buildLabel.fontSize = BuildLabelSize;
+            buildLabel.alignment = TextAnchor.MiddleCenter;
+            buildLabel.color = new Color(.62f, .68f, .78f);
+            buildLabel.raycastTarget = false;
+            buildLabel.horizontalOverflow = HorizontalWrapMode.Overflow;
+            buildLabel.verticalOverflow = VerticalWrapMode.Overflow;
+            var rect = buildLabel.rectTransform;
+            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(.5f, 0f);
+            rect.anchoredPosition = new Vector2(0f, BuildLabelBottom);
+            rect.sizeDelta = new Vector2(640f, 32f);
         }
 
         /// <summary>The open mode's map pick, made hidden with the title: a line saying what to pick, then the Dunes, the Ruins and a random
@@ -303,7 +334,12 @@ namespace AnomalyArena
         void ShowTitleEntries()
         {
             foreach (var part in new[] { titleStory, titleOpen, titleTutorial, titleSettings, titleLanguage })
-                if (part && part.gameObject.activeSelf == mapSelectOpen) part.gameObject.SetActive(!mapSelectOpen);
+            {
+                // The Alpha page (BuildEdition) offers only Start Game and Tutorial: no story mode, no Language, no Settings.
+                bool alphaHides = BuildEdition.IsAlpha && (part == titleStory || part == titleSettings || part == titleLanguage);
+                bool show = !mapSelectOpen && !alphaHides;
+                if (part && part.gameObject.activeSelf != show) part.gameObject.SetActive(show);
+            }
             if (mapSelect && mapSelect.gameObject.activeSelf != mapSelectOpen) mapSelect.gameObject.SetActive(mapSelectOpen);
         }
 
@@ -399,7 +435,9 @@ namespace AnomalyArena
             bool refit = titleStoryLabel.font != titleFittedFont;
             titleFittedFont = titleStoryLabel.font;
             TitleLabel(titleStoryLabel, ArenaText.Pair("开始游戏-剧情模式", "Start Game - Story Mode"), entryLargest, EntrySmallest, refit);
-            TitleLabel(titleOpenLabel, ArenaText.Pair("开始游戏-开放模式", "Start Game - Open Mode"), entryLargest, EntrySmallest, refit);
+            // The Alpha page has the open mode alone, so its entry is simply Start Game.
+            TitleLabel(titleOpenLabel, BuildEdition.IsAlpha ? ArenaText.Pair("开始游戏", "Start Game") : ArenaText.Pair("开始游戏-开放模式", "Start Game - Open Mode"),
+                entryLargest, EntrySmallest, refit);
             TitleLabel(titleTutorialLabel, ArenaText.Pair("教学", "Tutorial"), entryLargest, EntrySmallest, refit);
             // The same word in both languages on purpose.
             TitleLabel(titleLanguageLabel, ArenaText.Pair("Language", "Language"), LanguageLargest, LanguageSmallest, refit);
@@ -407,7 +445,14 @@ namespace AnomalyArena
             if (mapLine)
             {
                 if (mapLine.font != titleFittedFont && titleFittedFont) mapLine.font = titleFittedFont;
-                SetText(mapLine, ArenaText.Pair("开放模式 · 选择地图", "Open Mode · Choose a Map"));
+                SetText(mapLine, BuildEdition.IsAlpha ? ArenaText.Pair("选择地图", "Choose a Map") : ArenaText.Pair("开放模式 · 选择地图", "Open Mode · Choose a Map"));
+            }
+            if (buildLabel)
+            {
+                if (buildLabel.font != titleFittedFont && titleFittedFont) buildLabel.font = titleFittedFont;
+                // Only the course's English builds name themselves; the whole game (the Chinese page) shows no line.
+                SetText(buildLabel, BuildEdition.IsAlpha ? ArenaText.Pair("Alpha 版本 · 白盒", "Alpha Build · Whitebox")
+                    : BuildEdition.IsCourseBuild ? ArenaText.Pair("Beta 版本", "Beta Build") : "");
             }
             string[] mapWords =
             {
@@ -785,42 +830,42 @@ namespace AnomalyArena
                     // V2 day campaign: the game has no cards any more, so its text names none.
                     SetBody(screen.body, s.hideXp
                         ? ArenaText.Pair("选择一种熟悉的外形。拿到之前不知道是哪种攻击方式和特性；选中的那一刻揭晓：游戏暂停，显示这件武器的说明。\n手动瞄准，利用地形。", "Pick one familiar form. Its attack and trait are unknown until you take it; the moment you choose, the game pauses and shows what the weapon does.\nAim manually; use the terrain.")
-                        : ArenaText.Pair("选择一种熟悉的外形。拿到之前不知道是哪种攻击方式和特性；选中的那一刻揭晓：游戏暂停，弹出武器卡。\n手动瞄准，利用地形。", "Pick one familiar form. Its attack and trait are unknown until you take it; the moment you choose, the game pauses and the weapon card appears.\nAim manually; use the terrain."));
+                        : ArenaText.Pair("选一种你熟悉的武器外形。它的攻击方式和特性要拿到手才知道：选中的那一刻，游戏会暂停并弹出它的武器卡。\n需要手动瞄准，记得利用地形。", "Pick a weapon form you know. Its attack and trait stay hidden until you take it: the moment you choose, the game pauses and its weapon card appears.\nAim by hand, and use the terrain."));
                     break;
                 case ArenaUiState.Armory:
                     cards = s.armoryOffers;
-                    SetBody(screen.body, ArenaText.Pair("三选一：一件新武器，或把已持有的武器强化到更高型号（攻击方式、特性和已有强化都不变）。也可以跳过。新武器替换掉旧武器时，旧武器身上的强化会一起没了。", "Pick one of three: a new weapon, or a higher Mk for one you hold (its attack, trait and upgrades stay). You may skip. A new weapon that replaces an old one leaves the old one's upgrades behind.") + WalkHint());
+                    SetBody(screen.body, ArenaText.Pair("三选一：拿一件新武器，或者把手上的某把武器升到更高型号（攻击方式、特性和已有的强化都不变）。也可以跳过。注意，新武器换下旧武器时，旧武器身上的强化会一起消失。", "Pick one of three: a new weapon, or a higher Mk for a weapon you hold (its attack, trait and upgrades stay). You can also skip. If a new weapon replaces an old one, the old one's upgrades go with it.") + WalkHint());
                     break;
                 case ArenaUiState.Draft:
                     cards = s.draftCards;
                     SetText(screen.heading, s.isGreaterReward ? ArenaText.Text("ui.greater.heading")
                         : s.hideXp ? ArenaText.Pair($"升级 {s.draftIndex} / {Mathf.Max(1, s.draftCount)}", $"UPGRADE {s.draftIndex} / {Mathf.Max(1, s.draftCount)}")
                         : ArenaText.Text("ui.draft.counter", s.draftIndex, Mathf.Max(1, s.draftCount)));
-                    SetBody(screen.body, s.isGreaterReward ? ArenaText.Pair("从三个高阶虚空技能里选一个（可以不选），没有后续升级。按 " + ArenaKeys.SkillKeys + " 选择。", "Pick one of three Greater Void skills (or none); they have no further levels. " + ArenaKeys.SkillKeys + " select.")
+                    SetBody(screen.body, s.isGreaterReward ? ArenaText.Pair("从三个高阶虚空技能里选一个，也可以都不要。它们没有后续等级。按 " + ArenaKeys.SkillKeys + " 选择。", "Pick one of three Greater Void skills, or none. They have no further levels. Press " + ArenaKeys.SkillKeys + " to choose.")
                         : s.hideXp ? ArenaText.Pair("三选一。按 " + ArenaKeys.SkillKeys + " 选择；R 重抽三项（每波一次）。", "Pick one of three. " + ArenaKeys.SkillKeys + " select; R rerolls all three (once per wave).") + WalkHint()
-                        : ArenaText.Pair("三张卡每种一张：属性卡、武器卡（给一把已经揭晓的武器一个还没拿过的强化方向）、技能卡（一个新技能，或者给已有技能升级；卡的颜色代表它给的等级）。按 " + ArenaKeys.SkillKeys + " 选择；R 重抽三张（每波一次）。", "Three cards, one of each: a stat card, a weapon card (an upgrade direction a revealed weapon has not taken yet) and a skill card (a new skill, or a higher level for one you own; its colour shows the level it gives). " + ArenaKeys.SkillKeys + " select; R rerolls all three (once per wave).") + WalkHint());
+                        : ArenaText.Pair("这三张卡分别是属性卡、武器卡和技能卡。武器卡给一把已揭晓的武器加一个还没有的强化方向；技能卡学一个新技能，或者给已有的技能升级，卡的颜色代表它给的等级。按 " + ArenaKeys.SkillKeys + " 选择，按 R 重抽三张（每波一次）。", "These are a stat card, a weapon card and a skill card. The weapon card gives a revealed weapon an upgrade direction it doesn't have yet; the skill card teaches a new skill or raises one you own, and its colour shows the level it gives. Press " + ArenaKeys.SkillKeys + " to choose, or R to reroll all three (once per wave).") + WalkHint());
                     if (screen.reroll) screen.reroll.interactable = s.rerolls > 0;
                     SetText(screen.rerollLabel, ArenaText.Text("ui.reroll.counter", s.rerolls));
                     break;
                 case ArenaUiState.LevelUp:
                     cards = s.draftCards;
                     SetText(screen.heading, ArenaText.Pair($"升级 · 选一张（还剩 {s.bankedDrafts} 次）", $"LEVEL UP · PICK ONE ({s.bankedDrafts} LEFT)"));
-                    SetBody(screen.body, ArenaText.Pair($"按 {ArenaKeys.SkillKeys} 选择；R 重抽（每波一次）；Esc 稍后再选，战斗中按 {ArenaKeys.CardPickKey} 可再打开。", $"{ArenaKeys.SkillKeys} select; R rerolls (once per wave); Esc picks later, {ArenaKeys.CardPickKey} opens this again in combat."));
+                    SetBody(screen.body, ArenaText.Pair($"按 {ArenaKeys.SkillKeys} 选择，按 R 重抽（每波一次）。按 Esc 可以稍后再选，之后在战斗中按 {ArenaKeys.CardPickKey} 重新打开。", $"Press {ArenaKeys.SkillKeys} to choose, or R to reroll (once per wave). Esc saves the pick for later; press {ArenaKeys.CardPickKey} in combat to open it again."));
                     if (screen.reroll) screen.reroll.interactable = s.rerolls > 0;
                     SetText(screen.rerollLabel, ArenaText.Text("ui.reroll.counter", s.rerolls));
                     break;
                 case ArenaUiState.ReplaceWeapon:
                     RenderReplacement(screen, s.replacementSlots, s.replacementCount);
-                    SetBody(screen.body, ArenaText.Pair("选择要替换的武器。强化跟着武器走，武器被替换掉，它身上的强化也一起没了。", "Choose the weapon to replace. Upgrades stay with the weapon: replace it and they are gone with it."));
+                    SetBody(screen.body, ArenaText.Pair("选一把要换掉的武器。强化是跟着武器走的，被换掉的武器，身上的强化也会一起消失。", "Choose the weapon to replace. Upgrades belong to the weapon, so the one you replace takes its upgrades with it."));
                     break;
                 case ArenaUiState.ReplaceSkill:
                     RenderReplacement(screen, s.skillSlots, 3);
                     SetBody(screen.body, s.hideXp
-                        ? ArenaText.Pair("已有 3 个技能时再选择新技能，就要选一个旧的替换；新技能从它给的等级开始。", "With 3 skills already, taking a new one means replacing an old one; the new skill starts at the level it comes with.")
-                        : ArenaText.Pair("已有 3 个技能时再选择新技能，就要选一个旧的替换；新技能从这张卡给的等级开始。", "With 3 skills already, taking a new one means replacing an old one; the new skill starts at the level this card gives."));
+                        ? ArenaText.Pair("你已经有 3 个技能了，要学新技能，就得选一个旧技能替换掉。新技能从它带的等级开始。", "You already have 3 skills, so learning a new one means replacing an old one. The new skill starts at the level it comes with.")
+                        : ArenaText.Pair("你已经有 3 个技能了，要学新技能，就得选一个旧技能替换掉。新技能从这张卡给的等级开始。", "You already have 3 skills, so learning a new one means replacing an old one. The new skill starts at the level this card gives."));
                     break;
                 case ArenaUiState.Ready:
-                    SetBody(screen.body, ArenaText.Pair("整备选项已完成。点击「开始下一波」继续。", "Build choices complete. Click START NEXT WAVE to go on.") + WalkHint());
+                    SetBody(screen.body, ArenaText.Pair("这一轮的整备都选完了。点击「开始下一波」继续。", "All build choices are done. Click START NEXT WAVE to continue.") + WalkHint());
                     break;
                 case ArenaUiState.WeaponIntro:
                     SetText(screen.heading, s.weaponIntroTitle);
@@ -865,16 +910,16 @@ namespace AnomalyArena
         {
             (ArenaKeys.MoveKeys, ArenaText.Pair("移动", "Move"), ""),
             (ArenaText.Pair("鼠标", "Mouse"), ArenaText.Pair("瞄准", "Aim"), ""),
-            (ArenaText.Pair("左键", "Left mouse button"), ArenaText.Pair("使用当前手持武器", "Use the held weapon"),
+            (ArenaText.Pair("左键", "Left mouse button"), ArenaText.Pair("使用手上的武器", "Use the weapon in your hand"),
                 ArenaText.Pair("（按住蓄力或连射，取决于武器）", "(hold to charge or to keep firing, depending on the weapon)")),
-            (ArenaText.Pair("右键", "Right mouse button"), ArenaText.Pair("切换两个手持栏位", "Swap the two hand slots"), ""),
+            (ArenaText.Pair("右键", "Right mouse button"), ArenaText.Pair("在两只手的武器之间切换", "Switch between your two hand weapons"), ""),
             (ArenaKeys.SprintKey, ArenaText.Pair("冲刺", "Sprint"), ""),
             (ArenaKeys.SkillKeys, ArenaText.Pair("释放技能；面板打开时选对应的一项", "Cast a skill; pick that option while a panel is open"), ""),
-            (ArenaKeys.InteractKey, ArenaText.Pair("互动（能用的东西会在你站上去时提示）", $"Interact (a thing that takes {ArenaKeys.InteractKey} says so once you stand on it)"), ""),
-            ("Esc", ArenaText.Pair("暂停 / 继续；波次中的选卡面板上 = 稍后再选", "Pause / resume; on a mid-wave card panel, pick later"), ""),
+            (ArenaKeys.InteractKey, ArenaText.Pair("互动（站到能用的东西旁边时会有提示）", "Interact (a prompt shows when you stand next to something you can use)"), ""),
+            ("Esc", ArenaText.Pair("暂停 / 继续；在波次中的选卡面板上是“稍后再选”", "Pause / resume; on a mid-wave card panel, pick later"), ""),
             ("R", ArenaText.Pair("结算时重开；选卡面板打开时重抽", "Restart on the result screen; reroll while a card panel is open"), ""),
-            (ArenaKeys.CardPickKey, ArenaText.Pair("波次中有存着的选卡时打开（屏幕上会提示）", "During a wave, open a card pick you kept for later (the screen tells you)"), ""),
-            ("Tab", ArenaText.Pair("整备时收起面板，再按回到面板", "Put the build panel away in the build phase; press again to bring it back"), ""),
+            (ArenaKeys.CardPickKey, ArenaText.Pair("打开之前留着没选的卡（屏幕上会提示）", "Open a card pick you saved for later (the screen tells you)"), ""),
+            ("Tab", ArenaText.Pair("整备时收起面板，再按一次回到面板", "Put the build panel away between waves; press again to bring it back"), ""),
         };
 
         /// <summary>A V2 day campaign is running. It has no card picks and no build phase, so the pause table shows its
@@ -888,15 +933,15 @@ namespace AnomalyArena
         {
             (ArenaKeys.MoveKeys, ArenaText.Pair("移动", "Move"), ""),
             (ArenaText.Pair("鼠标", "Mouse"), ArenaText.Pair("瞄准", "Aim"), ""),
-            (ArenaText.Pair("左键", "Left mouse button"), ArenaText.Pair("使用当前手持武器", "Use the held weapon"),
+            (ArenaText.Pair("左键", "Left mouse button"), ArenaText.Pair("使用手上的武器", "Use the weapon in your hand"),
                 ArenaText.Pair("（按住蓄力或连射，取决于武器）", "(hold to charge or to keep firing, depending on the weapon)")),
-            (ArenaText.Pair("右键", "Right mouse button"), ArenaText.Pair("切换两个手持栏位", "Swap the two hand slots"), ""),
+            (ArenaText.Pair("右键", "Right mouse button"), ArenaText.Pair("在两只手的武器之间切换", "Switch between your two hand weapons"), ""),
             (ArenaKeys.SprintKey, ArenaText.Pair("冲刺", "Sprint"), ""),
             (ArenaKeys.SkillKeys, ArenaText.Pair("释放技能；面板打开时选对应的一项", "Cast a skill; pick that option while a panel is open"), ""),
             (ArenaText.Pair($"按住 {ArenaKeys.InteractKey}", $"Hold {ArenaKeys.InteractKey}"), ArenaText.Pair("采矿（夜里要站在矿灯的光里）", "Mine (at night, only in a lamp's light)"), ""),
             // Since 2026-11-06 the campaign's day is a morning, an afternoon and a night. The black hole's hidden gate is left out here: it
             // is a secret until it opens, and its own label says E.
-            (ArenaKeys.InteractKey, ArenaText.Pair("在基地门口：下午和夜里进入基地，上午用能量补充基地护盾", "At the base door: enter the base in the afternoon or at night; in the morning, top up its shield with energy"), ""),
+            (ArenaKeys.InteractKey, ArenaText.Pair("在基地门口：下午和夜里进入基地，上午花能量补充基地护盾", "At the base door: go inside in the afternoon or at night; in the morning, spend energy to top up its shield"), ""),
             (ArenaKeys.LampKey, ArenaText.Pair("放下一盏矿灯", "Set down a mining lamp"), ""),
             ("Esc", ArenaText.Pair("暂停 / 继续", "Pause / resume"), ""),
             ("R", ArenaText.Pair("结算时重开", "Restart on the result screen"), ""),
@@ -905,7 +950,8 @@ namespace AnomalyArena
         // The pause screen's table sits under the paused line; V5MenuSkin puts the buttons under PauseTableBottom.
         public const float PauseTableTop = 150f, PauseTableRow = 28f;
         public static float PauseTableBottom => PauseTableTop + ControlRows().Length * PauseTableRow;
-        public static readonly string[] PauseButtons = { "ResumeRun", "RestartRun", "HowToPlay", "Codex", "QuitToTitle" };
+        // The pause screen's row; a page without one of them (the Alpha has no collection) lays out the others.
+        public static readonly string[] PauseButtons = { "ResumeRun", "RestartRun", "HowToPlay", ArenaCodex.ButtonName, "QuitToTitle" };
         V2ControlsTable pauseControls;
         UnityEngine.UI.Text tutorialLabel;
         bool tutorialPending;
@@ -942,10 +988,14 @@ namespace AnomalyArena
                 // Without the menu skin (the Editor's Play button keeps the loaded scene): paused line, table, then the buttons in a row.
                 if (screen.body) PlaceTopLeft(screen.body.rectTransform, 44f, 100f, 1012f, 40f);
                 float left = 44f, top = PauseTableBottom + 24f;
-                foreach (var name in PauseButtons)
+                // The buttons the page has share the row's width (1012, as four of 237 with gaps of 18 did).
+                var row = new System.Collections.Generic.List<RectTransform>();
+                foreach (var name in PauseButtons) if (content.Find(name) is RectTransform button) row.Add(button);
+                float width = row.Count > 0 ? (1012f - 18f * (row.Count - 1)) / row.Count : 0f;
+                foreach (var button in row)
                 {
-                    if (content.Find(name) is RectTransform button) PlaceTopLeft(button, left, top, 186f, 65f);
-                    left += 204f;
+                    PlaceTopLeft(button, left, top, width, 65f);
+                    left += width + 18f;
                 }
                 if (screen.summary) PlaceTopLeft(screen.summary.rectTransform, 44f, top + 80f, 1012f, 60f);
             }
@@ -980,7 +1030,7 @@ namespace AnomalyArena
         }
 
         /// <summary>Build phase: Tab puts the panel away so the player can walk the empty arena (and step onto an open portal).</summary>
-        static string WalkHint() => ArenaText.Pair("\nTab 收起面板，在空场上走动；再按 Tab 回到面板。", "\nTab puts this panel away so you can walk the empty arena; Tab again brings it back.");
+        static string WalkHint() => ArenaText.Pair("\n按 Tab 可以收起面板，在空场上走动；再按一次 Tab 回到面板。", "\nPress Tab to put this panel away and walk the empty arena; press Tab again to bring it back.");
 
         // Since 2026-11-10 the build panel no longer explains the portal: the portal itself shows its E, and what entering costs, once
         // the player stands on it (V2WorldLabels).

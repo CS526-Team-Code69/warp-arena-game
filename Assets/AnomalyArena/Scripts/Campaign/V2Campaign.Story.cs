@@ -8,16 +8,17 @@ namespace AnomalyArena
     /// Story and the base visits. Day 0 (V2 doc section 2): a black "Day 0" card, then from the crash site west of the base (since
     /// 2026-11-06 as far from it as on the classic arena, not at the large map's edge) the walk to the base, taught step by step with the
     /// spotlight since 2026-11-10 (V2Campaign.Tutorial.cs), ends at the wreck and the base, whose system tells the main goal (Arrival). The
-    /// memory CG plays as Day 0 passes into night; the tutorial night teaches the lamp and dark matter, and (having no clock since
-    /// 2026-11-06) sends the player back to the base door to wait for dawn. The failed ignition and the Tyrant reuse the existing final
-    /// boss; the ending sends the ship home.
+    /// memory plays as Day 0 passes into night; the tutorial night teaches the lamp and dark matter, and (having no clock since
+    /// 2026-11-06) sends the player back to the base door to wait for dawn. The memory, the failed ignition before the Tyrant (the
+    /// existing final boss) and the ending that sends the ship home are story cutscenes staged in whitebox (V2Cutscene), played by
+    /// PlayCutscene.
     /// The lines are the drafts of the asset plan's appendix A (to be rewritten); lines without a recording show as subtitles
     /// only (D9: voice in English, subtitles per edition). T07 to T09 and D02 (2026-11-10) have none yet.
     /// </summary>
     public sealed partial class V2Campaign
     {
         // New lines go at the end: the voice table (CampaignArt.voices) names its takes by these ids.
-        public enum Line { T01, T02, T03, T04, T05, T06, M01, S01, S02, S03, S04, S05, S06, S07, S08, S09, S10, F01, F02, F03, E00, E01, E02, E03, C01, C02, C03, C04, C05, D01, K01, N01, N02, N03, B01, T07, T08, T09, D02, T10 }
+        public enum Line { T01, T02, T03, T04, T05, T06, M01, S01, S02, S03, S04, S05, S06, S07, S08, S09, S10, F01, F02, F03, E00, E01, E02, E03, C01, C02, C03, C04, C05, D01, K01, N01, N02, N03, B01, T07, T08, T09, D02, T10, C06, C07, C08, C09, F04, F05 }
 
         // Each line is an ArenaText.Pair, read when it is said: the English edition keeps only the English side.
         static (bool system, string text) LineText(Line id) => id switch
@@ -29,7 +30,7 @@ namespace AnomalyArena
             Line.T07 => (false, ArenaText.Pair("角落里有东西在发光，过去看看。", "Something's glowing in that corner. Let me take a look.")),
             Line.T08 => (false, ArenaText.Pair("一个武器箱……居然没摔坏。", "A weapon crate... still in one piece.")),
             Line.T09 => (false, ArenaText.Pair("这东西不属于这里。", "This doesn't belong here.")),
-            Line.D02 => (false, ArenaText.Pair("得去收集一些矿物，顺便看看还有没有没被破坏的武器箱。", "I need to gather some ore, and see if any weapon crates survived.")),
+            Line.D02 => (false, ArenaText.Pair("得去收集些矿物，顺便看看还有没有完好的武器箱。", "I need to gather some ore, and see if any weapon crates survived.")),
             // After the first weapon is taken from a crate (2026-11-10): only then does the game say the weapons here have changed.
             Line.T10 => (false, ArenaText.Pair("这个武器已经不一样了，应该是被异星能量改变了。我得注意这把武器的使用方式。", "This weapon isn't what it was. The alien energy must have changed it. I'd better watch how I use it.")),
             Line.T03 => (false, ArenaText.Pair("这块矿石……对修复飞船有大用。", "This ore... it'll go a long way toward fixing the ship.")),
@@ -59,6 +60,13 @@ namespace AnomalyArena
             Line.C03 => (false, ArenaText.Pair("醒来时，我已经落在这颗星球上，飞船烂了。", "When I woke, I'd crashed on this planet. The ship was wrecked.")),
             Line.C04 => (false, ArenaText.Pair("飞船自动部署了基地系统。它就是为这种意外准备的。", "The ship deployed its base system on its own. It was built for accidents like this.")),
             Line.C05 => (false, ArenaText.Pair("它会帮我离开这里。", "It will help me get out of here.")),
+            // The story cutscenes' lines that have no recording: the memory's M1, M2, M3 and M6, and the failed ignition's L3 and L4.
+            Line.C06 => (false, ArenaText.Pair("人类遭到了异星入侵。", "Humanity was invaded by aliens.")),
+            Line.C07 => (false, ArenaText.Pair("为了抗战，人类开始了大征兵。", "To fight back, humanity called a great conscription.")),
+            Line.C08 => (false, ArenaText.Pair("我叫 Felix，是外婆把我带大的。", "I'm Felix. My grandmother raised me.")),
+            Line.C09 => (false, ArenaText.Pair("部队的其他人，不知所踪。", "The rest of my unit went missing.")),
+            Line.F04 => (true, ArenaText.Pair("警告：暗物质能量波动正在扩散。", "Warning: dark matter energy surge spreading.")),
+            Line.F05 => (false, ArenaText.Pair("点火程序完成不了……它需要一股极其庞大的能量来驱动。", "The ignition can't finish... it needs an enormous source of energy.")),
             // Since 2026-11-06 the screen calls this stage the afternoon; the English line stays as recorded.
             Line.D01 => (true, ArenaText.Pair("下午。怪物在夜里会被异星力量增强，趁天黑前补充物资。", "Dusk. Alien power strengthens the monsters at night. Gather what you can before dark.")),
             Line.K01 => (true, ArenaText.Pair("生命体征消失。已将你带回基地，今晚的收获全部遗失。", "Vital signs lost. You have been brought back to the base. Tonight's haul is lost.")),
@@ -162,13 +170,21 @@ namespace AnomalyArena
             voiceSource.Play();
         }
 
+        // The memory's four sounds of the older set, in the order of art.memorySounds.
         static readonly CampaignSfx[] CgSounds = { CampaignSfx.MemoryCgTransition, CampaignSfx.WormholeTurbulence, CampaignSfx.ShipCrash, CampaignSfx.BaseDeploy };
 
-        /// <summary>The memory CG's sounds in order: the fade into the memory, the turbulence, the crash, the base deploying. The takes of
-        /// 2026-11-10 (CampaignAudio) play when they are installed; otherwise the 11-06 ones of art.memorySounds.</summary>
-        void PlayCgSound(int index)
+        /// <summary>A cutscene's sound: CampaignAudio's take when it is installed. Otherwise the memory's four sounds fall back to their
+        /// older takes in art.memorySounds, and the failed ignition to the weapon jam.</summary>
+        void PlayCutsceneSound(CampaignSfx sound)
         {
-            if (index >= 0 && index < CgSounds.Length && CampaignAudio.Play(CgSounds[index])) return;
+            if (CampaignAudio.Play(sound)) return;
+            if (sound == CampaignSfx.IgnitionFail)
+            {
+                V3WorldAudio.Instance?.Play(ArenaWorldCue.WeaponJam, ShipCentre);
+                return;
+            }
+
+            int index = System.Array.IndexOf(CgSounds, sound);
             var sounds = art ? art.memorySounds : null;
             if (sounds == null || index < 0 || index >= sounds.Length || !sounds[index]) return;
             if (!cgSoundSource) cgSoundSource = Source2D(gameObject);
@@ -281,41 +297,91 @@ namespace AnomalyArena
             return OutdoorVisit;
         }
 
-        // ───── CGs ─────
+        // ───── Story cutscenes ─────
+
+        V2Cutscene cutscene;
+        // The memory's five illustrated pictures (CampaignArt.memoryShots) are the moments of the storyboard's M4, M5, M6, M8 and M9.
+        static readonly string[] MemoryPictureShots = { "M4", "M5", "M6", "M8", "M9" };
+
+        /// <summary>
+        /// Plays a story cutscene on the CG screen shot by shot: each staged in whitebox (V2Cutscene), or, for a shot the art has a picture
+        /// for while pictures are on (PictureFor), that picture with its slow push-in. Each shot says its lines and plays its sounds at
+        /// their moments, and a cut clears the last shot's subtitle. A click or Esc skips everything left (V2CampaignUi.CgSkipped) and
+        /// stops the line being spoken. The stage and its picture are let go at the end.
+        /// </summary>
+        IEnumerator PlayCutscene(CutsceneShot[] shots, bool memory)
+        {
+            if (!cutscene) cutscene = V2Cutscene.Create();
+            ui.BeginCg(memory);
+            for (int i = 0; i < shots.Length && !ui.CgSkipped; i++)
+            {
+                var shot = shots[i];
+                var picture = PictureFor(shot.id, out var front);
+                if (picture)
+                {
+                    cutscene.Hide();
+                    ui.CgShot(picture, front, shot.seconds, i);
+                }
+                else
+                {
+                    cutscene.Show(shot);
+                    ui.CgLive(cutscene.Picture, shot.seconds);
+                }
+
+                ui.ClearSubtitle();
+                float clock = 0f;
+                int next = 0;
+                while (!ui.CgSkipped)
+                {
+                    while (next < shot.beats.Length && shot.beats[next].at <= clock) Beat(shot.beats[next++]);
+                    if (clock >= shot.seconds) break;
+                    yield return null;
+                    clock += Time.unscaledDeltaTime;
+                }
+            }
+
+            bool skipped = ui.CgSkipped;
+            cutscene.End();
+            ui.EndCg();
+            ui.ClearSubtitle();
+            if (!skipped) yield break;
+            if (voiceSource) voiceSource.Stop();
+            speechUntil = 0f;
+        }
+
+        void Beat(CutsceneBeat beat)
+        {
+            if (beat.line.HasValue) Say(beat.line.Value);
+            if (beat.sound.HasValue) PlayCutsceneSound(beat.sound.Value);
+            if (beat.whiteOut > 0f) ui.WhiteOut(beat.whiteOut);
+        }
+
+        /// <summary>The picture a shot shows in place of its whitebox staging while the illustrated art is on: the art's picture for the
+        /// shot's id, else, for the memory, the illustrated memory picture of that moment with its foreground layer. None in whitebox, and
+        /// none on the course's English builds (BuildEdition), whose cutscenes are always staged in whitebox.</summary>
+        Texture PictureFor(string id, out Texture front)
+        {
+            front = null;
+            if (!art || BuildEdition.IsCourseBuild || !Art.Enabled) return null;
+            if (art.cutscenePictures != null)
+                foreach (var entry in art.cutscenePictures)
+                    if (entry.picture && entry.shot == id) return entry.picture;
+            int i = System.Array.IndexOf(MemoryPictureShots, id);
+            if (i < 0 || art.memoryShots == null || i >= art.memoryShots.Length || !art.memoryShots[i]) return null;
+            if (art.memoryForegrounds != null && i < art.memoryForegrounds.Length) front = art.memoryForegrounds[i];
+            return art.memoryShots[i];
+        }
 
         IEnumerator MemoryCg()
         {
             Stage = CampaignStage.Story;
             gm.CampaignSetPhase(ArenaUiState.Story);
-            // CG01 as storyboarded on 11-04 (appendix B of the asset plan): the base view pales into the memory, then five illustrated
-            // shots of two layers, one line each. The CG pictures follow the art switch like the models: the whitebox plays the memory
-            // as subtitles over black.
-            bool pictures = art && Art.Enabled;
-            var shots = pictures ? art.memoryShots : null;
-            var fronts = pictures ? art.memoryForegrounds : null;
-            var plan = new (Line line, float seconds)[] { (Line.C01, 5f), (Line.C02, 6f), (Line.C03, 6f), (Line.C04, 7f), (Line.C05, 4f) };
+            // The base view pales into the memory, then its nine shots (V2Cutscene.Memory).
             ui.WhiteOut(1.2f);
-            PlayCgSound(0);
+            PlayCutsceneSound(CampaignSfx.MemoryCgTransition);
             float paleUntil = Time.realtimeSinceStartup + 1.2f;
             while (Time.realtimeSinceStartup < paleUntil) yield return null;
-            ui.BeginCg();
-            for (int shot = 0; shot < plan.Length; shot++)
-            {
-                if (ui.CgSkipped) break;
-                var (line, seconds) = plan[shot];
-                Texture picture = shots != null && shot < shots.Length ? shots[shot] : null;
-                Texture front = fronts != null && shot < fronts.Length ? fronts[shot] : null;
-                // Without a picture of its own the first shot (the soldier before the jump) shows the game's title art.
-                if (!picture && pictures && shot == 0 && gm.hud && gm.hud.v2Hud && gm.hud.v2Hud.art) picture = gm.hud.v2Hud.art.themeBackground;
-                ui.CgShot(picture, front, seconds, shot);
-                if (shot is >= 1 and <= 3) PlayCgSound(shot); // the turbulence, the crash, the base deploying
-                Say(line);
-                if (line == Line.C02) gm.Shake(.4f);
-                float until = Time.realtimeSinceStartup + seconds;
-                while (Time.realtimeSinceStartup < until && !ui.CgSkipped) yield return null;
-            }
-            ui.EndCg();
-            ui.ClearSubtitle();
+            yield return PlayCutscene(V2Cutscene.Memory, true);
             BeginTutorialNight();
         }
 
@@ -330,6 +396,8 @@ namespace AnomalyArena
             StartCoroutine(IgnitionSequence());
         }
 
+        /// <summary>The failed ignition (V2Cutscene.Ignition) while the run stands still with the player at the base door in daylight;
+        /// after it the Tyrant fight starts there.</summary>
         IEnumerator IgnitionSequence()
         {
             Stage = CampaignStage.Story;
@@ -338,33 +406,8 @@ namespace AnomalyArena
             ClearNight(false);
             ApplyDaylight();
             PlacePlayer(DoorPoint);
-            gm.CampaignSetPhase(ArenaUiState.Story, 1f);
-            CameraRig rig = null;
-            if (gm.cam && gm.cam.TryGetComponent(out rig)) rig.Focus(ShipCentre, .7f, 1.4f);
-            Say(Line.S10);
-            yield return new WaitForSecondsRealtime(LineSeconds(Line.S10, 2.8f));
-            // The failed ignition's own sound (2026-11-10, 5 s) runs under the sputter and the bursts; without it the jam sound marks the failure.
-            bool ignitionSound = CampaignAudio.Play(CampaignSfx.IgnitionFail);
-            Vector3 nozzle = ShipCentre + new Vector3(-7f, 1.4f, 0f);
-            for (float t = 0f; t < 3.2f; t += Time.unscaledDeltaTime)
-            {
-                if (Random.value < .5f) Fx.Pop(nozzle + Random.insideUnitSphere * .6f, Color.Lerp(new Color(.4f, .8f, 1f), new Color(1f, .6f, .2f), Random.value), Random.Range(.8f, 1.8f));
-                gm.Shake(.08f + t * .05f);
-                yield return null;
-            }
-            for (int i = 0; i < 4; i++) { Fx.Burst(nozzle, Vector3.left, new Color(1f, .5f, .2f), 12, 8f, 120f, .3f); gm.Shake(.3f); yield return new WaitForSecondsRealtime(.35f); }
-            if (!ignitionSound) V3WorldAudio.Instance?.Play(ArenaWorldCue.WeaponJam, ShipCentre);
-            Say(Line.F01);
-            yield return new WaitForSecondsRealtime(LineSeconds(Line.F01, 2.6f));
-            Say(Line.F02);
-            ui.Flash(ArenaText.Pair("暗物质核心缺失", "DARK MATTER CORE MISSING"), 2.5f);
-            yield return new WaitForSecondsRealtime(LineSeconds(Line.F02, 2.6f));
-            // The Tyrant's arrival (2026-11-10, 3 s) starts with the ground's shaking and runs under F03.
-            CampaignAudio.Play(CampaignSfx.TyrantArrive);
-            for (float t = 0f; t < 1.8f; t += Time.unscaledDeltaTime) { gm.Shake(.25f); yield return null; }
-            if (rig) rig.ClearFocus(.6f);
-            Say(Line.F03);
-            yield return new WaitForSecondsRealtime(LineSeconds(Line.F03, 1.2f));
+            gm.CampaignSetPhase(ArenaUiState.Story);
+            yield return PlayCutscene(V2Cutscene.Ignition, false);
             Stage = CampaignStage.FinalBoss;
             gm.CampaignFinalBoss();
         }
@@ -377,35 +420,12 @@ namespace AnomalyArena
             StartCoroutine(EndingSequence());
         }
 
-        /// <summary>The ending's sounds (2026-11-10): the core going in while the camera turns to the ship, the ignition as the ship lifts,
-        /// the jump with the white-out.</summary>
+        /// <summary>The ending (V2Cutscene.Ending) while the run stands still: the core rises, the ship lifts off and jumps home. Its last
+        /// shot turns the screen white, and the run is won while it is white.</summary>
         IEnumerator EndingSequence()
         {
-            gm.CampaignSetPhase(ArenaUiState.Story, 1f);
-            CameraRig rig = null;
-            if (gm.cam && gm.cam.TryGetComponent(out rig)) rig.Focus(ShipCentre, .7f, 1.4f);
-            CampaignAudio.Play(CampaignSfx.CoreInsert);
-            yield return new WaitForSecondsRealtime(1.2f);
-            Say(Line.E01);
-            fuelTank.sharedMaterial = gm.Mat(new Color(.85f, .4f, 1f));
-            yield return new WaitForSecondsRealtime(LineSeconds(Line.E01, 2.4f));
-            CampaignAudio.Play(CampaignSfx.IgnitionSuccess);
-            Vector3 start = shipRoot.position;
-            Vector3 nozzle = new(-7f, 1.4f, 0f);
-            for (float t = 0f; t < 4.5f; t += Time.unscaledDeltaTime)
-            {
-                float lift = t * t * .9f;
-                shipRoot.position = start + Vector3.up * lift;
-                if (Random.value < .7f) Fx.Pop(shipRoot.position + nozzle + Random.insideUnitSphere * .5f, new Color(.6f, .85f, 1f), Random.Range(1f, 2f));
-                gm.Shake(.12f);
-                if (t > 2f && t - Time.unscaledDeltaTime <= 2f) Say(Line.E02);
-                yield return null;
-            }
-            Say(Line.E03);
-            CampaignAudio.Play(CampaignSfx.WarpJump);
-            ui.WhiteOut(1.6f);
-            yield return new WaitForSecondsRealtime(2f);
-            if (rig) rig.ClearFocus(.1f);
+            gm.CampaignSetPhase(ArenaUiState.Story);
+            yield return PlayCutscene(V2Cutscene.Ending, false);
             EndingDone = true;
             gm.CampaignWin();
         }

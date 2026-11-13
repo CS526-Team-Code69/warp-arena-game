@@ -49,7 +49,8 @@ namespace AnomalyArena
         /// screen again (the panel holds the game's keys meanwhile, so its Esc does not resume).</summary>
         void AddPauseSettingsButton(Transform content)
         {
-            if (content.Find(PauseSettingsButton) || content.Find("RestartRun") is not { } restart) return;
+            // The Alpha page offers no settings (BuildEdition): it stays silent, at the volume's default.
+            if (BuildEdition.IsAlpha || content.Find(PauseSettingsButton) || content.Find("RestartRun") is not { } restart) return;
             var button = CopyAsPlainButton(restart, PauseSettingsButton, OpenSettings);
             pauseSettingsLabel = button.GetComponentInChildren<UnityEngine.UI.Text>(true);
             if (content is RectTransform panel)

@@ -71,8 +71,9 @@ namespace AnomalyArena
             Place(sub.rectTransform, new Vector2(.5f, 1f), new Vector2(0f, -74f), new Vector2(1100f, 52f), new Vector2(.5f, 1f));
             for (int i = 0; i < views.Length; i++) views[i] = BuildView(panel, i);
             hint = Label("Keys", panel, 16, Faint, TextAnchor.MiddleCenter);
-            Place(hint.rectTransform, new Vector2(.5f, 0f), new Vector2(0f, 24f), new Vector2(1100f, 28f), new Vector2(.5f, 0f));
-            var skipRect = Box("Leave", panel, new Vector2(.5f, 0f), new Vector2(0f, 62f), new Vector2(240f, 48f), new Color(.1f, .15f, .22f, 1f));
+            // The key hint runs along the bottom edge and the Leave button sits above it, so neither covers the other.
+            Place(hint.rectTransform, new Vector2(.5f, 0f), new Vector2(0f, 10f), new Vector2(1100f, 28f), new Vector2(.5f, 0f));
+            var skipRect = Box("Leave", panel, new Vector2(.5f, 0f), new Vector2(0f, 76f), new Vector2(240f, 48f), new Color(.1f, .15f, .22f, 1f));
             skipRect.GetComponent<Image>().raycastTarget = true;
             var skipEdge = skipRect.gameObject.AddComponent<Outline>();
             skipEdge.effectColor = new Color(.3f, .55f, .85f, .55f); skipEdge.effectDistance = new Vector2(2f, -2f);
@@ -152,8 +153,8 @@ namespace AnomalyArena
             iconsIllustrated = Art.Enabled;
             skip.gameObject.SetActive(canLeave);
             skipLabel.text = ArenaText.Pair("不拿", "LEAVE IT");
-            hint.text = canLeave ? ArenaText.Pair($"按 {ArenaKeys.SkillKeys} 或点击选择 · Esc 不拿", $"{ArenaKeys.SkillKeys} or click to take one · Esc to leave it")
-                : ArenaText.Pair($"按 {ArenaKeys.SkillKeys} 或点击选择", $"{ArenaKeys.SkillKeys} or click to take one");
+            hint.text = canLeave ? ArenaText.Pair($"按 {ArenaKeys.SkillKeys} 或点击选择，按 Esc 不拿", $"Press {ArenaKeys.SkillKeys} or click to take one, or Esc to leave it")
+                : ArenaText.Pair($"按 {ArenaKeys.SkillKeys} 或点击选择", $"Press {ArenaKeys.SkillKeys} or click to take one");
             openedAt = Time.unscaledTime;
             screen.gameObject.SetActive(true);
             screen.SetAsLastSibling();

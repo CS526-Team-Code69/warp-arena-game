@@ -326,7 +326,7 @@ namespace AnomalyArena
             snapshot.weaponIntroTitle=w.Label;
             // V2 day campaign (since 2026-11-06): a weapon unlocked at the base says it is an anomaly weapon; the starting Pistol is not one
             // and has no trait. The classic card keeps its two sections.
-            string anomaly=CampaignRunning&&w.IsAnomalous?$"\n<color=#c9a6ff>{ArenaText.Pair("异常武器：攻击方式和特性都与众不同，用过才知道它的厉害。","Anomaly weapon: its attack and its trait are out of the ordinary; use it to learn them.")}</color>":"";
+            string anomaly=CampaignRunning&&w.IsAnomalous?$"\n<color=#c9a6ff>{ArenaText.Pair("异常武器：攻击方式和特性都与众不同，多用几次才能摸清它的脾气。","Anomaly weapon: its attack and trait are out of the ordinary. Use it a few times to get a feel for it.")}</color>":"";
             string trait=w.IsAnomalous?$"\n\n<b><color=#ff8a73>{ArenaText.Pair("特性","Trait")}</color></b>\n{WeaponGuide.Backfire(w.form,w.variant)}":"";
             float wait=w.form==WeaponForm.ShieldRing&&w.variant==1?runWeapons.DrainShieldWait(w):0f;
             string drainWait=wait>0f?"\n"+ArenaText.Pair($"{wait:0.#} 秒没受到敌人攻击后生成能量盾",$"Energy Shield after {wait:0.#} s without an enemy hit"):"";
@@ -376,7 +376,7 @@ namespace AnomalyArena
             switch(command)
             {
                 case ArenaUiCommand.Start:if(RunPhase==ArenaUiState.Title)SetPhase(ArenaUiState.Loadout);break;
-                case ArenaUiCommand.StartCampaign:if(RunPhase==ArenaUiState.Title&&campaign)campaign.Begin();break;
+                case ArenaUiCommand.StartCampaign:if(RunPhase==ArenaUiState.Title&&campaign&&!BuildEdition.IsAlpha)campaign.Begin();break; // the Alpha has no story mode
                 case ArenaUiCommand.ChooseMap:
                     // A pick already reloading the scene takes no second one (a second reload would come on top of it).
                     if(RunPhase!=ArenaUiState.Title||index<0||index>=OpenModeMaps.Length||openModeStartPending)return;
@@ -468,7 +468,7 @@ namespace AnomalyArena
                     if(known)snapshot.bossImmunities+=(i==0?ArenaText.Pair("暴虐君王免疫：", "Tyrant King immunities: "):" · ")+ArenaTerms.Element(immune);
                 }
                 snapshot.banner=RunPhase==ArenaUiState.WaveIntro?ArenaText.Pair("第 "+snapshot.wave+" 波", "WAVE "+snapshot.wave):"";
-                snapshot.resultTitle=State==GameState.Won?ArenaText.Pair("即将重返地球", "EARTH IS WITHIN REACH"):ArenaText.Pair("探索者陨落", "EXPLORER LOST");snapshot.resultDetails=ArenaText.Pair($"第{snapshot.wave}波 · 等级{snapshot.level} · 消灭{snapshot.kills}个敌人\n在星际战场生存了{Elapsed:0}秒", $"Wave {snapshot.wave} · Level {snapshot.level} · {snapshot.kills} kills\n{Elapsed:0} seconds on the Interstellar Battlefield");
+                snapshot.resultTitle=State==GameState.Won?ArenaText.Pair("即将重返地球", "EARTH IS WITHIN REACH"):ArenaText.Pair("探索者陨落", "EXPLORER LOST");snapshot.resultDetails=ArenaText.Pair($"第 {snapshot.wave} 波 · 等级 {snapshot.level} · 消灭 {snapshot.kills} 个敌人\n在星际战场坚持了 {Elapsed:0} 秒", $"Wave {snapshot.wave} · Level {snapshot.level} · {snapshot.kills} kills\n{Elapsed:0} seconds on the Interstellar Battlefield");
                 if(runWeapons){for(int i=0;i<2;i++)WriteSlot(snapshot.handSlots[i],runWeapons.Hand[i],i==runWeapons.ActiveIndex);for(int i=0;i<snapshot.autoSlots.Length;i++)WriteSlot(snapshot.autoSlots[i],i<runWeapons.Auto.Length?runWeapons.Auto[i]:null,false);for(int i=0;i<snapshot.armoryOffers.Length;i++){var w=i<runWeapons.Offers.Length?runWeapons.Offers[i]:null;WriteArmoryOffer(snapshot.armoryOffers[i],w);}}
                 for(int i=0;i<snapshot.armoryOffers.Length;i++)
                 {
@@ -500,7 +500,7 @@ namespace AnomalyArena
         void WriteArmoryOffer(ArenaUiCard card,RunWeapon w)
         {
             card.available=w!=null;card.formIndex=w==null?-1:(int)w.form;
-            if(w==null){card.title=ArenaText.Pair("没有可提供的武器", "No eligible weapon");card.kind="";card.body="";return;}
+            if(w==null){card.title=ArenaText.Pair("没有可选的武器", "No weapon to offer");card.kind="";card.body="";return;}
             string hand=w.IsAuto?ArenaText.Pair("自动", "AUTO"):ArenaText.Pair("手持", "HAND");
             if(w.upgradeOf!=null)
             {
@@ -511,7 +511,7 @@ namespace AnomalyArena
                 return;
             }
             card.title=w.FormName;card.kind=hand;
-            card.body=ArenaText.Pair($"新武器 · 搭配未揭晓 · {w.MkLabel}（伤害 ×{runWeapons.MkDamage(w):0.##}）", $"New weapon · pairing unrevealed · {w.MkLabel} (damage ×{runWeapons.MkDamage(w):0.##})");
+            card.body=ArenaText.Pair($"一把新武器，搭配未揭晓。{w.MkLabel}，伤害 ×{runWeapons.MkDamage(w):0.##}。", $"A new weapon; its pairing is unrevealed. {w.MkLabel}, damage ×{runWeapons.MkDamage(w):0.##}.");
         }
         void WriteSlot(ArenaUiSlot slot,RunWeapon w,bool active)
         {

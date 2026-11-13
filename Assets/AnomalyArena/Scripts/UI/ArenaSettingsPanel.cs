@@ -194,7 +194,7 @@ namespace AnomalyArena
         // ───── Art mode ─────
 
         /// <summary>The title's art switch worked on the title only, and the enemy lab shows only the illustrated art.</summary>
-        static bool ArtSwitchable => GameManager.Instance && GameManager.Instance.RunPhase == ArenaUiState.Title && !Art.IllustratedOnly;
+        static bool ArtSwitchable => GameManager.Instance && GameManager.Instance.RunPhase == ArenaUiState.Title && !Art.IllustratedOnly && !Art.WhiteboxOnly;
 
         void ChooseArt(bool wanted)
         {
@@ -232,9 +232,9 @@ namespace AnomalyArena
                     // The row keeps waiting: the player presses another key, or Esc.
                     messageText = ArenaKeys.WhyRefused(key) switch
                     {
-                        KeyRefusal.MenuKey => ArenaText.Pair($"{ArenaKeys.Label(key)} 是菜单的固定键，不能用。换一个键，或按 Esc 取消。", $"{ArenaKeys.Label(key)} is one of the menus' fixed keys. Press another key, or Esc to give up."),
-                        KeyRefusal.SystemKey => ArenaText.Pair($"{ArenaKeys.Label(key)} 会被浏览器或系统占用，不能用。换一个键，或按 Esc 取消。", $"{ArenaKeys.Label(key)} is taken by the browser or the system. Press another key, or Esc to give up."),
-                        _ => ArenaText.Pair("这个键不能用。换一个键，或按 Esc 取消。", "That key cannot be used. Press another key, or Esc to give up."),
+                        KeyRefusal.MenuKey => ArenaText.Pair($"{ArenaKeys.Label(key)} 是菜单的固定键，不能用。换一个键，或按 Esc 取消。", $"{ArenaKeys.Label(key)} is one of the menus' fixed keys. Press another key, or Esc to cancel."),
+                        KeyRefusal.SystemKey => ArenaText.Pair($"{ArenaKeys.Label(key)} 会被浏览器或系统占用，不能用。换一个键，或按 Esc 取消。", $"{ArenaKeys.Label(key)} is taken by the browser or the system. Press another key, or Esc to cancel."),
+                        _ => ArenaText.Pair("这个键不能用。换一个键，或按 Esc 取消。", "That key can't be used. Press another key, or Esc to cancel."),
                     };
                     V2Audio.Instance?.PlayUI(ArenaUiSound.Cancel);
                     return result;
@@ -264,10 +264,10 @@ namespace AnomalyArena
             GameAction.MoveDown => ArenaText.Pair("向下移动", "Move down"),
             GameAction.MoveRight => ArenaText.Pair("向右移动", "Move right"),
             GameAction.Sprint => ArenaText.Pair("冲刺", "Sprint"),
-            GameAction.Interact => ArenaText.Pair("互动 · 采集", "Interact · mine"),
-            GameAction.Skill1 => ArenaText.Pair("技能 1 · 面板第 1 项", "Skill 1 · option 1"),
-            GameAction.Skill2 => ArenaText.Pair("技能 2 · 面板第 2 项", "Skill 2 · option 2"),
-            GameAction.Skill3 => ArenaText.Pair("技能 3 · 面板第 3 项", "Skill 3 · option 3"),
+            GameAction.Interact => ArenaText.Pair("互动 / 采集", "Interact / Mine"),
+            GameAction.Skill1 => ArenaText.Pair("技能 1 / 面板选项 1", "Skill 1 / Option 1"),
+            GameAction.Skill2 => ArenaText.Pair("技能 2 / 面板选项 2", "Skill 2 / Option 2"),
+            GameAction.Skill3 => ArenaText.Pair("技能 3 / 面板选项 3", "Skill 3 / Option 3"),
             GameAction.Lamp => ArenaText.Pair("放下矿灯", "Place a lamp"),
             GameAction.CardPick => ArenaText.Pair("打开待选的升级", "Open a pending pick"),
             _ => action.ToString(),
@@ -281,6 +281,10 @@ namespace AnomalyArena
             SetText(volumeLabel, ArenaText.Pair("音量", "Volume"));
             SetText(volumeValue, Mathf.RoundToInt(ArenaVolume.Master * 100f) + "%");
 
+            // The Alpha page is whitebox only (BuildEdition): it has no art row at all.
+            bool artRow = !Art.WhiteboxOnly;
+            foreach (Component part in new Component[] { artLabel, illustrated, whitebox, artNote })
+                if (part && part.gameObject.activeSelf != artRow) part.gameObject.SetActive(artRow);
             SetText(artLabel, ArenaText.Pair("画面", "Art mode"));
             SetText(illustratedLabel, ArenaText.Pair("插画", "Illustrated"));
             SetText(whiteboxLabel, ArenaText.Pair("白盒", "Whitebox"));
@@ -290,10 +294,10 @@ namespace AnomalyArena
             Mark(whiteboxMark, whiteboxLabel, !Art.Enabled);
             SetText(artNote, switchable ? ""
                 : Art.IllustratedOnly ? ArenaText.Pair("这个场景只有插画。", "This scene is illustrated only.")
-                : ArenaText.Pair("回到标题界面才能切换。", "Switch it on the title screen."));
+                : ArenaText.Pair("回到标题界面才能切换。", "You can only switch this on the title screen."));
 
             SetText(keysHeading, ArenaText.Pair("按键", "Keys"));
-            SetText(keysHint, listening >= 0 ? ArenaText.Pair("按下想用的键 · Esc 取消", "Press the key you want · Esc gives up")
+            SetText(keysHint, listening >= 0 ? ArenaText.Pair("按下你想用的键，按 Esc 取消", "Press the key you want, or Esc to cancel")
                 : ArenaText.Pair("点右边的键，再按下想用的键", "Click a key on the right, then press the key you want"));
             for (int i = 0; i < rowNames.Length; i++)
             {
@@ -304,8 +308,8 @@ namespace AnomalyArena
                 if (rowKeys[i].color != colour) rowKeys[i].color = colour;
             }
             SetText(message, messageText);
-            SetText(fixedNote, ArenaText.Pair("鼠标不能改：左键使用手持武器，右键切换两个手持栏位。Esc、Tab、R、空格和回车是菜单的固定键，也不能分给上面这些动作。",
-                "The mouse is fixed: the left button uses the held weapon, the right button swaps the two hand slots. Esc, Tab, R, Space and Enter are the menus' fixed keys and cannot be given to an action above."));
+            SetText(fixedNote, ArenaText.Pair("鼠标按键不能改：左键使用手上的武器，右键在两只手的武器之间切换。Esc、Tab、R、空格和回车是菜单专用键，不能分配给上面的动作。",
+                "Mouse buttons are fixed: left click uses the weapon in your hand, right click switches hands. Esc, Tab, R, Space and Enter are reserved for menus and can't be given to the actions above."));
             SetText(resetLabel, ArenaText.Pair("恢复默认按键", "RESET KEYS"));
             SetText(closeLabel, ArenaText.Pair("关闭  [Esc]", "CLOSE  [Esc]"));
         }

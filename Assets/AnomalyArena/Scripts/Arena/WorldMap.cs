@@ -191,7 +191,9 @@ namespace AnomalyArena
         void PlaceHolesAtAnchors()
         {
             // Null-safe since 2026-11-06: RestoreLayout (WorldMap.Campaign.cs) also calls this, possibly while the scene is going away.
-            foreach (var hole in holes) if (hole) hole.ResetHole();
+            // A map hole pulls a little faster than the player walks (BlackHole.PullOverWalk), in the open mode as in the story.
+            float pull = BlackHole.MapPull(PlayerWalkSpeed());
+            foreach (var hole in holes) if (hole) { hole.ResetHole(); hole.pullSpeed = pull; }
             if (layout && layout.holeAnchors != null && layout.holeAnchors.Length >= 2 && holes.Length >= 2 && holes[0] && holes[1])
             {
                 int first = UnityEngine.Random.Range(0, layout.holeAnchors.Length);
@@ -199,6 +201,14 @@ namespace AnomalyArena
                 holes[0].transform.position = new Vector3(layout.holeAnchors[first].x, 0, layout.holeAnchors[first].y);
                 holes[1].transform.position = new Vector3(layout.holeAnchors[second].x, 0, layout.holeAnchors[second].y);
             }
+        }
+
+        /// <summary>The player's walking speed (PlayerController.moveSpeed), 6 cells a second before there is a player.</summary>
+        static float PlayerWalkSpeed()
+        {
+            var gm = GameManager.Instance;
+            var player = gm && gm.player ? gm.player : FindAnyObjectByType<PlayerController>();
+            return player ? player.moveSpeed : 6f;
         }
 
         void OnDestroy()
@@ -635,7 +645,7 @@ namespace AnomalyArena
             GM.waves.TrackBoss(hollow);
             // Since 2026-11-10 the banner does not explain the portals: each shows its own E once the player stands on it.
             if (GM.hud) GM.hud.Banner(ArenaText.Pair("纳什先知", "THE NASH PROPHET"),
-                ArenaText.Pair("它的召唤物活着时，它不会受伤。", "While its summons live it takes no damage."));
+                ArenaText.Pair("只要它的召唤物还活着，它就不会受伤。", "As long as its summons are alive, it can't be hurt."));
             VoidTrialEntered?.Invoke();
         }
         /// <summary>Enemy lab ("player cannot die"): a fall sets the body back on safe ground instead of ending the run. In the trial

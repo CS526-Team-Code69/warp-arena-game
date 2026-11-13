@@ -24,6 +24,8 @@ namespace AnomalyArena
         public static bool DefaultIllustrated(bool startedInChinese) => startedInChinese;
 
         public static bool Enabled;
+        /// <summary>The page is the Alpha's (BuildEdition): whitebox only. The art switch does nothing there and the settings hide it.</summary>
+        public static bool WhiteboxOnly => BuildEdition.IsAlpha;
         /// <summary>The running scene shows only the illustrated art (the enemy lab): Enabled stays on and the title's switch does nothing.</summary>
         public static bool IllustratedOnly { get; private set; }
         // Whether this play's first run has taken its default (the name it had before 2026-11-10; RunAnalyticsTest reads it), and the
@@ -48,6 +50,14 @@ namespace AnomalyArena
         /// and get it back after the enemy lab. Called with no arguments it follows an English start (whitebox).</summary>
         public static void EnsureV2Default(bool illustratedOnly = false, bool startedInChinese = false)
         {
+            if (WhiteboxOnly && !illustratedOnly)
+            {
+                IllustratedOnly = false;
+                toggleChoice = null;
+                Enabled = false;
+                v2ChoiceInitialized = true;
+                return;
+            }
             if (illustratedOnly)
             {
                 if (!IllustratedOnly) toggleChoice = Enabled;
@@ -71,7 +81,7 @@ namespace AnomalyArena
         /// <summary>The title's whitebox / illustrated switch. The enemy lab has none, so it never leaves the illustrated art.</summary>
         public static void Toggle()
         {
-            if (!IllustratedOnly) Enabled = !Enabled;
+            if (!IllustratedOnly && !WhiteboxOnly) Enabled = !Enabled;
         }
 
         /// <summary>Tints one renderer through a property block, leaving its shared material untouched.</summary>

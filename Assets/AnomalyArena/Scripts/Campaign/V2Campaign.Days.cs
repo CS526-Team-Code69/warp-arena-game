@@ -7,7 +7,8 @@ namespace AnomalyArena
     /// hooks set at the start of a run, each neutral outside a running campaign so the open mode's 15 waves are untouched: each day's
     /// morning brings only the kinds its day allows (WaveManager.KindWeightRule; the wave's count and pace stay); every body gets the
     /// campaign's HP by day and the two bosses their fixed HP and shields (Enemy.CampaignBudget); skills and statuses follow the day's
-    /// scale (WaveManager.CombatScaleRule); what is paid as a share of damage shrinks by day (ElementStatus.PayoffScale); Tame and Twist
+    /// scale (WaveManager.CombatScaleRule) and monsters hit as hard as the day's table says (WaveManager.DamageFactorRule); what is paid as
+    /// a share of damage shrinks by day (ElementStatus.PayoffScale); Tame and Twist
     /// add their attack speed and damage (RunWeapons.WeaponSpeedRule, WeaponDamageRule); the void armor restores energy at the campaign's
     /// rate (RunProgression.VoidRegenRule). Here too: the energy bar filled at each morning, one point of energy for each death, the day's
     /// alien energy shared out over its kills so that killing every monster pays exactly the table, the body research's stat lines, and
@@ -18,6 +19,8 @@ namespace AnomalyArena
         // What is left of today's kill energy, and the weight (seconds to kill) of the bodies killed today.
         int killEnergyLeft;
         float killedWeight;
+        // Kill energy held back by kills that dropped none (paid with the next drop), and how many kills in a row dropped none.
+        int energyHeld, killsWithoutDrop;
         // Before this many seconds of a wave the pace of its arrivals is not judged (the first bodies all come at once).
         const float MinPacingSeconds = 3f;
 
@@ -32,21 +35,32 @@ namespace AnomalyArena
         {
             WaveManager.KindWeightRule = (kind, saved) => DaysLive && Day > 0 ? rules.DayKindWeight(Day, kind, saved) : saved;
             WaveManager.CombatScaleRule = () => DaysLive ? rules.CombatScaleOn(Day, TyrantFight) : 0f;
+            WaveManager.DamageFactorRule = () => DaysLive ? rules.EnemyDamageOn(Day, TyrantFight) : 0f;
             Enemy.CampaignBudget = (data, elite, affix, mini) => DaysLive && data ? BudgetFor(data, elite, affix, mini) : (EnemyBudget?)null;
-            ElementStatus.PayoffScale = body => DaysLive && body && gm && body == gm.player ? rules.PayoffScaleOn(Day) : 1f;
+            ElementStatus.PayoffScale = body => DaysLive && body && gm && body == gm.player ? rules.PayoffScaleOn(Day, TyrantFight) : 1f;
             RunProgression.VoidRegenRule = rate => DaysLive ? rules.voidArmorEnergyRegen : rate;
             RunWeapons.WeaponDamageRule = w => DaysLive && w != null && w.Has(UpgradeAxis.Twist) ? Mathf.Max(1f, rules.twistDamage) : 1f;
             RunWeapons.WeaponSpeedRule = w => DaysLive && w != null && w.Has(UpgradeAxis.Tame) ? Mathf.Max(1f, rules.tameAttackSpeed) : 1f;
+            // The mornings: the same length every day and more monsters (V2Campaign.cs puts part of them on a near ring); every story
+            // monster walks a little slower than the player, so a black hole always takes it.
+            WaveManager.DurationRule = () => Mornings ? rules.morningSeconds : 0f;
+            WaveManager.CrowdRule = () => Mornings ? rules.morningCrowd : 0f;
+            WaveManager.WalkScaleRule = () => DaysLive ? rules.monsterWalkScale : 0f;
+            WaveManager.WalkCapRule = () => DaysLive && gm && gm.player ? rules.monsterWalkCap * gm.player.moveSpeed : 0f;
         }
+
+        bool Mornings => DaysLive && Day > 0 && Stage is CampaignStage.Day or CampaignStage.Lull;
 
         static void ClearDayHooks()
         {
             WaveManager.KindWeightRule = null;
             WaveManager.CombatScaleRule = null;
+            WaveManager.DamageFactorRule = null;
             Enemy.CampaignBudget = null;
             ElementStatus.PayoffScale = null;
             RunProgression.VoidRegenRule = null;
             RunWeapons.WeaponDamageRule = RunWeapons.WeaponSpeedRule = null;
+            WaveManager.DurationRule = WaveManager.CrowdRule = WaveManager.WalkScaleRule = WaveManager.WalkCapRule = null;
         }
 
         /// <summary>A body's HP and shields in the campaign: the Nash Prophet without a shield, the Tyrant with its two shield shares, every
@@ -69,6 +83,7 @@ namespace AnomalyArena
         {
             killEnergyLeft = rules.DayKillEnergy(Day);
             killedWeight = 0f;
+            energyHeld = killsWithoutDrop = 0;
             var progression = gm ? gm.progression : null;
             if (rules.dawnEnergyRefill && progression) progression.GainEnergy(progression.Stats.maxEnergy);
         }
@@ -84,12 +99,25 @@ namespace AnomalyArena
         /// <summary>DropCurrencies by day: what this kill drops of the day's kill energy (CampaignRules.KillEnergyShare).</summary>
         int KillEnergyFor(Enemy enemy)
         {
-            if (killEnergyLeft <= 0 || !enemy.definition) return 0;
+            if (killEnergyLeft <= 0 && energyHeld <= 0 || !enemy.definition) return 0;
             float weight = BodyWeight(enemy.definition, enemy.Elite, enemy.Mini);
             killedWeight += weight;
-            int amount = CampaignRules.KillEnergyShare(killEnergyLeft, weight, WeightStillToCome(), Random.value);
+            float stillToCome = WeightStillToCome();
+            int amount = CampaignRules.KillEnergyShare(killEnergyLeft, weight, stillToCome, Random.value);
             killEnergyLeft -= amount;
-            return amount;
+            energyHeld += amount;
+            // Not every kill drops: one that does pays what the kills before it held back. The pity and the day's last kill always drop.
+            bool last = stillToCome <= 0f;
+            float chance = rules.DropChance(enemy.definition.kind, enemy.Elite, enemy.Mini);
+            if (!last && !CampaignRules.KillDrops(chance, killsWithoutDrop, rules.dropPity, Random.value))
+            {
+                killsWithoutDrop++;
+                return 0;
+            }
+            killsWithoutDrop = 0;
+            int paid = energyHeld;
+            energyHeld = 0;
+            return paid;
         }
 
         /// <summary>The weight of the day's bodies still to come after this kill: those standing and announced; once the day's last wave
@@ -110,8 +138,7 @@ namespace AnomalyArena
             standing += Mathf.Max(0, waves.PendingCount - markers) * rules.TargetSeconds(EnemyKind.Grunt, false);
             int laterWaves = Mathf.Max(0, rules.wavesPerDay - WaveOfDay - 1);
             if (waves.TimeExpired && laterWaves == 0) return standing;
-            var set = waves.waveSet;
-            float length = set && set.waves != null && waves.WaveIndex >= 0 && waves.WaveIndex < set.waves.Length ? set.waves[waves.WaveIndex].duration : 30f;
+            float length = waves.WaveSeconds;
             float left = waves.TimeExpired ? 0f : waves.Phase == WavePhase.WaveIntro ? length : waves.TimeLeft;
             float rate = (killedWeight + standing) / Mathf.Max(MinPacingSeconds, length - left);
             return standing + rate * (left + laterWaves * length);
@@ -121,8 +148,9 @@ namespace AnomalyArena
         /// nothing) lies at the player's feet, so the day pays its table entry in full.</summary>
         void DropKillEnergyLeft()
         {
-            if (killEnergyLeft > 0 && gm && gm.player) SpawnPickup(PickupKind.Energy, killEnergyLeft, gm.player.Position);
-            killEnergyLeft = 0;
+            int left = killEnergyLeft + energyHeld; // with what the last kills held back
+            if (left > 0 && gm && gm.player) SpawnPickup(PickupKind.Energy, left, gm.player.Position);
+            killEnergyLeft = energyHeld = killsWithoutDrop = 0;
         }
 
         /// <summary>OnEnemyEliminated: a monster's death restores rules.energyPerKill of the player's energy (the skill bar), a boss's and
@@ -181,8 +209,8 @@ namespace AnomalyArena
             if (rows == null) return;
             int tier = ResearchTierShown(ResearchLine.Body);
             bool works = Works(CampaignRoom.Energy, 1);
-            string rule = ArenaText.Pair("体质每项一条线：白、绿、蓝、紫、橙一档一档买；买了高一档，数值换成高一档的，不和低档叠加。买了立刻生效。",
-                "Each stat is one line, bought white, green, blue, purple, orange in turn: a higher step replaces the value of the one below, they do not add up. It works at once.");
+            string rule = ArenaText.Pair("每项体质都按白、绿、蓝、紫、橙的顺序一档一档地买。买下高一档后，这一项的数值直接换成高一档的，不和低档叠加。买下立刻生效。",
+                "Each stat is bought one step at a time: white, green, blue, purple, then orange. A higher step replaces the value of the one below instead of adding to it. Each purchase takes effect at once.");
             foreach (var row in rows)
             {
                 if (row == null || row.retired) continue;
@@ -193,8 +221,8 @@ namespace AnomalyArena
                 var full = new StatCardOffer(stat, rarity, row.At(rarity), row.bonus, row.BonusAt(rarity));
                 var stats = progression.Stats;
                 var icon = StudyArt ? StudyIcon(StudyArt.statIcons, (int)stat) : null;
-                string have = steps > 0 ? ArenaText.Pair($"已买到{ArenaTerms.Rarity(CampaignRules.StatLineRarity(steps - 1) ?? CardRarity.Common)}。", $"Bought up to {ArenaTerms.Rarity(CampaignRules.StatLineRarity(steps - 1) ?? CardRarity.Common)}.")
-                    : ArenaText.Pair("这一项还没买过。", "Nothing of this stat bought yet.");
+                string have = steps > 0 ? ArenaText.Pair($"目前已买到{ArenaTerms.Rarity(CampaignRules.StatLineRarity(steps - 1) ?? CardRarity.Common)}档。", $"Bought up to {ArenaTerms.Rarity(CampaignRules.StatLineRarity(steps - 1) ?? CardRarity.Common)}.")
+                    : ArenaText.Pair("这一项还没买过。", "You haven't bought this stat yet.");
                 string detail = full.Description + "\n" + have + "\n" + rule;
                 if (next == null)
                 {
@@ -207,7 +235,7 @@ namespace AnomalyArena
                 if (step.Bonus != StatBonus.None) after.AddBonus(step.Bonus, step.BonusValue);
                 var stepRarity = rarity;
                 string blocked = !works ? RoomBroken(CampaignRoom.Energy)
-                    : rules.RarityTier(rarity) > tier ? ArenaText.Pair($"{ResearchName(ResearchLine.Body)}升到 {rules.RarityTier(rarity)} 阶后才能买{ArenaTerms.Rarity(rarity)}这一档", $"{ArenaTerms.Rarity(rarity)} needs {ResearchName(ResearchLine.Body)} tier {rules.RarityTier(rarity)}")
+                    : rules.RarityTier(rarity) > tier ? ArenaText.Pair($"{ResearchName(ResearchLine.Body)}升到 {rules.RarityTier(rarity)} 阶后，才能买{ArenaTerms.Rarity(rarity)}档", $"The {ArenaTerms.Rarity(rarity)} step needs {ResearchName(ResearchLine.Body)} tier {rules.RarityTier(rarity)}")
                     : stats.AtCap(stat) ? ArenaText.Pair("这项已到上限", "This stat is at its cap") : null;
                 tab.entries.Add(StudyItem($"stat.{stat}", StudyRoom.Energy, tab.name, rarity, icon, full.Title, StudyStatValue(stat, stats), StudyStatValue(stat, after),
                     detail, new CampaignCost(0, rules.RarityEnergy(rarity)), false, blocked, () => TryBuyStat(stat, stepRarity)));
@@ -216,8 +244,8 @@ namespace AnomalyArena
 
         /// <summary>The line the Tame and Twist tiles add: the attack speed or damage they give the weapon besides.</summary>
         string TameTwistBonusText(UpgradeAxis axis) => axis == UpgradeAxis.Tame
-            ? ArenaText.Pair($"另外：这把武器攻速 ×{rules.tameAttackSpeed:0.##}。", $"Besides: this weapon attacks ×{rules.tameAttackSpeed:0.##} as fast.")
-            : ArenaText.Pair($"另外：这把武器伤害 ×{rules.twistDamage:0.##}。", $"Besides: this weapon deals ×{rules.twistDamage:0.##} damage.");
+            ? ArenaText.Pair($"此外，这把武器的攻速 ×{rules.tameAttackSpeed:0.##}。", $"This weapon also attacks ×{rules.tameAttackSpeed:0.##} as fast.")
+            : ArenaText.Pair($"此外，这把武器的伤害 ×{rules.twistDamage:0.##}。", $"This weapon also deals ×{rules.twistDamage:0.##} damage.");
 
         // ───── Day 0's gifts ─────
 

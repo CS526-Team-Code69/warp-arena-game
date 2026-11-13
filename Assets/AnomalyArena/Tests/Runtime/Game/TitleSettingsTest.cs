@@ -177,7 +177,7 @@ namespace AnomalyArena
             Click(Part(TitleContent(), V2Hud.TitleSettingsButton));
             await Awaitable.NextFrameAsync();
             var slider = PanelPart("Volume").GetComponent<Slider>();
-            Assert.That(slider.value, Is.EqualTo(ArenaVolume.Default).Within(.001f), "the slider opens on the volume as it is: full, with nothing saved");
+            Assert.That(slider.value, Is.EqualTo(ArenaVolume.Default).Within(.001f), "the slider opens on the default volume, with nothing saved");
 
             slider.value = .35f;
             await Awaitable.NextFrameAsync();

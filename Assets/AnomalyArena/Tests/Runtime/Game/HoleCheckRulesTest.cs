@@ -127,6 +127,9 @@ namespace AnomalyArena
         [TestCase(7, 1f, 240)]
         [TestCase(9, 1f, 240)]
         [TestCase(2, 1.3f, 39)]
+        [TestCase(3, 1.3f, 59)]
+        [TestCase(5, 1.3f, 137)]
+        [TestCase(7, 1.3f, 312)]
         [TestCase(0, 1f, 0)]
         public void AfternoonAlloy_FollowsTheTableByDay_LaterDaysTakeTheLast_TimesTheShipBonus(int day, float scale, int expected)
         {

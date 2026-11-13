@@ -79,7 +79,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 818548749
-    m_Localized: SKIP OFFER
+    m_Localized: "SKIP"
     m_Metadata:
       m_Items: []
   - m_Id: 818548750
@@ -143,7 +143,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 818548765
-    m_Localized: '{0} cards remain. Pick the unfinished choices at random and start the next wave?'
+    m_Localized: "{0} picks are still open. Pick the rest at random and start the next wave?"
     m_Metadata:
       m_Items: []
   - m_Id: 818548766

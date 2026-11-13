@@ -11,11 +11,15 @@ namespace AnomalyArena
     /// </summary>
     public static class ArenaVolume
     {
-        public const string SavedKey = "WarpArena.Volume";
-        /// <summary>Full volume: the game as it sounded before there was a setting.</summary>
-        public const float Default = 1f;
+        /// <summary>Its own key, so a volume kept while the default was full volume does not carry over.</summary>
+        public const string SavedKey = "WarpArena.MasterVolume";
+        /// <summary>The volume before the player chooses one: silent on the course's English builds (BuildEdition), which make no sound
+        /// until the player turns it up in the settings; full on the whole game (the Chinese page, the editor).</summary>
+        public static float Default => BuildEdition.IsCourseBuild ? 0f : EngineFull;
+        // The engine's own full volume, which the editor's previews get back when a play ends.
+        const float EngineFull = 1f;
 
-        static float master = Default;
+        static float master;
         static bool loaded;
 
         /// <summary>The volume, 0 to 1.</summary>
@@ -52,11 +56,7 @@ namespace AnomalyArena
 
         // The editor keeps statics from one play to the next (domain reload is off).
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        static void ResetForPlay()
-        {
-            master = Default;
-            loaded = false;
-        }
+        static void ResetForPlay() => loaded = false;
 
         /// <summary>Before the first scene makes a sound. The listener's volume belongs to the engine, not to the play: leaving a play
         /// in the editor would keep a lowered volume for the editor's own previews, so it goes back to full then.</summary>
@@ -68,6 +68,6 @@ namespace AnomalyArena
             Application.quitting += RestoreFull;
         }
 
-        static void RestoreFull() => AudioListener.volume = Default;
+        static void RestoreFull() => AudioListener.volume = EngineFull;
     }
 }

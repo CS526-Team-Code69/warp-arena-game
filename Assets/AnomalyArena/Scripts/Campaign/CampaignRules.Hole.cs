@@ -76,6 +76,8 @@ namespace AnomalyArena
         [Header("Mined each day (since 2026-11-10)")]
         [Tooltip("Alloy in each afternoon's ore, days 1, 2, 3 ...; later days use the last entry. Shared evenly by the day's ore nodes (the remainder goes to the nodes nearest the black hole) and multiplied by the ship's ore bonus.")]
         public int[] afternoonAlloy = { 20, 30, 45, 70, 105, 160, 240 };
+        [Tooltip("Days 1, 2, 3 ...: the mining lamps each afternoon's extra alloy pays for (lampCost each), added to afternoonAlloy after the ship's ore bonus; later days use the last entry. From day 1 on lamps are crafted (dailyFreeLamps), so this rises with the nights.")]
+        public int[] dayLampsToCraft = { 3, 3, 4, 4, 5, 5, 6 };
         [Tooltip("Dark matter in each night's nodes, nights 1, 2, 3 ...; later nights use the last entry. Shared evenly by the night's dark matter nodes (Day 0's tutorial night places its own).")]
         public int[] nightDark = { 10, 12, 15, 18, 28, 36, 45 };
 
@@ -86,8 +88,14 @@ namespace AnomalyArena
             return Mathf.Max(0, table[Mathf.Min(day, table.Length) - 1]);
         }
 
-        /// <summary>The day's afternoon alloy: the table's entry times the ore bonus, rounded to whole alloy.</summary>
-        public static int AfternoonAlloyTotal(int[] table, int day, float scale) => Mathf.Max(0, Mathf.RoundToInt(ByDay(table, day) * Mathf.Max(0f, scale)));
+        /// <summary>The day's afternoon alloy: the table's entry times the ore bonus, rounded half up to whole alloy. 1 + 0.3 is
+        /// 1.29999995 as a float, so 45 x 1.3 and 105 x 1.3 come out a hair under the half; the small margin makes them 59 and 137, as
+        /// the V2 doc's ledger has them, where plain rounding gave 58 and 136.</summary>
+        /// <summary>The alloy a day's afternoon adds for its lamps: dayLampsToCraft lamps at lampCost each (none before day 1).</summary>
+        public int LampAlloyOn(int day) => day < 1 ? 0 : ByDay(dayLampsToCraft, day) * Mathf.Max(0, lampCost);
+
+        public static int AfternoonAlloyTotal(int[] table, int day, float scale) =>
+            Mathf.Max(0, Mathf.FloorToInt(ByDay(table, day) * Mathf.Max(0f, scale) + .5f + 1e-3f));
 
         /// <summary>total shared out over count parts as evenly as whole numbers allow: the first (total mod count) parts get one more.
         /// The parts always add up to total; none for count 0.</summary>

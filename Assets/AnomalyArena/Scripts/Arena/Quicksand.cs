@@ -17,6 +17,8 @@ namespace AnomalyArena
         // on the floor art and under every telegraph.
         const int SortingOrder = -3;
         static readonly int ColorId = Shader.PropertyToID("_BaseColor"), TextureId = Shader.PropertyToID("_BaseMap");
+        // Whitebox: WhiteboxIcons' circle covers this share of its texture, so the disc's edge is the pool's edge; and how opaque it is.
+        const float WhiteboxDiscShare = .86f, WhiteboxPoolAlpha = .55f;
         static Mesh quad;
         static Quicksand drawn;
         readonly List<(Transform decal, float spin)> spinning = new();
@@ -79,6 +81,11 @@ namespace AnomalyArena
             if (illustrated && V5TerrainPits.Draw(transform, pools, quad, DecalHeight, SortingOrder)) return;
             var look = biome;
             if (!look || !look.quicksandMaterial || look.quicksandLayers == null) return;
+            if (!illustrated)
+            {
+                DrawWhitebox(look);
+                return;
+            }
             var block = new MaterialPropertyBlock();
             for (int p = 0; p < pools.Length; p++)
             for (int l = 0; l < look.quicksandLayers.Length; l++)
@@ -102,6 +109,33 @@ namespace AnomalyArena
                 block.SetTexture(TextureId, layer.texture);
                 renderer.SetPropertyBlock(block);
                 if (layer.spin != 0f) spinning.Add((decal, layer.spin));
+            }
+        }
+
+        /// <summary>Whitebox draws no picture: one flat disc per pool, exactly the pool's size, in the colour of the biome's first (darkest)
+        /// pool layer.</summary>
+        void DrawWhitebox(Biome look)
+        {
+            var block = new MaterialPropertyBlock();
+            var disc = WhiteboxIcons.Mark(WhiteboxIcons.Glyph.Circle).texture;
+            Color tint = look.quicksandLayers.Length > 0 ? look.quicksandLayers[0].tint : new Color(.18f, .12f, .05f, 1f);
+            for (int p = 0; p < pools.Length; p++)
+            {
+                var decal = new GameObject($"Pool{p}").transform;
+                decal.SetParent(transform, false);
+                decal.SetPositionAndRotation(new Vector3(pools[p].centre.x, DecalHeight, pools[p].centre.y), Quaternion.identity);
+                float size = pools[p].radius * 2f / WhiteboxDiscShare;
+                decal.localScale = new Vector3(size, 1f, size);
+                decal.gameObject.AddComponent<MeshFilter>().sharedMesh = quad;
+                var renderer = decal.gameObject.AddComponent<MeshRenderer>();
+                renderer.sharedMaterial = look.quicksandMaterial;
+                renderer.shadowCastingMode = ShadowCastingMode.Off;
+                renderer.receiveShadows = false;
+                renderer.sortingOrder = SortingOrder;
+                block.Clear();
+                block.SetColor(ColorId, new Color(tint.r, tint.g, tint.b, WhiteboxPoolAlpha));
+                block.SetTexture(TextureId, disc);
+                renderer.SetPropertyBlock(block);
             }
         }
 

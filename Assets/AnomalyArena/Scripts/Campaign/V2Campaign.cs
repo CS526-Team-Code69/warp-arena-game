@@ -74,6 +74,7 @@ namespace AnomalyArena
             GiveMapBack();
             if (Active == this) { Active = null; ClearHooks(); }
             if (ui) Destroy(ui.gameObject);
+            if (cutscene) Destroy(cutscene.gameObject);
         }
 
         static void ClearHooks()
@@ -272,8 +273,8 @@ namespace AnomalyArena
                 Say(Line.S07);
                 // The first morning says how the monsters behave; later mornings only say what to do (since 2026-11-10).
                 Objective(Day <= 1
-                    ? ArenaText.Pair("上午：守住基地。怪物从四周走来直奔基地，靠近你的会先打你", "Morning: hold the base. Monsters walk in from all around for it; those near you attack you first")
-                    : ArenaText.Pair("上午：守住基地", "Morning: hold the base"), null);
+                    ? ArenaText.Pair("守住基地。怪物会从四面八方涌向基地，离你近的会先冲着你来", "Hold the base. Monsters close in on it from every side, and any that get near you will come for you first")
+                    : ArenaText.Pair("守住基地", "Hold the base"), null);
             }
             // The table's wave for today (rules.WaveNumber: since 2026-11-06 day d fights wave 2d, so day 7 is wave 14 before the Tyrant);
             // overtime repeats the last day's wave.
@@ -457,8 +458,10 @@ namespace AnomalyArena
             if (!Running || !map || map.TrialActive || Stage is not (CampaignStage.Day or CampaignStage.Lull)) return picked;
             Vector3 d = Query.Flat(picked - BaseCentre);
             float angle = d.sqrMagnitude > .01f ? Mathf.Atan2(d.z, d.x) : Random.value * Mathf.PI * 2f;
+            // Part of the morning is born on the near ring, the rest on the far one (rules.nearSpawnShare).
+            float ring = Random.value < rules.nearSpawnShare ? rules.nearSpawnRing : rules.daySpawnRing;
             // One step round the ring is about the player clearance long.
-            float step = SpawnPlayerClearance * 1.2f / Mathf.Max(4f, rules.daySpawnRing);
+            float step = SpawnPlayerClearance * 1.2f / Mathf.Max(4f, ring);
             Vector3 player = gm && gm.player ? Query.Flat(gm.player.Position) : new Vector3(float.MaxValue, 0f, float.MaxValue);
             Vector3? best = null; float bestDistance = -1f;
             for (int attempt = 0; attempt < 6; attempt++)
@@ -466,7 +469,7 @@ namespace AnomalyArena
                 // The first try at the pick's bearing, later ones one, two, three steps round the ring, alternately either way.
                 float a = angle + Random.Range(-.06f, .06f) + (attempt + 1) / 2 * (attempt % 2 == 0 ? 1f : -1f) * step;
                 Vector3 dir = new(Mathf.Cos(a), 0f, Mathf.Sin(a));
-                Vector3 p = FindOpen(BaseCentre + dir * SpawnRingRadius(dir), .6f);
+                Vector3 p = FindOpen(BaseCentre + dir * SpawnRingRadius(dir, ring), .6f);
                 if (!map.IsWalkable(p, .6f)) continue;
                 float distance = Query.Flat(p - player).magnitude;
                 if (distance >= SpawnPlayerClearance) return p;
@@ -475,11 +478,11 @@ namespace AnomalyArena
             return best ?? picked;
         }
 
-        /// <summary>The spawn ring's radius along a bearing from the base: rules.daySpawnRing, shortened where the map ends sooner.</summary>
-        float SpawnRingRadius(Vector3 dir)
+        /// <summary>A spawn ring's radius along a bearing from the base: ring, shortened where the map ends sooner.</summary>
+        float SpawnRingRadius(Vector3 dir, float ring)
         {
             Vector2 half = MapHalfSize;
-            float r = Mathf.Max(BaseHalf + 4f, rules.daySpawnRing);
+            float r = Mathf.Max(BaseHalf + 4f, ring);
             if (Mathf.Abs(dir.x) > .001f) r = Mathf.Min(r, Mathf.Max(1f, half.x - SpawnRingMapMargin - Mathf.Abs(BaseCentre.x)) / Mathf.Abs(dir.x));
             if (Mathf.Abs(dir.z) > .001f) r = Mathf.Min(r, Mathf.Max(1f, half.y - SpawnRingMapMargin - Mathf.Abs(BaseCentre.z)) / Mathf.Abs(dir.z));
             return r;

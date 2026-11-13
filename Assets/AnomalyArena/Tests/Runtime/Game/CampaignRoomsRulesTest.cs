@@ -176,6 +176,33 @@ namespace AnomalyArena
             Assert.That(actual, Is.EqualTo(200));
         }
 
+        [TestCase(1, 10)]
+        [TestCase(2, 14)]
+        [TestCase(3, 20)]
+        [TestCase(4, 32)]
+        [TestCase(5, 48)]
+        [TestCase(6, 76)]
+        public void BaseLevelPrice_FromLevel_SharesTheTwoHundredByTheHpTheLevelAdds(int level, int expected)
+        {
+            var sut = CreateRules();
+
+            var actual = sut.BaseLevelPrice(level);
+
+            Assert.That(actual?.alloy, Is.EqualTo(expected));
+        }
+
+        [TestCase(1)]
+        [TestCase(3)]
+        [TestCase(6)]
+        public void BaseLevelPrice_FromLevel_IsAboutFourHundredthsOfAlloyAPointOfHpAdded(int level)
+        {
+            var sut = CreateRules();
+
+            float actual = sut.BaseLevelPrice(level).Value.alloy / (sut.BaseHpAt(level + 1) - sut.BaseHpAt(level));
+
+            Assert.That(actual, Is.EqualTo(.04f).Within(.0001f));
+        }
+
         [Test]
         public void BaseLevelPrice_AtLevelSeven_IsNull()
         {

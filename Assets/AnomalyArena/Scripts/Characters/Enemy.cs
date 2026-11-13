@@ -339,6 +339,8 @@ namespace AnomalyArena
             if (balance) maxHp = balance.MaxHp(data, GM.waves.WaveIndex + 1, elite, Affix, mini);
             ApplyCampaignBudget(data, elite, mini); // Enemy.CampaignBudget.cs: the V2 day campaign's own HP (since 2026-11-10)
             moveSpeed = data.speed * (GM && GM.waves ? GM.waves.EnemySpeedFactor : 1f);
+            // The story caps every monster's walk below the player's (WaveManager.WalkCapRule), so a black hole's pull always takes it.
+            if (WaveManager.WalkCapRule?.Invoke() is float walkCap && walkCap > 0f) moveSpeed = Mathf.Min(moveSpeed, walkCap);
             radius = data.radius * bodyScale;
             attackDamage = data.damage * (elite ? 1.5f : 1f) * (mini ? MiniDamageShare : 1f) *
                            (GM && GM.waves ? data.kind == EnemyKind.Tyrant ? GM.waves.FinalBossDamageFactor : GM.waves.EnemyDamageFactor : 1f);

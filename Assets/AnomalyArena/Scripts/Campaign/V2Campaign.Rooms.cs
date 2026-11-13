@@ -165,7 +165,7 @@ namespace AnomalyArena
             researchBought[(int)line]++;
             Bought("research_tier", $"{line} tier {tier + 1}", CampaignRoom.Energy, price.Value);
             V3WorldAudio.Instance?.Play(ArenaWorldCue.LevelUp, BaseCentre);
-            ui.Flash(ArenaText.Pair($"{ResearchName(line)}升到 {tier + 1} 阶：解锁了更稀有的内容", $"{ResearchName(line)} reached tier {tier + 1}: rarer items unlocked"));
+            ui.Flash(ArenaText.Pair($"{ResearchName(line)}升到了 {tier + 1} 阶，更稀有的项目已解锁", $"{ResearchName(line)} is now tier {tier + 1}. Rarer items are unlocked."));
             return true;
         }
 
@@ -259,7 +259,7 @@ namespace AnomalyArena
             weapons.Infuse(weapon, element);
             Bought("weapon_infusion", $"{weapon.form} {element}", CampaignRoom.Energy, price);
             V3WorldAudio.Instance?.Play(ArenaWorldCue.LevelUp, BaseCentre);
-            ui.Flash(ArenaText.Pair($"附魔：{weapon.FormName}附上了{ArenaTerms.Element(element)}", $"Infusion: the {weapon.FormName} now carries {ArenaTerms.Element(element)}"));
+            ui.Flash(ArenaText.Pair($"{weapon.FormName}附上了{ArenaTerms.Element(element)}属性", $"Your {weapon.FormName} is now infused with {ArenaTerms.Element(element)}"));
             return true;
         }
 
@@ -277,7 +277,7 @@ namespace AnomalyArena
             weapon.axes |= axis;
             Bought(axis == UpgradeAxis.Tame ? "weapon_tame" : "weapon_twist", weapon.form.ToString(), CampaignRoom.Armament, price);
             V3WorldAudio.Instance?.Play(ArenaWorldCue.LevelUp, BaseCentre);
-            ui.Flash(ArenaText.Pair($"{ArenaTerms.Upgrade(axis)}：{weapon.FormName}", $"{ArenaTerms.Upgrade(axis)}: {weapon.FormName}"));
+            ui.Flash(ArenaText.Pair($"{weapon.FormName}的{ArenaTerms.Upgrade(axis)}已完成", $"{ArenaTerms.Upgrade(axis)} added to the {weapon.FormName}"));
             return true;
         }
 
@@ -305,7 +305,7 @@ namespace AnomalyArena
             if (!NewWeaponForSale || definition == null || definition.retired || !RunWeapon.IsAnomalousForm(form) || definition.unlockWave > ResearchWave
                 || weapons.OwnsForm(form)) return false;
             int slot = SlotFor(form);
-            if (slot < 0) { ui.Flash(ArenaText.Pair("武器栏已满：没有空位放这把武器", "No free slot for this weapon")); return false; }
+            if (slot < 0) { ui.Flash(ArenaText.Pair("武器栏都满了，放不下这把武器", "There's no free slot for this weapon")); return false; }
             var price = NewWeaponCost;
             if (!TrySpend(price)) return false;
             bool auto = RunWeapon.IsAutoForm(form);
@@ -316,8 +316,8 @@ namespace AnomalyArena
             Bought("new_weapon", $"{form} Mk{weapon.mk} {(auto ? "auto" : "hand")}{(old != null ? ", replaces " + old.form : "")}", CampaignRoom.Armament, price);
             V3WorldAudio.Instance?.Play(ArenaWorldCue.LevelUp, BaseCentre);
             AnnounceWeapon(weapon, old != null
-                ? ArenaText.Pair($"研究出新的异常武器：{weapon.FormName}（{weapon.MkLabel}），换下了{old.FormName}", $"New anomaly weapon researched: {weapon.FormName} ({weapon.MkLabel}); it replaces the {old.FormName}")
-                : ArenaText.Pair($"研究出新的异常武器：{weapon.FormName}（{weapon.MkLabel}）", $"New anomaly weapon researched: {weapon.FormName} ({weapon.MkLabel})"));
+                ? ArenaText.Pair($"研究出了新的异常武器：{weapon.FormName}（{weapon.MkLabel}），换下了{old.FormName}", $"New anomaly weapon researched: {weapon.FormName} ({weapon.MkLabel}), in place of the {old.FormName}")
+                : ArenaText.Pair($"研究出了新的异常武器：{weapon.FormName}（{weapon.MkLabel}）", $"New anomaly weapon researched: {weapon.FormName} ({weapon.MkLabel})"));
             return true;
         }
 

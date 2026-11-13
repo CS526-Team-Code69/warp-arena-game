@@ -131,8 +131,8 @@ namespace AnomalyArena
             holeSeen = true;
             // Fed first: the side quest's line says how (V2Campaign.HoleFeed.cs); the flash only names what was just seen.
             if (!HoleAwake) ui.Flash(ArenaText.Pair("黑洞会吞掉靠近它的怪物", "The black hole swallows the monsters that come near it"), 3f);
-            else ui.Flash(ArenaText.Pair($"黑洞里有东西。攻击它：第一次打中后计时 {Mathf.RoundToInt(rules.holeCheckSeconds)} 秒，打出足够的伤害就能把它激怒。",
-                $"Something lies within the black hole. Attack it: from the first hit you have {Mathf.RoundToInt(rules.holeCheckSeconds)} s to deal enough damage to enrage it."), 4.5f);
+            else ui.Flash(ArenaText.Pair($"黑洞里有东西。攻击它，从第一次打中开始计时，{Mathf.RoundToInt(rules.holeCheckSeconds)} 秒内打出足够的伤害，就能把它激怒。",
+                $"Something lies within the black hole. Attack it: once your first hit lands, you have {Mathf.RoundToInt(rules.holeCheckSeconds)} seconds to deal enough damage to enrage it."), 4.5f);
         }
 
         /// <summary>E on the hidden gate: the question before the void trial. A no leaves the gate open; a yes enters on the next frame
@@ -141,9 +141,9 @@ namespace AnomalyArena
         {
             if (!ui) { yes?.Invoke(); return; }
             bool morning = Stage is CampaignStage.Day or CampaignStage.Lull;
-            string body = ArenaText.Pair("接下来可能遇到非常强力的敌人，确定要进入吗？", "A very powerful enemy may be waiting in there. Do you want to go in?") + "\n\n"
+            string body = ArenaText.Pair("里面可能有非常强大的敌人。确定要进去吗？", "A very powerful enemy may be waiting in there. Do you want to go in?") + "\n\n"
                 + (morning ? ArenaText.Pair("在里面倒下会结束本局。", "Dying in there ends the run.")
-                    : ArenaText.Pair("在里面倒下会回到基地醒来，什么都不会丢，下午继续。", "Dying in there wakes you at the base with nothing lost, and the afternoon goes on."));
+                    : ArenaText.Pair("如果在里面倒下，你会在基地醒来，什么都不会丢，下午照常继续。", "If you fall in there, you'll wake up at the base with nothing lost, and the afternoon goes on."));
             ui.Confirm(ArenaText.Pair("虚空传送门", "THE VOID PORTAL"), body, yes, no);
         }
 
@@ -253,7 +253,7 @@ namespace AnomalyArena
             if (!holeCheckAnnounced)
             {
                 holeCheckAnnounced = true;
-                ui.Flash(ArenaText.Pair($"计时开始：{Mathf.RoundToInt(holeCheck.Seconds)} 秒内打出足够的伤害", $"The clock is running: deal enough damage within {Mathf.RoundToInt(holeCheck.Seconds)} s"), 2.5f);
+                ui.Flash(ArenaText.Pair($"计时开始！{Mathf.RoundToInt(holeCheck.Seconds)} 秒内打出足够的伤害", $"The clock is running! Deal enough damage within {Mathf.RoundToInt(holeCheck.Seconds)} seconds"), 2.5f);
                 V3WorldAudio.Instance?.Play(ArenaWorldCue.BossInhale, hole.Centre);
             }
             if (!p || !p.IsAlive || !holeOut)
@@ -281,7 +281,7 @@ namespace AnomalyArena
             hole.campaignLabel = "";
             hole.OpenGate(gm.waves ? gm.waves.WaveIndex + 1 : 0);
             CampaignEvents.RaiseMilestone(CampaignEvents.MilestoneHoleCheck, CampaignEvents.HoleCheckPassed, holeCheck.Progress, Day);
-            ui.Flash(ArenaText.Pair("里面的东西被激怒了：黑洞变成了一座传送门", "What lies within is enraged: the black hole turns into a portal"), 3f);
+            ui.Flash(ArenaText.Pair("里面的东西被激怒了，黑洞变成了一座传送门", "What lies within is enraged. The black hole has become a portal"), 3f);
             V3WorldAudio.Instance?.Play(ArenaWorldCue.PortalOpen, hole.Centre);
         }
 
@@ -298,7 +298,7 @@ namespace AnomalyArena
                 hole.campaignLabel = "";
                 Fx.Ring(hole.Centre, hole.GravityRadius, PillarFillColour, .6f);
             }
-            if (timeUp) ui.Flash(ArenaText.Pair("今天没能激怒它，明天再来", "It was not enraged today. Come back tomorrow."), 3.5f);
+            if (timeUp) ui.Flash(ArenaText.Pair("今天没能激怒它，明天再来吧", "You couldn't enrage it today. Come back tomorrow."), 3.5f);
         }
 
         void ResetHoleCheck()
@@ -362,7 +362,7 @@ namespace AnomalyArena
             bool portal = hole.Phase != HolePhase.Active;
             string text = portal ? ArenaText.Pair("虚空传送门已打开", "The void portal is open")
                 : !HoleAwake ? FeedQuestLine()
-                : holeFailedToday ? ArenaText.Pair("限时击破黑洞：今天没能激怒它，明天再来", "Break the black hole in time: not enraged today, come back tomorrow")
+                : holeFailedToday ? ArenaText.Pair("限时击破黑洞（今天没成功，明天再来）", "Break the black hole in time (failed today; try again tomorrow)")
                 : ArenaText.Pair("限时击破黑洞", "Break the black hole in time");
             if (!shown && !holeFailedToday)
                 text += portal ? ArenaText.Pair("（夜里不出现）", " (gone at night)") : ArenaText.Pair("（黑洞夜里不出现）", " (the black hole is gone at night)");

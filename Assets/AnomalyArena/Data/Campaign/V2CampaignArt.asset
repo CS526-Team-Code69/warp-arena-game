@@ -64,6 +64,33 @@ MonoBehaviour:
   - {fileID: 2800000, guid: 2b97d6d3cdfc9ee4790f42b5c97d5f5a, type: 3}
   - {fileID: 2800000, guid: a4cbf98af0375934ca5690879d684b2a, type: 3}
   - {fileID: 2800000, guid: 10f25926d2cd8704a873655b41f3e649, type: 3}
+  cutscenePictures:
+  - shot: M1
+    picture: {fileID: 2800000, guid: 510669091bfd44f79a677e0bfd421925, type: 3}
+  - shot: M2
+    picture: {fileID: 2800000, guid: 8cd5f14ad6a440aabe4ca9340d6f3e6a, type: 3}
+  - shot: M3
+    picture: {fileID: 2800000, guid: f7afd478edc54176982d7b9370ac1f6b, type: 3}
+  - shot: M5
+    picture: {fileID: 2800000, guid: d128cc774d134e3aa0de64b86fa5d4a4, type: 3}
+  - shot: M7
+    picture: {fileID: 2800000, guid: 64c8af887ffb4576ba66420786cd7cd3, type: 3}
+  - shot: L1
+    picture: {fileID: 2800000, guid: 7f3e5971f38242168cca0ef68fdba56b, type: 3}
+  - shot: L2
+    picture: {fileID: 2800000, guid: 08b6677977134eab8ed643375e168690, type: 3}
+  - shot: L3
+    picture: {fileID: 2800000, guid: d3873017c8564e92b50be6984766a234, type: 3}
+  - shot: L4
+    picture: {fileID: 2800000, guid: 7cb016353b58445197f85f4a99f41774, type: 3}
+  - shot: L5
+    picture: {fileID: 2800000, guid: ee01268a3b004282a0c83a7fc62ce423, type: 3}
+  - shot: E1
+    picture: {fileID: 2800000, guid: 12c9b649fbd24c89b59fa9461b64914e, type: 3}
+  - shot: E2
+    picture: {fileID: 2800000, guid: c2eac1c6e7ee47bc803ac576a73d9d42, type: 3}
+  - shot: E3
+    picture: {fileID: 2800000, guid: e93da67dbbcc416d9445f2fb22e265cf, type: 3}
   voices:
   - line: C01
     clip: {fileID: 8300000, guid: a66ae214c8c44854882091b37663b134, type: 3}

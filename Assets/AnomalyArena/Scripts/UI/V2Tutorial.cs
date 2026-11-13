@@ -39,13 +39,13 @@ namespace AnomalyArena
 
         static (string title, string line, Func<Demo> demo)[] ClassicPages() => new (string, string, Func<Demo>)[]
         {
-            (ArenaText.Pair("移动", "MOVE"), ArenaText.Pair($"{ArenaKeys.MoveKeys} 移动。", $"{ArenaKeys.MoveKeys} to move."), () => new MoveDemo()),
+            (ArenaText.Pair("移动", "MOVE"), ArenaText.Pair($"用 {ArenaKeys.MoveKeys} 移动。", $"Use {ArenaKeys.MoveKeys} to move."), () => new MoveDemo()),
             AimPage(),
-            (ArenaText.Pair("冲刺", "SPRINT"), ArenaText.Pair("边移动边按住 " + ArenaKeys.SprintKey + " 冲刺，会消耗体力。体力用光后，回满才能再冲刺。", "Hold " + ArenaKeys.SprintKey + " while moving to sprint. It drains stamina; once empty, it must refill fully first."), () => new SprintDemo()),
-            (ArenaText.Pair("换武器和技能", "SWAP & SKILLS"), ArenaText.Pair($"右键切换两个手持栏位，{ArenaKeys.SkillKeys} 释放技能。", $"Right click swaps the two hand slots. {ArenaKeys.SkillKeysWith(", ")} cast skills."), () => new SkillDemo()),
-            (ArenaText.Pair("利用地形", "USE THE ARENA"), ArenaText.Pair("把敌人打飞去撞墙，或者推进黑洞。", "Knock enemies into walls and black holes."), () => new TerrainDemo()),
+            (ArenaText.Pair("冲刺", "SPRINT"), ArenaText.Pair("移动时按住 " + ArenaKeys.SprintKey + " 冲刺。冲刺消耗体力，体力用光后要等它回满才能再冲刺。", "Hold " + ArenaKeys.SprintKey + " while moving to sprint. It drains stamina, and once that runs out it has to refill completely."), () => new SprintDemo()),
+            (ArenaText.Pair("换武器和技能", "SWAP & SKILLS"), ArenaText.Pair($"按右键在两只手的武器之间切换，按 {ArenaKeys.SkillKeys} 释放技能。", $"Right click switches between your two hand weapons, and {ArenaKeys.SkillKeysWith(", ")} cast your skills."), () => new SkillDemo()),
+            (ArenaText.Pair("利用地形", "USE THE ARENA"), ArenaText.Pair("把敌人打飞去撞墙，或者把它们推进黑洞。", "Knock enemies into walls, or push them into black holes."), () => new TerrainDemo()),
             (ArenaText.Pair("收起选卡面板", "PUT THE PANEL AWAY"),
-                ArenaText.Pair("整备时按 Tab 收起选卡面板，可以走动、站上传送门；再按 Tab 回到面板。", "Between waves, Tab puts the card panel away so you can walk and reach a portal. Tab again brings it back."),
+                ArenaText.Pair("整备时按 Tab 收起选卡面板，就能四处走动、走上传送门；再按一次 Tab 回到面板。", "Between waves, press Tab to put the card panel away and walk around or onto a portal. Press Tab again to bring it back."),
                 () => new BuildWalkDemo()),
             PausePage(),
         };
@@ -59,20 +59,20 @@ namespace AnomalyArena
             return new (string, string, Func<Demo>)[]
             {
                 (ArenaText.Pair("坠落异星", "STRANDED"),
-                    ArenaText.Pair($"飞船坠落在一颗异星上。用 {days} 天修好它、加满燃料，然后逃离这里。", $"Your ship crashed on an alien planet. Spend {days} days repairing it and filling its tank, then escape."),
+                    ArenaText.Pair($"你的飞船坠落在一颗陌生的星球上。你有 {days} 天时间修好它、加满燃料，然后离开这里。", $"Your ship has crashed on an alien planet. You have {days} days to repair it, fill its tank and get out of here."),
                     () => new StrandedDemo(days)),
                 (ArenaText.Pair("移动和冲刺", "MOVE & SPRINT"),
-                    ArenaText.Pair($"{ArenaKeys.MoveKeys} 移动；边移动边按住 {ArenaKeys.SprintKey} 冲刺。体力用光后，回满才能再冲刺。", $"{ArenaKeys.MoveKeys} to move. Hold {ArenaKeys.SprintKey} while moving to sprint. Once stamina is empty, it must refill fully first."),
+                    ArenaText.Pair($"用 {ArenaKeys.MoveKeys} 移动，移动时按住 {ArenaKeys.SprintKey} 冲刺。体力用光后，要等它回满才能再冲刺。", $"Use {ArenaKeys.MoveKeys} to move; hold {ArenaKeys.SprintKey} while moving to sprint. Once stamina runs out, it has to refill completely."),
                     () => new MoveSprintDemo()),
                 AimPage(),
                 (ArenaText.Pair("换武器和技能", "SWAP & SKILLS"),
-                    ArenaText.Pair($"右键切换两个手持栏位；在能量研究区学会技能后，按 {ArenaKeys.SkillKeys} 释放。", $"Right click swaps the two hand slots. Skills learned at the Energy Lab are cast with {ArenaKeys.SkillKeysWith(", ")}."),
+                    ArenaText.Pair($"按右键在两只手的武器之间切换。在基地的能量研究区学会技能后，按 {ArenaKeys.SkillKeys} 释放。", $"Right click switches between your hand weapons. Skills learned at the base's Energy Lab are cast with {ArenaKeys.SkillKeysWith(", ")}."),
                     () => new SkillDemo()),
                 (ArenaText.Pair("采集资源", "GATHER"),
-                    ArenaText.Pair($"下午按住 {ArenaKeys.InteractKey} 采合金矿，路上的武器箱按 {ArenaKeys.InteractKey} 打开；夜里按 {ArenaKeys.LampKey} 放下矿灯，在灯光里按住 {ArenaKeys.InteractKey} 采暗物质。", $"Afternoon: hold {ArenaKeys.InteractKey} on alloy ore, and {ArenaKeys.InteractKey} opens a weapon crate on the way. Night: {ArenaKeys.LampKey} sets a lamp; hold {ArenaKeys.InteractKey} in its light on dark matter."),
+                    ArenaText.Pair($"下午按住 {ArenaKeys.InteractKey} 采合金矿，按 {ArenaKeys.InteractKey} 打开路上的武器箱；夜里先按 {ArenaKeys.LampKey} 放矿灯，再在灯光里按住 {ArenaKeys.InteractKey} 采暗物质。", $"In the afternoon, hold {ArenaKeys.InteractKey} to mine alloy ore; {ArenaKeys.InteractKey} opens crates. At night, {ArenaKeys.LampKey} sets a lamp; hold {ArenaKeys.InteractKey} in its light to mine dark matter."),
                     () => new GatherDemo()),
                 (ArenaText.Pair("基地和升级", "BASE & UPGRADES"),
-                    ArenaText.Pair($"下午或夜里在基地门口按 {ArenaKeys.InteractKey}：建造各区、在研习窗口里买升级、修飞船，买下立刻生效。", $"Afternoon or night, {ArenaKeys.InteractKey} at the base door: build rooms, study upgrades, repair the ship. Each takes effect at once."),
+                    ArenaText.Pair($"下午或夜里在基地门口按 {ArenaKeys.InteractKey} 进去，可以建造各区、在研习窗口买升级、修飞船，买下立刻生效。", $"Afternoon or night, press {ArenaKeys.InteractKey} at the base door to build rooms, study upgrades or repair the ship; it all works at once."),
                     () => new BaseDemo()),
                 PausePage(),
             };
@@ -80,11 +80,11 @@ namespace AnomalyArena
 
         // The two pages both sets share.
         static (string title, string line, Func<Demo> demo) AimPage() => (ArenaText.Pair("瞄准和开火", "AIM & FIRE"),
-            ArenaText.Pair("鼠标瞄准，左键使用手持武器，按住蓄力或连射，取决于武器。", "Aim with the mouse. Left click uses the held weapon; hold it to charge or keep firing, depending on the weapon."),
+            ArenaText.Pair("用鼠标瞄准，按左键使用手上的武器。按住时是蓄力还是连射，要看是哪种武器。", "Aim with the mouse. Left click uses the held weapon; hold it to charge or keep firing, depending on the weapon."),
             () => new FireDemo());
 
         static (string title, string line, Func<Demo> demo) PausePage() => (ArenaText.Pair("暂停", "PAUSE"),
-            ArenaText.Pair("按 Esc 暂停，暂停页可以查看按键、重看教程、重新开局或返回标题。", "Esc pauses. The pause screen lists the keys and has How to Play, Restart Run and Quit to Title."),
+            ArenaText.Pair("按 Esc 暂停。在暂停页可以查看按键、重看教程、重新开局或返回标题。", "Press Esc to pause. From there you can check the keys, see How to Play again, restart the run or quit to the title."),
             () => new PauseDemo());
 
         // The story mode's pages while a campaign runs; the title starts no run, but its Start opens the story mode, so its button forces
@@ -104,8 +104,8 @@ namespace AnomalyArena
         }
 
         static string Footnote() => InCampaign
-            ? ArenaText.Pair("看左上角的目标，跟着蓝色标记走。其他按键用到时屏幕上会有提示。", "Read the goal at the top left and follow the blue marker. Other keys show on screen when needed.")
-            : ArenaText.Pair($"波次中的选卡面板上按 Esc 可以稍后再选，之后按 {ArenaKeys.CardPickKey} 打开。其他按键用到时屏幕上会有提示。", $"On a mid-wave card panel, Esc picks later and {ArenaKeys.CardPickKey} opens it again. Other keys are shown on screen when needed.");
+            ? ArenaText.Pair("左上角写着当前的目标，跟着蓝色标记走就行。其他按键用得到时，屏幕上会提示。", "Your goal is at the top left; follow the blue marker. Other keys are shown on screen when you need them.")
+            : ArenaText.Pair($"波次中的选卡面板可以按 Esc 留到稍后，之后按 {ArenaKeys.CardPickKey} 打开。其他按键用得到时，屏幕上会提示。", $"Esc puts a mid-wave card pick off; {ArenaKeys.CardPickKey} opens it again. Other keys are shown on screen when you need them.");
 
         Font font;
         float heldScale = 1f;

@@ -60,6 +60,10 @@ namespace AnomalyArena
         [Tooltip("EnemyKind order (14 kinds, Chanter last). Seconds to kill an elite, at the day's reference DPS (the game's own ratios, averaging 6 s). Only the specials become elites; the other entries are not read.")]
         public float[] eliteSeconds = { 6f, 6f, 6f, 6f, 6.21f, 5.38f, 6f, 6f, 6.62f, 6.62f, 4.97f, 0f, 0f, 6.21f };
 
+        [Header("Each day's monster damage")]
+        [Tooltip("Days 1, 2, 3 ...: every monster's attack damage is its definition's times this (an elite's x1.5 on top), in place of the classic wave's damage growth; a day past the table takes its last entry. It is the reference player's max HP that morning over day 1's (the number ledger's three builds: 25 HP and 5 more a level of armor), so a player takes as many hits from a monster on every day and a day is harder for its new kinds, not for its numbers. The Tyrant's fight keeps the classic factors; an empty table keeps them every day.")]
+        public float[] dayEnemyDamage = { 1f, 1f, 1.07f, 1.07f, 1.13f, 1.13f, 1.2f };
+
         [Header("The two bosses in the campaign (since 2026-11-10)")]
         [Min(1f), Tooltip("The Nash Prophet's HP in the void trial, whatever the day; it has no shield. The black hole's check asks for holeCheckProphetShare of it.")]
         public float prophetHp = 8200f;
@@ -81,6 +85,8 @@ namespace AnomalyArena
         public float tyrantInfusionFloor = 90f;
         [Tooltip("Days 1, 2, 3 ...: the effects paid as a share of the damage dealt (Light heals, Earth shields, Void and the void enchant restore energy, Radiance heals) are multiplied by this, so they pay what they did in the classic run; a day past the table takes its last entry.")]
         public float[] payoffScaleByDay = { .85f, .75f, .457f, .286f, .2f, .129f, .064f };
+        [Min(0f), Tooltip("The same factor in the Tyrant's fight: the classic final boss's reference DPS (40) over the campaign's in that fight (tyrantReferenceDps 930).")]
+        public float tyrantPayoffScale = .043f;
         [Min(1f), Tooltip("Tame: the tamed weapon attacks this many times as fast, on top of what taming did before.")]
         public float tameAttackSpeed = 1.25f;
         [Min(1f), Tooltip("Twist: the twisted weapon deals this many times the damage, on top of the twist itself.")]
@@ -97,8 +103,16 @@ namespace AnomalyArena
         public float voidArmorEnergyRegen = 1f;
 
         [Header("Alien energy by day (since 2026-11-10)")]
-        [Tooltip("Days 1, 2, 3 ...: the alien energy the morning's kills drop in all; a day past the table takes its last entry. Each kill drops its share of what is left by its seconds to kill against the bodies still to come, and the last kill drops the rest, so killing every monster of the day pays exactly this.")]
+        [Tooltip("Days 1, 2, 3 ...: the alien energy the morning's kills drop in all; a day past the table takes its last entry. Each kill takes its share of what is left by its seconds to kill against the bodies still to come; a kill that drops (the chances below) pays its share and those held back by the kills before it, and the last kill drops the rest, so killing every monster of the day pays exactly this.")]
         public int[] dayKillEnergy = { 20, 32, 52, 80, 120, 176, 240 };
+        [Range(0f, 1f), Tooltip("Chance that a basic monster's death drops alien energy (its share and those held back before it).")]
+        public float basicDropChance = .35f;
+        [Range(0f, 1f), Tooltip("The same for a special or support monster (EnemyRoles); an elite always drops.")]
+        public float specialDropChance = .6f;
+        [Range(0f, 1f), Tooltip("The same for a Splitter's small ones.")]
+        public float miniDropChance = .2f;
+        [Min(0), Tooltip("At most this many kills in a row drop no energy: the next one always does.")]
+        public int dropPity = 3;
         [Tooltip("Nights 1, 2, 3 ...: the alien energy the night's dark matter nodes carry in all, shared evenly by them; a night past the table takes its last entry.")]
         public int[] nightEnergy = { 5, 8, 13, 20, 30, 44, 60 };
 
@@ -161,8 +175,15 @@ namespace AnomalyArena
         /// <summary>The scale of skills and statuses on day, or in the Tyrant's fight; 0 on Day 0, where the classic rule (1) stays.</summary>
         public float CombatScaleOn(int day, bool tyrantFight) => tyrantFight ? Mathf.Max(1f, tyrantCombatScale) : day <= 0 ? 0f : ByDay(dayCombatScale, day, 0f);
 
-        /// <summary>The factor on the effects paid as a share of damage on day; 1 on Day 0 or with an empty table.</summary>
-        public float PayoffScaleOn(int day) => day <= 0 ? 1f : Mathf.Max(0f, ByDay(payoffScaleByDay, day, 1f));
+        /// <summary>The factor on the effects paid as a share of damage on day, or in the Tyrant's fight; 1 on Day 0 or with an empty
+        /// table.</summary>
+        public float PayoffScaleOn(int day, bool tyrantFight = false) =>
+            tyrantFight ? Mathf.Max(0f, tyrantPayoffScale) : day <= 0 ? 1f : Mathf.Max(0f, ByDay(payoffScaleByDay, day, 1f));
+
+        /// <summary>The factor on every monster's attack damage on day (Day 0 counts as day 1); 0 in the Tyrant's fight or with an empty
+        /// table, where the classic wave's damage growth stays.</summary>
+        public float EnemyDamageOn(int day, bool tyrantFight = false) =>
+            tyrantFight || dayEnemyDamage is not { Length: > 0 } ? 0f : Mathf.Max(.01f, ByDay(dayEnemyDamage, Mathf.Max(1, day), 1f));
 
         /// <summary>The alien energy the morning's kills of day drop in all.</summary>
         public int DayKillEnergy(int day) => ByDay(dayKillEnergy, day);
@@ -172,6 +193,14 @@ namespace AnomalyArena
         /// <summary>What one kill drops of the day's kill energy still left: its share by weight (its seconds to kill) against the weight of
         /// the bodies still to come, the fraction rounded up with its own chance (roll, 0 to 1) so the average stays the share; all that is
         /// left when nothing is still to come. Never more than left, so the day pays exactly its table entry once its last body falls.</summary>
+        /// <summary>A body's chance to drop the energy held so far: an elite always; a Splitter's small one miniDropChance; a special or
+        /// support monster specialDropChance; any other basicDropChance.</summary>
+        public float DropChance(EnemyKind kind, bool elite, bool mini) =>
+            elite ? 1f : mini ? miniDropChance : EnemyRoles.IsSpecial(kind) || EnemyRoles.IsSupport(kind) ? specialDropChance : basicDropChance;
+
+        /// <summary>Whether a kill drops: always once pity kills in a row dropped none, else when roll falls under its chance.</summary>
+        public static bool KillDrops(float chance, int missesInARow, int pity, float roll) => missesInARow >= Mathf.Max(0, pity) || roll < chance;
+
         public static int KillEnergyShare(int left, float weight, float stillToCome, float roll)
         {
             if (left <= 0) return 0;

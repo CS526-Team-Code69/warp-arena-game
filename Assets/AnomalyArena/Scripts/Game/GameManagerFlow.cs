@@ -33,7 +33,7 @@ namespace AnomalyArena
 
         void ReadShownKeys(Keyboard keyboard)
         {
-            if (V2Tutorial.HoldsInput || ArenaSettingsPanel.HoldsInput || hud && hud.v2Hud && hud.v2Hud.GetComponent<ArenaCodex>() is { IsOpen: true }) return;
+            if (V2Tutorial.HoldsInput || ArenaSettingsPanel.HoldsInput || ArenaCodex.HoldsInput) return;
             bool digitRead = false;
             foreach (var (key, code) in ShownKeys)
             {
@@ -172,8 +172,8 @@ namespace AnomalyArena
             // run's absorbed power (no enemy is on the map to look for either).
             if (CampaignRunning && campaign.rules)
                 hud?.Banner(ArenaText.Pair("虚空的馈赠", "THE GIFT OF THE VOID"),
-                    ArenaText.Pair($"虚空能量 +{campaign.rules.voidEnergyReward} · 虚空合金 +{campaign.rules.voidAlloyReward}　回基地的能量研究区研习",
-                        $"Void energy +{campaign.rules.voidEnergyReward} · Void alloy +{campaign.rules.voidAlloyReward}   Study them at the base's Energy Lab"));
+                    ArenaText.Pair($"虚空能量 +{campaign.rules.voidEnergyReward}，虚空合金 +{campaign.rules.voidAlloyReward}。回基地的能量研究区可以用它们研习。",
+                        $"Void energy +{campaign.rules.voidEnergyReward}, void alloy +{campaign.rules.voidAlloyReward}. Spend them at the base's Energy Lab."));
             else
                 hud?.Banner(ArenaText.Pair("吸收虚空之力", "ABSORBING THE VOID"),
                     ArenaText.Pair($"战场冻结 {trialReturnFreeze:0.#} 秒，趁现在看清敌人的位置。", $"The battlefield is frozen for {trialReturnFreeze:0.#} s. Use it to see where the enemies are."));

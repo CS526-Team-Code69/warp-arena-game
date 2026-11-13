@@ -58,6 +58,7 @@ MonoBehaviour:
   baseLightRadius: 15
   playerGlowRadius: 2.4
   freeLampsPerNight: 3
+  dailyFreeLamps: 0
   lampHp: 4
   regions: {x: 6, y: 4}
   killsPerShadow: 4
@@ -98,6 +99,12 @@ MonoBehaviour:
   scatterYield: 2
   scatterReach: 60
   daySpawnRing: 56
+  nearSpawnRing: 30
+  nearSpawnShare: 0.4
+  morningSeconds: 75
+  morningCrowd: 1.25
+  monsterWalkScale: 0.944
+  monsterWalkCap: 0.95
   holeFeedsToOpen: 20
   holeQuestSpawnSeconds: 3
   holeQuestMaxAlive: 5
@@ -267,3 +274,22 @@ MonoBehaviour:
   arrivalEnergy: 4
   tutorialNightOre: 2
   tutorialNightOreAlloy: 2
+  baseLevelAlloy:
+  - 10
+  - 14
+  - 20
+  - 32
+  - 48
+  - 76
+  basicDropChance: 0.35
+  specialDropChance: 0.6
+  miniDropChance: 0.2
+  dropPity: 3
+  dayLampsToCraft:
+  - 3
+  - 3
+  - 4
+  - 4
+  - 5
+  - 5
+  - 6

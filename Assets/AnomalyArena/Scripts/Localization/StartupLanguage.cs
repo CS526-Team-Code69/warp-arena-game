@@ -36,9 +36,13 @@ namespace AnomalyArena
 
         /// <summary>The address's path holds "/zh/". The host, the query (after ?) and the fragment (after #) do not count, so
         /// "https://zh.example.com/" or "...?page=/zh/" stay English.</summary>
-        public static bool PagePathIsChinese(string pageAddress)
+        public static bool PagePathIsChinese(string pageAddress) => PagePath(pageAddress).IndexOf("/zh/", StringComparison.OrdinalIgnoreCase) >= 0;
+
+        /// <summary>The address's path, without the scheme and the host, the query (after ?) and the fragment (after #); "/" for an
+        /// address that has no path, "" for none. The page's build reads it too (BuildEdition).</summary>
+        public static string PagePath(string pageAddress)
         {
-            if (string.IsNullOrEmpty(pageAddress)) return false;
+            if (string.IsNullOrEmpty(pageAddress)) return "";
             string path = pageAddress;
             int end = path.IndexOfAny(new[] { '?', '#' });
             if (end >= 0) path = path.Substring(0, end);
@@ -48,7 +52,7 @@ namespace AnomalyArena
                 int slash = path.IndexOf('/', scheme + 3);
                 path = slash >= 0 ? path.Substring(slash) : "/";
             }
-            return path.IndexOf("/zh/", StringComparison.OrdinalIgnoreCase) >= 0;
+            return path;
         }
     }
 }

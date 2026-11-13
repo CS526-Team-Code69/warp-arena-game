@@ -201,6 +201,70 @@ namespace AnomalyArena
             Assert.That(actual, Is.EqualTo(expected).Within(.0001f));
         }
 
+        [Test]
+        public void PayoffScaleOn_InTheTyrantsFight_IsItsOwnFactor()
+        {
+            var sut = CreateRules();
+
+            float actual = sut.PayoffScaleOn(7, tyrantFight: true);
+
+            Assert.That(actual, Is.EqualTo(.043f).Within(.0001f));
+        }
+
+        // ───── Each day's monster damage ─────
+
+        [TestCase(0, 1f)]
+        [TestCase(1, 1f)]
+        [TestCase(3, 1.07f)]
+        [TestCase(5, 1.13f)]
+        [TestCase(7, 1.2f)]
+        [TestCase(9, 1.2f)]
+        public void EnemyDamageOn_Day_IsTheTable(int day, float expected)
+        {
+            var sut = CreateRules();
+
+            float actual = sut.EnemyDamageOn(day);
+
+            Assert.That(actual, Is.EqualTo(expected).Within(.0001f));
+        }
+
+        [Test]
+        public void EnemyDamageOn_InTheTyrantsFight_LeavesTheClassicFactor()
+        {
+            var sut = CreateRules();
+
+            float actual = sut.EnemyDamageOn(7, tyrantFight: true);
+
+            Assert.That(actual, Is.EqualTo(0f));
+        }
+
+        // The reference player's max HP on each morning (the number ledger's three builds: 25 HP, 5 a level of armor; their armor levels
+        // on the mornings of days 1 to 7 are 0, 0, 0, 0, 0, 0, 0 / 0, 0, 1, 1, 2, 2, 3 / 0, 0, 0, 0, 0, 0, 0): a Grunt's five hits fell it
+        // on every day, as on day 1.
+        [TestCase(1, 25f)]
+        [TestCase(3, 26.667f)]
+        [TestCase(5, 28.333f)]
+        [TestCase(7, 30f)]
+        public void EnemyDamageOn_Day_KeepsTheReferencePlayersHitsFromAGruntAtFive(int day, float referenceHp)
+        {
+            var sut = CreateRules();
+
+            float actual = referenceHp / (5f * sut.EnemyDamageOn(day));
+
+            Assert.That(actual, Is.EqualTo(5f).Within(.05f));
+        }
+
+        [Test]
+        public void EnemyDamageOn_WithAnEmptyTable_LeavesTheClassicFactor()
+        {
+            var sut = CreateRules();
+            sut.dayEnemyDamage = new float[0];
+
+            float actual = sut.EnemyDamageOn(4);
+
+            Assert.That(actual, Is.EqualTo(0f));
+        }
+
         // ───── The day's kill energy ─────
 
         // A day's bodies in the order they die, as seconds to kill: a melee swarm with specials and elites among it.

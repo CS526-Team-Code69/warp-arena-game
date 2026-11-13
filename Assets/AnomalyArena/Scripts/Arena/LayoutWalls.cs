@@ -4,18 +4,27 @@ namespace AnomalyArena
 {
     /// <summary>
     /// Keeps a map's wall objects in step with its layout. The scene saves one wall object per layout rect, in order (collider on the Wall layer
-    /// plus artwork). Rects the layout gained later, such as the L and ] walls of the Ruins (system doc 12.2), get a copy of the saved wall nearest
-    /// in size, moved and scaled onto the rect, so collisions, bounces and the art match what paths and spawns read from the layout. Saved walls
-    /// past the end of the layout are switched off.
+    /// plus artwork). A saved wall whose rect moved in the layout since (the walls taken out of the black holes' wider pull ring) is moved and
+    /// scaled onto it; rects the layout gained later, such as the L and ] walls of the Ruins (system doc 12.2), get a copy of the saved wall
+    /// nearest in size, moved and scaled onto the rect. So collisions, bounces and the art match what paths and spawns read from the layout.
+    /// Saved walls past the end of the layout are switched off.
     /// </summary>
     public static class LayoutWalls
     {
-        /// <summary>Adds the missing wall objects of a layout to its wall group; returns how many were added. Calling it again adds nothing.</summary>
+        /// <summary>Puts every saved wall of the group onto its rect and adds the missing wall objects of the layout; returns how many were
+        /// added. Calling it again adds nothing.</summary>
         public static int Fill(Transform group, MapLayout layout)
         {
             if (!group || !layout || layout.walls == null || group.childCount == 0) return 0;
             int existing = group.childCount, added = 0;
             for (int i = layout.walls.Length; i < existing; i++) group.GetChild(i).gameObject.SetActive(false);
+            for (int i = 0; i < Mathf.Min(existing, layout.walls.Length); i++)
+            {
+                var rect = layout.walls[i];
+                var t = group.GetChild(i);
+                t.localPosition = new Vector3(rect.center.x, t.localPosition.y, rect.center.y);
+                t.localScale = new Vector3(rect.width, t.localScale.y, rect.height);
+            }
             for (int i = existing; i < layout.walls.Length; i++)
             {
                 var rect = layout.walls[i];

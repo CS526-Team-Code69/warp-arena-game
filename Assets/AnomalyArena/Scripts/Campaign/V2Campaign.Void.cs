@@ -141,8 +141,8 @@ namespace AnomalyArena
 
         static string VoidCost(int energyCost, int alloyCost)
         {
-            if (energyCost > 0 && alloyCost > 0) return ArenaText.Pair($"{energyCost} 虚空能量 · {alloyCost} 虚空合金", $"{energyCost} void energy · {alloyCost} void alloy");
-            return energyCost > 0 ? ArenaText.Pair($"{energyCost} 虚空能量", $"{energyCost} void energy") : ArenaText.Pair($"{alloyCost} 虚空合金", $"{alloyCost} void alloy");
+            if (energyCost > 0 && alloyCost > 0) return ArenaText.Pair($"虚空能量 {energyCost} + 虚空合金 {alloyCost}", $"{energyCost} void energy + {alloyCost} void alloy");
+            return energyCost > 0 ? ArenaText.Pair($"虚空能量 {energyCost}", $"{energyCost} void energy") : ArenaText.Pair($"虚空合金 {alloyCost}", $"{alloyCost} void alloy");
         }
 
         /// <summary>The Void room's tiles, once the Prophet is beaten: the three void skills, each held weapon's void enchant, the void Mk
@@ -185,7 +185,7 @@ namespace AnomalyArena
                 now = owned ? ArenaText.Pair("已学会", "Learned") : ArenaText.Pair("未学会", "Not learned"),
                 after = owned ? "" : replaced != null ? ArenaText.Pair($"学会（替换{replaced}）", $"Learned (replaces {replaced})") : ArenaText.Pair("学会", "Learned"),
                 detail = definition.Description(1) + ArenaText.Pair($"\n每次使用消耗 {definition.cost:0} 能量。虚空技能没有等级。", $"\nEach cast costs {definition.cost:0} energy. Void skills have no levels.")
-                    + (replaced != null ? ArenaText.Pair($"\n技能栏已满：学会它会替换等级最低的{replaced}。", $"\nThe skill slots are full: it replaces the lowest-level skill, {replaced}.") : ""),
+                    + (replaced != null ? ArenaText.Pair($"\n技能栏已满，学会它会替换掉等级最低的{replaced}。", $"\nYour skill slots are full, so learning it replaces your lowest-level skill, {replaced}.") : ""),
                 costText = VoidCost(cost, 0),
                 state = VoidState(owned, cost, 0),
                 buy = () => BuyVoidSkill(id, cost),
@@ -235,10 +235,10 @@ namespace AnomalyArena
                 rarity = CardRarity.Void,
                 icon = StudyWeaponIcon(weapon.form),
                 title = ArenaText.Pair($"虚空附魔：{weapon.Label}", $"Void enchant: {weapon.Label}"),
-                now = owned ? ArenaText.Pair("命中吸蓝", "Hits restore energy") : ArenaText.Pair("无", "None"),
-                after = owned ? "" : ArenaText.Pair($"命中伤害的 {share}% 变成能量", $"{share}% of hit damage as energy"),
-                detail = ArenaText.Pair($"给这把武器附上虚空：它每次命中，按造成伤害的 {share}% 给你回复能量（和虚空元素相同的比例）。它原来的元素不变。武器换下以后，附魔跟着这把武器。",
-                    $"Enchant this weapon with the void: each hit restores {share}% of the damage it deals as energy (the Void element's share). Its own element stays. The enchant stays with this weapon if it leaves your hands."),
+                now = owned ? ArenaText.Pair("命中回能量", "Hits restore energy") : ArenaText.Pair("无", "None"),
+                after = owned ? "" : ArenaText.Pair($"命中伤害的 {share}% 转为能量", $"{share}% of hit damage back as energy"),
+                detail = ArenaText.Pair($"给这把武器附上虚空之力：它每次命中，都按造成伤害的 {share}% 给你回复能量（和虚空元素的比例相同）。武器原有的元素不变。这把武器被换下后，附魔仍然留在它身上。",
+                    $"Enchant this weapon with the void: each hit restores energy equal to {share}% of the damage it deals, the same share as the Void element. The weapon keeps its own element, and the enchant stays on it even if it leaves your hands."),
                 costText = VoidCost(0, cost),
                 state = VoidState(owned, 0, cost),
                 buy = () => BuyVoidEnchant(weapon, cost),
@@ -264,11 +264,11 @@ namespace AnomalyArena
                 category = ArenaText.Pair("武器", "Weapons"),
                 rarity = CardRarity.Void,
                 icon = StudyAxisIcon(UpgradeAxis.Power),
-                title = ArenaText.Pair($"虚空 MK{to}", $"Void Mk {to}"),
-                now = mk > 0 ? $"MK{mk}" : "",
-                after = owned ? "" : ArenaText.Pair($"MK{to}（黑色标记）", $"Mk {to} (black mark)"),
-                detail = ArenaText.Pair($"全队武器从 MK{from} 升到 MK{to}：手里和以后拿到的所有武器一起升，等级标记变成黑色。全队 MK 到 {from} 以后才能升。",
-                    $"Raises the whole armament from Mk {from} to Mk {to}: every weapon in hand and every weapon taken later, its mark turning black. Needs the armament at Mk {from}."),
+                title = ArenaText.Pair($"虚空 Mk {to}", $"Void Mk {to}"),
+                now = mk > 0 ? $"Mk {mk}" : "",
+                after = owned ? "" : ArenaText.Pair($"Mk {to}（黑色标记）", $"Mk {to} (black mark)"),
+                detail = ArenaText.Pair($"把所有异常武器的型号从 Mk {from} 升到 Mk {to}：手上的和以后拿到的都会一起升级，型号标记会变成黑色。型号要先升到 Mk {from} 才能买。",
+                    $"Raises all your anomaly weapons from Mk {from} to Mk {to}, both the ones you hold and any you get later; their Mk mark turns black. Your weapons must reach Mk {from} first."),
                 costText = VoidCost(0, cost),
                 state = owned ? StudyState.Owned : mk < from ? StudyState.Locked : VoidState(false, 0, cost),
                 buy = () => BuyVoidMk(from, to, cost),
@@ -300,7 +300,7 @@ namespace AnomalyArena
                 title = ArenaText.Pair("虚空装甲附魔", "Void armor enchant"),
                 now = voidArmor ? ArenaText.Pair($"能量每秒 +{regen:0.#}", $"Energy +{regen:0.#}/s") : ArenaText.Pair("能量不会自动恢复", "No energy regeneration"),
                 after = voidArmor ? "" : ArenaText.Pair($"能量每秒 +{regen:0.#}", $"Energy +{regen:0.#}/s"),
-                detail = ArenaText.Pair($"给你的装甲附上虚空：能量随时间自动恢复，每秒 {regen:0.#} 点，到上限为止。", $"Enchant your armor with the void: energy restores over time, {regen:0.#} a second, up to its maximum."),
+                detail = ArenaText.Pair($"给你的装甲附上虚空之力：之后能量会随时间自动恢复，每秒 {regen:0.#} 点，直到回满。", $"Enchant your armor with the void: your energy then regenerates by itself, {regen:0.#} per second, until it's full."),
                 costText = VoidCost(0, cost),
                 state = VoidState(voidArmor, 0, cost),
                 buy = BuyVoidArmor,

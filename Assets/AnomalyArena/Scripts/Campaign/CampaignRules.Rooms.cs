@@ -36,8 +36,8 @@ namespace AnomalyArena
         public float[] shieldCapShares = { .33f, .45f, .58f };
         [Tooltip("The base's max HP at base levels 1 to 7 (the V2 doc's base table).")]
         public float[] baseLevelHp = { 500f, 750f, 1100f, 1600f, 2400f, 3600f, 5500f };
-        [Tooltip("Alloy to raise the base to levels 2 to 7 (the doc gives 200 in all; the split is a placeholder).")]
-        public int[] baseLevelAlloy = { 10, 20, 30, 40, 45, 55 };
+        [Tooltip("Alloy to raise the base to levels 2 to 7: the V2 doc's 200 in all, shared by the HP each level adds (250, 350, 500, 800, 1200 and 1900 of 5000). The doc has the base rise a level a day, and so each level costs about the same share, 45 to 50%, of the afternoon alloy of the day before it.")]
+        public int[] baseLevelAlloy = { 10, 14, 20, 32, 48, 76 };
         [Min(0), Tooltip("Alloy to repair a broken room, any room, every time.")]
         public int roomRepairAlloy = 15;
         [Tooltip("Armor levels 1 to 5 at the Armament Bay, in alloy (the doc gives 150 in all; the split is a placeholder). Each level is one player level: max HP and max energy as before.")]

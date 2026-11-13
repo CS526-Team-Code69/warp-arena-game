@@ -79,7 +79,8 @@ namespace AnomalyArena
         [Min(1f), Tooltip("Radius of a placed mining lamp, in cells.")] public float lampRadius = 6.5f;
         [Min(1f), Tooltip("Radius of the base's light at night, in cells: its floodlights light this circle and no shadow comes into it.")] public float baseLightRadius = 15f;
         [Min(0f), Tooltip("The player's own faint glow: shows the feet, does not scare shadows, does not allow mining.")] public float playerGlowRadius = 2.4f;
-        [Min(0), Tooltip("Mining lamps the base hands out each night.")] public int freeLampsPerNight = 3;
+        [Min(0), Tooltip("Mining lamps in the base's store for the tutorial night (day 0). From day 1 on the base adds dailyFreeLamps at each dusk and the rest are crafted (lampCost).")] public int freeLampsPerNight = 3;
+        [Min(0), Tooltip("Mining lamps the base adds to its store at each dusk from day 1 on. 0: every later lamp is crafted, from the alloy dayLampsToCraft adds to the afternoon's ore.")] public int dailyFreeLamps = 0;
         [Min(1f), Tooltip("How long a lamp lasts once a crowd of shadows has gone into its light: this many seconds against two of them, less against more.")] public float lampHp = 4f;
 
         [Header("Night: shadow monsters")]
@@ -137,7 +138,13 @@ namespace AnomalyArena
         [Header("Big map, open-ended afternoon and night, mineral trails")]
         [Tooltip("The campaign map's size in cells (x, z). The classic arena is 180 x 120 (WreckField and DustFlats maps).")] public Vector2Int mapSize = new(200, 140);
         [Tooltip("No clock in the afternoon (dusk) or at night: the player goes into the night and on to the next day from the base door (its panel's Into the night and Wait for dawn). Off: both run on duskSeconds and NightLength as before.")] public bool openEndedEvenings = true;
-        [Min(0f), Tooltip("Day monsters are born on a ring this many cells from the base centre (not on the far rim of the big map), then walk in. 56 sits between 42, which was too near, and 70, which was too far; tune it after a played day.")] public float daySpawnRing = 56f;
+        [Min(0f), Tooltip("The far spawn ring: day monsters are born on a ring this many cells from the base centre (not on the far rim of the big map), then walk in. nearSpawnShare of them come from the near ring instead.")] public float daySpawnRing = 56f;
+        [Min(0f), Tooltip("Cells from the base centre of the near spawn ring, which brings part of each morning close at once.")] public float nearSpawnRing = 30f;
+        [Range(0f, 1f), Tooltip("Share of a morning's monsters born on the near ring; the rest come from the far one (daySpawnRing).")] public float nearSpawnShare = .4f;
+        [Min(0f), Tooltip("Seconds monsters keep coming each morning, the same every day (the open mode keeps its wave table's).")] public float morningSeconds = 75f;
+        [Min(0f), Tooltip("Each morning's concurrent monsters: the wave table's target times this.")] public float morningCrowd = 1.25f;
+        [Min(0f), Tooltip("Monsters walk at their table speed times this in the story (the open mode keeps WaveManager.movementSpeedMultiplier): a Grunt then walks at 0.85 of the player's 6 cells a second.")] public float monsterWalkScale = .944f;
+        [Range(.1f, 1f), Tooltip("No monster walks faster than this share of the player's walking speed, so a black hole (BlackHole.PullOverWalk of it) always takes it.")] public float monsterWalkCap = .95f;
         [Min(0), Tooltip("Ore nodes among each night's nodes, each beside one of the night's dark matter clusters; the rest of the night's nodes are dark matter. 0 since 2026-11-06 (it was 1): its alloy went to the afternoon's scattered nodes (scatterNodes), and afternoon ore left unmined still lies there at night.")] public int nightOreNodes = 0;
         [Min(0), Tooltip("How many of each afternoon's ore nodes lie on the trail toward the black hole (newly seen minerals point the way). At least OreNodes(days) puts every afternoon node on the trail (once the hidden boss has turned the hole into ground, the trail still leads to where it stood); the rest lie at random over the map.")] public int trailNodes = 10;
         [Min(0f), Tooltip("Cells from the base that the trail's farthest node reaches on day 1.")] public float trailReach = 36f;

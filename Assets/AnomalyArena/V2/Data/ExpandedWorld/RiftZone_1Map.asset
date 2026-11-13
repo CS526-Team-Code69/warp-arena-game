@@ -123,7 +123,7 @@ MonoBehaviour:
     height: 3
   - serializedVersion: 2
     x: 8
-    y: 31
+    y: 30
     width: 3
     height: 3
   - serializedVersion: 2
@@ -178,12 +178,12 @@ MonoBehaviour:
     height: 6
   - serializedVersion: 2
     x: 72
-    y: -33
+    y: -31
     width: 3
     height: 3
   - serializedVersion: 2
     x: 66
-    y: -33
+    y: -32
     width: 2
     height: 6
   - serializedVersion: 2
@@ -208,7 +208,7 @@ MonoBehaviour:
     height: 3
   - serializedVersion: 2
     x: 72
-    y: 31
+    y: 28
     width: 3
     height: 3
   holeAnchors:

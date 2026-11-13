@@ -47,8 +47,8 @@ MonoBehaviour:
     width: 2
     height: 5
   - serializedVersion: 2
-    x: -67
-    y: 32
+    x: -66
+    y: 31
     width: 14
     height: 2
   - serializedVersion: 2
@@ -117,8 +117,8 @@ MonoBehaviour:
     width: 2
     height: 5
   - serializedVersion: 2
-    x: -3
-    y: 32
+    x: -4
+    y: 31
     width: 14
     height: 2
   - serializedVersion: 2
@@ -173,7 +173,7 @@ MonoBehaviour:
     height: 5
   - serializedVersion: 2
     x: 61
-    y: -32
+    y: -31
     width: 14
     height: 2
   - serializedVersion: 2
@@ -203,7 +203,7 @@ MonoBehaviour:
     height: 5
   - serializedVersion: 2
     x: 61
-    y: 32
+    y: 29
     width: 14
     height: 2
   - serializedVersion: 2

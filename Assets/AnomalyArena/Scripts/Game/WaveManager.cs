@@ -130,7 +130,8 @@ namespace AnomalyArena
         {
             index = Mathf.Clamp(index,0,waveSet.waves.Length-1);
             float ramp = earlyPopulationScale != null && index < earlyPopulationScale.Length ? Mathf.Clamp01(earlyPopulationScale[index]) : 1f;
-            return Mathf.Min(Mathf.Max(1,maxConcurrentOrdinary),Mathf.Max(1,Mathf.CeilToInt(waveSet.waves[index].aliveTarget*Mathf.Max(0f,spawnCountMultiplier)*ramp)));
+            float crowd = CrowdRule?.Invoke() is float story && story > 0f ? story : 1f; // the story's mornings (V2Campaign.Days.cs)
+            return Mathf.Min(Mathf.Max(1,maxConcurrentOrdinary),Mathf.Max(1,Mathf.CeilToInt(waveSet.waves[index].aliveTarget*Mathf.Max(0f,spawnCountMultiplier)*ramp*crowd)));
         }
         /// <summary>
         /// System doc §9.2: melee swarm gives a fixed swarmExperienceReward and a mini Splitter miniExperienceReward. Every other non-boss enemy gives
@@ -174,7 +175,11 @@ namespace AnomalyArena
         public WavePhase Phase { get; private set; }
         public float TimeLeft { get; private set; }
         public float HpMultiplier => waveSet && WaveIndex >= 0 ? waveSet.waves[Mathf.Min(WaveIndex, waveSet.waves.Length - 1)].hpMultiplier * waveSet.ExtraHp(WaveIndex+1) : 1f;
-        public float EnemyDamageFactor => waveSet ? waveSet.DamageFactor(WaveIndex+1) : 1f;
+        /// <summary>The wave's enemy damage growth, or the campaign's by day while its rule gives more than 0.</summary>
+        public float EnemyDamageFactor => DamageFactorRule?.Invoke() is float day && day > 0f ? day : waveSet ? waveSet.DamageFactor(WaveIndex+1) : 1f;
+        /// <summary>V2 day campaign: the enemy damage factor by the campaign's day instead of the wave; null, or 0 or less, keeps the
+        /// wave's (the Tyrant's own damage is FinalBossDamageFactor and never goes through it).</summary>
+        public static Func<float> DamageFactorRule;
         /// <summary>R(w): this wave's reference DPS over wave 1's, i.e. how much fodder EHP has grown. Status stacks, damage over time and skill hits follow it.</summary>
         /// The final boss fight counts as wave 15 here (number table row 59): WaveIndex stays on the last ordinary wave.
         public float CombatScale
@@ -195,7 +200,21 @@ namespace AnomalyArena
         /// <summary>The Tyrant's own damage growth, that of the final boss wave (wave 15). Its scepter's summons keep the
         /// last ordinary wave's (EnemyDamageFactor), as document 12.2 sizes them on wave 14.</summary>
         public float FinalBossDamageFactor => waveSet ? waveSet.DamageFactor(WaveCount + 1) : 1f;
-        public float EnemySpeedFactor => (waveSet ? waveSet.SpeedFactor(WaveIndex+1) : 1f) * MovementSpeedScale;
+        public float EnemySpeedFactor => (waveSet ? waveSet.SpeedFactor(WaveIndex+1) : 1f) * (WalkScaleRule?.Invoke() is float story && story > 0f ? story : MovementSpeedScale);
+        /// <summary>V2 day campaign: the monsters' walking speed scale in place of movementSpeedMultiplier (charges keep
+        /// MovementSpeedScale); null, or 0 or less, keeps it.</summary>
+        public static Func<float> WalkScaleRule;
+        /// <summary>V2 day campaign: no monster walks faster than this many cells a second (Enemy, when it spawns); null, or 0 or less,
+        /// sets no cap.</summary>
+        public static Func<float> WalkCapRule;
+        /// <summary>V2 day campaign: seconds a morning's monsters keep coming, the same every day; null, or 0 or less, keeps the wave
+        /// table's.</summary>
+        public static Func<float> DurationRule;
+        /// <summary>V2 day campaign: a morning's concurrent target is the wave table's times this; null, or 0 or less, keeps it.</summary>
+        public static Func<float> CrowdRule;
+        /// <summary>Seconds the current wave's monsters keep coming: DurationRule's, else the wave table's.</summary>
+        public float WaveSeconds => DurationRule?.Invoke() is float story && story > 0f ? story
+            : waveSet && waveSet.waves != null && WaveIndex >= 0 && WaveIndex < waveSet.waves.Length ? waveSet.waves[WaveIndex].duration : 30f;
         public float BuildTime => waveSet && WaveIndex >= 0 ? waveSet.waves[Mathf.Min(WaveIndex, waveSet.waves.Length - 1)].buildTime : 20f;
         public event Action<int> WaveCompleted;
         public event Action<Enemy> EnemySpawned;
@@ -430,7 +449,7 @@ namespace AnomalyArena
             tyrant.HoldAttacks(bosses.tyrantOpeningGrace); // no move while the banner is up
             Track(tyrant);
             finalBossPending = false;
-            if (GM.hud) GM.hud.Banner(ArenaText.Pair("暴虐君王", "THE TYRANT KING"), ArenaText.Pair("击破护盾。它的冲锋会撞碎墙体和壁垒。", "Break its Shield. Its charge smashes through walls and Bulwarks."));
+            if (GM.hud) GM.hud.Banner(ArenaText.Pair("暴虐君王", "THE TYRANT KING"), ArenaText.Pair("先打破它的护盾。小心，它的冲锋能撞碎墙体和壁垒。", "Break its Shield first. Watch out: its charge smashes through walls and Bulwarks."));
         }
 
         void TickV2(float dt)
@@ -447,7 +466,7 @@ namespace AnomalyArena
             if (Phase == WavePhase.WaveIntro)
             {
                 TimeLeft -= dt;
-                if (TimeLeft <= 0f) { Phase = WavePhase.WaveActive; TimeLeft = waveSet.waves[WaveIndex].duration; BeginBatch(); IssueBatchMarkers(); }
+                if (TimeLeft <= 0f) { Phase = WavePhase.WaveActive; TimeLeft = WaveSeconds; BeginBatch(); IssueBatchMarkers(); }
                 return;
             }
             if (Phase == WavePhase.FinalBoss)

@@ -383,8 +383,7 @@ namespace AnomalyArena
 
         void SkinPaused(V2UiScreen screen, RectTransform content)
         {
-            const float w = 1040f, buttonGap = 18f;
-            float buttonW = (w - 80f - buttonGap * (V2Hud.PauseButtons.Length - 1)) / V2Hud.PauseButtons.Length;
+            const float w = 1040f, buttonW = 226f, buttonGap = 18f;
             float top = V2Hud.PauseTableBottom + 24f, h = top + 64f + 16f + 128f + 24f;
             var panel = MakePanel(screen.gameObject, content, new Vector2(w, h));
             panel.heightWithoutSummary = top + 64f + 40f;
@@ -397,18 +396,20 @@ namespace AnomalyArena
             // The paused line; V2Hud puts the controls table under it.
             Style(screen.body, 40f, 106f, w - 80f, 36f, 18, TextAnchor.MiddleCenter);
             if (screen.body) screen.body.color = SoftText;
-            float left = 40f;
+            // The buttons the page has (the Alpha has no collection), centred, each at most buttonW wide.
+            var row = new List<(RectTransform rect, Button button, string name)>();
             foreach (var name in V2Hud.PauseButtons)
+                if (content.Find(name) is RectTransform go && go.GetComponent<Button>() is { } button) row.Add((go, button, name));
+            float rowButtonW = row.Count > 0 ? Mathf.Min(buttonW, (w - 80f - buttonGap * (row.Count - 1)) / row.Count) : buttonW;
+            float left = (w - row.Count * (rowButtonW + buttonGap) + buttonGap) * .5f;
+            foreach (var (rect, button, name) in row)
             {
-                if (content.Find(name) is RectTransform go && go.GetComponent<Button>() is { } button)
-                {
-                    SkinButton(button, name == "ResumeRun", 20);
-                    Place(go, left, top, buttonW, 64f);
-                }
-                left += buttonW + buttonGap;
+                SkinButton(button, name == "ResumeRun", 20);
+                Place(rect, left, top, rowButtonW, 64f);
+                left += rowButtonW + buttonGap;
             }
             // The settings button stands alone in the panel's top-right corner, beside the centred heading, clear of the controls
-            // table and of the row of four under it.
+            // table and of the row of buttons under it.
             if (content.Find(V2Hud.PauseSettingsButton) is RectTransform settings && settings.GetComponent<Button>() is { } settingsButton)
             {
                 SkinButton(settingsButton, false, 18);

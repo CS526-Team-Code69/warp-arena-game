@@ -154,7 +154,7 @@ namespace AnomalyArena
             afternoonCombat = false;
             gm.CampaignSetPhase(ArenaUiState.Night);
             NightlyBaseUpkeep();
-            lampStock += rules.freeLampsPerNight;
+            lampStock += rules.dailyFreeLamps; // from day 1 on lamps are crafted, from the alloy the afternoon's ore carries for them
             nightAlloy = nightDark = 0; knockedOut = false;
             BankHaul();
             SpawnAfternoonOre(Day);
@@ -175,17 +175,24 @@ namespace AnomalyArena
             var set = gm.waves ? gm.waves.waveSet : null;
             if (!set || Day >= rules.days && !Overtime)
             {
-                gm.hud?.Banner(ArenaText.Pair("下午 · 休息、采矿时间", "AFTERNOON · REST AND MINING"),
+                gm.hud?.Banner(ArenaText.Pair("下午 · 休整与采矿", "AFTERNOON · REST AND MINING"),
                     ArenaText.Pair("今天的合金矿露出了地表。数量有限，采完就没有了。", "Today's ore has surfaced. There is only so much; once mined, it is gone."));
                 return;
             }
             int today = Mathf.Clamp(rules.WaveNumber(Day, rules.wavesPerDay - 1), 1, set.waves.Length), tomorrow = Mathf.Clamp(rules.WaveNumber(Day + 1, rules.wavesPerDay - 1), 1, set.waves.Length);
             // Since 2026-11-10 the HP follows the campaign's own reference DPS by day (CampaignRules.Days.cs), not the classic wave's.
             float hp = rules.DayReferenceDps(Day + 1) / rules.DayReferenceDps(Day) - 1f;
-            float damage = set.DamageFactor(tomorrow) / set.DamageFactor(today) - 1f;
+            float damageToday = rules.EnemyDamageOn(Day), damageTomorrow = rules.EnemyDamageOn(Day + 1);
+            float damage = damageToday > 0f && damageTomorrow > 0f ? damageTomorrow / damageToday - 1f
+                : set.DamageFactor(tomorrow) / set.DamageFactor(today) - 1f;
+            // Only what rises is named: a "+0%" says nothing.
+            int hpUp = Mathf.RoundToInt(hp * 100f), damageUp = Mathf.RoundToInt(damage * 100f);
+            string zhRise = hpUp > 0 && damageUp > 0 ? $"明天的怪物生命 +{hpUp}%、伤害 +{damageUp}%。"
+                : hpUp > 0 ? $"明天的怪物生命 +{hpUp}%。" : damageUp > 0 ? $"明天的怪物伤害 +{damageUp}%。" : "明天的怪物和今天一样强。";
+            string enRise = hpUp > 0 && damageUp > 0 ? $"Tomorrow's monsters get HP +{hpUp}% and damage +{damageUp}%."
+                : hpUp > 0 ? $"Tomorrow's monsters get HP +{hpUp}%." : damageUp > 0 ? $"Tomorrow's monsters get damage +{damageUp}%." : "Tomorrow's monsters are as strong as today's.";
             gm.hud?.Banner(ArenaText.Pair("下午 · 异星力量正在增强怪物", "AFTERNOON · ALIEN POWER STRENGTHENS THE MONSTERS"),
-                ArenaText.Pair($"明天的怪物：生命 +{hp * 100f:0}%，伤害 +{damage * 100f:0}%。今天的合金矿露出了地表，数量有限。",
-                    $"Tomorrow's monsters: HP +{hp * 100f:0}%, damage +{damage * 100f:0}%. Today's ore has surfaced; there is only so much."));
+                ArenaText.Pair(zhRise + "合金矿数量有限，采完就没了。", enRise + " The ore is limited; once mined, it's gone."));
         }
 
         /// <summary>The afternoon's goal: how much of today's ore is left, with a marker on the ore trail's next node (the trail leads toward
@@ -195,12 +202,12 @@ namespace AnomalyArena
             if (Stage != CampaignStage.Dusk) return;
             int left = OreLeftToday;
             // Short since 2026-11-10: the goal says what to do, the keys are on the hint line and the prompts.
-            string onward = EveningsOpenEnded ? ArenaText.Pair("回基地升级或入夜", "upgrade or go into the night at the base")
-                : ArenaText.Pair("回基地升级", "upgrade at the base");
+            string onward = EveningsOpenEnded ? ArenaText.Pair("回基地升级或入夜", "head back to the base to upgrade or start the night")
+                : ArenaText.Pair("回基地升级", "head back to the base to upgrade");
             Vector3? next = TrailFrontier();
             if (next == null && left > 0 && gm.player && TryNearestNode(NodeKind.Ore, gm.player.Position, out var nearest)) next = nearest;
-            Objective(left > 0 ? ArenaText.Pair($"下午：采合金矿（还剩 {left} 处）", $"Afternoon: mine the alloy ore ({left} left)")
-                : ArenaText.Pair("下午：合金矿采完了，", "Afternoon: the ore is mined out; ") + onward, next);
+            Objective(left > 0 ? ArenaText.Pair($"采集合金矿（还剩 {left} 处）", $"Mine the alloy ore ({left} left)")
+                : ArenaText.Pair("合金矿采完了，", "The ore is mined out; ") + onward, next);
         }
 
         void TickDusk(float dt)
@@ -275,9 +282,9 @@ namespace AnomalyArena
             if (Stage != CampaignStage.Night || Day <= 0) return;
             Vector3 from = gm.player ? gm.player.Position : DoorPoint;
             if (TryNearestNode(NodeKind.Dark, from, out var dark))
-                Objective(ArenaText.Pair("夜晚：在灯光里采暗物质", "Night: mine dark matter in lamp light"), dark);
+                Objective(ArenaText.Pair("在灯光里采集暗物质", "Mine dark matter in the lamplight"), dark);
             else
-                Objective(ArenaText.Pair("夜晚：暗物质采完了，回基地等待天亮", "Night: the dark matter is mined out; wait for dawn at the base"), DoorPoint);
+                Objective(ArenaText.Pair("暗物质采完了，回基地等待天亮", "The dark matter is mined out. Wait for dawn at the base"), DoorPoint);
         }
 
         void TickNight(float dt)
@@ -317,10 +324,10 @@ namespace AnomalyArena
             if (Day >= rules.days)
             {
                 // The last planned day is over and the ship cannot leave yet: the days go on (the last day's wave again) until it can.
-                string missing = !engineFixed ? ArenaText.Pair("引擎还没修好", "The engine is not repaired")
-                    : !armorFixed ? ArenaText.Pair("装甲还没修好", "The armor is not repaired")
-                    : ArenaText.Pair("燃料还没满", "The tank is not full");
-                ui.Flash(ArenaText.Pair($"{missing}：飞船无法起飞，再撑一天。", $"{missing}: the ship cannot leave. Hold out another day."), 3.5f);
+                string missing = !engineFixed ? ArenaText.Pair("引擎还没修好", "The engine isn't repaired")
+                    : !armorFixed ? ArenaText.Pair("装甲还没修好", "The armor isn't repaired")
+                    : ArenaText.Pair("燃料还没满", "The tank isn't full");
+                ui.Flash(ArenaText.Pair($"{missing}，飞船飞不起来，得再撑一天。", $"{missing}, so the ship can't leave yet. Hold out one more day."), 3.5f);
             }
             Stage = CampaignStage.Build; // StartNextWave begins a new day from this stage
             gm.CampaignStartDay();
@@ -345,7 +352,7 @@ namespace AnomalyArena
         {
             var p = gm.player;
             if (!p || mining != null || Query.Flat(p.Position - DoorPoint).magnitude >= 3.2f) return false;
-            prompt = ArenaText.Pair($"按 {ArenaKeys.InteractKey} 进入基地", $"{ArenaKeys.InteractKey}: enter the base");
+            prompt = ArenaText.Pair($"按 {ArenaKeys.InteractKey} 进入基地", $"Press {ArenaKeys.InteractKey} to enter the base");
             if (!EPressed) return false;
             OpenBase();
             return true;
@@ -354,16 +361,16 @@ namespace AnomalyArena
         string NightHint()
         {
             if (Stage == CampaignStage.Dusk)
-                return EveningsOpenEnded ? ArenaText.Pair("想入夜时回基地", "Go to the base when you want the night to begin")
+                return EveningsOpenEnded ? ArenaText.Pair("下午不会自己结束，想入夜时就回基地。", "The afternoon won't end on its own. Go back to the base when you're ready for the night.")
                     : ArenaText.Pair($"今天采到：合金 +{nightAlloy}", $"Mined today: alloy +{nightAlloy}");
             // At night the note names what a death would cost: everything gained since nightfall or the last base visit (the afternoon is kept).
             var risk = TonightsHaul;
             // Named only while there is something to lose.
             string atRisk = risk.alloy + risk.energy + risk.dark <= 0 ? ""
-                : ArenaText.Pair($"倒下会丢：合金 {risk.alloy} · 能量 {risk.energy} · 暗物质 {risk.dark}（进基地就存下）", $"A death loses: alloy {risk.alloy} · energy {risk.energy} · dark matter {risk.dark} (the base keeps it)");
-            return Dot(ArenaText.Pair("武器伤不到影子", "Weapons cannot hurt shadows"), atRisk,
-                EveningsOpenEnded ? ArenaText.Pair("回基地等待天亮", "Wait for dawn at the base")
-                    : ArenaText.Pair($"今晚：合金 +{nightAlloy} · 暗物质 +{nightDark}", $"Tonight: alloy +{nightAlloy} · dark matter +{nightDark}"));
+                : ArenaText.Pair($"现在倒下，会丢掉身上的合金 {risk.alloy}、能量 {risk.energy}、暗物质 {risk.dark}，回到基地就能存下。", $" If you fall now, you lose the {risk.alloy} alloy, {risk.energy} energy and {risk.dark} dark matter you carry; reach the base to keep them.");
+            return ArenaText.Pair("武器伤不到影子。", "Weapons can't hurt shadows.") + atRisk
+                + (EveningsOpenEnded ? ArenaText.Pair("想结束今晚，就回基地等待天亮。", " When you're done for the night, wait for dawn at the base.")
+                    : ArenaText.Pair($"今晚已采到合金 {nightAlloy}、暗物质 {nightDark}。", $" Tonight so far: {nightAlloy} alloy, {nightDark} dark matter."));
         }
 
         // ───── Lamps ─────
@@ -373,7 +380,7 @@ namespace AnomalyArena
             if (!FPressed || WorldMap.Active && WorldMap.Active.TrialActive) return;
             var p = gm.player;
             if (!p || !p.IsAlive) return;
-            if (lampStock <= 0) { ui.Flash(ArenaText.Pair("没有矿灯了：在基地的飞船发射区用合金制造", "No lamps left: craft them with alloy at the Ship Launch Bay")); return; }
+            if (lampStock <= 0) { ui.Flash(ArenaText.Pair("矿灯用完了。可以在基地的飞船发射区用合金制造。", "You're out of lamps. Craft more with alloy at the base's Ship Launch Bay.")); return; }
             Vector3 at = Query.Flat(p.Position + p.AimDirection.normalized * .8f);
             if (WorldMap.Active && (WorldMap.Active.IsWall(at, .4f) || !WorldMap.Active.Contains(at, .5f))) at = Query.Flat(p.Position);
             PlaceLamp(at);
@@ -467,7 +474,19 @@ namespace AnomalyArena
         // Nodes keep this far apart and this far inside the campaign map's edge; the ore trail's gaps average at least TrailMinSpacing (they
         // shrink toward the hole, TrailShare) and each node lies at least half of it further along than the one before, its first node at
         // least TrailBaseGap cells beyond the base's walls, its last HoleKeepOut cells short of the black hole's centre.
-        const float NodeSpacing = 2.6f, NodeEdgeMargin = 6f, TrailMinSpacing = 5f, TrailBaseGap = 3f, TrailSideSpread = 3.5f, HoleKeepOut = 7f;
+        const float NodeSpacing = 2.6f, NodeEdgeMargin = 6f, TrailMinSpacing = 5f, TrailBaseGap = 3f, TrailSideSpread = 3.5f, HoleKeepOut = 7f, TrailRingGap = 3f;
+
+        /// <summary>How far short of the black hole's centre the trail ends: outside its pull ring with TrailRingGap cells to spare, and
+        /// never nearer than HoleKeepOut.</summary>
+        float TrailHoleKeepOut
+        {
+            get
+            {
+                var map = WorldMap.Active;
+                float ring = map && map.CampaignHole ? map.CampaignHole.GravityRadius : 0f;
+                return Mathf.Max(HoleKeepOut, ring + TrailRingGap);
+            }
+        }
 
         /// <summary>Since 2026-11-06 every afternoon the day's alloy ore surfaces on the campaign map (kills drop none): rules.OreNodes(day)
         /// nodes, so a day's alloy has a ceiling. rules.trailNodes of them lie on a trail from the base toward the black hole, its farthest
@@ -487,7 +506,8 @@ namespace AnomalyArena
             for (int i = trail.Count; i < count; i++)
                 if (TryNodePoint(out var at)) AddNode(NodeKind.Ore, at, 0);
             SpawnScatteredOre();
-            ShareAfternoonAlloy(first, CampaignRules.AfternoonAlloyTotal(rules.afternoonAlloy, day, afternoonOreScale));
+            // The day's alloy (with the ship's ore bonus) and the alloy for its lamps (rules.dayLampsToCraft).
+            ShareAfternoonAlloy(first, CampaignRules.AfternoonAlloyTotal(rules.afternoonAlloy, day, afternoonOreScale) + rules.LampAlloyOn(day));
         }
 
         /// <summary>The day's alloy over the ore nodes placed from index first on: evenly, the remainder one each to the nodes nearest the
@@ -524,7 +544,7 @@ namespace AnomalyArena
             Vector3 toHole = Query.Flat(hole - BaseCentre);
             float holeDistance = toHole.magnitude;
             float start = Mathf.Max(rules.nodeBaseClearance, BaseHalf + TrailBaseGap);
-            float reach = Mathf.Min(rules.trailReach + rules.trailReachPerDay * Mathf.Max(0, day - 1), holeDistance - HoleKeepOut);
+            float reach = Mathf.Min(rules.trailReach + rules.trailReachPerDay * Mathf.Max(0, day - 1), holeDistance - TrailHoleKeepOut);
             if (holeDistance < 1f || reach < start) return points;
             Vector3 dir = toHole / holeDistance, side = new(-dir.z, 0f, dir.x);
             // A short trail (day 1) holds fewer nodes, so its gaps average at least TrailMinSpacing; they shrink toward the hole (TrailShare),
@@ -872,18 +892,21 @@ namespace AnomalyArena
             bool lit = dusk || InLampLight(node.position);
             string what = node.kind switch
             {
-                NodeKind.Ore => ArenaText.Pair($"异星合金 +{node.amount}", $"alien alloy +{node.amount}"),
-                NodeKind.VoidAlloy => ArenaText.Pair($"虚空合金 +{node.amount}", $"void alloy +{node.amount}"),
-                _ when node.energy > 0 => ArenaText.Pair($"暗物质 +{node.amount} · 能量 +{node.energy}", $"dark matter +{node.amount} · energy +{node.energy}"),
-                _ => ArenaText.Pair($"暗物质 +{node.amount}", $"dark matter +{node.amount}")
+                NodeKind.Ore => ArenaText.Pair($"异星合金（+{node.amount}）", $"alien alloy (+{node.amount})"),
+                NodeKind.VoidAlloy => ArenaText.Pair($"虚空合金（+{node.amount}）", $"void alloy (+{node.amount})"),
+                _ when node.energy > 0 => ArenaText.Pair($"暗物质（+{node.amount}，能量 +{node.energy}）", $"dark matter (+{node.amount}, energy +{node.energy})"),
+                _ => ArenaText.Pair($"暗物质（+{node.amount}）", $"dark matter (+{node.amount})")
             };
             if (!lit)
             {
-                prompt = ArenaText.Pair($"太黑了：先按 {ArenaKeys.LampKey} 放一盏矿灯", $"Too dark: press {ArenaKeys.LampKey} to place a lamp first");
+                prompt = lampStock > 0
+                    ? ArenaText.Pair($"太黑了，先按 {ArenaKeys.LampKey} 放一盏矿灯", $"It's too dark. Press {ArenaKeys.LampKey} to set down a lamp first")
+                    : ArenaText.Pair($"太黑了，手里也没有矿灯。回基地，在飞船发射区造一盏（{rules.lampCost} 合金）",
+                        $"It's too dark, and you have no lamps left. Craft one at the base's Ship Launch Bay ({rules.lampCost} alloy)");
                 mining = null; mineProgress = 0f;
                 return;
             }
-            if (!EHeld) { prompt = ArenaText.Pair($"按住 {ArenaKeys.InteractKey} 采集 {what}", $"Hold {ArenaKeys.InteractKey} to mine {what}"); mining = null; mineProgress = 0f; return; }
+            if (!EHeld) { prompt = ArenaText.Pair($"按住 {ArenaKeys.InteractKey} 采集{what}", $"Hold {ArenaKeys.InteractKey} to mine {what}"); mining = null; mineProgress = 0f; return; }
             if (mining != node) { mining = node; mineProgress = 0f; }
             mineProgress += dt / Mathf.Max(.05f, rules.mineSeconds);
             prompt = ""; // the mining bar shows the progress (V2CampaignUi.Feedback.cs)

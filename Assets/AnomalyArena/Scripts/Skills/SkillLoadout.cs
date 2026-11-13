@@ -279,7 +279,7 @@ namespace AnomalyArena
         {
             if (index < 0 || index >= Slots.Length || Slots[index].Empty || !body || !body.IsAlive) return false;
             var game = GameManager.Instance;
-            if (game && !game.IsCombatActive) return Refuse(index, ArenaText.Pair("菜单中不能施放", "Not during a menu"));
+            if (game && !game.IsCombatActive) return Refuse(index, ArenaText.Pair("菜单打开时不能释放技能", "Can't cast while a menu is open"));
             var slot = Slots[index]; var def = slot.Definition; int level = slot.Level;
             var board = ElementStatus.For(body);
             // A Blink cast with a stored charge ignores the slot cooldown.
@@ -288,10 +288,10 @@ namespace AnomalyArena
             // displacement (Blink, Void Walk) still cast, and they end the slide.
             bool sliding = (body.State is CharacterState.Knocked or CharacterState.Thrown) && !BreaksDisplacement(def.id);
             if (body.Stunned || body.State == CharacterState.Dashing || sliding || (board && board.BlocksActions) || coolingDown)
-                return Refuse(index, ArenaText.Pair("暂时无法施放", "Not ready"));
+                return Refuse(index, ArenaText.Pair("暂时不能释放", "Not ready"));
             // Not again while this skill's own effect still lasts; no Energy and no cooldown are spent.
             if (EffectActive(def.id)) return Refuse(index, ArenaText.Pair("效果仍在持续", "Still active"));
-            if (!HasWorldHook(def.id)) return Refuse(index, ArenaText.Pair("此效果暂不可用", "World action unavailable"));
+            if (!HasWorldHook(def.id)) return Refuse(index, ArenaText.Pair("现在用不了这个技能", "This skill can't be used right now"));
             Vector3 desired = body.AimPoint;
             Vector3 origin = body.Position;
             Vector3 offset = Query.Flat(desired - origin);
@@ -302,7 +302,7 @@ namespace AnomalyArena
             {
                 var valid = SkillWorldAPI.ValidPoint(origin, desired);
                 if (!valid.HasValue)
-                    return Refuse(index, ArenaText.Pair("没有合法落点", "No valid point"));
+                    return Refuse(index, ArenaText.Pair("那个位置不能释放", "Can't cast at that spot"));
                 point = valid.Value;
             }
 
@@ -310,10 +310,10 @@ namespace AnomalyArena
             if (def.id == SkillId.Devour)
             {
                 target = FindDevourTarget(def, level, origin, body.AimPoint);
-                if (!target) return Refuse(index, ArenaText.Pair("没有符合生命阈值的目标", "No weakened target"));
+                if (!target) return Refuse(index, ArenaText.Pair("附近没有血量够低的敌人", "No enemy nearby is weak enough"));
             }
             // Cost and Cooldown carry the campaign's room factors (SkillSlot), which are 1 elsewhere.
-            if (!progression || !progression.TrySpendEnergy(slot.Cost)) return Refuse(index, ArenaText.Pair("能量不足", "No Energy"));
+            if (!progression || !progression.TrySpendEnergy(slot.Cost)) return Refuse(index, ArenaText.Pair("能量不足", "Not enough energy"));
             if (def.id == SkillId.Blink) SpendBlinkCharge(slot.Cooldown);
             else slot.CooldownLeft = slot.Cooldown;
             Vector3 visualPoint = target ? target.Position : pointTarget ? point : origin;

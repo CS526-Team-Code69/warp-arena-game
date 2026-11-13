@@ -40,7 +40,12 @@ namespace AnomalyArena
         // cg
         int cgShot; float cgClock, cgLength; Texture cgTexture, cgFrontTexture;
         RawImage cgForeground;
+        // The shot shows a staged cutscene's live picture (CgLive): whole and unmoved, in its own colours.
+        bool cgLive;
         public bool CgSkipped { get; private set; }
+        // A live shot fades in from black and out to black over this many seconds at each cut; a memory has darker edges than a
+        // cutscene of the present.
+        const float CgLiveFade = .3f, CgMemoryEdges = .92f, CgPresentEdges = .6f;
 
         static readonly Color Panel = new(.04f, .07f, .12f, .94f), PanelEdge = new(.3f, .55f, .85f, .55f), Soft = new(.86f, .9f, .96f), Faint = new(.62f, .72f, .85f);
         static readonly Color Accent = new(.45f, .85f, 1f), Warn = new(1f, .45f, .3f), Good = new(.5f, 1f, .6f), SystemColour = new(.5f, .9f, 1f), PlayerColour = new(1f, .86f, .55f);
@@ -428,7 +433,7 @@ namespace AnomalyArena
             confirmBody.text = body ?? "";
             confirmYesLabel.text = ArenaText.Pair("确定", "OK");
             confirmNoLabel.text = ArenaText.Pair("取消", "Cancel");
-            confirmHint.text = ArenaText.Pair("点击确定 · Esc 取消", "Click OK · Esc: Cancel");
+            confirmHint.text = "";
             confirmYes = onYes; confirmNo = onNo;
             confirmOpenedAt = Time.unscaledTime;
             // Only a running world is held (a question over the base panel or a frozen screen leaves that phase as it is).
@@ -493,21 +498,46 @@ namespace AnomalyArena
 
         public void SkipCg() => CgSkipped = true;
         public bool BaseOpen => baseScreen && baseScreen.gameObject.activeSelf;
-        public void BeginCg() { CgSkipped = false; cgScreen.gameObject.SetActive(true); cgSkip.text = ArenaText.Pair("点击或按 Esc 跳过", "Click or Esc to skip"); }
+        /// <summary>Opens the CG screen for a cutscene; memory gives it a memory's darker edges.</summary>
+        public void BeginCg(bool memory = false)
+        {
+            CgSkipped = false;
+            cgScreen.gameObject.SetActive(true);
+            cgVignette.color = new Color(0f, 0f, 0f, memory ? CgMemoryEdges : CgPresentEdges);
+            cgSkip.text = ArenaText.Pair("点击或按 Esc 跳过", "Click or press Esc to skip");
+        }
+
         public void EndCg()
         {
             cgScreen.gameObject.SetActive(false);
-            cgFrontTexture = null;
+            cgLive = false;
+            cgTexture = cgFrontTexture = null;
+            cgPicture.texture = null; // a cutscene's live picture is let go after this
             cgForeground.texture = null;
         }
         public void CgShot(Texture picture, float seconds, int shot) => CgShot(picture, null, seconds, shot);
+
+        /// <summary>One shot of a staged cutscene (V2Cutscene): its camera's live picture, whole and unmoved (the camera does the
+        /// moving), in its own colours, fading in from black and out to black at the cuts.</summary>
+        public void CgLive(Texture live, float seconds)
+        {
+            cgLive = true;
+            cgTexture = live; cgFrontTexture = null; cgClock = 0f; cgLength = Mathf.Max(.1f, seconds);
+            float aspect = live && live.height > 0 ? live.width / (float)live.height : 16f / 9f;
+            cgPicture.rectTransform.sizeDelta = new Vector2(720f * aspect, 720f);
+            cgPicture.texture = live;
+            cgPicture.uvRect = new Rect(0f, 0f, 1f, 1f);
+            cgPicture.color = Color.black;
+            cgForeground.texture = null;
+            cgForeground.color = new Color(1f, 1f, 1f, 0f);
+        }
 
         /// <summary>One shot of a CG: a background and an optional transparent foreground drawn over it with a little parallax, both sized
         /// to the picture's own shape (16:9 for the CG01 illustrations).</summary>
         public void CgShot(Texture picture, Texture front, float seconds, int shot)
         {
+            cgLive = false;
             cgTexture = picture; cgFrontTexture = picture ? front : null; cgShot = shot; cgClock = 0f; cgLength = Mathf.Max(.1f, seconds);
-            cgBlocksShot = -1; // the whitebox's blocks are laid out again for this shot (V2CampaignUi.Whitebox.cs)
             float aspect = picture && picture.height > 0 ? Mathf.Clamp(picture.width / (float)picture.height, 1.2f, 1.9f) : 1.5f;
             var size = new Vector2(720f * aspect, 720f);
             cgPicture.rectTransform.sizeDelta = size;
@@ -579,6 +609,13 @@ namespace AnomalyArena
         void TickCg()
         {
             cgClock += Time.unscaledDeltaTime;
+            if (cgLive)
+            {
+                float shown = Mathf.Clamp01(Mathf.Min(cgClock / CgLiveFade, (cgLength - cgClock) / CgLiveFade));
+                cgPicture.color = new Color(shown, shown, shown, 1f);
+                return;
+            }
+
             float t = Mathf.Clamp01(cgClock / cgLength);
             // A slow push-in that drifts a different way on each shot (Ken Burns), fading in and out.
             float zoom = Mathf.Lerp(.94f, .82f, t);
@@ -598,8 +635,6 @@ namespace AnomalyArena
                 cgForeground.uvRect = new Rect((1f - zoomFront) * d.x, (1f - zoomFront) * d.y, zoomFront, zoomFront);
                 cgForeground.color = tint;
             }
-            // Whitebox (2026-11-10): flat blocks in place of the pictures, with the same push-in and fade.
-            TickWhiteboxCg(t, d, fade);
         }
 
         /// <summary>The campaign calls this each frame: what the HUD shows follows the stage.</summary>
@@ -667,7 +702,9 @@ namespace AnomalyArena
             var rect = root.rect;
             float scale = root.lossyScale.x > 0f ? 1f / root.lossyScale.x : 1f;
             Vector2 p = new(sp.x * scale, sp.y * scale);
-            if (sp.z < 0f) p = new Vector2(rect.width - p.x, rect.height - p.y);
+            // A perspective camera mirrors a goal behind it; the orthographic 2.5D view does not (V2WorldLabels.FacingScreenPoint).
+            // Mirrored there, a far goal on the camera's side was marked on the opposite edge.
+            if (sp.z < 0f && !gm.cam.orthographic) p = new Vector2(rect.width - p.x, rect.height - p.y);
             // Kept clear of the weapon and skill bar at the bottom and the day and base bars at the top (since 2026-11-10 the base bar sits
             // lower, under the HUD's batch line: the marker stays a little below wherever it is).
             float highest = rect.height * .8f;

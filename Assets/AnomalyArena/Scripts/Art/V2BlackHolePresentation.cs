@@ -24,6 +24,10 @@ namespace AnomalyArena
         public float swirlDegreesPerSecond = 32f;
         public float groundHeight = .035f;
         float rotation;
+        // The art's soft glow for the pull field, put back when the art comes back; whitebox draws WhiteboxIcons' circle there instead,
+        // which covers this share of its sprite, so the disc's edge is the pull's edge.
+        Sprite gravityArt;
+        const float WhiteboxDiscShare = .86f;
         MeshRenderer disc;
         Material discMaterial;
         HolePhase lastPhase;
@@ -104,10 +108,18 @@ namespace AnomalyArena
             bool illustrated = Art.Enabled;
             float pulse = .5f + .5f * Mathf.Sin(Time.time * pulsePerSecond * Mathf.PI * 2f);
             bool pulling = hole.Phase == HolePhase.Active;
-            Layer(gravity, pulling, hole.GravityRadius, groundHeight,
-                illustrated ? new Color(.74f, .4f, 1f, .38f + .1f * pulse) : new Color(.62f, .4f, .95f, .3f), 0f);
-            Layer(warningRing, pulling, hole.GravityRadius, groundHeight + .001f, new Color(.95f, .55f, 1f, .55f + .4f * pulse), rotation * .4f);
-            Layer(inwardStreaks, pulling, hole.GravityRadius * .97f, groundHeight + .0015f, new Color(.85f, .55f, 1f, .7f), rotation * streakDegreesPerSecond / Mathf.Max(1f, swirlDegreesPerSecond));
+            // Whitebox draws no picture: the pull field is one flat disc out to the pull's edge, without the art's soft glow, dashed ring
+            // and streaks.
+            if (gravity)
+            {
+                if (!gravityArt) gravityArt = gravity.sprite;
+                var wanted = illustrated ? gravityArt : WhiteboxIcons.Mark(WhiteboxIcons.Glyph.Circle);
+                if (gravity.sprite != wanted) gravity.sprite = wanted;
+            }
+            Layer(gravity, pulling, illustrated ? hole.GravityRadius : hole.GravityRadius / WhiteboxDiscShare, groundHeight,
+                illustrated ? new Color(.74f, .4f, 1f, .38f + .1f * pulse) : new Color(.62f, .4f, .95f, .2f + .08f * pulse), 0f);
+            Layer(warningRing, pulling && illustrated, hole.GravityRadius, groundHeight + .001f, new Color(.95f, .55f, 1f, .55f + .4f * pulse), rotation * .4f);
+            Layer(inwardStreaks, pulling && illustrated, hole.GravityRadius * .97f, groundHeight + .0015f, new Color(.85f, .55f, 1f, .7f), rotation * streakDegreesPerSecond / Mathf.Max(1f, swirlDegreesPerSecond));
             Layer(coreGlow, active && illustrated, hole.KillRadius * 1.5f, groundHeight + .0018f, new Color(1f, 1f, 1f, .9f + .1f * pulse), 0f);
             Layer(core, active && illustrated, hole.KillRadius, groundHeight + .002f, new Color(.018f, .01f, .03f, 1f), 0f);
             Layer(swirl, active && illustrated, hole.KillRadius, groundHeight + .004f, new Color(.78f, .5f, 1f, .95f), rotation);

@@ -94,8 +94,8 @@
     },
     {
       "key": "ui.skip",
-      "zh": "放弃本次武器",
-      "en": "SKIP OFFER",
+      "zh": "跳过",
+      "en": "SKIP",
       "context": "Arena v2 player-visible text; format arguments come from current data."
     },
     {
@@ -190,8 +190,8 @@
     },
     {
       "key": "ui.early.question",
-      "zh": "还有 {0} 组卡未选。随机完成剩余选卡并开始下一波？",
-      "en": "{0} cards remain. Pick the unfinished choices at random and start the next wave?",
+      "zh": "还有 {0} 组卡没选。要随机选完剩下的，直接开始下一波吗？",
+      "en": "{0} picks are still open. Pick the rest at random and start the next wave?",
       "context": "Arena v2 player-visible text; format arguments come from current data."
     },
     {
