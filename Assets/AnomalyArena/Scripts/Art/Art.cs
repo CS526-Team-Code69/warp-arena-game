@@ -6,7 +6,8 @@ namespace AnomalyArena
     /// Whitebox / illustrated toggle shared by every presentation component, switched on the title (in whitebox the base,
     /// the characters, the monsters and the weapons are boxes, the terrain and the backdrop pictures stay as they are). Since 2026-11-10 one
     /// scene serves both languages, and the first run's art follows the language the game opened in (ArenaLanguage): whitebox in English
-    /// (the course staff approved the illustrated art only as an optional mode, with whitebox as the default), illustrated in Chinese. Once
+    /// (the course staff approved the illustrated art only as an optional mode, with whitebox as the default), illustrated in Chinese, and
+    /// illustrated on the English Gold page as well (BuildEdition; the Gold milestone allows art). Once
     /// the player switches, their choice is kept from run to run for the rest of the play: static fields survive scene reloads. The enemy
     /// lab shows only the illustrated art. The switch changes the scene, the monsters, the characters and the combat
     /// effects; the menus and icons are the same either way.
@@ -20,8 +21,13 @@ namespace AnomalyArena
         /// <summary>The named scene shows only the illustrated art (the enemy lab).</summary>
         public static bool IsIllustratedOnlyScene(string sceneName) => sceneName == EnemyLabScene;
 
-        /// <summary>The first run's art for the language the game opened in: illustrated in Chinese, whitebox in English.</summary>
-        public static bool DefaultIllustrated(bool startedInChinese) => startedInChinese;
+        /// <summary>The first run's art for the language the game opened in and the page (BuildEdition): illustrated in Chinese and on
+        /// the English Gold, whitebox on the other English pages.</summary>
+        public static bool DefaultIllustrated(bool startedInChinese) => DefaultIllustrated(startedInChinese, BuildEdition.Current);
+
+        /// <summary>DefaultIllustrated for a given page, so the rule can be checked without a web page.</summary>
+        public static bool DefaultIllustrated(bool startedInChinese, BuildEdition.Edition edition) =>
+            startedInChinese || edition == BuildEdition.Edition.EnglishGold;
 
         public static bool Enabled;
         /// <summary>The page is the Alpha's (BuildEdition): whitebox only. The art switch does nothing there and the settings hide it.</summary>

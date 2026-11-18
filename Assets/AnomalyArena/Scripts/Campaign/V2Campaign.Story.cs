@@ -364,7 +364,8 @@ namespace AnomalyArena
 
         /// <summary>The picture a shot shows in place of its whitebox staging while the illustrated art is on: the art's picture for the
         /// shot's id, else, for the memory, the illustrated memory picture of that moment with its foreground layer. None in whitebox, and
-        /// none on the course's English builds (BuildEdition): the Beta plays no cutscenes and the Alpha has no story.</summary>
+        /// none on the course's Alpha and Beta (BuildEdition): the Beta plays no cutscenes and the Alpha has no story. The English Gold
+        /// shows them.</summary>
         Texture PictureFor(string id, out Texture front)
         {
             front = null;

@@ -13,8 +13,8 @@ namespace AnomalyArena
     {
         /// <summary>Its own key, so a volume kept while the default was full volume does not carry over.</summary>
         public const string SavedKey = "WarpArena.MasterVolume";
-        /// <summary>The volume before the player chooses one: silent on the course's English builds (BuildEdition), which make no sound
-        /// until the player turns it up in the settings; full on the whole game (the Chinese page, the editor).</summary>
+        /// <summary>The volume before the player chooses one: silent on the course's Alpha and Beta (BuildEdition), which make no sound
+        /// until the player turns it up in the settings; full on the whole game (the Chinese page, the editor) and on the English Gold.</summary>
         public static float Default => BuildEdition.IsCourseBuild ? 0f : EngineFull;
         // The engine's own full volume, which the editor's previews get back when a play ends.
         const float EngineFull = 1f;

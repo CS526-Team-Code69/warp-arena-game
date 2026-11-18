@@ -523,7 +523,8 @@ namespace AnomalyArena
 
         /// <summary>The line naming the page's build: only the course's English builds name themselves; the whole game shows none.</summary>
         internal static string BuildLabelWords() => BuildEdition.IsAlpha ? ArenaText.Pair("Alpha 版本 · 白盒", "Alpha Build · Whitebox")
-            : BuildEdition.IsCourseBuild ? ArenaText.Pair("Beta 版本", "Beta Build") : "";
+            : BuildEdition.IsCourseBuild ? ArenaText.Pair("Beta 版本", "Beta Build")
+            : BuildEdition.IsGold ? ArenaText.Pair("Gold 版本", "Gold Build") : "";
 
         void TitleLabel(UnityEngine.UI.Text label, string text, int largest, int smallest, bool refit)
         {
