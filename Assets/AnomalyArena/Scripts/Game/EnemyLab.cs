@@ -9,8 +9,9 @@ namespace AnomalyArena
     /// <summary>
     /// Enemy lab (scene EnemyLab: the Chinese arena with WaveManager.labMode on): no waves, every enemy kind spawned by hand, so a
     /// designer can edit an EnemyDefinition asset (V2/Data/Enemies) in the Inspector and feel the change at once. The panel on the
-    /// right lists the kinds, the switches and the live numbers of the selected kind. Keys: F5 spawn, F6 respawn (clear first),
-    /// F7 clear, F8 player invulnerable, F9 slow motion, F10 elite, PageUp / PageDown select the kind. The Hollow is fought only in the
+    /// right lists the kinds, the switches, the player's output and the live numbers of the selected kind. Keys: F5 spawn, F6 respawn
+    /// (clear first), F7 clear, F8 player invulnerable, F9 slow motion, F10 elite, PageUp / PageDown select the kind, [ and ] step the
+    /// scale on the player's damage (PlayerOutput), whose rolling DPS and time to kill the panel shows. The Hollow is fought only in the
     /// void trial, so spawning it enters the trial on its platform; clearing kills it and ends the trial as a win.
     /// </summary>
     public sealed class EnemyLab : MonoBehaviour
@@ -23,6 +24,19 @@ namespace AnomalyArena
         [Tooltip("Slow motion for watching a wind-up.")] public bool slowMotion;
         [Range(.1f, 1f)] public float slowMotionScale = .35f;
         public EnemyKind selected = EnemyKind.Grunt;
+        [Tooltip("Scale on everything the player deals to a monster while the lab runs (PlayerOutput); [ and ] step it through OutputScales.")]
+        public float playerOutputScale = 1f;
+
+        static readonly float[] OutputScales = { .25f, .5f, .75f, 1f, 1.25f, 1.5f, 2f, 3f, 4f, 6f, 8f, 12f, 16f, 24f, 32f, 48f, 64f, 96f };
+
+        // The difficulty plan's expected output on day 0 to 7 and in the Tyrant's fight (work/gold-1117/difficulty-1117): the scale on a
+        // Mk1 weapon with no upgrade (the weapons' own x1.25 already in the scene) and the damage a second it should then deal.
+        static readonly float[] DayPresetScales = { 1f, 1f, 1.6f, 3.5f, 7f, 13f, 24f, 58f, 93f };
+        static readonly float[] DayPresetDps = { 7.5f, 12.5f, 20f, 43.75f, 87.5f, 162.5f, 300f, 725f, 1162.5f };
+        /// <summary>The day preset in use (0 to 7, 8 the Tyrant's fight), or -1 when the scale was set by hand.</summary>
+        int dayPreset = -1;
+        /// <summary>Seconds of game time the panel's DPS averages over.</summary>
+        const float DpsWindow = 5f;
 
         static readonly EnemyKind[] Kinds =
         {
@@ -62,6 +76,8 @@ namespace AnomalyArena
 
         void Start() => BuildPanel();
 
+        void OnDisable() => PlayerOutput.Scale = 1f;
+
         void Update()
         {
             gm = GameManager.Instance;
@@ -79,6 +95,7 @@ namespace AnomalyArena
                 if (invulnerable && gm.player.IsAlive && gm.player.Hp <= gm.player.maxHp * .2f) gm.player.Heal(gm.player.maxHp);
             }
             if (gm.IsCombatActive) Time.timeScale = slowMotion ? slowMotionScale : 1f;
+            PlayerOutput.Scale = Mathf.Max(0f, playerOutputScale);
             var kb = Keyboard.current;
             if (kb != null && gm.IsCombatActive)
             {
@@ -90,6 +107,10 @@ namespace AnomalyArena
                 if (kb.f10Key.wasPressedThisFrame) elite = !elite;
                 if (kb.pageUpKey.wasPressedThisFrame) Step(-1);
                 if (kb.pageDownKey.wasPressedThisFrame) Step(1);
+                if (kb.leftBracketKey.wasPressedThisFrame) StepOutput(-1);
+                if (kb.rightBracketKey.wasPressedThisFrame) StepOutput(1);
+                if (kb.commaKey.wasPressedThisFrame) StepDay(-1);
+                if (kb.periodKey.wasPressedThisFrame) StepDay(1);
             }
             RefreshPanel();
         }
@@ -134,6 +155,34 @@ namespace AnomalyArena
             selected = Kinds[((index < 0 ? 0 : index) + delta + Kinds.Length) % Kinds.Length];
         }
 
+        /// <summary>The next or previous step of OutputScales from the nearest one; the count starts again so the DPS shows the new scale.</summary>
+        void StepOutput(int delta)
+        {
+            int index = 0;
+            for (int i = 1; i < OutputScales.Length; i++)
+                if (Mathf.Abs(OutputScales[i] - playerOutputScale) < Mathf.Abs(OutputScales[index] - playerOutputScale)) index = i;
+            playerOutputScale = OutputScales[Mathf.Clamp(index + delta, 0, OutputScales.Length - 1)];
+            dayPreset = -1;
+            PlayerOutput.Reset();
+        }
+
+        /// <summary>The next or previous day preset (day 0 to 7, then the Tyrant's fight): its scale, and the count starts again.</summary>
+        void StepDay(int delta)
+        {
+            dayPreset = dayPreset < 0 ? (delta > 0 ? 0 : DayPresetScales.Length - 1) : Mathf.Clamp(dayPreset + delta, 0, DayPresetScales.Length - 1);
+            playerOutputScale = DayPresetScales[dayPreset];
+            PlayerOutput.Reset();
+        }
+
+        static string DayName(int preset) => preset >= 8 ? ArenaText.Pair("暴虐君王之战", "the Tyrant's fight") : ArenaText.Pair($"第 {preset} 天", $"day {preset}");
+
+        void ResetOutput()
+        {
+            playerOutputScale = 1f;
+            dayPreset = -1;
+            PlayerOutput.Reset();
+        }
+
         void BuildPanel()
         {
             hud = FindFirstObjectByType<V2Hud>(FindObjectsInactive.Include);
@@ -162,7 +211,8 @@ namespace AnomalyArena
             layout.childControlWidth = true;
             panel.GetComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             Live(MakeLabel(panel, "", 20, FontStyle.Bold), () => ArenaText.Pair("敌人实验室", "ENEMY LAB"));
-            Live(MakeLabel(panel, "", 13), () => ArenaText.Pair("F5 生成 · F6 重生 · F7 清场 · PgUp / PgDn 选怪", "F5 spawn · F6 respawn · F7 clear · PgUp / PgDn pick"));
+            Live(MakeLabel(panel, "", 13), () => ArenaText.Pair("F5 生成一只，F6 清场后重新生成，F7 清场，PgUp 和 PgDn 切换怪物，[ 和 ] 调整玩家输出，, 和 . 按天数模拟。",
+                "F5 spawns one, F6 clears and spawns again, F7 clears, PgUp and PgDn switch the monster, [ and ] change the player's output, and , and . play as a given day."));
             foreach (var kind in Kinds)
             {
                 var chosen = kind;
@@ -174,6 +224,13 @@ namespace AnomalyArena
             slowLabel = MakeButton(panel, "", () => slowMotion = !slowMotion);
             Live(MakeButton(panel, "", () => Spawn()), () => ArenaText.Pair("再生成一只（F5）", "Spawn one more (F5)"));
             Live(MakeButton(panel, "", Clear), () => ArenaText.Pair("清场（F7）", "Clear (F7)"));
+            Live(MakeLabel(panel, "", 15, FontStyle.Bold), () => ArenaText.Pair($"玩家输出 ×{PlayerOutput.Scale:0.##}", $"PLAYER OUTPUT ×{PlayerOutput.Scale:0.##}"));
+            Live(MakeButton(panel, "", () => StepOutput(-1)), () => ArenaText.Pair("降低玩家输出（[）", "Lower the player's output ([)"));
+            Live(MakeButton(panel, "", () => StepOutput(1)), () => ArenaText.Pair("提高玩家输出（]）", "Raise the player's output (])"));
+            Live(MakeButton(panel, "", ResetOutput), () => ArenaText.Pair("恢复原样，重新计算输出", "Back to ×1 and count again"));
+            Live(MakeButton(panel, "", () => StepDay(1)), () => dayPreset < 0
+                ? ArenaText.Pair("按天数模拟玩家输出（, 和 . 切换）", "Play as a given day's player (, and . switch)")
+                : ArenaText.Pair($"正在模拟{DayName(dayPreset)}，点一下换下一天", $"Playing as {DayName(dayPreset)}; click for the next"));
             readout = MakeLabel(panel, "", 13);
         }
 
@@ -284,8 +341,27 @@ namespace AnomalyArena
                 string kind = Name(nearest.definition ? nearest.definition.kind : selected);
                 text.AppendLine(ArenaText.Pair($"最近一只：{kind} · 距离 {Mathf.Sqrt(best):0.0} · {state}", $"nearest: {kind} · {Mathf.Sqrt(best):0.0} away · {state}"));
             }
-            text.AppendLine(ArenaText.Pair("改数值：在 Project 里选 V2/Data/Enemies 下的资产，改完按 F6 重生。",
-                "Tune: select the asset under V2/Data/Enemies, edit it, press F6 to respawn."));
+            float dps = PlayerOutput.Dps(DpsWindow);
+            if (dayPreset >= 0)
+                text.AppendLine(ArenaText.Pair($"正在模拟{DayName(dayPreset)}的玩家：输出 ×{DayPresetScales[dayPreset]:0.##}，按方案应在每秒 {DayPresetDps[dayPreset]:0.#} 点伤害左右（拿着一把没有强化的 Mk1 武器时）。",
+                    $"Playing as the player of {DayName(dayPreset)}: output ×{DayPresetScales[dayPreset]:0.##}, about {DayPresetDps[dayPreset]:0.#} damage a second by the plan (with a Mk1 weapon and no upgrade)."));
+            if (gm && gm.waves && gm.runWeapons)
+                text.AppendLine(ArenaText.Pair($"全局倍率：怪物伤害 ×{gm.waves.EnemyDamageScale:0.##}，武器伤害 ×{gm.runWeapons.WeaponDamageScale:0.##}，自伤和撞墙 ×{gm.runWeapons.SelfDamageScale:0.##}。",
+                    $"Global scales: monster damage ×{gm.waves.EnemyDamageScale:0.##}, weapon damage ×{gm.runWeapons.WeaponDamageScale:0.##}, self-damage and wall slams ×{gm.runWeapons.SelfDamageScale:0.##}."));
+            text.AppendLine(ArenaText.Pair($"玩家输出 ×{PlayerOutput.Scale:0.##}：最近 {DpsWindow:0} 秒平均每秒造成 {dps:0.#} 点伤害，{PlayerOutput.Since:0} 秒里一共 {PlayerOutput.Total:0} 点。",
+                $"Player output ×{PlayerOutput.Scale:0.##}: {dps:0.#} damage a second over the last {DpsWindow:0} s, {PlayerOutput.Total:0} in all over {PlayerOutput.Since:0} s."));
+            var target = nearest ? nearest : last && last.IsAlive ? last : null;
+            if (target)
+            {
+                float hp = target.maxHp;
+                string who = Name(target.definition ? target.definition.kind : selected);
+                text.AppendLine(dps > 0f
+                    ? ArenaText.Pair($"按这个输出，打倒一只{who}（最大生命 {hp:0}）大约要 {hp / dps:0.0} 秒；带护盾的会再久一些。",
+                        $"At this output a {who} with {hp:0} max HP falls in about {hp / dps:0.0} s; one with a shield takes a little longer.")
+                    : ArenaText.Pair("还没有打出伤害。朝怪物开火以后，这里会显示打倒它要多久。", "No damage yet. Fire at a monster to see how long it takes to fall."));
+            }
+            text.AppendLine(ArenaText.Pair("要改怪物的数值，在 Project 窗口里选中 V2/Data/Enemies 下的资产，改完按 F6 重新生成。",
+                "To tune a monster, select its asset under V2/Data/Enemies in the Project window, edit it, and press F6 to spawn it again."));
             return text.ToString();
         }
     }

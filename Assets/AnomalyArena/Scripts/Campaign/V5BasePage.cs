@@ -955,18 +955,18 @@ namespace AnomalyArena
                             $"Shield {Mathf.CeilToInt(c.BaseShield)} / {Mathf.CeilToInt(c.BaseMaxShield)}   ·   level {c.ShieldLevel} / {c.MaxShieldLevel}   ·   refills each night")
                         : ArenaText.Pair("护盾：未解锁", "Shield: locked"));
                     if (c.Room(room).damaged)
-                        lines.Add(Tint(ArenaText.Pair("总控区损坏了。先在这里把它修好，其他三个区才能继续建造和升级。",
-                            "Central Control is broken. Repair it here first; until then, the other three rooms can't be built or upgraded."), V5TitleKit.OrangeHi));
+                        lines.Add(Tint(ArenaText.Pair("总控区损坏了。先在这里把它修好：在那之前，其他三个区不能建造、升级或修复，基地护盾在夜里也不会回满。",
+                            "Central Control is broken. Repair it here first: until then, the other three rooms can't be built, upgraded or repaired, and the base shield won't refill at night."), V5TitleKit.OrangeHi));
                     else if (r && c.BaseHp < c.BaseMaxHp - .5f)
-                        lines.Add(Tint(ArenaText.Pair($"基地每晚会自动修复 {r.nightSelfRepair * 100f:0}% 的生命", $"The base repairs {r.nightSelfRepair * 100f:0}% of its HP on its own each night"),
+                        lines.Add(Tint(ArenaText.Pair($"基地每晚会自动修复最大生命的 {r.nightSelfRepair * 100f:0}%。", $"Each night the base repairs {r.nightSelfRepair * 100f:0}% of its max HP on its own."),
                             V5TitleKit.Ink3));
                     break;
                 case CampaignRoom.Armament:
                     if (c.Room(room).level >= 1) lines.Add(ArenaText.Pair($"装甲 {c.ArmorLevel} 级　·　武器 Mk {c.TeamMk}", $"Armor level {c.ArmorLevel}   ·   weapons Mk {c.TeamMk}"));
                     break;
                 case CampaignRoom.Ship:
-                    if (r) lines.Add(ArenaText.Pair($"矿灯在这里造，每盏 {r.lampCost} 合金，用不完的会留到下一晚。",
-                        $"Mining lamps are made here, {r.lampCost} alloy each; unused ones keep for the next night."));
+                    if (r) lines.Add(ArenaText.Pair($"矿灯每盏 {r.lampCost} 合金。夜里放下矿灯，就能在它的光里采矿；用不完的会留到下一晚。",
+                        $"Mining lamps cost {r.lampCost} alloy each. Set one down at night to mine in its light; unused lamps carry over to the next night."));
                     lines.Add(ArenaText.Pair("修好引擎和装甲、加满燃料，就能点火返航。", "Repair the engine and the armor and fill the tank, and the ship can head home."));
                     break;
             }
@@ -976,8 +976,8 @@ namespace AnomalyArena
         /// <summary>What a room's level brings, as the old page's lines name it.</summary>
         static string B5StepWords(CampaignRoom room, int level) => room switch
         {
-            CampaignRoom.Armament => level == 1 ? ArenaText.Pair("装甲升级、武器型号", "Armor and weapon Mk upgrades")
-                : level == 2 ? ArenaText.Pair("新武器、驯化", "New weapons and taming") : ArenaText.Pair("武器变招", "Weapon twists"),
+            CampaignRoom.Armament => level == 1 ? ArenaText.Pair("装甲和武器型号升级", "Armor and weapon Mk upgrades")
+                : level == 2 ? ArenaText.Pair("新武器和驯化", "New weapons and taming") : ArenaText.Pair("武器变招", "Weapon twists"),
             CampaignRoom.Energy => level == 1 ? ArenaText.Pair("体质研究", "Body research")
                 : level == 2 ? ArenaText.Pair("技能研究", "Skill research") : ArenaText.Pair("附魔研究", "Infusion research"),
             _ => level == 1 ? ArenaText.Pair("修复飞船引擎", "Repair the ship's engine")

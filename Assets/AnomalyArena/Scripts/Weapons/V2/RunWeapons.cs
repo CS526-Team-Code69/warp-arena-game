@@ -24,6 +24,12 @@ namespace AnomalyArena
         public float startingDamageFactor = .5f;
         [Min(.01f), Tooltip("群怪版本的玩家武器伤害倍率；在既有半伤/双频率和升级乘区之后作用，不重置卡片成长。")]
         public float crowdDamageMultiplier = 1f;
+        [Min(0f), Tooltip("Scale on every weapon hit that lands on a monster, hand and auto weapons alike, in both modes (Combatant applies it before the burn share, so a weapon's own burn follows). The weapons' backfires and the hits on the player are not scaled by it.")]
+        public float weaponDamageScale = 1f;
+        [Min(0f), Tooltip("Scale on the damage the player takes from their own weapons (backfires, blasts that reach them) and from wall slams, in both modes.")]
+        public float selfDamageScale = 1f;
+        public float WeaponDamageScale => DifficultyScales.Read(weaponDamageScale);
+        public float SelfDamageScale => DifficultyScales.Read(selfDamageScale);
         [Min(.01f), Tooltip("Complete attack duration multiplier for the three starting forms; .5 doubles firing and motion cadence.")]
         public float startingCycleFactor = .5f;
         [field: SerializeField, HideInInspector, Tooltip("旧版衰减保存字段，现已停用。人形火箭本次发射的所有目标使用同一伤害。")]
@@ -857,7 +863,7 @@ namespace AnomalyArena
                 // Document 5.8: the Charged Shot Twist and Tame, Reverse Shot Tame, Flying Blade Tame, Chain Blade Tame and Launch Yourself Tame.
                 (WeaponForm.Rifle,0,true)=>ArenaText.Pair($"蓄满松手时枪口喷出气浪，把前方 {u.chargedBlastRange:0.#} 格内的敌人击退 {u.chargedBlastPush:0.#} 格；这一发每穿过 1 个敌人，伤害 +{P(u.chargedPierceGrowth)}%（最多 +{P(u.chargedPierceGrowthCap)}%）。",
                     $"A full-charge release also blasts the cone ahead, knocking enemies within {u.chargedBlastRange:0.#} cells back {u.chargedBlastPush:0.#} cells; that round deals +{P(u.chargedPierceGrowth)}% damage for each enemy it has passed (up to +{P(u.chargedPierceGrowthCap)}%)."),
-                (WeaponForm.Rifle,0,false)=>ArenaText.Pair($"蓄力时你不再减速，受到敌人攻击的伤害改为 -{P(1f-u.chargeTameDamageTaken)}%；准星线上的非 Boss 敌人减速 {P(1f-u.chargeLineSlowFactor)}%。",
+                (WeaponForm.Rifle,0,false)=>ArenaText.Pair($"蓄力时你不再减速，被敌人攻击时反而少受 {P(1f-u.chargeTameDamageTaken)}% 的伤害；准星线上的非 Boss 敌人移速降低 {P(1f-u.chargeLineSlowFactor)}%。",
                     $"Charging no longer slows you, and enemy attacks hit you for {P(1f-u.chargeTameDamageTaken)}% less instead of more; non-boss enemies on your aim line move {P(1f-u.chargeLineSlowFactor)}% slower."),
                 (WeaponForm.Rifle,1,true)=>ArenaText.Pair($"子弹第一次弹墙时分裂成 2 颗，各 {P(u.reverseSplitShare)}% 伤害。",$"On its first wall bounce a round splits in two, each at {P(u.reverseSplitShare)}% damage."),
                 (WeaponForm.Rifle,1,false)=>ArenaText.Pair($"仍从背后射击，每发后坐把你往准星方向推 {u.reverseTameRecoil:0.#} 格；身前 {u.reverseGuardRange:0.#} 格内有敌人时，隔一发改为向前打它。",
@@ -865,10 +871,10 @@ namespace AnomalyArena
                 (WeaponForm.Knife,0,true)=>ArenaText.Pair($"飞刃回到出手点时旋斩，{u.knifeSpinRadius:0.#} 格内这次回程没砍到的敌人各受 {P(u.knifeSpinShare)}% 伤害。",$"When the blade comes home it spins: enemies within {u.knifeSpinRadius:0.#} cells that this return did not cut take {P(u.knifeSpinShare)}% damage."),
                 (WeaponForm.Knife,0,false)=>ArenaText.Pair($"折返的飞刃不再伤你；从你身上扫过算接住：冷却缩短 {P(1f-u.knifeCatchCooldownShare)}%，下一刀多弹 {u.knifeCatchTargets} 个敌人、飞行速度 +{P(u.knifeCatchSpeed-1f)}%。",
                     $"The returning blade no longer cuts you; sweeping through you is a catch: {P(1f-u.knifeCatchCooldownShare)}% shorter cooldown, and the next throw bounces to {u.knifeCatchTargets} more enemies and flies {P(u.knifeCatchSpeed-1f)}% faster."),
-                (WeaponForm.Knife,1,true)=>ArenaText.Pair("甩出的敌人撞到别人后，自动钩住被撞者；每次出钩限连 1 次。","A flung enemy that crashes into another hooks the one it hit; once per manual hook."),
+                (WeaponForm.Knife,1,true)=>ArenaText.Pair("甩出去的敌人撞到别的敌人时，链刃会自动钩住被撞的那一个；每次手动出钩只会连钩一次。","When a flung enemy crashes into another, the chain blade hooks the one it hit, once for each hook you throw yourself."),
                 (WeaponForm.Knife,1,false)=>ArenaText.Pair($"双向拉扯时不会被打断、不受攻击伤害；会合时把 {u.hookShockRadius:0.#} 格内的其他敌人震退 {u.hookShockPush:0.#} 格；空钩打中墙时把你拉到墙边。",
                     $"During the two-way pull nothing interrupts you and attacks cannot hurt you; as you meet, other enemies within {u.hookShockRadius:0.#} cells are knocked back {u.hookShockPush:0.#} cells. An empty hook that hits a wall pulls you to it."),
-                (WeaponForm.RocketLauncher,0,true)=>ArenaText.Pair($"炸死的敌人原地再炸一次：半径 {u.strikeChainRadius:0.#}、伤害 {P(u.strikeChainShare)}%，不再连锁。",$"Enemies the strike kills explode where they fall: radius {u.strikeChainRadius:0.#}, {P(u.strikeChainShare)}% damage, no further chain."),
+                (WeaponForm.RocketLauncher,0,true)=>ArenaText.Pair($"被这次打击炸死的敌人会在原地再爆炸一次（半径 {u.strikeChainRadius:0.#}，伤害 {P(u.strikeChainShare)}%）；这些爆炸不会伤到你，也不会再引发连锁。",$"Enemies the strike kills explode where they fall (radius {u.strikeChainRadius:0.#}, {P(u.strikeChainShare)}% damage); these blasts never hurt you and set off no further chain."),
                 (WeaponForm.RocketLauncher,0,false)=>ArenaText.Pair($"自己的爆炸不再伤你，改为把你弹开 {u.strikeJumpDistance:0.#} 格，不会撞墙受伤。",$"Your own blast no longer hurts you; it pushes you {u.strikeJumpDistance:0.#} cells instead, with no wall damage."),
                 (WeaponForm.RocketLauncher,1,true)=>ArenaText.Pair($"撞到的敌人沿飞行方向击退，导弹飞得越快推得越远：刚起飞时 {u.rocketCueMax:0.#} 格，飞到尽头 {u.rocketCueMax*Mathf.Clamp(u.rocketEndSpeedShare,.1f,1f):0.#} 格。",$"Enemies you hit are knocked along your flight, farther the faster you still fly: {u.rocketCueMax:0.#} cells at launch, {u.rocketCueMax*Mathf.Clamp(u.rocketEndSpeedShare,.1f,1f):0.#} at the end."),
                 (WeaponForm.RocketLauncher,1,false)=>ArenaText.Pair("飞行中不会被黑洞拉偏或吞掉；撞墙不再扣你的血，这一飞的冷却立刻清零。","In flight black holes neither drag nor swallow you; hitting a wall no longer costs you HP and resets this flight's cooldown."),

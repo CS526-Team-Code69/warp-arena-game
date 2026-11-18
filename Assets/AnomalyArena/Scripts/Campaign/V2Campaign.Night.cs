@@ -326,7 +326,7 @@ namespace AnomalyArena
                 // The last planned day is over and the ship cannot leave yet: the days go on (the last day's wave again) until it can.
                 string missing = !engineFixed ? ArenaText.Pair("引擎还没修好", "The engine isn't repaired")
                     : !armorFixed ? ArenaText.Pair("装甲还没修好", "The armor isn't repaired")
-                    : ArenaText.Pair("燃料还没满", "The tank isn't full");
+                    : ArenaText.Pair("燃料还没满", "The fuel tank isn't full");
                 ui.Flash(ArenaText.Pair($"{missing}，飞船飞不起来，得再撑一天。", $"{missing}, so the ship can't leave yet. Hold out one more day."), 3.5f);
             }
             SaveStoryPhase(SavePhase.Morning); // the morning's save, before the new day's one-shot effects (V2Campaign.Save.cs)

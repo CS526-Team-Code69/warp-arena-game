@@ -768,7 +768,11 @@ def _count_bars(ax, labels, counts, whole, xlabel, colors=None):
 
 
 def _rate_axis(ax, top, xlabel):
-    ax.set_xlim(0, top * 1.5)
+    # The extra room right of the bars is for their labels; ticks stop at 100% so the axis never reads past a whole.
+    right = top * 1.5
+    step = 20 if top > 50 else 10 if top > 20 else 5
+    ax.set_xlim(0, right)
+    ax.set_xticks([t for t in range(0, 101, step) if t <= right])
     ax.xaxis.set_major_formatter(lambda v, _: "%d%%" % v)
     ax.grid(axis="x", color=GRID, linewidth=0.8, zorder=0)
     ax.set_xlabel(xlabel, color=INK_2)
@@ -1073,13 +1077,14 @@ def render_weapons(agg, out_path, source):
         x = list(range(len(days)))
         shares = [_pct(agg["days"][d]["left"], agg["days"][d]["opened"]) for d in days]
         lower.bar(x, shares, width=0.6, color=BAR_COLOR, edgecolor=SURFACE, linewidth=2, zorder=3)
-        top = max(shares) or 1
+        top = max(max(shares), 10)  # at least 0-12% on the axis, so whole-percent ticks never repeat when every share is small
         for xi, d, s in zip(x, days, shares):
             lower.text(xi, s + top * 0.03, "%.0f%%" % s, ha="center", va="bottom", fontsize=8.5, color=INK_2, zorder=4)
         lower.set_xticks(x, ["Day %d\n%d" % (d, agg["days"][d]["opened"]) for d in days])
         lower.tick_params(axis="x", labelsize=8.5)
         lower.set_xlim(-0.6, len(days) - 0.4)
         lower.set_ylim(0, top * 1.25)
+        lower.set_yticks([t for t in range(0, 101, 5 if top <= 30 else 10 if top <= 60 else 20) if t <= top * 1.25])
         lower.yaxis.set_major_formatter(lambda v, _: "%d%%" % v)
         lower.grid(axis="y", color=GRID, linewidth=0.8, zorder=0)
         lower.set_xlabel("Under each day: the crates opened that could be left", color=INK_2)

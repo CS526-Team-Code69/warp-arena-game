@@ -196,7 +196,7 @@ namespace AnomalyArena
             Bought("constitution", $"{stat} {rarity}", CampaignRoom.Energy, price);
             V3WorldAudio.Instance?.Play(ArenaWorldCue.LevelUp, BaseCentre);
             var shown = new StatCardOffer(stat, rarity, row.At(rarity));
-            ui.Flash(ArenaText.Pair($"体质：{shown.Title}升到{ArenaTerms.Rarity(rarity)}", $"Body: {shown.Title} is now {ArenaTerms.Rarity(rarity)}"));
+            ui.Flash(ArenaText.Pair($"体质：{shown.Title}升到了{ArenaTerms.Rarity(rarity)}档", $"Body: {shown.Title} raised to {ArenaTerms.Rarity(rarity)}"));
             return true;
         }
 
@@ -221,7 +221,7 @@ namespace AnomalyArena
                 var full = new StatCardOffer(stat, rarity, row.At(rarity), row.bonus, row.BonusAt(rarity));
                 var stats = progression.Stats;
                 var icon = StudyArt ? StudyIcon(StudyArt.statIcons, (int)stat) : null;
-                string have = steps > 0 ? ArenaText.Pair($"目前已买到{ArenaTerms.Rarity(CampaignRules.StatLineRarity(steps - 1) ?? CardRarity.Common)}档。", $"Bought up to {ArenaTerms.Rarity(CampaignRules.StatLineRarity(steps - 1) ?? CardRarity.Common)}.")
+                string have = steps > 0 ? ArenaText.Pair($"目前已买到{ArenaTerms.Rarity(CampaignRules.StatLineRarity(steps - 1) ?? CardRarity.Common)}档。", $"You've bought up to the {ArenaTerms.Rarity(CampaignRules.StatLineRarity(steps - 1) ?? CardRarity.Common)} step.")
                     : ArenaText.Pair("这一项还没买过。", "You haven't bought this stat yet.");
                 string detail = full.Description + "\n" + have + "\n" + rule;
                 if (next == null)
@@ -244,8 +244,8 @@ namespace AnomalyArena
 
         /// <summary>The line the Tame and Twist tiles add: the attack speed or damage they give the weapon besides.</summary>
         string TameTwistBonusText(UpgradeAxis axis) => axis == UpgradeAxis.Tame
-            ? ArenaText.Pair($"此外，这把武器的攻速 ×{rules.tameAttackSpeed:0.##}。", $"This weapon also attacks ×{rules.tameAttackSpeed:0.##} as fast.")
-            : ArenaText.Pair($"此外，这把武器的伤害 ×{rules.twistDamage:0.##}。", $"This weapon also deals ×{rules.twistDamage:0.##} damage.");
+            ? ArenaText.Pair($"此外，这把武器的攻速 ×{rules.tameAttackSpeed:0.##}。", $"This weapon also attacks {rules.tameAttackSpeed:0.##}× as fast.")
+            : ArenaText.Pair($"此外，这把武器的伤害 ×{rules.twistDamage:0.##}。", $"This weapon also deals {rules.twistDamage:0.##}× damage.");
 
         // ───── Day 0's gifts ─────
 

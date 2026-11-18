@@ -3,8 +3,7 @@ using NUnit.Framework;
 namespace AnomalyArena
 {
     /// <summary>The start language's rule (StartupLanguage): the player's saved choice first; on the web the page's path, Chinese with
-    /// "/zh/" in it; English otherwise (the default since 2026-11-10, when the system language stopped counting). No scene and no Unity
-    /// runtime.</summary>
+    /// "/zh/" in it and English otherwise; off the web (the editor, a desktop build) Chinese. No scene and no Unity runtime.</summary>
     [TestFixture]
     public class StartupLanguageTest
     {
@@ -14,7 +13,7 @@ namespace AnomalyArena
         [TestCase("zh-Hans", true, EnglishPage, ExpectedResult = StartupLanguage.Chinese, TestName = "Saved Chinese beats the English page")]
         [TestCase("en", true, ChinesePage, ExpectedResult = StartupLanguage.English, TestName = "Saved English beats the Chinese page")]
         [TestCase("en", false, "", ExpectedResult = StartupLanguage.English, TestName = "Saved English off the web")]
-        [TestCase("zh-Hans", false, "", ExpectedResult = StartupLanguage.Chinese, TestName = "Saved Chinese beats the English default")]
+        [TestCase("zh-Hans", false, "", ExpectedResult = StartupLanguage.Chinese, TestName = "Saved Chinese off the web")]
         [TestCase("zh-CN", false, "", ExpectedResult = StartupLanguage.Chinese, TestName = "Any saved zh code is Chinese")]
         [TestCase("EN-us", false, "", ExpectedResult = StartupLanguage.English, TestName = "Any saved en code is English")]
         public string Resolve_SavedChoice_ComesFirst(string saved, bool web, string page) =>
@@ -35,9 +34,9 @@ namespace AnomalyArena
         public string Resolve_WebWithoutSavedChoice_FollowsThePagePath(string page) =>
             StartupLanguage.Resolve("", true, page);
 
-        [TestCase("", ExpectedResult = StartupLanguage.English, TestName = "Off the web the game starts in English")]
-        [TestCase(ChinesePage, ExpectedResult = StartupLanguage.English, TestName = "An address is only read on the web")]
-        public string Resolve_OffTheWebWithoutSavedChoice_IsEnglish(string page) =>
+        [TestCase("", ExpectedResult = StartupLanguage.Chinese, TestName = "Off the web the game starts in Chinese")]
+        [TestCase(EnglishPage, ExpectedResult = StartupLanguage.Chinese, TestName = "An address is only read on the web")]
+        public string Resolve_OffTheWebWithoutSavedChoice_IsChinese(string page) =>
             StartupLanguage.Resolve(null, false, page);
 
         [TestCase("fr", ExpectedResult = StartupLanguage.English, TestName = "An unknown saved code counts as none")]

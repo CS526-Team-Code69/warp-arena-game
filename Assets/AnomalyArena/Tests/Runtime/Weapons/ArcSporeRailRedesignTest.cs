@@ -276,7 +276,7 @@ namespace AnomalyArena
             Assert.That(en[4], Does.Contain("black hole").And.Contain("does not hurt"));
             Assert.That(zh[5], Does.Contain("返还部分冷却").And.Contain("提升下一发伤害").And.Not.Contain("阈值"), "Execute: the kill reward, no growing line");
             Assert.That(en[5], Does.Contain("cooldown back").And.Contain("next shot").And.Not.Contain("threshold"));
-            Assert.That(zh[6], Does.Contain("电击玩家自身").And.Contain("长冷却").And.Contain("Boss").And.Not.Contain("生命上限"), "Execute trait");
+            Assert.That(zh[6], Does.Contain("电击你自己").And.Contain("长冷却").And.Contain("Boss").And.Not.Contain("生命上限"), "Execute trait");
             Assert.That(en[6], Does.Contain("shocks you").And.Contain("long cooldown"));
             string speed = ((tuning.chainTameMoveSpeed - 1f) * 100f).ToString("0.#");
             Assert.That(zh[7], Does.Contain($"移速 +{speed}%").And.Contain($"最多多跳 {tuning.chainStoreMax} 次"), "Arc Jump Tame: the cap stays and the speed-up is new");

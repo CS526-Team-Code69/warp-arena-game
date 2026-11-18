@@ -167,15 +167,15 @@ namespace AnomalyArena
                     if (c.NextLevelCost(tab) is { } shipCost) actions.Add((UpgradeLabel(tab), shipCost, () => c.TryUpgradeRoom(tab), UpgradeFail(tab, shipCost), c.ControlWorks && !current.damaged));
                     if (!c.EngineFixed)
                         actions.Add((ArenaText.Pair("修复引擎", "Repair the engine"), r.engineRepair, c.TryRepairEngine,
-                            current.level < 1 ? ArenaText.Pair("飞船发射区 1 级才能修引擎", "Needs Ship Launch Bay level 1") : Why(r.engineRepair), c.CanRepairEngine));
+                            current.level < 1 ? ArenaText.Pair("飞船发射区 1 级才能修引擎", "Needs the Ship Launch Bay at level 1") : Why(r.engineRepair), c.CanRepairEngine));
                     if (!c.ArmorFixed)
                         actions.Add((ArenaText.Pair("修复装甲", "Repair the armor"), r.armorRepair, c.TryRepairArmor,
-                            current.level < 2 ? ArenaText.Pair("飞船发射区 2 级才能修装甲", "Needs Ship Launch Bay level 2") : Why(r.armorRepair), c.CanRepairArmor));
+                            current.level < 2 ? ArenaText.Pair("飞船发射区 2 级才能修装甲", "Needs the Ship Launch Bay at level 2") : Why(r.armorRepair), c.CanRepairArmor));
                     if (!c.FuelFull)
                         actions.Add((ArenaText.Pair($"合成反物质燃料（{c.Fuel}/{c.FuelUnits}）", $"Synthesize antimatter fuel ({c.Fuel}/{c.FuelUnits})"), new CampaignCost(0, 0, c.DarkPerFuel), c.TrySynthesiseFuel,
-                            current.level < 3 ? ArenaText.Pair("飞船发射区 3 级才能合成燃料", "Needs Ship Launch Bay level 3") : ArenaText.Pair("暗物质不够", "Not enough dark matter"), c.CanSynthesiseFuel));
+                            current.level < 3 ? ArenaText.Pair("飞船发射区 3 级才能合成燃料", "Needs the Ship Launch Bay at level 3") : ArenaText.Pair("暗物质不够", "Not enough dark matter"), c.CanSynthesiseFuel));
                     actions.Add((ArenaText.Pair($"制造矿灯（现有 {c.LampStock} 盏）", $"Craft a mining lamp (you have {c.LampStock})"), new CampaignCost(r.lampCost), c.TryCraftLamp,
-                        current.damaged ? ArenaText.Pair("飞船发射区损坏", "The Ship Launch Bay is broken") : ArenaText.Pair("合金不够", "Not enough alloy"), c.LampsCraftable));
+                        current.damaged ? ArenaText.Pair("飞船发射区已损坏", "The Ship Launch Bay is broken") : ArenaText.Pair("合金不够", "Not enough alloy"), c.LampsCraftable));
                     if (c.CanIgnite) actions.Add((ArenaText.Pair("启动点火程序", "Start the ignition sequence"), null, () => { c.Ignite(); return true; }, "", true));
                     break;
                 default:
@@ -216,7 +216,7 @@ namespace AnomalyArena
             }
             else if (c.Day == 0 && !c.BaseAtDawn) leaves.Add((ArenaText.Pair("出发（夜幕降临）", "Head out (night falls)"), c.LeaveBase));
             else if (c.Day >= r.days && c.CanIgnite) leaves.Add((ArenaText.Pair("启动点火程序", "Start the ignition sequence"), c.Ignite));
-            else leaves.Add((c.Day >= r.days ? ArenaText.Pair($"燃料未满 · 开始第 {c.Day + 1} 天", $"Tank not full · start day {c.Day + 1}") : ArenaText.Pair($"出发：开始第 {c.Day + 1} 天", $"Head out: start day {c.Day + 1}"), c.LeaveBase));
+            else leaves.Add((c.Day >= r.days ? ArenaText.Pair($"飞船还走不了 · 开始第 {c.Day + 1} 天", $"Ship can't leave yet · start day {c.Day + 1}") : ArenaText.Pair($"出发：开始第 {c.Day + 1} 天", $"Head out: start day {c.Day + 1}"), c.LeaveBase));
             for (int i = 0; i < leaves.Count; i++)
             {
                 var (label, act) = leaves[i];
@@ -481,12 +481,12 @@ namespace AnomalyArena
                         ? ArenaText.Pair($"护盾 {Mathf.CeilToInt(c.BaseShield)} / {Mathf.CeilToInt(c.BaseMaxShield)}　·　{c.ShieldLevel} / {c.MaxShieldLevel} 级　·　每晚回满", $"Shield {Mathf.CeilToInt(c.BaseShield)} / {Mathf.CeilToInt(c.BaseMaxShield)}   ·   level {c.ShieldLevel} / {c.MaxShieldLevel}   ·   refills each night")
                         : ArenaText.Pair("护盾：未解锁", "Shield: locked"));
                     // What only matters in a state is said in that state.
-                    if (c.Room(room).damaged) lines.Add(Small(ArenaText.Pair("总控区损坏了。先在这里把它修好，其他三个区才能继续建造和升级。", "Central Control is broken. Repair it here first; until then, the other three rooms can't be built or upgraded."), Warn));
-                    else if (c.BaseHp < c.BaseMaxHp - .5f) lines.Add(Small(ArenaText.Pair($"基地每晚会自动修复 {r.nightSelfRepair * 100f:0}% 的生命", $"The base repairs {r.nightSelfRepair * 100f:0}% of its HP on its own each night"), Faint));
+                    if (c.Room(room).damaged) lines.Add(Small(ArenaText.Pair("总控区损坏了。先在这里把它修好：在那之前，其他三个区不能建造、升级或修复，基地护盾在夜里也不会回满。", "Central Control is broken. Repair it here first: until then, the other three rooms can't be built, upgraded or repaired, and the base shield won't refill at night."), Warn));
+                    else if (c.BaseHp < c.BaseMaxHp - .5f) lines.Add(Small(ArenaText.Pair($"基地每晚会自动修复最大生命的 {r.nightSelfRepair * 100f:0}%。", $"Each night the base repairs {r.nightSelfRepair * 100f:0}% of its max HP on its own."), Faint));
                     break;
                 case CampaignRoom.Armament:
-                    lines.Add(Level(1, lv >= 1, ArenaText.Pair("装甲升级、武器型号", "armor and weapon Mk upgrades")));
-                    lines.Add(Level(2, lv >= 2, ArenaText.Pair("新武器、驯化", "new weapons and taming")));
+                    lines.Add(Level(1, lv >= 1, ArenaText.Pair("装甲和武器型号升级", "armor and weapon Mk upgrades")));
+                    lines.Add(Level(2, lv >= 2, ArenaText.Pair("新武器和驯化", "new weapons and taming")));
                     lines.Add(Level(3, lv >= 3, ArenaText.Pair("武器变招", "weapon twists")));
                     if (lv >= 1) lines.Add(Small(ArenaText.Pair($"装甲 {c.ArmorLevel} 级　·　武器 Mk {c.TeamMk}", $"Armor level {c.ArmorLevel}   ·   weapons Mk {c.TeamMk}"), Faint));
                     break;
@@ -500,8 +500,8 @@ namespace AnomalyArena
                     lines.Add(Level(2, lv >= 2, ArenaText.Pair("修复飞船装甲", "repair the ship's armor"), c.ArmorFixed));
                     lines.Add(Level(3, lv >= 3, ArenaText.Pair($"合成反物质燃料 {c.Fuel} / {c.FuelUnits}", $"synthesize antimatter fuel {c.Fuel} / {c.FuelUnits}"), c.FuelFull));
                     // Two sentences, one line each: the text breaks lines only at spaces, so one long Chinese line broke after the number.
-                    lines.Add(Small(ArenaText.Pair($"矿灯在这里造，每盏 {r.lampCost} 合金，用不完的会留到下一晚。",
-                        $"Mining lamps are made here, {r.lampCost} alloy each; unused ones keep for the next night."), Faint));
+                    lines.Add(Small(ArenaText.Pair($"矿灯每盏 {r.lampCost} 合金。夜里放下矿灯，就能在它的光里采矿；用不完的会留到下一晚。",
+                        $"Mining lamps cost {r.lampCost} alloy each. Set one down at night to mine in its light; unused lamps carry over to the next night."), Faint));
                     lines.Add(Small(ArenaText.Pair("修好引擎和装甲、加满燃料，就能点火返航。",
                         "Repair the engine and the armor and fill the tank, and the ship can head home."), Faint));
                     break;

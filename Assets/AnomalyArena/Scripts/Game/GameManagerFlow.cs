@@ -126,7 +126,7 @@ namespace AnomalyArena
             if (!VoidDashUnlocked) return;
             voidDashNoticePending = false;
             string cost = player.voidDash.CostWords;
-            hud?.Toast(ArenaText.Pair($"获得虚空冲刺：按空格朝光标冲刺，消耗{cost}", $"Void Dash gained: press Space to dash toward the cursor, using {cost}"),
+            hud?.Toast(ArenaText.Pair($"获得虚空冲刺：按空格朝光标方向冲刺，每次消耗{cost}。", $"Void Dash gained: press Space to dash toward the cursor. Each dash uses {cost}."),
                 ElementCombat.ColorFor(ElementKind.Void), VoidDashNoticeSeconds);
         }
 

@@ -28,9 +28,11 @@ namespace AnomalyArena
         // ───── Each day's kinds (the implementation spec's section F) ─────
 
         [TestCase(1, EnemyKind.Grunt, 60, 60)]
-        [TestCase(1, EnemyKind.Spitter, 15, 15)]
-        [TestCase(1, EnemyKind.Warden, 0, 6)]
-        [TestCase(1, EnemyKind.Skitter, 20, 0)]
+        [TestCase(1, EnemyKind.Skitter, 20, 20)]
+        [TestCase(1, EnemyKind.Brute, 0, 6)]
+        [TestCase(1, EnemyKind.Spitter, 15, 0)]
+        [TestCase(1, EnemyKind.Warden, 0, 0)]
+        [TestCase(2, EnemyKind.Spitter, 15, 15)]
         [TestCase(2, EnemyKind.Warden, 6, 6)]
         [TestCase(2, EnemyKind.Chanter, 6, 0)]
         [TestCase(3, EnemyKind.Spire, 6, 6)]
@@ -39,7 +41,8 @@ namespace AnomalyArena
         [TestCase(5, EnemyKind.Stomper, 6, 6)]
         [TestCase(6, EnemyKind.Stomper, 0, 0)]
         [TestCase(6, EnemyKind.Shade, 0, 6)]
-        [TestCase(6, EnemyKind.Brute, 18, 0)]
+        [TestCase(6, EnemyKind.Brute, 18, 18)]
+        [TestCase(6, EnemyKind.Splitter, 20, 0)]
         [TestCase(7, EnemyKind.Skitter, 25, 25)]
         [TestCase(7, EnemyKind.Splitter, 20, 20)]
         [TestCase(9, EnemyKind.Brute, 18, 18)]
@@ -56,28 +59,28 @@ namespace AnomalyArena
 
         static readonly Dictionary<EnemyKind, int[]> PlainHp = new()
         {
-            [EnemyKind.Grunt] = new[] { 4, 6, 13, 26, 49, 90, 218 },
-            [EnemyKind.Skitter] = new[] { 4, 6, 13, 26, 49, 90, 218 },
-            [EnemyKind.Splitter] = new[] { 4, 6, 13, 26, 49, 90, 218 },
-            [EnemyKind.Brute] = new[] { 4, 6, 13, 26, 49, 90, 218 },
-            [EnemyKind.Spitter] = new[] { 15, 24, 51, 103, 191, 353, 853 },
-            [EnemyKind.Warden] = new[] { 19, 30, 66, 132, 244, 451, 1090 },
-            [EnemyKind.Chanter] = new[] { 19, 30, 66, 132, 244, 451, 1090 },
-            [EnemyKind.Rammer] = new[] { 20, 31, 69, 137, 255, 470, 1137 },
-            [EnemyKind.Bloater] = new[] { 13, 21, 46, 92, 170, 314, 760 },
-            [EnemyKind.Spire] = new[] { 24, 39, 86, 172, 318, 588, 1421 },
-            [EnemyKind.Stomper] = new[] { 13, 21, 47, 94, 174, 321, 775 },
-            [EnemyKind.Shade] = new[] { 12, 18, 40, 80, 150, 276, 667 },
+            [EnemyKind.Grunt] = new[] { 3, 4, 10, 22, 43, 86, 218 },
+            [EnemyKind.Skitter] = new[] { 3, 4, 10, 22, 43, 86, 218 },
+            [EnemyKind.Splitter] = new[] { 3, 4, 10, 22, 43, 86, 218 },
+            [EnemyKind.Brute] = new[] { 6, 8, 20, 44, 86, 172, 435 },
+            [EnemyKind.Spitter] = new[] { 6, 8, 20, 44, 86, 172, 435 },
+            [EnemyKind.Warden] = new[] { 15, 21, 51, 111, 216, 432, 1090 },
+            [EnemyKind.Chanter] = new[] { 15, 21, 51, 111, 216, 432, 1090 },
+            [EnemyKind.Rammer] = new[] { 16, 22, 53, 116, 225, 451, 1137 },
+            [EnemyKind.Bloater] = new[] { 10, 14, 35, 77, 151, 301, 760 },
+            [EnemyKind.Spire] = new[] { 20, 27, 66, 145, 282, 564, 1421 },
+            [EnemyKind.Stomper] = new[] { 11, 15, 36, 79, 154, 307, 775 },
+            [EnemyKind.Shade] = new[] { 9, 13, 31, 68, 132, 264, 667 },
         };
 
         static readonly Dictionary<EnemyKind, int[]> EliteHp = new()
         {
-            [EnemyKind.Chanter] = new[] { 62, 99, 217, 435, 807, 1490, 3602 },
-            [EnemyKind.Rammer] = new[] { 62, 99, 217, 435, 807, 1490, 3602 },
-            [EnemyKind.Bloater] = new[] { 54, 86, 188, 377, 699, 1291, 3120 },
-            [EnemyKind.Spire] = new[] { 66, 106, 232, 463, 861, 1589, 3840 },
-            [EnemyKind.Stomper] = new[] { 39, 62, 135, 270, 502, 927, 2240 },
-            [EnemyKind.Shade] = new[] { 50, 80, 174, 348, 646, 1193, 2883 },
+            [EnemyKind.Chanter] = new[] { 50, 68, 168, 366, 714, 1428, 3602 },
+            [EnemyKind.Rammer] = new[] { 50, 68, 168, 366, 714, 1428, 3602 },
+            [EnemyKind.Bloater] = new[] { 43, 59, 145, 317, 619, 1237, 3120 },
+            [EnemyKind.Spire] = new[] { 53, 73, 179, 391, 761, 1523, 3840 },
+            [EnemyKind.Stomper] = new[] { 31, 42, 104, 228, 444, 888, 2240 },
+            [EnemyKind.Shade] = new[] { 40, 55, 134, 293, 572, 1143, 2883 },
         };
 
         static IEnumerable<TestCaseData> HpCases(Dictionary<EnemyKind, int[]> table)
@@ -127,7 +130,7 @@ namespace AnomalyArena
 
             float actual = sut.BodyHp(EnemyKind.Grunt, 0, false, 0f, ShieldDirect);
 
-            Assert.That(actual, Is.EqualTo(4f));
+            Assert.That(actual, Is.EqualTo(3f));
         }
 
         [Test]
@@ -176,10 +179,10 @@ namespace AnomalyArena
 
         [TestCase(0, false, 0f)]
         [TestCase(1, false, 1.1f)]
-        [TestCase(4, false, 2.7f)]
-        [TestCase(7, false, 16f)]
-        [TestCase(9, false, 16f)]
-        [TestCase(7, true, 24f)]
+        [TestCase(4, false, 3.4f)]
+        [TestCase(7, false, 20f)]
+        [TestCase(9, false, 20f)]
+        [TestCase(7, true, 30f)]
         public void CombatScaleOn_DayOrTyrantFight_IsTheTable(int day, bool tyrantFight, float expected)
         {
             var sut = CreateRules();
@@ -214,12 +217,12 @@ namespace AnomalyArena
 
         // ───── Each day's monster damage ─────
 
-        [TestCase(0, 1f)]
-        [TestCase(1, 1f)]
-        [TestCase(3, 1.07f)]
-        [TestCase(5, 1.13f)]
-        [TestCase(7, 1.2f)]
-        [TestCase(9, 1.2f)]
+        [TestCase(0, .6f)]
+        [TestCase(1, .6f)]
+        [TestCase(3, .67f)]
+        [TestCase(5, .89f)]
+        [TestCase(7, 1.25f)]
+        [TestCase(9, 1.25f)]
         public void EnemyDamageOn_Day_IsTheTable(int day, float expected)
         {
             var sut = CreateRules();
@@ -239,20 +242,23 @@ namespace AnomalyArena
             Assert.That(actual, Is.EqualTo(0f));
         }
 
-        // The reference player's max HP on each morning (the number ledger's three builds: 25 HP, 5 a level of armor; their armor levels
-        // on the mornings of days 1 to 7 are 0, 0, 0, 0, 0, 0, 0 / 0, 0, 1, 1, 2, 2, 3 / 0, 0, 0, 0, 0, 0, 0): a Grunt's five hits fell it
-        // on every day, as on day 1.
-        [TestCase(1, 25f)]
-        [TestCase(3, 26.667f)]
-        [TestCase(5, 28.333f)]
-        [TestCase(7, 30f)]
-        public void EnemyDamageOn_Day_KeepsTheReferencePlayersHitsFromAGruntAtFive(int day, float referenceHp)
+        // The monsters' damage eases in over the seven days: p(d) = p1 + (p7 - p1) x ((d - 1) / 6)^2 with p1 = .6 and p7 = 1.25, so the
+        // first days hurt little and the last day hits as the definitions say (the table holds the curve rounded to two decimals).
+        [TestCase(1)]
+        [TestCase(2)]
+        [TestCase(3)]
+        [TestCase(4)]
+        [TestCase(5)]
+        [TestCase(6)]
+        [TestCase(7)]
+        public void EnemyDamageOn_Day_FollowsTheEasingCurve(int day)
         {
             var sut = CreateRules();
+            float t = (day - 1) / 6f, expected = .6f + (1.25f - .6f) * t * t;
 
-            float actual = referenceHp / (5f * sut.EnemyDamageOn(day));
+            float actual = sut.EnemyDamageOn(day);
 
-            Assert.That(actual, Is.EqualTo(5f).Within(.05f));
+            Assert.That(actual, Is.EqualTo(expected).Within(.006f));
         }
 
         [Test]

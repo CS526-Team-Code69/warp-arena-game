@@ -15,10 +15,10 @@ namespace AnomalyArena
         string Main => Stat switch
         {
             StatId.Damage => ArenaText.Pair($"直接伤害（包括技能伤害）按比例提高：×{1f + Value:0.##}（和其他伤害加成相乘）", $"Direct damage, skills included, scaled up: ×{1f + Value:0.##} (multiplies with other bonuses)"),
-            StatId.AttackSpeed => ArenaText.Pair($"武器冷却缩短，攻击频率 +{Value * 100f:0}%（冷却时间 ÷{1f + Value:0.##}）", $"Shorter weapon cooldowns: attack rate +{Value * 100f:0}% (cooldown ÷{1f + Value:0.##})"),
+            StatId.AttackSpeed => ArenaText.Pair($"武器的冷却、蓄力和换弹都会变快，攻击频率 +{Value * 100f:0}%（所需时间 ÷{1f + Value:0.##}）", $"Weapons cool down, charge and reload faster: attack rate +{Value * 100f:0}% (time taken ÷{1f + Value:0.##})"),
             StatId.Protection => ArenaText.Pair($"护甲 +{Value:0}，受到的伤害按比例减少（×100/(100+护甲)）", $"Armor +{Value:0}: damage taken shrinks in proportion (×100/(100+armor))"),
             StatId.CritChance => ArenaText.Pair($"暴击率 +{Value * 100f:0}%", $"Crit chance +{Value * 100f:0}%"),
-            StatId.ElementPenetration => ArenaText.Pair($"属性伤害按比例打进免疫它的目标：伤害穿透 +{Value * 100f:0}%（状态仍然叠不上）", $"Element damage partly gets through to targets immune to it: Damage Penetration +{Value * 100f:0}% (statuses still never land)"),
+            StatId.ElementPenetration => ArenaText.Pair($"伤害穿透 +{Value * 100f:0}%：打免疫某种属性的目标时，这一比例的属性伤害仍会生效，但状态依旧叠不上", $"Damage Penetration +{Value * 100f:0}%: this share of an element's damage still hits targets immune to it, though its statuses never land"),
             StatId.MaxHp => ArenaText.Pair($"最大生命 +{Value:0.##}，拿到时同时回复等量的生命", $"Max HP +{Value:0.##}, and you heal the same amount when you take it"),
             StatId.MoveSpeed => ArenaText.Pair($"移动速度 +{Value * 100f:0}%", $"Move Speed +{Value * 100f:0}%"),
             StatId.MaxEnergy => ArenaText.Pair($"能量上限 +{Value:0.##}", $"Max Energy +{Value:0.##}"),

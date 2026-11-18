@@ -581,6 +581,7 @@ namespace AnomalyArena
         void Update()
         {
             ApplyFont();
+            TickGoalFlash();
             // An open question takes Esc for itself: Esc then neither leaves the base nor skips a CG.
             if (ConfirmOpen) TickConfirm();
             else if (StudyOpen) TickStudy(); // the study window (V2CampaignUi.Study.cs) takes the keys, Esc included, while it is open

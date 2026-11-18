@@ -79,14 +79,14 @@ namespace AnomalyArena
             holeAwake = true;
             DismissLured();
             labelPercent = labelSeconds = -1;
-            ui.Flash(ArenaText.Pair("黑洞醒了！攻击它，不过它也会还手", "The black hole is awake! Attack it, but it will strike back."), 3.5f);
+            ui.Flash(ArenaText.Pair("黑洞醒了！现在可以攻击它，但它也会还手。", "The black hole is awake! You can attack it now, but it will strike back."), 3.5f);
             Fx.Ring(hole.Centre, hole.GravityRadius, HoleWakeColour, .8f);
             V3WorldAudio.Instance?.Play(ArenaWorldCue.BossInhale, hole.Centre);
         }
 
         /// <summary>The side quest's line while the hole is fed: the count, and how to do it.</summary>
-        string FeedQuestLine() => ArenaText.Pair($"把怪物引进黑洞（{holeFed}/{HoleFeedGoal}）：试着自己走进它的引力圈，把它们引进来",
-            $"Lure monsters into the black hole ({holeFed}/{HoleFeedGoal}): try stepping into its pull so they follow you in");
+        string FeedQuestLine() => ArenaText.Pair($"把怪物引进黑洞（{holeFed}/{HoleFeedGoal}）：走进它的引力圈，追着你的怪物会跟进来，被它吞掉。",
+            $"Lure monsters into the black hole ({holeFed}/{HoleFeedGoal}): step into its pull, and the monsters chasing you follow you in and get swallowed.");
 
         /// <summary>The hole's world label while it is fed. Written again only when the count changes.</summary>
         string FeedLabel()

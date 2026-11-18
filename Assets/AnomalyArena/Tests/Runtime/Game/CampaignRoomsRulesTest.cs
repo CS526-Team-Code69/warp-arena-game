@@ -319,9 +319,9 @@ namespace AnomalyArena
             Assert.That(actual, Is.EqualTo(expected).Within(.0001f));
         }
 
-        [TestCase(3, 2, 14f)]
-        [TestCase(7, 3, 183f)]
-        [TestCase(9, 1, 61f)]
+        [TestCase(3, 2, 16f)]
+        [TestCase(7, 3, 231f)]
+        [TestCase(9, 1, 77f)]
         [TestCase(5, 0, 0f)]
         public void InfusionFloor_DayAndTier_IsTheDaysTableTimesTier(int day, int tier, float expected)
         {
@@ -333,13 +333,13 @@ namespace AnomalyArena
         }
 
         [Test]
-        public void InfusionFloor_InTheTyrantsFight_IsNinetyTimesTier()
+        public void InfusionFloor_InTheTyrantsFight_IsTheTyrantFloorTimesTier()
         {
             var sut = CreateRules();
 
             float actual = sut.InfusionFloor(7, 2, true);
 
-            Assert.That(actual, Is.EqualTo(180f).Within(.0001f));
+            Assert.That(actual, Is.EqualTo(224f).Within(.0001f));
         }
 
         [TestCase(3, 2, 150f)]

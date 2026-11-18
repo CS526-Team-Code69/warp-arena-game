@@ -34,7 +34,11 @@ namespace AnomalyArena
         static string RequestPath => Path.Combine(LogsDir, "xp-pacing.request");
 
         [TearDown]
-        public void TearDown() => Time.timeScale = 1f;
+        public void TearDown()
+        {
+            Time.timeScale = 1f;
+            DifficultyScales.Neutral = true;
+        }
 
         [OneTimeTearDown]
         public void OneTimeTearDown()
@@ -56,6 +60,11 @@ namespace AnomalyArena
             await CommandUntil(game, ArenaUiCommand.ChooseLoadout, () => game.RunPhase == ArenaUiState.WeaponIntro, 1);
             await CommandUntil(game, ArenaUiCommand.DismissWeaponIntro, () => game.RunPhase == ArenaUiState.WaveIntro);
 
+            // The driver measures the real game, so the scene's difficulty scales count: the weapons' scale raises the bot's hits as it
+            // raises a player's weapon hits (the bot's hits have no weapon, so Combatant does not scale them itself).
+            DifficultyScales.Neutral = false;
+            float weaponScale = game.runWeapons ? game.runWeapons.WeaponDamageScale : 1f;
+            Debug.Log($"[XpPacing] efficiency {efficiency:0.00}, weapon damage scale {weaponScale:0.##}");
             var progression = game.progression;
             var rules = progression.Rules;
             var balance = game.waves.waveSet ? game.waves.waveSet.encounterBalance : null;
@@ -116,7 +125,7 @@ namespace AnomalyArena
                 int fast = Mathf.Min(rules.maxLevel, wave + 1);
                 var definition =
                     game.waves.waveSet.waves[Mathf.Clamp(wave - 1, 0, game.waves.waveSet.waves.Length - 1)];
-                float modelXp = efficiency * game.waves.xpPerReferenceSecond * definition.duration;
+                float modelXp = efficiency * weaponScale * game.waves.xpPerReferenceSecond * definition.duration;
                 string kindList = string.Join(" ",
                     kinds.OrderByDescending(p => p.Value).Select(p => $"{p.Key}:{p.Value}"));
                 string causeList = string.Join(" ", causes.Select(p => $"{p.Key}:{p.Value}"));
@@ -167,7 +176,7 @@ namespace AnomalyArena
                     game.player.ProtectFor(2f);
                     game.player.Heal(game.player.maxHp);
                     float dt = game.WorldDeltaTime;
-                    bank += efficiency * balance.DpsAt(game.waves.WaveIndex + 1) * dt;
+                    bank += efficiency * weaponScale * balance.DpsAt(game.waves.WaveIndex + 1) * dt;
                     hitClock += dt;
                     // Hand over the interval's budget in one hit: ReceiveDamage floors any accepted attack to one HP and rounds shield
                     // absorption, so per-frame slivers would not behave like weapon hits.

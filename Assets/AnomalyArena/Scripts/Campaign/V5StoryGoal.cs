@@ -26,6 +26,17 @@ namespace AnomalyArena
         string storyGoal = "", storyWay = "", storyPrompt = "", storyNote = "";
         bool? storyGoalChinese;
 
+        // The plate's call for attention (TickGoalFlash): a new goal, or a new stage of the side quest, flashes the plate three times
+        // (orange for a goal, violet for the side quest, whose strip glows too), nudges it larger for a moment and plays the panel's
+        // sound. A line whose only change is a number (3/10 to 4/10) and a switch of language do not call for it.
+        Image storyGoalFlash;
+        string storyGoalKey, storySideKey;
+        float goalFlashAt = -10f;
+        Color goalFlashColour;
+        bool goalFlashSide;
+        const float GoalFlashSeconds = 1.6f, GoalFlashPulses = 3f, GoalFlashPeak = .42f, GoalFlashGrow = .05f, GoalFlashGrowSeconds = .3f;
+        const float GoalCutPx = 11f; // the plate's corner cut, which its flash keeps
+
         /// <summary>The goal panel's left edge, top edge (as its anchored position, from the screen's top) and width: the fifth pass's
         /// plate, or the old panel's.</summary>
         float GoalLeft => V5HudKit.On ? Sp(GoalLeftPx) : ObjectiveLeft;
@@ -40,9 +51,15 @@ namespace AnomalyArena
             objectiveBack.enabled = false;
             var bar = back.Find("Bar");
             if (bar) bar.gameObject.SetActive(false);
-            var plate = V5HudKit.Plate(back, "Plate", V5HudKit.PlateLook.Plain, 11f, V5HudKit.StoryCss);
+            var plate = V5HudKit.Plate(back, "Plate", V5HudKit.PlateLook.Plain, GoalCutPx, V5HudKit.StoryCss);
             plate.transform.SetAsFirstSibling();
             V5TitleKit.Stretch(plate.Rect);
+            storyGoalFlash = new GameObject("Flash", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
+            storyGoalFlash.transform.SetParent(back, false);
+            storyGoalFlash.transform.SetSiblingIndex(1); // over the plate, under the words
+            V5TitleKit.Stretch(storyGoalFlash.rectTransform);
+            storyGoalFlash.raycastTarget = false;
+            storyGoalFlash.color = Color.clear;
             // A triangle that points up, turned to point right: 13 across its base, 11 deep.
             storyGoalPointer = V5HudKit.Arrow(back, "Pointer", new Vector2(Sp(13f), Sp(11f)), V5TitleKit.Orange, -90f);
             storyGoalCap = V5StoryKit.Label(back, "Cap", 12f, V5TitleKit.OrangeHi, TextAnchor.MiddleLeft, true);
@@ -95,6 +112,7 @@ namespace AnomalyArena
         void LayOutStoryGoal()
         {
             if (!storyGoalTitle) return;
+            bool sameLanguage = storyGoalChinese == ArenaText.IsChinese;
             storyGoalChinese = ArenaText.IsChinese;
             var back = objectiveBack.rectTransform;
             SplitWords(storyGoal, true, out string title, out string rest);
@@ -111,6 +129,11 @@ namespace AnomalyArena
             Add(storyPrompt, V5TitleKit.OrangeHi);
             Add(storyNote, null);
             bool main = title.Length > 0 || body.Length > 0, side = !string.IsNullOrEmpty(sideQuestBody);
+            string goalKey = WordsOf(storyGoal), sideKey = side ? WordsOf(sideQuestBody) : "";
+            if (sameLanguage && goalKey.Length > 0 && goalKey != storyGoalKey) StartGoalFlash(V5TitleKit.OrangeHi, false);
+            else if (sameLanguage && sideKey.Length > 0 && sideKey != storySideKey) StartGoalFlash(V5HudKit.VioletHi, true);
+            storyGoalKey = goalKey;
+            storySideKey = sideKey;
             float width = Sp(GoalWidthPx), left = Sp(GoalPadLeftPx), inner = width - Sp(GoalPadLeftPx + GoalPadRightPx), y = 0f;
             SetShown(storyGoalPointer, main);
             SetShown(storyGoalCap, main);
@@ -154,6 +177,51 @@ namespace AnomalyArena
             if (!any) return;
             back.sizeDelta = new Vector2(width, y);
             back.anchoredPosition = new Vector2(GoalLeft, GoalTop - goalDrop);
+        }
+
+        /// <summary>A line without its digits, so a count that only moves (3/10, then 4/10) reads as the same line.</summary>
+        static string WordsOf(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return "";
+            var words = new StringBuilder(text.Length);
+            foreach (char c in text)
+                if (!char.IsDigit(c)) words.Append(c);
+            return words.ToString();
+        }
+
+        void StartGoalFlash(Color colour, bool side)
+        {
+            goalFlashAt = Time.unscaledTime;
+            goalFlashColour = colour;
+            goalFlashSide = side;
+            // A white shape of the plate's outline (the cut-corner mask with the art on, a flat rectangle in whitebox), tinted by the
+            // flash's colour: the plate's own picture is dark, and a dark picture stays dark whatever colour it is tinted.
+            bool art = Art.Enabled;
+            V5TitleKit.Dress(storyGoalFlash, art ? V5TitleKit.Chamfer : null, Color.clear, art ? V5HudKit.ChamferDensity(GoalCutPx, V5HudKit.StoryCss) : 0f);
+            V5UiSound.Play(V5UiSound.Ui.Panel);
+        }
+
+        /// <summary>Each frame (Update): the flash's three pulses, each weaker than the last, the plate's nudge at the start and, for the
+        /// side quest, its strip's glow; everything back as it was once the flash is over.</summary>
+        void TickGoalFlash()
+        {
+            if (!storyGoalFlash) return;
+            var back = objectiveBack.rectTransform;
+            float t = Time.unscaledTime - goalFlashAt;
+            if (t < 0f || t > GoalFlashSeconds)
+            {
+                if (storyGoalFlash.color.a <= 0f) return;
+                storyGoalFlash.color = Color.clear;
+                back.localScale = Vector3.one;
+                if (goalFlashSide) sideQuestBack.color = V5StoryKit.VioletWash;
+                return;
+            }
+            float pulse = Mathf.Sin(Mathf.PI * GoalFlashPulses * t / GoalFlashSeconds);
+            float a = GoalFlashPeak * pulse * pulse * (.45f + .55f * (1f - t / GoalFlashSeconds));
+            storyGoalFlash.color = new Color(goalFlashColour.r, goalFlashColour.g, goalFlashColour.b, Mathf.Max(.001f, a));
+            float grow = t < GoalFlashGrowSeconds ? GoalFlashGrow * Mathf.Sin(Mathf.PI * t / GoalFlashGrowSeconds) : 0f;
+            back.localScale = Vector3.one * (1f + grow);
+            if (goalFlashSide) sideQuestBack.color = Color.Lerp(V5StoryKit.VioletWash, V5HudKit.VioletHi, a);
         }
 
         /// <summary>A wrapped label from (left, top) of the plate, as wide as given and as tall as its text; its height.</summary>

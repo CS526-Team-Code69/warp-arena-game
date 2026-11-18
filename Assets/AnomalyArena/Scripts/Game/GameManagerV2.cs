@@ -207,7 +207,7 @@ namespace AnomalyArena
             // V2 day campaign: no card picks; the summary counts the upgrades really applied (a pick no unlocked kind can fill stays).
             if(automatic){int count=progression.BankedDrafts;progression.ResolvePendingRandom();int applied=count-progression.BankedDrafts;
                 if(CampaignRunning){if(applied>0)buildSummary+=ArenaText.Pair($"\n自动完成的升级：{applied} 次", $"\nUpgrades applied automatically: {applied}");}
-                else if(count>0)buildSummary+=ArenaText.Pair($"\n已自动处理{count}组待选卡", $"\n{count} pending drafts resolved automatically");}
+                else if(count>0)buildSummary+=ArenaText.Pair($"\n{count} 组待选卡已随机替你选好", $"\n{count} pending card picks were made for you at random");}
             snapshot.earlyStartConfirmation=false;pendingDraft=pendingOffer=-1;
             player.Heal(player.maxHp);player.stamina.Refill();player.ClearWaveState();BeginWaveDrafts();
             if(!CampaignRunning)SaveOpenRun(); // the open mode saves just before every wave and the Tyrant (GameManager.Save.cs)
@@ -329,7 +329,7 @@ namespace AnomalyArena
             string lead=WeaponCardLead(w.IsAuto,w.element,CampaignRunning&&w.IsAnomalous,BuildEdition.Current);
             string trait=w.IsAnomalous?$"\n\n<b><color=#ff8a73>{ArenaText.Pair("特性","Trait")}</color></b>\n{WeaponGuide.Backfire(w.form,w.variant)}":"";
             float wait=w.form==WeaponForm.ShieldRing&&w.variant==1?runWeapons.DrainShieldWait(w):0f;
-            string drainWait=wait>0f?"\n"+ArenaText.Pair($"{wait:0.#} 秒没受到敌人攻击后生成能量盾",$"Energy Shield after {wait:0.#} s without an enemy hit"):"";
+            string drainWait=wait>0f?"\n"+ArenaText.Pair($"连续 {wait:0.#} 秒没受到敌人攻击，就会生成能量盾。",$"The Energy Shield forms after {wait:0.#} s without an enemy hit."):"";
             snapshot.weaponIntroBody=$"{lead}<b><color=#ffd36e>{ArenaText.Pair("攻击方式","How it attacks")}</color></b>\n{WeaponGuide.How(w.form,w.variant)}{drainWait}{trait}";
             snapshot.weaponIntroHint=ArenaText.Pair("点击任意处、按空格或回车继续","Click anywhere or press Space or Enter to continue");
             snapshot.weaponIntroContinue=ArenaText.Pair("继续","CONTINUE");
@@ -481,7 +481,7 @@ namespace AnomalyArena
                     if(known)snapshot.bossImmunities+=(i==0?ArenaText.Pair("暴虐君王免疫：", "Tyrant King immunities: "):" · ")+ArenaTerms.Element(immune);
                 }
                 snapshot.banner=RunPhase==ArenaUiState.WaveIntro?ArenaText.Pair("第 "+snapshot.wave+" 波", "WAVE "+snapshot.wave):"";
-                snapshot.resultTitle=State==GameState.Won?ArenaText.Pair("即将重返地球", "EARTH IS WITHIN REACH"):ArenaText.Pair("探索者陨落", "EXPLORER LOST");snapshot.resultDetails=ArenaText.Pair($"第 {snapshot.wave} 波 · 等级 {snapshot.level} · 消灭 {snapshot.kills} 个敌人\n在星际战场坚持了 {Elapsed:0} 秒", $"Wave {snapshot.wave} · Level {snapshot.level} · {snapshot.kills} kills\n{Elapsed:0} seconds on the Interstellar Battlefield");
+                snapshot.resultTitle=State==GameState.Won?ArenaText.Pair("即将重返地球", "EARTH IS WITHIN REACH"):ArenaText.Pair("探索者陨落", "EXPLORER LOST");snapshot.resultDetails=ArenaText.Pair($"第 {snapshot.wave} 波 · 等级 {snapshot.level} · 消灭 {snapshot.kills} 个敌人\n在星际战场坚持了 {Elapsed:0} 秒", $"Wave {snapshot.wave} · Level {snapshot.level} · {snapshot.kills} kills\nYou held out on the Interstellar Battlefield for {Elapsed:0} seconds");
                 if(runWeapons){for(int i=0;i<2;i++)WriteSlot(snapshot.handSlots[i],runWeapons.Hand[i],i==runWeapons.ActiveIndex);for(int i=0;i<snapshot.autoSlots.Length;i++)WriteSlot(snapshot.autoSlots[i],i<runWeapons.Auto.Length?runWeapons.Auto[i]:null,false);for(int i=0;i<snapshot.armoryOffers.Length;i++){var w=i<runWeapons.Offers.Length?runWeapons.Offers[i]:null;WriteArmoryOffer(snapshot.armoryOffers[i],w);}}
                 for(int i=0;i<snapshot.armoryOffers.Length;i++)
                 {
@@ -491,7 +491,7 @@ namespace AnomalyArena
                 }
                 for(int i=0;i<3;i++)
                 {
-                    var loadout=snapshot.loadoutChoices[i];loadout.title=ArenaTerms.WeaponForm(i==0?WeaponForm.RocketLauncher:i==1?WeaponForm.Rifle:WeaponForm.Knife);loadout.body=ArenaText.Pair("拿到之前不知道是哪种攻击方式和特性；选中的那一刻揭晓。", "Its attack and trait are unknown until you take it; they are revealed the moment you choose.");loadout.formIndex=i==0?2:i==1?0:1;loadout.elementIndex=-1;
+                    var loadout=snapshot.loadoutChoices[i];loadout.title=ArenaTerms.WeaponForm(i==0?WeaponForm.RocketLauncher:i==1?WeaponForm.Rifle:WeaponForm.Knife);loadout.body=ArenaText.Pair("它的攻击方式和特性要到你选中的那一刻才会揭晓。", "Its attack and trait stay hidden until the moment you choose it.");loadout.formIndex=i==0?2:i==1?0:1;loadout.elementIndex=-1;
                     loadout.rarity=CardRarity.Common;loadout.badge=ArenaTerms.Rarity(loadout.rarity);loadout.kind=ArenaTerms.CardKind(DraftCardKind.Weapon);
                     if(skills)WriteSkillSlot(snapshot.skillSlots[i],skills.Slots[i]);
                 }
@@ -543,11 +543,11 @@ namespace AnomalyArena
                 float gain=runWeapons.MkDamage(w)/Mathf.Max(.01f,runWeapons.MkDamage(w.upgradeOf))-1f;
                 // A stronger version upgrades the held weapon itself; its pairing, upgrades and infusion stay.
                 card.title=w.FormName+" "+w.upgradeOf.MkLabel+" → "+w.MkLabel;card.kind=ArenaText.Pair("强化 · ", "UPGRADE · ")+hand;
-                card.body=ArenaText.Pair($"强化手上的{w.upgradeOf.Label}：型号伤害 +{gain*100f:0}%。攻击方式和特性不变，已有的强化和灌注都保留。", $"Upgrades your {w.upgradeOf.Label}: Mk damage +{gain*100f:0}%. Its attack and trait stay the same; its upgrades and infusion are kept.");
+                card.body=ArenaText.Pair($"强化你现有的{w.upgradeOf.Label}，型号伤害提高 {gain*100f:0}%。它的攻击方式和特性不变，已有的强化和灌注也都保留。", $"Upgrades the {w.upgradeOf.Label} you already have, raising its Mk damage by {gain*100f:0}%. Its attack and trait stay the same, and it keeps its upgrades and infusion.");
                 return;
             }
             card.title=w.FormName;card.kind=hand;
-            card.body=ArenaText.Pair($"一把新武器，搭配未揭晓。{w.MkLabel}，伤害 ×{runWeapons.MkDamage(w):0.##}。", $"A new weapon; its pairing is unrevealed. {w.MkLabel}, damage ×{runWeapons.MkDamage(w):0.##}.");
+            card.body=ArenaText.Pair($"一把新武器，搭配未揭晓。{w.MkLabel}，伤害 ×{runWeapons.MkDamage(w):0.##}。", $"A new weapon whose pairing is still hidden. {w.MkLabel}, damage ×{runWeapons.MkDamage(w):0.##}.");
         }
         void WriteSlot(ArenaUiSlot slot,RunWeapon w,bool active)
         {

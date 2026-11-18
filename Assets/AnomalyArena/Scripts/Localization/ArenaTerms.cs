@@ -128,17 +128,17 @@ namespace AnomalyArena
             bool everySecond = UnityEngine.Mathf.Approximately(r.twitchInterval, 1f);
             return element switch
             {
-                ElementKind.Fire => ArenaText.Pair($"命中点燃敌人：{window} 秒内每秒烧这把武器秒伤的 {P(r.fireBurnShare)}%（喷火器自带的火焰另有倍率），再命中就续上。",
+                ElementKind.Fire => ArenaText.Pair($"命中会点燃敌人，{window} 秒内每秒受到这把武器秒伤 {P(r.fireBurnShare)}% 的燃烧伤害（喷火器自带的火焰另有倍率）；再次命中会重新计时。",
                     $"Hits ignite the enemy: it burns {P(r.fireBurnShare)}% of the weapon's DPS per second for {window} s (the Flamethrower's built-in Fire has its own factor); each hit renews it."),
-                ElementKind.Poison => ArenaText.Pair($"每次命中叠 {stacks} 层毒（最多 {N(r.poisonOnEnemyCap)} 层），每层每秒 {N(r.poisonOnEnemyDamagePerStack * ElementCombat.WaveScale)} 点伤害、无视护盾；{window} 秒不再命中就散去。",
+                ElementKind.Poison => ArenaText.Pair($"每次命中叠 {stacks} 层毒（最多 {N(r.poisonOnEnemyCap)} 层），每层每秒造成 {N(r.poisonOnEnemyDamagePerStack * ElementCombat.WaveScale)} 点伤害并无视护盾；{window} 秒内不再被命中，毒就会散去。",
                     $"Each hit adds {stacks} Poison (up to {N(r.poisonOnEnemyCap)}); each stack deals {N(r.poisonOnEnemyDamagePerStack * ElementCombat.WaveScale)} per second through Shields and fades {window} s after the last hit."),
-                ElementKind.Frost => ArenaText.Pair($"每次命中叠 {stacks} 层冰冻，每层让敌人移动和出手慢 {P(r.frostSlowPerStack)}%；叠满 {N(r.frostThreshold)} 层冻结 {N(r.frostDuration)} 秒、受到伤害 +{P(r.frozenDamageTaken - 1f)}%，之后 {immunity} 秒不会再冻结。",
+                ElementKind.Frost => ArenaText.Pair($"每次命中叠 {stacks} 层冰冻，每层让敌人的移动和出手慢 {P(r.frostSlowPerStack)}%；叠满 {N(r.frostThreshold)} 层时敌人冻结 {N(r.frostDuration)} 秒，期间受到的伤害 +{P(r.frozenDamageTaken - 1f)}%，之后 {immunity} 秒不会再冻结。",
                     $"Each hit adds {stacks} Frost, each slowing the enemy's moves and attacks by {P(r.frostSlowPerStack)}%; at {N(r.frostThreshold)} it freezes for {N(r.frostDuration)} s and takes +{P(r.frozenDamageTaken - 1f)}% damage, then cannot freeze again for {immunity} s."),
-                ElementKind.Lightning => ArenaText.Pair($"每次命中叠 {stacks} 层雷电，每层让敌人受到伤害 +{P(r.lightningVulnerabilityPerStack)}%、{(everySecond ? "每秒" : $"每 {N(r.twitchInterval)} 秒")}有 {P(r.lightningTwitchChancePerStack)}% 机会抽搐；叠满 {N(r.lightningThreshold)} 层麻痹 {N(r.lightningDuration)} 秒{(r.lightningParalysedVulnerability > 0f ? $"（期间受到伤害 +{P(r.lightningParalysedVulnerability)}%）" : "")}，之后 {immunity} 秒不会再麻痹；雷电会传给附近的敌人。",
-                    $"Each hit adds {stacks} Lightning: per stack +{P(r.lightningVulnerabilityPerStack)}% damage taken and a {P(r.lightningTwitchChancePerStack)}% chance {(everySecond ? "a second" : $"every {N(r.twitchInterval)} s")} to twitch; at {N(r.lightningThreshold)} the enemy is paralysed for {N(r.lightningDuration)} s{(r.lightningParalysedVulnerability > 0f ? $" (taking +{P(r.lightningParalysedVulnerability)}% damage)" : "")}, then cannot be again for {immunity} s. It jumps to nearby enemies."),
+                ElementKind.Lightning => ArenaText.Pair($"每次命中叠 {stacks} 层雷电，每层让敌人受到的伤害 +{P(r.lightningVulnerabilityPerStack)}%，并且{(everySecond ? "每秒" : $"每 {N(r.twitchInterval)} 秒")}有 {P(r.lightningTwitchChancePerStack)}% 的机会抽搐；叠满 {N(r.lightningThreshold)} 层时敌人麻痹 {N(r.lightningDuration)} 秒{(r.lightningParalysedVulnerability > 0f ? $"（期间受到的伤害 +{P(r.lightningParalysedVulnerability)}%）" : "")}，之后 {immunity} 秒不会再麻痹；雷电还会传给附近的敌人。",
+                    $"Each hit adds {stacks} Lightning: per stack +{P(r.lightningVulnerabilityPerStack)}% damage taken and a {P(r.lightningTwitchChancePerStack)}% chance {(everySecond ? "a second" : $"every {N(r.twitchInterval)} s")} to twitch; at {N(r.lightningThreshold)} the enemy is paralysed for {N(r.lightningDuration)} s{(r.lightningParalysedVulnerability > 0f ? $" (taking +{P(r.lightningParalysedVulnerability)}% damage)" : "")}, then cannot be paralysed again for {immunity} s. Lightning jumps to nearby enemies."),
                 ElementKind.Earth => ArenaText.Pair($"命中时把伤害的 {P(r.earthShare)}% 变成你的护盾。", $"Hits give you Shield equal to {P(r.earthShare)}% of their damage."),
-                ElementKind.Light => ArenaText.Pair($"命中时按伤害的 {P(r.lightShare)}% 给你回血；打虚空敌人伤害 ×{N(r.lightAgainstVoid)}。",
-                    $"Hits heal you {P(r.lightShare)}% of their damage; ×{N(r.lightAgainstVoid)} damage against Void enemies."),
+                ElementKind.Light => ArenaText.Pair($"命中时按伤害的 {P(r.lightShare)}% 给你回血；对虚空敌人造成的伤害 ×{N(r.lightAgainstVoid)}。",
+                    $"Hits heal you for {P(r.lightShare)}% of their damage and deal ×{N(r.lightAgainstVoid)} damage to Void enemies."),
                 ElementKind.Void => ArenaText.Pair($"命中时按伤害的 {P(r.voidShare)}% 给你回能量。", $"Hits restore Energy equal to {P(r.voidShare)}% of their damage."),
                 _ => ""
             };

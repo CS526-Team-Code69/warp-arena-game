@@ -481,7 +481,7 @@ namespace AnomalyArena
                 typeof(GameManager).GetMethod("ShowWeaponIntro", BindingFlags.Instance | BindingFlags.NonPublic)
                     .Invoke(GameManager.Instance, new object[] { drain, null });
                 string body = GameManager.Instance.UiSnapshot.weaponIntroBody;
-                Assert.That(body, Does.Contain($"{weapons.DrainShieldWait(drain):0.#} 秒没受到敌人攻击后生成能量盾"), "the Drain's card states its shield wait");
+                Assert.That(body, Does.Contain($"连续 {weapons.DrainShieldWait(drain):0.#} 秒没受到敌人攻击，就会生成能量盾"), "the Drain's card states its shield wait");
                 Assert.That(body, Does.Not.Contain("每次命中").And.Not.Contain("出手间隔"), "no damage section on the card");
                 Assert.That(weapons.DrainShieldWait(drain), Is.LessThan(tuning.drainShieldWait), "Mk3 waits less than the Mk1 wait");
             }

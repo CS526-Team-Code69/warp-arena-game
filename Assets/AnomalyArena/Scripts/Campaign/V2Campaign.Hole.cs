@@ -130,7 +130,7 @@ namespace AnomalyArena
         {
             holeSeen = true;
             // Fed first: the side quest's line says how (V2Campaign.HoleFeed.cs); the flash only names what was just seen.
-            if (!HoleAwake) ui.Flash(ArenaText.Pair("黑洞会吞掉靠近它的怪物", "The black hole swallows the monsters that come near it"), 3f);
+            if (!HoleAwake) ui.Flash(ArenaText.Pair("黑洞会把靠近它的怪物吞进去。", "The black hole swallows the monsters that come near it."), 3f);
             else ui.Flash(ArenaText.Pair($"黑洞里有东西。攻击它，从第一次打中开始计时，{Mathf.RoundToInt(rules.holeCheckSeconds)} 秒内打出足够的伤害，就能把它激怒。",
                 $"Something lies within the black hole. Attack it: once your first hit lands, you have {Mathf.RoundToInt(rules.holeCheckSeconds)} seconds to deal enough damage to enrage it."), 4.5f);
         }
@@ -281,7 +281,7 @@ namespace AnomalyArena
             hole.campaignLabel = "";
             hole.OpenGate(gm.waves ? gm.waves.WaveIndex + 1 : 0);
             CampaignEvents.RaiseMilestone(CampaignEvents.MilestoneHoleCheck, CampaignEvents.HoleCheckPassed, holeCheck.Progress, Day);
-            ui.Flash(ArenaText.Pair("里面的东西被激怒了，黑洞变成了一座传送门", "What lies within is enraged. The black hole has become a portal"), 3f);
+            ui.Flash(ArenaText.Pair("里面的东西被激怒了，黑洞变成了一座传送门。", "What lies within is enraged. The black hole has become a portal."), 3f);
             V3WorldAudio.Instance?.Play(ArenaWorldCue.PortalOpen, hole.Centre);
         }
 
@@ -354,20 +354,53 @@ namespace AnomalyArena
             if (holeTarget) holeTarget.Show(on);
         }
 
-        /// <summary>The line under the goal: nothing before the hole is met; then the timed check, how the day went, or the open gate.</summary>
+        /// <summary>The line under the goal. Before the hole is met it shows once the morning's fight is over, while the hole is out: where
+        /// to find it. Then how to feed it, the timed check, how the day went, or the open gate. While the hole can still hurt the player,
+        /// a second line in the threat colour says how.</summary>
         string HoleQuestLine(BlackHole hole, bool shown)
         {
-            if (!holeSeen) return null;
-            // The open portal needs no instruction (2026-11-10): the line only says it is open; standing on it shows the E (V2WorldLabels).
+            if (!holeSeen)
+                return shown && Stage is CampaignStage.Lull or CampaignStage.Dusk
+                    ? WithThreat(ArenaText.Pair("矿脉的尽头有一个黑洞，沿着地上的矿石走过去就能找到它。",
+                        "A black hole waits at the end of the ore trail. Follow the ore on the ground to find it."), PullThreat())
+                    : null;
+            // The open portal needs no instruction: the line only says it is open; standing on it shows the E (V2WorldLabels).
             bool portal = hole.Phase != HolePhase.Active;
-            string text = portal ? ArenaText.Pair("虚空传送门已打开", "The void portal is open")
+            string text = portal ? ArenaText.Pair("虚空传送门已经打开。", "The void portal is open.")
                 : !HoleAwake ? FeedQuestLine()
-                : holeFailedToday ? ArenaText.Pair("限时击破黑洞（今天没成功，明天再来）", "Break the black hole in time (failed today; try again tomorrow)")
-                : ArenaText.Pair("限时击破黑洞", "Break the black hole in time");
-            if (!shown && !holeFailedToday)
-                text += portal ? ArenaText.Pair("（夜里不出现）", " (gone at night)") : ArenaText.Pair("（黑洞夜里不出现）", " (the black hole is gone at night)");
-            return text;
+                : holeFailedToday ? ArenaText.Pair("今天没能击破黑洞，它已经退去，明天再来。", "You didn't break the black hole today. It has withdrawn; come back tomorrow.")
+                : ArenaText.Pair($"击破黑洞：从第一次打中它开始计时，{Mathf.RoundToInt(rules.holeCheckSeconds)} 秒内打出足够的伤害。",
+                    $"Break the black hole: from your first hit, you have {Mathf.RoundToInt(rules.holeCheckSeconds)} seconds to deal enough damage.");
+            if (!shown)
+                return holeFailedToday ? text
+                    : text + (portal ? ArenaText.Pair("（夜里会消失）", " (gone at night)") : ArenaText.Pair("（黑洞到了夜里会消失）", " (the black hole is gone at night)"));
+            if (portal || holeFailedToday) return text;
+            return WithThreat(text, HoleAwake ? PillarThreat() : PullThreat());
         }
+
+        /// <summary>The colour of the side quest's threat line.</summary>
+        const string ThreatColour = "FF9A85";
+
+        static string WithThreat(string line, string threat) => $"{line}\n<color=#{ThreatColour}>{threat}</color>";
+
+        /// <summary>What a fall costs at this time of day: in the afternoon the campaign wakes the player at the base (CatchesPlayerDeath);
+        /// in the morning the run ends.</summary>
+        string FallOutcome() => Stage == CampaignStage.Dusk
+            ? ArenaText.Pair("你会被送回基地", "you wake up back at the base")
+            : ArenaText.Pair("这一局就此结束", "the run ends");
+
+        /// <summary>The pull's threat: rules.holePullFactor keeps it a little faster than a walk, so only a sprint gets out.</summary>
+        string PullThreat()
+        {
+            string key = ArenaKeys.Name(GameAction.Sprint);
+            return ArenaText.Pair($"小心：它的引力比走路快，被拉住时按 {key} 冲刺才能逃开；掉进去会立刻倒下，{FallOutcome()}。",
+                $"Careful: its pull is faster than you walk, so sprint ({key}) to break free. Falling in drops you at once, and {FallOutcome()}.");
+        }
+
+        /// <summary>The awake hole's answer: a void pillar warns with a circle for rules.holePillarWarning seconds, and a standing one kills
+        /// a player whose centre is inside it (Enemy.HoleEcho.cs).</summary>
+        string PillarThreat() => ArenaText.Pair($"小心：它会还手。地上出现圆圈时马上走开，光柱落下时还站在里面会立刻倒下，{FallOutcome()}。",
+            $"Careful: it strikes back. When a circle appears on the ground, leave it at once: the pillar that falls there drops you on the spot, and {FallOutcome()}.");
 
         /// <summary>The hole's world label (V2WorldLabels reads BlackHole.campaignLabel): the damage share and the seconds left while the
         /// check runs, nothing otherwise (no count of swallowed monsters any more). Written only when a shown number changes.</summary>

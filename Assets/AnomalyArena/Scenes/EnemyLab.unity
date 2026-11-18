@@ -241271,6 +241271,7 @@ MonoBehaviour:
   chantInterval: 3
   chantRadius: 6
   chantDamageBonus: 0.3
+  enemyDamageScale: 0.8
   radiationRadius: 3
   radiationLife: 4
   radiationTickSeconds: 0.5
@@ -371054,6 +371055,8 @@ MonoBehaviour:
   startingRocketVariantAChance: 0.5
   startingDamageFactor: 0.5
   crowdDamageMultiplier: 1.5
+  weaponDamageScale: 1.25
+  selfDamageScale: 0.6
   startingCycleFactor: 0.5
   <HumanRocketImpactRetention>k__BackingField: 0.5
   knifeOutboundSpeed: 18

@@ -59,9 +59,9 @@ namespace AnomalyArena
         {
             (ArenaText.Pair("移动", "MOVE"), ArenaText.Pair($"用 {ArenaKeys.MoveKeys} 移动。", $"Use {ArenaKeys.MoveKeys} to move."), () => new MoveDemo()),
             AimPage(),
-            (ArenaText.Pair("冲刺", "SPRINT"), ArenaText.Pair("移动时按住 " + ArenaKeys.SprintKey + " 冲刺。冲刺消耗体力，体力用光后要等它回满才能再冲刺。", "Hold " + ArenaKeys.SprintKey + " while moving to sprint. It drains stamina, and once that runs out it has to refill completely."), () => new SprintDemo()),
+            (ArenaText.Pair("冲刺", "SPRINT"), ArenaText.Pair("移动时按住 " + ArenaKeys.SprintKey + " 冲刺。冲刺消耗体力，体力用光后要等它回满才能再冲刺。", "Hold " + ArenaKeys.SprintKey + " while moving to sprint. Sprinting uses stamina; once it runs out, wait for a full bar before sprinting again."), () => new SprintDemo()),
             (ArenaText.Pair("换武器和技能", "SWAP & SKILLS"), ArenaText.Pair($"按右键在两只手的武器之间切换，按 {ArenaKeys.SkillKeys} 释放技能。", $"Right click switches between your two hand weapons, and {ArenaKeys.SkillKeysWith(", ")} cast your skills."), () => new SkillDemo()),
-            (ArenaText.Pair("利用地形", "USE THE ARENA"), ArenaText.Pair("把敌人打飞去撞墙，或者把它们推进黑洞。", "Knock enemies into walls, or push them into black holes."), () => new TerrainDemo()),
+            (ArenaText.Pair("利用地形", "USE THE ARENA"), ArenaText.Pair("把敌人打飞去撞墙，它们会额外受伤；把它们推进黑洞，它们会被吞掉。", "Knock enemies into a wall and the impact hurts them; push them into a black hole and it swallows them."), () => new TerrainDemo()),
             (ArenaText.Pair("收起选卡面板", "PUT THE PANEL AWAY"),
                 ArenaText.Pair("整备时按 Tab 收起选卡面板，就能四处走动、走上传送门；再按一次 Tab 回到面板。", "Between waves, press Tab to put the card panel away and walk around or onto a portal. Press Tab again to bring it back."),
                 () => new BuildWalkDemo()),
@@ -80,7 +80,7 @@ namespace AnomalyArena
                     ArenaText.Pair($"你的飞船坠落在一颗陌生的星球上。你有 {days} 天时间修好它、加满燃料，然后离开这里。", $"Your ship has crashed on an alien planet. You have {days} days to repair it, fill its tank and get out of here."),
                     () => new StrandedDemo(days)),
                 (ArenaText.Pair("移动和冲刺", "MOVE & SPRINT"),
-                    ArenaText.Pair($"用 {ArenaKeys.MoveKeys} 移动，移动时按住 {ArenaKeys.SprintKey} 冲刺。体力用光后，要等它回满才能再冲刺。", $"Use {ArenaKeys.MoveKeys} to move; hold {ArenaKeys.SprintKey} while moving to sprint. Once stamina runs out, it has to refill completely."),
+                    ArenaText.Pair($"用 {ArenaKeys.MoveKeys} 移动，移动时按住 {ArenaKeys.SprintKey} 冲刺。体力用光后，要等它回满才能再冲刺。", $"Use {ArenaKeys.MoveKeys} to move and hold {ArenaKeys.SprintKey} while moving to sprint. Once stamina runs out, wait for a full bar to sprint again."),
                     () => new MoveSprintDemo()),
                 AimPage(),
                 (ArenaText.Pair("换武器和技能", "SWAP & SKILLS"),
@@ -122,8 +122,8 @@ namespace AnomalyArena
         }
 
         static string Footnote() => InCampaign
-            ? ArenaText.Pair("左上角写着当前的目标，跟着蓝色标记走就行。其他按键用得到时，屏幕上会提示。", "Your goal is at the top left; follow the blue marker. Other keys are shown on screen when you need them.")
-            : ArenaText.Pair($"波次中的选卡面板可以按 Esc 留到稍后，之后按 {ArenaKeys.CardPickKey} 打开。其他按键用得到时，屏幕上会提示。", $"Esc puts a mid-wave card pick off; {ArenaKeys.CardPickKey} opens it again. Other keys are shown on screen when you need them.");
+            ? ArenaText.Pair("左上角写着当前的目标，跟着闪动的标记走就行。其他按键用得到时，屏幕上会提示。", "Your goal is at the top left; follow the pulsing marker. Other keys appear on screen when you need them.")
+            : ArenaText.Pair($"波次中的选卡面板可以按 Esc 留到稍后，之后按 {ArenaKeys.CardPickKey} 打开。其他按键用得到时，屏幕上会提示。", $"Esc saves a mid-wave card pick for later, and {ArenaKeys.CardPickKey} opens it again. Other keys appear on screen when you need them.");
 
         Font font;
         float heldScale = 1f;
@@ -1049,8 +1049,8 @@ namespace AnomalyArena
                 };
                 captions = new[]
                 {
-                    Caption(ArenaText.Pair("守住基地，打怪掉落异星能量", "Hold the base; kills drop alien energy"), 14, Faint, 102f),
-                    Caption(ArenaText.Pair("合金矿露出地表，不用灯就能采", "Alloy ore surfaces; it needs no lamp"), 14, Faint, 102f),
+                    Caption(ArenaText.Pair("守住基地，打倒怪物能拿到异星能量", "Hold the base and kill monsters for alien energy"), 14, Faint, 102f),
+                    Caption(ArenaText.Pair("合金矿露出地表，不用灯就能采", "Alloy ore comes to the surface; no lamp needed"), 14, Faint, 102f),
                     Caption(ArenaText.Pair("影子怪物怕光，站在灯光里采暗物质", "Shadows fear the light: mine dark matter in it"), 14, Faint, 102f),
                 };
                 gains = new[]
@@ -1183,8 +1183,8 @@ namespace AnomalyArena
                 phases = new[] { Caption(ArenaText.Pair("下午或夜里", "AFTERNOON OR NIGHT"), 20, Soft, 128f), Caption(ArenaText.Pair("上午", "MORNING"), 20, Soft, 128f) };
                 captions = new[]
                 {
-                    Caption(ArenaText.Pair($"在门口按 {ArenaKeys.InteractKey} 进入基地", $"{ArenaKeys.InteractKey} at the door: enter the base"), 14, Faint, 102f),
-                    Caption(ArenaText.Pair($"护盾解锁后，在门口按 {ArenaKeys.InteractKey} 用异星能量补充", $"Once the shield is unlocked, {ArenaKeys.InteractKey} at the door tops it up with alien energy"), 14, Faint, 102f),
+                    Caption(ArenaText.Pair($"在门口按 {ArenaKeys.InteractKey} 进入基地", $"Press {ArenaKeys.InteractKey} at the door to enter the base"), 14, Faint, 102f),
+                    Caption(ArenaText.Pair($"护盾解锁后，在门口按 {ArenaKeys.InteractKey} 花异星能量补充护盾", $"Once the shield is unlocked, press {ArenaKeys.InteractKey} at the door to top it up with alien energy"), 14, Faint, 102f),
                 };
 
                 (sheet, fade) = Sheet(new Vector2(480f, 290f), SheetAt);

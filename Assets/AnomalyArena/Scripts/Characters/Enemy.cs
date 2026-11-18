@@ -343,7 +343,7 @@ namespace AnomalyArena
             if (WaveManager.WalkCapRule?.Invoke() is float walkCap && walkCap > 0f) moveSpeed = Mathf.Min(moveSpeed, walkCap);
             radius = data.radius * bodyScale;
             attackDamage = data.damage * (elite ? 1.5f : 1f) * (mini ? MiniDamageShare : 1f) *
-                           (GM && GM.waves ? data.kind == EnemyKind.Tyrant ? GM.waves.FinalBossDamageFactor : GM.waves.EnemyDamageFactor : 1f);
+                           (GM && GM.waves ? (data.kind == EnemyKind.Tyrant ? GM.waves.FinalBossDamageFactor : GM.waves.EnemyDamageFactor) * GM.waves.EnemyDamageScale : 1f);
             windupTime = data.windup;
             attackInterval =
                 data.interval * (Affix == ElementKind.Void ? VoidIntervalFactor : 1f); // §7.3: Void acts faster.

@@ -33,15 +33,18 @@ namespace AnomalyArena
     public sealed partial class CampaignRules
     {
         [Header("Each day's monsters (since 2026-11-10)")]
-        [Tooltip("The kinds day 1, 2, 3 ... may bring; a day past the table takes its last entry. Day d still fights the wave table's wave (WaveNumber): its numbers and its pace stay, only its kinds are these. Day 1 the three basic kinds (the plain melee monster, the Spitter and the Warden), day 2 the same; day 3 adds the Spire and the Chanter; day 4 the Bloater and the Rammer; day 5 the Stomper; day 6 the Shade instead of the Stomper; day 7 every kind (the Skitter, the Splitter and the Brute only then).")]
+        [Tooltip("The kinds day 1, 2, 3 ... may bring; a day past the table takes its last entry. Day d still fights the wave table's wave (WaveNumber): its numbers and its pace stay, only its kinds are these. Day 1 only the three melee kinds (the plain melee monster, the Skitter and the Brute); each later day keeps them and adds as the V2 day table does: day 2 the Spitter and the Warden; day 3 the Spire and the Chanter; day 4 the Bloater and the Rammer; day 5 the Stomper; day 6 the Shade instead of the Stomper; day 7 every kind (the Splitter only then).")]
         public DayKinds[] dayKinds =
         {
-            new(EnemyKind.Grunt, EnemyKind.Spitter, EnemyKind.Warden),
-            new(EnemyKind.Grunt, EnemyKind.Spitter, EnemyKind.Warden),
-            new(EnemyKind.Grunt, EnemyKind.Spitter, EnemyKind.Warden, EnemyKind.Spire, EnemyKind.Chanter),
-            new(EnemyKind.Grunt, EnemyKind.Spitter, EnemyKind.Warden, EnemyKind.Spire, EnemyKind.Chanter, EnemyKind.Bloater, EnemyKind.Rammer),
-            new(EnemyKind.Grunt, EnemyKind.Spitter, EnemyKind.Warden, EnemyKind.Spire, EnemyKind.Chanter, EnemyKind.Bloater, EnemyKind.Rammer, EnemyKind.Stomper),
-            new(EnemyKind.Grunt, EnemyKind.Spitter, EnemyKind.Warden, EnemyKind.Spire, EnemyKind.Chanter, EnemyKind.Bloater, EnemyKind.Rammer, EnemyKind.Shade),
+            new(EnemyKind.Grunt, EnemyKind.Skitter, EnemyKind.Brute),
+            new(EnemyKind.Grunt, EnemyKind.Skitter, EnemyKind.Brute, EnemyKind.Spitter, EnemyKind.Warden),
+            new(EnemyKind.Grunt, EnemyKind.Skitter, EnemyKind.Brute, EnemyKind.Spitter, EnemyKind.Warden, EnemyKind.Spire, EnemyKind.Chanter),
+            new(EnemyKind.Grunt, EnemyKind.Skitter, EnemyKind.Brute, EnemyKind.Spitter, EnemyKind.Warden, EnemyKind.Spire, EnemyKind.Chanter,
+                EnemyKind.Bloater, EnemyKind.Rammer),
+            new(EnemyKind.Grunt, EnemyKind.Skitter, EnemyKind.Brute, EnemyKind.Spitter, EnemyKind.Warden, EnemyKind.Spire, EnemyKind.Chanter,
+                EnemyKind.Bloater, EnemyKind.Rammer, EnemyKind.Stomper),
+            new(EnemyKind.Grunt, EnemyKind.Skitter, EnemyKind.Brute, EnemyKind.Spitter, EnemyKind.Warden, EnemyKind.Spire, EnemyKind.Chanter,
+                EnemyKind.Bloater, EnemyKind.Rammer, EnemyKind.Shade),
             new(EnemyKind.Grunt, EnemyKind.Brute, EnemyKind.Skitter, EnemyKind.Spitter, EnemyKind.Rammer, EnemyKind.Bloater, EnemyKind.Warden, EnemyKind.Splitter,
                 EnemyKind.Spire, EnemyKind.Stomper, EnemyKind.Shade, EnemyKind.Chanter)
         };
@@ -49,20 +52,20 @@ namespace AnomalyArena
         public int unlistedKindWeight = 6;
 
         [Header("Each day's monster HP (since 2026-11-10; the open mode keeps EncounterBalance)")]
-        [Tooltip("The campaign's reference DPS on days 1, 2, 3 ...; a day past the table takes its last entry. A monster's HP = this x its seconds to kill / (1 + its opening shield share / the shield's direct damage factor), as EncounterBalance.MaxHp does with the classic reference DPS.")]
-        public float[] dayReferenceDps = { 10f, 16f, 35f, 70f, 130f, 240f, 580f };
+        [Tooltip("The campaign's reference DPS on days 1, 2, 3 ...; a day past the table takes its last entry. A monster's HP = this x its seconds to kill / (1 + its opening shield share / the shield's direct damage factor), as EncounterBalance.MaxHp does with the classic reference DPS. It is the reference player's expected DPS that morning (weapons at x1.25) times a kill-time factor that grows from .55 on day 1 to .8 on day 7, rounded so a pistol still fells a day-2 Grunt in one shot: the first days' monsters fall faster than the build alone would make them. It is no longer the player's DPS itself.")]
+        public float[] dayReferenceDps = { 8f, 11f, 27f, 59f, 115f, 230f, 580f };
         [Min(1f), Tooltip("The reference DPS in the Tyrant's fight, for the monsters it calls (the Tyrant's own HP is tyrantHp).")]
         public float tyrantReferenceDps = 930f;
-        [Min(.05f), Tooltip("Seconds to kill a melee monster (the plain one, the Skitter, the Splitter, the Brute), at the day's reference DPS.")]
+        [Min(.05f), Tooltip("Seconds to kill a melee monster whose functionSeconds entry is empty, at the day's reference DPS.")]
         public float fodderSeconds = .375f;
-        [Tooltip("EnemyKind order (14 kinds, Chanter last). Seconds to kill an ordinary monster that is not melee, at the day's reference DPS (the game's own ratios between kinds, averaging 1.8 s). The melee and boss entries are not read.")]
-        public float[] functionSeconds = { .375f, .375f, .375f, 1.47f, 1.96f, 1.31f, 1.88f, .375f, 2.45f, 2.29f, 1.15f, 0f, 0f, 1.88f };
+        [Tooltip("EnemyKind order (14 kinds, Chanter last). Seconds to kill an ordinary monster, at the day's reference DPS (the game's own ratios between kinds). The plain melee monster, the Skitter and the Splitter take .375 s; the Brute and the Spitter twice that, so the Brute is the one to deal with first and a far Spitter falls in a few shots. The boss entries are not read.")]
+        public float[] functionSeconds = { .375f, .75f, .375f, .75f, 1.96f, 1.31f, 1.88f, .375f, 2.45f, 2.29f, 1.15f, 0f, 0f, 1.88f };
         [Tooltip("EnemyKind order (14 kinds, Chanter last). Seconds to kill an elite, at the day's reference DPS (the game's own ratios, averaging 6 s). Only the specials become elites; the other entries are not read.")]
         public float[] eliteSeconds = { 6f, 6f, 6f, 6f, 6.21f, 5.38f, 6f, 6f, 6.62f, 6.62f, 4.97f, 0f, 0f, 6.21f };
 
         [Header("Each day's monster damage")]
-        [Tooltip("Days 1, 2, 3 ...: every monster's attack damage is its definition's times this (an elite's x1.5 on top), in place of the classic wave's damage growth; a day past the table takes its last entry. It is the reference player's max HP that morning over day 1's (the number ledger's three builds: 25 HP and 5 more a level of armor), so a player takes as many hits from a monster on every day and a day is harder for its new kinds, not for its numbers. The Tyrant's fight keeps the classic factors; an empty table keeps them every day.")]
-        public float[] dayEnemyDamage = { 1f, 1f, 1.07f, 1.07f, 1.13f, 1.13f, 1.2f };
+        [Tooltip("Days 1, 2, 3 ...: every monster's attack damage is its definition's times this (an elite's x1.5 on top, WaveManager.enemyDamageScale over all), in place of the classic wave's damage growth; a day past the table takes its last entry and day 0 takes day 1's. It eases in as p(d) = p1 + (p7 - p1) x ((d - 1) / 6)^2 with p1 = .6 and p7 = 1.25, so the first days hurt little while the build and the controls are still new, and the last day hits as the definitions say. The Tyrant's fight keeps the classic factors; an empty table keeps them every day.")]
+        public float[] dayEnemyDamage = { .6f, .62f, .67f, .76f, .89f, 1.05f, 1.25f };
 
         [Header("The two bosses in the campaign (since 2026-11-10)")]
         [Min(1f), Tooltip("The Nash Prophet's HP in the void trial, whatever the day; it has no shield. The black hole's check asks for holeCheckProphetShare of it.")]
@@ -76,13 +79,13 @@ namespace AnomalyArena
 
         [Header("Skills, statuses and payoffs by day (since 2026-11-10)")]
         [Tooltip("Days 1, 2, 3 ...: the scale of skills and statuses that grow with the fight (strike, gravity well, poison, chain lightning, fire trail ...), in place of the classic run's wave scale R(w); a day past the table takes its last entry.")]
-        public float[] dayCombatScale = { 1.1f, 1.6f, 2.1f, 2.7f, 4.4f, 7.3f, 16f };
+        public float[] dayCombatScale = { 1.1f, 1.6f, 2.2f, 3.4f, 5.5f, 9.1f, 20f };
         [Min(1f), Tooltip("The same scale in the Tyrant's fight.")]
-        public float tyrantCombatScale = 24f;
+        public float tyrantCombatScale = 30f;
         [Tooltip("Days 1, 2, 3 ...: the infusion floor per infusion research tier (a burn or poison of the player's deals at least this x the tier a second); a day past the table takes its last entry. Empty: infusionFloorPerDay x day x tier.")]
-        public float[] infusionFloorByDay = { 2f, 3f, 7f, 10f, 17f, 27f, 61f };
+        public float[] infusionFloorByDay = { 2.5f, 4f, 8f, 13f, 21f, 34f, 77f };
         [Min(0f), Tooltip("The infusion floor per tier in the Tyrant's fight.")]
-        public float tyrantInfusionFloor = 90f;
+        public float tyrantInfusionFloor = 112f;
         [Tooltip("Days 1, 2, 3 ...: the effects paid as a share of the damage dealt (Light heals, Earth shields, Void and the void enchant restore energy, Radiance heals) are multiplied by this, so they pay what they did in the classic run; a day past the table takes its last entry.")]
         public float[] payoffScaleByDay = { .85f, .75f, .457f, .286f, .2f, .129f, .064f };
         [Min(0f), Tooltip("The same factor in the Tyrant's fight: the classic final boss's reference DPS (40) over the campaign's in that fight (tyrantReferenceDps 930).")]
@@ -152,14 +155,14 @@ namespace AnomalyArena
         public float DayReferenceDps(int day, bool tyrantFight = false) =>
             Mathf.Max(1f, tyrantFight ? tyrantReferenceDps : ByDay(dayReferenceDps, Mathf.Max(1, day), 10f));
 
-        /// <summary>Seconds of the reference DPS a plain or elite body of this kind takes to kill: melee bodies that are not elite take
-        /// fodderSeconds, the rest their kind's entry (1.8 or 6 when the table has none).</summary>
+        /// <summary>Seconds of the reference DPS a plain or elite body of this kind takes to kill: its kind's entry; a melee body that is
+        /// not elite and has no entry takes fodderSeconds, any other body 1.8 or 6.</summary>
         public float TargetSeconds(EnemyKind kind, bool elite)
         {
-            if (!elite && EnemyRoles.IsMelee(kind)) return Mathf.Max(.05f, fodderSeconds);
             var table = elite ? eliteSeconds : functionSeconds;
             float seconds = table != null && (int)kind < table.Length ? table[(int)kind] : 0f;
-            return seconds > 0f ? seconds : elite ? 6f : 1.8f;
+            if (seconds > 0f) return Mathf.Max(.05f, seconds);
+            return !elite && EnemyRoles.IsMelee(kind) ? Mathf.Max(.05f, fodderSeconds) : elite ? 6f : 1.8f;
         }
 
         /// <summary>A body's max HP in the campaign: the Nash Prophet prophetHp, the Tyrant tyrantHp; any other the day's reference DPS x its

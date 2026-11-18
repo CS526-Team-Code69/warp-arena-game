@@ -657,6 +657,12 @@ namespace AnomalyArena
             // Drain: the same attacks hit protection covers may be taken whole by the player's Energy Shield.
             if (info.isAttack && !selfHit && Team == Team.Player && GM && GM.runWeapons && GM.runWeapons.EnergyShieldBlocks()) return false;
             float beforeHp=Hp,beforeShield=elementStatus?elementStatus.Shield:0;
+            // The player's damage to a monster: the weapons' scale on weapon hits (RunWeapons.WeaponDamageScale) and the enemy lab's
+            // scale on everything (PlayerOutput), both before the burn share, the crit and this body's own modifiers.
+            if(Team==Team.Enemy&&!selfHit&&info.dealer?.Owner is Combatant{Team:Team.Player})
+                info.amount*=(info.weapon!=null&&GM&&GM.runWeapons?GM.runWeapons.WeaponDamageScale:1f)*PlayerOutput.Scale;
+            // The player's own weapons and wall slams hurt the player at RunWeapons.SelfDamageScale.
+            if(Team==Team.Player&&(selfHit||info.source==DamageSource.Wall)&&GM&&GM.runWeapons)info.amount*=GM.runWeapons.SelfDamageScale;
             bool crit=false;
             // A Fire hit's burn follows the hit as dealt, before a crit and this body's own modifiers.
             float baseDamage=info.amount;
@@ -686,6 +692,7 @@ namespace AnomalyArena
             float shieldDamage=Mathf.Max(0f,beforeShield-(elementStatus?elementStatus.Shield:0));
             float actualDamage=hpDamage+shieldDamage;
             if(actualDamage>0f){LastDamagedBy=info.dealer?.Owner;LastDamageSource=info.source;DamageTaken?.Invoke(info,actualDamage);}
+            if(actualDamage>0f&&Team==Team.Enemy&&!selfHit&&info.dealer?.Owner is Combatant{Team:Team.Player})PlayerOutput.Record(actualDamage);
             if(!tick&&actualDamage>0f)
             {
                 PlayHitFeedback(hpDamage,info.knockDir,info.kind,crit,info.feel,info.dealer?.Owner);

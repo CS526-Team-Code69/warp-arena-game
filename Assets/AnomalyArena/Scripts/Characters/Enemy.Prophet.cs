@@ -98,7 +98,8 @@ namespace AnomalyArena
         }
 
         /// <summary>A hit of this share: the asset's damage × the fixed damage factor (Y), whatever the wave.</summary>
-        float NashDamage(float share) => (definition ? definition.damage : 0f) * Mathf.Max(0f, Boss.nashDamageFactor) * Mathf.Max(0f, share);
+        float NashDamage(float share) => (definition ? definition.damage : 0f) * Mathf.Max(0f, Boss.nashDamageFactor) * Mathf.Max(0f, share) *
+                                        (GM && GM.waves ? GM.waves.EnemyDamageScale : 1f);
 
         /// <summary>TickSpecial hook: the whole fight. It never walks. A move starts once the opening hold (cooldown), the rings, volley,
         /// pull or summon still running and the rest after them are over; a forced move (enemy lab, tests) skips that rest.</summary>

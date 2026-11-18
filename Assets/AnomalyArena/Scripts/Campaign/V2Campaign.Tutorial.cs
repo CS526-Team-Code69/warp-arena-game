@@ -138,7 +138,7 @@ namespace AnomalyArena
         {
             tutStart = Query.Flat(PlayerPoint());
             tutMarker = FindOpen(CrashSite + new Vector3(14f, 0f, 0f), 1f);
-            Objective(ArenaText.Pair($"朝蓝色标记走 {rules.tutorialMoveMeters:0} 米", $"Walk {rules.tutorialMoveMeters:0} m toward the blue marker"), tutMarker);
+            Objective(ArenaText.Pair($"朝闪动的标记走 {rules.tutorialMoveMeters:0} 米", $"Walk {rules.tutorialMoveMeters:0} m toward the pulsing marker"), tutMarker);
             Teach(TutorialStep.Move, PlayerPoint, 3f, ArenaKeys.MoveKeys, ArenaText.Pair("向标记移动", "Walk to the marker"));
         }
 
@@ -233,10 +233,10 @@ namespace AnomalyArena
             switch (homeLeg)
             {
                 case HomeLeg.Ore:
-                    Objective(ArenaText.Pair("回基地。路边还有一处合金矿，可以顺手采掉", "Head back to the base. There's more ore along the way you can mine"), tutSecondOre?.position);
+                    Objective(ArenaText.Pair("回基地。路边还有一处合金矿，可以顺手采掉", "Head back to the base. You can mine the alloy ore by the road on the way"), tutSecondOre?.position);
                     break;
                 case HomeLeg.Crate:
-                    Objective(ArenaText.Pair("路边还有一个武器箱。从里面拿武器会换下小手枪，不想换也可以不拿", "There's another weapon crate by the road. Taking a weapon from it replaces your pistol, but you can leave it"), tutSecondCrate?.position);
+                    Objective(ArenaText.Pair("路边还有一个武器箱。从里面拿武器会换下小手枪，不想换也可以不拿", "There's another weapon crate by the road. Taking a weapon from it replaces your pistol, but you don't have to take one"), tutSecondCrate?.position);
                     break;
                 default:
                     Objective(ArenaText.Pair("回到基地门口", "Go to the base door"), DoorPoint);

@@ -834,7 +834,7 @@ namespace AnomalyArena
             }
             earlyStartPrompt.SetActive(s.earlyStartConfirmation);
             SetText(earlyStartLabel, s.hideXp
-                ? ArenaText.Pair($"还有 {s.bankedDrafts} 次升级没选。随机选完剩下的，然后开始？", $"Upgrades still unchosen: {s.bankedDrafts}. Pick the rest at random and start?")
+                ? ArenaText.Pair($"还有 {s.bankedDrafts} 次升级没选。要随机选完剩下的再开始吗？", $"You still have upgrades to choose ({s.bankedDrafts} left). Pick the rest at random and start?")
                 : ArenaText.Text("ui.early.question", s.bankedDrafts));
         }
 
@@ -911,10 +911,10 @@ namespace AnomalyArena
                     // V2 day campaign: the game has no cards any more, so its text names none. The fifth pass's screens say it in one line
                     // (their cards show the unknown attack and trait as "???").
                     SetBody(screen.body, V5HudKit.On
-                        ? (s.hideXp ? ArenaText.Pair("选一种熟悉的外形：攻击方式和特性拿到手才揭晓。手动瞄准，利用地形。", "Pick one familiar form: its attack and trait show once you take it. Aim by hand; use the terrain.")
-                            : ArenaText.Pair("选一种熟悉的武器外形：攻击方式和特性拿到手才揭晓。手动瞄准，记得利用地形。", "Pick a weapon form you know: its attack and trait show once you take it. Aim by hand and use the terrain."))
+                        ? (s.hideXp ? ArenaText.Pair("选一种你熟悉的外形，它的攻击方式和特性要拿到手才揭晓。需要手动瞄准，记得利用地形。", "Pick a form you know; its attack and trait are revealed once you take it. Aim by hand, and make use of the terrain.")
+                            : ArenaText.Pair("选一种你熟悉的武器外形，它的攻击方式和特性要拿到手才揭晓。需要手动瞄准，记得利用地形。", "Pick a weapon form you know; its attack and trait are revealed once you take it. Aim by hand, and make use of the terrain."))
                         : s.hideXp
-                        ? ArenaText.Pair("选择一种熟悉的外形。拿到之前不知道是哪种攻击方式和特性；选中的那一刻揭晓：游戏暂停，显示这件武器的说明。\n手动瞄准，利用地形。", "Pick one familiar form. Its attack and trait are unknown until you take it; the moment you choose, the game pauses and shows what the weapon does.\nAim manually; use the terrain.")
+                        ? ArenaText.Pair("选一种你熟悉的外形。拿到之前，你不知道它是哪种攻击方式和特性；选中的那一刻，游戏会暂停并显示这件武器的说明。\n需要手动瞄准，记得利用地形。", "Pick a form you know. Its attack and trait stay hidden until you take it; the moment you choose, the game pauses and shows what the weapon does.\nAim by hand, and make use of the terrain.")
                         : ArenaText.Pair("选一种你熟悉的武器外形。它的攻击方式和特性要拿到手才知道：选中的那一刻，游戏会暂停并弹出它的武器卡。\n需要手动瞄准，记得利用地形。", "Pick a weapon form you know. Its attack and trait stay hidden until you take it: the moment you choose, the game pauses and its weapon card appears.\nAim by hand, and use the terrain."));
                     break;
                 case ArenaUiState.Armory:
@@ -922,7 +922,7 @@ namespace AnomalyArena
                     // The fifth pass's line is one line: its keys are in the foot row, and a card whose weapon would push one out says so
                     // (V5PickScreen).
                     SetBody(screen.body, V5HudKit.On
-                        ? ArenaText.Pair("三选一：拿一件新武器，或把手上的武器升到更高型号（强化都保留）；也可以跳过。", "Pick one of three: a new weapon, or a higher Mk for one you hold (its upgrades stay). Or skip.")
+                        ? ArenaText.Pair("三选一：拿一件新武器，或者把手上的一把武器升到更高型号（已有的强化都保留）；也可以跳过不选。", "Pick one of three: a new weapon, or a higher Mk for a weapon you hold (its upgrades stay). You can also skip.")
                         : ArenaText.Pair("三选一：拿一件新武器，或者把手上的某把武器升到更高型号（攻击方式、特性和已有的强化都不变）。也可以跳过。注意，新武器换下旧武器时，旧武器身上的强化会一起消失。", "Pick one of three: a new weapon, or a higher Mk for a weapon you hold (its attack, trait and upgrades stay). You can also skip. If a new weapon replaces an old one, the old one's upgrades go with it.") + WalkHint());
                     break;
                 case ArenaUiState.Draft:
@@ -934,9 +934,9 @@ namespace AnomalyArena
                     SetBody(screen.body, V5HudKit.On
                         ? (s.isGreaterReward ? ArenaText.Pair("三个高阶虚空技能选一个，也可以都不要；它们没有后续等级。", "Pick one of three Greater Void skills, or none. They have no further levels.")
                             : s.hideXp ? ArenaText.Pair("三选一，每波可以重抽一次。", "Pick one of three; you can reroll once per wave.")
-                            : ArenaText.Pair("属性、武器、技能卡各一张：武器卡给武器加一个新的强化方向；技能卡学新技能或给技能升级，卡的颜色代表它给的等级。", "A stat, a weapon and a skill card: a weapon card adds a new upgrade direction; a skill card teaches or raises a skill, and its colour shows the level it gives."))
+                            : ArenaText.Pair("三张卡分别是属性卡、武器卡和技能卡。武器卡给一把武器加一个新的强化方向；技能卡学一个新技能或给已有的技能升级，卡的颜色代表它给的等级。", "You get a stat card, a weapon card and a skill card. The weapon card gives a weapon a new upgrade direction; the skill card teaches or raises a skill, and its colour shows the level it gives."))
                         : s.isGreaterReward ? ArenaText.Pair("从三个高阶虚空技能里选一个，也可以都不要。它们没有后续等级。按 " + ArenaKeys.SkillKeys + " 选择。", "Pick one of three Greater Void skills, or none. They have no further levels. Press " + ArenaKeys.SkillKeys + " to choose.")
-                        : s.hideXp ? ArenaText.Pair("三选一。按 " + ArenaKeys.SkillKeys + " 选择；R 重抽三项（每波一次）。", "Pick one of three. " + ArenaKeys.SkillKeys + " select; R rerolls all three (once per wave).") + WalkHint()
+                        : s.hideXp ? ArenaText.Pair("三选一。按 " + ArenaKeys.SkillKeys + " 选择，按 R 重抽三项（每波一次）。", "Pick one of three. Press " + ArenaKeys.SkillKeys + " to choose, or R to reroll all three (once per wave).") + WalkHint()
                         : ArenaText.Pair("这三张卡分别是属性卡、武器卡和技能卡。武器卡给一把已揭晓的武器加一个还没有的强化方向；技能卡学一个新技能，或者给已有的技能升级，卡的颜色代表它给的等级。按 " + ArenaKeys.SkillKeys + " 选择，按 R 重抽三张（每波一次）。", "These are a stat card, a weapon card and a skill card. The weapon card gives a revealed weapon an upgrade direction it doesn't have yet; the skill card teaches a new skill or raises one you own, and its colour shows the level it gives. Press " + ArenaKeys.SkillKeys + " to choose, or R to reroll all three (once per wave).") + WalkHint());
                     if (screen.reroll) screen.reroll.interactable = s.rerolls > 0;
                     SetText(screen.rerollLabel, ArenaText.Text("ui.reroll.counter", s.rerolls));
@@ -1021,9 +1021,9 @@ namespace AnomalyArena
             (ArenaKeys.SprintKey, ArenaText.Pair("冲刺", "Sprint"), ""),
             (ArenaKeys.SkillKeys, ArenaText.Pair("释放技能；面板打开时选对应的一项", "Cast a skill; pick that option while a panel is open"), ""),
             (ArenaKeys.InteractKey, ArenaText.Pair("互动（站到能用的东西旁边时会有提示）", "Interact (a prompt shows when you stand next to something you can use)"), ""),
-            ("Esc", ArenaText.Pair("暂停 / 继续；在波次中的选卡面板上是“稍后再选”", "Pause / resume; on a mid-wave card panel, pick later"), ""),
+            ("Esc", ArenaText.Pair("暂停 / 继续；在波次中的选卡面板上是“稍后再选”", "Pause / resume; on a mid-wave card panel, save the pick for later"), ""),
             ("R", ArenaText.Pair("结算时重开；选卡面板打开时重抽", "Restart on the result screen; reroll while a card panel is open"), ""),
-            (ArenaKeys.CardPickKey, ArenaText.Pair("打开之前留着没选的卡（屏幕上会提示）", "Open a card pick you saved for later (the screen tells you)"), ""),
+            (ArenaKeys.CardPickKey, ArenaText.Pair("打开之前留着没选的卡（有卡待选时屏幕上会提示）", "Open a card pick you saved for later (the screen shows when one is waiting)"), ""),
             ("Tab", ArenaText.Pair("整备时收起面板，再按一次回到面板", "Put the build panel away between waves; press again to bring it back"), ""),
         };
 

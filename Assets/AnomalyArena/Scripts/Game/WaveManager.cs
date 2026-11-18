@@ -69,6 +69,8 @@ namespace AnomalyArena
         [Min(.1f), Tooltip("Seconds between a Chanter's chants (cue and animation only; its aura is always on).")] public float chantInterval = 3f;
         [Min(0f), Tooltip("Radius around a living Chanter in which other non-boss enemies deal bonus damage.")] public float chantRadius = 6f;
         [Min(0f), Tooltip("Damage bonus of enemies inside a Chanter aura: 0.3 = +30%. Several Chanters do not stack.")] public float chantDamageBonus = .3f;
+        [Min(0f), Tooltip("Scale on every monster's attack damage, bosses included, in both modes, over the wave's or the day's own factor; the base's raids follow it too. Night shadows, burns, poison and radiation are not scaled by it.")] public float enemyDamageScale = 1f;
+        public float EnemyDamageScale => DifficultyScales.Read(enemyDamageScale);
         [Min(0f), Tooltip("Radius of the radiation zone a Bloater leaves where it explodes.")] public float radiationRadius = 3f;
         [Min(0f), Tooltip("Seconds a radiation zone lasts.")] public float radiationLife = 4f;
         [Min(.05f), Tooltip("Seconds of exposure per radiation tick while the player stands inside any zone (zones do not stack).")] public float radiationTickSeconds = .5f;

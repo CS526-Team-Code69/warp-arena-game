@@ -108,17 +108,17 @@ namespace AnomalyArena
         static string LessonLine(int lesson) => lesson switch
         {
             0 => ArenaText.Pair($"移动时按住 {ArenaKeys.SprintKey} 冲刺；体力用光后，要等它回满才能再冲刺。",
-                $"Hold {ArenaKeys.SprintKey} while moving to sprint; once stamina runs out, it has to refill completely."),
-            1 => ArenaText.Pair("鼠标瞄准，左键使用手上的武器；按住是蓄力还是连射，看武器。",
-                "Aim with the mouse; left click uses the weapon in hand. Holding charges or keeps firing, depending on the weapon."),
-            2 => ArenaText.Pair("右键在两只手的武器之间切换；技能在基地的能量研究区学会。",
-                "Right click switches between your hand weapons; skills are learned at the base's Energy Lab."),
+                $"Hold {ArenaKeys.SprintKey} while moving to sprint. Once stamina runs out, wait for a full bar before sprinting again."),
+            1 => ArenaText.Pair("用鼠标瞄准，按左键使用手上的武器；按住时是蓄力还是连射，取决于武器。",
+                "Aim with the mouse; left click uses the weapon in your hand. Holding the button charges or keeps firing, depending on the weapon."),
+            2 => ArenaText.Pair("右键在两只手的武器之间切换；在基地的能量研究区学会技能后，按技能键释放。",
+                "Right click switches between your hand weapons; skills learned at the base's Energy Lab are cast with the skill keys."),
             3 => ArenaText.Pair($"下午按住 {ArenaKeys.InteractKey} 采合金矿；夜里先按 {ArenaKeys.LampKey} 放矿灯，再在灯光里采暗物质。",
-                $"Afternoon: hold {ArenaKeys.InteractKey} to mine alloy ore. Night: {ArenaKeys.LampKey} sets a lamp; mine dark matter in its light."),
-            4 => ArenaText.Pair($"下午或夜里在基地门口按 {ArenaKeys.InteractKey} 进去：建造、研习、修飞船。",
-                $"Afternoon or night, press {ArenaKeys.InteractKey} at the base door to build, study and repair the ship."),
-            _ => ArenaText.Pair("暂停页可以查看按键、重看教程、重新开局或返回标题。",
-                "From the pause screen you can check the keys, see the tutorial again, restart or quit to the title."),
+                $"In the afternoon, hold {ArenaKeys.InteractKey} to mine alloy ore; at night, press {ArenaKeys.LampKey} to set down a lamp and mine dark matter in its light."),
+            4 => ArenaText.Pair($"下午或夜里在基地门口按 {ArenaKeys.InteractKey} 进去，就能建造各区、研习升级和修理飞船。",
+                $"In the afternoon or at night, press {ArenaKeys.InteractKey} at the base door to go in and build, study or repair the ship."),
+            _ => ArenaText.Pair("按 Esc 暂停，在暂停页可以查看按键、重看教程、重新开局或返回标题。",
+                "Press Esc to pause. From there you can check the keys, see the tutorial again, restart or quit to the title."),
         };
 
         void OpenTutorial()

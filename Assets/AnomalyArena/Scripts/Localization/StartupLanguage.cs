@@ -5,8 +5,8 @@ namespace AnomalyArena
     /// <summary>
     /// The language the game opens in (one game, both languages; the English web page opens in English, the Chinese page in Chinese).
     /// In this order: the language the player last chose on the title; on the web, the page's address, Chinese when its path holds
-    /// "/zh/"; otherwise English. English is the default since 2026-11-10 (until then the editor and the desktop followed the system
-    /// language). Plain C# with no Unity call, so the rule is tested on its own; ArenaLanguage reads the inputs from Unity.
+    /// "/zh/" and English otherwise; outside a web page (the editor and a desktop build), Chinese. Plain C# with no Unity call, so
+    /// the rule is tested on its own; ArenaLanguage reads the inputs from Unity.
     /// </summary>
     public static class StartupLanguage
     {
@@ -21,7 +21,8 @@ namespace AnomalyArena
         {
             string saved = Normalize(savedChoice);
             if (saved != null) return saved;
-            return webPage && PagePathIsChinese(pageAddress) ? Chinese : English;
+            if (!webPage) return Chinese;
+            return PagePathIsChinese(pageAddress) ? Chinese : English;
         }
 
         /// <summary>A saved or asked-for code as one of the two languages: any "zh..." is Chinese, any "en..." English, anything else none.</summary>

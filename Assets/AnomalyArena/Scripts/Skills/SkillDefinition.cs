@@ -93,33 +93,33 @@ namespace AnomalyArena
         static bool InCampaign => V2Campaign.Active && V2Campaign.Active.Running;
         string ChineseDescription(int level) => id switch
         {
-            SkillId.FlameWake => $"身后留下燃烧尾迹，碰到的敌人被点燃（{Duration(level):0.#} 秒，每秒烧 {Strength(level):0.#} 点，随波次成长）。"
-                + (level >= 2 ? "持续更久" + (level >= MaxLevel ? "，满级尾迹更宽" : "") + "。" : ""),
-            SkillId.Contagion => $"给附近敌人叠毒；期间中毒的敌人死亡时，毒跳到附近敌人身上（{Radius(level):0.#} 单位内 {Strength(level):0.#} 层毒素，{Duration(level):0.#} 秒）。"
-                + (level >= 2 ? "持续更久" + (level >= MaxLevel ? "，满级一次跳给两个敌人，向外扩散" : "") + "。" : ""),
+            SkillId.FlameWake => $"身后留下燃烧尾迹，碰到的敌人会被点燃（尾迹持续 {Duration(level):0.#} 秒，每秒烧 {Strength(level):0.#} 点，随波次成长）。"
+                + (level >= 2 ? "比 1 级持续更久、烧得更猛" + (level >= MaxLevel ? "，满级时尾迹还会变宽" : "") + "。" : ""),
+            SkillId.Contagion => $"给你周围 {Radius(level):0.#} 单位内的敌人叠上 {Strength(level):0.#} 层毒素；之后 {Duration(level):0.#} 秒内，中毒的敌人一死，身上的毒就会跳到离它最近的敌人身上。"
+                + (level >= 2 ? "比 1 级持续更久、毒素更多" + (level >= MaxLevel ? "，满级时毒会同时跳给最近的两个敌人，一路向外扩散" : "") + "。" : ""),
             SkillId.FrostNova => $"给周围敌人叠冰冻，小怪当场冻住（{Radius(level):0.#} 单位内 {Strength(level):0.#} 层冰冻）。"
-                + (level >= 2 ? "范围更大" + (level >= MaxLevel ? $"，满级冻住的敌人至少冻 {freezeHold:0.#} 秒" : "") + "。" : ""),
-            SkillId.StormCall => $"在光标附近随机落雷，造成伤害并叠雷电（{Duration(level):0.#} 秒内 {Radius(level):0.#} 单位内落 {Strength(level):0} 道，每道 {ScaledDamage(hitDamage, level):0.#} 伤害、{HitStacks(level):0.#} 层雷电，伤害{(InCampaign ? "随天数和伤害加成" : "随波次和伤害卡")}成长）。"
-                + (level >= 2 ? "闪电更多、范围更大" + (level >= MaxLevel ? "，满级闪电命中后还会跳到附近敌人" : "") + "。" : ""),
-            SkillId.Bulwark => $"在光标处立一道墙，撞上的敌人被击退，只有 Boss 能摧毁它：暴虐君王的冲锋、纳什先知的斥力脉冲；同时获得护盾（墙长 {Radius(level):0.#} 单位，{Duration(level):0.#} 秒，击退 {ContactKnockback(level):0.#} 单位，"
+                + (level >= 2 ? "比 1 级范围更大、冰冻更多" + (level >= MaxLevel ? $"，满级时被它冻住的敌人至少冻 {freezeHold:0.#} 秒" : "") + "。" : ""),
+            SkillId.StormCall => $"在光标周围 {Radius(level):0.#} 单位内，{Duration(level):0.#} 秒里接连落下 {Strength(level):0} 道闪电，每道随机劈中一个敌人，造成 {ScaledDamage(hitDamage, level):0.#} 伤害并叠 {HitStacks(level):0.#} 层雷电（伤害{(InCampaign ? "随天数和伤害加成" : "随波次和伤害卡")}成长）。"
+                + (level >= 2 ? "比 1 级闪电更多、范围更大" + (level >= MaxLevel ? "，满级时闪电命中后还会跳到附近的敌人身上" : "") + "。" : ""),
+            SkillId.Bulwark => $"在光标处立一道墙，碰到墙的敌人会被击退，只有 Boss 能摧毁它：暴虐君王的冲锋、纳什先知的斥力脉冲；同时获得护盾（墙长 {Radius(level):0.#} 单位，{Duration(level):0.#} 秒，击退 {ContactKnockback(level):0.#} 单位，"
                 + (shieldScalesWithMaxHp ? $"护盾为最大生命的 {Strength(level) * 100:0}%）。" : $"护盾 {Strength(level):0.#} 点）。")
-                + (level >= 2 ? "护盾更厚、击退更远、墙更长" + (level >= MaxLevel ? $"，满级护盾特别厚、减伤更高：打在这层护盾上的直接伤害只算 {bulwarkShieldDirectFactor * 100:0}%" : "") + "。" : ""),
+                + (level >= 2 ? "比 1 级护盾更厚、击退更远、墙更长" + (level >= MaxLevel ? $"；满级时护盾特别厚，减伤也更高，打在这层护盾上的直接伤害只算 {bulwarkShieldDirectFactor * 100:0}%" : "") + "。" : ""),
             SkillId.Radiance => $"清除你身上所有状态；之后攻击吸血，异常抗性提高（{Duration(level):0.#} 秒，吸血 {Strength(level) * 100:0}%，抗性 {StatusResistance(level) * 100:0}%）。"
-                + (level >= 2 ? "持续更久、抗性更高" + (level >= MaxLevel ? $"，满级还立刻回 {healOnCast:0.#} 点生命" : "") + "。" : ""),
-            SkillId.Devour => $"吞掉附近一个残血敌人，回能量（{Range(level):0.#} 单位内生命低于 {Strength(level) * 100:0}% 的敌人，精英可以，Boss 不行；回 {energyReward:0.#} 能量，冷却 {Cooldown(level):0.#} 秒）。"
-                + (level >= 2 ? "能吞的血线更高" + (level >= MaxLevel ? "，满级冷却更短" : "") + "。" : ""),
+                + (level >= 2 ? "比 1 级持续更久、抗性更高" + (level >= MaxLevel ? $"，满级时释放还会立刻回 {healOnCast:0.#} 点生命" : "") + "。" : ""),
+            SkillId.Devour => $"在你周围 {Range(level):0.#} 单位内、生命低于 {Strength(level) * 100:0}% 的敌人里，吞掉离光标最近的一个，回复 {energyReward:0.#} 能量；精英也能吞，Boss 不行（冷却 {Cooldown(level):0.#} 秒）。"
+                + (level >= 2 ? "比 1 级能吞的血线更高" + (level >= MaxLevel ? "，满级时冷却更短" : "") + "。" : ""),
             SkillId.Blink => $"朝光标瞬移，并取消正在进行的击退（最远 {Range(level):0.#} 单位）。"
-                + (level >= 2 ? "距离更远" + (level >= MaxLevel ? "，满级有两次充能，各自冷却" : "") + "。" : ""),
+                + (level >= 2 ? "比 1 级距离更远" + (level >= MaxLevel ? "，满级时有两次充能，各自冷却" : "") + "。" : ""),
             SkillId.Shockwave => $"把你周围的敌人全部重重推开（{Radius(level):0.#} 单位内击退 {Strength(level):0.#} 单位）。"
-                + (level >= 2 ? "范围更大" + (level >= MaxLevel ? "，满级还能反弹敌方飞行物" : "") + "。" : ""),
-            SkillId.GravityWell => $"在落点放一个引力井，把附近敌人拉向中心（{Radius(level):0.#} 单位内每秒拉 {Strength(level):0.#} 单位，{Duration(level):0.#} 秒）。"
-                + (level >= 2 ? "持续更久" + (level >= MaxLevel ? $"，满级结束时爆炸（{ScaledDamage(endDamage, level):0.#} 伤害、向外击退 {endKnockback:0.#} 单位，伤害随波次成长）" : "") + "。" : ""),
+                + (level >= 2 ? "比 1 级范围更大" + (level >= MaxLevel ? "，满级时还能反弹敌方飞行物" : "") + "。" : ""),
+            SkillId.GravityWell => $"在光标处放一个引力井，把附近敌人拉向中心（{Radius(level):0.#} 单位内每秒拉 {Strength(level):0.#} 单位，{Duration(level):0.#} 秒）。"
+                + (level >= 2 ? "比 1 级持续更久" + (level >= MaxLevel ? $"，满级时引力井结束会爆炸，造成 {ScaledDamage(endDamage, level):0.#} 伤害并把敌人向外击退 {endKnockback:0.#} 单位（伤害随波次成长）" : "") + "。" : ""),
             SkillId.TimeSlip => $"除你以外的一切变慢（{Strength(level) * 100:0}% 速度，{Duration(level):0.#} 秒）。"
-                + (level >= 2 ? "持续更久" + (level >= MaxLevel ? "，满级期间你的攻速 +50%" : "") + "。" : ""),
+                + (level >= 2 ? "比 1 级持续更久" + (level >= MaxLevel ? "，满级时这段时间里你的攻速 +50%" : "") + "。" : ""),
             SkillId.Decoy => $"放一个你的镜像，敌人会去追它（{Duration(level):0.#} 秒）。"
-                + (level >= 2 ? "持续更久" + (level >= MaxLevel ? "，满级镜像死亡时免费放出你随机一个其他技能（按该技能当前等级）" : "") + "。" : ""),
+                + (level >= 2 ? "比 1 级持续更久" + (level >= MaxLevel ? "；满级的镜像消失时，会在原地免费放出你随机一个其他技能（按该技能当前等级）" : "") + "。" : ""),
             SkillId.Overcharge => $"所有武器攻击频率翻倍（手持和自动，冷却计时 ×{overchargeRate:0.#}，{Duration(level):0.#} 秒）。"
-                + (level >= 2 ? "持续更久" + (level >= MaxLevel ? $"，满级武器伤害 +{(overchargeDamageMultiplier - 1f) * 100:0}%" : "") + "。" : ""),
+                + (level >= 2 ? "比 1 级持续更久" + (level >= MaxLevel ? $"，满级时武器伤害还会 +{(overchargeDamageMultiplier - 1f) * 100:0}%" : "") + "。" : ""),
             SkillId.PocketVoid => $"在光标处开一个小黑洞，吞掉除 Boss 外的一切，并获得被吞怪物的经验（占地 {Radius(level):0.#}×{Radius(level):0.#} 单位，引力环 {voidGravityWidth:0.#} 单位，{Duration(level):0.#} 秒；也会吞掉你）。",
             SkillId.VoidWalk => $"进入虚空：移速提高，不能被选中、不受伤害，并打断正在进行的击退（{Duration(level):0.#} 秒，移速 ×{voidWalkMoveMultiplier:0.#}）；结束后两把手持武器带虚空属性 {voidWalkEnchantSeconds:0.#} 秒。",
             SkillId.Singularity => $"化身奇点 {Duration(level):0.#} 秒：完全无敌（不受伤害、击退和控制）但大幅减速，仍能开火和放技能；屏幕上所有敌人被拽向你并减速，结束时爆炸，吸来的越多伤害越高（拉近 {Strength(level):0.#} 单位，敌人减速到 {singularitySlowMultiplier * 100:0}%，你移速 {singularityPlayerMoveMultiplier * 100:0}%，爆炸半径 {Radius(level):0.#}，伤害 {ScaledDamage(singularityBaseDamage, level):0.#} + 每个敌人 {ScaledDamage(singularityDamagePerEnemy, level):0.#}）。",
@@ -127,36 +127,36 @@ namespace AnomalyArena
         };
         string EnglishDescription(int level) => id switch
         {
-            SkillId.FlameWake => $"Leave a burning trail that sets touching enemies alight ({Duration(level):0.#} s, burns {Strength(level):0.#} per second, more in later waves)."
-                + (level >= 2 ? " Lasts longer" + (level >= MaxLevel ? "; at max level the trail is wider" : "") + "." : ""),
-            SkillId.Contagion => $"Poison nearby enemies; meanwhile a poisoned enemy's death passes the poison to a neighbour ({Strength(level):0.#} Poison within {Radius(level):0.#}, {Duration(level):0.#} s)."
-                + (level >= 2 ? " Lasts longer" + (level >= MaxLevel ? "; at max level it jumps to two enemies, spreading outward" : "") + "." : ""),
-            SkillId.FrostNova => $"Frost on the enemies around you; small enemies freeze at once ({Strength(level):0.#} Frost within {Radius(level):0.#})."
-                + (level >= 2 ? " Larger area" + (level >= MaxLevel ? $"; at max level frozen enemies stay frozen at least {freezeHold:0.#} s" : "") + "." : ""),
-            SkillId.StormCall => $"Random lightning near the cursor: damage plus Lightning ({Strength(level):0} bolts within {Radius(level):0.#} over {Duration(level):0.#} s; {ScaledDamage(hitDamage, level):0.#} damage and {HitStacks(level):0.#} Lightning each, damage grows with {(InCampaign ? "the days and the Damage bonus" : "waves and Damage cards")})."
-                + (level >= 2 ? " More bolts, wider area" + (level >= MaxLevel ? "; at max level a hit also chains to nearby enemies" : "") + "." : ""),
-            SkillId.Bulwark => $"A wall at the cursor knocks back enemies touching it; only a boss can destroy it: the Tyrant King's charge or the Nash Prophet's Repulse Pulse. Plus a Shield (wall {Radius(level):0.#} long, {Duration(level):0.#} s, knockback {ContactKnockback(level):0.#}, "
+            SkillId.FlameWake => $"Leave a burning trail that sets enemies alight when they touch it (the trail lasts {Duration(level):0.#} s and burns {Strength(level):0.#} per second, more in later waves)."
+                + (level >= 2 ? " Lasts longer and burns hotter than at level 1" + (level >= MaxLevel ? "; at max level the trail is also wider" : "") + "." : ""),
+            SkillId.Contagion => $"Put {Strength(level):0.#} Poison on every enemy within {Radius(level):0.#} of you. For the next {Duration(level):0.#} s, when a poisoned enemy dies, its poison jumps to the nearest enemy."
+                + (level >= 2 ? " Lasts longer and puts on more Poison than at level 1" + (level >= MaxLevel ? "; at max level the poison jumps to the two nearest enemies at once, spreading outward" : "") + "." : ""),
+            SkillId.FrostNova => $"Put {Strength(level):0.#} Frost on every enemy within {Radius(level):0.#} of you; small enemies freeze on the spot."
+                + (level >= 2 ? " Larger area and more Frost than at level 1" + (level >= MaxLevel ? $"; at max level the enemies it freezes stay frozen for at least {freezeHold:0.#} s" : "") + "." : ""),
+            SkillId.StormCall => $"Call down {Strength(level):0} bolts within {Radius(level):0.#} of the cursor over {Duration(level):0.#} s, each striking a random enemy there. Bolts deal {ScaledDamage(hitDamage, level):0.#} damage and {HitStacks(level):0.#} Lightning each; the damage grows with {(InCampaign ? "the days and the Damage bonus" : "waves and Damage cards")}."
+                + (level >= 2 ? " More bolts and a wider area than at level 1" + (level >= MaxLevel ? "; at max level each hit also chains to nearby enemies" : "") + "." : ""),
+            SkillId.Bulwark => $"A wall at the cursor knocks back enemies touching it; only a boss can destroy it: the Tyrant King's charge or the Nash Prophet's Repulse Pulse. You also gain a Shield (wall {Radius(level):0.#} long, {Duration(level):0.#} s, knockback {ContactKnockback(level):0.#}, "
                 + (shieldScalesWithMaxHp ? $"Shield {Strength(level) * 100f:0}% of max HP)." : $"Shield {Strength(level):0.#}).")
-                + (level >= 2 ? " Thicker Shield, farther knockback, longer wall" + (level >= MaxLevel ? $"; at max level a very thick Shield, hits on it count {bulwarkShieldDirectFactor * 100f:0}%" : "") + "." : ""),
+                + (level >= 2 ? " A thicker Shield, farther knockback and a longer wall than at level 1" + (level >= MaxLevel ? $"; at max level the Shield is very thick and direct hits on it count {bulwarkShieldDirectFactor * 100f:0}%" : "") + "." : ""),
             SkillId.Radiance => $"Clear your statuses; then your attacks heal you and status resistance rises ({Duration(level):0.#} s, {Strength(level) * 100f:0}% lifesteal, {StatusResistance(level) * 100f:0}% resistance)."
-                + (level >= 2 ? " Lasts longer, more resistance" + (level >= MaxLevel ? $"; at max level also heals {healOnCast:0.#} HP at once" : "") + "." : ""),
-            SkillId.Devour => $"Swallow a nearby low-HP enemy and restore Energy (below {Strength(level) * 100f:0}% HP within {Range(level):0.#}, elites too, never bosses; {energyReward:0.#} Energy, cooldown {Cooldown(level):0.#} s)."
-                + (level >= 2 ? " Higher HP line" + (level >= MaxLevel ? "; at max level a shorter cooldown" : "") + "." : ""),
+                + (level >= 2 ? " Lasts longer and resists more than at level 1" + (level >= MaxLevel ? $"; at max level it also heals {healOnCast:0.#} HP the moment you cast it" : "") + "." : ""),
+            SkillId.Devour => $"Of the enemies within {Range(level):0.#} of you and below {Strength(level) * 100f:0}% HP, swallow the one nearest the cursor and restore {energyReward:0.#} Energy. Elites can be swallowed, bosses never (cooldown {Cooldown(level):0.#} s)."
+                + (level >= 2 ? " Takes enemies at higher HP than at level 1" + (level >= MaxLevel ? "; at max level the cooldown is shorter" : "") + "." : ""),
             SkillId.Blink => $"Teleport toward the cursor, cancelling any knockback (up to {Range(level):0.#})."
-                + (level >= 2 ? " Farther" + (level >= MaxLevel ? "; at max level two charges, each with its own cooldown" : "") + "." : ""),
+                + (level >= 2 ? " Reaches farther than at level 1" + (level >= MaxLevel ? "; at max level it has two charges, each with its own cooldown" : "") + "." : ""),
             SkillId.Shockwave => $"Shove every enemy around you away hard (push {Strength(level):0.#} within {Radius(level):0.#})."
-                + (level >= 2 ? " Larger area" + (level >= MaxLevel ? "; at max level it also reflects enemy projectiles" : "") + "." : ""),
-            SkillId.GravityWell => $"A gravity well at the target point pulls nearby enemies to its centre (pull {Strength(level):0.#}/s within {Radius(level):0.#}, {Duration(level):0.#} s)."
-                + (level >= 2 ? " Lasts longer" + (level >= MaxLevel ? $"; at max level it explodes at the end ({ScaledDamage(endDamage, level):0.#} damage, push {endKnockback:0.#}; damage grows with waves)" : "") + "." : ""),
+                + (level >= 2 ? " Larger area than at level 1" + (level >= MaxLevel ? "; at max level it also reflects enemy projectiles" : "") + "." : ""),
+            SkillId.GravityWell => $"Open a gravity well at the cursor that pulls enemies within {Radius(level):0.#} toward its centre for {Duration(level):0.#} s, at {Strength(level):0.#} per second."
+                + (level >= 2 ? " Lasts longer than at level 1" + (level >= MaxLevel ? $"; at max level it explodes when it ends, dealing {ScaledDamage(endDamage, level):0.#} damage and pushing enemies {endKnockback:0.#} outward (the damage grows with waves)" : "") + "." : ""),
             SkillId.TimeSlip => $"Everything but you slows down ({Strength(level) * 100f:0}% speed, {Duration(level):0.#} s)."
-                + (level >= 2 ? " Lasts longer" + (level >= MaxLevel ? "; at max level +50% Attack Speed meanwhile" : "") + "." : ""),
-            SkillId.Decoy => $"A mirror image of you that enemies chase ({Duration(level):0.#} s)."
-                + (level >= 2 ? " Lasts longer" + (level >= MaxLevel ? "; at max level, when it dies it casts one of your other skills at random for free (at that skill's level)" : "") + "." : ""),
+                + (level >= 2 ? " Lasts longer than at level 1" + (level >= MaxLevel ? "; at max level you also get +50% Attack Speed while it lasts" : "") + "." : ""),
+            SkillId.Decoy => $"Place a mirror image of yourself at the cursor; enemies chase it for {Duration(level):0.#} s."
+                + (level >= 2 ? " Lasts longer than at level 1" + (level >= MaxLevel ? "; at max level, when the image fades it casts one of your other skills at random on that spot for free, at that skill's level" : "") + "." : ""),
             SkillId.Overcharge => $"Every weapon attacks twice as often (hand and auto, cooldowns x{overchargeRate:0.#}, {Duration(level):0.#} s)."
-                + (level >= 2 ? " Lasts longer" + (level >= MaxLevel ? $"; at max level weapons also deal +{(overchargeDamageMultiplier - 1f) * 100f:0}% damage" : "") + "." : ""),
+                + (level >= 2 ? " Lasts longer than at level 1" + (level >= MaxLevel ? $"; at max level weapons also deal +{(overchargeDamageMultiplier - 1f) * 100f:0}% damage" : "") + "." : ""),
             SkillId.PocketVoid => $"A small black hole at the cursor swallows everything but bosses, and you gain the XP of monsters it swallows ({Radius(level):0.#}×{Radius(level):0.#} footprint, {voidGravityWidth:0.#}-wide gravity ring, {Duration(level):0.#} s; it can swallow you too).",
-            SkillId.VoidWalk => $"Enter the void: faster, untargetable and undamageable, breaking any knockback ({Duration(level):0.#} s, move speed x{voidWalkMoveMultiplier:0.#}); then both hand weapons carry Void for {voidWalkEnchantSeconds:0.#} s.",
-            SkillId.Singularity => $"Become a singularity for {Duration(level):0.#} s: fully invincible (no damage, knockback or control), heavily slowed, free to fire and cast. Enemies on screen are dragged in and slowed; then it blasts, harder the more it drew in (pull {Strength(level):0.#}, enemies {singularitySlowMultiplier * 100:0}%, you {singularityPlayerMoveMultiplier * 100:0}%, radius {Radius(level):0.#}, {ScaledDamage(singularityBaseDamage, level):0.#} + {ScaledDamage(singularityDamagePerEnemy, level):0.#} per enemy).",
+            SkillId.VoidWalk => $"Enter the void for {Duration(level):0.#} s: you move at x{voidWalkMoveMultiplier:0.#} speed, can't be targeted or damaged, and break free of any knockback. When it ends, both hand weapons carry Void for {voidWalkEnchantSeconds:0.#} s.",
+            SkillId.Singularity => $"Become a singularity for {Duration(level):0.#} s: you are fully invincible (no damage, knockback or control) and heavily slowed, but can still fire and cast. Enemies on screen are dragged toward you and slowed; then you explode, harder the more you drew in (pull {Strength(level):0.#}, enemy speed {singularitySlowMultiplier * 100:0}%, your speed {singularityPlayerMoveMultiplier * 100:0}%, radius {Radius(level):0.#}, {ScaledDamage(singularityBaseDamage, level):0.#} + {ScaledDamage(singularityDamagePerEnemy, level):0.#} per enemy).",
             _ => descriptions is { Length: > 0 } ? descriptions[Mathf.Clamp(level - 1, 0, descriptions.Length - 1)] : ""
         };
 
