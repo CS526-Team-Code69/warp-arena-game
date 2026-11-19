@@ -26,6 +26,22 @@ namespace AnomalyArena
         [Range(.05f, .9f), Tooltip("Candidate contact frame in the supplied attack; enemy release aligns to the real attack sequence.")]
         public float attackContactNormalized = .35f;
         [Min(.01f)] public float minimumAttackVisualInterval = .16f;
+        [Header("Boss moves (written by the V6 installer from the model's manifest)")]
+        [Tooltip("A boss's own clip per move. While the move (Enemy.BossAttackIndex) winds up, its state is sampled up to windupEnd by the " +
+                 "wind-up's progress; once the move is released it plays on from there in real time. A move without an entry, or whose state the " +
+                 "controller lacks, uses Attack as before.")]
+        public MoveClip[] moveClips;
+        [Min(.01f), Tooltip("Ground speed (m/s) at which a ChargeRun state plays at its own pace (feet planted).")]
+        public float chargeRunReferenceSpeed = 9f;
+
+        /// <summary>One boss move's clip: the controller state, the Enemy.BossAttackIndex that starts it and where its wind-up ends (0-1).</summary>
+        [System.Serializable]
+        public struct MoveClip
+        {
+            public string state;
+            public int bossAttack;
+            [Range(0f, 1f)] public float windupEnd;
+        }
         [Header("Player: legs, chest and extra clips (2026-11-06)")]
         [Tooltip("Off since 2026-11-06: the player's attacks play no clip and the weapon stays in the hand (V2WeaponPresentation). " +
                  "On: the old whole-body Attack clip (not with legsFollowMovement).")]
@@ -85,6 +101,14 @@ namespace AnomalyArena
         static readonly int DeathHash = Animator.StringToHash("Base Layer.Death");
         static readonly int RunSpeedId = Animator.StringToHash("RunSpeed");
         bool lookedUp, hasRunSpeed, hasWalk, hasSprint, hasDash, hasKnocked, hasFall, hasDeath;
+        // Boss moves: the state hash of each moveClips entry (0 when the controller lacks it), the move winding up now, the rush's leap and the phase.
+        static readonly int ChargeRunHash = Animator.StringToHash("Base Layer.ChargeRun");
+        static readonly int ChargeLeapHash = Animator.StringToHash("Base Layer.ChargeLeap");
+        static readonly int PhaseShiftHash = Animator.StringToHash("Base Layer.PhaseShift");
+        static readonly int RoarHash = Animator.StringToHash("Base Layer.Roar");
+        int[] moveHashes;
+        int windMove = -1, lastBossPhase = -1;
+        bool bossStatesLooked, leaping, hasChargeRun, hasChargeLeap, hasPhaseShift, hasRoar;
         readonly System.Collections.Generic.Dictionary<int, float> clipLengths = new System.Collections.Generic.Dictionary<int, float>();
         AnimatedBone chest;
         float twist;
@@ -156,6 +180,7 @@ namespace AnomalyArena
             attackSequence = enemy ? enemy.AttackSequence : 0;
             consumedAttack = requestedAttack;
             attackRemaining = 0f; sinceAttack = 100f; winding = corpse = false;
+            windMove = -1; leaping = false; lastBossPhase = -1;
             modelRoot.localPosition = authoredPosition; modelRoot.localScale = authoredScale;
             animator.Rebind(); animator.Play(IdleHash, 0, 0f); animator.Update(0f);
             stateHash = IdleHash;
@@ -261,11 +286,16 @@ namespace AnomalyArena
 
             if (enemy)
             {
+                if (!bossStatesLooked) LookUpBossStates();
+                bool rushing = enemy.Charging || enemy.RushLeaping;
                 if (enemy.AttackSequence != attackSequence)
                 {
                     attackSequence = enemy.AttackSequence;
-                    BeginAttack(attackContactNormalized);
-                    winding = false;
+                    // A move with its own clip plays on from the end of its wind-up. During the rush the count also moves at the landing,
+                    // which restarts nothing: the rush's run and leap have their own clips.
+                    if (windMove >= 0) PlayOnce(moveHashes[windMove], moveClips[windMove].windupEnd);
+                    else if (!((rushing || stateHash == ChargeLeapHash && attackRemaining > 0f) && (hasChargeRun || hasChargeLeap))) BeginAttack(attackContactNormalized);
+                    winding = false; windMove = -1;
                 }
                 else if (enemy.WindingUp)
                 {
@@ -273,16 +303,33 @@ namespace AnomalyArena
                     {
                         winding = true;
                         windupLength = Mathf.Max(.01f, enemy.WindupSecondsRemaining);
+                        windMove = MoveFor(enemy.BossAttackIndex);
                     }
                     float anticipation = 1f - Mathf.Clamp01(enemy.WindupSecondsRemaining / windupLength);
                     // Explicit sampling follows the real windup, including cancellation or slowdown.
-                    animator.Play(AttackHash, 0, anticipation * attackContactNormalized);
-                    animator.Update(0f); stateHash = AttackHash;
+                    int hash = windMove >= 0 ? moveHashes[windMove] : AttackHash;
+                    float end = windMove >= 0 ? moveClips[windMove].windupEnd : attackContactNormalized;
+                    animator.Play(hash, 0, anticipation * end);
+                    animator.Update(0f); stateHash = hash;
                 }
                 else if (winding)
                 {
-                    winding = false; attackRemaining = 0f; stateHash = 0;
+                    winding = false; windMove = -1; attackRemaining = 0f; stateHash = 0;
                 }
+                // The rush's leap plays once from the take-off; its run loops at the ground speed below.
+                if (enemy.RushLeaping && hasChargeLeap)
+                {
+                    if (!leaping) { leaping = true; PlayOnce(ChargeLeapHash, 0f); }
+                }
+                else leaping = false;
+                // A new phase plays the boss's phase clip (the Prophet's PhaseShift, else a Roar) when no move is under way.
+                int phase = enemy.BossPhase;
+                if (lastBossPhase >= 0 && phase > lastBossPhase && !winding && attackRemaining <= 0f)
+                {
+                    if (hasPhaseShift) PlayOnce(PhaseShiftHash, 0f);
+                    else if (hasRoar) PlayOnce(RoarHash, 0f);
+                }
+                lastBossPhase = phase;
             }
             else if (requestedAttack != consumedAttack)
             {
@@ -306,7 +353,13 @@ namespace AnomalyArena
             float scale = SizeNow;
             float squash = body.HitSquash01 * hitSquash;
             modelRoot.localScale = Vector3.Scale(authoredScale * scale, new Vector3(1f + squash, 1f - squash, 1f + squash));
-            if (!attacking)
+            if (!attacking && enemy && enemy.Charging && hasChargeRun)
+            {
+                // The rush's run, at the ground speed (feet planted at chargeRunReferenceSpeed).
+                SwitchState(ChargeRunHash);
+                animator.speed = velocity.magnitude / Mathf.Max(.01f, chargeRunReferenceSpeed);
+            }
+            else if (!attacking)
             {
                 SwitchState(walking ? RunHash : IdleHash);
                 // Enemy rigidbody velocity already contains WorldTimeScale. Do not scale Run twice.
@@ -401,6 +454,43 @@ namespace AnomalyArena
         }
 
         static bool IsGait(int hash) => hash == RunHash || hash == WalkHash || hash == SprintHash;
+
+        /// <summary>Finds the boss move states in the controller once (moveClips, ChargeRun, ChargeLeap, PhaseShift, Roar) and their clip lengths.</summary>
+        void LookUpBossStates()
+        {
+            bossStatesLooked = true;
+            int count = moveClips?.Length ?? 0;
+            moveHashes = new int[count];
+            for (int i = 0; i < count; i++)
+            {
+                int hash = Animator.StringToHash("Base Layer." + moveClips[i].state);
+                moveHashes[i] = !string.IsNullOrEmpty(moveClips[i].state) && animator.HasState(0, hash) ? hash : 0;
+            }
+            hasChargeRun = animator.HasState(0, ChargeRunHash);
+            hasChargeLeap = animator.HasState(0, ChargeLeapHash);
+            hasPhaseShift = animator.HasState(0, PhaseShiftHash);
+            hasRoar = animator.HasState(0, RoarHash);
+            if (animator.runtimeAnimatorController)
+                foreach (var clip in animator.runtimeAnimatorController.animationClips)
+                    if (clip) clipLengths[Animator.StringToHash("Base Layer." + clip.name)] = clip.length;
+        }
+
+        /// <summary>The moveClips entry for a boss move whose state the controller has, or -1.</summary>
+        int MoveFor(int bossAttack)
+        {
+            for (int i = 0; i < (moveHashes?.Length ?? 0); i++)
+                if (moveHashes[i] != 0 && moveClips[i].bossAttack == bossAttack) return i;
+            return -1;
+        }
+
+        /// <summary>Plays a state once from a point of its clip (0-1), as BeginAttack does for Attack.</summary>
+        void PlayOnce(int hash, float startNormalized)
+        {
+            float length = clipLengths.TryGetValue(hash, out float known) ? known : 1f;
+            animator.CrossFadeInFixedTime(hash, blendSeconds, 0, length * startNormalized);
+            stateHash = hash; sinceAttack = 0f;
+            attackRemaining = Mathf.Max(.05f, length * (1f - startNormalized));
+        }
 
         void BeginAttack(float startNormalized)
         {

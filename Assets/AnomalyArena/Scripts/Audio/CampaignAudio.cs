@@ -7,7 +7,9 @@ namespace AnomalyArena
 {
     /// <summary>
     /// The V2 campaign's sound effects made on 2026-11-10 (work/art-plans/v2-1104/audio-1110/清单.md): one value per file, named after it
-    /// (CampaignAudio.FileName: NightFall is SFX-night-fall). CampaignArt.sounds stores them by number, so new values go at the end.
+    /// (CampaignAudio.FileName: NightFall is SFX-night-fall). CampaignArt.sounds stores them by number, so new values go at the end. The
+    /// last eleven, from RecordChime on, are the story cutscenes' own sounds (V2Cutscene); each stays silent until its file is in
+    /// Audio/Campaign and Install Sounds has run.
     /// </summary>
     public enum CampaignSfx
     {
@@ -17,7 +19,9 @@ namespace AnomalyArena
         ShipArmorRepair, FuelFillLoop, FuelFull, AreaUpgrade, UpgradeDenied, CorePickup, CollectAlienEnergy, CollectStarMatter,
         ShadowAppear, TyrantArrive, BaseUiOpen, BaseUiClose, DayTitleIngame, TutorialCrashAmbience, NightNoCombat,
         NightAmbienceLoop, BaseDamagedLoop, AreaBuild, MemoryCgTransition, WormholeTurbulence, ShipCrash, BaseDeploy,
-        IgnitionFail, IgnitionSuccess, WarpJump, CoreInsert, DayTitleStinger
+        IgnitionFail, IgnitionSuccess, WarpJump, CoreInsert, DayTitleStinger,
+        RecordChime, DistantInvasion, HallMarch, DesertWind, MorningStreet, EngineSpinUp, CockpitAlarm, EnergyWave, TyrantGrowl,
+        TyrantSteps, CoordinatesLocked
     }
 
     /// <summary>
@@ -138,9 +142,12 @@ namespace AnomalyArena
         {
             CampaignSfx.ShieldRecharge or CampaignSfx.DayBreak or CampaignSfx.BaseUiOpen or CampaignSfx.ShadowFleeLight or CampaignSfx.DarknessLoop => 1f,
             CampaignSfx.MemoryCgTransition or CampaignSfx.WormholeTurbulence or CampaignSfx.ShipCrash or CampaignSfx.BaseDeploy or CampaignSfx.IgnitionFail
-                or CampaignSfx.IgnitionSuccess or CampaignSfx.WarpJump or CampaignSfx.CoreInsert or CampaignSfx.TyrantArrive or CampaignSfx.DayTitleStinger => .9f,
-            CampaignSfx.MineHit or CampaignSfx.ShadowApproachLoop or CampaignSfx.BaseDamagedLoop => .5f,
-            CampaignSfx.NightAmbienceLoop or CampaignSfx.TutorialCrashAmbience or CampaignSfx.FuelFillLoop => .6f,
+                or CampaignSfx.IgnitionSuccess or CampaignSfx.WarpJump or CampaignSfx.CoreInsert or CampaignSfx.TyrantArrive or CampaignSfx.DayTitleStinger
+                or CampaignSfx.RecordChime or CampaignSfx.EngineSpinUp or CampaignSfx.CockpitAlarm or CampaignSfx.EnergyWave or CampaignSfx.TyrantGrowl
+                or CampaignSfx.TyrantSteps or CampaignSfx.CoordinatesLocked => .9f,
+            CampaignSfx.MineHit or CampaignSfx.ShadowApproachLoop or CampaignSfx.BaseDamagedLoop or CampaignSfx.DistantInvasion => .5f,
+            CampaignSfx.NightAmbienceLoop or CampaignSfx.TutorialCrashAmbience or CampaignSfx.FuelFillLoop or CampaignSfx.HallMarch or CampaignSfx.DesertWind
+                or CampaignSfx.MorningStreet => .6f,
             _ => .7f
         };
 
@@ -155,7 +162,9 @@ namespace AnomalyArena
             _ => .08f
         };
 
-        static int MaxAtOnce(CampaignSfx sfx) => sfx is CampaignSfx.MineHit or CampaignSfx.BaseHit or CampaignSfx.ShieldHit or CampaignSfx.CollectAlienEnergy ? 2 : 1;
+        // LightOn: the memory's last shot lights four lamps 0.8 s apart, as long as the sound itself.
+        static int MaxAtOnce(CampaignSfx sfx) =>
+            sfx is CampaignSfx.MineHit or CampaignSfx.BaseHit or CampaignSfx.ShieldHit or CampaignSfx.CollectAlienEnergy or CampaignSfx.LightOn ? 2 : 1;
 
         /// <summary>1 within near cells, 0 from far on, on a square curve between, so a sound swells as its source comes near.</summary>
         public static float Proximity(float distance, float near, float far)
@@ -212,6 +221,12 @@ namespace AnomalyArena
 
         /// <summary>The sound has a clip in this build.</summary>
         public static bool Has(CampaignSfx sfx) => Instance && Instance.EntryOf(sfx).clip;
+
+        /// <summary>Ends a one-shot that is playing (a skipped story cutscene's sounds), fading it out over tailFade.</summary>
+        public static void Stop(CampaignSfx sfx)
+        {
+            if (Instance) Instance.Cut(sfx);
+        }
 
         // ───── State ─────
 
@@ -367,6 +382,13 @@ namespace AnomalyArena
             }
             if (same >= MaxAtOnce(sfx)) return -1;
             return free >= 0 ? free : nearestEnd;
+        }
+
+        void Cut(CampaignSfx sfx)
+        {
+            if (pool == null) return;
+            for (int i = 0; i < pool.Length; i++)
+                if (poolLeft[i] > 0f && poolSfx[i] == sfx) poolLeft[i] = Mathf.Min(poolLeft[i], Mathf.Max(tailFade, 1e-3f));
         }
 
         void TickVoices(float dt)

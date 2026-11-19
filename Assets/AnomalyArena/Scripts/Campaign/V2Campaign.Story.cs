@@ -18,7 +18,8 @@ namespace AnomalyArena
     public sealed partial class V2Campaign
     {
         // New lines go at the end: the voice table (CampaignArt.voices) names its takes by these ids.
-        public enum Line { T01, T02, T03, T04, T05, T06, M01, S01, S02, S03, S04, S05, S06, S07, S08, S09, S10, F01, F02, F03, E00, E01, E02, E03, C01, C02, C03, C04, C05, D01, K01, N01, N02, N03, B01, T07, T08, T09, D02, T10, C06, C07, C08, C09, F04, F05 }
+        public enum Line { T01, T02, T03, T04, T05, T06, M01, S01, S02, S03, S04, S05, S06, S07, S08, S09, S10, F01, F02, F03, E00, E01, E02, E03, C01, C02, C03, C04, C05, D01, K01, N01, N02, N03, B01, T07, T08, T09, D02, T10, C06, C07, C08, C09, F04, F05,
+            C10, C11, C12, C13, C14, C15, C16, C17, C18, C19, C20, C21, F06, F07, F08, F09, F10, F11, F12, E04, E05, E06, E07, E08 }
 
         // Each line is an ArenaText.Pair, read when it is said: the English edition keeps only the English side.
         static (bool system, string text) LineText(Line id) => id switch
@@ -47,6 +48,7 @@ namespace AnomalyArena
             Line.S07 => (true, ArenaText.Pair("天亮了。敌人来袭，守住基地。", "Daybreak. Enemies incoming. Defend the base.")),
             Line.S08 => (true, ArenaText.Pair("飞船引擎修复完成。", "Ship engine repaired.")),
             Line.S09 => (true, ArenaText.Pair("飞船装甲修复完成。", "Ship armor repaired.")),
+            // S10, F01 to F05, E01 to E03 and C01 to C09 are the story cutscenes' earlier lines: kept with their recordings, no longer said.
             Line.S10 => (true, ArenaText.Pair("反物质燃料已满。启动点火程序。", "Antimatter fuel full. Starting ignition sequence.")),
             Line.F01 => (true, ArenaText.Pair("点火失败。燃料无法激活。", "Ignition failed. Fuel cannot be activated.")),
             Line.F02 => (true, ArenaText.Pair("缺少暗物质核心。", "Dark matter core missing.")),
@@ -60,13 +62,39 @@ namespace AnomalyArena
             Line.C03 => (false, ArenaText.Pair("醒来时，我已经落在这颗星球上，飞船烂了。", "When I woke, I'd crashed on this planet. The ship was wrecked.")),
             Line.C04 => (false, ArenaText.Pair("飞船自动部署了基地系统。它就是为这种意外准备的。", "The ship deployed its base system on its own. It was built for accidents like this.")),
             Line.C05 => (false, ArenaText.Pair("它会帮我离开这里。", "It will help me get out of here.")),
-            // The story cutscenes' lines that have no recording: the memory's M1, M2, M3 and M6, and the failed ignition's L3 and L4.
             Line.C06 => (false, ArenaText.Pair("人类遭到了异星入侵。", "Humanity was invaded by aliens.")),
             Line.C07 => (false, ArenaText.Pair("为了反击，人类开始了大规模征兵。", "To fight back, humanity called a great conscription.")),
             Line.C08 => (false, ArenaText.Pair("我叫 Felix，是外婆把我带大的。", "I'm Felix. My grandmother raised me.")),
             Line.C09 => (false, ArenaText.Pair("部队的其他人，不知所踪。", "The rest of my unit went missing.")),
             Line.F04 => (true, ArenaText.Pair("警告：暗物质能量波动正在扩散。", "Warning: dark matter energy surge spreading.")),
             Line.F05 => (false, ArenaText.Pair("点火程序完成不了……它需要一股极其庞大的能量来驱动。", "The ignition can't finish... it needs an enormous source of energy.")),
+            // The story cutscenes (V2Cutscene). The memory: Felix gives the base system his survivor's record.
+            Line.C10 => (true, ArenaText.Pair("请开始口述你的幸存者记录。", "Please begin your survivor's record.")),
+            Line.C11 => (false, ArenaText.Pair("我叫 Felix，是一名星际战士。", "I'm Felix, an interstellar soldier.")),
+            Line.C12 => (false, ArenaText.Pair("事情要从异星入侵说起。", "It began when the aliens invaded.")),
+            Line.C13 => (false, ArenaText.Pair("人类开始大征兵，能上战场的人都被征走了，我们被送往银河系参战。", "Humanity called up everyone who could fight, and sent us to war across the galaxy.")),
+            Line.C14 => (false, ArenaText.Pair("舰队在虫洞里跃迁到一半，撞上了异星乱流。", "My fleet was halfway through a wormhole jump when alien turbulence hit us.")),
+            Line.C15 => (false, ArenaText.Pair("我们掉在了这颗星球上。", "We came down on this planet.")),
+            Line.C16 => (false, ArenaText.Pair("飞船摔烂了，部队里的其他人，我一个也没找到。", "The ship is wrecked, and I can't find the rest of my unit.")),
+            Line.C17 => (true, ArenaText.Pair("飞船为了保护自己，自动把我这套基地系统部署了出来。", "The ship deployed me on its own, to protect itself.")),
+            Line.C18 => (true, ArenaText.Pair("这艘飞船在设计时，就为这类事故准备了我。我该通知你的哪位亲属？", "I was built into this ship for accidents like this one. Who should I notify?")),
+            Line.C19 => (false, ArenaText.Pair("我外婆。我是她带大的。", "My grandmother. She raised me.")),
+            Line.C20 => (false, ArenaText.Pair("不，什么都别发给她。我要自己回去告诉她。", "No. Don't send her anything. I'll tell her myself.")),
+            Line.C21 => (true, ArenaText.Pair("那我就什么都不发。我会帮你离开这里。", "Then I will send nothing. I will help you leave this place.")),
+            // The failed ignition.
+            Line.F06 => (false, ArenaText.Pair("燃料加满了。带我们回家。", "The tank is full. Take us home.")),
+            Line.F07 => (true, ArenaText.Pair("现在启动点火程序。", "I am starting the ignition sequence.")),
+            Line.F08 => (false, ArenaText.Pair("燃料没有问题。点火程序走不完，它还缺一股极其庞大的能量来驱动。", "The fuel is fine. The sequence can't finish without an enormous source of energy.")),
+            Line.F09 => (true, ArenaText.Pair("警告：点火失败时，一股暗物质能量波扩散了出去。", "Warning. The failed ignition released a wave of dark matter energy.")),
+            Line.F10 => (true, ArenaText.Pair("有东西被这股能量引过来了。", "Something is coming for it.")),
+            Line.F11 => (true, ArenaText.Pair("它体内有一颗暗物质核心。我们缺的能量，全在那里面。", "It carries a dark matter core. That is all the energy we need.")),
+            Line.F12 => (false, ArenaText.Pair("那我就去把它拿过来。", "Then I'll go and get it.")),
+            // The ending.
+            Line.E04 => (false, ArenaText.Pair("装好了。再试一次。", "There. Try it now.")),
+            Line.E05 => (true, ArenaText.Pair("核心已经就位。现在启动点火程序。", "The core is in place. I am starting the ignition sequence.")),
+            Line.E06 => (false, ArenaText.Pair("部队里的其他人，我始终没有找到。回去以后，我会让人回来接着找。", "I never found the others. I'll make sure someone comes back to look.")),
+            Line.E07 => (true, ArenaText.Pair("跃迁坐标已经锁定地球。要关闭幸存者记录吗？", "The jump coordinates are locked on Earth. Shall I close the record?")),
+            Line.E08 => (false, ArenaText.Pair("关吧。我说过，要自己回去告诉她。", "Close it. I said I'd tell her myself.")),
             // Since 2026-11-06 the screen calls this stage the afternoon; the English line stays as recorded.
             Line.D01 => (true, ArenaText.Pair("下午了。异星力量会在夜里增强怪物，趁天还没黑，尽量补充物资。", "Dusk. Alien power strengthens the monsters at night. Gather what you can before dark.")),
             Line.K01 => (true, ArenaText.Pair("生命体征消失。已将你带回基地，今晚的收获全部遗失。", "Vital signs lost. You have been brought back to the base. Tonight's haul is lost.")),
@@ -96,7 +124,7 @@ namespace AnomalyArena
             if (args != null && args.Length > 0) text = string.Format(text, args);
             PlayVoice(voice);
             // The speaking itself lasts as long as the recording (a line without one: a short while); the subtitle stays up longer to be read.
-            speechUntil = Time.unscaledTime + (voice ? voice.length + .3f : Mathf.Min(3.5f, 1.2f + .06f * text.Length));
+            speechUntil = Time.unscaledTime + SpeakingSeconds(voice, text) + (voice ? .3f : 0f);
             ui.Subtitle(Speaker(line.system), text, line.system, Mathf.Max(2.2f + .085f * text.Length, voice ? voice.length + .4f : 0f));
         }
 
@@ -114,6 +142,12 @@ namespace AnomalyArena
             quietLinesWaiting = Mathf.Max(0, quietLinesWaiting - 1);
             if (Running && (still == null || still())) Say(id);
         }
+
+        /// <summary>How long saying a line takes: its recording, or for a line shown as a subtitle only a short while by its length.</summary>
+        static float SpeakingSeconds(AudioClip voice, string text) => voice ? voice.length : Mathf.Min(3.5f, 1.2f + .06f * text.Length);
+
+        /// <summary>How long saying a line takes in the language shown (SpeakingSeconds), with its recording when it has one.</summary>
+        float SpeakingSeconds(Line id) => SpeakingSeconds(VoiceClip(id), LineText(id).text);
 
         int quietLinesWaiting;
         float speechUntil;
@@ -304,34 +338,41 @@ namespace AnomalyArena
         // ───── Story cutscenes ─────
 
         V2Cutscene cutscene;
-        // The memory's five illustrated pictures (CampaignArt.memoryShots) are the moments of the storyboard's M4, M5, M6, M8 and M9.
-        static readonly string[] MemoryPictureShots = { "M4", "M5", "M6", "M8", "M9" };
+        readonly List<(float at, CutsceneBeat beat)> cutsceneBeats = new();
+        /// <summary>In a cutscene a line starts at least this long after the one before it has finished, and a shot lasts at least this
+        /// long after its last line has finished.</summary>
+        public const float CutsceneLineGap = .3f, CutsceneLineTail = .4f;
 
         /// <summary>
         /// Plays a story cutscene on the CG screen shot by shot: each staged in whitebox (V2Cutscene), or, for a shot the art has a picture
-        /// for while pictures are on (PictureFor), that picture with its slow push-in. Each shot says its lines and plays its sounds at
-        /// their moments, and a cut clears the last shot's subtitle. A click or Esc skips everything left (V2CampaignUi.CgSkipped) and
-        /// stops the line being spoken. The stage and its picture are let go at the end.
+        /// for while pictures are on (PictureFor), that picture, framed as the shot asks. Each shot begins with its own cut, is graded as
+        /// the present or a memory (V2CampaignUi.CgShot), says its lines and plays its sounds at the moments Schedule gives them, and lasts
+        /// until its last line has finished; a cut clears the last shot's subtitle. A shot fades out to black when the next begins from
+        /// black, and so does the last, unless a white-out covers its end. A click or Esc skips everything left (V2CampaignUi.CgSkipped)
+        /// and stops the line being spoken and the cutscene's sounds. The stage and its picture are let go at the end.
         /// </summary>
-        IEnumerator PlayCutscene(CutsceneShot[] shots, bool memory)
+        IEnumerator PlayCutscene(CutsceneShot[] shots)
         {
             // A page without cutscenes (BuildEdition.PlaysCutscenes) goes on at once, as if the player had skipped.
             if (!BuildEdition.PlaysCutscenes) yield break;
             if (!cutscene) cutscene = V2Cutscene.Create();
-            ui.BeginCg(memory);
+            ui.BeginCg();
             for (int i = 0; i < shots.Length && !ui.CgSkipped; i++)
             {
                 var shot = shots[i];
-                var picture = PictureFor(shot.id, out var front);
+                float length = Schedule(shot, SpeakingSeconds, cutsceneBeats);
+                bool fadeOut = i + 1 < shots.Length ? shots[i + 1].cut == CutsceneCut.Black : !shot.EndsWhite;
+                if (shot.cut == CutsceneCut.Dissolve) ui.CgHoldPicture();
+                var picture = PictureFor(shot.id);
                 if (picture)
                 {
                     cutscene.Hide();
-                    ui.CgShot(picture, front, shot.seconds, i);
+                    ui.CgShot(picture, false, shot, length, fadeOut);
                 }
                 else
                 {
                     cutscene.Show(shot);
-                    ui.CgLive(cutscene.Picture, shot.seconds);
+                    ui.CgShot(cutscene.Picture, true, shot, length, fadeOut);
                 }
 
                 ui.ClearSubtitle();
@@ -339,8 +380,8 @@ namespace AnomalyArena
                 int next = 0;
                 while (!ui.CgSkipped)
                 {
-                    while (next < shot.beats.Length && shot.beats[next].at <= clock) Beat(shot.beats[next++]);
-                    if (clock >= shot.seconds) break;
+                    while (next < cutsceneBeats.Count && cutsceneBeats[next].at <= clock) Beat(cutsceneBeats[next++].beat);
+                    if (clock >= length) break;
                     yield return null;
                     clock += Time.unscaledDeltaTime;
                 }
@@ -353,6 +394,39 @@ namespace AnomalyArena
             if (!skipped) yield break;
             if (voiceSource) voiceSource.Stop();
             speechUntil = 0f;
+            // The cutscene's sounds stop with its picture.
+            foreach (var shot in shots)
+                foreach (var beat in shot.beats)
+                    if (beat.sound.HasValue) CampaignAudio.Stop(beat.sound.Value);
+            if (cgSoundSource) cgSoundSource.Stop();
+        }
+
+        /// <summary>
+        /// Puts a shot's beats at the moments they happen, in order of time, into beats, and returns how long the shot lasts. Sounds,
+        /// white-outs and cuts to black keep the moments the table gives them. A line waits until the line before it has finished
+        /// (speakingSeconds: its recording, or the time a line without one counts as spoken) and CutsceneLineGap more; the shot lasts
+        /// until its last line has finished and CutsceneLineTail more, when that is longer than its seconds. A shot that grows keeps its
+        /// closing (a white-out full as it ends, or a cut to black) at its end: the beats from where the closing begins move on by as much
+        /// as the shot grew.
+        /// </summary>
+        public static float Schedule(CutsceneShot shot, System.Func<Line, float> speakingSeconds, List<(float at, CutsceneBeat beat)> beats)
+        {
+            beats.Clear();
+            float spokenUntil = float.NegativeInfinity, length = shot.seconds;
+            foreach (var beat in shot.beats)
+            {
+                if (!beat.line.HasValue) continue;
+                float at = Mathf.Max(beat.at, spokenUntil + CutsceneLineGap);
+                spokenUntil = at + Mathf.Max(0f, speakingSeconds(beat.line.Value));
+                length = Mathf.Max(length, spokenUntil + CutsceneLineTail);
+                beats.Add((at, beat));
+            }
+
+            float grown = length - shot.seconds, closing = shot.ClosingAt;
+            foreach (var beat in shot.beats)
+                if (!beat.line.HasValue) beats.Add((beat.at >= closing ? beat.at + grown : beat.at, beat));
+            beats.Sort((a, b) => a.at.CompareTo(b.at));
+            return length;
         }
 
         void Beat(CutsceneBeat beat)
@@ -360,43 +434,34 @@ namespace AnomalyArena
             if (beat.line.HasValue) Say(beat.line.Value);
             if (beat.sound.HasValue) PlayCutsceneSound(beat.sound.Value);
             if (beat.whiteOut > 0f) ui.WhiteOut(beat.whiteOut);
+            if (beat.black) ui.CgBlack();
         }
 
         /// <summary>The picture a shot shows in place of its whitebox staging while the illustrated art is on: the art's picture for the
-        /// shot's id, else, for the memory, the illustrated memory picture of that moment with its foreground layer. None in whitebox, and
-        /// none on the course's Alpha and Beta (BuildEdition): the Beta plays no cutscenes and the Alpha has no story. The English Gold
-        /// shows them.</summary>
-        Texture PictureFor(string id, out Texture front)
+        /// shot's id (CampaignArt.cutscenePictures; the file of M11 is cutscene-m11.png). A shot without one is staged in whitebox. None in
+        /// whitebox, and none on the course's Alpha and Beta (BuildEdition): the Beta plays no cutscenes and the Alpha has no story. The
+        /// English Gold shows them.</summary>
+        Texture PictureFor(string id)
         {
-            front = null;
-            if (!art || BuildEdition.IsCourseBuild || !Art.Enabled) return null;
-            if (art.cutscenePictures != null)
-                foreach (var entry in art.cutscenePictures)
-                    if (entry.picture && entry.shot == id) return entry.picture;
-            int i = System.Array.IndexOf(MemoryPictureShots, id);
-            if (i < 0 || art.memoryShots == null || i >= art.memoryShots.Length || !art.memoryShots[i]) return null;
-            if (art.memoryForegrounds != null && i < art.memoryForegrounds.Length) front = art.memoryForegrounds[i];
-            return art.memoryShots[i];
+            if (!art || BuildEdition.IsCourseBuild || !Art.Enabled || art.cutscenePictures == null) return null;
+            foreach (var entry in art.cutscenePictures)
+                if (entry.picture && entry.shot == id) return entry.picture;
+            return null;
         }
 
         IEnumerator MemoryCg()
         {
             Stage = CampaignStage.Story;
             gm.CampaignSetPhase(ArenaUiState.Story);
-            // The base view pales into the memory, then its nine shots (V2Cutscene.Memory); a page without cutscenes goes straight on.
-            if (BuildEdition.PlaysCutscenes)
-            {
-                ui.WhiteOut(1.2f);
-                PlayCutsceneSound(CampaignSfx.MemoryCgTransition);
-                float paleUntil = Time.realtimeSinceStartup + 1.2f;
-                while (Time.realtimeSinceStartup < paleUntil) yield return null;
-            }
-            yield return PlayCutscene(V2Cutscene.Memory, true);
+            // The memory (V2Cutscene.Memory) opens in the present, in the base's control room, and pales into the past on its own
+            // white-out (M11); a page without cutscenes goes straight on.
+            yield return PlayCutscene(V2Cutscene.Memory);
             BeginTutorialNight();
         }
 
         /// <summary>The ignition, from the base panel or by itself at the dawn after the last planned day once the ship is ready: the full
-        /// tank fails to light, the core is missing, and the Tyrant arrives (the existing wave-15 boss, same moves).</summary>
+        /// tank fails to light for want of an enormous energy, and the Tyrant arrives carrying a dark matter core (the existing wave-15
+        /// boss, same moves).</summary>
         public void Ignite()
         {
             if (!CanIgnite) return;
@@ -417,7 +482,7 @@ namespace AnomalyArena
             ApplyDaylight();
             PlacePlayer(DoorPoint);
             gm.CampaignSetPhase(ArenaUiState.Story);
-            yield return PlayCutscene(V2Cutscene.Ignition, false);
+            yield return PlayCutscene(V2Cutscene.Ignition);
             Stage = CampaignStage.FinalBoss;
             gm.CampaignFinalBoss();
         }
@@ -430,12 +495,12 @@ namespace AnomalyArena
             StartCoroutine(EndingSequence());
         }
 
-        /// <summary>The ending (V2Cutscene.Ending) while the run stands still: the core rises, the ship lifts off and jumps home. Its last
-        /// shot turns the screen white, and the run is won while it is white.</summary>
+        /// <summary>The ending (V2Cutscene.Ending) while the run stands still: the core goes into the engine, the ship lifts off, the
+        /// record is closed in orbit and the ship jumps home. Its last shot turns the screen white, and the run is won while it is white.</summary>
         IEnumerator EndingSequence()
         {
             gm.CampaignSetPhase(ArenaUiState.Story);
-            yield return PlayCutscene(V2Cutscene.Ending, false);
+            yield return PlayCutscene(V2Cutscene.Ending);
             EndingDone = true;
             gm.CampaignWin();
         }

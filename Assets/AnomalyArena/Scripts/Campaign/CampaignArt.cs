@@ -52,13 +52,13 @@ namespace AnomalyArena
         [Tooltip("Ship tab pictures, used only when the live view of the ship cannot be drawn (D1-C shows the ship itself).")]
         public Texture2D shipWreckPicture;
         public Texture2D shipIntactPicture;
-        [Tooltip("Memory pictures in order: the soldier in the cabin, the wormhole, the crash, the base deploying, the pull-back to the present. In the illustrated art they show for the memory's M4, M5, M6, M8 and M9 where the shot has no picture of its own below.")]
+        [Tooltip("The earlier memory's pictures in order: the soldier in the cabin, the wormhole, the crash, the base deploying, the pull-back to the present. The story cutscenes no longer show them: each shot has a picture of its own in cutscenePictures.")]
         public Texture2D[] memoryShots;
-        [Tooltip("The transparent foreground layer of each memory picture, drawn over it with a little parallax; may be empty.")]
+        [Tooltip("The transparent foreground layer of each earlier memory picture; no longer shown.")]
         public Texture2D[] memoryForegrounds;
 
-        [Header("Story cutscenes (V2Cutscene: the memory M1 to M9, the failed ignition L1 to L5, the ending E1 to E3)")]
-        [Tooltip("A picture for one cutscene shot, by the shot's id (M1 to M9, L1 to L5, E1 to E3), shown in place of the whitebox staging while the illustrated art is on. The course's English builds (BuildEdition) always stage in whitebox. A shot without one is staged in whitebox, or shows its memory picture.")]
+        [Header("Story cutscenes (V2Cutscene: the memory M11 to M20, the failed ignition L11 to L15, the ending E11 to E14)")]
+        [Tooltip("A picture for one cutscene shot, by the shot's id (M11 to M20, L11 to L15, E11 to E14; the file is cutscene- and the id in lower case, cutscene-m11.png), shown in place of the whitebox staging while the illustrated art is on. The course's English builds (BuildEdition) always stage in whitebox. A shot without one is staged in whitebox.")]
         public CutscenePicture[] cutscenePictures;
 
         [Header("Voice (D9: English in both editions) and CG sounds")]
@@ -83,7 +83,7 @@ namespace AnomalyArena
         [Range(0f, 1f)] public float gain;
     }
 
-    /// <summary>A picture for one shot of a story cutscene: the shot's id (V2Cutscene: M1, L3, E2...) and the picture.</summary>
+    /// <summary>A picture for one shot of a story cutscene: the shot's id (V2Cutscene: M11, L13, E12...) and the picture.</summary>
     [System.Serializable]
     public struct CutscenePicture
     {

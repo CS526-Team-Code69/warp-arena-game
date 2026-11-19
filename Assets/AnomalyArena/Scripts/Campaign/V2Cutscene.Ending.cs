@@ -1,67 +1,89 @@
+using System.Collections.Generic;
 using UnityEngine;
 using Prim = AnomalyArena.Whitebox.Prim;
 
 namespace AnomalyArena
 {
     /// <summary>
-    /// The ending (V2 doc section 2), played once the dark matter core is taken: the core rises beside the fallen Tyrant, the ship lifts
-    /// off over the base, and it flies into the jump gate home, the picture turning white. The base system's E01 and E02 and Felix's E03
-    /// keep their voices; the run is won when the white is full.
+    /// The ending (V2 doc section 2), played once the dark matter core is taken: Felix seats the core in the engine's empty ring and the
+    /// base system starts the ignition again, the ship lifts off over the base while Felix promises to send someone back for his unit, in
+    /// orbit the jump to Earth is locked and the survivor's record is closed, and the ship flies into the jump gate home, the picture
+    /// turning white. The run is won when the white is full.
     /// </summary>
     public sealed partial class V2Cutscene
     {
-        /// <summary>The ending's three shots, E1 to E3.</summary>
+        /// <summary>The ending's four shots, E11 to E14, 30.5 seconds as written.</summary>
         public static readonly CutsceneShot[] Ending =
         {
-            new("E1", 5f, StageCore),
-            new("E2", 6f, StageLiftOff, CutsceneBeat.Sound(CampaignSfx.CoreInsert, 0f), CutsceneBeat.Sound(CampaignSfx.IgnitionSuccess, .8f),
-                CutsceneBeat.Say(V2Campaign.Line.E01, .5f)),
-            new("E3", 5f, StageWarp, CutsceneBeat.Say(V2Campaign.Line.E02, .3f), CutsceneBeat.Say(V2Campaign.Line.E03, 3f), CutsceneBeat.Sound(CampaignSfx.WarpJump, 3.4f),
-                CutsceneBeat.WhiteOut(1f, 4f)),
+            new("E11", 8.5f, CutsceneTime.Present, CutsceneCut.Black, Move(Crop(.5f, .5f, 1f), Crop(.55f, .46f, .7f)), StageCoreSeat,
+                CutsceneBeat.Sound(CampaignSfx.CoreInsert, .6f), CutsceneBeat.Say(V2Campaign.Line.E04, 1.2f), CutsceneBeat.Say(V2Campaign.Line.E05, 3f),
+                CutsceneBeat.Sound(CampaignSfx.EngineSpinUp, 7.8f)),
+            new("E12", 7.5f, CutsceneTime.Present, CutsceneCut.Hard, Move(Crop(.5f, .62f, .85f), Crop(.5f, .38f, .85f)), StageLiftOff,
+                CutsceneBeat.Sound(CampaignSfx.IgnitionSuccess, 0f), CutsceneBeat.Say(V2Campaign.Line.E06, 1.4f)),
+            new("E13", 10f, CutsceneTime.Present, CutsceneCut.Dissolve, Move(Crop(.66f, .55f, .8f), Crop(.4f, .45f, .8f)), StageOrbit,
+                CutsceneBeat.Sound(CampaignSfx.CoordinatesLocked, .3f), CutsceneBeat.Say(V2Campaign.Line.E07, .6f), CutsceneBeat.Say(V2Campaign.Line.E08, 6.4f),
+                CutsceneBeat.Sound(CampaignSfx.RecordChime, 9f)),
+            new("E14", 4.5f, CutsceneTime.Present, CutsceneCut.Hard, Hold(Crop(.5f, .5f, .95f)), StageWarp,
+                CutsceneBeat.Sound(CampaignSfx.WarpJump, 1f), CutsceneBeat.WhiteOut(1f, 3.5f)),
         };
 
-        static readonly Color GateHot = new(.86f, .66f, 1f);
+        static readonly Color GateHot = new(.86f, .66f, 1f), EarthBlue = new(.62f, .82f, 1f);
 
-        // ───── E1: the core rises beside the fallen Tyrant ─────
+        // ───── E11: Felix seats the core in the engine's empty ring ─────
 
-        static void StageCore(V2Cutscene s)
+        static void StageCoreSeat(V2Cutscene s)
         {
             s.Sky(DawnSky);
             s.Ground(Sand);
-            // The Tyrant fallen behind Felix: its three boxes on their sides in a row, dull now, its horns and its tail on the sand.
-            var fallen = new[]
-            {
-                s.Box(new Vector3(4.4f, 3.6f, 4.4f), new Vector3(-7.5f, 2.2f, 13f), TyrantDull, new Vector3(0f, 20f, 90f)).transform,
-                s.Box(new Vector3(3.4f, 3f, 3.4f), new Vector3(-3.2f, 1.7f, 14.5f), TyrantDull, new Vector3(0f, 25f, 90f)).transform,
-                s.Box(new Vector3(2.2f, 2.2f, 2.2f), new Vector3(0f, 1.1f, 15.5f), TyrantDull, new Vector3(0f, 30f, 90f)).transform
-            };
-            s.Solid(Prim.Pyramid, new Vector3(.8f, 1.4f, .8f), new Vector3(1.8f, .4f, 15f), Table("tyrantHorn"), new Vector3(0f, 0f, 80f));
-            s.Solid(Prim.Pyramid, new Vector3(.8f, 1.4f, .8f), new Vector3(2.2f, .4f, 16.4f), Table("tyrantHorn"), new Vector3(0f, 40f, 95f));
-            s.Box(new Vector3(1f, 1f, 3f), new Vector3(-10.5f, .5f, 11.5f), TyrantDull, new Vector3(0f, 60f, 0f));
-            s.Look("base", new Vector3(22f, 0f, 60f), new Vector3(0f, 200f, 0f)); // far away on the right
-            // Felix from the front, the core half sunk in the sand before him: it rises turning on its point to the top of his box.
-            s.Felix(Vector3.zero, 195f);
-            var core = s.Solid(Prim.Octa, new Vector3(.9f, 1.2f, .9f), new Vector3(.2f, 0f, -1.25f), Table("core")).transform;
+            BaseWithLamps(s, new Vector3(16f, 0f, 14f));
+            // The ship at its pad, its full tank lit and its engine still dark; on the left side of the engine the empty ring that the
+            // cockpit's diagram showed (L13).
+            var ship = s.Look("ship", Vector3.zero);
+            ship.SetColour("control", BrokenGrey);
+            ship.SetColour("core", FullTank);
+            Vector3 ringAt = new(-.74f, 1.5f, -6.2f);
+            var ring = Outline(s, ringAt, .8f, .8f, .08f, RingDim);
+            ring.localRotation = Quaternion.Euler(0f, 90f, 0f); // its face toward Felix, along the engine's side
+            var bars = ring.GetComponentsInChildren<MeshRenderer>();
+            // Felix before the ring, the core at his chest: it slides into the ring in the first 0.6 seconds (the CoreInsert sound lands
+            // with it).
+            s.Felix(new Vector3(-2.1f, 0f, -5.95f), 90f);
+            Vector3 chest = new(-1.45f, 1.45f, -5.95f);
+            var core = s.Solid(Prim.Octa, new Vector3(.5f, .66f, .5f), chest, Table("core")).transform;
             var motes = new Spout();
-            var smoke = new Spout();
+            var runners = new Spout();
+            var jet = new Spout();
+            bool seated = false;
             s.Every(t =>
             {
-                core.localPosition = new Vector3(.2f, Mathf.Lerp(0f, 2f, Smooth(t / 4.2f)), -1.25f);
+                float k = Smooth(t / .6f);
+                core.localPosition = Vector3.Lerp(chest, ringAt, k);
                 core.localRotation = Quaternion.Euler(0f, 70f * t, 0f);
-                for (int n = motes.Take(12f, s.Step); n > 0; n--)
-                    s.Emit(core.localPosition + Jitter(.35f, .4f, .35f), new Vector3(J(-.15f, .15f), J(.6f, 1.2f), J(-.15f, .15f)), Violet, J(.1f, .18f), J(1.2f, 1.8f));
-                for (int n = smoke.Take(9f, s.Step); n > 0; n--)
+                for (int n = motes.Take(10f, s.Step); n > 0; n--)
+                    s.Emit(core.localPosition + Jitter(.3f, .35f, .3f), new Vector3(J(-.15f, .15f), J(.5f, 1f), J(-.15f, .15f)), Violet, J(.08f, .14f), J(1f, 1.5f));
+                if (k < 1f) return;
+                // Seated: the ring turns bright violet, the engine comes back to cyan, and violet cubes run along the hull to the nose.
+                if (!seated)
                 {
-                    var box = fallen[UnityEngine.Random.Range(0, fallen.Length)];
-                    s.Emit(box.localPosition + Vector3.up * J(1f, 2f) + Jitter(1f, 0f, 1f), new Vector3(J(-.2f, .2f), J(.8f, 1.4f), J(-.2f, .2f)), Smoke, J(.4f, .8f), J(2f, 3f));
+                    seated = true;
+                    foreach (var bar in bars) Paint(bar, Violet);
+                    ship.SetColour("control", Table("control"));
                 }
+
+                for (int n = runners.Take(14f, s.Step); n > 0; n--)
+                    s.Emit(new Vector3(J(-1.9f, -1.85f), J(1f, 2.2f), J(-5f, -4.4f)), new Vector3(0f, 0f, J(7f, 9f)), Violet, J(.12f, .2f), J(1.2f, 1.4f));
+                // The engine warms up at the end of the shot (EngineSpinUp, 7.8 s), its first cyan cubes out of the nozzle.
+                if (t >= 7.8f)
+                    for (int n = jet.Take(30f, s.Step); n > 0; n--)
+                        s.Emit(new Vector3(0f, 1.5f, -7.6f) + Jitter(.3f, .3f, .1f), new Vector3(J(-.4f, .4f), J(-.3f, .3f), -J(3f, 6f)), ExhaustCyan, J(.25f, .4f), J(.4f, .7f));
             });
-            s.CameraMove(new Vector3(2.6f, 2.1f, -8f), new Vector3(.2f, 1.6f, 0f), new Vector3(1.7f, 2f, -5.6f), new Vector3(.2f, 1.75f, -1.25f), 38f);
-            s.LightFrom(150f);
-            s.Subject(core, Vector3.zero);
+            // From behind his right shoulder, slowly in to the ring.
+            s.CameraMove(new Vector3(-4.3f, 2.5f, -8.4f), ringAt, new Vector3(-3f, 2.15f, -7.6f), ringAt, 42f, 38f);
+            s.LightFrom(140f);
+            s.Subject(ring, Vector3.zero);
         }
 
-        // ───── E2: the ship lifts off over the base ─────
+        // ───── E12: the ship lifts off over the base ─────
 
         static void StageLiftOff(V2Cutscene s)
         {
@@ -100,7 +122,50 @@ namespace AnomalyArena
             s.Subject(ship.transform, new Vector3(0f, 1.5f, 0f));
         }
 
-        // ───── E3: into the jump gate, home ─────
+        // ───── E13: in orbit, the route home on the console ─────
+
+        static void StageOrbit(V2Cutscene s)
+        {
+            s.Sky(SpaceSky);
+            CockpitRoom(s);
+            // Space through the window: white square stars above, and below them the planet, part of one huge sand-brown disc, sinking
+            // slowly as the ship climbs.
+            var random = new System.Random(13);
+            var stars = new List<Matrix4x4>();
+            for (int i = 0; i < 80; i++)
+                stars.Add(Matrix4x4.TRS(new Vector3(R(random, -80f, 70f), R(random, 6f, 45f), R(random, 140f, 170f)), Quaternion.identity, Vector3.one * .5f));
+            s.Batch(Prim.Box, stars, Color.white, "Stars");
+            Vector3 planetAt = new(-20f, -155f, 260f);
+            var planet = s.Solid(Prim.Disc, new Vector3(320f, 2f, 320f), planetAt, Sand, new Vector3(-75f, 0f, 0f)).transform;
+            // Over the console, the route home: a line of small cyan cubes in a low arc from a small sand-coloured disc (this planet) to a
+            // pale-blue cube (Earth). The cubes light one after another from the planet's end; then the Earth pulses.
+            const float front = 2.85f, planetEnd = -1f, earthEnd = 1.6f;
+            s.Solid(Prim.Disc, new Vector3(.3f, .04f, .3f), new Vector3(planetEnd - .3f, 2.55f, front), Sand, new Vector3(90f, 0f, 0f));
+            var earth = s.Box(Vector3.one * .18f, new Vector3(earthEnd + .3f, 2.55f, front), EarthBlue).transform;
+            const int steps = 12;
+            var route = new MeshRenderer[steps];
+            for (int i = 0; i < steps; i++)
+            {
+                float u = i / (steps - 1f);
+                route[i] = s.Box(Vector3.one * .08f, new Vector3(Mathf.Lerp(planetEnd, earthEnd, u), 2.55f + .3f * Mathf.Sin(Mathf.PI * u), front), StripDim);
+            }
+
+            // Felix in the pilot's seat on the left, his box sunk to a sitting height before a seat back.
+            s.Box(new Vector3(1.1f, 1.2f, .25f), new Vector3(-1.3f, 1.6f, .25f), ConsoleGrey);
+            var felix = s.Felix(new Vector3(-1.3f, .55f, .9f), 15f);
+            s.Every(t =>
+            {
+                planet.localPosition = planetAt + Vector3.down * (.6f * t);
+                for (int i = 0; i < steps; i++) Paint(route[i], t >= .4f + i * .45f ? Table("door") : StripDim);
+                earth.localScale = Vector3.one * (.18f * (t >= .4f + steps * .45f ? 1f + .25f * Mathf.Sin(t * 5f) : 1f));
+            });
+            // Over his shoulder, slowly in toward the window and the route.
+            s.CameraMove(new Vector3(.6f, 3.1f, -3.4f), new Vector3(-.2f, 2.7f, 4f), new Vector3(.3f, 2.85f, -2.2f), new Vector3(.1f, 2.75f, 4f), 48f, 44f);
+            s.LightFrom(135f);
+            s.Subject(felix.transform, new Vector3(0f, 1.5f, 0f));
+        }
+
+        // ───── E14: into the jump gate, home ─────
 
         static void StageWarp(V2Cutscene s)
         {
@@ -155,7 +220,7 @@ namespace AnomalyArena
                     for (int n = exhaust.Take(50f, s.Step); n > 0; n--)
                         s.Emit(s.OnStage(ship.transform, new Vector3(0f, 1.5f, -7.6f)) + Jitter(.3f, .3f, .3f), -heading * J(6f, 10f) + Jitter(.5f, .5f, .5f),
                             UnityEngine.Random.value < .6f ? ExhaustCyan : Color.white, J(.3f, .45f), J(.4f, .6f));
-                float stretch = 1f + 18f * Mathf.Pow(Ramp(t, 2.5f, 2.5f), 2f);
+                float stretch = 1f + 18f * Mathf.Pow(Ramp(t, 2f, 2.5f), 2f);
                 foreach (var star in stars) star.localScale = new Vector3(.9f, .9f, .9f * stretch);
             });
             s.CameraPath(t => new CameraPose(eye, new Vector3(3f, 1.5f, 40f), 50f));

@@ -203,7 +203,6 @@ MonoBehaviour:
   hitSquash: 0.24
   hitRecoil: 0.15
   eliteOutlineScale: 1.12
-  whiteboxOutlineScale: 1.15
 --- !u!114 &2878074411716754899
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -221,6 +220,8 @@ MonoBehaviour:
   phaseMark: {fileID: 1807692631616515038}
   markHeight: 0.7
   headOffset: 0.65
+  whiteboxTipGap: 0.4
+  whiteboxTipSpacing: 1.6
 --- !u!114 &4372189446444976146
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -255,27 +256,55 @@ MonoBehaviour:
   modelRoot: {fileID: 4490427474400632492}
   animator: {fileID: 3569973428782030584}
   idleClip: {fileID: -3100369314251171874, guid: ac2683babb21e664ebc657fba8692ed7, type: 3}
-  runClip: {fileID: 5522812681064789136, guid: ac2683babb21e664ebc657fba8692ed7, type: 3}
-  attackClip: {fileID: 6720303635017113406, guid: ac2683babb21e664ebc657fba8692ed7, type: 3}
+  runClip: {fileID: 2667949614841947897, guid: ac2683babb21e664ebc657fba8692ed7, type: 3}
+  attackClip: {fileID: 8189695323691616126, guid: ac2683babb21e664ebc657fba8692ed7, type: 3}
   modelRenderers:
   - {fileID: 6184006172944910494}
   rotationOffsetEuler: {x: 0, y: 0, z: 0}
-  runReferenceSpeed: 3.5
+  runReferenceSpeed: 2.5
   movementThreshold: 0.12
   blendSeconds: 0.08
-  attackContactNormalized: 0.35
+  attackContactNormalized: 0.5263
   minimumAttackVisualInterval: 0.16
+  moveClips:
+  - state: TailSweep
+    bossAttack: 10
+    windupEnd: 0.45
+  - state: GroundPound
+    bossAttack: 11
+    windupEnd: 0.5263
+  - state: ChargeWindup
+    bossAttack: 12
+    windupEnd: 1
+  - state: ScepterSummon
+    bossAttack: 13
+    windupEnd: 0.5556
+  - state: StarThrow
+    bossAttack: 14
+    windupEnd: 0.5333
+  - state: AstralDevour
+    bossAttack: 15
+    windupEnd: 0.6957
+  chargeRunReferenceSpeed: 9
+  playerAttackMotion: 0
+  legsFollowMovement: 0
+  maxUpperBodyTwist: 90
+  backpedalAngle: 110
+  walkBelowSpeed: 3
+  walkReferenceSpeed: 2.4
+  sprintReferenceSpeed: 9
   playerFacesAim: 1
   scaleWithBodyRadius: 1
   referenceBodyRadius: 2.2
-  authoredScale: {x: 2.0329645, y: 2.0329645, z: 2.0329645}
+  authoredScale: {x: 1.8129692, y: 1.8129692, z: 1.8129692}
   presentationScale: 0
   critFlashEmission: {r: 1.3, g: 0.85, b: 0.3, a: 1}
   idleEmission: {r: 0, g: 0, b: 0, a: 1}
-  authoredPosition: {x: 0, y: 0, z: 0}
+  authoredPosition: {x: -0.034008503, y: 0, z: -0.3491634}
   flashEmission: {r: 0.7, g: 0.65, b: 0.4, a: 1}
   windupEmission: {r: 0.18, g: 0.12, b: 0.025, a: 1}
   modelBrightness: 1.4
+  illustratedTint: {r: 0.62, g: 0.82, b: 1, a: 1}
   hitSquash: 0.12
   corpseRotationEuler: {x: 90, y: 0, z: 0}
   corpseGroundClearance: 0.025
@@ -1006,19 +1035,19 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 1572113980778142925, guid: 27dc156be3e090c46b4f359bfcd988e6, type: 3}
       propertyPath: m_LocalScale.x
-      value: 2.0329645
+      value: 1.8129692
       objectReference: {fileID: 0}
     - target: {fileID: 1572113980778142925, guid: 27dc156be3e090c46b4f359bfcd988e6, type: 3}
       propertyPath: m_LocalScale.y
-      value: 2.0329645
+      value: 1.8129692
       objectReference: {fileID: 0}
     - target: {fileID: 1572113980778142925, guid: 27dc156be3e090c46b4f359bfcd988e6, type: 3}
       propertyPath: m_LocalScale.z
-      value: 2.0329645
+      value: 1.8129692
       objectReference: {fileID: 0}
     - target: {fileID: 1572113980778142925, guid: 27dc156be3e090c46b4f359bfcd988e6, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0
+      value: -0.034008503
       objectReference: {fileID: 0}
     - target: {fileID: 1572113980778142925, guid: 27dc156be3e090c46b4f359bfcd988e6, type: 3}
       propertyPath: m_LocalPosition.y
@@ -1026,7 +1055,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1572113980778142925, guid: 27dc156be3e090c46b4f359bfcd988e6, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0
+      value: -0.3491634
       objectReference: {fileID: 0}
     - target: {fileID: 1572113980778142925, guid: 27dc156be3e090c46b4f359bfcd988e6, type: 3}
       propertyPath: m_LocalRotation.w

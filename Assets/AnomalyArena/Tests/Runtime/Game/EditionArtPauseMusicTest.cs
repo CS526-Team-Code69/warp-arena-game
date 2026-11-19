@@ -18,7 +18,7 @@ namespace AnomalyArena
     /// the wave, and Esc again brings back the same panel, or the walk with the panel put away. The combat music plays only while the
     /// player can move, as before 10-26: the wave's end, an opened supply crate, the build panels and a mid-wave card pick
     /// fade it out and stop it, and once the player can move again it starts from the top; only the pause menu holds it where it is.
-    /// The Spitter's spit flies 10 cells a second (it was 14).</summary>
+    /// The Spitter's spit flies 7.5 cells a second (it was 14, then 10).</summary>
     [TestFixture]
     public class EditionArtPauseMusicTest
     {
@@ -381,7 +381,7 @@ namespace AnomalyArena
         // ───── The Spitter's spit ─────
 
         [Test, LoadScene(SceneCn), Category("Integration"), Timeout(40000)]
-        public async Task SpitterSpit_FliesTenCellsASecond()
+        public async Task SpitterSpit_FliesSevenAndAHalfCellsASecond()
         {
             var (game, targets) = await V3CombatSmokeTest.StartSandbox();
             targets[0].DiscardWithoutReward();
@@ -402,8 +402,8 @@ namespace AnomalyArena
             float flown = Query.Flat(spit.transform.position - from).magnitude, seconds = (Time.fixedTime - start) * game.WorldTimeScale;
             Assume.That(spit.gameObject.activeInHierarchy && seconds > .05f, Is.True, "the spit is still in the air");
 
-            Assert.That(data.projectileSpeed, Is.EqualTo(10f), "the saved Spitter spits at 10 cells a second");
-            Assert.That(flown / seconds, Is.EqualTo(10f).Within(.5f), "and its spit flies that fast");
+            Assert.That(data.projectileSpeed, Is.EqualTo(7.5f), "the saved Spitter spits at 7.5 cells a second");
+            Assert.That(flown / seconds, Is.EqualTo(7.5f).Within(.5f), "and its spit flies that fast");
         }
 
         // ───── Helpers ─────

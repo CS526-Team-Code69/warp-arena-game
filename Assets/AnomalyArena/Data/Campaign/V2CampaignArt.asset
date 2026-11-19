@@ -65,32 +65,44 @@ MonoBehaviour:
   - {fileID: 2800000, guid: a4cbf98af0375934ca5690879d684b2a, type: 3}
   - {fileID: 2800000, guid: 10f25926d2cd8704a873655b41f3e649, type: 3}
   cutscenePictures:
-  - shot: M1
-    picture: {fileID: 2800000, guid: 510669091bfd44f79a677e0bfd421925, type: 3}
-  - shot: M2
-    picture: {fileID: 2800000, guid: 8cd5f14ad6a440aabe4ca9340d6f3e6a, type: 3}
-  - shot: M3
-    picture: {fileID: 2800000, guid: f7afd478edc54176982d7b9370ac1f6b, type: 3}
-  - shot: M5
-    picture: {fileID: 2800000, guid: d128cc774d134e3aa0de64b86fa5d4a4, type: 3}
-  - shot: M7
-    picture: {fileID: 2800000, guid: 64c8af887ffb4576ba66420786cd7cd3, type: 3}
-  - shot: L1
-    picture: {fileID: 2800000, guid: 7f3e5971f38242168cca0ef68fdba56b, type: 3}
-  - shot: L2
-    picture: {fileID: 2800000, guid: 08b6677977134eab8ed643375e168690, type: 3}
-  - shot: L3
-    picture: {fileID: 2800000, guid: d3873017c8564e92b50be6984766a234, type: 3}
-  - shot: L4
-    picture: {fileID: 2800000, guid: 7cb016353b58445197f85f4a99f41774, type: 3}
-  - shot: L5
-    picture: {fileID: 2800000, guid: ee01268a3b004282a0c83a7fc62ce423, type: 3}
-  - shot: E1
-    picture: {fileID: 2800000, guid: 12c9b649fbd24c89b59fa9461b64914e, type: 3}
-  - shot: E2
-    picture: {fileID: 2800000, guid: c2eac1c6e7ee47bc803ac576a73d9d42, type: 3}
-  - shot: E3
-    picture: {fileID: 2800000, guid: e93da67dbbcc416d9445f2fb22e265cf, type: 3}
+  - shot: M11
+    picture: {fileID: 2800000, guid: 20c32bc17fd34fad847345c09f79620d, type: 3}
+  - shot: M12
+    picture: {fileID: 2800000, guid: ee20258994a1487cbb1d55e647628580, type: 3}
+  - shot: M13
+    picture: {fileID: 2800000, guid: 61549666c82645deae4095b896764927, type: 3}
+  - shot: M14
+    picture: {fileID: 2800000, guid: 7ee0a4bf70534e6794a5e8c5a9d70d7e, type: 3}
+  - shot: M15
+    picture: {fileID: 2800000, guid: 4af5960bcd0e42edba2bef4395ad7024, type: 3}
+  - shot: M16
+    picture: {fileID: 2800000, guid: 814505af784049bbb2e9361ef53d00e1, type: 3}
+  - shot: M17
+    picture: {fileID: 2800000, guid: 8eff3a355f6a4a5bb2ca1d1fbd3eeab3, type: 3}
+  - shot: M18
+    picture: {fileID: 2800000, guid: 68fdbe66ddc049f59343d9d58ebeacc3, type: 3}
+  - shot: M19
+    picture: {fileID: 2800000, guid: e75f33f69a4c4b54b9d4c85406518901, type: 3}
+  - shot: M20
+    picture: {fileID: 2800000, guid: 3ad701c90b644be49372c3105cda73e4, type: 3}
+  - shot: L11
+    picture: {fileID: 2800000, guid: c96581d412ba4e338c7b5225c3aa96f6, type: 3}
+  - shot: L12
+    picture: {fileID: 2800000, guid: 9d4ca0341e564ebfb026721d83fcb6d7, type: 3}
+  - shot: L13
+    picture: {fileID: 2800000, guid: c8dd6b92e0d44432a89e0e4013e9793c, type: 3}
+  - shot: L14
+    picture: {fileID: 2800000, guid: e5838653e0de44439acf4510713b0cd6, type: 3}
+  - shot: L15
+    picture: {fileID: 2800000, guid: 6f85fa332c5e48f3a861ceea32f71829, type: 3}
+  - shot: E11
+    picture: {fileID: 2800000, guid: b5bb64667b53449ba00c27d1fbc26e58, type: 3}
+  - shot: E12
+    picture: {fileID: 2800000, guid: 73b348c5097b42218e4827d6eab25156, type: 3}
+  - shot: E13
+    picture: {fileID: 2800000, guid: 5ca993b773c14ed29d9a995e292a35ef, type: 3}
+  - shot: E14
+    picture: {fileID: 2800000, guid: 458690f4cf18468c89a2a1617c7c7faf, type: 3}
   voices:
   - line: B01
     clip: {fileID: 8300000, guid: 503eb030d06172c4c9c9fad534fd504a, type: 3}
@@ -112,6 +124,30 @@ MonoBehaviour:
     clip: {fileID: 8300000, guid: 23fbdfdd36f350248878fcb6987082ba, type: 3}
   - line: C09
     clip: {fileID: 8300000, guid: 3004dd92b8c93d84c98c2357f679783b, type: 3}
+  - line: C10
+    clip: {fileID: 8300000, guid: 2d8241b5ea3e4b87828e64801bb96737, type: 3}
+  - line: C11
+    clip: {fileID: 8300000, guid: 7a877e1bd81241c9a9b2d3a841359c94, type: 3}
+  - line: C12
+    clip: {fileID: 8300000, guid: a6596cbd96204757b732f5f758f2737b, type: 3}
+  - line: C13
+    clip: {fileID: 8300000, guid: cde2d4e969b644aba44613ca23e4a64b, type: 3}
+  - line: C14
+    clip: {fileID: 8300000, guid: 45d3392afea345ca88a1779a65658f2d, type: 3}
+  - line: C15
+    clip: {fileID: 8300000, guid: 8d2afdf150fe4d76afcbca560f250567, type: 3}
+  - line: C16
+    clip: {fileID: 8300000, guid: 9468ae2d02d64958a15d644ef07f47ad, type: 3}
+  - line: C17
+    clip: {fileID: 8300000, guid: 60bb3d3da786403f98316a82e45c89b2, type: 3}
+  - line: C18
+    clip: {fileID: 8300000, guid: 6158e015a6e345929e2bef56bc84fa33, type: 3}
+  - line: C19
+    clip: {fileID: 8300000, guid: f21fd2eee49c4888905d452e40f2b0f7, type: 3}
+  - line: C20
+    clip: {fileID: 8300000, guid: 90e1196356694e4899d3cf8cf18c2253, type: 3}
+  - line: C21
+    clip: {fileID: 8300000, guid: f9766628dc0d44c5bda38cf17c70dca3, type: 3}
   - line: D01
     clip: {fileID: 8300000, guid: 7fe91f32d365f754e8a8fa62af5b7230, type: 3}
   - line: D02
@@ -124,6 +160,16 @@ MonoBehaviour:
     clip: {fileID: 8300000, guid: c31a2c51025f4e447b46f653c561e90a, type: 3}
   - line: E03
     clip: {fileID: 8300000, guid: 28b23bd37b902c94b84403ed5dce26e3, type: 3}
+  - line: E04
+    clip: {fileID: 8300000, guid: 66fb8cfdff5841899f8469df11cc2b23, type: 3}
+  - line: E05
+    clip: {fileID: 8300000, guid: 8bc3067b369244b390c4825a99fee846, type: 3}
+  - line: E06
+    clip: {fileID: 8300000, guid: 39ad7a2ec7b648ccb892740e35a3ccb1, type: 3}
+  - line: E07
+    clip: {fileID: 8300000, guid: a6bd69e953da4eb499f3c07445583586, type: 3}
+  - line: E08
+    clip: {fileID: 8300000, guid: 91761bb2995a411da400f71e86e00916, type: 3}
   - line: F01
     clip: {fileID: 8300000, guid: c3864a27301964e4293544c041e89aa6, type: 3}
   - line: F02
@@ -134,6 +180,20 @@ MonoBehaviour:
     clip: {fileID: 8300000, guid: e5ab2fcabdf14004f8f3dda0ee3b5e2c, type: 3}
   - line: F05
     clip: {fileID: 8300000, guid: cb60d58378252d24d9c6f75ee2b789a2, type: 3}
+  - line: F06
+    clip: {fileID: 8300000, guid: 7ec0c3b720644ab29b0883b99a051afd, type: 3}
+  - line: F07
+    clip: {fileID: 8300000, guid: c632b89fa8804c208a332a47e6f78977, type: 3}
+  - line: F08
+    clip: {fileID: 8300000, guid: f5c8091264d44627b69066149906c3eb, type: 3}
+  - line: F09
+    clip: {fileID: 8300000, guid: 5c19264f45a94b6a80273951e3efb4c8, type: 3}
+  - line: F10
+    clip: {fileID: 8300000, guid: fda24e9f0c0941429b85a1b264f68023, type: 3}
+  - line: F11
+    clip: {fileID: 8300000, guid: 9d84f60ef5644aabaed339d806a0a7b5, type: 3}
+  - line: F12
+    clip: {fileID: 8300000, guid: 55386344da55439baa2c1222fd942c36, type: 3}
   - line: K01
     clip: {fileID: 8300000, guid: d1802c20058cf604794babd86aa6730a, type: 3}
   - line: M01

@@ -37,15 +37,24 @@ namespace AnomalyArena
         RawImage cgPicture;
         float flashUntil, subtitleUntil, titleUntil, titleLength, whiteOutClock, whiteOutLength, refreshAt;
         Vector3? marker;
-        // cg
-        int cgShot; float cgClock, cgLength; Texture cgTexture, cgFrontTexture;
-        RawImage cgForeground;
-        // The shot shows a staged cutscene's live picture (CgLive): whole and unmoved, in its own colours.
-        bool cgLive;
+        // cg: the shot on screen (CgShot), its picture or its stage's live picture, how long it plays and how long its table writes it.
+        float cgClock, cgLength, cgSeconds, cgBlackAt;
+        Texture cgTexture;
+        bool cgLive, cgFadeOut;
+        CutsceneCut cgCut;
+        CutsceneFraming cgFraming;
+        // The present or a memory, for the shot on screen and for the one before it: a dissolve eases from that one's grade to this one's.
+        CutsceneTime cgTime, cgHeldTime;
+        // Under a dissolve: the last picture of the shot before, held still (a staged shot's is copied, as its stage films the next one).
+        RawImage cgHeld;
+        RenderTexture cgHeldCopy;
+        // Over the pictures: the warm grey veil that pales a memory.
+        Image cgVeil;
         public bool CgSkipped { get; private set; }
-        // A live shot fades in from black and out to black over this many seconds at each cut; a memory has darker edges than a
-        // cutscene of the present.
-        const float CgLiveFade = .3f, CgMemoryEdges = .92f, CgPresentEdges = .6f;
+        // Seconds of a fade from or to black and of a dissolve; the darkness of a memory's edges and of the present's; how strongly the
+        // veil pales a memory, its colour, and the warm tint of a memory's picture under it.
+        const float CgFade = .5f, CgDissolve = .5f, CgMemoryEdges = .82f, CgPresentEdges = .6f, CgMemoryVeil = .16f;
+        static readonly Color CgVeilColour = new(.56f, .51f, .45f), CgMemoryTint = new(1f, .93f, .82f);
 
         static readonly Color Panel = new(.04f, .07f, .12f, .94f), PanelEdge = new(.3f, .55f, .85f, .55f), Soft = new(.86f, .9f, .96f), Faint = new(.62f, .72f, .85f);
         static readonly Color Accent = new(.45f, .85f, 1f), Warn = new(1f, .45f, .3f), Good = new(.5f, 1f, .6f), SystemColour = new(.5f, .9f, 1f), PlayerColour = new(1f, .86f, .55f);
@@ -190,16 +199,12 @@ namespace AnomalyArena
 
             cgScreen = Box("Cg", root, Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero, Color.black);
             StretchFull(cgScreen);
-            cgPicture = new GameObject("Picture", typeof(RectTransform), typeof(RawImage)).GetComponent<RawImage>();
-            cgPicture.rectTransform.SetParent(cgScreen, false);
-            Anchor(cgPicture.rectTransform, new Vector2(.5f, .5f), new Vector2(0f, 30f), new Vector2(1080f, 720f), new Vector2(.5f, .5f));
-            cgPicture.raycastTarget = false;
-            cgForeground = new GameObject("Foreground", typeof(RectTransform), typeof(RawImage)).GetComponent<RawImage>();
-            cgForeground.rectTransform.SetParent(cgScreen, false);
-            Anchor(cgForeground.rectTransform, new Vector2(.5f, .5f), new Vector2(0f, 30f), new Vector2(1080f, 720f), new Vector2(.5f, .5f));
-            cgForeground.raycastTarget = false;
-            cgForeground.color = new Color(1f, 1f, 1f, 0f);
-            // A memory: the pictures fade warm and pale with dark edges.
+            // The pictures fill the screen's width at their 16:9 shape; the held one lies under the one on screen for a dissolve. A memory
+            // fades warm and pale under the veil, with dark edges; the present keeps its colours, with lighter edges.
+            cgHeld = CgLayer<RawImage>("Held");
+            cgPicture = CgLayer<RawImage>("Picture");
+            cgVeil = CgLayer<Image>("Veil");
+            cgVeil.color = Color.clear;
             cgVignette = new GameObject("Vignette", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
             cgVignette.rectTransform.SetParent(cgScreen, false);
             Stretch(cgVignette.rectTransform, 0f, 0f, 0f, 0f);
@@ -222,6 +227,24 @@ namespace AnomalyArena
             BuildConfirm();
             if (V5HudKit.On) BuildStoryHud(); // the story layer of the fifth pass (V5StoryHud.cs and the other V5Story files)
             HideAll();
+        }
+
+        /// <summary>A layer of the CG screen as wide as the screen at the pictures' 16:9 shape, centred up and down.</summary>
+        T CgLayer<T>(string name) where T : Graphic
+        {
+            var layer = new GameObject(name, typeof(RectTransform), typeof(T)).GetComponent<T>();
+            var rect = layer.rectTransform;
+            rect.SetParent(cgScreen, false);
+            rect.anchorMin = new Vector2(0f, .5f);
+            rect.anchorMax = new Vector2(1f, .5f);
+            rect.pivot = new Vector2(.5f, .5f);
+            rect.anchoredPosition = Vector2.zero;
+            rect.sizeDelta = new Vector2(0f, 900f);
+            var fit = layer.gameObject.AddComponent<AspectRatioFitter>();
+            fit.aspectMode = AspectRatioFitter.AspectMode.WidthControlsHeight;
+            fit.aspectRatio = 16f / 9f;
+            layer.raycastTarget = false;
+            return layer;
         }
 
         /// <summary>The yes / no question (since 2026-11-06): a dimmed screen that takes every click, so none reaches the game or the panels
@@ -510,12 +533,22 @@ namespace AnomalyArena
 
         public void SkipCg() => CgSkipped = true;
         public bool BaseOpen => baseScreen && baseScreen.gameObject.activeSelf;
-        /// <summary>Opens the CG screen for a cutscene; memory gives it a memory's darker edges.</summary>
-        public void BeginCg(bool memory = false)
+        /// <summary>Opens the CG screen for a cutscene, black until its first shot.</summary>
+        public void BeginCg()
         {
             CgSkipped = false;
             cgScreen.gameObject.SetActive(true);
-            cgVignette.color = new Color(0f, 0f, 0f, memory ? CgMemoryEdges : CgPresentEdges);
+            cgTexture = null;
+            cgLive = cgFadeOut = false;
+            cgCut = CutsceneCut.Black;
+            cgTime = cgHeldTime = CutsceneTime.Present;
+            cgClock = cgLength = 0f;
+            cgBlackAt = -1f;
+            cgPicture.texture = cgHeld.texture = null;
+            cgPicture.color = Color.black;
+            cgHeld.enabled = false;
+            cgVeil.color = Color.clear;
+            cgVignette.color = new Color(0f, 0f, 0f, CgPresentEdges);
             cgSkip.text = ArenaText.Pair("点击或按 Esc 跳过", "Click or press Esc to skip");
         }
 
@@ -523,42 +556,69 @@ namespace AnomalyArena
         {
             cgScreen.gameObject.SetActive(false);
             cgLive = false;
-            cgTexture = cgFrontTexture = null;
+            cgTexture = null;
             cgPicture.texture = null; // a cutscene's live picture is let go after this
-            cgForeground.texture = null;
-        }
-        public void CgShot(Texture picture, float seconds, int shot) => CgShot(picture, null, seconds, shot);
-
-        /// <summary>One shot of a staged cutscene (V2Cutscene): its camera's live picture, whole and unmoved (the camera does the
-        /// moving), in its own colours, fading in from black and out to black at the cuts.</summary>
-        public void CgLive(Texture live, float seconds)
-        {
-            cgLive = true;
-            cgTexture = live; cgFrontTexture = null; cgClock = 0f; cgLength = Mathf.Max(.1f, seconds);
-            float aspect = live && live.height > 0 ? live.width / (float)live.height : 16f / 9f;
-            cgPicture.rectTransform.sizeDelta = new Vector2(720f * aspect, 720f);
-            cgPicture.texture = live;
-            cgPicture.uvRect = new Rect(0f, 0f, 1f, 1f);
-            cgPicture.color = Color.black;
-            cgForeground.texture = null;
-            cgForeground.color = new Color(1f, 1f, 1f, 0f);
+            cgHeld.texture = null;
+            ReleaseHeldCopy();
         }
 
-        /// <summary>One shot of a CG: a background and an optional transparent foreground drawn over it with a little parallax, both sized
-        /// to the picture's own shape (16:9 for the CG01 illustrations).</summary>
-        public void CgShot(Texture picture, Texture front, float seconds, int shot)
+        /// <summary>One shot of a cutscene: its picture, framed as the shot asks (CutsceneShot.framing), or, live, the picture its stage's
+        /// camera films (V2Cutscene), shown whole since the camera does the moving. It begins as the shot's cut says, is graded as the
+        /// present or a memory, plays for length seconds (at least its table's), and with fadeOut fades to black over its last moments.</summary>
+        public void CgShot(Texture picture, bool live, CutsceneShot shot, float length, bool fadeOut)
         {
-            cgLive = false;
-            cgTexture = picture; cgFrontTexture = picture ? front : null; cgShot = shot; cgClock = 0f; cgLength = Mathf.Max(.1f, seconds);
-            float aspect = picture && picture.height > 0 ? Mathf.Clamp(picture.width / (float)picture.height, 1.2f, 1.9f) : 1.5f;
-            var size = new Vector2(720f * aspect, 720f);
-            cgPicture.rectTransform.sizeDelta = size;
-            cgForeground.rectTransform.sizeDelta = size;
+            cgTexture = picture;
+            cgLive = live;
+            cgCut = shot.cut;
+            cgTime = shot.time;
+            cgFraming = shot.framing;
+            cgSeconds = Mathf.Max(.1f, shot.seconds);
+            cgLength = Mathf.Max(.1f, length);
+            cgFadeOut = fadeOut;
+            cgClock = 0f;
+            cgBlackAt = -1f;
             cgPicture.texture = picture;
-            cgPicture.color = picture ? Color.white : new Color(0f, 0f, 0f, 0f);
-            cgForeground.texture = cgFrontTexture;
-            cgForeground.color = new Color(1f, 1f, 1f, 0f);
+            cgPicture.uvRect = live ? new Rect(0f, 0f, 1f, 1f) : cgFraming.At(0f, cgSeconds).Uv;
+            if (cgCut != CutsceneCut.Dissolve) cgHeld.texture = null;
+            ShowCgFrame();
         }
+
+        /// <summary>Holds the picture on screen now under the next shot, which dissolves in over it: a picture as it is framed and graded
+        /// now, a staged shot's live picture as a copy (its stage goes on to film the next shot into the same picture).</summary>
+        public void CgHoldPicture()
+        {
+            cgHeldTime = cgTime;
+            Texture held = cgTexture;
+            if (cgLive && cgTexture is RenderTexture live)
+            {
+                if (!cgHeldCopy || cgHeldCopy.width != live.width || cgHeldCopy.height != live.height)
+                {
+                    ReleaseHeldCopy();
+                    cgHeldCopy = new RenderTexture(live.width, live.height, 0) { name = "Cutscene held picture" };
+                }
+
+                Graphics.Blit(live, cgHeldCopy);
+                held = cgHeldCopy;
+            }
+
+            cgHeld.texture = held;
+            cgHeld.uvRect = cgPicture.uvRect;
+            var shown = cgPicture.color;
+            cgHeld.color = new Color(shown.r, shown.g, shown.b, 1f);
+        }
+
+        /// <summary>The picture cuts to black and stays black until the next shot.</summary>
+        public void CgBlack() => cgBlackAt = cgClock;
+
+        void ReleaseHeldCopy()
+        {
+            if (!cgHeldCopy) return;
+            cgHeldCopy.Release();
+            Destroy(cgHeldCopy);
+            cgHeldCopy = null;
+        }
+
+        void OnDestroy() => ReleaseHeldCopy();
 
         /// <summary>The title's Start opens the V2 campaign. Since 2026-11-06 there is no button for the classic 15-wave run (it stays
         /// in the project, not on the title); the tests still start it with ArenaUiCommand.Start.</summary>
@@ -623,33 +683,35 @@ namespace AnomalyArena
         void TickCg()
         {
             cgClock += Time.unscaledDeltaTime;
-            if (cgLive)
+            ShowCgFrame();
+        }
+
+        /// <summary>The CG screen at cgClock: the picture's framing, its fade from or to black (fading darkens it toward the black screen),
+        /// its dissolve over the held picture, and the grade of the present or a memory, eased over a dissolve from the shot before.</summary>
+        void ShowCgFrame()
+        {
+            float fade = 1f;
+            if (cgBlackAt >= 0f) fade = 0f;
+            else
             {
-                float shown = Mathf.Clamp01(Mathf.Min(cgClock / CgLiveFade, (cgLength - cgClock) / CgLiveFade));
-                cgPicture.color = new Color(shown, shown, shown, 1f);
-                return;
+                if (cgCut == CutsceneCut.Black) fade = Mathf.Min(fade, cgClock / CgFade);
+                if (cgFadeOut) fade = Mathf.Min(fade, (cgLength - cgClock) / CgFade);
+                fade = Mathf.Clamp01(fade);
             }
 
-            float t = Mathf.Clamp01(cgClock / cgLength);
-            // A slow push-in that drifts a different way on each shot (Ken Burns), fading in and out.
-            float zoom = Mathf.Lerp(.94f, .82f, t);
-            Vector2 from = cgShot % 2 == 0 ? new Vector2(.2f, .5f) : new Vector2(.8f, .3f);
-            Vector2 to = cgShot % 2 == 0 ? new Vector2(.7f, .4f) : new Vector2(.3f, .6f);
-            Vector2 d = Vector2.Lerp(from, to, t);
-            cgPicture.uvRect = new Rect((1f - zoom) * d.x, (1f - zoom) * d.y, zoom, zoom);
-            float fade = Mathf.Clamp01(Mathf.Min(cgClock / .6f, (cgLength - cgClock) / .6f));
-            // Fading darkens both layers toward the black screen instead of making them see-through: a half-transparent foreground
-            // would let the background show through the figure as a ghost.
-            var tint = new Color(fade, .93f * fade, .82f * fade, 1f);
-            if (cgTexture) cgPicture.color = tint;
-            if (cgFrontTexture)
-            {
-                // The foreground starts lined up with its background and pushes in faster: a touch of depth between the layers.
-                float zoomFront = Mathf.Lerp(.935f, .76f, t);
-                cgForeground.uvRect = new Rect((1f - zoomFront) * d.x, (1f - zoomFront) * d.y, zoomFront, zoomFront);
-                cgForeground.color = tint;
-            }
+            float mix = cgCut == CutsceneCut.Dissolve && cgHeld.texture ? Mathf.Clamp01(cgClock / CgDissolve) : 1f;
+            cgHeld.enabled = mix < 1f;
+            if (!cgLive && cgTexture) cgPicture.uvRect = cgFraming.At(cgClock, cgSeconds).Uv;
+            var tint = cgTime == CutsceneTime.Memory ? CgMemoryTint : Color.white;
+            cgPicture.color = cgTexture ? new Color(tint.r * fade, tint.g * fade, tint.b * fade, mix) : Color.black;
+            float veil = Mathf.Lerp(CgVeil(cgHeldTime), CgVeil(cgTime), mix), edges = Mathf.Lerp(CgEdges(cgHeldTime), CgEdges(cgTime), mix);
+            cgVeil.color = new Color(CgVeilColour.r * fade, CgVeilColour.g * fade, CgVeilColour.b * fade, veil);
+            cgVignette.color = new Color(0f, 0f, 0f, edges);
         }
+
+        static float CgVeil(CutsceneTime time) => time == CutsceneTime.Memory ? CgMemoryVeil : 0f;
+
+        static float CgEdges(CutsceneTime time) => time == CutsceneTime.Memory ? CgMemoryEdges : CgPresentEdges;
 
         /// <summary>The campaign calls this each frame: what the HUD shows follows the stage.</summary>
         public void Refresh()

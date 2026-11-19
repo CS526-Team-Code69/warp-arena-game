@@ -16,9 +16,9 @@ namespace AnomalyArena.EditorTools
     /// CampaignRules and CampaignArt assets and puts a V2Campaign on the scene's GameManager. Every missing file is skipped (the campaign
     /// then draws its whitebox stand-in) and named again in the closing line. Safe to run again: it replaces what it made before and
     /// keeps the rules asset's numbers once it exists (they are tuned in the Inspector). The campaign's sound effects of 2026-11-10
-    /// come from Audio/Campaign (InstallCampaignAudio); the voice lines recorded that day (E00, D01, K01, N01 to N03, B01) sit in
-    /// Art/Campaign/Voice under their line ids like the others (copied there by work/v2-doc-1110/tools/copy_audio_picks.py, not
-    /// listed in the voice manifest), so FillVoices takes them as it takes every file there.
+    /// come from Audio/Campaign (InstallCampaignAudio). The voice manifest lists every line the game says, in the two custom voices,
+    /// with its takes and the default one; lines no longer said keep their older files in Art/Campaign/Voice, and FillVoices takes
+    /// every file there.
     /// Menu: Anomaly Arena/V2 Campaign/Install, and Install (use files in place), which skips the copy here too.
     /// Batch: -executeMethod AnomalyArena.EditorTools.InstallV2Campaign.InstallBatch [-filesInPlace]. The log ends with one line,
     /// "[V2Campaign] INSTALL OK: ..." or "[V2Campaign] INSTALL FAILED: ...", and Unity exits with 0 or 1 (see InstallBatch).
@@ -78,7 +78,7 @@ namespace AnomalyArena.EditorTools
         static readonly string[] Models = { "Base", "BaseDamaged", "ShipWreck", "ShipIntact", "MiningLamp", "OreAlloy", "DarkMatterNode", "ShadowA", "ShadowB", "ShadowC" };
         static readonly Dictionary<string, string> Reuses = new() { ["DarkMatterNode"] = "OreAlloy", ["BaseDamaged"] = "Base" };
 
-        // The parts of work/art-plans/v2-1104/voice/manifest.json the installer reads (JsonUtility skips the rest).
+        // The parts of the voice manifest (VoiceSource + manifest.json) the installer reads (JsonUtility skips the rest).
         [System.Serializable] class VoiceManifest { public VoiceLine[] lines; }
         [System.Serializable] class VoiceLine { public string id; public int default_take; public VoiceTake[] takes; public VoiceVariant[] variants; }
         [System.Serializable] class VoiceVariant { public string room; public int default_take; public VoiceTake[] takes; }
@@ -99,7 +99,7 @@ namespace AnomalyArena.EditorTools
         static string PictureSource => Work + "art-plans/v2-1104/gen/";
         static string ModelSource => Work + "art-plans/v2-1104/models/campaign/";
         static string PreparedPictures => Work + "v2-campaign-1106/pictures-1106/";
-        static string VoiceSource => Work + "art-plans/v2-1104/voice/";
+        static string VoiceSource => Work + "gold-1117/voice-1118/";
         static string SoundSource => Work + "art-plans/v2-1104/sfx-cg01/";
         static bool HasSources => Directory.Exists(IconSource) || Directory.Exists(PictureSource) || Directory.Exists(ModelSource)
                                   || Directory.Exists(PreparedPictures) || Directory.Exists(VoiceSource) || Directory.Exists(SoundSource);

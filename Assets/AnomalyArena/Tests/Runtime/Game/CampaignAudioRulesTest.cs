@@ -36,7 +36,7 @@ namespace AnomalyArena
                 if (CampaignAudio.Loops(sfx)) loops++;
                 Assert.That(CampaignAudio.DefaultGain(sfx), Is.InRange(.05f, 1f), $"{sfx} default gain");
             }
-            Assert.That(names.Count, Is.EqualTo(51), "one value per sound of the 2026-11-10 set");
+            Assert.That(names.Count, Is.EqualTo(62), "one value per sound of the 2026-11-10 set, and the story cutscenes' eleven");
             Assert.That(loops, Is.EqualTo(6), "darkness, shadow approach, fuel fill, night ambience, damaged base, crash site");
         }
 

@@ -15,7 +15,8 @@ namespace AnomalyArena
     /// The tracks are mp3 files in StreamingAssets/Music, loaded at run time, so on the web they are separate files and not part of the
     /// data file. Until dusk.mp3 and ending.mp3 exist, the dusk borrows night.mp3 and the ending title.mp3; once the files are there
     /// they are used at the next start, with no change here. A track with no file at all leaves V3WorldAudio's music as it was,
-    /// without an error. A classic run keeps V3WorldAudio's combat music.
+    /// without an error. A classic run and the enemy lab keep V3WorldAudio's music and its rules (it plays only while the player
+    /// can move); V3WorldAudio borrows the day track for them, and the boss track for the Tyrant's wave and the void trial.
     /// Changes cross-fade over fadeSeconds of real time. A looping track plays from its file's head trim to its tail trim and
     /// cross-fades into its own start over loopFadeSeconds, so a file that fades in and out does not dip at the seam. The volume follows
     /// V3WorldAudio's musicGain and masterGain; the pause menu holds the music where it is.
@@ -39,6 +40,11 @@ namespace AnomalyArena
         public Track Current => current;
         /// <summary>True once the track can play: its own file, or the one it borrows (dusk: night, ending: title), has been loaded.</summary>
         public bool Loaded(Track track) => ClipFor(track);
+        /// <summary>True once every track's file has been tried, loaded or not there.</summary>
+        public bool Settled => loadsLeft <= 0;
+        /// <summary>What a classic run or the enemy lab plays on V3WorldAudio's music channel: the day track, or the boss track in the
+        /// Tyrant's wave and the void trial; null while that file is not loaded.</summary>
+        public AudioClip ClassicClip(bool boss) => ClipFor(boss ? Track.Boss : Track.Day);
 
         [Min(.1f), Tooltip("Seconds of real time a change of track takes to cross-fade.")] public float fadeSeconds = 1.5f;
         [Min(.1f), Tooltip("Seconds of real time a looping track takes to cross-fade from its end into its own start.")] public float loopFadeSeconds = 2f;
@@ -52,6 +58,7 @@ namespace AnomalyArena
         Track current = Track.None;
         float blend = 1f, fadeFrom, fadeLength = 1.5f, position, loopEnd;
         bool paused, campaignOver, nightTime, duskTime;
+        int loadsLeft = Files.Length - 1;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void Create()
@@ -68,7 +75,7 @@ namespace AnomalyArena
             Instance = this;
             playing = NewSource();
             fading = NewSource();
-            for (int i = 1; i < Files.Length; i++) StartCoroutine(Load((Track)i));
+            for (int i = 1; i < Files.Length; i++) StartCoroutine(LoadCounted((Track)i));
         }
 
         void OnDestroy() { if (Instance == this) Instance = null; }
@@ -105,6 +112,12 @@ namespace AnomalyArena
             source.loop = false; // looping is done here, with a cross-fade at the seam
             source.volume = 0f;
             return source;
+        }
+
+        IEnumerator LoadCounted(Track track)
+        {
+            yield return Load(track);
+            loadsLeft--;
         }
 
         IEnumerator Load(Track track)
@@ -173,7 +186,9 @@ namespace AnomalyArena
                 }
             }
             if (campaignOver && (phase == ArenaUiState.Result || current == Track.Ending)) return Track.Ending;
-            return Track.None; // a classic run: V3WorldAudio's combat music
+            // A classic run and the enemy lab: V3WorldAudio's music, which plays only while the player can move; it plays the day
+            // track from here, and the boss track in the Tyrant's wave and the void trial (ClassicClip).
+            return Track.None;
         }
 
         void Update()

@@ -5,28 +5,36 @@ using Prim = AnomalyArena.Whitebox.Prim;
 namespace AnomalyArena
 {
     /// <summary>
-    /// The failed ignition (V2 doc section 2), played when the full tank is lit: the engine fires and sputters out, Felix finds in the
-    /// cockpit that the ignition needs an enormous source of energy, the wave of dark-matter energy spreads over the desert and the Tyrant
-    /// senses it, and the Tyrant rises outside the base. The base system's lines S10, F01, F02 and Felix's F03 keep their voices.
+    /// The failed ignition (V2 doc section 2), played when the full tank is lit: Felix asks the ship to take them home and the base system
+    /// starts the ignition; the engine fires and dies; in the cockpit Felix reads that the fuel is fine but the sequence needs an enormous
+    /// source of energy; the system warns of the wave of dark-matter energy the failed ignition sent out, which the Tyrant on a far ridge
+    /// turns to; and when the Tyrant rises outside the base the system finds a dark matter core in it, the energy they lack, and Felix
+    /// goes to take it.
     /// </summary>
     public sealed partial class V2Cutscene
     {
-        /// <summary>The failed ignition's five shots, L1 to L5; the Tyrant fight starts after the last.</summary>
+        /// <summary>The failed ignition's five shots, L11 to L15, 38.5 seconds as written; the Tyrant fight starts after the last.</summary>
         public static readonly CutsceneShot[] Ignition =
         {
-            new("L1", 5f, StageIgnition, CutsceneBeat.Say(V2Campaign.Line.S10, .4f)),
-            new("L2", 5.5f, StageSputter, CutsceneBeat.Sound(CampaignSfx.IgnitionFail, 0f), CutsceneBeat.Say(V2Campaign.Line.F01, .5f)),
-            new("L3", 6f, StageCockpit, CutsceneBeat.Say(V2Campaign.Line.F02, .3f), CutsceneBeat.Say(V2Campaign.Line.F05, 2.4f)),
-            new("L4", 5.5f, StageSurge, CutsceneBeat.Say(V2Campaign.Line.F04, .8f)),
-            new("L5", 5f, StageArrival, CutsceneBeat.Sound(CampaignSfx.TyrantArrive, 0f), CutsceneBeat.Say(V2Campaign.Line.F03, 2.4f)),
+            new("L11", 7.5f, CutsceneTime.Present, CutsceneCut.Black, Move(Crop(.5f, .5f, .96f), Crop(.5f, .5f, .92f)), StageIgnition,
+                CutsceneBeat.Sound(CampaignSfx.EngineSpinUp, 0f), CutsceneBeat.Say(V2Campaign.Line.F06, .4f), CutsceneBeat.Say(V2Campaign.Line.F07, 3.8f)),
+            new("L12", 4f, CutsceneTime.Present, CutsceneCut.Hard, Hold(Crop(.5f, .5f, .92f)), StageSputter,
+                CutsceneBeat.Sound(CampaignSfx.IgnitionFail, 0f)),
+            new("L13", 7.5f, CutsceneTime.Present, CutsceneCut.Hard, Move(Crop(.5f, .5f, 1f), Crop(.6f, .38f, .72f)), StageCockpit,
+                CutsceneBeat.Sound(CampaignSfx.CockpitAlarm, 0f), CutsceneBeat.Say(V2Campaign.Line.F08, .7f)),
+            new("L14", 9.5f, CutsceneTime.Present, CutsceneCut.Hard, Move(Crop(.66f, .46f, .8f), Crop(.34f, .46f, .8f)), StageSurge,
+                CutsceneBeat.Sound(CampaignSfx.ZoneOverrunWarning, 0f), CutsceneBeat.Sound(CampaignSfx.EnergyWave, .5f), CutsceneBeat.Say(V2Campaign.Line.F09, .6f),
+                CutsceneBeat.Sound(CampaignSfx.TyrantGrowl, 6.2f), CutsceneBeat.Say(V2Campaign.Line.F10, 6.8f), CutsceneBeat.Sound(CampaignSfx.TyrantSteps, 8.6f)),
+            new("L15", 10f, CutsceneTime.Present, CutsceneCut.Hard, Move(Crop(.5f, .62f, .85f), Crop(.5f, .4f, .85f)), StageArrival,
+                CutsceneBeat.Sound(CampaignSfx.TyrantArrive, 0f), CutsceneBeat.Say(V2Campaign.Line.F11, 1.5f), CutsceneBeat.Say(V2Campaign.Line.F12, 7.5f)),
         };
 
         static readonly Color ConsoleGrey = new(.3f, .3f, .33f), ScreenBack = new(.07f, .09f, .13f), RingRed = new(1f, .35f, .2f), RingDim = new(.45f, .18f, .14f);
 
-        // ───── L1 and L2: the ship beside the base at dawn, seen low from behind on its right ─────
+        // ───── L11 and L12: the ship beside the base at dawn, seen low from behind on its right ─────
 
         /// <summary>The ship whole and repaired on the sand beside the base: its engine in the left half of the picture, the base with its
-        /// door in the right half. L1 and L2 are the same place moments apart.</summary>
+        /// door in the right half. L11 and L12 are the same place moments apart.</summary>
         static WhiteboxLook LaunchPad(V2Cutscene s)
         {
             s.Sky(DawnSky);
@@ -86,10 +94,10 @@ namespace AnomalyArena
         static void StageSputter(V2Cutscene s)
         {
             var ship = LaunchPad(s);
-            // The jet stutters: weak bursts, each shorter than the last, cyan turning dull orange; then only embers and smoke, the engine
-            // dark for good. The blown sand settles meanwhile.
-            (float start, float length, float power)[] bursts = { (.3f, .9f, 1f), (1.6f, .6f, .6f), (2.6f, .35f, .35f) };
-            const float dead = 3.2f;
+            // The jet stutters: weak bursts, each shorter than the last, cyan turning dull orange, all within the first 2.6 seconds; then
+            // only embers and smoke, the engine dark for good. The blown sand settles meanwhile.
+            (float start, float length, float power)[] bursts = { (.2f, .8f, 1f), (1.3f, .55f, .6f), (2.15f, .35f, .35f) };
+            const float dead = 2.6f;
             var jet = new Spout();
             var embers = new Spout();
             var smoke = new Spout();
@@ -126,15 +134,13 @@ namespace AnomalyArena
             s.Subject(ship.transform, new Vector3(0f, 1.5f, -6.2f));
         }
 
-        // ───── L3: in the cockpit, the engine wants an enormous energy it does not have ─────
+        // ───── L13: in the cockpit, the engine wants an enormous energy it does not have ─────
 
-        static void StageCockpit(V2Cutscene s)
+        /// <summary>The ship's cockpit (L13, and in orbit E13): its floor at y 1, slate walls and ceiling, the front wall at z = 4.4 with a
+        /// wide window from x -3.9 to 3.9 and y 2.0 to 4.2, and the console under the window.</summary>
+        static void CockpitRoom(V2Cutscene s)
         {
-            s.Sky(DawnSky);
-            s.Box(new Vector3(400f, 1f, 400f), new Vector3(0f, -.5f, 120f), Sand); // the desert beyond the window
-            s.Box(new Vector3(10f, 4f, 10f), new Vector3(13f, 2f, 30f), Table("base")); // a corner of the base out there
             s.Box(new Vector3(10f, .2f, 9f), new Vector3(0f, .9f, 0f), SlateFloor);
-            // The front wall at z = 4.4 with a wide window, x -3.9 to 3.9 and y 2.0 to 4.2.
             s.Box(new Vector3(10f, 1f, .3f), new Vector3(0f, 1.5f, 4.4f), Slate);
             s.Box(new Vector3(10f, .9f, .3f), new Vector3(0f, 4.65f, 4.4f), Slate);
             s.Box(new Vector3(1.1f, 2.2f, .3f), new Vector3(-4.45f, 3.1f, 4.4f), Slate);
@@ -143,6 +149,14 @@ namespace AnomalyArena
             s.Box(new Vector3(.3f, 4.2f, 9f), new Vector3(5f, 3f, 0f), Slate);
             s.Box(new Vector3(10.3f, .3f, 9.3f), new Vector3(0f, 5.2f, 0f), SlateCeiling);
             s.Box(new Vector3(3.4f, 1.1f, 1f), new Vector3(0f, 1.55f, 3f), ConsoleGrey);
+        }
+
+        static void StageCockpit(V2Cutscene s)
+        {
+            s.Sky(DawnSky);
+            s.Box(new Vector3(400f, 1f, 400f), new Vector3(0f, -.5f, 120f), Sand); // the desert beyond the window
+            s.Box(new Vector3(10f, 4f, 10f), new Vector3(13f, 2f, 30f), Table("base")); // a corner of the base out there
+            CockpitRoom(s);
             // The diagram over the console, on a dark backing so its cyan reads against the bright window: the engine as a long
             // outline, inside it the empty ring where the energy belongs, rows of cubes running at the ring and stopping short of it,
             // and a gauge of ten boxes with only the bottom one lit. No writing: the shapes say it.
@@ -195,13 +209,13 @@ namespace AnomalyArena
             return outline;
         }
 
-        // ───── L4: the wave of dark matter spreads; the Tyrant senses it ─────
+        // ───── L14: the wave of dark matter spreads; the Tyrant on the ridge turns to it and goes ─────
 
         static void StageSurge(V2Cutscene s)
         {
             s.Sky(DawnSky);
             s.Ground(Sand);
-            // A ridge of big rocks across the foreground, the camera on it behind the Tyrant, looking back at the base far away.
+            // A ridge of big rocks across the foreground, the camera on it behind the Tyrant, looking out at the base far away.
             var random = new System.Random(14);
             var rocks = new List<Matrix4x4>();
             for (int i = 0; i < 14; i++)
@@ -222,16 +236,17 @@ namespace AnomalyArena
             const int segments = 96;
             var ring = new Transform[segments];
             for (int i = 0; i < segments; i++) ring[i] = s.Box(Vector3.one, shipAt, Violet).transform;
-            Vector3 eye = new(3f, 12.5f, -14f), toEye = eye - shipAt;
-            toEye.y = 0f;
-            float distance = toEye.magnitude, facingEye = Mathf.Atan2(toEye.z, toEye.x), seconds = s.Seconds;
+            Vector3 eye = new(3f, 12.5f, -14f), toEye = eye - shipAt, toRidge = tyrantAt - shipAt;
+            toEye.y = toRidge.y = 0f;
+            float ridge = toRidge.magnitude, facingEye = Mathf.Atan2(toEye.z, toEye.x);
             float face = Mathf.Atan2(shipAt.x - tyrantAt.x, shipAt.z - tyrantAt.z) * Mathf.Rad2Deg;
-            Vector3 stepTo = tyrantAt + Quaternion.Euler(0f, face, 0f) * Vector3.forward * 2f;
+            Vector3 ahead = Quaternion.Euler(0f, face, 0f) * Vector3.forward;
             var hops = new Spout();
-            bool landed = false;
+            bool pushedOff = false;
             s.Every(t =>
             {
-                float radius = 4f + (distance + 30f) * t / seconds;
+                // The ring spreads from the ship, crosses the ridge at five seconds and runs on past the camera.
+                float radius = 4f + (ridge - 4f) * t / 5f;
                 float length = 2f * Mathf.PI * radius / segments * 1.02f;
                 for (int i = 0; i < segments; i++)
                 {
@@ -249,24 +264,27 @@ namespace AnomalyArena
                     s.Emit(at, new Vector3(J(-.5f, .5f), J(3f, 5.5f), J(-.5f, .5f)), Violet, J(.4f, .8f), J(.9f, 1.2f), 9f);
                 }
 
-                // The Tyrant turns until its wedge points at the ring, its red flares a moment, and it slides one heavy step forward.
-                float yaw = Mathf.LerpAngle(-95f, face, Smooth(t / 3f));
-                float flare = Mathf.Sin(Mathf.PI * Ramp(t, 3f, .6f));
-                float step = Smooth(Ramp(t, 3.6f, .8f));
-                tyrant.transform.localPosition = Vector3.Lerp(tyrantAt, stepTo, step);
+                // From six seconds the Tyrant turns until its wedge points at the ring and its red flares a moment; from eight it slides
+                // off the far side of the ridge toward the ship, down and out of sight.
+                float yaw = Mathf.LerpAngle(-95f, face, Smooth(Ramp(t, 6f, 1.4f)));
+                float flare = Mathf.Sin(Mathf.PI * Ramp(t, 6.4f, .8f));
+                float slide = Ramp(t, 8f, 1.3f);
+                slide *= slide;
+                tyrant.transform.localPosition = tyrantAt + ahead * (6f * slide) + Vector3.down * (14f * slide);
                 tyrant.transform.localRotation = Quaternion.Euler(0f, yaw, 0f);
                 tyrant.SetColour("tyrant", Color.Lerp(Table("tyrant"), TyrantFlash, flare));
-                if (!landed && step >= 1f)
+                if (!pushedOff && t >= 8f)
                 {
-                    landed = true;
-                    SandWave(s, stepTo, 26, 5f, stepTo.y);
+                    pushedOff = true;
+                    SandWave(s, tyrantAt, 26, 5f, tyrantAt.y);
                 }
 
-                if (step > 0f && step < 1f || landed && t < 4.9f) s.Shake(.05f);
+                if (slide > 0f && slide < 1f) s.Shake(.05f);
             });
-            s.CameraMove(eye, new Vector3(16f, 2f, 60f), new Vector3(3.4f, 12.8f, -15f), new Vector3(16f, 2f, 60f), 46f);
+            // From the ring on the right, slowly over to the ridge on the left, where the Tyrant stood.
+            s.CameraMove(eye, new Vector3(22f, 2f, 60f), new Vector3(3.4f, 12.8f, -15f), new Vector3(6f, 3f, 50f), 46f);
             s.LightFrom(120f);
-            s.Subject(tyrant.transform, new Vector3(0f, 6f, 0f));
+            s.Subject(s.Node("Ridge top", tyrantAt + Vector3.up * 4f));
         }
 
         /// <summary>The Tyrant as the whitebox shows it, with a white wedge on the front of its top box for the way it faces.</summary>
@@ -277,7 +295,7 @@ namespace AnomalyArena
             return tyrant;
         }
 
-        // ───── L5: the Tyrant rises outside the base ─────
+        // ───── L15: the Tyrant rises outside the base ─────
 
         static void StageArrival(V2Cutscene s)
         {
@@ -303,8 +321,9 @@ namespace AnomalyArena
             var tyrant = Tyrant(s, tyrantAt + Vector3.down * sunk, 180f, scale);
             var hinge = s.Node("Tail hinge", new Vector3(0f, 1f, -2.2f), default, tyrant.transform);
             tyrant.PartRenderer(5).transform.SetParent(hinge, true); // the tail, the table's sixth part, swings about the back of the body
-            // Felix in the right foreground from behind, looking up at it.
-            Vector3 felixAt = new(2.6f, 0f, -1.4f);
+            // Felix in the right foreground from behind, looking up at it: half a step back as it rises, one step toward it as he makes up
+            // his mind (F12, 7.5 s into the shot).
+            Vector3 felixAt = new(2.6f, 0f, -1.4f), toward = Quaternion.Euler(0f, -22f, 0f) * Vector3.forward;
             var felix = s.Felix(felixAt, -22f);
             var pour = new Spout();
             var hop = new Spout();
@@ -313,7 +332,7 @@ namespace AnomalyArena
                 tyrant.transform.localPosition = tyrantAt + Vector3.down * (sunk * (1f - EaseOut(t / 3f)));
                 tyrant.transform.localRotation = Quaternion.Euler(-6f, 180f, 0f);
                 hinge.localRotation = Quaternion.Euler(0f, 28f * Mathf.Sin(Mathf.PI * Ramp(t, 3f, 1.1f)), 0f);
-                felix.transform.localPosition = felixAt + Vector3.back * (.6f * Smooth(Ramp(t, 2.4f, .5f)));
+                felix.transform.localPosition = felixAt + Vector3.back * (.6f * Smooth(Ramp(t, 2.4f, .5f))) + toward * (.9f * Smooth(Ramp(t, 7.5f, .5f)));
                 felix.transform.localRotation = Quaternion.Euler(-7f, -22f, 0f);
                 if (t >= 3.4f) return;
                 s.Shake(.1f * (1f - Ramp(t, 2.6f, .8f)));

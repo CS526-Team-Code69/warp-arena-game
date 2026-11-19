@@ -62,7 +62,7 @@ namespace AnomalyArena.EditorTools
         const float FacingAspect = 1.3f;
         // The maps the Blender step delivers are 2K; the web build caps textures at 1024 itself (WebGLBuild.MaxTextureSize).
         const int MapSize = 2048;
-        static readonly string[] Kinds = { "Grunt", "Brute", "Skitter", "Spitter", "Rammer", "Bloater", "Warden", "Splitter", "Spire", "Stomper", "Shade", "Tyrant" };
+        static readonly string[] Kinds = { "Grunt", "Brute", "Skitter", "Spitter", "Rammer", "Bloater", "Warden", "Splitter", "Spire", "Stomper", "Shade", "Tyrant", "Hollow" };
         // The player hero: only when named (-kinds PlayerV2); its own folders, extra clips and controller (see the class summary).
         const string PlayerKind = "PlayerV2";
         const string PlayerSourceFolder = "Assets/AnomalyArena/Art/V6/Player/";
@@ -107,6 +107,20 @@ namespace AnomalyArena.EditorTools
             public string[] clip_files;
             // Optional (the player hero): takes beyond Idle, Run and Attack, and which clips loop (DefaultLoops when absent).
             public string[] extra_clips, loop_clips;
+            // Optional: a clip cut from a take of another name ("Run=Walk"), a boss's own clip per move (V2ModelPresentation.moveClips), and
+            // presentation speeds measured in Blender; zero or absent leaves the prefab's values as they are.
+            public string[] clip_takes;
+            public MoveSpec[] moves;
+            public float run_reference_speed, charge_run_reference_speed, attack_contact_normalized;
+        }
+
+        /// <summary>One boss move in a manifest: the clip, the Enemy.BossAttackIndex that starts it and where its wind-up ends (0-1).</summary>
+        [Serializable]
+        sealed class MoveSpec
+        {
+            public string clip;
+            public int boss_attack;
+            public float windup_end;
         }
 
         sealed class Job
@@ -372,7 +386,7 @@ namespace AnomalyArena.EditorTools
             importer.SaveAndReimport(); // the takes below are read with these settings
             var takes = importer.defaultClipAnimations ?? Array.Empty<ModelImporterClipAnimation>();
             Log($"{job.Kind}: {path} takes [{string.Join(", ", takes.Select(t => $"{t.takeName} {t.firstFrame:0}-{t.lastFrame:0}"))}]");
-            importer.clipAnimations = job.Clips.Select(name => ClipFrom(FindTake(takes, name, path, allowSingle: false), name, job.Loops(name))).ToArray();
+            importer.clipAnimations = job.Clips.Select(name => ClipFrom(CopyTake(FindTake(takes, TakeFor(job.Manifest, name), path, allowSingle: false)), name, job.Loops(name))).ToArray();
             importer.SaveAndReimport();
             RequireAvatar(path, job.Kind);
             var model = AssetDatabase.LoadAssetAtPath<GameObject>(path);
@@ -448,6 +462,24 @@ namespace AnomalyArena.EditorTools
         }
 
         /// <summary>A take named exactly like the clip, or one whose "|"-separated name has it as a part (Blender: "Armature|Idle"; other exports: "Armature|Armature|Idle|baselayer").</summary>
+        /// <summary>A fresh clip on a take's frames: ClipFrom names what it is given, so two clips cut from one take (Attack and GroundPound)
+        /// each need their own.</summary>
+        static ModelImporterClipAnimation CopyTake(ModelImporterClipAnimation take) => new ModelImporterClipAnimation
+        {
+            takeName = take.takeName, firstFrame = take.firstFrame, lastFrame = take.lastFrame
+        };
+
+        /// <summary>The take a clip is cut from: the manifest's "Clip=Take" entry for it, or the take of the clip's own name.</summary>
+        static string TakeFor(Manifest manifest, string clip)
+        {
+            foreach (var entry in manifest?.clip_takes ?? Array.Empty<string>())
+            {
+                int at = entry.IndexOf('=');
+                if (at > 0 && string.Equals(entry.Substring(0, at).Trim(), clip, StringComparison.OrdinalIgnoreCase)) return entry.Substring(at + 1).Trim();
+            }
+            return clip;
+        }
+
         static ModelImporterClipAnimation FindTake(ModelImporterClipAnimation[] takes, string clip, string where, bool allowSingle)
         {
             Require(takes != null && takes.Length > 0, $"{where} has no animation takes");
@@ -661,6 +693,16 @@ namespace AnomalyArena.EditorTools
             var byName = ClipNames.Select((name, i) => (name, clip: clips[i])).ToDictionary(p => p.name, p => p.clip);
             int assigned = 0;
             foreach (var layer in controller.layers) assigned += AssignMotions(layer.stateMachine, byName, job.Kind, path);
+            // Extra clips (a boss's moves): one more Base Layer state each, named like its clip and without transitions;
+            // V2ModelPresentation plays them by name.
+            var machine = controller.layers[0].stateMachine;
+            for (int i = ClipNames.Length; i < job.Clips.Length && i < clips.Length; i++)
+            {
+                string name = job.Clips[i];
+                var state = machine.states.Select(s => s.state).FirstOrDefault(s => s && s.name == name) ?? machine.AddState(name, new Vector3(520f, 60f * i, 0f));
+                state.motion = clips[i];
+            }
+            if (job.Clips.Length > ClipNames.Length) Log($"{job.Kind}: {path}: {job.Clips.Length - ClipNames.Length} extra states [{string.Join(", ", job.Clips.Skip(ClipNames.Length))}]");
             EditorUtility.SetDirty(controller);
             Log($"{job.Kind}: {path}: {assigned} states play the V6 clips, {controller.parameters.Length} parameters as V3");
             return controller;
@@ -908,6 +950,16 @@ namespace AnomalyArena.EditorTools
                 presentation.idleClip = clips[0];
                 presentation.runClip = clips[1];
                 presentation.attackClip = clips[2];
+                var manifest = job.Manifest;
+                if (!job.Player && manifest != null)
+                {
+                    presentation.moveClips = (manifest.moves ?? Array.Empty<MoveSpec>())
+                        .Select(m => new V2ModelPresentation.MoveClip { state = m.clip, bossAttack = m.boss_attack, windupEnd = Mathf.Clamp01(m.windup_end) }).ToArray();
+                    if (manifest.run_reference_speed > 0f) presentation.runReferenceSpeed = manifest.run_reference_speed;
+                    if (manifest.charge_run_reference_speed > 0f) presentation.chargeRunReferenceSpeed = manifest.charge_run_reference_speed;
+                    if (manifest.attack_contact_normalized > 0f) presentation.attackContactNormalized = manifest.attack_contact_normalized;
+                    if (presentation.moveClips.Length > 0) Log($"{job.Kind}: {presentation.moveClips.Length} move clips [{string.Join(", ", presentation.moveClips.Select(m => $"{m.bossAttack}:{m.state}@{m.windupEnd:0.###}"))}]");
+                }
                 presentation.modelRenderers = newRenderers;
                 presentation.authoredScale = model.transform.localScale;
                 presentation.authoredPosition = position;

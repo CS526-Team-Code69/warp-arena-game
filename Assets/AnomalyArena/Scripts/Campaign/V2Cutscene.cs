@@ -7,9 +7,9 @@ using UnityEngine.Rendering.Universal;
 namespace AnomalyArena
 {
     /// <summary>
-    /// The story cutscenes staged in whitebox. Each shot of the storyboard (the memory M1 to M9, the failed ignition L1 to L5, the ending
-    /// E1 to E3) is a small set of the whitebox's solids, built when the shot starts, moved by its own clock and filmed by a camera of its
-    /// own into a picture that the campaign's CG screen shows (V2CampaignUi.CgLive).
+    /// The story cutscenes staged in whitebox. Each shot of the storyboard (the memory M11 to M20, the failed ignition L11 to L15, the
+    /// ending E11 to E14) is a small set of the whitebox's solids, built when the shot starts, moved by its own clock and filmed by a camera
+    /// of its own into a picture that the campaign's CG screen shows (V2CampaignUi.CgShot), where the shot has no picture of its own.
     /// Nothing of the run gets into that picture: the set stands far below the map on a layer only this camera draws, the camera has no
     /// post-processing (as the play camera in whitebox), and the night's darkness and the HUD are screen overlays, which a camera that
     /// draws into a texture never sees. The set is lit by the scene's own sun and ambient, the light the whitebox is seen in during play,
@@ -572,6 +572,21 @@ namespace AnomalyArena
             }
         }
 
+        // ───── The shot tables' shorthand ─────
+
+        /// <summary>A part of a shot's picture on screen (CutsceneFrame): the point at the screen's centre, x from the picture's left and
+        /// y from its top (0 to 1), and the share of the picture's width that shows.</summary>
+        static CutsceneFrame Crop(float x, float y, float size) => new(x, y, size);
+
+        /// <summary>The picture's framing eases from one part to another over the shot.</summary>
+        static CutsceneFraming Move(CutsceneFrame from, CutsceneFrame to) => CutsceneFraming.Move(from, to);
+
+        /// <summary>The picture holds one framing for the whole shot.</summary>
+        static CutsceneFraming Hold(CutsceneFrame frame) => CutsceneFraming.Move(frame, frame);
+
+        /// <summary>The picture's framing passes through parts at moments of the shot (seconds from its start).</summary>
+        static CutsceneFraming Keys(params (float at, CutsceneFrame frame)[] keys) => CutsceneFraming.Keys(keys);
+
         // ───── Shapes of time ─────
 
         /// <summary>0 to 1 over 0 to 1, starting and ending gently.</summary>
@@ -613,7 +628,7 @@ namespace AnomalyArena
         static readonly Color Smoke = new(.25f, .25f, .27f), ExhaustCyan = new(.6f, .95f, 1f), DullOrange = new(.72f, .4f, .2f), Violet = new(.75f, .35f, 1f);
         // The ship's parts as the base panel paints them (V2Campaign.Base.cs): a broken engine, an empty tank, and a full one lit.
         static readonly Color BrokenGrey = new(.3f, .3f, .32f), EmptyTank = new(.2f, .1f, .25f), FullTank = new(.92f, .5f, 1f);
-        // The Tyrant's colour struck down, and the flash of its red.
-        static readonly Color TyrantDull = new(.42f, .09f, .11f), TyrantFlash = new(1f, .42f, .4f);
+        // The flash of the Tyrant's red.
+        static readonly Color TyrantFlash = new(1f, .42f, .4f);
     }
 }

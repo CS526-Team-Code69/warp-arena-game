@@ -18,7 +18,7 @@ namespace AnomalyArena
         public Sound[] bank;
         public AudioSource[] worldVoices, lifecycleVoices;
         public AudioSource ambienceSource, musicSource;
-        [Range(0f,1f)] public float worldGain=.65f, lifecycleGain=.65f, ambienceGain=.14f, musicGain=.2f;
+        [Range(0f,1f)] public float worldGain=.65f, lifecycleGain=.65f, ambienceGain=.14f, musicGain=.15f;
         [Range(0f,1f)] public float masterGain=1f;
         [Min(1f)] public float audibleRange=26f;
         [Min(.01f)] public float backgroundFadeSeconds=.3f;
@@ -129,7 +129,10 @@ namespace AnomalyArena
             bool yieldMusic=CampaignMusic.Overrides;
             if(running&&!paused)
             {
-                if(musicSource&&!musicSource.clip)musicSource.clip=byCue[(int)ArenaWorldCue.CombatMusic]?.clip;
+                // A classic run and the enemy lab play the campaign's day track, and its boss track in the Tyrant's wave and the void
+                // trial (a change of track starts the new one from the top); the bank's combat track only when those files are not there.
+                var clip=RunMusic(gm);
+                if(musicSource&&clip!=musicSource.clip){musicSource.Stop();musicSource.clip=clip;}
                 if(musicSource&&musicSource.clip&&!musicSource.isPlaying&&!yieldMusic)musicSource.Play();
                 if(ambienceSource&&ambienceSource.clip&&!ambienceSource.isPlaying)ambienceSource.Play();
             }
@@ -137,6 +140,15 @@ namespace AnomalyArena
             if(musicSource)musicSource.volume=yieldMusic?0f:musicGain*backgroundBlend*masterGain;
             if(ambienceSource)ambienceSource.volume=ambienceGain*backgroundBlend*masterGain;
             if(!running&&!paused&&backgroundBlend<=0f){if(musicSource)musicSource.Stop();if(ambienceSource)ambienceSource.Stop();}
+        }
+        AudioClip RunMusic(GameManager gm)
+        {
+            var bankClip=byCue[(int)ArenaWorldCue.CombatMusic]?.clip;
+            var tracks=CampaignMusic.Instance;
+            if(!tracks)return bankClip;
+            bool boss=gm.RunPhase==ArenaUiState.FinalBoss||gm.waves&&gm.waves.Phase==WavePhase.FinalBoss||WorldMap.Active&&WorldMap.Active.TrialActive;
+            var clip=tracks.ClassicClip(boss);
+            return clip?clip:tracks.Settled?bankClip:null;
         }
         static void TickVoices(AudioSource[] voices,float[] left)
         {

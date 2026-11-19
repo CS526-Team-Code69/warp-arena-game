@@ -599,7 +599,7 @@ public static class V2CampaignCheck
                 if (InStep > 3f) Shot("18-ignition");
                 if (InStep > 9.5f) Shot("18b-ignition-failed");
                 if (campaign.Stage == CampaignStage.Core) { Go(22, 1.2f); return; }
-                if (campaign.Stage != CampaignStage.FinalBoss) { if (InStep > 40f) End("no final boss after the ignition"); return; }
+                if (campaign.Stage != CampaignStage.FinalBoss) { if (InStep > 60f) End("no final boss after the ignition"); return; } // the failed ignition plays 38.5 s and more
                 var tyrant = gm.waves.tyrant;
                 if (tyrant && tyrant.IsAlive)
                 {

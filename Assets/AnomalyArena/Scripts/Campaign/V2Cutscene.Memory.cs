@@ -5,25 +5,39 @@ using Prim = AnomalyArena.Whitebox.Prim;
 namespace AnomalyArena
 {
     /// <summary>
-    /// The memory (V2 doc section 2), played as Day 0 passes into night: the alien invasion, the great conscription, the grandmother who
-    /// raised Felix, the cabin before the jump, the turbulence in the wormhole, the fall, Felix alone by the wreck, the ship deploying the
-    /// base by itself, and the base's lamps coming on beside the wreck at night. One line each, in Felix's words; the five that were
-    /// recorded keep their voices (C01 to C05).
+    /// The memory (V2 doc section 2), played as Day 0 passes into night. It is a survivor's record: in the base's control room the base
+    /// system asks Felix for it, and his story goes back into the past (the alien invasion, the great conscription, the turbulence in the
+    /// wormhole, the fall, Felix alone by the wreck, the ship deploying the base by itself). Back in the room the system asks whom to
+    /// notify; he remembers the grandmother who raised him and says he will tell her himself; and the base's lamps come on beside the
+    /// wreck at night as the system promises to help him leave.
     /// </summary>
     public sealed partial class V2Cutscene
     {
-        /// <summary>The memory's nine shots, M1 to M9, under fifty seconds in all.</summary>
+        /// <summary>The memory's ten shots, M11 to M20, 61 seconds as written.</summary>
         public static readonly CutsceneShot[] Memory =
         {
-            new("M1", 5.5f, StageInvasion, CutsceneBeat.Say(V2Campaign.Line.C06, .6f)),
-            new("M2", 5f, StageConscription, CutsceneBeat.Say(V2Campaign.Line.C07, .5f)),
-            new("M3", 5f, StageGrandmother, CutsceneBeat.Say(V2Campaign.Line.C08, .6f)),
-            new("M4", 5f, StageCabin, CutsceneBeat.Say(V2Campaign.Line.C01, .4f)),
-            new("M5", 5.5f, StageWormhole, CutsceneBeat.Sound(CampaignSfx.WormholeTurbulence, 0f), CutsceneBeat.Say(V2Campaign.Line.C02, .4f)),
-            new("M6", 5f, StageFall, CutsceneBeat.Sound(CampaignSfx.ShipCrash, 1f), CutsceneBeat.Say(V2Campaign.Line.C09, .8f)),
-            new("M7", 5.5f, StageAlone, CutsceneBeat.Say(V2Campaign.Line.C03, .4f)),
-            new("M8", 6.5f, StageDeploy, CutsceneBeat.Sound(CampaignSfx.BaseDeploy, 0f), CutsceneBeat.Say(V2Campaign.Line.C04, .3f)),
-            new("M9", 5.5f, StageNightBase, CutsceneBeat.Say(V2Campaign.Line.C05, 1.8f)),
+            new("M11", 7f, CutsceneTime.Present, CutsceneCut.Black, Move(Crop(.5f, .5f, 1f), Crop(.46f, .48f, .78f)), StageRecord,
+                CutsceneBeat.Sound(CampaignSfx.RecordChime, 0f), CutsceneBeat.Say(V2Campaign.Line.C10, .5f), CutsceneBeat.Say(V2Campaign.Line.C11, 3.8f),
+                CutsceneBeat.Sound(CampaignSfx.MemoryCgTransition, 6.2f), CutsceneBeat.WhiteOut(.8f, 6.2f)),
+            new("M12", 4f, CutsceneTime.Memory, CutsceneCut.Hard, Move(Crop(.5f, .5f, 1f), Crop(.5f, .48f, .9f)), StageInvasion,
+                CutsceneBeat.Sound(CampaignSfx.DistantInvasion, 0f), CutsceneBeat.Say(V2Campaign.Line.C12, .7f)),
+            new("M13", 7f, CutsceneTime.Memory, CutsceneCut.Dissolve, Move(Crop(.5f, .52f, .95f), Crop(.5f, .48f, .8f)), StageConscription,
+                CutsceneBeat.Sound(CampaignSfx.HallMarch, 0f), CutsceneBeat.Say(V2Campaign.Line.C13, .4f)),
+            new("M14", 6f, CutsceneTime.Memory, CutsceneCut.Dissolve, Hold(Crop(.5f, .5f, .92f)), StageWormhole,
+                CutsceneBeat.Sound(CampaignSfx.WormholeTurbulence, 0f), CutsceneBeat.Say(V2Campaign.Line.C14, .5f)),
+            new("M15", 3.5f, CutsceneTime.Memory, CutsceneCut.Hard, Move(Crop(.5f, .4f, .85f), Crop(.5f, .6f, .85f)), StageFall,
+                CutsceneBeat.Sound(CampaignSfx.ShipCrash, .3f), CutsceneBeat.Say(V2Campaign.Line.C15, .4f), CutsceneBeat.CutToBlack(3.2f)),
+            new("M16", 6f, CutsceneTime.Memory, CutsceneCut.Black, Move(Crop(.5f, .55f, .8f), Crop(.5f, .5f, 1f)), StageAlone,
+                CutsceneBeat.Sound(CampaignSfx.DesertWind, 0f), CutsceneBeat.Say(V2Campaign.Line.C16, .7f)),
+            new("M17", 5.5f, CutsceneTime.Memory, CutsceneCut.Dissolve, Move(Crop(.42f, .5f, .85f), Crop(.58f, .5f, .85f)), StageDeploy,
+                CutsceneBeat.Sound(CampaignSfx.BaseDeploy, 0f), CutsceneBeat.Say(V2Campaign.Line.C17, .5f)),
+            new("M18", 7.5f, CutsceneTime.Present, CutsceneCut.Hard, Move(Crop(.5f, .5f, 1f), Crop(.5f, .5f, .92f)), StageRecordCloseUp,
+                CutsceneBeat.Say(V2Campaign.Line.C18, .4f)),
+            new("M19", 8.5f, CutsceneTime.Memory, CutsceneCut.Dissolve, Keys((0f, Crop(.5f, .48f, .96f)), (4f, Crop(.51f, .42f, .84f)), (8.5f, Crop(.52f, .32f, .64f))),
+                StageGrandmother, CutsceneBeat.Sound(CampaignSfx.MorningStreet, 0f), CutsceneBeat.Say(V2Campaign.Line.C19, .5f), CutsceneBeat.Say(V2Campaign.Line.C20, 4f)),
+            new("M20", 6f, CutsceneTime.Present, CutsceneCut.Black, Move(Crop(.5f, .55f, .8f), Crop(.5f, .5f, 1f)), StageNightBase,
+                CutsceneBeat.Say(V2Campaign.Line.C21, .5f), CutsceneBeat.Sound(CampaignSfx.LightOn, .6f), CutsceneBeat.Sound(CampaignSfx.LightOn, 1.4f),
+                CutsceneBeat.Sound(CampaignSfx.LightOn, 2.2f), CutsceneBeat.Sound(CampaignSfx.LightOn, 3f)),
         };
 
         static readonly Color CitySky = new(.07f, .09f, .18f), CityGround = new(.11f, .11f, .13f), TowerWhite = new(.84f, .84f, .8f), TowerGrey = new(.68f, .7f, .74f);
@@ -32,11 +46,60 @@ namespace AnomalyArena
         static readonly Color MorningSky = new(.8f, .81f, .84f), Pavement = new(.52f, .5f, .47f), Street = new(.6f, .61f, .64f);
         static readonly Color HouseWall = new(.74f, .75f, .77f), HouseRoof = new(.6f, .61f, .64f), Doorway = new(.08f, .08f, .1f), Wood = new(.5f, .42f, .34f);
         static readonly Color Grandmother = new(.8f, .8f, .84f), KitBag = new(.33f, .34f, .38f);
-        static readonly Color CabinSky = new(.015f, .02f, .05f), Locker = new(.86f, .86f, .82f), PaleStar = new(.65f, .8f, 1f);
+        // The record lamp while it waits for Felix to speak.
+        static readonly Color LampWaiting = new(.05f, .24f, .3f);
         static readonly Color WormholeSky = new(.02f, .01f, .035f), FrameDark = new(.3f, .08f, .5f), FrameBright = new(.6f, .3f, .95f), Turbulence = new(.8f, .7f, 1f);
         static readonly Color NightGround = new(.1f, .115f, .16f), NightTint = new(.09f, .11f, .17f), LampDim = new(.3f, .28f, .22f);
 
-        // ───── M1: the alien invasion of a human city at night, far and high ─────
+        // ───── M11 and M18: the base's control room, where Felix gives his survivor's record ─────
+
+        /// <summary>The control room at dusk: slate walls with an open hatch in the far wall and the dusk desert and a corner of the wreck
+        /// beyond it, a dark console with the record lamp on its left end, and Felix behind the console, facing the camera.</summary>
+        static (WhiteboxLook felix, MeshRenderer lamp) RecordRoom(V2Cutscene s)
+        {
+            s.Sky(DuskSky);
+            s.Ground(SandDusk);
+            Wreck(s, new Vector3(4f, 0f, 24f), -120f);
+            s.Box(new Vector3(10f, .2f, 11.5f), new Vector3(0f, -.08f, -.75f), SlateFloor);
+            // The far wall at z = 5 with the hatch from x 1.2 to 3.2 and up to 2.8, a cyan strip down each side of it.
+            s.Box(new Vector3(6.2f, 3.6f, .3f), new Vector3(-1.9f, 1.8f, 5f), Slate);
+            s.Box(new Vector3(1.8f, 3.6f, .3f), new Vector3(4.1f, 1.8f, 5f), Slate);
+            s.Box(new Vector3(2f, .8f, .3f), new Vector3(2.2f, 3.2f, 5f), Slate);
+            s.Box(new Vector3(.08f, 2.8f, .1f), new Vector3(1.16f, 1.4f, 4.82f), Table("door"));
+            s.Box(new Vector3(.08f, 2.8f, .1f), new Vector3(3.24f, 1.4f, 4.82f), Table("door"));
+            s.Box(new Vector3(.3f, 3.6f, 11.5f), new Vector3(-5f, 1.8f, -.75f), Slate);
+            s.Box(new Vector3(.3f, 3.6f, 11.5f), new Vector3(5f, 1.8f, -.75f), Slate);
+            s.Box(new Vector3(10.3f, .3f, 11.8f), new Vector3(0f, 3.75f, -.75f), SlateCeiling);
+            s.Box(new Vector3(2.6f, 1f, .9f), new Vector3(-.8f, .5f, 1.2f), ConsoleGrey);
+            s.Box(new Vector3(1.6f, .03f, .5f), new Vector3(-.4f, 1.015f, 1.2f), ScreenBack);
+            var lamp = s.Box(Vector3.one * .16f, new Vector3(-1.7f, 1.08f, 1f), Table("door"));
+            var felix = s.Felix(new Vector3(-.6f, 0f, 2.3f), 180f);
+            s.LightFrom(150f);
+            return (felix, lamp);
+        }
+
+        /// <summary>M11: the base system opens the record. From the far side of the room the camera pushes in to Felix and the lamp,
+        /// which blinks once a second while the record waits and stays lit once he speaks (C11, 3.8 s into the shot).</summary>
+        static void StageRecord(V2Cutscene s)
+        {
+            var (felix, lamp) = RecordRoom(s);
+            s.Every(t => Paint(lamp, t >= 3.8f || Mathf.Repeat(t, 1f) < .5f ? Table("door") : LampWaiting));
+            s.CameraMove(new Vector3(2.5f, 2.6f, -5.5f), new Vector3(0f, 1.4f, 3f), new Vector3(-.9f, 1.7f, -.9f), new Vector3(-1f, 1.4f, 1.8f), 50f, 40f);
+            s.Subject(felix.transform, new Vector3(0f, 1.5f, 0f));
+        }
+
+        /// <summary>M18: back in the room, close on Felix in the right half of the picture with the lit lamp in the left foreground; he
+        /// listens and slowly lowers his head, leaning five degrees forward over the shot.</summary>
+        static void StageRecordCloseUp(V2Cutscene s)
+        {
+            var (felix, _) = RecordRoom(s);
+            float seconds = s.Seconds;
+            s.Every(t => felix.transform.localRotation = Quaternion.Euler(5f * Smooth(t / seconds), 180f, 0f));
+            s.CameraMove(new Vector3(-1.9f, 1.55f, -.6f), new Vector3(-1.15f, 1.35f, 1.9f), new Vector3(-1.78f, 1.53f, -.3f), new Vector3(-1.13f, 1.35f, 1.9f), 34f);
+            s.Subject(felix.transform, new Vector3(0f, 1.5f, 0f));
+        }
+
+        // ───── M12: the alien invasion of a human city at night, far and high ─────
 
         static void StageInvasion(V2Cutscene s)
         {
@@ -119,7 +182,7 @@ namespace AnomalyArena
             s.Subject(s.Node("City", new Vector3(0f, 15f, 100f)));
         }
 
-        // ───── M2: the great conscription, ranks of soldiers in a hall, ships along the walls ─────
+        // ───── M13: the great conscription, ranks of soldiers in a hall, ships along the walls ─────
 
         static void StageConscription(V2Cutscene s)
         {
@@ -176,7 +239,7 @@ namespace AnomalyArena
             s.Subject(s.Node("Ranks", new Vector3(0f, 1f, 80f)));
         }
 
-        // ───── M3: the grandmother sends Felix off at the door of their home ─────
+        // ───── M19: the grandmother sends Felix off at the door of their home ─────
 
         static void StageGrandmother(V2Cutscene s)
         {
@@ -203,7 +266,7 @@ namespace AnomalyArena
             const float height = 1.35f, herLean = 5f, hisLean = 2.5f;
             float gap = height * (Mathf.Sin(herLean * Mathf.Deg2Rad) + Mathf.Sin(hisLean * Mathf.Deg2Rad));
             var hisFeet = s.Node("Felix's feet", new Vector3(.35f, 0f, 0f));
-            var felix = s.Felix(new Vector3(.5f, 0f, 0f), -90f, hisFeet);
+            s.Felix(new Vector3(.5f, 0f, 0f), -90f, hisFeet);
             var herFeet = s.Node("Grandmother's feet", new Vector3(.35f - gap, 0f, 0f));
             var her = s.Node("Grandmother", new Vector3(-.375f, 0f, 0f), new Vector3(0f, 90f, 0f), herFeet);
             s.Box(new Vector3(.75f, height, .75f), new Vector3(0f, height * .5f, 0f), Grandmother, default, her);
@@ -216,72 +279,20 @@ namespace AnomalyArena
                 herFeet.localRotation = Quaternion.Euler(0f, 0f, -herLean * k);
                 hisFeet.localRotation = Quaternion.Euler(0f, 0f, hisLean * k);
             });
-            s.CameraMove(new Vector3(.2f, 1.9f, -9f), new Vector3(-.5f, 1f, 1f), new Vector3(.1f, 1.85f, -7.4f), new Vector3(-.45f, 1f, 1f), 30f);
-            s.Subject(felix.transform, new Vector3(0f, 1f, 0f));
-        }
-
-        // ───── M4: Felix in the ship's cabin, the galaxy beyond the window ─────
-
-        static void StageCabin(V2Cutscene s)
-        {
-            s.Sky(CabinSky);
-            s.Box(new Vector3(16f, .2f, 16f), new Vector3(0f, -.1f, 0f), SlateFloor);
-            // The window wall at z = 5, its opening from x -0.2 to 6.2 and y 0.9 to 4.1; lockers with orange strips on its left part.
-            s.Box(new Vector3(7.8f, 5f, .3f), new Vector3(-4.1f, 2.5f, 5f), Slate);
-            s.Box(new Vector3(1.6f, 5f, .3f), new Vector3(7f, 2.5f, 5f), Slate);
-            s.Box(new Vector3(6.4f, .9f, .3f), new Vector3(3f, .45f, 5f), Slate);
-            s.Box(new Vector3(6.4f, .9f, .3f), new Vector3(3f, 4.55f, 5f), Slate);
-            s.Box(new Vector3(.3f, 5f, 16f), new Vector3(-8f, 2.5f, -2f), Slate);
-            s.Box(new Vector3(.3f, 5f, 16f), new Vector3(7.8f, 2.5f, -2f), Slate);
-            s.Box(new Vector3(16.3f, .3f, 16f), new Vector3(0f, 5.15f, -2f), SlateCeiling);
-            for (int i = 0; i < 4; i++)
+            // A slow push on the two of them; from the fourth second the camera turns toward the table and the chair in the dark doorway
+            // behind her, keeping her in the picture.
+            Vector3 eyeFrom = new(.2f, 1.9f, -9f), eyePushed = new(.15f, 1.88f, -8.2f), eyeTo = new(-.6f, 1.8f, -6.5f);
+            Vector3 lookFrom = new(-.5f, 1f, 1f), lookTo = new(-3.2f, 1f, 5f);
+            float seconds = s.Seconds;
+            s.CameraPath(t =>
             {
-                float x = -6.6f + i * 1.25f;
-                s.Box(new Vector3(1f, 2.3f, .7f), new Vector3(x, 1.15f, 4.45f), Locker);
-                s.Box(new Vector3(.16f, 1.6f, .05f), new Vector3(x, 1.3f, 4.08f), Table("armament"));
-            }
-
-            // Space through the window: white square stars, and a galaxy straight through the opening from where the camera ends up.
-            Vector3 eye = new(.8f, 2.05f, -5.3f), opening = new(3f, 2.5f, 5f);
-            Vector3 through = (opening - eye).normalized;
-            var random = new System.Random(4);
-            var stars = new List<Matrix4x4>();
-            for (int i = 0; i < 70; i++)
-                stars.Add(Matrix4x4.TRS(eye + through * R(random, 110f, 150f) + new Vector3(R(random, -45f, 45f), R(random, -25f, 25f), 0f), Quaternion.identity,
-                    Vector3.one * .45f));
-            var drift = s.Node("Stars", Vector3.zero);
-            s.Batch(Prim.Box, stars, Color.white, "Stars", drift);
-            // A loose pinwheel of three arms of small white and pale-blue cubes, its disc tipped toward the window, turning slowly.
-            var galaxy = s.Node("Galaxy", eye + through * 80f, new Vector3(-62f, 10f, 0f));
-            var spin = s.Node("Spin", Vector3.zero, default, galaxy);
-            var whites = new List<Matrix4x4>();
-            var blues = new List<Matrix4x4>();
-            for (int i = 0; i < 260; i++)
-            {
-                float r = 1.5f + i / 260f * 16f + R(random, -1.2f, 1.2f);
-                float a = i % 3 * Mathf.PI * 2f / 3f + r * .3f + R(random, -.25f, .25f), size = R(random, .3f, .6f) * (1.3f - r / 24f);
-                var placement = Matrix4x4.TRS(new Vector3(Mathf.Cos(a) * r, R(random, -.3f, .3f), Mathf.Sin(a) * r),
-                    Quaternion.Euler(R(random, 0f, 90f), R(random, 0f, 90f), 0f), Vector3.one * size);
-                (random.NextDouble() < .5 ? whites : blues).Add(placement);
-            }
-
-            s.Batch(Prim.Box, whites, Color.white, "Galaxy", spin);
-            s.Batch(Prim.Box, blues, PaleStar, "Galaxy", spin);
-            s.Box(Vector3.one * 1.3f, Vector3.zero, Color.white, default, spin);
-            // Felix turns until his wedge points at the window, then tilts back a little as if looking up at the galaxy.
-            var felix = s.Felix(new Vector3(-1.6f, 0f, 1.4f), 5f);
-            s.Every(t =>
-            {
-                float yaw = 5f + 47f * Smooth(t / 3.2f), back = -7f * Smooth(Ramp(t, 3.2f, 1.3f));
-                felix.transform.localRotation = Quaternion.Euler(back, yaw, 0f);
-                spin.localRotation = Quaternion.Euler(0f, 4f * t, 0f);
-                drift.localPosition = new Vector3(-1.2f * t, .3f * t, 0f);
+                float push = Smooth(t / 4f), turn = Smooth(Ramp(t, 4f, seconds - 4f));
+                return new CameraPose(Vector3.Lerp(Vector3.Lerp(eyeFrom, eyePushed, push), eyeTo, turn), Vector3.Lerp(lookFrom, lookTo, turn), 30f);
             });
-            s.CameraMove(new Vector3(.4f, 2f, -6.6f), new Vector3(2f, 2.15f, 5f), eye, new Vector3(2.2f, 2.2f, 5f), 50f);
-            s.Subject(felix.transform, new Vector3(0f, 1f, 0f));
+            s.Subject(her, new Vector3(0f, .8f, 0f));
         }
 
-        // ───── M5: the fleet in the wormhole, torn by alien turbulence ─────
+        // ───── M14: the fleet in the wormhole, torn by alien turbulence ─────
 
         static void StageWormhole(V2Cutscene s)
         {
@@ -373,7 +384,7 @@ namespace AnomalyArena
             s.Subject(near.transform, new Vector3(0f, 1.5f, 0f));
         }
 
-        // ───── M6: the ship burning, falling toward the planet, alone ─────
+        // ───── M15: the ship burning, falling toward the planet, alone ─────
 
         static void StageFall(V2Cutscene s)
         {
@@ -434,7 +445,7 @@ namespace AnomalyArena
         /// <summary>Straight ahead (+z), pitched down by degrees.</summary>
         static Vector3 Downward(float degrees) => new(0f, -Mathf.Sin(degrees * Mathf.Deg2Rad), Mathf.Cos(degrees * Mathf.Deg2Rad));
 
-        // ───── M7: Felix alone by the wreck at dusk ─────
+        // ───── M16: Felix alone by the wreck at dusk ─────
 
         static void StageAlone(V2Cutscene s)
         {
@@ -462,8 +473,9 @@ namespace AnomalyArena
             var smoke = new Spout();
             s.Every(t =>
             {
-                // He turns slowly from left to right, searching, past the sun.
-                float yaw = -42f + 22f * Smooth(t / 2.2f) + 28f * Smooth(Ramp(t, 3f, 2f));
+                // He turns slowly from left to right, searching, past the sun: two slow turns over the first five seconds, then he stands
+                // still.
+                float yaw = -42f + 22f * Smooth(t / 2.6f) + 28f * Smooth(Ramp(t, 2.9f, 2.1f));
                 felix.transform.localRotation = Quaternion.Euler(0f, yaw, 0f);
                 for (int i = 0; i < prints; i++)
                 {
@@ -478,7 +490,7 @@ namespace AnomalyArena
             s.Subject(felix.transform, new Vector3(0f, 1f, 0f));
         }
 
-        // ───── M8: the ship builds the base by itself with its arms ─────
+        // ───── M17: the ship builds the base by itself with its arms ─────
 
         static void StageDeploy(V2Cutscene s)
         {
@@ -504,7 +516,8 @@ namespace AnomalyArena
             var weld = new Spout();
             s.Every(t =>
             {
-                float k1 = Smooth((t - .6f) / 2.8f), k2 = Smooth((t - 1.6f) / 3f), k3 = Smooth((t - 2.6f) / 3f);
+                // The roof, the lamp and the box come to rest one after another, the last by 4.8 s.
+                float k1 = Smooth((t - .5f) / 2.4f), k2 = Smooth((t - 1.4f) / 2.55f), k3 = Smooth((t - 2.2f) / 2.6f);
                 roof.localPosition = baseAt + new Vector3(0f, 4.3f + (1f - k1) * 3.4f, 0f);
                 lamp.localPosition = Vector3.Lerp(lampFrom, lampTo, k2) + Vector3.up * (Mathf.Sin(k2 * Mathf.PI) * 1.2f);
                 float swing = (-70f + 70f * k3) * Mathf.Deg2Rad;
@@ -580,7 +593,7 @@ namespace AnomalyArena
                 s.Emit(at + Jitter(.3f, .2f, .3f), new Vector3(J(-3f, 3f), J(1.5f, 4.5f), J(-3f, 3f)), Table("fire"), J(.15f, .3f), J(.4f, .8f), 9f);
         }
 
-        // ───── M9: night; the base's lamps come on beside the wreck ─────
+        // ───── M20: night; the base's lamps come on beside the wreck ─────
 
         static void StageNightBase(V2Cutscene s)
         {
@@ -621,7 +634,7 @@ namespace AnomalyArena
                 float on = 0f;
                 for (int i = 0; i < lamps.Length; i++)
                 {
-                    float k = Ramp(t, .8f + i * .9f, .25f);
+                    float k = Ramp(t, .6f + i * .8f, .25f); // at 0.6, 1.4, 2.2 and 3.0 s, with the shot's four LightOn sounds
                     on += k;
                     bool bright = k >= 1f || k > 0f && Mathf.Repeat(t * 14f, 1f) < .5f; // a flicker as it comes on
                     lamps[i].SetColour("lamp", bright ? Table("lamp") : LampDim);

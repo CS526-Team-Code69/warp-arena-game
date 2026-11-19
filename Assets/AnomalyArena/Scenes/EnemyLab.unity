@@ -207809,7 +207809,7 @@ MonoBehaviour:
   worldGain: 0.65
   lifecycleGain: 0.65
   ambienceGain: 0.14
-  musicGain: 0.2
+  musicGain: 0.15
   masterGain: 1
   audibleRange: 26
   backgroundFadeSeconds: 0.3

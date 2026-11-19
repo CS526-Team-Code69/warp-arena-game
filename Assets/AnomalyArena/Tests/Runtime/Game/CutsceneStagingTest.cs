@@ -7,10 +7,12 @@ using UnityEngine;
 namespace AnomalyArena
 {
     /// <summary>
-    /// The story cutscenes staged in whitebox (V2Cutscene): the shot lists follow the storyboard (M1 to M9, L1 to L5, E1 to E3, in order,
-    /// each of four to seven seconds, the memory under fifty in all, every beat inside its shot); every shot builds, plays to its end and
-    /// keeps its main figure in the picture at its first and its last frame, with everything it made on the stage's layer, the only one
-    /// the cutscene camera draws; and once the cutscene is over nothing of the stage is left to draw and its picture is let go.
+    /// The story cutscenes staged in whitebox (V2Cutscene): the shot lists follow the script (M11 to M20, L11 to L15, E11 to E14, in
+    /// order, each of 3.5 to 10 seconds, 61, 38.5 and 30.5 seconds in all, the memory's flashbacks marked as memories, every beat inside
+    /// its shot, and the 24 lines C10 to E08 said once each in their order); a line waits for the one before it and a shot outlasts its
+    /// last line (V2Campaign.Schedule); every shot builds, plays to its end and keeps its main figure in the picture at its first and its
+    /// last frame, with everything it made on the stage's layer, the only one the cutscene camera draws; and once the cutscene is over
+    /// nothing of the stage is left to draw and its picture is let go.
     /// </summary>
     [TestFixture]
     public class CutsceneStagingTest
@@ -30,18 +32,48 @@ namespace AnomalyArena
         }
 
         [Test]
-        public void ShotLists_FollowTheStoryboard_TheMemoryUnderFiftySeconds()
+        public void ShotLists_FollowTheScript_SixtyOneSecondsOfMemory()
         {
-            Assert.That(V2Cutscene.Memory.Select(shot => shot.id), Is.EqualTo(new[] { "M1", "M2", "M3", "M4", "M5", "M6", "M7", "M8", "M9" }));
-            Assert.That(V2Cutscene.Ignition.Select(shot => shot.id), Is.EqualTo(new[] { "L1", "L2", "L3", "L4", "L5" }));
-            Assert.That(V2Cutscene.Ending.Select(shot => shot.id), Is.EqualTo(new[] { "E1", "E2", "E3" }));
-            Assert.That(V2Cutscene.Memory.Sum(shot => shot.seconds), Is.LessThanOrEqualTo(50f), "the memory lasts under fifty seconds");
+            Assert.That(V2Cutscene.Memory.Select(shot => shot.id), Is.EqualTo(new[] { "M11", "M12", "M13", "M14", "M15", "M16", "M17", "M18", "M19", "M20" }));
+            Assert.That(V2Cutscene.Ignition.Select(shot => shot.id), Is.EqualTo(new[] { "L11", "L12", "L13", "L14", "L15" }));
+            Assert.That(V2Cutscene.Ending.Select(shot => shot.id), Is.EqualTo(new[] { "E11", "E12", "E13", "E14" }));
+            Assert.That(V2Cutscene.Memory.Sum(shot => shot.seconds), Is.EqualTo(61f).Within(.01f), "the memory lasts 61 seconds as written");
+            Assert.That(V2Cutscene.Ignition.Sum(shot => shot.seconds), Is.EqualTo(38.5f).Within(.01f), "the failed ignition lasts 38.5 seconds");
+            Assert.That(V2Cutscene.Ending.Sum(shot => shot.seconds), Is.EqualTo(30.5f).Within(.01f), "the ending lasts 30.5 seconds");
+            Assert.That(AllShots.Where(shot => shot.time == CutsceneTime.Memory).Select(shot => shot.id),
+                Is.EqualTo(new[] { "M12", "M13", "M14", "M15", "M16", "M17", "M19" }), "the flashbacks are memories, the rest the present");
+            var lines = AllShots.SelectMany(shot => shot.beats).Where(beat => beat.line.HasValue).Select(beat => beat.line.Value);
+            var script = Enumerable.Range((int)V2Campaign.Line.C10, 24).Select(i => (V2Campaign.Line)i);
+            Assert.That(lines, Is.EqualTo(script), "the 24 lines C10 to E08, each once, in their order");
             foreach (var shot in AllShots)
             {
-                Assert.That(shot.seconds, Is.InRange(4f, 7f), $"{shot.id} lasts four to seven seconds");
+                Assert.That(shot.seconds, Is.InRange(3.5f, 10f), $"{shot.id} lasts 3.5 to 10 seconds");
                 Assert.That(shot.stage, Is.Not.Null, $"{shot.id} is staged");
                 foreach (var beat in shot.beats) Assert.That(beat.at, Is.InRange(0f, shot.seconds), $"{shot.id}: every beat falls inside the shot");
             }
+        }
+
+        [Test]
+        public void Schedule_ALineWaitsForTheOneBefore_TheShotOutlastsItsLastLine_ItsClosingMovesWithIt()
+        {
+            var beats = new List<(float at, CutsceneBeat beat)>();
+            var ignition = V2Cutscene.Ignition[0]; // L11: F06 at 0.4 s, F07 at 3.8 s, the engine's sound at 0
+            Assert.That(V2Campaign.Schedule(ignition, _ => 2f, beats), Is.EqualTo(7.5f), "short lines: the shot keeps its seconds");
+            Assert.That(beats.Where(b => b.beat.line.HasValue).Select(b => b.at), Is.EqualTo(new[] { .4f, 3.8f }), "short lines keep their moments");
+
+            float length = V2Campaign.Schedule(ignition, _ => 5f, beats);
+            float second = .4f + 5f + V2Campaign.CutsceneLineGap;
+            Assert.That(beats.Where(b => b.beat.line.HasValue).Select(b => b.at), Is.EqualTo(new[] { .4f, second }).Within(1e-4f), "F07 waits for F06");
+            Assert.That(length, Is.EqualTo(second + 5f + V2Campaign.CutsceneLineTail).Within(1e-4f), "the shot lasts until F07 has finished");
+            Assert.That(beats.First(b => b.beat.sound.HasValue).at, Is.EqualTo(0f), "a sound keeps its moment");
+
+            var record = V2Cutscene.Memory[0]; // M11: closes on a white-out at 6.2 s with the memory's sound
+            length = V2Campaign.Schedule(record, _ => 5f, beats);
+            float grown = length - record.seconds;
+            Assert.That(grown, Is.GreaterThan(0f), "two long lines make the shot longer");
+            Assert.That(beats.First(b => b.beat.whiteOut > 0f).at, Is.EqualTo(6.2f + grown).Within(1e-4f), "the white-out still closes the shot");
+            Assert.That(beats.First(b => b.beat.sound == CampaignSfx.MemoryCgTransition).at, Is.EqualTo(6.2f + grown).Within(1e-4f), "and its sound with it");
+            Assert.That(beats.First(b => b.beat.sound == CampaignSfx.RecordChime).at, Is.EqualTo(0f), "the opening sound keeps its moment");
         }
 
         [TestCaseSource(nameof(ShotIds)), CreateScene]
@@ -66,7 +98,7 @@ namespace AnomalyArena
         public void End_NothingOfTheStageIsLeftToDraw_ThePictureIsLetGo()
         {
             stage = V2Cutscene.Create("CutsceneStagingTest");
-            stage.Show(V2Cutscene.Memory[0]);
+            stage.Show(AllShots.First(shot => shot.id == "M12"));
             stage.Advance(1f);
             Assume.That(stage.LiveCubes, Is.GreaterThan(0), "the burning towers have cubes in the air");
 
