@@ -112,6 +112,8 @@ namespace AnomalyArena
             TickSummonWarning(dt); // the red crosses of a summon turn into its summons
             TickNashPhase(b);
             TickVoidPillars(dt, player);
+            // A phase change holds everything else (Enemy.PhaseShift.cs); the pillars and the summons' red crosses run on.
+            if (TickPhaseShift(dt, player)) return true;
             TickNashSequences(dt, player, b);
             if (LivingProphetSummons() > 0 || summonPoints.Count > 0) nashSummonRest = b.nashSummonCooldown;
             else if (nashSummonRest > 0f) nashSummonRest -= dt;
@@ -144,7 +146,8 @@ namespace AnomalyArena
         {
             float share = maxHp > 0f ? Hp / maxHp : 1f;
             int next = share < b.nashPhase3HpShare ? 3 : share < b.nashPhase2HpShare ? 2 : 1;
-            if (next > bossPhase) bossPhase = next;
+            // A hit stops on the line and begins the change there (Enemy.PhaseShift.cs); this catches HP that went below one any other way.
+            if (next > bossPhase) BeginPhaseShift(next);
         }
 
         /// <summary>Ages the pillars; a standing pillar kills a player whose centre is inside it (Kill spares the enemy lab's undying player

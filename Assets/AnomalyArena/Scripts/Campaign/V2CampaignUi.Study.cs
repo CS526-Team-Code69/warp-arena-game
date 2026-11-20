@@ -422,8 +422,8 @@ namespace AnomalyArena
             if (Time.unscaledTime >= studyRefreshAt) { studyRefreshAt = Time.unscaledTime + .25f; RefreshStudyTexts(); }
             if (V5HudKit.On) TickStudy5();
             if (studyIllustrated != Art.Enabled) RebuildStudy(); // the tiles' icons follow the art switch (2026-11-10)
-            // The press that opened the window does not act in it.
-            if (Time.unscaledTime - studyOpenedAt < .15f) return;
+            // The press that opened the window does not act in it, and while the base tour runs no key or pad button does.
+            if (Time.unscaledTime - studyOpenedAt < .15f || BaseTourRunning) return;
             var keys = Keyboard.current;
             var pad = Gamepad.current;
             if (keys != null && keys.escapeKey.wasPressedThisFrame || pad != null && pad.buttonEast.wasPressedThisFrame) { CloseStudy(); return; }

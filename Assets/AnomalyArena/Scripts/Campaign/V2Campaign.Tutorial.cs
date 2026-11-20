@@ -56,10 +56,26 @@ namespace AnomalyArena
             tutOre = tutSecondOre = null; tutFirstCrate = tutSecondCrate = null;
             PlayerController.InputGate = TutorialLets;
             if (!crateLoopRunning) { crateLoopRunning = true; StartCoroutine(CrateLoop()); }
-            // Crash debris at the start: a few dark scorched slabs (whitebox stand-in for the crash site props).
+            // Crash debris at the start: pieces of the wreck while the art is on (CampaignArt.crashDebrisPrefabs, taken in turn), else a
+            // few dark scorched slabs.
+            var debris = art && Art.Enabled && art.crashDebrisPrefabs != null && art.crashDebrisPrefabs.Length > 0 ? art.crashDebrisPrefabs : null;
             for (int i = 0; i < 5; i++)
-                Box(worldRoot, "CrashDebris", CrashSite + new Vector3(Random.Range(-4f, 3f), .2f, Random.Range(-5f, 5f)), new Vector3(Random.Range(.8f, 2f), .4f, Random.Range(.6f, 1.6f)), new Color(.18f, .16f, .15f))
+            {
+                Vector3 at = CrashSite + new Vector3(Random.Range(-4f, 3f), .2f, Random.Range(-5f, 5f));
+                var piece = debris != null ? debris[i % debris.Length] : null;
+                if (piece)
+                {
+                    var holder = new GameObject("CrashDebris").transform;
+                    holder.SetParent(worldRoot, false);
+                    holder.SetPositionAndRotation(new Vector3(at.x, 0f, at.z), Quaternion.Euler(0f, Random.Range(0f, 360f), 0f));
+                    var model = Instantiate(piece, holder);
+                    StripColliders(model);
+                    FitFootprint(model.transform, Random.Range(1.4f, 2.4f));
+                    continue;
+                }
+                Box(worldRoot, "CrashDebris", at, new Vector3(Random.Range(.8f, 2f), .4f, Random.Range(.6f, 1.6f)), new Color(.18f, .16f, .15f))
                     .transform.rotation = Quaternion.Euler(Random.Range(-10f, 10f), Random.Range(0f, 360f), Random.Range(-10f, 10f));
+            }
             Say(Line.T01);
             TeachMove();
         }
@@ -505,7 +521,8 @@ namespace AnomalyArena
 
         // ───── The void crystals by the way home ─────
 
-        /// <summary>Purple-black crystals of void matter (whitebox look "voidore"): they cannot be mined; E only says so.</summary>
+        /// <summary>Purple-black crystals of void matter (CampaignArt.voidCrystalPrefab while the art is on, else the whitebox look
+        /// "voidore"): they cannot be mined; E only says so.</summary>
         void PlaceVoidCrystals(Vector3 at)
         {
             voidCrystalsAt = at;
@@ -517,7 +534,13 @@ namespace AnomalyArena
                 root.position = at + (i == 0 ? Vector3.zero : new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * 1.2f);
                 root.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
                 root.localScale = Vector3.one * (i == 0 ? 1f : .7f);
-                Whitebox.Build("voidore", root);
+                if (art && Art.Enabled && art.voidCrystalPrefab)
+                {
+                    var model = Instantiate(art.voidCrystalPrefab, root);
+                    StripColliders(model);
+                    FitHeight(model.transform, 1.5f * root.localScale.y);
+                }
+                else Whitebox.Build("voidore", root);
                 voidCrystals.Add(root);
             }
         }
@@ -643,6 +666,9 @@ namespace AnomalyArena
         }
 
         // ───── For automated checks ─────
+
+        /// <summary>Where the void crystals stand; null before the way home has placed them.</summary>
+        public Vector3? VoidCrystalsPlaced => voidCrystals.Count > 0 ? voidCrystalsAt : (Vector3?)null;
 
         /// <summary>Passes the step being taught when an automated check cannot give its input (a walk, shots, a sprint).</summary>
         public void DebugPassTutorialStep()

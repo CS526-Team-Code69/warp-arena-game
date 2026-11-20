@@ -828,7 +828,9 @@ namespace AnomalyArena
             foreach (var screen in screens)
             {
                 // The mid-wave level-up pick reuses the Draft screen.
-                bool active = (screen.state == s.state || screen.state == ArenaUiState.Draft && s.state == ArenaUiState.LevelUp) && !(s.buildWalking && screen.state is ArenaUiState.Armory or ArenaUiState.Draft or ArenaUiState.Ready);
+                bool active = (screen.state == s.state || screen.state == ArenaUiState.Draft && s.state == ArenaUiState.LevelUp) && !(s.buildWalking && screen.state is ArenaUiState.Armory or ArenaUiState.Draft or ArenaUiState.Ready)
+                    // The character screen holds the run in the pause's phase and draws its own page: the pause menu stays hidden meanwhile.
+                    && !(screen.state == ArenaUiState.Paused && GameManager.Instance && GameManager.Instance.CharacterScreenHolds);
                 if (screen.gameObject.activeSelf != active) screen.gameObject.SetActive(active);
                 if (active) RenderScreen(screen, s);
             }

@@ -70,6 +70,7 @@ public static class V2CampaignCheck
         shipTabOpened = sideBroken = darkNodeShot = nightDeathDone = deathWalletCheck = holeNoted = false; diedAtNight = -1;
         shopDay = grantDay = -1; boughtResearch = boughtNewWeapons = boughtUpgrades = 0;
         holeFailDay = -1; studyStage = voidStudyStage = 0; holeFailNoted = holePassNoted = giftNoted = holeFeedNoted = false; holeAngle = 0f; holdKey = null; studyBought.Clear();
+        tourShot = 0;
         startedAt = stepSince = lastAct = Time.realtimeSinceStartup;
         EditorApplication.LockReloadAssemblies();
         EditorApplication.update -= Tick; EditorApplication.update += Tick;
@@ -94,6 +95,54 @@ public static class V2CampaignCheck
         if (campaign) { campaign.debugHoldE = false; }
         EditorApplication.UnlockReloadAssemblies();
         Note($"END {why} after {Time.realtimeSinceStartup - startedAt:0}s; script reloads released");
+    }
+
+    static int tourShot;
+
+    /// <summary>The base tour's first steps, each shot once its box has been up a while, then done as a player would: Central
+    /// Control's zone clicked (its tab shows already, so only the click passes the step), the Armament Bay's tab shown, the bay built.
+    /// The capture is written at the end of the frame, so each step's action waits for the next frame after its shot. True once done,
+    /// or when a step does not come in time (noted).</summary>
+    static bool TourShots()
+    {
+        var ui = campaign.Ui;
+        var now = ui.BaseTourStepNow;
+        switch (tourShot)
+        {
+            case 0:
+                if (now == BaseTourStep.Control && Held("tour-control", 2f)) { Shot("06t1-tour-control"); tourShot = 1; }
+                else if (InStep > 25f) { Note($"PROBLEM: the base tour's first step never showed (step {now})"); tourShot = 9; }
+                return false;
+            case 1:
+                var control = ui.transform.Find("BasePanel/Page5/ZoneControl");
+                var button = control ? control.GetComponentInChildren<UnityEngine.UI.Button>(true) : null;
+                if (button) button.onClick.Invoke();
+                else Note("PROBLEM: no button on BasePanel/Page5/ZoneControl for the tour's first step");
+                tourShot = 2;
+                return false;
+            case 2:
+                if (now == BaseTourStep.ArmamentZone && Held("tour-armament", 2f)) { Shot("06t2-tour-armament"); tourShot = 3; }
+                else if (InStep > 40f) { Note($"PROBLEM: the tour's Armament Bay step never showed (step {now})"); tourShot = 9; }
+                return false;
+            case 3:
+                ui.ShowTab(CampaignRoom.Armament);
+                tourShot = 4;
+                return false;
+            case 4:
+                if (now == BaseTourStep.BuildArmament && Held("tour-build", 2f)) { Shot("06t3-tour-build"); tourShot = 5; }
+                else if (InStep > 55f) { Note($"PROBLEM: the tour's build step never showed (step {now})"); tourShot = 9; }
+                return false;
+            case 5:
+                campaign.TryUpgradeRoom(CampaignRoom.Armament);
+                tourShot = 6;
+                return false;
+            case 6:
+                if (now == BaseTourStep.OpenStudy && Held("tour-study", 2f)) { Shot("06t4-tour-study"); Note("base tour: four steps shot"); tourShot = 9; }
+                else if (InStep > 70f) { Note($"PROBLEM: the tour's study step never showed (step {now})"); tourShot = 9; }
+                return false;
+            default:
+                return true;
+        }
     }
 
     static void Go(int next, float delay = 0f) { step = next; wait = Time.realtimeSinceStartup + delay; stepSince = Time.realtimeSinceStartup; shotTaken = false; }
@@ -308,6 +357,13 @@ public static class V2CampaignCheck
                     return;
                 }
                 campaign.debugHoldE = false;
+                // The void crystals by the way home (placed after the first fight): one look at them from close by.
+                if (campaign.VoidCrystalsPlaced is Vector3 crystals && !shots.Contains("04v-void-crystals"))
+                {
+                    if (Query.Flat(gm.player.Position - crystals).magnitude > 4.5f) Teleport(gm, crystals + new Vector3(-3f, 0f, -2.5f));
+                    if (Held("tut-crystals", 1.2f)) Shot("04v-void-crystals");
+                    return;
+                }
                 if (campaign.ObjectivePoint is Vector3 goal)
                 {
                     Vector3 from = gm.player.Position;
@@ -326,6 +382,8 @@ public static class V2CampaignCheck
                 if (campaign.Stage == CampaignStage.Story) { if (InStep > 2f) Shot("05-arrival"); return; }
                 if (campaign.Stage != CampaignStage.Base) { if (InStep > 25f) End("no base visit after the tutorial"); return; }
                 Shot("06-base-first");
+                // The base tour of Day 0's arrival: its first steps are shot, then the check makes its own purchases as before.
+                if (!TourShots()) return;
                 if (InStep < 3f) return;
                 Note($"first visit wallet {Wallet}: armament {campaign.TryUpgradeRoom(CampaignRoom.Armament)}, energy lab {campaign.TryUpgradeRoom(CampaignRoom.Energy)} -> {Wallet}; level {gm.progression.Level}, xp {gm.progression.Xp:0.0}/{gm.progression.XpRequired}");
                 Go(5, 1f);

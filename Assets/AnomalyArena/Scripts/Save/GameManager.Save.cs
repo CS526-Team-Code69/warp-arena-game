@@ -127,6 +127,7 @@ namespace AnomalyArena
             run.statCardPity = p.StatCardPity;
             run.draftWave = p.DraftWave;
             run.bankedPicks = p.BankedPickKinds;
+            run.cardsTaken = p.TakenCardsCopy();
             run.skills = new int[skills.Slots.Length];
             run.skillLevels = new int[skills.Slots.Length];
             for (int i = 0; i < skills.Slots.Length; i++)
@@ -178,6 +179,7 @@ namespace AnomalyArena
             skills.RestoreCardPity(run.skillCardPity);
             progression.Restore(run.level, run.xp, run.stats, run.energy, run.energyUnlocked, run.voidEnergy, run.voidBadge, run.statCardPity,
                 run.draftWave, run.bankedPicks);
+            progression.RestoreTaken(run.cardsTaken);
             runWeapons.RestoreSlots(Weapons(run.hand), Weapons(run.auto), run.activeHand);
             ApplyStats();
             player.RestoreHp(run.hp > 0f ? run.hp : player.maxHp);

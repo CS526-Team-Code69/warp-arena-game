@@ -54,6 +54,26 @@ namespace AnomalyArena
         /// <summary>A card pick was used up (V2 day campaign: the room that sold it is done with it).</summary>
         public event Action DraftConsumed;
 
+        /// <summary>The upgrade cards taken in this run, in the order taken: the character screen lists them, a save keeps them.</summary>
+        public IReadOnlyList<TakenCard> TakenCards => taken;
+        readonly List<TakenCard> taken = new();
+
+        /// <summary>A card taken without ApplyCard (the void trial's greater reward, which GameManager applies itself) joins the list.</summary>
+        public void NoteTaken(DraftCard card)
+        {
+            if (card != null) taken.Add(TakenCard.Of(card));
+        }
+
+        /// <summary>The cards taken, as a save writes them.</summary>
+        public TakenCard[] TakenCardsCopy() => taken.ToArray();
+
+        /// <summary>A continued save's cards taken.</summary>
+        public void RestoreTaken(TakenCard[] cards)
+        {
+            taken.Clear();
+            if (cards != null) taken.AddRange(cards);
+        }
+
         /// <summary>V2 day campaign: one card pick bought at the base; it waits with the other banked picks for the build phase.</summary>
         public void BankPick()
         {
@@ -74,12 +94,22 @@ namespace AnomalyArena
             return true;
         }
 
+        /// <summary>The player's stats as a run starts: the rules' starting stats with the rules' energy maximum (the character screen
+        /// measures its bonuses from them).</summary>
+        public RunStats StartingStats()
+        {
+            var start = Rules.startingStats.Copy();
+            start.maxEnergy = Rules.energyMax;
+            return start;
+        }
+
         public void ResetRun()
         {
-            Stats = Rules.startingStats.Copy(); Stats.maxEnergy = Rules.energyMax;
+            Stats = StartingStats();
             Level = 1; Xp = 0f; Energy = 0f; EnergyUnlocked = false; VoidEnergy = false; VoidBadge = false;
             LastLevelHpGain = LastLevelEnergyGain = 0f;
             MayOfferPenetration = MustOfferPenetration = false; regenerationClock = 0f; statsWithoutHighTier = 0; draftWave = 0; drafts.Clear();
+            taken.Clear();
             CurrentCards = Array.Empty<DraftCard>(); RerollsRemaining = 0;
             OnChanged();
         }
@@ -262,7 +292,10 @@ namespace AnomalyArena
 
         public bool ApplyCard(int index, int replacementIndex = -1)
         {
-            if (index < 0 || index >= CurrentCards.Length || !CurrentCards[index].Apply(replacementIndex)) return false;
+            if (index < 0 || index >= CurrentCards.Length) return false;
+            var card = CurrentCards[index];
+            if (!card.Apply(replacementIndex)) return false;
+            NoteTaken(card);
             ConsumeDraft(); return true;
         }
 

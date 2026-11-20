@@ -30,6 +30,10 @@ namespace AnomalyArena
         public bool waveTimeExpired;
         public int waveBatch, waveLiving, wavePending;
         public float bossHp, bossMaxHp, bossShield;
+        /// <summary>The boss's phase, the shares of its max HP where its second and third phases begin (0: no such phase), and how far
+        /// its change of phase has run (0 while none runs, above 0 from its first moment).</summary>
+        public float bossLine2, bossLine3, bossShift01;
+        public int bossPhase;
         public int level = 1, maxLevel = 12, wave = 1, maxWaves = 14, kills, bankedDrafts, rerolls = 1;
         public int draftIndex = 1, draftCount;
         public string banner = "";

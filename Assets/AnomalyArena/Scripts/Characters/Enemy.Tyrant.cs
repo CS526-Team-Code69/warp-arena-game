@@ -207,6 +207,9 @@ namespace AnomalyArena
                 return true;
             }
 
+            // A phase change holds everything else once it is on the ground (Enemy.PhaseShift.cs).
+            if (TickPhaseShift(dt, player)) return true;
+
             switch (tyrantStage)
             {
                 case TyrantStage.Windup:
@@ -385,11 +388,17 @@ namespace AnomalyArena
             cooldown = Mathf.Max(cooldown, TyrantGap);
         }
 
-        /// <summary>§13.2: below tyrantPhase2At of its max HP it enters phase 2, once, and its shield is refilled.</summary>
+        /// <summary>§13.2: below tyrantPhase2At of its max HP it enters phase 2, once. A hit stops on that line and begins the change
+        /// there (Enemy.PhaseShift.cs); this catches HP that went below it any other way.</summary>
         void TickTyrantPhase()
         {
             if (bossPhase >= TyrantPhaseCount || maxHp <= 0f || Hp >= maxHp * Boss.tyrantPhase2At) return;
-            bossPhase = TyrantPhaseCount;
+            BeginPhaseShift(TyrantPhaseCount);
+        }
+
+        /// <summary>Entering phase 2 refills its shield.</summary>
+        void RefillTyrantPhaseShield()
+        {
             var balance = GM && GM.waves && GM.waves.waveSet ? GM.waves.waveSet.encounterBalance : null;
             // The refill is counted in its HP budget (EncounterBalance.ShieldBudgetShare); without a budget it gets its opening shield back.
             // The V2 day campaign budgets its own refill (Enemy.CampaignBudget.cs, since 2026-11-10).
@@ -492,7 +501,7 @@ namespace AnomalyArena
                 return;
             }
 
-            if (V5Vfx.On) V5Vfx.I.GroundSlam(centre, Mathf.Max(band, PoundWidth) * .5f, definition.colour, false);
+            if (V5Vfx.On) V5Vfx.I.TyrantPoundBand(centre, poundFacing, band, PoundWidth, poundStep == 0);
             else Fx.Ring(centre, Mathf.Max(band, PoundWidth) * .5f, definition.colour);
             // The pound itself is the slam; each band after it is heard as it reaches on, a little less each time.
             if (poundStep > 0) V5WeaponAudio.At(V5Sfx.PoundBand, centre, Mathf.Max(.45f, 1f - .08f * poundStep), 1f - .03f * poundStep);
@@ -694,7 +703,7 @@ namespace AnomalyArena
             if (capsule) capsule.enabled = true;
             AttackSequence++;
             V3WorldAudio.Instance?.Play(ArenaWorldCue.BossSlam, rushLanding);
-            if (V5Vfx.On) V5Vfx.I.GroundSlam(rushLanding, rushSlamReach, definition.colour);
+            if (V5Vfx.On) V5Vfx.I.TyrantSlam(rushLanding, rushSlamReach);
             else Fx.Ring(rushLanding, rushSlamReach, definition.colour);
             // §13.2: the slam shakes off and hurts everything around the landing point, its own minions and you alike (document 5.3: fly).
             float damage = TyrantHit(b.rushSlamDamage), push = TierPush(b.rushSlamKnock);
@@ -764,7 +773,7 @@ namespace AnomalyArena
             meteorFlying = false;
             V3WorldAudio.Instance?.Play(ArenaWorldCue.BossSlam, meteorTarget);
             V2Audio.Instance?.PlayWorld(ArenaSoundCue.Explosion, meteorTarget);
-            if (V5Vfx.On) V5Vfx.I.Explosion(meteorTarget, meteorReach);
+            if (V5Vfx.On) V5Vfx.I.TyrantMeteorImpact(meteorTarget, meteorReach);
             else
             {
                 Fx.Ring(meteorTarget, meteorReach, MeteorColour);

@@ -75,7 +75,18 @@ namespace AnomalyArena.EditorTools
         const string RoomOfflineLine = "S04";
         // Vorbis quality 0.5, mono, compressed in memory: the voice and CG sounds should add little to the web build.
         const float AudioQuality = .5f;
-        static readonly string[] Models = { "Base", "BaseDamaged", "ShipWreck", "ShipIntact", "MiningLamp", "OreAlloy", "DarkMatterNode", "ShadowA", "ShadowB", "ShadowC" };
+        static readonly string[] Models = { "Base", "BaseDamaged", "ShipWreck", "ShipIntact", "MiningLamp", "OreAlloy", "DarkMatterNode", "ShadowA", "ShadowB", "ShadowC",
+            "WeaponCrate", "DarkMatterCore", "VoidCrystal", "CrashDebrisHull", "CrashDebrisEngine", "EnergyShard", "VoidPlatform" };
+        // The props made on 2026-11-19 for what was still a box, a cylinder or a flat picture in the illustrated game; they install with
+        // the rest, or on their own (InstallProps) without touching the voices, pictures, sounds or the scene.
+        static readonly string[] Props1119 = { "WeaponCrate", "DarkMatterCore", "VoidCrystal", "CrashDebrisHull", "CrashDebrisEngine", "EnergyShard", "VoidPlatform" };
+        // Their glow, linear like DarkNodeGlow and multiplying the same colour map: the violet of the dark matter and the void where the
+        // design glows (the core's heart, the crystals' edges, the energy shard, the platform's runes and cracks).
+        static readonly Dictionary<string, Color> PropGlow = new()
+        {
+            ["DarkMatterCore"] = new Color(.9f, .2f, 1.1f), ["VoidCrystal"] = new Color(.7f, .15f, 1.1f),
+            ["EnergyShard"] = new Color(.9f, .35f, 1.2f), ["VoidPlatform"] = new Color(.6f, .15f, .95f),
+        };
         static readonly Dictionary<string, string> Reuses = new() { ["DarkMatterNode"] = "OreAlloy", ["BaseDamaged"] = "Base" };
 
         // The parts of the voice manifest (VoiceSource + manifest.json) the installer reads (JsonUtility skips the rest).
@@ -234,6 +245,7 @@ namespace AnomalyArena.EditorTools
                 var shadows = new List<GameObject>();
                 foreach (var s in new[] { "ShadowA", "ShadowB", "ShadowC" }) if (Get(prefabs, s)) shadows.Add(prefabs[s]);
                 art.shadowPrefabs = shadows.ToArray();
+                SetProps(art, prefabs);
             }
             art.shardMaterial = ShardMaterial();
             if (art.shardMaterial) materials++;
@@ -394,6 +406,76 @@ namespace AnomalyArena.EditorTools
             return log.ToString();
         }
 
+        static void SetProps(CampaignArt art, Dictionary<string, GameObject> prefabs)
+        {
+            art.weaponCratePrefab = Get(prefabs, "WeaponCrate");
+            art.darkCorePrefab = Get(prefabs, "DarkMatterCore");
+            art.voidCrystalPrefab = Get(prefabs, "VoidCrystal");
+            var debris = new List<GameObject>();
+            foreach (var piece in new[] { "CrashDebrisHull", "CrashDebrisEngine" }) if (Get(prefabs, piece)) debris.Add(prefabs[piece]);
+            art.crashDebrisPrefabs = debris.ToArray();
+            art.energyShardPrefab = Get(prefabs, "EnergyShard");
+            art.voidPlatformPrefab = Get(prefabs, "VoidPlatform");
+        }
+
+        [MenuItem("Anomaly Arena/V2 Campaign/Install Props (2026-11-19)")]
+        public static void InstallPropsMenu() => Debug.Log(InstallProps());
+
+        /// <summary>Batch entry for InstallProps; it exits by itself with 0 when the closing line is INSTALL OK, 1 otherwise (as
+        /// InstallBatch).</summary>
+        public static void InstallPropsBatch()
+        {
+            int code = 1;
+            try
+            {
+                InstallProps();
+                code = problems.Count == 0 ? 0 : 1;
+            }
+            catch (System.Exception e) { Debug.LogError("[V2Campaign] INSTALL FAILED: " + e); }
+            if (Application.isBatchMode) EditorApplication.Exit(code);
+        }
+
+        /// <summary>Only the props of 2026-11-19 (Props1119): copied from work/ where it has them, imported, their materials and prefabs
+        /// built, and their entries in the art asset set. The voices, pictures, sounds and the scene stay as they are.</summary>
+        public static string InstallProps()
+        {
+            log.Clear();
+            problems.Clear();
+            if (EditorApplication.isPlayingOrWillChangePlaymode) { Problem("the editor is in Play mode; leave it first"); return Finish(null); }
+            if (Directory.Exists(ModelSource))
+                foreach (var model in Props1119)
+                {
+                    string from = ModelSource + model + "/";
+                    if (!Directory.Exists(from)) { Log($"{model}: no prepared folder ({from})"); continue; }
+                    Directory.CreateDirectory(Project + ArtRoot + "Models/" + model);
+                    foreach (var file in Directory.GetFiles(from))
+                    {
+                        string ext = Path.GetExtension(file).ToLowerInvariant(), name = Path.GetFileNameWithoutExtension(file);
+                        if (ext == ".fbx" || ext == ".png" && (name.EndsWith("_BaseColor") || name.EndsWith("_Normal")))
+                            CopyIn(file.Replace('\\', '/'), ArtRoot + "Models/" + model + "/" + Path.GetFileName(file));
+                    }
+                }
+            AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
+            var prefabs = new Dictionary<string, GameObject>();
+            foreach (var model in Props1119)
+            {
+                string dir = ArtRoot + "Models/" + model + "/";
+                if (!AssetDatabase.IsValidFolder(dir.TrimEnd('/'))) { Problem($"{model}: no folder {dir}"); continue; }
+                string fbx = FindFile(dir, ".fbx");
+                if (fbx == null) { Problem($"{model}: no FBX in {dir}"); continue; }
+                var material = BuildMaterial(model, dir);
+                SetupModel(fbx, false);
+                var prefab = BuildPrefab(model, fbx, material);
+                if (prefab) prefabs[model] = prefab;
+            }
+            var art = AssetDatabase.LoadAssetAtPath<CampaignArt>(ArtPath);
+            if (!art) { Problem($"no art asset at {ArtPath}"); return Finish(null); }
+            SetProps(art, prefabs);
+            EditorUtility.SetDirty(art);
+            AssetDatabase.SaveAssets();
+            return Finish($"{prefabs.Count} of {Props1119.Length} props installed");
+        }
+
         static bool HasArg(string name) => System.Array.Exists(System.Environment.GetCommandLineArgs(), a => string.Equals(a, name, System.StringComparison.OrdinalIgnoreCase));
 
         static GameObject Get(Dictionary<string, GameObject> map, string key) => map.TryGetValue(key, out var go) ? go : null;
@@ -481,12 +563,15 @@ namespace AnomalyArena.EditorTools
             {
                 var type = normal ? TextureImporterType.NormalMap : TextureImporterType.Default;
                 // 1024 in the game: two 2048 maps per big model would add about 40 MB to the web build (the sources in work/ stay 2048).
-                if (importer.textureType != type || importer.sRGBTexture == normal || importer.maxTextureSize != 1024)
+                // 512 for the small props of 2026-11-19: a crate or a crystal covers about a hundred pixels from the game camera, and
+                // the web build's data file has to stay under GitHub's 100 MB a file.
+                int size = System.Array.Exists(Props1119, p => p != "VoidPlatform" && dir.EndsWith("Models/" + p + "/")) ? 512 : 1024;
+                if (importer.textureType != type || importer.sRGBTexture == normal || importer.maxTextureSize != size)
                 {
                     importer.textureType = type;
                     importer.sRGBTexture = !normal;
                     importer.textureCompression = TextureImporterCompression.Compressed;
-                    importer.maxTextureSize = 1024;
+                    importer.maxTextureSize = size;
                     importer.SaveAndReimport();
                 }
             }
@@ -517,15 +602,17 @@ namespace AnomalyArena.EditorTools
             if (material.HasProperty("_Color")) material.SetColor("_Color", tint);
             material.SetFloat("_Metallic", model.StartsWith("Shadow") ? 0f : .25f);
             material.SetFloat("_Smoothness", model.StartsWith("Shadow") ? .15f : .35f);
-            // Glow where the design glows: the lamp's glass and the dark matter's cracks, from their own colour map.
-            if (model == "MiningLamp" || darkMatter)
+            // Glow where the design glows: the lamp's glass, the dark matter's cracks and the violet of the props in PropGlow, from their
+            // own colour map.
+            bool propGlow = PropGlow.TryGetValue(model, out var glow);
+            if (model == "MiningLamp" || darkMatter || propGlow)
             {
                 material.EnableKeyword("_EMISSION");
                 material.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
                 material.SetTexture("_EmissionMap", baseMap);
                 // SetColor takes sRGB values and this linear-space project converts them on the way to the shader, so the dark node's
                 // glow, chosen in linear terms, goes in through .gamma.
-                material.SetColor("_EmissionColor", darkMatter ? DarkNodeGlow.gamma : new Color(.6f, .9f, .9f) * .6f);
+                material.SetColor("_EmissionColor", darkMatter ? DarkNodeGlow.gamma : propGlow ? glow.gamma : new Color(.6f, .9f, .9f) * .6f);
             }
             else
             {

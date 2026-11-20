@@ -34,7 +34,8 @@ namespace AnomalyArena
         const float VolumeTop = 96f, ArtTop = 152f, KeysTop = 214f, RowsTop = 252f, RowH = 44f;
         const float KeyColumnW = 392f, KeyColumnGap = 20f, KeyButtonW = 132f, KeyButtonH = 36f;
         const float MessageTop = 524f, FixedTop = 554f, BottomButtonW = 260f, BottomButtonH = 52f;
-        // The left column holds the moves, the sprint and the interact key; the right one the skills, the lamp and the card pick.
+        // The left column holds the moves, the sprint and the interact key; the right one the skills, the lamp, the card pick and the
+        // character screen.
         const int LeftRows = 6;
 
         static readonly Color Soft = new(.86f, .90f, .96f), Faint = new(.62f, .72f, .85f), Cyan = new(.50f, .86f, 1f), Waiting = new(1f, .84f, .36f);
@@ -263,6 +264,7 @@ namespace AnomalyArena
             GameAction.Skill3 => ArenaText.Pair("技能 3 / 面板选项 3", "Skill 3 / Option 3"),
             GameAction.Lamp => ArenaText.Pair("放下矿灯", "Place a lamp"),
             GameAction.CardPick => ArenaText.Pair("打开待选的升级", "Open a pending pick"),
+            GameAction.Character => ArenaText.Pair("角色面板", "Character screen"),
             _ => action.ToString(),
         };
 

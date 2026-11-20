@@ -807,15 +807,23 @@ namespace AnomalyArena
             root.SetParent(worldRoot, false);
             root.position = node.position;
             root.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
-            var prefab = !art || !Art.Enabled ? null : kind switch { NodeKind.Ore => art.oreNodePrefab, NodeKind.Dark => art.darkNodePrefab, _ => null };
-            // Void alloy has no illustrated model yet: its whitebox look in both arts.
-            if (kind == NodeKind.VoidAlloy) Whitebox.Build("voidalloy", root);
-            else if (prefab)
+            // Void alloy is the alloy ore's model in the void's black and violet (VoidAlloyMaterial).
+            var prefab = !art || !Art.Enabled ? null
+                : kind switch
+                {
+                    NodeKind.Ore or NodeKind.VoidAlloy => art.oreNodePrefab, NodeKind.Dark => art.darkNodePrefab, NodeKind.Core => art.darkCorePrefab,
+                    _ => null
+                };
+            if (prefab)
             {
                 var model = Instantiate(prefab, root);
                 StripColliders(model);
-                FitFootprint(model.transform, kind == NodeKind.Dark ? 1.5f : 1.8f);
+                // The core stands about as tall as a person's chest; the nodes are fitted by their footprint.
+                if (kind == NodeKind.Core) FitHeight(model.transform, 1.2f);
+                else FitFootprint(model.transform, kind == NodeKind.Dark ? 1.5f : 1.8f);
+                if (kind == NodeKind.VoidAlloy) PaintVoidAlloy(model);
             }
+            else if (kind == NodeKind.VoidAlloy) Whitebox.Build("voidalloy", root);
             // The whitebox (2026-11-10): the whitebox table's core, ore and dark matter node; the old boxes stay for the illustrated art
             // without a model (the core has none).
             else if (!Art.Enabled) Whitebox.Build(kind switch { NodeKind.Core => "core", NodeKind.Dark => "dark", _ => "ore" }, root);
@@ -830,6 +838,30 @@ namespace AnomalyArena
                 Box(root, "Crystal", new Vector3(.15f, .9f, 0f), new Vector3(.35f, .9f, .35f), kind == NodeKind.Ore ? new Color(.6f, .75f, .9f) : new Color(.55f, .15f, .85f));
             }
             node.view = root;
+        }
+
+        static Material voidAlloyMaterial;
+
+        /// <summary>The alloy ore's model in the void's colours: near-black rock with violet light in its veins, the same texture as the
+        /// alloy ore so it reads as its void kind. One material, made from the model's own the first time.</summary>
+        static void PaintVoidAlloy(GameObject model)
+        {
+            foreach (var r in model.GetComponentsInChildren<Renderer>(true))
+            {
+                if (!voidAlloyMaterial && r.sharedMaterial)
+                {
+                    voidAlloyMaterial = new Material(r.sharedMaterial) { name = "VoidAlloyNode" };
+                    voidAlloyMaterial.SetColor("_BaseColor", new Color(.2f, .12f, .3f));
+                    if (r.sharedMaterial.HasProperty("_BaseMap")) voidAlloyMaterial.SetTexture("_EmissionMap", r.sharedMaterial.GetTexture("_BaseMap"));
+                    voidAlloyMaterial.SetColor("_EmissionColor", new Color(.55f, .14f, .95f));
+                    voidAlloyMaterial.EnableKeyword("_EMISSION");
+                    voidAlloyMaterial.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
+                }
+                if (!voidAlloyMaterial) continue;
+                var materials = new Material[r.sharedMaterials.Length];
+                for (int i = 0; i < materials.Length; i++) materials[i] = voidAlloyMaterial;
+                r.sharedMaterials = materials;
+            }
         }
 
         static void FitHeight(Transform model, float height)

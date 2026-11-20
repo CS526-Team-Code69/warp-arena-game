@@ -367,6 +367,7 @@ namespace AnomalyArena
             supportTimer = 0f;
             summonTimer = data.kind == EnemyKind.Hollow ? Boss.prophetSummonInterval : Boss.tyrantSummonInterval;
             bossPhase = 1;
+            ClearPhaseShift();
             inhaleLeft = bossRecovery = 0f;
             ClearBossMarks();
             forcedMove = followUp = -1;
@@ -376,6 +377,7 @@ namespace AnomalyArena
             leaping = royalShield = inhaleHit = false;
             openingMove = data.kind == EnemyKind.Hollow;
             if (EnemyRoles.IsBoss(data.kind) && !GetComponent<V2BossGroundMarks>()) gameObject.AddComponent<V2BossGroundMarks>();
+            if (EnemyRoles.IsBoss(data.kind) && !GetComponent<V5BossPhaseFx>()) gameObject.AddComponent<V5BossPhaseFx>();
             // The Spire's light wave ring and the flash on the player it catches, made at runtime like the marks above.
             if (data.kind == EnemyKind.Spire && !GetComponent<SpireWavePresentation>()) gameObject.AddComponent<SpireWavePresentation>();
             laserTimer = 0f;
@@ -431,6 +433,7 @@ namespace AnomalyArena
             else if (Immovable) info.knockDistance = 0f;
 
             if (TurnedAwayByWard()) return false; // the Nash Prophet takes no damage while a summon lives (Enemy.Prophet.cs)
+            if (TurnedAwayByPhaseShift()) return false; // nor does a boss while it changes phase (Enemy.PhaseShift.cs)
             bool accepted = base.ReceiveDamage(info);
             // Execute Twist: any accepted damage may leave a marked enemy under the line; checked only after the hit has fully
             // resolved, so its stacks never land on a dead body.

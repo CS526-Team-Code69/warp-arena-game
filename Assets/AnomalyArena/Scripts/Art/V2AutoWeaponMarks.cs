@@ -46,6 +46,9 @@ namespace AnomalyArena
         }
         MeshRenderer fieldDisc, shieldDisc;
         SpriteRenderer droneSprite, ghostSprite;
+        // The afterimage as the hero's own model in the hologram material while the art is on; the picture or the disc otherwise.
+        GameObject ghostModel;
+        Material ghostMaterial;
         Vector3 droneShown;
         bool droneShownSet;
         float smokeAt;
@@ -58,9 +61,16 @@ namespace AnomalyArena
             if (shieldCubes.holder) shieldCubes.holder.gameObject.SetActive(false);
             if (droneSprite) droneSprite.enabled = false;
             if (ghostSprite) ghostSprite.enabled = false;
+            if (ghostModel) ghostModel.SetActive(false);
             if (fieldDisc) fieldDisc.enabled = false;
             if (shieldDisc) shieldDisc.enabled = false;
             droneShownSet = false;
+        }
+
+        void OnDestroy()
+        {
+            if (ghostModel) Destroy(ghostModel);
+            if (ghostMaterial) Destroy(ghostMaterial);
         }
 
         void LateUpdate()
@@ -201,7 +211,8 @@ namespace AnomalyArena
                 }
             }
             Vector3 spot = on ? drone.whirlTo : Vector3.zero;
-            Sprite sprite = on && Art.Enabled && look && look.illustration ? look.illustration.sprite : null;
+            bool model = ShowGhostModel(on && Art.Enabled, spot, on ? body.Position : spot, player);
+            Sprite sprite = on && Art.Enabled && !model && look && look.illustration ? look.illustration.sprite : null;
             if (ShowSprite(ref ghostSprite, "Afterimage", sprite))
             {
                 ghostSprite.sprite = sprite;
@@ -209,8 +220,51 @@ namespace AnomalyArena
                 Billboard(ghostSprite, spot + Vector3.up * look.height * .5f, look.height * sprite.bounds.size.x / Mathf.Max(.01f, sprite.bounds.size.y), look.height);
                 ghostSprite.color = afterimageColor;
             }
-            if (Line(ref ghostFill, "AfterimageFill", on && !sprite, true)) { Disc(ghostFill, new Vector3(spot.x, .05f, spot.z), player.radius); Paint(ghostFill, afterimageColor, 1f); }
+            if (Line(ref ghostFill, "AfterimageFill", on && !sprite && !model, true)) { Disc(ghostFill, new Vector3(spot.x, .05f, spot.z), player.radius); Paint(ghostFill, afterimageColor, 1f); }
             if (Line(ref ghostRing, "AfterimageRing", on, true)) { Circle(ghostRing, spot, player.radius + .1f, .06f); ghostRing.widthMultiplier = lineWidth; Paint(ghostRing, afterimageColor, 2f); }
+        }
+
+        /// <summary>The hero's own model as a hologram standing at the spot where the Whirl will slam the enemy, facing the enemy it
+        /// pulls in, in its idle pose. False, and hidden, when it is not wanted or the hero shows no 3D model (the whitebox): the picture
+        /// or the disc stands there instead.</summary>
+        bool ShowGhostModel(bool show, Vector3 spot, Vector3 facing, Combatant player)
+        {
+            if (show && !ghostModel)
+            {
+                var hero = GetComponent<V2ModelPresentation>();
+                var shader = Resources.Load<Shader>("V5/V5Hologram");
+                if (hero && hero.modelRoot && hero.modelRoot.gameObject.activeInHierarchy && shader)
+                {
+                    ghostModel = Instantiate(hero.modelRoot.gameObject, transform.parent);
+                    ghostModel.name = "AfterimageModel";
+                    ghostModel.transform.localScale = hero.modelRoot.lossyScale;
+                    ghostMaterial = new Material(shader) { name = "AfterimageHologram" };
+                    foreach (var r in ghostModel.GetComponentsInChildren<Renderer>(true))
+                    {
+                        var materials = new Material[r.sharedMaterials.Length];
+                        for (int i = 0; i < materials.Length; i++) materials[i] = ghostMaterial;
+                        r.sharedMaterials = materials;
+                        r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                    }
+                    foreach (var c in ghostModel.GetComponentsInChildren<Collider>(true)) Destroy(c);
+                    var animator = ghostModel.GetComponentInChildren<Animator>();
+                    if (animator)
+                    {
+                        animator.applyRootMotion = false;
+                        animator.Play("Base Layer.Idle", 0, 0f);
+                    }
+                }
+            }
+            if (!ghostModel) return false;
+            if (ghostModel.activeSelf != show) ghostModel.SetActive(show);
+            if (!show) return false;
+            Vector3 towards = facing - spot;
+            towards.y = 0f;
+            ghostModel.transform.SetPositionAndRotation(new Vector3(spot.x, player ? player.transform.position.y : 0f, spot.z),
+                towards.sqrMagnitude > .01f ? Quaternion.LookRotation(towards) : ghostModel.transform.rotation);
+            ghostMaterial.SetColor("_BaseColor", new Color(afterimageColor.r * 1.3f, afterimageColor.g * 1.3f, afterimageColor.b * 1.3f, 1f));
+            ghostMaterial.SetFloat("_Alpha", Mathf.Clamp01(afterimageColor.a * 1.5f));
+            return true;
         }
 
         /// <summary>The whitebox drone: the table's look with its octahedron at the hover point, turning slowly; lying on the ground to cool

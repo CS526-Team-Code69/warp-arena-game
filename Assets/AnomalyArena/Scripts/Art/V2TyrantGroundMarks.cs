@@ -68,8 +68,13 @@ namespace AnomalyArena
             Style(landing, lineWidth, rimColor);
         }
 
+        // The tail's direction last frame, so the V5 art sets the arc crossed since then burning.
+        Vector3 lastTail;
+        bool sweepTracked;
+
         void DrawSweep(bool show)
         {
+            if (!show) sweepTracked = false;
             bool rim = Show(ref fanRim, "TyrantSweepRim", Segments, false, show);
             if (!Show(ref tail, "TyrantTail", 2, false, show) || !rim) return;
             Vector3 centre = Query.Flat(enemy.Position), facing = Query.Flat(enemy.TelegraphFacing).normalized;
@@ -87,14 +92,18 @@ namespace AnomalyArena
             Flatten(tail);
             if (V5Vfx.On)
             {
-                // The V5 art: a tapering burning blade instead of a flat bar, with a crescent running behind it; the hit shape is unchanged.
+                // The V5 art: a tapering burning blade instead of a flat bar, and the arc it crossed since the last frame set burning
+                // behind it (V5Vfx.TyrantSweepTrail); the hit shape is unchanged.
                 Style(fanRim, lineWidth * .6f, new Color(1f, .62f, .28f, .6f));
                 tail.sharedMaterial = V5Vfx.I.TailMaterial;
-                tail.startWidth = Mathf.Max(lineWidth, enemy.TailHalfWidth * 2.2f);
-                tail.endWidth = .08f;
+                tail.startWidth = Mathf.Max(lineWidth, enemy.TailHalfWidth * 3f);
+                tail.endWidth = .14f;
                 tail.widthMultiplier = 1f;
-                tail.startColor = tail.endColor = new Color(1f, .68f, .32f, 1f);
-                V5Vfx.I.TailSweepTick(centre, enemy.TailDirection, reach);
+                tail.startColor = tail.endColor = new Color(1f, .8f, .5f, 1f);
+                Vector3 swungTo = enemy.TailDirection;
+                V5Vfx.I.TyrantSweepTrail(centre, sweepTracked ? lastTail : swungTo, swungTo, reach);
+                lastTail = swungTo;
+                sweepTracked = true;
                 return;
             }
             Style(tail, Mathf.Max(lineWidth, enemy.TailHalfWidth * 2f), tailColor);

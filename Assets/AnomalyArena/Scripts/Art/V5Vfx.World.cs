@@ -335,9 +335,75 @@ namespace AnomalyArena
         bool platformDressed;
         Material platformMaterial, platformSaved;
 
+        // The trial's ground as the platform model (CampaignArt.voidPlatformPrefab) while the art is on: on the saved platform and on each
+        // fragment the disc's own renderer is hidden and the model stands over it, as wide as the disc, its flat top at the disc's top;
+        // the disc keeps its collider. Without the model, the platform shader below as before.
+        const float PlatformWalkHeight = .91f;   // share of the model's height where its flat top lies (1.574 of 1.728 m in Blender)
+        GameObject platformPrefab;
+        bool platformPrefabLooked;
+        float platformModelWidth, platformModelHeight, platformModelBottom;
+        readonly Dictionary<Transform, GameObject> discModels = new();
+
+        GameObject PlatformPrefab()
+        {
+            if (platformPrefabLooked) return platformPrefab;
+            platformPrefabLooked = true;
+            var campaign = FindAnyObjectByType<V2Campaign>(FindObjectsInactive.Include);
+            platformPrefab = campaign && campaign.art ? campaign.art.voidPlatformPrefab : null;
+            return platformPrefab;
+        }
+
+        void DressDisc(Transform disc, bool on)
+        {
+            if (!disc) return;
+            discModels.TryGetValue(disc, out var model);
+            if (on && !model)
+            {
+                model = Instantiate(platformPrefab);
+                model.name = disc.name + " Model";
+                foreach (var c in model.GetComponentsInChildren<Collider>(true)) Destroy(c);
+                if (platformModelWidth <= 0f)
+                {
+                    var renderers = model.GetComponentsInChildren<Renderer>();
+                    if (renderers.Length > 0)
+                    {
+                        var b = renderers[0].bounds;
+                        foreach (var r in renderers) b.Encapsulate(r.bounds);
+                        platformModelWidth = Mathf.Max(b.size.x, b.size.z);
+                        platformModelHeight = b.size.y;
+                        platformModelBottom = b.min.y - model.transform.position.y;
+                    }
+                }
+                // A child of the disc, so it follows the disc's moves and its being shown or hidden.
+                model.transform.SetParent(disc, false);
+                discModels[disc] = model;
+            }
+            if (model)
+            {
+                if (model.activeSelf != on) model.SetActive(on);
+                if (on && platformModelWidth > .01f)
+                {
+                    // A unit cylinder is 1 wide and 2 high: the disc's width is its x scale, its top one y scale above its centre.
+                    var size = disc.lossyScale;
+                    float k = size.x / platformModelWidth;
+                    model.transform.localRotation = Quaternion.identity;
+                    model.transform.localScale = new Vector3(k / size.x, k / Mathf.Max(.0001f, size.y), k / size.z);
+                    float y = disc.position.y + size.y - (platformModelBottom + platformModelHeight * PlatformWalkHeight) * k;
+                    model.transform.position = new Vector3(disc.position.x, y, disc.position.z);
+                }
+            }
+            if (disc.TryGetComponent(out Renderer body)) body.enabled = !(on && model);
+        }
+
         void DressTrialPlatform()
         {
             var world = WorldMap.Active;
+            if (world && world.trialPlatform)
+            {
+                bool model = Art.Enabled && PlatformPrefab();
+                DressDisc(world.trialPlatform, model);
+                foreach (var fragment in world.TrialFragments) DressDisc(fragment, model);
+            }
             if (platformDressed == Art.Enabled || !world || !world.trialPlatform) return;
             var body = world.trialPlatform.GetComponent<Renderer>();
             if (!body) return;

@@ -38,6 +38,7 @@ namespace AnomalyArena
         [TestCase(GameAction.Skill3, "Digit3")]
         [TestCase(GameAction.Lamp, "F")]
         [TestCase(GameAction.CardPick, "T")]
+        [TestCase(GameAction.Character, "I")]
         public void Defaults_EachAction_IsOnTheKeyTheGameAlwaysHad(GameAction action, string key)
         {
             Assert.That(ArenaKeys.KeyNameOf(action), Is.EqualTo(key));
@@ -55,6 +56,7 @@ namespace AnomalyArena
             Assert.That(ArenaKeys.InteractKey, Is.EqualTo("E"));
             Assert.That(ArenaKeys.LampKey, Is.EqualTo("F"));
             Assert.That(ArenaKeys.CardPickKey, Is.EqualTo("T"));
+            Assert.That(ArenaKeys.CharacterKey, Is.EqualTo("I"));
         }
 
         // ───── Rebinding ─────

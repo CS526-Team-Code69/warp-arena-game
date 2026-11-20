@@ -686,6 +686,10 @@ namespace AnomalyArena
             float dealt=elementStatus?elementStatus.ResolveDamage(raw,info.source,info.ignoreShield,info.ignoreShieldReduction):raw;
             if(dealt>0f)dealt=Mathf.Max(1f,dealt); // Zero HP damage after full shield absorption must remain zero.
             Hp -= dealt;
+            // A boss's HP stops on the line of its next phase, and the rest of the hit is lost (Enemy.PhaseShift.cs).
+            float floor = HpFloor;
+            bool floored = floor > 0f && beforeHp > floor && Hp <= floor;
+            if (floored) { dealt = beforeHp - floor; Hp = floor; }
             if (info.isAttack && raw>0f && protectionTime > 0f && !selfHit) protectTimer = protectionTime;
             bool tick=info.source==DamageSource.Burn||info.source==DamageSource.Poison;
             float hpDamage=Mathf.Min(beforeHp,Mathf.Max(0f,dealt));
@@ -721,6 +725,7 @@ namespace AnomalyArena
             // Self-hits add no stacks, no Light/Earth/Void payoff and no lifesteal.
             if(!tick&&!selfHit&&info.source==DamageSource.Hit&&info.dealer?.Owner is Combatant { Team: Team.Player } source)
                 ElementCombat.ApplyHit(this,info.element,actualDamage,source,info.builtInElement,info.noLightningJump,info.continuousSource,baseDamage,info.weapon);
+            if (floored && IsAlive) OnHpFloorReached();
             return true;
         }
 
@@ -786,6 +791,15 @@ namespace AnomalyArena
             if (eliminated) return;
             eliminated = true;
             Eliminated?.Invoke(this);
+        }
+
+        /// <summary>HP a hit cannot take this body below while it is above it (0: none). A boss stops on the line of its next phase
+        /// (Enemy.PhaseShift.cs). Kill is not stopped: it stays an outright kill (the enemy lab's Clear).</summary>
+        protected virtual float HpFloor => 0f;
+
+        /// <summary>A hit has stopped on HpFloor.</summary>
+        protected virtual void OnHpFloorReached()
+        {
         }
 
         protected virtual void OnDamaged(float amount)

@@ -143,7 +143,10 @@ namespace AnomalyArena
             if (uiCrate && RectTransformUtility.ScreenPointToLocalPointInRectangle(overlayRoot, cratePoint, uiCamera, out var crateAt))
             {
                 uiCrate.rectTransform.anchoredPosition = crateAt + uiOffset;
-                if (!waiting) uiCrate.color = new Color(1f,1f,1f,alpha);
+                // With the crate's model in the world the flat picture would cover it, so the picture stays only as the click
+                // area over the model (its button opens the crate), fully transparent.
+                bool modelShown = crateModel && crateModel.activeSelf;
+                uiCrate.color = new Color(1f, 1f, 1f, modelShown ? 0f : waiting ? 1f : alpha);
                 float squash = landed ? Mathf.Clamp01(1f - afterLand / .14f) : 0f;
                 uiCrate.rectTransform.localScale = new Vector3(1f + squash * .12f, 1f - squash * .1f, 1f);
             }
@@ -153,8 +156,48 @@ namespace AnomalyArena
                 if (uiGlow) { uiGlow.rectTransform.anchoredPosition = groundAt + uiOffset; uiGlow.color = Alpha(uiGlowColor,landed ? alpha : u * .4f); }
             }
         }
+        // The weapon crate's model in place of the saved crate's cubes while the art is on (CampaignArt.weaponCratePrefab, from the
+        // V2Campaign on the GameManager); its material is opaque, so it shrinks away where the cubes fade.
+        GameObject crateModel;
+        bool crateModelLooked;
+        Vector3 crateModelScale;
+
+        void ShowCrateModel()
+        {
+            if (!crateModelLooked && crateRoot)
+            {
+                crateModelLooked = true;
+                var campaign = game ? game.GetComponent<V2Campaign>() : null;
+                var prefab = campaign && campaign.art ? campaign.art.weaponCratePrefab : null;
+                if (prefab)
+                {
+                    crateModel = Instantiate(prefab, crateRoot);
+                    crateModel.name = "CrateModel";
+                    foreach (var c in crateModel.GetComponentsInChildren<Collider>(true)) Destroy(c);
+                    // As wide as the cubes it stands in for, its middle where theirs is.
+                    Bounds cubes = default, own = default;
+                    bool anyCube = false, anyOwn = false;
+                    foreach (var r in crateSurfaces ?? new Renderer[0]) if (r) { if (!anyCube) cubes = r.bounds; else cubes.Encapsulate(r.bounds); anyCube = true; }
+                    foreach (var r in crateModel.GetComponentsInChildren<Renderer>()) { if (!anyOwn) own = r.bounds; else own.Encapsulate(r.bounds); anyOwn = true; }
+                    if (anyCube && anyOwn && Mathf.Max(own.size.x, own.size.z) > .01f)
+                    {
+                        crateModel.transform.localScale *= Mathf.Max(cubes.size.x, cubes.size.z) / Mathf.Max(own.size.x, own.size.z);
+                        own = default; anyOwn = false;
+                        foreach (var r in crateModel.GetComponentsInChildren<Renderer>()) { if (!anyOwn) own = r.bounds; else own.Encapsulate(r.bounds); anyOwn = true; }
+                        crateModel.transform.position += cubes.center - own.center;
+                    }
+                    crateModelScale = crateModel.transform.localScale;
+                }
+            }
+            bool model = crateModel && Art.Enabled;
+            if (crateModel && crateModel.activeSelf != model) crateModel.SetActive(model);
+            foreach (var r in crateSurfaces ?? new Renderer[0]) if (r) r.enabled = !model;
+        }
+
         void SetCrateAlpha(float alpha)
         {
+            ShowCrateModel();
+            if (crateModel && crateModel.activeSelf) crateModel.transform.localScale = crateModelScale * Mathf.Clamp01(alpha);
             for (int i = 0; i < (crateSurfaces?.Length ?? 0); i++)
             {
                 var renderer = crateSurfaces[i]; if (!renderer || blocks == null || i >= blocks.Length) continue;

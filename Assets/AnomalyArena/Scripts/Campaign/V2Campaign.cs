@@ -132,7 +132,7 @@ namespace AnomalyArena
             if (Running || !gm || !rules) return false;
             Active = this; Running = true; Day = 0; WaveOfDay = 0; Overtime = false; BaseDestroyed = false; EndingDone = false;
             armoryRoundsLeft = 0; ArmoryRoundActive = false; armoryMode = ArmoryMode.Rooms; activeUpgrade = null;
-            ResetEconomy(); ResetBase(); ResetNight();
+            ResetEconomy(); ResetBase(); ResetNight(); ResetBaseTour();
             InstallHooks();
             // Since 2026-11-06 the campaign plays on its own large map with terrain and a far black hole (V2Campaign.Map.cs). It is put in
             // place before the base and the ship are built on it.
@@ -243,6 +243,7 @@ namespace AnomalyArena
                 case CampaignStage.Night: TickNight(dt); break;
                 case CampaignStage.FinalBoss: TickPickups(dt); break;
                 case CampaignStage.Core: TickCore(dt); break;
+                case CampaignStage.Base: TickBaseTour(); break; // the base page's tour on Day 0's arrival (V2Campaign.BaseTour.cs)
             }
             TickBaseVisuals(unscaled);
             ui.Refresh();

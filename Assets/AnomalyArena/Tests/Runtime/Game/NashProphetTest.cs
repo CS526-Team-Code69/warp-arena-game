@@ -773,11 +773,16 @@ namespace AnomalyArena
             typeof(Enemy).GetField("cooldown", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(hollow, 0f);
         }
 
-        /// <summary>Takes it just under the HP share where the phase begins (not a player hit: no crit, no ward).</summary>
+        /// <summary>Takes it to the HP share where the phase begins (not a player hit: no crit, no ward), one line at a time: each hit stops
+        /// on the line of its next phase, and that change of phase is ended at once (BossPhaseShiftTest checks the change itself).</summary>
         internal static void ToPhase(Enemy hollow, int phase, BossTuning b)
         {
-            float share = phase >= 3 ? b.nashPhase3HpShare : b.nashPhase2HpShare;
-            hollow.ReceiveDamage(new DamageInfo { amount = hollow.Hp - hollow.maxHp * share + 1f, source = DamageSource.Wall, ignoreShield = true });
+            for (int next = hollow.BossPhase + 1; next <= phase; next++)
+            {
+                float share = next >= 3 ? b.nashPhase3HpShare : b.nashPhase2HpShare;
+                hollow.ReceiveDamage(new DamageInfo { amount = hollow.Hp - hollow.maxHp * share + 1f, source = DamageSource.Wall, ignoreShield = true });
+                hollow.EndPhaseShiftNow();
+            }
         }
 
         /// <summary>How long a quick player keeps a key down after the view jumps to the far side of a portal, the camera still settling.</summary>

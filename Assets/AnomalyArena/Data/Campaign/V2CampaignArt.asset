@@ -23,6 +23,14 @@ MonoBehaviour:
   - {fileID: 406238175135146963, guid: dff310f10eda22149af3f098775e55a4, type: 3}
   - {fileID: 7514299494949348655, guid: fa2c2d4152acd7c4988df6f0add1c530, type: 3}
   - {fileID: 1494374676725471407, guid: ba29c8b4a19cec74399106a3f22a1422, type: 3}
+  weaponCratePrefab: {fileID: 3612846384673128886, guid: 3e937dc04fe710440aaad38468f7d361, type: 3}
+  darkCorePrefab: {fileID: 2292477343304745057, guid: e78a9860c864f024484ae6dc203b3721, type: 3}
+  voidCrystalPrefab: {fileID: 5526271516241825677, guid: 5be5758d76b61e7459862a1e651b129d, type: 3}
+  crashDebrisPrefabs:
+  - {fileID: 7792773158203529353, guid: 22d3ab6f4d2b9d94fb2bdd096f355425, type: 3}
+  - {fileID: 2718488175070690579, guid: 7eacb790195bd1e4ba6076ad9b087c58, type: 3}
+  energyShardPrefab: {fileID: 3248045615158503844, guid: b409ff040a7fb00439ade1e59ff1fb9f, type: 3}
+  voidPlatformPrefab: {fileID: 275291774841572607, guid: e571604416e6a4d4c828ff77bb4311e5, type: 3}
   shardMaterial: {fileID: 2100000, guid: 9c6553522e3f08f4495ce801a046ed6d, type: 2}
   energy: {fileID: 21300000, guid: d31d318f2f3fd5044836fc7174533a38, type: 3}
   alloy: {fileID: 21300000, guid: 0d5ddd7da45fa5b449e6e91b8a0d879f, type: 3}

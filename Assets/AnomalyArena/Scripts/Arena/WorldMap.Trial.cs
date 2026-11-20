@@ -15,6 +15,8 @@ namespace AnomalyArena
     public sealed partial class WorldMap
     {
         readonly List<Transform> trialFragments = new();
+        /// <summary>The trial's floating fragments made so far (V5Vfx dresses each like the platform).</summary>
+        public IReadOnlyList<Transform> TrialFragments => trialFragments;
         readonly List<BlackHole> trialPortals = new(), fragmentPortals = new();
         int trialTerrainCount;
         // After any jump every portal waits a moment before E takes the player again, and the player stands still a little longer

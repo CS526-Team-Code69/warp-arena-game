@@ -82,6 +82,9 @@ namespace AnomalyArena
             return true;
         }
 
+        /// <summary>The crate model's longer side, metres (the whitebox crate is 1.28 by 1.03).</summary>
+        const float CrateFootprint = 1.6f;
+
         Crate PlaceCrate(Vector3 at, CrateKind kind)
         {
             var crate = new Crate { kind = kind, position = Query.Flat(at) };
@@ -89,9 +92,15 @@ namespace AnomalyArena
             root.SetParent(worldRoot, false);
             root.position = crate.position;
             root.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
-            // The whitebox table's crate carries a lock for a lock mechanic that was dropped (the crate just
-            // opens), so no crate shows it.
-            Whitebox.Build("crate", root).GetComponent<WhiteboxLook>().ShowParts("lock", false);
+            // The crate's model while the art is on (CampaignArt.weaponCratePrefab). Otherwise the whitebox table's crate, whose lock
+            // belongs to a lock mechanic that was dropped (the crate just opens), so no crate shows it.
+            if (art && Art.Enabled && art.weaponCratePrefab)
+            {
+                var model = Instantiate(art.weaponCratePrefab, root);
+                StripColliders(model);
+                FitFootprint(model.transform, CrateFootprint);
+            }
+            else Whitebox.Build("crate", root).GetComponent<WhiteboxLook>().ShowParts("lock", false);
             crate.view = root;
             crates.Add(crate);
             return crate;

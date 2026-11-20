@@ -8,7 +8,7 @@ namespace AnomalyArena
 {
     /// <summary>What the player does with a key they may choose themselves, in the order the settings list shows them. They are saved
     /// by name, so one added later leaves the keys saved for the others alone.</summary>
-    public enum GameAction { MoveUp, MoveLeft, MoveDown, MoveRight, Sprint, Interact, Skill1, Skill2, Skill3, Lamp, CardPick }
+    public enum GameAction { MoveUp, MoveLeft, MoveDown, MoveRight, Sprint, Interact, Skill1, Skill2, Skill3, Lamp, CardPick, Character }
 
     /// <summary>How giving an action a key ended: it took the key, it took it and the action that held it took the old one, it had
     /// that key already, or the key cannot be used.</summary>
@@ -19,10 +19,12 @@ namespace AnomalyArena
 
     /// <summary>
     /// The keys of the game's own actions in one place: moving, sprinting, interacting (mining, doors, crates, portals), the three
-    /// skills (which also pick the first, second and third option on a panel), setting a lamp down and opening a card pick kept for
-    /// later. Every script that reads one of these from the keyboard asks here, and every text that names one asks here for the key's
-    /// name, so a key changed in the settings is the key the game reads and the key it shows. The defaults are the keys the game always
-    /// had: W A S D, Shift, E, 1 2 3, F, T.
+    /// skills (which also pick the first, second and third option on a panel), setting a lamp down, opening a card pick kept for
+    /// later and opening the character screen (V5CharacterScreen). Every script that reads one of these from the keyboard asks here,
+    /// and every text that names one asks here for the key's name, so a key changed in the settings is the key the game reads and the
+    /// key it shows. The defaults are the keys the game always had, W A S D, Shift, E, 1 2 3, F and T, and I for the character screen.
+    /// A saved set of keys from before the character screen has no entry for it, so it takes I, unless the set has I on another
+    /// action: then the set is dropped whole and the defaults stand, as for any saved set that puts two actions on one key.
     ///
     /// Fixed, and not here: the mouse (aim, attack on the left button, swap hands on the right), because the pointer also works the
     /// menus and a weapon needs the button's press, hold and release; and the menus' keys Esc, Tab, R, Space and Enter. Those act on
@@ -41,7 +43,7 @@ namespace AnomalyArena
 
         static readonly Key[] Defaults =
         {
-            Key.W, Key.A, Key.S, Key.D, Key.LeftShift, Key.E, Key.Digit1, Key.Digit2, Key.Digit3, Key.F, Key.T,
+            Key.W, Key.A, Key.S, Key.D, Key.LeftShift, Key.E, Key.Digit1, Key.Digit2, Key.Digit3, Key.F, Key.T, Key.I,
         };
 
         // The menus' own keys. They are written by name: SourceKeysTest lets no script but GameManagerFlow.cs name the weapon card's
@@ -155,6 +157,7 @@ namespace AnomalyArena
         public static string InteractKey => Name(GameAction.Interact);
         public static string LampKey => Name(GameAction.Lamp);
         public static string CardPickKey => Name(GameAction.CardPick);
+        public static string CharacterKey => Name(GameAction.Character);
 
         /// <summary>A key's name as the game shows it, the same in both languages (what is printed on the key, or a short word).</summary>
         public static string Label(Key key)

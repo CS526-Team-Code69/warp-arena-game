@@ -19,6 +19,12 @@ namespace AnomalyArena
         public GameObject oreNodePrefab;
         public GameObject darkNodePrefab;
         [Tooltip("The three looks of the one shadow monster.")] public GameObject[] shadowPrefabs;
+        [Tooltip("The weapon crate: the story's crates and the classic supply drop.")] public GameObject weaponCratePrefab;
+        [Tooltip("The dark matter core the Tyrant drops.")] public GameObject darkCorePrefab;
+        [Tooltip("The void crystals that cannot be mined, by the way home on Day 0.")] public GameObject voidCrystalPrefab;
+        [Tooltip("Pieces of the wreck lying around the crash site at the start of Day 0.")] public GameObject[] crashDebrisPrefabs;
+        [Tooltip("A shard of alien energy dropped by a monster.")] public GameObject energyShardPrefab;
+        [Tooltip("The void trial's ground: its platform and each floating fragment.")] public GameObject voidPlatformPrefab;
         [Tooltip("Additive unlit material the dropped energy and alloy shards copy (their icon goes on as the texture).")]
         public Material shardMaterial;
 

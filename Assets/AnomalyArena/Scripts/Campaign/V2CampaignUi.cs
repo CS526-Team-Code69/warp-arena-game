@@ -292,6 +292,7 @@ namespace AnomalyArena
             flashUntil = 0f;
             // The run is over or not begun: an open question goes away unanswered and the side quest is cleared.
             if (confirmScreen) confirmScreen.gameObject.SetActive(false);
+            EndBaseTour(); // the base tour's dim and the backing that takes its clicks never outlive the run
             confirmYes = confirmNo = null; confirmHoldsRun = false;
             sideQuestBody = null;
             if (sideQuestBack) sideQuestBack.gameObject.SetActive(false);
@@ -642,13 +643,14 @@ namespace AnomalyArena
         {
             ApplyFont();
             TickGoalFlash();
+            TickBaseTour(); // the base page's tour (V2CampaignUi.BaseTour.cs): it ends with the page and holds the page's keys while it runs
             // An open question takes Esc for itself: Esc then neither leaves the base nor skips a CG.
             if (ConfirmOpen) TickConfirm();
             else if (StudyOpen) TickStudy(); // the study window (V2CampaignUi.Study.cs) takes the keys, Esc included, while it is open
             else if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
             {
                 if (cgScreen.gameObject.activeSelf) CgSkipped = true;
-                else if (baseScreen.gameObject.activeSelf && campaign.Stage == CampaignStage.Base && !campaign.BaseAtDawn && campaign.NightTimeLeft(out _)) campaign.LeaveBase();
+                else if (baseScreen.gameObject.activeSelf && !BaseTourRunning && campaign.Stage == CampaignStage.Base && !campaign.BaseAtDawn && campaign.NightTimeLeft(out _)) campaign.LeaveBase();
             }
             campaign.ShowShipView(BaseOpen && tab == CampaignRoom.Ship);
             float now = Time.unscaledTime;

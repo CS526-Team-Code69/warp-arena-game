@@ -107,7 +107,7 @@ namespace AnomalyArena
         static readonly int PhaseShiftHash = Animator.StringToHash("Base Layer.PhaseShift");
         static readonly int RoarHash = Animator.StringToHash("Base Layer.Roar");
         int[] moveHashes;
-        int windMove = -1, lastBossPhase = -1;
+        int windMove = -1, shiftSeen;
         bool bossStatesLooked, leaping, hasChargeRun, hasChargeLeap, hasPhaseShift, hasRoar;
         readonly System.Collections.Generic.Dictionary<int, float> clipLengths = new System.Collections.Generic.Dictionary<int, float>();
         AnimatedBone chest;
@@ -180,7 +180,7 @@ namespace AnomalyArena
             attackSequence = enemy ? enemy.AttackSequence : 0;
             consumedAttack = requestedAttack;
             attackRemaining = 0f; sinceAttack = 100f; winding = corpse = false;
-            windMove = -1; leaping = false; lastBossPhase = -1;
+            windMove = -1; leaping = false; shiftSeen = enemy ? enemy.PhaseShiftSequence : 0;
             modelRoot.localPosition = authoredPosition; modelRoot.localScale = authoredScale;
             animator.Rebind(); animator.Play(IdleHash, 0, 0f); animator.Update(0f);
             stateHash = IdleHash;
@@ -322,14 +322,19 @@ namespace AnomalyArena
                     if (!leaping) { leaping = true; PlayOnce(ChargeLeapHash, 0f); }
                 }
                 else leaping = false;
-                // A new phase plays the boss's phase clip (the Prophet's PhaseShift, else a Roar) when no move is under way.
-                int phase = enemy.BossPhase;
-                if (lastBossPhase >= 0 && phase > lastBossPhase && !winding && attackRemaining <= 0f)
+                // A phase change (Enemy.PhaseShift.cs) plays the boss's phase clip, the Prophet's PhaseShift, else a Roar, over whatever it
+                // was winding up, once it is on the ground; the clip holds the body to its end.
+                if (enemy.PhaseShiftShown && enemy.PhaseShiftSequence != shiftSeen)
                 {
-                    if (hasPhaseShift) PlayOnce(PhaseShiftHash, 0f);
-                    else if (hasRoar) PlayOnce(RoarHash, 0f);
+                    shiftSeen = enemy.PhaseShiftSequence;
+                    int clip = hasPhaseShift ? PhaseShiftHash : hasRoar ? RoarHash : 0;
+                    if (clip != 0)
+                    {
+                        winding = false;
+                        windMove = -1;
+                        PlayOnce(clip, 0f);
+                    }
                 }
-                lastBossPhase = phase;
             }
             else if (requestedAttack != consumedAttack)
             {

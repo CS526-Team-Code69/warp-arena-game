@@ -100,6 +100,8 @@ namespace AnomalyArena
             public V5Plate button;
             public Func<bool> act;
             public string fail;
+            // What the row does (B5DeedOf): the base tour finds its rows by it.
+            public B5Deed deed;
         }
 
         sealed class B5Way
@@ -430,7 +432,7 @@ namespace AnomalyArena
             float scale = Mathf.Min(1f, Mathf.Min(size.x / Bp(B5Width), size.y / Bp(B5Height)));
             if (scale > 0f && !Mathf.Approximately(b5Page.localScale.x, scale)) b5Page.localScale = new Vector3(scale, scale, 1f);
             if (b5Art != Art.Enabled) RefreshBasePanel(true);
-            if (!BaseOpen || StudyOpen || ConfirmOpen || V2Tutorial.HoldsInput || ArenaSettingsPanel.HoldsInput || ArenaCodex.HoldsInput) return;
+            if (!BaseOpen || StudyOpen || ConfirmOpen || BaseTourRunning || V2Tutorial.HoldsInput || ArenaSettingsPanel.HoldsInput || ArenaCodex.HoldsInput) return;
             if (gm && gm.RunPhase != ArenaUiState.Base) return;
             var keys = Keyboard.current;
             if (keys == null) return;
@@ -732,6 +734,7 @@ namespace AnomalyArena
             SetShown(row.root, true);
             V5TitleKit.Place(row.root, Bp(B5ActLeft), Bp(top), Bp(B5ActW), Bp(h));
             bool done = item.done != null;
+            row.deed = item.deed;
             row.plate.SetLook(done ? V5HudKit.PlateLook.Teal : go ? V5HudKit.PlateLook.Warm : V5HudKit.PlateLook.Plain);
             row.fade.alpha = done || item.enabled ? 1f : .55f;
             SetShown(row.tab, go);

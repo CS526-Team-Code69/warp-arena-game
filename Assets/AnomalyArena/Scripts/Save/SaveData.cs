@@ -37,6 +37,8 @@ namespace AnomalyArena
         public int draftWave;
         /// <summary>Card picks banked, in order (true: stat cards only).</summary>
         public bool[] bankedPicks = Array.Empty<bool>();
+        /// <summary>The upgrade cards taken, in order (RunProgression.TakenCards); empty in a save from before the list was kept.</summary>
+        public TakenCard[] cardsTaken = Array.Empty<TakenCard>();
 
         // the skills (SkillLoadout), one entry per slot: the SkillId, -1 for an empty slot
         public int[] skills = { -1, -1, -1 };

@@ -941,6 +941,7 @@ namespace AnomalyArena
             tyrant.ReceiveDamage(new DamageInfo { amount = tyrant.maxHp * (1f - b.tyrantPhase2At) + 1f, source = DamageSource.Wall, ignoreShield = true });
             await Until(() => tyrant.BossPhase == 2, 2f, "phase 2");
             Assert.That(board.Shield, Is.EqualTo(tyrant.maxHp * balance.tyrantPhaseShieldShare).Within(1f), "entering phase 2 refills its shield");
+            tyrant.EndPhaseShiftNow(); // this check is about phase 2 itself; BossPhaseShiftTest checks the change of phase
 
             board.SetShield(0f);
             tyrant.ReceiveDamage(new DamageInfo { amount = tyrant.Hp - tyrant.maxHp * .1f, source = DamageSource.Wall, ignoreShield = true });

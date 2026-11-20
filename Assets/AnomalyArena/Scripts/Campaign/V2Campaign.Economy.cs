@@ -29,6 +29,8 @@ namespace AnomalyArena
         const float SolidPickupGrowth = .08f; // a whitebox drop's size grows by this share per unit it holds, up to six
         // Since 2026-11-10 a whitebox drop floats this high (a dead enemy's body used to hide it on the ground) at this size.
         const float SolidPickupHeight = .8f, SolidPickupSize = 1.3f;
+        /// <summary>Height of the energy shard's model holding one unit, metres (it grows with SolidPickupGrowth).</summary>
+        const float EnergyShardHeight = .7f;
         readonly List<Pickup> pickups = new();
         const int MaxPickups = 80;
 
@@ -121,6 +123,21 @@ namespace AnomalyArena
                 if (nearest != null) { nearest.amount += amount; return; }
             }
             var pickup = new Pickup { kind = kind, amount = amount, position = at };
+            if (kind == PickupKind.Energy && Art.Enabled && art && art.energyShardPrefab)
+            {
+                // The energy shard's model, floating and turning like the whitebox crystal, a little larger the more it holds.
+                var holder = new GameObject("EnergyShard").transform;
+                holder.SetParent(worldRoot, false);
+                var model = Instantiate(art.energyShardPrefab, holder);
+                StripColliders(model);
+                FitHeight(model.transform, EnergyShardHeight);
+                foreach (var part in model.GetComponentsInChildren<Renderer>()) part.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                holder.localScale = Vector3.one * (1f + SolidPickupGrowth * Mathf.Min(6, amount));
+                pickup.view = holder;
+                pickup.solid = true;
+                pickups.Add(pickup);
+                return;
+            }
             if (kind == PickupKind.Energy && !Art.Enabled)
             {
                 // The whitebox (2026-11-10): the whitebox table's turning energy crystal.

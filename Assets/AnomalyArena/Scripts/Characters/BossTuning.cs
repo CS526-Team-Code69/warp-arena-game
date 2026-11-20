@@ -298,6 +298,20 @@ namespace AnomalyArena
         [Range(0f, 1f), Tooltip("Shield it gains per minion devoured, as a share of its max HP (0.025 = 2.5%).")] public float astralShieldPerMinion = .025f;
         [Range(0f, 1f), Tooltip("This never raises its shield past this share of its max HP.")] public float astralShieldCap = .2f;
 
+        [Header("Both bosses: phase change")]
+        [Min(.1f), Tooltip("Seconds the Tyrant's change of phase lasts (its Roar clip is 2.4 s). A hit stops on the HP line of its next phase; it then starts no move and takes no damage for this long.")]
+        public float tyrantShiftSeconds = 2.4f;
+        [Min(.1f), Tooltip("The same for the Nash Prophet (its PhaseShift clip is 2.2 s).")]
+        public float nashShiftSeconds = 2.2f;
+        [Range(0f, 1f), Tooltip("Share of the change after which its burst goes off: the light gathered on the boss bursts out and a close player is thrown back.")]
+        public float shiftBurstShare = .42f;
+        [Min(0f), Tooltip("The burst throws back a player whose edge is within this many cells of the boss's centre.")]
+        public float shiftPushRadius = 5f;
+        [Min(0f), Tooltip("How far the burst throws the player, cells (never into an open hole of the void trial). It does not hurt.")]
+        public float shiftPushDistance = 2.5f;
+        [Min(0f), Tooltip("Seconds the boss waits after its change before its next move.")]
+        public float shiftResumeHold = .5f;
+
         public static readonly BossTuning Defaults = new();
     }
 }

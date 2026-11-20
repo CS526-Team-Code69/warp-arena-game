@@ -18,8 +18,9 @@ namespace AnomalyArena
         // drawn around the circle is the circle's radius / HoleEdge on each side.
         const float HoleEdge = .8f, HoleClear = .62f, MinRadius = 40f;
         // The pass: the green flash, then the dim fading out (seconds, unscaled).
-        const float FlashSeconds = .45f, FadeSeconds = .5f, FadeInSeconds = .25f;
-        static readonly Color PassGreen = new(.4f, 1f, .5f), Edge = new(.45f, .85f, 1f), TipPlate = new(.03f, .06f, .11f, .92f), Cap = new(.92f, .94f, .98f);
+        // The base tour's spotlight (V2RectSpotlight) draws its ring and its pass with the same colours and timing.
+        internal const float FlashSeconds = .45f, FadeSeconds = .5f, FadeInSeconds = .25f;
+        internal static readonly Color PassGreen = new(.4f, 1f, .5f), Edge = new(.45f, .85f, 1f), TipPlate = new(.03f, .06f, .11f, .92f), Cap = new(.92f, .94f, .98f);
 
         RectTransform layer, tip, keyCap;
         readonly Image[] quads = new Image[4];

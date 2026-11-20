@@ -75,6 +75,8 @@ namespace AnomalyArena
             built = true;
             LayOut();
             Redress();
+            // The character screen's key is read wherever the battle HUD is (V5CharacterScreen; its page is made when it first opens).
+            V5CharacterScreen.Install(hud.gameObject);
         }
 
         /// <summary>The saved resource panel (life, stamina, energy), the experience header, the banner's own words, the boss's immunity
@@ -204,6 +206,9 @@ namespace AnomalyArena
             }
             LayDock();
             PlaceEdgeFloor(story);
+            // The character screen's key shows only while the screen can open: the player in play, no other page over the run.
+            float character = V5CharacterScreen.CanOpen ? 1f : 0f;
+            if (characterGroup && !Mathf.Approximately(characterGroup.alpha, character)) characterGroup.alpha = character;
             RenderChargeBar(s);
             RenderHint(s);
             RenderBanner(banner, toast);
@@ -348,8 +353,9 @@ namespace AnomalyArena
         // ───── The key hints (bottom right) ─────
 
         RectTransform hints;
-        V5HudKey interactKey, pauseKey, dashKey;
-        Text interactWord, pauseWord, dashWord;
+        V5HudKey interactKey, pauseKey, dashKey, characterKey;
+        Text interactWord, pauseWord, dashWord, characterWord;
+        CanvasGroup characterGroup;
         bool dashShown;
 
         void BuildKeyHints()
@@ -365,10 +371,20 @@ namespace AnomalyArena
             dashWord = V5BattleKit.Label(hints, "DashWord", 16f, V5TitleKit.Ink2, TextAnchor.MiddleRight);
             dashKey.gameObject.SetActive(false);
             dashWord.gameObject.SetActive(false);
+            // The character screen's key (V5CharacterScreen), at the row's left end. Its place is kept whether or not the screen can open
+            // just now, so neither the row nor the dock beside it moves as it shows and hides.
+            var character = V5TitleKit.Rect(hints, "CharacterHint");
+            V5TitleKit.Stretch(character);
+            characterGroup = character.gameObject.AddComponent<CanvasGroup>();
+            characterGroup.blocksRaycasts = characterGroup.interactable = false;
+            characterGroup.alpha = 0f;
+            characterKey = V5HudKit.Key(character, "CharacterKey", ArenaKeys.CharacterKey, false, Css, 28f, 15f);
+            characterWord = V5BattleKit.Label(character, "CharacterWord", 16f, V5TitleKit.Ink2, TextAnchor.MiddleRight);
         }
 
         /// <summary>"E 互动" and "Esc 暂停", right to left from the corner; the interact key is the one the player has it on (ArenaKeys).
-        /// Once the void dash is won, "Space 冲刺" stands left of them; nothing of it shows before.</summary>
+        /// Once the void dash is won, "Space 冲刺" stands left of them; nothing of it shows before. The character screen's key and "角色"
+        /// stand at the left end, seen only while the screen can open (Render).</summary>
         void LayKeyHints()
         {
             if (!hints) return;
@@ -379,12 +395,16 @@ namespace AnomalyArena
             pauseWord.text = ArenaText.Pair("暂停", "Pause");
             V5BattleKit.Sync(dashWord);
             dashWord.text = ArenaText.Pair("冲刺", "Dash");
+            characterKey.SetText(ArenaKeys.CharacterKey);
+            V5BattleKit.Sync(characterWord);
+            characterWord.text = ArenaText.Pair("角色", "Character");
             if (dashKey.gameObject.activeSelf != dashShown) dashKey.gameObject.SetActive(dashShown);
             if (dashWord.gameObject.activeSelf != dashShown) dashWord.gameObject.SetActive(dashShown);
             float right = 0f;
             right = PlaceHint(pauseWord, pauseKey, right);
             right = PlaceHint(interactWord, interactKey, right + HintItemGap * Css);
             if (dashShown) right = PlaceHint(dashWord, dashKey, right + HintItemGap * Css);
+            right = PlaceHint(characterWord, characterKey, right + HintItemGap * Css);
             hints.sizeDelta = new Vector2(right, 28f * Css);
         }
 
@@ -404,6 +424,9 @@ namespace AnomalyArena
         RectTransform boss;
         Text bossName, bossNumbers, bossImmune;
         Image bossHpTrack, bossShieldTrack;
+        // The lines on the life bar where the boss's later phases begin, and the light over the bar while it changes phase.
+        readonly Image[] bossLines = new Image[2];
+        Image bossShiftLight;
 
         /// <summary>The saved boss bars (V2Hud.bossRoot, shown in the void trial and against the Tyrant) as one plate under the top centre:
         /// the boss's name and its immunities, its life in numbers on the right, its life bar and its shield under them.</summary>
@@ -422,6 +445,17 @@ namespace AnomalyArena
             V5BattleKit.Place(bossNumbers.rectTransform, BossW * .5f, 8f, BossW * .5f - 16f, 22f);
             bossHpTrack = Track(hud.bossHpFill, 36f, 12f);
             bossShieldTrack = Track(hud.bossShieldFill, 51f, 4f);
+            for (int i = 0; i < bossLines.Length; i++)
+            {
+                bossLines[i] = V5TitleKit.Picture(boss, "V5PhaseLine" + i, null, V5TitleKit.Ink);
+                bossLines[i].raycastTarget = false;
+                bossLines[i].gameObject.SetActive(false);
+            }
+
+            bossShiftLight = V5TitleKit.Picture(boss, "V5PhaseShift", null, Color.clear);
+            bossShiftLight.raycastTarget = false;
+            V5BattleKit.Place(bossShiftLight.rectTransform, 14f, 33f, BossW - 28f, 18f);
+            bossShiftLight.gameObject.SetActive(false);
             if (hud.bossImmunityIcons != null)
                 foreach (var icon in hud.bossImmunityIcons)
                     if (icon)
@@ -455,15 +489,29 @@ namespace AnomalyArena
             bossNumbers.text = $"{Mathf.CeilToInt(s.bossHp)}<size={V5BattleKit.Font(12f)}><color=#{V5BattleKit.Hex(V5TitleKit.Ink3)}> / {Mathf.CeilToInt(s.bossMaxHp)}</color></size>";
             float nameWidth = V5BattleKit.Width(bossName) / Css;
             V5BattleKit.Place(bossName.rectTransform, 16f, 8f, nameWidth + 4f, 22f);
-            // The immunities after the name: a word, then the element icons V2Hud shows.
+            // The immunities after the name: a word, then the element icons V2Hud shows. While the boss changes phase it cannot be hurt
+            // at all, and one amber line says so in their place.
             float x = 16f + nameWidth + 14f;
-            bool any = false;
+            bool shifting = s.bossShift01 > 0f, any = false;
             if (hud.bossImmunityIcons != null)
                 foreach (var icon in hud.bossImmunityIcons)
-                    if (icon && icon.gameObject.activeSelf) { any = true; break; }
-            bossImmune.gameObject.SetActive(any);
-            if (any)
+                {
+                    if (!icon || !icon.gameObject.activeSelf) continue;
+                    if (shifting) icon.gameObject.SetActive(false);
+                    else any = true;
+                }
+
+            bossImmune.gameObject.SetActive(any || shifting);
+            RenderBossPhase(s, shifting);
+            if (shifting)
             {
+                bossImmune.text = ArenaText.Pair("阶段转换中，暂时无法受伤", "CHANGING PHASE · INVULNERABLE");
+                bossImmune.color = V5TitleKit.Gold;
+                V5BattleKit.Place(bossImmune.rectTransform, x, 8f, V5BattleKit.Width(bossImmune) / Css + 2f, 22f);
+            }
+            else if (any)
+            {
+                bossImmune.color = V5TitleKit.Ink3;
                 bossImmune.text = ArenaText.Pair("免疫", "IMMUNE");
                 float wordWidth = V5BattleKit.Width(bossImmune) / Css;
                 V5BattleKit.Place(bossImmune.rectTransform, x, 8f, wordWidth + 2f, 22f);
@@ -475,6 +523,32 @@ namespace AnomalyArena
                     x += 24f;
                 }
             }
+        }
+
+        /// <summary>The lines on the life bar where a later phase begins, bright while still ahead and dim once passed; while the boss
+        /// changes phase, the line it stopped on is amber and a light pulses over the bar.</summary>
+        void RenderBossPhase(ArenaUiSnapshot s, bool shifting)
+        {
+            float width = BossW - 32f;
+            for (int i = 0; i < bossLines.Length; i++)
+            {
+                var line = bossLines[i];
+                if (!line) continue;
+                float share = i == 0 ? s.bossLine2 : s.bossLine3;
+                bool shown = share > 0f && share < 1f;
+                if (line.gameObject.activeSelf != shown) line.gameObject.SetActive(shown);
+                if (!shown) continue;
+                V5BattleKit.Place(line.rectTransform, 16f + width * share - 1.5f, 32f, 3f, 20f);
+                bool passed = s.bossPhase >= i + 2, stoppedOn = shifting && s.bossPhase == i + 2;
+                line.color = stoppedOn ? V5TitleKit.Gold : passed ? new Color(1f, 1f, 1f, .28f) : V5TitleKit.Ink;
+            }
+
+            if (!bossShiftLight) return;
+            if (bossShiftLight.gameObject.activeSelf != shifting) bossShiftLight.gameObject.SetActive(shifting);
+            if (!shifting) return;
+            float pulse = .5f + .5f * Mathf.Sin(Time.unscaledTime * 10f);
+            var gold = V5TitleKit.Gold;
+            bossShiftLight.color = new Color(gold.r, gold.g, gold.b, .18f + .3f * pulse);
         }
 
         // ───── The statuses beside the vitals ─────
