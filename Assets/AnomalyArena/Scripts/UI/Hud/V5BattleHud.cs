@@ -77,6 +77,8 @@ namespace AnomalyArena
             Redress();
             // The character screen's key is read wherever the battle HUD is (V5CharacterScreen; its page is made when it first opens).
             V5CharacterScreen.Install(hud.gameObject);
+            // The end of a run in the same look, over the old result screen (V5ResultScreen; its page is made when a run first ends).
+            V5ResultScreen.Install(hud.gameObject);
         }
 
         /// <summary>The saved resource panel (life, stamina, energy), the experience header, the banner's own words, the boss's immunity

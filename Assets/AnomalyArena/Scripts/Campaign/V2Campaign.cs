@@ -415,6 +415,9 @@ namespace AnomalyArena
             {
                 s.resultTitle = ArenaText.Pair("即将重返地球", "EARTH IS WITHIN REACH");
                 s.resultDetails = ArenaText.Pair($"第 {Day} 天 · 消灭 {s.kills} 个敌人\n飞船带着暗物质核心跃迁回家", $"Day {Day} · {s.kills} kills\nThe ship jumps home with the dark matter core");
+                s.resultWhere = ArenaText.Pair($"第 {Day} 天", $"Day {Day}");
+                s.resultCause = "";
+                s.resultStats = ArenaText.Pair($"消灭 {s.kills} 个敌人\n飞船带着暗物质核心跃迁回家", $"{s.kills} kills\nThe ship jumps home with the dark matter core");
             }
             else if (gm.State == GameState.Lost)
             {
@@ -423,6 +426,10 @@ namespace AnomalyArena
                 string cause = gm.ResultCauseLine();
                 s.resultDetails = (cause.Length > 0 ? cause + "\n" : "") + ArenaText.Pair($"第 {Day} 天 · 消灭 {s.kills} 个敌人\n飞船修复：引擎{(engineFixed ? "✓" : "×")} 装甲{(armorFixed ? "✓" : "×")} 燃料 {fuel}/{FuelUnits}",
                     $"Day {Day} · {s.kills} kills\nShip: engine {(engineFixed ? "✓" : "×")} armor {(armorFixed ? "✓" : "×")} fuel {fuel}/{FuelUnits}");
+                s.resultWhere = ArenaText.Pair($"第 {Day} 天", $"Day {Day}");
+                s.resultCause = cause;
+                s.resultStats = ArenaText.Pair($"消灭 {s.kills} 个敌人\n飞船修复：引擎{(engineFixed ? "✓" : "×")}　装甲{(armorFixed ? "✓" : "×")}　燃料 {fuel}/{FuelUnits}",
+                    $"{s.kills} kills\nShip: engine {(engineFixed ? "✓" : "×")}, armor {(armorFixed ? "✓" : "×")}, fuel {fuel}/{FuelUnits}");
             }
         }
 

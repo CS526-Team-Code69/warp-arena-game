@@ -346,8 +346,8 @@ namespace AnomalyArena
                 text.AppendLine(ArenaText.Pair($"正在模拟{DayName(dayPreset)}的玩家：输出 ×{DayPresetScales[dayPreset]:0.##}，按方案应在每秒 {DayPresetDps[dayPreset]:0.#} 点伤害左右（拿着一把没有强化的 Mk1 武器时）。",
                     $"Playing as the player of {DayName(dayPreset)}: output ×{DayPresetScales[dayPreset]:0.##}, about {DayPresetDps[dayPreset]:0.#} damage a second by the plan (with a Mk1 weapon and no upgrade)."));
             if (gm && gm.waves && gm.runWeapons)
-                text.AppendLine(ArenaText.Pair($"全局倍率：怪物伤害 ×{gm.waves.EnemyDamageScale:0.##}，武器伤害 ×{gm.runWeapons.WeaponDamageScale:0.##}，自伤和撞墙 ×{gm.runWeapons.SelfDamageScale:0.##}。",
-                    $"Global scales: monster damage ×{gm.waves.EnemyDamageScale:0.##}, weapon damage ×{gm.runWeapons.WeaponDamageScale:0.##}, self-damage and wall slams ×{gm.runWeapons.SelfDamageScale:0.##}."));
+                text.AppendLine(ArenaText.Pair($"全局倍率：怪物伤害 ×{gm.waves.EnemyDamageScale:0.##}，武器伤害 ×{gm.runWeapons.WeaponDamageScale:0.##}，自伤 ×{gm.runWeapons.SelfDamageScale:0.##}，被怪物撞墙 ×{gm.runWeapons.EnemySlamScale:0.##}，怪物撞墙扣自身生命的 {gm.rules.wallSlamHpShare:0%}。",
+                    $"Global scales: monster damage ×{gm.waves.EnemyDamageScale:0.##}, weapon damage ×{gm.runWeapons.WeaponDamageScale:0.##}, self-damage ×{gm.runWeapons.SelfDamageScale:0.##}, slams by monsters ×{gm.runWeapons.EnemySlamScale:0.##}, a monster's slam takes {gm.rules.wallSlamHpShare:0%} of its HP."));
             text.AppendLine(ArenaText.Pair($"玩家输出 ×{PlayerOutput.Scale:0.##}：最近 {DpsWindow:0} 秒平均每秒造成 {dps:0.#} 点伤害，{PlayerOutput.Since:0} 秒里一共 {PlayerOutput.Total:0} 点。",
                 $"Player output ×{PlayerOutput.Scale:0.##}: {dps:0.#} damage a second over the last {DpsWindow:0} s, {PlayerOutput.Total:0} in all over {PlayerOutput.Since:0} s."));
             var target = nearest ? nearest : last && last.IsAlive ? last : null;

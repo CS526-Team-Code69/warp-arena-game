@@ -10,10 +10,11 @@ namespace AnomalyArena
     /// amount each day (kills drop none), most of it a trail that leads from the base toward the black hole a node or two at a time and
     /// lies closer together the nearer the hole, and a few small nodes scattered sparsely in the map's other directions. Night: the
     /// ground is dark except in lights (placed mining lamps, the base, the player's own faint glow); a lamp's light and the base's end at
-    /// a ring drawn on the ground, and what stands inside the ring is lit. Weapons and skills work but hurt no shadow. Every region holds
-    /// shadow monsters, more where the morning's kills fell (V2Campaign.Shadows.cs): they wait at a light's edge, hunt a player in the
-    /// dark a little faster than the player walks, and a crowd of them goes into a lamp's light and puts it out, so a player who killed
-    /// a lot somewhere cannot mine there. The night's nodes are dark matter (and rules.nightOreNodes ore nodes, 0 since
+    /// a ring drawn on the ground, and what stands inside the ring is lit. Weapons and skills work but hurt no shadow; only light does.
+    /// Every region holds shadow monsters, more where the morning's kills fell (V2Campaign.Shadows.cs): light burns them away within
+    /// rules.shadowLightSeconds, so they wait at a light's edge; they hunt a player in the dark a little faster than the player walks, and
+    /// a crowd of them goes into a lamp's light and puts it out before the light has burned it away, so a player who killed a lot
+    /// somewhere cannot mine there. The night's nodes are dark matter (and rules.nightOreNodes ore nodes, 0 since
     /// 2026-11-06), mined only in lamp light; afternoon ore left unmined lies there too and needs the light as well.
     /// The base door opens in the afternoon and at night. With CampaignRules.openEndedEvenings (the rule since 2026-11-06) neither has a
     /// clock: the base panel's "into the night" ends the afternoon and its "wait for dawn" ends the night, and mining everything out moves
@@ -382,6 +383,7 @@ namespace AnomalyArena
         {
             foreach (var s in shadows) if (s.view) Destroy(s.view.gameObject);
             shadows.Clear();
+            shadowsRaised = 0;
             foreach (var l in lamps) if (l.view) Destroy(l.view.gameObject);
             lamps.Clear();
             for (int i = nodes.Count - 1; i >= 0; i--)
@@ -503,8 +505,8 @@ namespace AnomalyArena
         }
 
         /// <summary>The ground point lies in a lamp's light or the base's: inside the ring drawn on the ground, where a node can be
-        /// mined. A lamp a crowd of shadows has gone into is covered and lights nothing. The player's own glow does not count: it neither
-        /// holds shadows back nor lets the player mine.</summary>
+        /// mined. A lamp a crowd of shadows has gone into is covered: it lights nothing to mine by and shelters no one, though it still
+        /// burns the shadows in it. The player's own glow does not count: it neither holds shadows back nor lets the player mine.</summary>
         bool InLampLight(Vector3 p)
         {
             if (InBaseLight(p)) return true;
@@ -924,6 +926,8 @@ namespace AnomalyArena
 
         // ───── For automated checks ─────
         public int ShadowCount => shadows.Count;
+        /// <summary>Shadows the night raised, those the light has burned away included.</summary>
+        public int ShadowsRaised => shadowsRaised;
         public int LampCount => lamps.Count;
         public int OverrunRegions { get { int n = 0; foreach (var pair in regionShadows) if (pair.Value >= rules.overrunShadows) n++; return n; } }
         /// <summary>Nodes of a kind that can be mined now (surfaced and not mined).</summary>

@@ -242009,6 +242009,12 @@ MonoBehaviour:
     astralHealPerMinion: 0.05
     astralShieldPerMinion: 0.025
     astralShieldCap: 0.2
+    tyrantShiftSeconds: 2.4
+    nashShiftSeconds: 2.2
+    shiftBurstShare: 0.42
+    shiftPushRadius: 5
+    shiftPushDistance: 2.5
+    shiftResumeHold: 0.5
   refillMissingShare: 0.2
   continuousCrowdRevision: 1
   earlyPopulationScale:
@@ -371961,7 +371967,7 @@ MonoBehaviour:
   startingDamageFactor: 0.5
   crowdDamageMultiplier: 1.5
   weaponDamageScale: 1.25
-  selfDamageScale: 0.6
+  selfDamageScale: 0.4
   startingCycleFactor: 0.5
   <HumanRocketImpactRetention>k__BackingField: 0.5
   pistolRoundSpeed: 45

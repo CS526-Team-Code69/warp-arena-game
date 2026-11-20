@@ -8,8 +8,11 @@
  * v2_event -> "v2_events". A story-mode run also sends run_start, run_end and wave_damage; their
  * rows end with mode "story" (open-mode rows with "open") and the open-mode chart leaves them out.
  * Summaries: setup() builds two tabs. "Dashboard" holds titles, captions and charts only: the four story-mode metrics,
- * each as a live chart with an example chart under it, and the open mode's run endings. The hidden "calc" holds every
- * table those charts read.
+ * each as a live chart with an example chart under it, the endings of story runs continued from a save, and the open
+ * mode's run endings. The hidden "calc" holds every table those charts read.
+ * A story run continued from a save sends its run_start at the stage where the save continues (dawn, dusk, night or
+ * final_boss) on the saved day; a fresh story run sends it at the stage "tutorial" on day 0. Card 1 and the totals count the
+ * two apart. Builds before 2026-11-20 sent "tutorial" for every story run, so their continued runs count as fresh here.
  *
  * The WebGL build posts one JSON event per request as a text/plain body.
  * doPost validates and sanitizes it, then appends its rows to the event's sheet.
@@ -131,8 +134,11 @@ var V2_DAY_TEXT_COLUMNS = ['B:F', 'J:K'];
 var V2_PURCHASE_TEXT_COLUMNS = ['B:F', 'H:K'];
 var V2_EVENT_TEXT_COLUMNS = ['B:F', 'H:J'];
 
-// The campaign's stages, as RunAnalytics names them; any other stage is stored as "other".
+// The campaign's stages, as RunAnalytics names them; any other stage is stored as "other". A story run_start says "tutorial"
+// for a fresh run, and dawn, dusk, night or final_boss for a run continued from a save (FRESH_STAGE).
 var V2_STAGES = ['tutorial', 'day', 'dusk', 'night', 'dawn', 'void_trial', 'final_boss', 'ending'];
+// The run_start stage of a fresh story run, the one that begins on Day 0; any other stage marks a run continued from a save.
+var FRESH_STAGE = 'tutorial';
 // What ended a run in the campaign: the "runs" causes plus the base falling.
 var V2_END_CAUSES = CAUSES.concat(['base_destroyed']);
 // The kinds of v2_event and the details each accepts: 'required' (any text, not empty), 'optional' (any text) or a list.
@@ -187,7 +193,7 @@ var STORY_FINAL_FIGHT = 'final_boss';
 var END_GROUPS = [
   { label: 'Enemy', causes: ['enemy'] },
   { label: 'Tyrant King', causes: ['tyrant'] },
-  { label: 'Own weapon', causes: ['backfire'] },
+  { label: 'Own weapon', causes: ['backfire'] }, // since 2026-11-20 also a wall slam the player's own weapon started
   { label: 'Wall slam', causes: ['wall_slam'] },
   { label: 'Burn / poison', causes: ['status'] },
   { label: 'Base destroyed', causes: ['base_destroyed'] },
@@ -195,6 +201,17 @@ var END_GROUPS = [
   { label: 'Left the run', causes: ['restart', 'quit_to_title'] }
 ];
 var OTHER_GROUP = 'Other';
+// How a story run began, as the list of run endings in calc marks it: fresh (its run_start said FRESH_STAGE, or it sent no story
+// run_start) or continued from a save. Card 1 charts the fresh runs; the continued runs have a chart of their own.
+var START_FRESH = 'fresh';
+var START_CONTINUED = 'continued';
+// The date of the builds that first sent the stage of a continued save; the rows of older builds call every run fresh.
+var CONTINUED_SINCE = '2026-11-20';
+// calc lists every story run_end row from this cell down, in five columns (S5: run_id, stage, day, cause, start). The list
+// grows with the data, so it stands right of every table and right of the list of first purchases.
+var ENDINGS_COLUMN = 19;
+var ENDINGS_ROW = 5;
+var ENDINGS_FIELDS = ['run_id', 'stage', 'day', 'cause', 'start'];
 var END_COLOURS = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e34948', '#e87ba4', '#008300', '#b1afa8', '#5f5e5a'];
 
 // Card 2, where the resources go. The base's rooms as the game names them in "v2_purchases", in the order the base shows
@@ -227,7 +244,7 @@ var WEAPON_COLOUR = '#2a78d6';
 var DAMAGE_GROUPS = [
   { label: 'Grunt', sources: ['Grunt', 'Grunt_elite'] },
   { label: 'Tyrant King', sources: ['Tyrant', 'Tyrant_elite'] },
-  { label: 'Own weapon', sources: ['backfire'] },
+  { label: 'Own weapon', sources: ['backfire'] }, // since 2026-11-20 also a wall slam the player's own weapon started
   { label: 'Wall slam', sources: ['wall_slam'] },
   { label: 'Brute', sources: ['Brute', 'Brute_elite'] },
   { label: 'Spitter', sources: ['Spitter', 'Spitter_elite'] },
@@ -255,6 +272,14 @@ var TOTALS = [
   ['hits', 'Hits on the player'],
   ['openEnded', 'Open-mode runs ended']
 ];
+// The totals of fresh runs and runs continued from a save. They stand in a table of their own at the end of calc, so that no
+// table above moves.
+var START_TOTALS = [
+  ['continued', 'Story runs continued from a save (run_start at a stage other than tutorial)'],
+  ['fresh', 'Fresh story runs (started minus continued)'],
+  ['freshEnded', 'Fresh story runs ended'],
+  ['continuedEnded', 'Story runs continued from a save, ended']
+];
 
 // The Dashboard's grid. Columns: a margin (A), the left card (B to G), a gutter (H), the right card (I to N), a margin (O).
 // A chart is exactly as wide as its card and as tall as the rows under it, so no chart covers a text row or another chart.
@@ -280,9 +305,10 @@ var TOTALS_ROW = 3;
 // example label and the first row of the example chart. A chart covers chartRows rows.
 var UPPER_BAND = { header: 5, caption: 6, liveLabel: 7, live: 8, exampleLabel: 22, example: 23, chartRows: 14 };
 var LOWER_BAND = { header: 38, caption: 39, liveLabel: 40, live: 41, exampleLabel: 59, example: 60, chartRows: 18 };
-// The open mode has one chart as wide as both cards, and no example.
-var OPEN_BAND = { header: 79, caption: 80, chart: 81, chartRows: 14 };
-var DASHBOARD_LAST_ROW = 94;
+// The story runs continued from a save, and the open mode, have one chart each as wide as both cards, and no example.
+var CONTINUED_BAND = { header: 79, caption: 80, chart: 81, chartRows: 14 };
+var OPEN_BAND = { header: 96, caption: 97, chart: 98, chartRows: 14 };
+var DASHBOARD_LAST_ROW = 111;
 
 var HEADER_FILL = '#1F2937';
 var HEADER_INK = '#FFFFFF';
@@ -988,26 +1014,59 @@ function groupCriteria_(field, values, listed) {
 // Every count below names its event or kind first. Besides picking the rows, that keeps the header row and the empty rows
 // under the data out of the "<>" criteria, which those rows would match.
 
-// ----- Card 1, from "runs": the run_end rows with mode "story"
+// ----- Card 1, from "runs": the run_end rows with mode "story", through the list of run endings in calc
 
-function storyEndCriteria_(pairs) {
-  return criteria_(RUNS_SHEET, HEADER, [['event', '"run_end"'], ['edition', '"<>test"'], ['mode', '"' + MODE_STORY + '"']].concat(pairs));
+// One column of the list of story run endings in calc, from its first row down: "$T$5:$T" for the stage.
+function endingsRef_(field) {
+  var column = letters_(ENDINGS_COLUMN + ENDINGS_FIELDS.indexOf(field));
+  return '$' + column + '$' + ENDINGS_ROW + ':$' + column;
 }
 
-// Story run_end rows of one cause group (causes null: OTHER_GROUP) on the days dayCriterion names; a story row keeps its day
-// in "wave". A run that ended in the final battle is counted under that battle and on no day: dayCriterion null counts
-// those, one COUNTIFS for each of the battle's stages.
-function storyEndFormula_(causes, dayCriterion) {
+// Every story run_end row (test rows left out), in the order the rows arrived: run_id, stage, day (a story row keeps it in
+// "wave") and cause. FILTER returns #N/A when nothing matches, and IFERROR leaves one empty row instead.
+function storyEndingsFormula_() {
+  var column = function (name) { return dataRef_(RUNS_SHEET, HEADER, name); };
+  return '=IFERROR(FILTER({' + [column('run_id'), column('stage'), column('wave'), column('cause')].join(',') + '},' +
+    column('event') + '="run_end",' + column('edition') + '<>"test",' + column('mode') + '="' + MODE_STORY + '"),{"","","",""})';
+}
+
+// How each run of the list began: "continued" when its run sent a story run_start at a stage other than FRESH_STAGE, else
+// "fresh" (a fresh start, a run whose run_start went out as the open mode, or a run of a build that said FRESH_STAGE for every
+// run). One COUNTIFS for each row of the list, worked out over the column at once.
+function storyEndingsStartFormula_() {
+  return '=ARRAYFORMULA(IF(' + endingsRef_('run_id') + '="","",IF(COUNTIFS(' +
+    columnRef_(RUNS_SHEET, HEADER, 'run_id') + ',' + endingsRef_('run_id') + ',' +
+    criteria_(RUNS_SHEET, HEADER, [['event', '"run_start"'], ['edition', '"<>test"'], ['mode', '"' + MODE_STORY + '"'],
+      ['stage', '"<>' + FRESH_STAGE + '"']]) + ')>0,"' + START_CONTINUED + '","' + START_FRESH + '")))';
+}
+
+// Story run_start rows at a stage other than FRESH_STAGE: the runs continued from a save. A run sends one run_start.
+function continuedStartsFormula_() {
+  return '=COUNTIFS(' + criteria_(RUNS_SHEET, HEADER, [['event', '"run_start"'], ['edition', '"<>test"'],
+    ['mode', '"' + MODE_STORY + '"'], ['stage', '"<>' + FRESH_STAGE + '"']]) + ')';
+}
+
+// Story runs that began as start says (START_FRESH or START_CONTINUED) and ended with a cause of one group (causes null:
+// OTHER_GROUP) on the days dayCriterion names. A run that ended in the final battle is counted under that battle and on no day:
+// dayCriterion null counts those, one COUNTIFS for each of the battle's stages. Counted in the list of run endings, whose
+// first column is not empty on a listed row.
+function storyEndFormula_(causes, dayCriterion, start) {
   var places = dayCriterion === null ?
     STORY_FINAL_STAGES.map(function (stage) { return [['stage', '"' + stage + '"']]; }) :
-    [STORY_FINAL_STAGES.map(function (stage) { return ['stage', '"<>' + stage + '"']; }).concat([['wave', dayCriterion]])];
+    [STORY_FINAL_STAGES.map(function (stage) { return ['stage', '"<>' + stage + '"']; }).concat([['day', quoted_(dayCriterion)]])];
   var terms = [];
   groupCriteria_('cause', causes, listed_(END_GROUPS, 'causes')).forEach(function (cause) {
     places.forEach(function (place) {
-      terms.push('COUNTIFS(' + storyEndCriteria_(cause.concat(place)) + ')');
+      var pairs = [['run_id', '"?*"'], ['start', '"' + start + '"']].concat(cause, place);
+      terms.push('COUNTIFS(' + pairs.map(function (pair) { return endingsRef_(pair[0]) + ',' + pair[1]; }).join(',') + ')');
     });
   });
   return '=' + terms.join('+');
+}
+
+// A criterion as text in quotes: 3 becomes "3"; one already in quotes (">7") stays as it is.
+function quoted_(criterion) {
+  return criterion.charAt(0) === '"' ? criterion : '"' + criterion + '"';
 }
 
 // Distinct story runs that sent run_start. FILTER keeps a "runs" row only when a row of its run_id says "story", so a run
@@ -1191,10 +1250,27 @@ function buildCalc_(ss) {
   calcWeapons_(calc, cursor, built);
   calcDamage_(calc, cursor, built);
   calcOpen_(calc, cursor, built);
+  // Added after the open mode, so that no table above moves.
+  calcContinued_(calc, cursor, built);
+
+  var starts = startTable_(calc, cursor, 'LIVE totals: fresh story runs and story runs continued from a save', ['Total', 'Value'],
+    START_TOTALS.length);
+  calc.getRange(starts.first, 1, starts.rows, 1).setValues(START_TOTALS.map(function (total) { return [total[1]]; }));
+  START_TOTALS.forEach(function (total, i) {
+    built.total[total[0]] = cell_(starts.first + i, 2);
+  });
+  var startFormulas = {
+    continued: continuedStartsFormula_(),
+    // Every continued run is among the story runs started, which also count a run whose run_start went out as the open mode.
+    fresh: '=' + built.total.started + '-' + built.total.continued,
+    freshEnded: '=SUM(' + bodyOf_(built.endings) + ')',
+    continuedEnded: '=SUM(' + bodyOf_(built.continued) + ')'
+  };
+  calc.getRange(starts.first, 2, starts.rows, 1).setFormulas(START_TOTALS.map(function (total) { return [startFormulas[total[0]]]; }));
 
   var formulas = {
     started: storyRunsStartedFormula_(),
-    ended: '=SUM(' + bodyOf_(built.endings) + ')',
+    ended: '=' + built.total.freshEnded + '+' + built.total.continuedEnded,
     purchases: '=COUNTIFS(' + purchaseCriteria_([]) + ')',
     crates: '=COUNTIFS(' + eventCriteria_('crate', []) + ')',
     since: firstOfferFormula_(),
@@ -1209,17 +1285,35 @@ function buildCalc_(ss) {
   return built;
 }
 
-function calcEndings_(calc, cursor, built) {
+// The table of card 1's charts for the runs that began as start says: runs ended on each day and in the final battle, by cause.
+function storyEndTable_(calc, cursor, title, start) {
   var days = storyDayRows_();
   var groups = END_GROUPS.map(function (group) { return group.causes; }).concat([null]);
   var header = ['Day'].concat(END_GROUPS.map(function (group) { return group.label; }), [OTHER_GROUP]);
-  built.endings = liveTable_(calc, cursor, 'LIVE 1: story runs ended on each day and in the final battle, by cause', header,
-    days.map(function (d) { return d.label; }).concat([STORY_BOSS_ROW]),
+  return liveTable_(calc, cursor, title, header, days.map(function (d) { return d.label; }).concat([STORY_BOSS_ROW]),
     days.map(function (d) { return d.criterion; }).concat([null]).map(function (criterion) {
-      return groups.map(function (causes) { return storyEndFormula_(causes, criterion); });
+      return groups.map(function (causes) { return storyEndFormula_(causes, criterion, start); });
     }));
+}
+
+function calcEndings_(calc, cursor, built) {
+  // Every story run_end row with how its run began, right of the tables: the second list of calc that grows.
+  calc.getRange(ENDINGS_ROW - 2, ENDINGS_COLUMN)
+    .setValue('LIVE 1: every story run that ended, and how it began (this list grows with the data)').setFontWeight('bold');
+  calc.getRange(ENDINGS_ROW - 1, ENDINGS_COLUMN, 1, ENDINGS_FIELDS.length).setValues([ENDINGS_FIELDS]).setFontWeight('bold');
+  calc.getRange(ENDINGS_ROW, ENDINGS_COLUMN).setFormulas([[storyEndingsFormula_()]]);
+  calc.getRange(ENDINGS_ROW, ENDINGS_COLUMN + ENDINGS_FIELDS.indexOf('start')).setFormulas([[storyEndingsStartFormula_()]]);
+
+  built.endings = storyEndTable_(calc, cursor,
+    'LIVE 1: fresh story runs (begun on Day 0) ended on each day and in the final battle, by cause', START_FRESH);
   built.endingsExample = fixedTable_(calc, cursor, 'EXAMPLE 1: the same table from simulated runs',
     withCatchAll_(STORY_EXAMPLES.endings, OTHER_GROUP));
+}
+
+// The runs continued from a save, in the same table as card 1's fresh runs. It stands after the open mode's table.
+function calcContinued_(calc, cursor, built) {
+  built.continued = storyEndTable_(calc, cursor,
+    'LIVE 1 continued: story runs continued from a save, ended on each day and in the final battle, by cause', START_CONTINUED);
 }
 
 function calcSpending_(calc, cursor, built) {
@@ -1417,10 +1511,10 @@ function layOutDashboard_(sheet) {
   sheet.setColumnWidth(RIGHT_CARD + CARD_COLUMNS, MARGIN_WIDTH);
   sheet.setRowHeights(1, DASHBOARD_LAST_ROW, ROW_HEIGHT);
   sheet.setRowHeight(TITLE_ROW, TITLE_ROW_HEIGHT);
-  [UPPER_BAND, LOWER_BAND, OPEN_BAND].forEach(function (band) {
+  [UPPER_BAND, LOWER_BAND, CONTINUED_BAND, OPEN_BAND].forEach(function (band) {
     sheet.setRowHeight(band.header, HEADER_ROW_HEIGHT);
   });
-  [UPPER_BAND, LOWER_BAND].forEach(function (band) {
+  [UPPER_BAND, LOWER_BAND, CONTINUED_BAND].forEach(function (band) {
     sheet.setRowHeight(band.caption, CAPTION_ROW_HEIGHT);
   });
 }
@@ -1433,16 +1527,18 @@ function buildDashboard_(ss, built) {
 
   line_(sheet, TITLE_ROW, LEFT_CARD, WIDE_COLUMNS, DASHBOARD_TITLE).setFontWeight('bold').setFontSize(18).setVerticalAlignment('middle');
   line_(sheet, INTRO_ROW, LEFT_CARD, WIDE_COLUMNS, DASHBOARD_INTRO).setFontColor(CAPTION_INK);
-  line_(sheet, TOTALS_ROW, LEFT_CARD, WIDE_COLUMNS, sentence_(['Story runs started ', [total.started], DOT + 'ended ', [total.ended],
-    DOT + 'purchases ', [total.purchases], DOT + 'crates opened ', [total.crates]]));
+  line_(sheet, TOTALS_ROW, LEFT_CARD, WIDE_COLUMNS, sentence_(['Story runs started ', [total.started], ' (fresh ', [total.fresh],
+    ', continued from a save ', [total.continued], ')' + DOT + 'ended ', [total.ended], DOT + 'purchases ', [total.purchases],
+    DOT + 'crates opened ', [total.crates], DOT + 'rows sent before ' + CONTINUED_SINCE + ' count every story run as fresh']));
 
   writeCard_(sheet, UPPER_BAND, LEFT_CARD, {
     title: '1' + DOT + 'How runs end',
-    caption: 'Runs ended on each day and in the final battle, by cause.',
-    live: sentence_([LIVE_LABEL + DOT + 'story runs ended: ', [total.ended]]),
+    caption: 'Fresh runs (begun on Day 0), ended on each day and in the final battle, by cause. Runs continued from a save ' +
+      'have their own chart under the cards.',
+    live: sentence_([LIVE_LABEL + DOT + 'fresh runs ended: ', [total.freshEnded], DOT + 'continued from a save: ', [total.continuedEnded]]),
     chart: function (example) {
       return stackedColumns_(sheet, tableRange_(calc, example ? built.endingsExample : built.endings),
-        chartTitle_('How story runs end, by day', example), 'Day', 'Runs ended', END_COLOURS, false);
+        chartTitle_('How fresh story runs end, by day', example), 'Day', 'Runs ended', END_COLOURS, false);
     }
   });
 
@@ -1480,13 +1576,22 @@ function buildDashboard_(ss, built) {
 
   writeCard_(sheet, LOWER_BAND, RIGHT_CARD, {
     title: '4' + DOT + 'What hurts the player',
-    caption: 'Share of each day\'s damage to the player, by source.',
+    caption: 'Share of each day\'s damage to the player, by source. A wall slam that the player\'s own weapon started counts as ' +
+      'Own weapon.',
     live: sentence_([LIVE_LABEL + DOT + 'hits on the player: ', [total.hits]]),
     chart: function (example) {
       return stackedColumns_(sheet, tableRange_(calc, example ? built.damageExample : built.damage),
         chartTitle_('Damage to the player per day, by source', example), 'Day', 'Share of the day\'s damage', DAMAGE_COLOURS, true);
     }
   });
+
+  headerLine_(sheet, CONTINUED_BAND.header, LEFT_CARD, WIDE_COLUMNS, '1' + DOT + 'How runs end: runs continued from a save');
+  captionLine_(sheet, CONTINUED_BAND.caption, LEFT_CARD, WIDE_COLUMNS,
+    sentence_(['Runs that began from a save (their run_start says the saved day and a stage other than tutorial), ended on each ' +
+      'day and in the final battle, by cause. Total: ', [total.continuedEnded], '. Rows sent before ' + CONTINUED_SINCE +
+      ' said tutorial for every run, so a run continued from a save before then counts as fresh, on card 1.']));
+  placeChart_(sheet, stackedColumns_(sheet, tableRange_(calc, built.continued), 'How story runs continued from a save end, by day',
+    'Day', 'Runs ended', END_COLOURS, false), CONTINUED_BAND.chart, LEFT_CARD, WIDE_WIDTH, CONTINUED_BAND.chartRows * ROW_HEIGHT);
 
   headerLine_(sheet, OPEN_BAND.header, LEFT_CARD, WIDE_COLUMNS, 'Open mode (' + (MAX_WAVE + 1) + ' waves)');
   captionLine_(sheet, OPEN_BAND.caption, LEFT_CARD, WIDE_COLUMNS,

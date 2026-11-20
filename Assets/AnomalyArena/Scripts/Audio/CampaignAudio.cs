@@ -29,10 +29,10 @@ namespace AnomalyArena
     /// Install Sounds from Audio/Campaign by file name, so another take is a file swapped and the menu run again. V2Campaign puts it beside
     /// itself; it acts only while a campaign runs, so the classic run never hears it, and a sound without a clip stays silent.
     /// One-shots come two ways: the campaign's scripted moments call Play or PlayAt (the memory CG, the ignition, the ending, the base's
-    /// stock, the base panel's refusals), and the rest are found here by comparing the campaign's public state with the frame before
-    /// (Watch: a room breaks or is repaired or gains a level, the shield breaks or refills, a lamp is set, eaten or lost, the night's
-    /// first shadows, a shadow's touch, currency mined or picked up, mining strikes, an overrun region entered, a click that cannot fire)
-    /// and from CampaignEvents (nightfall, dawn, a new day, a hit on the base, a lamp crafted, fuel). The six loops follow the state
+    /// stock, the base panel's refusals, a shadow the light dissolves, softly), and the rest are found here by comparing the campaign's
+    /// public state with the frame before (Watch: a room breaks or is repaired or gains a level, the shield breaks or refills, a lamp is
+    /// set, eaten or lost, the night's first shadows, a shadow's touch, currency mined or picked up, mining strikes, an overrun region
+    /// entered, a click that cannot fire) and from CampaignEvents (nightfall, dawn, a new day, a hit on the base, a lamp crafted, fuel). The six loops follow the state
     /// (LoopLevel) and fade in and out. A sound placed in the world is quieter the farther it is from the player (Proximity); every level
     /// is its own gain times effectsGain or loopsGain times V3WorldAudio's master gain, and the pause menu holds every sound where it is.
     /// Each loop cross-fades from its end into its own start over loopSeam (two sources): the web build turns every imported clip into
@@ -219,6 +219,9 @@ namespace AnomalyArena
         /// <summary>Plays a one-shot at a point of the world: quieter the farther it is from the player (fullWithin, audibleRange).</summary>
         public static bool PlayAt(CampaignSfx sfx, Vector3 at) => Instance && Instance.Emit(sfx, at);
 
+        /// <summary>The same at a share of its level (0 to 1), for a sound that should stay soft.</summary>
+        public static bool PlayAt(CampaignSfx sfx, Vector3 at, float volume) => Instance && Instance.Emit(sfx, at, volume);
+
         /// <summary>The sound has a clip in this build.</summary>
         public static bool Has(CampaignSfx sfx) => Instance && Instance.EntryOf(sfx).clip;
 
@@ -337,7 +340,7 @@ namespace AnomalyArena
             }
         }
 
-        bool Emit(CampaignSfx sfx, Vector3? at)
+        bool Emit(CampaignSfx sfx, Vector3? at, float volume = 1f)
         {
             if (!Live) return false;
             var entry = EntryOf(sfx);
@@ -346,7 +349,7 @@ namespace AnomalyArena
             int id = (int)sfx;
             float now = Time.unscaledTime;
             if (now < nextAllowed[id]) return true;
-            float level = entry.gain * effectsGain * Master;
+            float level = entry.gain * effectsGain * Master * Mathf.Clamp01(volume);
             var player = gm ? gm.player : null;
             if (at.HasValue && player) level *= Proximity(Query.Flat(player.Position - at.Value).magnitude, fullWithin, audibleRange);
             if (level <= .001f) return true;

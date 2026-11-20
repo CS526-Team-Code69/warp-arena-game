@@ -4,7 +4,8 @@ using UnityEngine;
 namespace AnomalyArena
 {
     /// <summary>The night's shadow rules (V2 doc section 5): how many shadows a region holds, how fast a hunting shadow is against the
-    /// player's walk, and when the shadows at a lamp are a crowd that goes into its light. The numbers are the rules' defaults.</summary>
+    /// player's walk, when the shadows at a lamp are a crowd that goes into its light, and how light burns a shadow away. The numbers are
+    /// the rules' defaults.</summary>
     [TestFixture]
     public class NightShadowRulesTest
     {
@@ -99,6 +100,65 @@ namespace AnomalyArena
         [Test]
         public void TutorialShadowHitScale_HurtsButLessThanANormalTouch() =>
             Assert.That(rules.tutorialShadowHitScale, Is.GreaterThan(0f).And.LessThan(1f));
+
+        // ───── Burning in light (CampaignRules.ShadowExposure, ShadowBurnedAway, ShadowBurnShare) ─────
+
+        [Test]
+        public void ShadowLightSeconds_AreThree() => Assert.That(rules.shadowLightSeconds, Is.EqualTo(3f));
+
+        [Test]
+        public void ShadowExposure_InLightWithoutABreak_BurnsAShadowAwayAtTheLightSeconds()
+        {
+            const float frame = 1f / 60f;
+            float exposure = 0f, seconds = 0f;
+
+            while (!rules.ShadowBurnedAway(exposure) && seconds < 10f)
+            {
+                exposure = CampaignRules.ShadowExposure(exposure, true, frame);
+                seconds += frame;
+            }
+
+            Assert.That(seconds, Is.EqualTo(rules.shadowLightSeconds).Within(frame * 1.5f), "it dissolves after three seconds in light, frame by frame");
+        }
+
+        [TestCase(0f, ExpectedResult = false, TestName = "A shadow the light has not touched is whole")]
+        [TestCase(2.9f, ExpectedResult = false, TestName = "After 2.9 seconds in light it is still there")]
+        [TestCase(3f, ExpectedResult = true, TestName = "After 3 seconds in light it is gone")]
+        public bool ShadowBurnedAway_OnlyOnceItHasTakenTheLightSeconds(float exposure) => rules.ShadowBurnedAway(exposure);
+
+        [Test]
+        public void ShadowExposure_OutOfTheLight_DoesNotHeal() =>
+            Assert.That(CampaignRules.ShadowExposure(1.5f, false, 20f), Is.EqualTo(1.5f), "twenty seconds in the dark give nothing back");
+
+        [Test]
+        public void ShadowExposure_ABackwardStepOfTime_GivesNothingBack() =>
+            Assert.That(CampaignRules.ShadowExposure(2f, true, -1f), Is.EqualTo(2f));
+
+        [Test]
+        public void ShadowExposure_ThreeShortStaysInLight_AddUp_AndTheThirdBurnsItAway()
+        {
+            float exposure = 0f;
+
+            for (int stay = 1; stay <= 3; stay++)
+            {
+                Assert.That(rules.ShadowBurnedAway(exposure), Is.False, $"still there before stay {stay}");
+                exposure = CampaignRules.ShadowExposure(exposure, true, 1f);   // a second in a lamp's light
+                exposure = CampaignRules.ShadowExposure(exposure, false, 10f); // then ten in the dark
+            }
+
+            Assert.That(rules.ShadowBurnedAway(exposure), Is.True, "three separate seconds of light burn it away like three in one go");
+        }
+
+        [TestCase(0f, ExpectedResult = 0f, TestName = "Untouched, the body is whole")]
+        [TestCase(1.5f, ExpectedResult = .5f, TestName = "Half the light seconds fade it halfway")]
+        [TestCase(3f, ExpectedResult = 1f, TestName = "All of them and it is gone")]
+        [TestCase(6f, ExpectedResult = 1f, TestName = "Never more than gone")]
+        public float ShadowBurnShare_FollowsTheLightTaken(float exposure) => rules.ShadowBurnShare(exposure);
+
+        [Test]
+        public void Crowd_ThatGoesIntoALampTogether_WearsItOutBeforeTheLightBurnsItAway() =>
+            Assert.That(V2Campaign.LampSecondsAgainst(rules.lampHp, rules.overrunShadows), Is.LessThan(rules.shadowLightSeconds),
+                "the smallest crowd puts a lamp out before it dissolves, so a crowd still puts lamps out");
 
         // ───── Keeping out of the light (V2Campaign.KeptOutOf), a lamp of radius 6.5 at the origin ─────
 

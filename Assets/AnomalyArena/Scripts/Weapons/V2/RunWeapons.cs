@@ -26,10 +26,13 @@ namespace AnomalyArena
         public float crowdDamageMultiplier = 1f;
         [Min(0f), Tooltip("Scale on every weapon hit that lands on a monster, hand and auto weapons alike, in both modes (Combatant applies it before the burn share, so a weapon's own burn follows). The weapons' backfires and the hits on the player are not scaled by it.")]
         public float weaponDamageScale = 1f;
-        [Min(0f), Tooltip("Scale on the damage the player takes from their own weapons (backfires, blasts that reach them) and from wall slams, in both modes.")]
+        [Min(0f), Tooltip("Scale on the damage the player takes from their own weapons (backfires, blasts that reach them) and from the wall slams their knocks start, in both modes.")]
         public float selfDamageScale = 1f;
+        [Min(0f), Tooltip("Scale on the damage the player takes from a wall slam an enemy's knock started (or one whose start is not known), in both modes.")]
+        public float enemySlamScale = .6f;
         public float WeaponDamageScale => DifficultyScales.Read(weaponDamageScale);
         public float SelfDamageScale => DifficultyScales.Read(selfDamageScale);
+        public float EnemySlamScale => DifficultyScales.Read(enemySlamScale);
         [Min(.01f), Tooltip("Complete attack duration multiplier for the three starting forms; .5 doubles firing and motion cadence.")]
         public float startingCycleFactor = .5f;
         [field: SerializeField, HideInInspector, Tooltip("旧版衰减保存字段，现已停用。人形火箭本次发射的所有目标使用同一伤害。")]

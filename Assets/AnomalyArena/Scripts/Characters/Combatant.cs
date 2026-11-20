@@ -658,8 +658,16 @@ namespace AnomalyArena
         {
             if (!IsAlive) return;
             float damage=GM.rules.wallDamage;
-            // Impact is a wave-1 bonus that grows with the same HP multiplier as the wall damage itself.
-            if(Team==Team.Enemy)damage=(damage+(GM.progression?GM.progression.Stats.impact:0))*GM.waves.HpMultiplier;
+            // A monster's slam takes a share of its own max HP (GameManager.Rules.WallSlamShare), so it weighs the same on every wave
+            // and every story day; the impact stat raises it by the share it adds to wallDamage. A boss keeps the fixed slam grown with
+            // the wave's HP.
+            if(Team==Team.Enemy)
+            {
+                float impact=GM.progression?GM.progression.Stats.impact:0f;
+                damage=this is Enemy{IsBoss:false} monster
+                    ?maxHp*GM.rules.WallSlamShare(monster.Elite)*(1f+impact/Mathf.Max(.01f,GM.rules.wallDamage))
+                    :(damage+impact)*GM.waves.HpMultiplier;
+            }
             slamWeapon = weapon;
             try { ReceiveDamage(new DamageInfo{amount=damage,knockDir=away,kind=HitKind.Slam,source=DamageSource.Wall,slamBy=by}); }
             finally { slamWeapon = null; }
@@ -689,8 +697,10 @@ namespace AnomalyArena
             // scale on everything (PlayerOutput), both before the burn share, the crit and this body's own modifiers.
             if(Team==Team.Enemy&&!selfHit&&info.dealer?.Owner is Combatant{Team:Team.Player})
                 info.amount*=(info.weapon!=null&&GM&&GM.runWeapons?GM.runWeapons.WeaponDamageScale:1f)*PlayerOutput.Scale;
-            // The player's own weapons and wall slams hurt the player at RunWeapons.SelfDamageScale.
-            if(Team==Team.Player&&(selfHit||info.source==DamageSource.Wall)&&GM&&GM.runWeapons)info.amount*=GM.runWeapons.SelfDamageScale;
+            // The player's own weapons, and the wall slams their knocks start, hurt the player at RunWeapons.SelfDamageScale; a slam an
+            // enemy's knock started (or one whose start is not known) takes RunWeapons.EnemySlamScale.
+            if(Team==Team.Player&&(selfHit||info.source==DamageSource.Wall)&&GM&&GM.runWeapons)
+                info.amount*=selfHit||info.By==this?GM.runWeapons.SelfDamageScale:GM.runWeapons.EnemySlamScale;
             bool crit=false;
             // A Fire hit's burn follows the hit as dealt, before a crit and this body's own modifiers.
             float baseDamage=info.amount;

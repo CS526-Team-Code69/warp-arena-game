@@ -837,8 +837,9 @@ namespace AnomalyArena
                     }
                     else
                     {
+                        // Its own crash: twice the share of its max HP a wall slam takes.
                         ReceiveDamage(new DamageInfo
-                            { amount = GM.rules.wallDamage * GM.waves.HpMultiplier * 2, kind = HitKind.Slam });
+                            { amount = maxHp * GM.rules.WallSlamShare(Elite) * 2f, kind = HitKind.Slam });
                         V5WeaponAudio.At(V5Sfx.RamCrash, Position);
                         cooldown = 1.5f;
                         Stun(1.5f);

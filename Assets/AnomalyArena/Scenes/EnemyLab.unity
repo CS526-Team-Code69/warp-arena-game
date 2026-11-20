@@ -371056,7 +371056,7 @@ MonoBehaviour:
   startingDamageFactor: 0.5
   crowdDamageMultiplier: 1.5
   weaponDamageScale: 1.25
-  selfDamageScale: 0.6
+  selfDamageScale: 0.4
   startingCycleFactor: 0.5
   <HumanRocketImpactRetention>k__BackingField: 0.5
   knifeOutboundSpeed: 18

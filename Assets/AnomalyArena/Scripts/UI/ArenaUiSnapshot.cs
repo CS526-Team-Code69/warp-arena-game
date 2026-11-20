@@ -57,6 +57,9 @@ namespace AnomalyArena
         public string bossImmunities = "";
         public string resultTitle = "RUN ENDED";
         public string resultDetails = "";
+        /// <summary>The result's parts for the fifth pass's page (V5ResultScreen): where the run ended, what ended it (its first line,
+        /// then what to know about it; empty for a run that was won) and the run's numbers. resultDetails keeps them in one text.</summary>
+        public string resultWhere = "", resultCause = "", resultStats = "";
 
         public string buildSummary = "";
 

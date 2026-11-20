@@ -22,6 +22,13 @@ namespace AnomalyArena
             [Tooltip("Damage for hitting a wall after being knocked back / thrown (ignores protection)")]
             public float wallDamage = 5f;
 
+            [Range(0f, 1f), Tooltip("Share of a monster's max HP one wall slam takes, in both modes (an elite takes half of it, a Rammer's own "
+                                     + "crash twice it); bosses keep the fixed wall damage grown with the wave's HP.")]
+            public float wallSlamHpShare = .2f;
+
+            /// <summary>The share of its max HP one wall slam takes from a monster (wallSlamHpShare, half for an elite).</summary>
+            public float WallSlamShare(bool elite) => Mathf.Clamp01(wallSlamHpShare) * (elite ? .5f : 1f);
+
             [Tooltip("Speed toward the wall at impact must exceed this to count as a hit (to be tuned)")]
             public float wallHitSpeed = 3f;
 

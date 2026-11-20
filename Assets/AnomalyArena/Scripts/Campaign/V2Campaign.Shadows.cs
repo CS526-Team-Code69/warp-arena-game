@@ -6,12 +6,15 @@ namespace AnomalyArena
     /// <summary>
     /// The night's shadow monsters (V2 doc section 5). Every region of the map holds some at night, and a region gets more for the
     /// morning's kills there; those are dark doubles of the monsters that were killed. A shadow that notices the player comes for them a
-    /// little faster than the player walks, so only a sprint opens the distance. Light holds shadows back: they wait at its edge. Once a
-    /// crowd of them (rules.overrunShadows) waits at one lamp they go in together, put the lamp out and attack; the base's light is
-    /// never put out. Weapons and skills work at night and pass through shadows: nothing hurts one.
+    /// little faster than the player walks, so only a sprint opens the distance. Light burns shadows: one inside a lamp's light or the
+    /// base's loses itself second by second, fades and leaves by the nearest edge, and once it has taken rules.shadowLightSeconds of light
+    /// in all (it does not heal during the night) it dissolves. So they wait at a light's edge. Once a crowd of them
+    /// (rules.overrunShadows) waits at one lamp they go in together, attack and wear the lamp down while it burns them: a crowd that
+    /// wears it out first puts it out, and a lamp whose crowd burned away or left shines again. The base's light is never put out.
+    /// Weapons and skills work at night and pass through shadows: only light hurts one.
     /// The tutorial night's shadows hunt wherever the player goes, a little slower than a walk, and touch for a share of a normal hit
-    /// (rules.tutorialShadowHitScale), so the first night shows that a touch hurts; they never join a crowd at a lamp. The first of them
-    /// to reach a lamp's edge while the player stands in its light says that they stop there.
+    /// (rules.tutorialShadowHitScale), so the first night shows that a touch hurts; they never join a crowd at a lamp, and light burns
+    /// them like any other. The first of them to reach a lamp's edge while the player stands in its light says that light burns them.
     /// </summary>
     public sealed partial class V2Campaign
     {
@@ -25,6 +28,12 @@ namespace AnomalyArena
             /// <summary>One of the tutorial night's: it hunts wherever the player goes, a little slower than a walk, touches lightly and
             /// never joins a crowd.</summary>
             public bool tutorial;
+            /// <summary>Seconds of light it has taken this night (CampaignRules.ShadowExposure): it never heals, and at
+            /// rules.shadowLightSeconds it dissolves (BurnAway).</summary>
+            public float burned;
+            /// <summary>Its surfaces, drawn see-through from the moment light first touched it (BeginBurn), which of them are its eyes,
+            /// and its height above its feet, where its smoke rises from.</summary>
+            public Renderer[] burnParts; public bool[] burnEyes; public float height;
         }
 
         /// <summary>The morning's kills by region in the order they fell: the shadows those kills raise there copy their looks.</summary>
@@ -45,10 +54,22 @@ namespace AnomalyArena
         const float TutorialChaseShare = .9f;
         // A crowd at a lamp shows itself this long before it goes in: the ring turns violet and the lamp flickers.
         const float CrowdWarning = 1.5f;
+        // A shadow this far inside a light's edge burns; one held on the edge itself (KeptOutOf) does not.
+        const float BurnInset = .05f;
+        // A burning shadow's body: its alpha when the light first touches it and when it is all but gone, and its colour, from near black
+        // toward a thin violet smoke. Its eyes dim faster than its body.
+        const float BurnAlphaStart = .9f, BurnAlphaEnd = .08f;
+        static readonly Color BurnBody = new(.06f, .03f, .1f), BurnSmoke = new(.16f, .07f, .24f);
+        // A shadow dissolving sounds this softly (its sound is short, and only one plays at a time).
+        const float BurnSoundVolume = .4f;
+        // The whitebox's wisps, drawn where the illustrated art's smoke is not (FxPool).
+        static readonly Color WhiteboxWisp = new(.45f, .22f, .7f, .75f);
         float swarmHitAt;
+        // Shadows raised this night, those the light has burned away included.
+        int shadowsRaised;
         // That weapons pass through shadows has been said in this run: the first ripple says it (RippleUnderFire).
         bool shadowFireSaid;
-        // The tutorial night's "they stopped at the edge of the light" was said; a shadow this far beyond a lamp's edge stands at it.
+        // The tutorial night's "light burns them, so they keep to its edge" was said; a shadow this far beyond a lamp's edge stands at it.
         bool tutEdgeSaid;
         const float TutorialEdgeSeen = 1.6f;
         MaterialPropertyBlock shadowBlock;
@@ -116,6 +137,7 @@ namespace AnomalyArena
             if (!(kind.HasValue && BuildKindShadow(root, kind.Value, s))) BuildPlainShadow(root);
             s.view = root;
             shadows.Add(s);
+            shadowsRaised++;
             return s;
         }
 
@@ -228,15 +250,27 @@ namespace AnomalyArena
             bool away = WorldMap.Active && WorldMap.Active.TrialActive; // in the void trial, off the map
             float lampRadius = LampRadius, lampSq = lampRadius * lampRadius;
 
-            // Each lamp's crowd: the shadows at its edge or inside it. A crowd goes in, and a lamp a crowd went into shelters no more.
+            // Each lamp's crowd: the shadows at its edge or inside it. A crowd goes in, and a lamp a crowd went into shelters no more
+            // while that crowd is in it.
             float band = lampRadius + rules.lampGatherBand;
             foreach (var lamp in lamps)
             {
-                int crowd = 0;
+                int crowd = 0, inside = 0;
                 foreach (var s in shadows)
-                    if (!s.tutorial && Query.Flat(s.position - lamp.position).sqrMagnitude <= band * band) crowd++;
+                {
+                    if (s.tutorial) continue;
+                    float apart = Query.Flat(s.position - lamp.position).sqrMagnitude;
+                    if (apart <= band * band) crowd++;
+                    if (apart <= lampSq) inside++;
+                }
                 lamp.crowd = crowd;
-                if (lamp.smothered) continue;
+                if (lamp.smothered)
+                {
+                    // The light burned the crowd away, or it left after the player, before the lamp went out: worn as they left it,
+                    // the lamp shines and shelters again.
+                    if (inside == 0 && !rules.Crowd(crowd)) { lamp.smothered = false; lamp.crowdSince = 0f; DrawLampEdge(lamp); }
+                    continue;
+                }
                 if (!rules.Crowd(crowd))
                 {
                     // The crowd thinned before it went in: the lamp holds.
@@ -294,11 +328,12 @@ namespace AnomalyArena
                     speed = Query.Flat(target - s.position).magnitude > 2.5f ? chase : rules.shadowSpeed * .35f;
                     if (!inBase && !s.tutorial) s.waitingAt = shelter;
                     // The tutorial night: the first shadow at a lamp's edge while the player stands in its light shows what the light
-                    // does (that night's shadows never crowd a lamp, so the light holds).
+                    // does: it burns them, so they keep to its edge (that night's shadows never crowd a lamp, so the light holds).
                     if (s.tutorial && !inBase && !tutEdgeSaid && Query.Flat(s.position - centre).magnitude <= radius + TutorialEdgeSeen)
                     {
                         tutEdgeSaid = true;
-                        ui.Flash(ArenaText.Pair("影子停在了灯光外面：它们不会走进光里。", "The shadows have stopped at the edge of the light: they will not walk into it."), 4f);
+                        ui.Flash(ArenaText.Pair("影子怕光：一进到光里就会被灼伤，几秒内就会消散，所以它们只在光圈外面打转。",
+                            "Shadows fear the light: inside it they burn away within seconds, so they keep to its edge."), 4.5f);
                     }
                 }
                 else
@@ -317,6 +352,15 @@ namespace AnomalyArena
                 if (WorldMap.Active) next = WorldMap.Active.ClampPoint(next, .5f);
                 Vector3 moved = next - s.position;
                 s.position = next;
+
+                // Light burns a shadow: what it takes is lost for the night, the body fades with it, and at rules.shadowLightSeconds the
+                // shadow dissolves (the pass after this loop). KeptOutOfLight above takes one caught inside out by the nearest edge; a
+                // crowd that went into a lamp burns there while it wears the lamp down.
+                if (BurnsShadow(s.position))
+                {
+                    s.burned = CampaignRules.ShadowExposure(s.burned, true, dt);
+                    ShowBurn(s);
+                }
 
                 // Inside a lamp a crowd went into, every shadow wears the lamp down.
                 if (!s.tutorial)
@@ -349,12 +393,15 @@ namespace AnomalyArena
                     HitPlayerAtNight(s);
                 }
             }
+            for (int i = shadows.Count - 1; i >= 0; i--)
+                if (rules.ShadowBurnedAway(shadows[i].burned)) BurnAway(i);
             RippleUnderFire();
         }
 
-        /// <summary>Where a shadow that wants to step from one point to the next ends up: no shadow stands in the base's light, or in a
-        /// lamp's light before a crowd has gone into it. One caught inside (a lamp was set down beside it) backs out; one that would step
-        /// in slides along the edge instead.</summary>
+        /// <summary>Where a shadow that wants to step from one point to the next ends up: no shadow stays in the base's light, or in a
+        /// lamp's light before a crowd has gone into it. One caught inside (a lamp was set down beside it) leaves straight out by the
+        /// nearest edge, faster than it hunts, and burns until it is out (BurnsShadow); one that would step in slides along the edge
+        /// instead.</summary>
         Vector3 KeptOutOfLight(Vector3 from, Vector3 next, float flee)
         {
             next = KeptOutOf(BaseCentre, rules.baseLightRadius, from, next, flee);
@@ -405,6 +452,81 @@ namespace AnomalyArena
             DrawLampEdge(lamp);
         }
 
+        /// <summary>A crowd of this many shadows that goes into a lamp together wears it out in this many seconds (lampHp at CrowdDrain
+        /// per shadow); the light burns them away in rules.shadowLightSeconds meanwhile.</summary>
+        public static float LampSecondsAgainst(float lampHp, int crowd) => crowd > 0 ? lampHp / (crowd * CrowdDrain) : float.PositiveInfinity;
+
+        /// <summary>The point lies in light that burns a shadow: the base's light or any lamp's, a lamp a crowd has gone into too (it
+        /// still shines while they wear it down). A shadow held on the edge itself (KeptOutOf) is outside.</summary>
+        bool BurnsShadow(Vector3 point)
+        {
+            float baseEdge = rules.baseLightRadius - BurnInset, lampEdge = LampRadius - BurnInset;
+            if (Query.Flat(point - BaseCentre).sqrMagnitude < baseEdge * baseEdge) return true;
+            foreach (var lamp in lamps)
+                if (Query.Flat(point - lamp.position).sqrMagnitude < lampEdge * lampEdge) return true;
+            return false;
+        }
+
+        /// <summary>The first touch of light: from now on every surface of the shadow is drawn with the see-through material (ShowBurn
+        /// sets its colour and alpha), and its height is noted for its smoke.</summary>
+        void BeginBurn(Shadow s)
+        {
+            var parts = new List<Renderer>();
+            if (s.view)
+                foreach (var r in s.view.GetComponentsInChildren<Renderer>(true))
+                    if (r is MeshRenderer or SkinnedMeshRenderer) parts.Add(r);
+            s.burnParts = parts.ToArray();
+            s.burnEyes = new bool[s.burnParts.Length];
+            var glass = Whitebox.SeeThrough;
+            float top = 1f;
+            for (int i = 0; i < s.burnParts.Length; i++)
+            {
+                var r = s.burnParts[i];
+                s.burnEyes[i] = r.name.StartsWith("Eye", System.StringComparison.Ordinal);
+                if (r.enabled) top = Mathf.Max(top, r.bounds.max.y - s.view.position.y);
+                var materials = r.sharedMaterials;
+                for (int m = 0; m < materials.Length; m++) materials[m] = glass;
+                r.sharedMaterials = materials;
+            }
+            s.height = Mathf.Min(top, 3f);
+        }
+
+        /// <summary>A burning shadow fades with what the light has taken: its body thins from near black toward a faint violet smoke and
+        /// its eyes dim faster; with the illustrated art a thin wisp leaves it now and then.</summary>
+        void ShowBurn(Shadow s)
+        {
+            if (s.burnParts == null) BeginBurn(s);
+            float t = rules.ShadowBurnShare(s.burned);
+            Color body = Color.Lerp(BurnBody, BurnSmoke, t), eyes = ShadowEye;
+            body.a = Mathf.Lerp(BurnAlphaStart, BurnAlphaEnd, t);
+            eyes.a = (1f - t) * (1f - t);
+            shadowBlock ??= new MaterialPropertyBlock();
+            for (int i = 0; i < s.burnParts.Length; i++)
+            {
+                var r = s.burnParts[i];
+                if (!r) continue;
+                shadowBlock.Clear();
+                shadowBlock.SetColor(ShadowBaseColorId, s.burnEyes[i] ? eyes : body);
+                r.SetPropertyBlock(shadowBlock);
+            }
+            if (V5Vfx.On) V5Vfx.I.ShadowSmoulder(s.position, s.height, t);
+        }
+
+        /// <summary>The light has burned a shadow away: a few violet-black wisps rise where it stood, a soft sound plays, and its body goes
+        /// as every shadow's body goes at dawn.</summary>
+        void BurnAway(int index)
+        {
+            var s = shadows[index];
+            shadows.RemoveAt(index);
+            if (V5Vfx.On) V5Vfx.I.ShadowDissolve(s.position, s.height);
+            else if (FxPool.Active)
+                for (int i = 0; i < 4; i++)
+                    FxPool.Active.Emit(s.position + new Vector3(Random.Range(-.3f, .3f), Random.Range(.4f, Mathf.Max(.5f, s.height)), Random.Range(-.3f, .3f)),
+                        WhiteboxWisp, Random.Range(.3f, .5f), Random.Range(.5f, .8f), Vector3.up * Random.Range(1f, 1.8f));
+            CampaignAudio.PlayAt(CampaignSfx.ShadowFleeLight, s.position, BurnSoundVolume);
+            if (s.view) Destroy(s.view.gameObject);
+        }
+
         /// <summary>A shot or a blast that crosses a shadow goes through it: the shadow only ripples, so the player sees that nothing
         /// landed. The first ripple of a run also says so, with what does work against shadows.</summary>
         void RippleUnderFire()
@@ -424,7 +546,7 @@ namespace AnomalyArena
                     if (!shadowFireSaid)
                     {
                         shadowFireSaid = true;
-                        ui.Flash(ArenaText.Pair("武器伤不到影子，只有光能挡住它们。", "Weapons can't hurt shadows. Only light keeps them back."), 3f);
+                        ui.Flash(ArenaText.Pair("武器伤不到影子，只有光能灼伤它们。", "Weapons can't hurt shadows. Only light burns them."), 3f);
                     }
                 }
             }
@@ -455,6 +577,14 @@ namespace AnomalyArena
         public void DebugPlacePlayer(Vector3 at) => PlacePlayer(at);
         public void DebugPlaceLamp(Vector3 at) { if (Stage == CampaignStage.Night) PlaceLamp(Query.Flat(at)); }
 
+        /// <summary>Raises one plain shadow at a point and gives back a probe that reads it: whether it is still there, where it stands and
+        /// how many seconds of light it has taken.</summary>
+        public System.Func<(bool there, Vector3 position, float burned)> DebugAddShadow(Vector3 at)
+        {
+            var s = AddShadow(Query.Flat(at), null);
+            return () => (shadows.Contains(s), s.position, s.burned);
+        }
+
         /// <summary>The night in one line: the shadows within reach cells of the player (how many have noticed them, the nearest's
         /// distance), and each lamp's crowd, wear and whether a crowd has gone in.</summary>
         public string DebugNightReport(float reach = 30f)
@@ -473,7 +603,7 @@ namespace AnomalyArena
                 nearest = Mathf.Min(nearest, d);
             }
             var text = new System.Text.StringBuilder();
-            text.Append($"shadows {shadows.Count} (model doubles {doubles}), within {reach:0}: {near}, noticed {alert}, nearest {(near > 0 ? nearest.ToString("0.0") : "-")}");
+            text.Append($"shadows {shadows.Count} (model doubles {doubles}, burned away {Mathf.Max(0, shadowsRaised - shadows.Count)}), within {reach:0}: {near}, noticed {alert}, nearest {(near > 0 ? nearest.ToString("0.0") : "-")}");
             text.Append($"; player at ({pp.x:0.0}, {pp.z:0.0}) hp {(p ? p.Hp : 0f):0}/{(p ? p.maxHp : 0f):0} in base light {InBaseLight(pp)} in light {InLampLight(pp)}");
             for (int i = 0; i < lamps.Count; i++)
                 text.Append($"; lamp {i} at ({lamps[i].position.x:0.0}, {lamps[i].position.z:0.0}) crowd {lamps[i].crowd} hp {lamps[i].hp:0.0} gone in {lamps[i].smothered}");

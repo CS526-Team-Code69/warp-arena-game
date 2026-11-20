@@ -77,16 +77,16 @@ namespace AnomalyArena
         [Range(0f, 1f), Tooltip("With open-ended evenings, how far the afternoon's light turns toward dusk's end (0 = full daylight, 1 = duskDarkness and the evening light): the afternoon is a rest and mining time in daylight, and the dark comes when the player goes into the night.")]
         public float afternoonLight = .25f;
         [Min(1f), Tooltip("Radius of a placed mining lamp, in cells.")] public float lampRadius = 6.5f;
-        [Min(1f), Tooltip("Radius of the base's light at night, in cells: its floodlights light this circle and no shadow comes into it.")] public float baseLightRadius = 15f;
-        [Min(0f), Tooltip("The player's own faint glow: shows the feet, does not scare shadows, does not allow mining.")] public float playerGlowRadius = 2.4f;
+        [Min(1f), Tooltip("Radius of the base's light at night, in cells: its floodlights light this circle; shadows keep out of it, and one caught inside burns (shadowLightSeconds) until it is out.")] public float baseLightRadius = 15f;
+        [Min(0f), Tooltip("The player's own faint glow: shows the feet, neither scares nor burns shadows, does not allow mining.")] public float playerGlowRadius = 2.4f;
         [Min(0), Tooltip("Mining lamps in the base's store for the tutorial night (day 0). From day 1 on the base adds dailyFreeLamps at each dusk and the rest are crafted (lampCost).")] public int freeLampsPerNight = 3;
         [Min(0), Tooltip("Mining lamps the base adds to its store at each dusk from day 1 on. 0: every later lamp is crafted, from the alloy dayLampsToCraft adds to the afternoon's ore.")] public int dailyFreeLamps = 0;
-        [Min(1f), Tooltip("How long a lamp lasts once a crowd of shadows has gone into its light: this many seconds against two of them, less against more.")] public float lampHp = 4f;
+        [Min(1f), Tooltip("How long a lamp lasts once a crowd of shadows has gone into its light: this many seconds against two of them, less against more. The light burns the crowd meanwhile (shadowLightSeconds), so only a crowd that wears the lamp out first puts it out.")] public float lampHp = 4f;
 
         [Header("Night: shadow monsters")]
         [Tooltip("Columns and rows of regions the map is cut into for the kills-to-shadows rule.")] public Vector2Int regions = new(6, 4);
         [Min(1f), Tooltip("Day kills in a region per shadow those kills raise there at night; each is the dark double of a monster killed there.")] public float killsPerShadow = 4f;
-        [Min(1), Tooltip("Shadows that make a crowd: that many at one lamp go into its light together and put it out, and a region holding that many sounds and looks its darkest.")] public int overrunShadows = 5;
+        [Min(1), Tooltip("Shadows that make a crowd: that many at one lamp go into its light together and wear it down while it burns them, and a region holding that many sounds and looks its darkest.")] public int overrunShadows = 5;
         [Min(1), Tooltip("Most shadows the kills raise in one region.")] public int maxShadowsPerRegion = 8;
         [Min(1), Tooltip("Most shadows on the whole map.")] public int maxShadows = 72;
         [Min(0f), Tooltip("Shadows every region holds at night whatever was killed there, so the whole map has them.")] public float ambientShadows = 1f;
@@ -100,6 +100,8 @@ namespace AnomalyArena
         [Min(0f), Tooltip("Cells past a lamp's edge within which a shadow counts toward the crowd at that lamp.")] public float lampGatherBand = 3.5f;
         [Range(0f, 1f), Tooltip("Share of the player's max HP one shadow touch takes.")] public float shadowHitShare = .15f;
         [Min(.1f)] public float shadowHitInterval = .9f;
+        [Min(.1f), Tooltip("Seconds of light that burn a shadow away. A shadow in a lamp's or the base's light loses itself second by second and leaves by the nearest edge; what it lost stays lost all night, and at this many seconds in all it dissolves.")]
+        public float shadowLightSeconds = 3f;
         [Range(0f, 1f), Tooltip("Share of tonight's haul (everything mined or picked up since dusk, or since the last base visit that night) lost when the player dies at night; 1 = all of it, the rule since 2026-11-06. The base's stock, the rooms and the ship stay, and the next day starts as usual.")]
         public float nightDeathLoss = 1f;
         [Min(.5f), Tooltip("Seconds the fallen player lies in the dark (the death animation plays) before waking at the base.")]
@@ -115,6 +117,13 @@ namespace AnomalyArena
         public bool Crowd(int shadows) => shadows >= overrunShadows;
         /// <summary>A shadow hunts a player it can sense who stands inside its territory, the ground round the place it rose at.</summary>
         public bool ShadowHunts(float shadowToPlayer, float homeToPlayer) => shadowToPlayer <= shadowSense && homeToPlayer <= shadowTerritory;
+        /// <summary>A shadow's light exposure after dt more seconds: it grows only while the shadow stands in light and never falls back
+        /// during the night, because what the light burned stays burned.</summary>
+        public static float ShadowExposure(float exposure, bool inLight, float dt) => inLight ? exposure + Mathf.Max(0f, dt) : exposure;
+        /// <summary>A shadow that has taken this much light has burned away.</summary>
+        public bool ShadowBurnedAway(float exposure) => exposure >= shadowLightSeconds;
+        /// <summary>How much of a shadow the light has burned: 0 whole, 1 gone. Its body fades with it.</summary>
+        public float ShadowBurnShare(float exposure) => Mathf.Clamp01(exposure / Mathf.Max(.1f, shadowLightSeconds));
         /// <summary>Two regions of a grid cols wide touch: side by side or corner to corner, never one and the same.</summary>
         public static bool RegionsTouch(int a, int b, int cols)
         {

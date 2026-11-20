@@ -734,7 +734,7 @@ namespace AnomalyArena
                 e.base_hp = Math.Round(campaign.BaseHp, 1);
                 e.base_shield = Math.Round(campaign.BaseShield, 1);
                 e.base_max_hp = Math.Round(campaign.BaseMaxHp, 1);
-                e.shadows = campaign.ShadowCount;
+                e.shadows = campaign.ShadowsRaised; // the night's shadows, those the light burned away included
                 e.overrun_regions = campaign.OverrunRegions;
             }
             e.player_damage = Math.Round(e.player_damage, 1);

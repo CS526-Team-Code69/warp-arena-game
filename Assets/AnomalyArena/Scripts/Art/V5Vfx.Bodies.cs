@@ -417,5 +417,35 @@ namespace AnomalyArena
                 ember.Emit(air + d * size * R(.8f, 1.6f), -d * size * R(2f, 4f), R(.05f, .11f), R(.2f, .36f), VoidTint);
             }
         }
+
+        static readonly Color ShadowSmoke = new(.09f, .035f, .15f, .6f);
+
+        /// <summary>A night shadow burning in light: now and then a thin violet-black wisp leaves its body and rises, a little more often as
+        /// less of it is left (share 0 whole, 1 gone).</summary>
+        public void ShadowSmoulder(Vector3 feet, float height, float share)
+        {
+            if (!Chance(2f + 3f * share)) return;
+            Vector2 o = Random.insideUnitCircle * .3f;
+            smoke.Emit(new Vector3(feet.x + o.x, feet.y + R(.3f, Mathf.Max(.4f, height * .9f)), feet.z + o.y), new Vector3(o.x, R(.7f, 1.3f), o.y),
+                R(.3f, .55f), R(.5f, .8f), ShadowSmoke, R(0f, 360f));
+        }
+
+        /// <summary>A night shadow the light has burned away: a few violet-black wisps rise from where it stood and thin out, with two or
+        /// three faint violet motes. No flash, no ring, no shake.</summary>
+        public void ShadowDissolve(Vector3 feet, float height)
+        {
+            float top = Mathf.Max(.6f, height);
+            int n = Count(5);
+            for (int i = 0; i < n; i++)
+            {
+                Vector2 o = Random.insideUnitCircle * .4f;
+                smoke.Emit(new Vector3(feet.x + o.x, feet.y + R(.2f, top * .85f), feet.z + o.y), new Vector3(o.x * .6f, R(1f, 1.8f), o.y * .6f),
+                    R(.45f, .8f), R(.7f, 1.1f), ShadowSmoke, R(0f, 360f));
+            }
+            int motes = Count(3);
+            for (int i = 0; i < motes; i++)
+                ember.Emit(new Vector3(feet.x + R(-.3f, .3f), feet.y + R(.4f, top), feet.z + R(-.3f, .3f)), Vector3.up * R(.7f, 1.4f), R(.04f, .07f),
+                    R(.5f, .8f), WithAlpha(VoidTint, .6f));
+        }
     }
 }
