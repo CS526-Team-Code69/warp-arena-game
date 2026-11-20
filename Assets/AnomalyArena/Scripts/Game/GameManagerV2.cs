@@ -469,7 +469,8 @@ namespace AnomalyArena
         /// enemy (with the collection's note on it).</summary>
         public static string ResultCauseLine(string cause,EnemyKind? enemy,DamageSource source,WeaponForm? weapon,int variant,bool wall,bool baseDestroyed)
         {
-            string gap=ArenaText.Pair("", " ");
+            // The cause on the first line and what to know about it on the next: one long line left its last mark alone on a line.
+            const string gap="\n";
             if(baseDestroyed)return ArenaText.Pair("怪物拆毁了基地。上午要先清掉正在攻击基地的怪物。","The monsters tore the base down. In the morning, clear the ones attacking the base first.");
             switch(cause)
             {
@@ -477,29 +478,29 @@ namespace AnomalyArena
                 case "black_hole":
                 {
                     string key=ArenaKeys.SprintKey;
-                    return ArenaText.Pair($"你掉进了黑洞。它的引力比走路快，被拉住时要按住 {key} 朝外冲刺。",$"You fell into the black hole. Its pull is faster than your walk; when it catches you, hold {key} and sprint outward.");
+                    return ArenaText.Pair($"你掉进了黑洞。{gap}它的引力比走路快，被拉住时要按住 {key} 朝外冲刺。",$"You fell into the black hole.{gap}Its pull is faster than your walk; when it catches you, hold {key} and sprint outward.");
                 }
                 case "backfire":
                 {
                     string name=weapon.HasValue?ArenaTerms.WeaponForm(weapon.Value):ArenaText.Pair("武器","weapon");
-                    string what=wall?ArenaText.Pair($"这一局结束于撞墙：你自己的{name}把你推到了墙上。",$"A wall ended this run: your own {name} threw you into it.")
-                        :ArenaText.Pair($"这一局结束于你自己的{name}。",$"Your own {name} ended this run.");
+                    string what=wall?ArenaText.Pair($"你被自己的{name}推到墙上，撞倒了。",$"A wall ended this run: your own {name} threw you into it.")
+                        :ArenaText.Pair($"你被自己的{name}打倒了。",$"Your own {name} ended this run.");
                     return what+gap+WeaponGuide.SelfHit(weapon,variant,wall);
                 }
                 case "wall_slam":
-                    return enemy.HasValue?ArenaText.Pair($"这一局结束于撞墙：{MonsterName(enemy.Value)}把你撞到了墙上。",$"A wall ended this run: {AMonster(enemy.Value)} knocked you into it.")
-                        :ArenaText.Pair("这一局结束于撞墙。","A wall ended this run.");
+                    return enemy.HasValue?ArenaText.Pair($"{MonsterName(enemy.Value)}把你撞到墙上，你倒下了。",$"A wall ended this run: {AMonster(enemy.Value)} knocked you into it.")
+                        :ArenaText.Pair("你撞到墙上，倒下了。","A wall ended this run.");
                 case "status":
                 {
                     string status=source==DamageSource.Burn?ArenaText.Pair("燃烧","burn"):ArenaText.Pair("中毒","poison");
-                    return enemy.HasValue?ArenaText.Pair($"这一局结束于{MonsterName(enemy.Value)}留在你身上的{status}。",$"The {status} {AMonster(enemy.Value)} left on you ended this run.")
-                        :ArenaText.Pair($"这一局结束于你身上的{status}。",$"The {status} on you ended this run.");
+                    return enemy.HasValue?ArenaText.Pair($"{MonsterName(enemy.Value)}留在你身上的{status}让你倒下了。",$"The {status} {AMonster(enemy.Value)} left on you ended this run.")
+                        :ArenaText.Pair($"你身上的{status}让你倒下了。",$"The {status} on you ended this run.");
                 }
-                case "tyrant":return ArenaText.Pair("暴虐君王结束了这一局。","The Tyrant King ended this run.");
+                case "tyrant":return ArenaText.Pair("你被暴虐君王打倒了。","The Tyrant King ended this run.");
                 case "enemy" when enemy.HasValue:
                 {
                     string note=ArenaCodex.MonsterNote(enemy.Value);
-                    string what=ArenaText.Pair($"这一局结束在{MonsterName(enemy.Value)}手里。",$"{Capital(AMonster(enemy.Value))} ended this run.");
+                    string what=ArenaText.Pair($"你被{MonsterName(enemy.Value)}打倒了。",$"{Capital(AMonster(enemy.Value))} ended this run.");
                     return string.IsNullOrEmpty(note)?what:what+gap+note;
                 }
                 default:return "";

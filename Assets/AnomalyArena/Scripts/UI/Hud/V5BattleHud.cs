@@ -783,6 +783,32 @@ namespace AnomalyArena
             // bannerTop: BannerTop, or lower while the hint plate stands under a boss plate (PlaceHintPlate).
             Fade(banner, bannerGroup, bannerWanted, ref bannerFade, ref bannerShown, dt, bannerTop);
             Fade(notice, noticeGroup, noticeWanted, ref noticeFade, ref noticeShown, dt, bannerTop);
+            plates[0] = Showing(banner, bannerGroup);
+            plates[1] = Showing(notice, noticeGroup);
+            platesFrame = Time.frameCount;
+        }
+
+        static readonly Rect?[] plates = new Rect?[2];
+        static readonly Vector3[] plateCorners = new Vector3[4];
+        static int platesFrame = -10;
+
+        /// <summary>A banner or notice plate in screen pixels while it shows (the canvas is an overlay); null otherwise.</summary>
+        static Rect? Showing(RectTransform part, CanvasGroup group)
+        {
+            if (!part || !part.gameObject.activeInHierarchy || group && group.alpha < .05f) return null;
+            part.GetWorldCorners(plateCorners);
+            return Rect.MinMaxRect(plateCorners[0].x, plateCorners[0].y, plateCorners[2].x, plateCorners[2].y);
+        }
+
+        /// <summary>For a screen-edge marker (V2WorldLabels): the lowest bottom edge, in screen pixels, of the banner or notice plates
+        /// showing now that overlap area; false when none does, or when this HUD has not drawn its plates in the last frames.</summary>
+        public static bool PlateOver(Rect area, out float bottom)
+        {
+            bottom = float.MaxValue;
+            if (Time.frameCount - platesFrame > 2) return false;
+            foreach (var plate in plates)
+                if (plate is Rect r && r.Overlaps(area)) bottom = Mathf.Min(bottom, r.yMin);
+            return bottom < float.MaxValue;
         }
 
         static void Fade(RectTransform part, CanvasGroup group, bool wanted, ref float shown, ref string text, float dt, float top)

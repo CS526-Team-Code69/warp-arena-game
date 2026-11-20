@@ -682,6 +682,14 @@ namespace AnomalyArena
                 if (!clash) break;
                 at.y += at.y > Screen.height * .5f ? -step : step;
             }
+            // A banner or notice at the top centre (a wave, a hit from the player's own weapon, a monster met for the first time) stays
+            // readable: a marker on the top edge that would lie over it steps down below it while it shows.
+            if (!onSide && at.y > area.center.y)
+            {
+                float w = Mathf.Max(80f, label.preferredWidth) * unit, h = 2f * half * unit;
+                if (V5BattleHud.PlateOver(new Rect(at.x - w * .5f, at.y - h * .5f, w, h), out float bottom)) at.y = bottom - h * .5f - 8f * unit;
+            }
+
             placedEdges.Add(at);
             RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, at, null, out var local);
             label.rectTransform.position = canvasRect.TransformPoint(local);
