@@ -8,7 +8,9 @@ namespace AnomalyArena
     /// <summary>
     /// The collection: the weapons, skills and monsters the player has met, kept from one run to the next (ArenaCodexProgress). A
     /// button in the pause screen's row opens it over the whole screen; Back or Esc closes it. The whole game's title shows the
-    /// same lists in a window of its own (V5Title), through the helpers here. An entry not met yet shows only "???". Retired weapons (WeaponRoster.IsRetired) are never offered, so they are left out.
+    /// same lists in a window of its own (V5Title), through the helpers here, and this page wears that window's look: the title's
+    /// plates (flat ones with a thin edge in whitebox), its inks and an Esc keycap on Back. An entry not met yet shows only "???".
+    /// Retired weapons (WeaponRoster.IsRetired) are never offered, so they are left out.
     /// V2Hud adds it on every page but the Alpha's (BuildEdition), whose title offers only Start Game and the tutorial.
     /// </summary>
     [DisallowMultipleComponent]
@@ -22,20 +24,24 @@ namespace AnomalyArena
         static ArenaCodex shown;
         static int closedFrame = -1;
 
-        // The colours of a page tab: the page on show, the others.
-        static readonly Color TabOn = new(.22f, .38f, .54f, 1f), TabOff = new(.12f, .19f, .27f, 1f);
+        // The page's colours (the title's collection window, V5Title): the night behind it, the list's well, an entry not met yet (its
+        // plate darker, its name faint), and the role line of a monster.
+        static readonly Color Night = V5TitleKit.Rgb(8, 11, 19), Well = V5TitleKit.Rgb(12, 16, 27, .92f), Unmet = new(.62f, .64f, .7f, 1f),
+            UnknownInk = V5TitleKit.Rgb(233, 223, 201, .75f), UnknownIcon = V5TitleKit.Rgb(22, 26, 36);
+        const string RoleInk = "#79AEE0";
 
-        // Space kept clear round the page, in canvas units.
-        const float Margin = 50f;
+        // Space kept clear round the page, in canvas units; the Back plate in the header and its keycap.
+        const float Margin = 50f, BackW = 176f, BackH = 58f;
 
         V2Hud hud;
         GameObject root, overlay;
         RectTransform list, viewportRect;
         Text title, count;
+        Image header;
         Font font;
         bool chinese;
         Page page;
-        readonly Dictionary<Page, Image> tabs = new();
+        readonly Dictionary<Page, (V5Plate plate, Text label)> tabs = new();
         // Every label whose words do not depend on the page, with its words, so a change of language writes them again.
         readonly List<(Text label, Func<string> words)> fixedLabels = new();
 
@@ -123,28 +129,36 @@ namespace AnomalyArena
 
             overlay = Node("CodexOverlay", root.transform, typeof(Image));
             Stretch((RectTransform)overlay.transform);
-            overlay.GetComponent<Image>().color = new Color(.025f, .035f, .055f, 1f);
+            overlay.GetComponent<Image>().color = Night;
 
-            var header = Node("Header", overlay.transform, typeof(Image));
-            var headerRect = (RectTransform)header.transform;
+            // The header: a plate with the window's small orange caption (on the Chinese page), its title and the count found; Back at
+            // its right end.
+            var headerNode = Node("Header", overlay.transform, typeof(Image));
+            header = headerNode.GetComponent<Image>();
+            var headerRect = (RectTransform)headerNode.transform;
             headerRect.anchorMin = new Vector2(0f, 1f); headerRect.anchorMax = new Vector2(1f, 1f); headerRect.pivot = new Vector2(.5f, 1f);
             headerRect.offsetMin = new Vector2(Margin, -36f - 90f); headerRect.offsetMax = new Vector2(-Margin, -36f);
-            header.GetComponent<Image>().color = new Color(.08f, .12f, .18f, 1f);
-            title = Label("Title", header.transform, 34, TextAnchor.MiddleLeft);
-            Place(title.rectTransform, 28, 8, 640, 74);
-            count = Label("Count", header.transform, 20, TextAnchor.MiddleRight);
-            PlaceFromRight(count.rectTransform, 190, 8, 330, 74);
-            AddButton(header.transform, "Close", () => ArenaText.Pair("返回 [Esc]", "Back [Esc]"), new Rect(14, 14, 160, 62), Close, true);
+            var cap = Label("Cap", headerNode.transform, 12, TextAnchor.MiddleLeft);
+            cap.color = V5TitleKit.OrangeHi;
+            Place(cap.rectTransform, 28, 14, 420, 16);
+            Fixed(cap, () => ArenaText.Pair(V5TitleKit.Spaced("COLLECTION"), ""));
+            title = Label("Title", headerNode.transform, 30, TextAnchor.MiddleLeft);
+            Place(title.rectTransform, 28, 30, 640, 48);
+            V5TitleKit.Painted(title);
+            count = Label("Count", headerNode.transform, 18, TextAnchor.MiddleRight);
+            count.color = V5TitleKit.Ink2;
+            PlaceFromRight(count.rectTransform, 16f + BackW + 24f, 8, 330, 74);
+            AddBack(headerNode.transform);
 
-            tabs[Page.Weapons] = AddButton(overlay.transform, "Weapons", () => ArenaText.Pair("武器", "Weapons"), new Rect(Margin, 146, 230, 58), () => Show(Page.Weapons));
-            tabs[Page.Skills] = AddButton(overlay.transform, "Skills", () => ArenaText.Pair("技能", "Skills"), new Rect(Margin + 246, 146, 230, 58), () => Show(Page.Skills));
-            tabs[Page.Monsters] = AddButton(overlay.transform, "Monsters", () => ArenaText.Pair("怪物", "Monsters"), new Rect(Margin + 492, 146, 230, 58), () => Show(Page.Monsters));
+            tabs[Page.Weapons] = AddTab("Weapons", () => ArenaText.Pair("武器", "Weapons"), 0, () => Show(Page.Weapons));
+            tabs[Page.Skills] = AddTab("Skills", () => ArenaText.Pair("技能", "Skills"), 1, () => Show(Page.Skills));
+            tabs[Page.Monsters] = AddTab("Monsters", () => ArenaText.Pair("怪物", "Monsters"), 2, () => Show(Page.Monsters));
 
             var viewport = Node("Viewport", overlay.transform, typeof(Image), typeof(Mask), typeof(ScrollRect));
             viewportRect = (RectTransform)viewport.transform;
             viewportRect.anchorMin = Vector2.zero; viewportRect.anchorMax = Vector2.one;
             viewportRect.offsetMin = new Vector2(Margin, 36f); viewportRect.offsetMax = new Vector2(-Margin, -220f);
-            viewport.GetComponent<Image>().color = new Color(.035f, .055f, .08f, 1f);
+            viewport.GetComponent<Image>().color = Well;
             viewport.GetComponent<Mask>().showMaskGraphic = true;
             var content = Node("Entries", viewport.transform, typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
             list = (RectTransform)content.transform;
@@ -168,6 +182,8 @@ namespace AnomalyArena
             if (!root) return;
             shown = this;
             root.SetActive(true);
+            // The art can only be switched on the title, so the page takes the look of the art on show when it opens.
+            DressPlate(header, Art.Enabled, 16f, true);
             Canvas.ForceUpdateCanvases(); // the list's width is known before its entries are written
             Show(page);
             V2Audio.Instance?.PlayUI(ArenaUiSound.Confirm);
@@ -185,12 +201,17 @@ namespace AnomalyArena
         {
             page = selected;
             for (int i = list.childCount - 1; i >= 0; i--) Destroy(list.GetChild(i).gameObject);
-            foreach (var (tab, image) in tabs) if (image) image.color = tab == page ? TabOn : TabOff;
+            foreach (var (tab, (plate, label)) in tabs)
+            {
+                if (!plate) continue;
+                plate.Chosen = tab == page;
+                label.color = tab == page ? V5TitleKit.Chosen : V5TitleKit.Ink2;
+            }
+            title.text = ArenaText.Pair("图鉴", "Collection");
             int found = 0, total = 0;
             switch (page)
             {
                 case Page.Weapons:
-                    title.text = ArenaText.Pair("武器图鉴", "Weapons");
                     foreach (var form in ListedWeapons())
                     {
                         bool met = ArenaCodexProgress.WeaponDiscovered(form);
@@ -200,7 +221,6 @@ namespace AnomalyArena
                     }
                     break;
                 case Page.Skills:
-                    title.text = ArenaText.Pair("技能图鉴", "Skills");
                     foreach (var (id, data) in ListedSkills())
                     {
                         bool met = ArenaCodexProgress.SkillDiscovered(id);
@@ -210,17 +230,17 @@ namespace AnomalyArena
                     }
                     break;
                 default:
-                    title.text = ArenaText.Pair("怪物图鉴", "Monsters");
                     foreach (var kind in ListedMonsters())
                     {
                         bool met = ArenaCodexProgress.EnemyDiscovered(kind);
                         total++; if (met) found++;
-                        AddEntry(met, ArenaText.Text("enemy." + kind), met ? $"<color=#9ad8ff>{Role(kind)}</color>\n{MonsterNote(kind)}" : "",
+                        AddEntry(met, ArenaText.Text("enemy." + kind), met ? $"<color={RoleInk}>{Role(kind)}</color>\n{MonsterNote(kind)}" : "",
                             Art.Enabled ? EnemySprite(hud.art, kind) : null, !Art.Enabled ? MonsterColour(kind) : (Color?)null);
                     }
                     break;
             }
-            count.text = ArenaText.Pair($"已发现 {found} / {total}", $"Found {found} of {total}");
+            count.text = ArenaText.Pair($"已发现 <color=#ECE7DC>{found}</color> / <color=#ECE7DC>{total}</color>",
+                $"Found <color=#ECE7DC>{found}</color> / <color=#ECE7DC>{total}</color>");
             list.anchoredPosition = Vector2.zero;
         }
 
@@ -232,28 +252,44 @@ namespace AnomalyArena
         }
 
         /// <summary>How a weapon met so far fights: the pistol's one way; for an anomaly weapon, each of its two anomalies that has
-        /// turned up (RunWeapons.Reveal keeps them), by name.</summary>
+        /// turned up (RunWeapons.Reveal keeps them), by name, with its trait on the line under it.</summary>
         static string WeaponDetail(WeaponForm form)
         {
             if (!RunWeapon.IsAnomalousForm(form)) return WeaponGuide.How(form, 0);
             var lines = new List<string>();
             var revealed = RevealedAnomalies(form, out int missing);
-            foreach (var (name, how) in revealed) lines.Add($"<b>{name}</b>{ArenaText.Pair("：", ": ")}{how}");
+            foreach (var (name, how, trait) in revealed)
+            {
+                lines.Add($"<b>{name}</b>{ArenaText.Pair("：", ": ")}{how}");
+                if (trait.Length > 0) lines.Add(TraitLine(trait));
+            }
             if (missing > 0) lines.Add(MissingAnomalies(missing));
             return string.Join("\n", lines);
         }
 
-        /// <summary>The anomalies of a weapon that have turned up (RunWeapons.Reveal keeps them), each by name with how it fights, and how
-        /// many of its two have not.</summary>
-        public static List<(string name, string how)> RevealedAnomalies(WeaponForm form, out int missing)
+        /// <summary>The anomalies of a weapon that have turned up (RunWeapons.Reveal keeps them), each by name with how it fights and its
+        /// trait (the weapon card's 特性), and how many of its two have not.</summary>
+        public static List<(string name, string how, string trait)> RevealedAnomalies(WeaponForm form, out int missing)
         {
-            var revealed = new List<(string, string)>();
+            var revealed = new List<(string, string, string)>();
             missing = 0;
             for (int variant = 0; variant < 2; variant++)
-                if (ArenaCodexProgress.AnomalyRevealed(form, variant)) revealed.Add((ArenaTerms.WeaponAnomaly(form, variant), WeaponGuide.How(form, variant)));
+                if (ArenaCodexProgress.AnomalyRevealed(form, variant))
+                    revealed.Add((ArenaTerms.WeaponAnomaly(form, variant), WeaponGuide.How(form, variant), WeaponGuide.Backfire(form, variant)));
                 else missing++;
             return revealed;
         }
+
+        /// <summary>The weapon card's inks for its two headings (GameManagerV2.ShowWeaponIntro): how a weapon attacks, and its trait.</summary>
+        public const string AttackInk = "#FFD36E", TraitInk = "#FF8A73";
+
+        /// <summary>How a weapon attacks under the weapon card's heading for it, as the collection and the character screen write it.</summary>
+        public static string AttackLine(string how) => Headed(ArenaText.Pair("攻击方式", "Attack"), AttackInk, how);
+
+        /// <summary>A weapon's trait under the weapon card's heading for it, as the collection and the character screen write it.</summary>
+        public static string TraitLine(string trait) => Headed(ArenaText.Pair("特性", "Trait"), TraitInk, trait);
+
+        static string Headed(string heading, string ink, string words) => $"<color={ink}>{heading}</color>{ArenaText.Pair("：", ": ")}{words}";
 
         /// <summary>The line for a weapon's anomalies that have not turned up (one or both); empty for none.</summary>
         public static string MissingAnomalies(int missing) => missing switch
@@ -336,20 +372,22 @@ namespace AnomalyArena
         void AddEntry(bool found, string entryName, string detail, Sprite sprite, Color? blockColour = null)
         {
             var row = Node("Entry", list, typeof(Image), typeof(LayoutElement));
-            row.GetComponent<Image>().color = found ? new Color(.09f, .13f, .18f, 1f) : new Color(.055f, .065f, .08f, 1f);
+            // A plate of the title's, darker for an entry not met yet.
+            DressPlate(row.GetComponent<Image>(), Art.Enabled, 12f, found);
             var icon = Node("Icon", row.transform, typeof(Image)).GetComponent<Image>();
             Place(icon.rectTransform, 18, 14, 88, 88); icon.preserveAspect = true; icon.sprite = sprite;
-            icon.color = found && blockColour.HasValue ? blockColour.Value : found && sprite ? Color.white : new Color(.12f, .14f, .17f, 1f);
-            var name = Label("Name", row.transform, 24, TextAnchor.UpperLeft); Place(name.rectTransform, 128, 17, 310, 40);
+            icon.color = found && blockColour.HasValue ? blockColour.Value : found && sprite ? Color.white : UnknownIcon;
+            var name = Label("Name", row.transform, 22, TextAnchor.UpperLeft); Place(name.rectTransform, 128, 17, 310, 40);
+            name.fontStyle = FontStyle.Bold;
             // Not met yet: nothing about it shows.
             name.text = found ? entryName : "???";
-            name.color = found ? new Color(.9f, .78f, .42f) : new Color(.42f, .46f, .52f);
+            name.color = found ? V5TitleKit.Ink : UnknownInk;
             // The words run to the list's right edge, whatever the screen's width.
             float detailWidth = Mathf.Max(240f, (viewportRect ? viewportRect.rect.width : 1340f) - 36f - 450f - 24f);
             var body = Label("Detail", row.transform, 18, TextAnchor.UpperLeft); Place(body.rectTransform, 450, 18, detailWidth, 82);
             body.horizontalOverflow = HorizontalWrapMode.Wrap;
             body.text = found ? detail : "";
-            body.color = new Color(.82f, .86f, .9f);
+            body.color = V5TitleKit.Ink2;
             // A longer entry (two anomalies, a long skill) grows to fit its words.
             row.GetComponent<LayoutElement>().preferredHeight = Mathf.Max(116f, body.preferredHeight + 36f);
         }
@@ -387,24 +425,59 @@ namespace AnomalyArena
             var label = Node(name, parent, typeof(Text)).GetComponent<Text>();
             label.font = font; label.fontSize = size; label.alignment = anchor; label.color = Color.white;
             label.verticalOverflow = VerticalWrapMode.Overflow;
+            label.raycastTarget = false;
             return label;
         }
 
-        /// <summary>A button and its label; rect.x is from the parent's left edge, or from its right edge when fromRight.</summary>
-        Image AddButton(Transform parent, string name, Func<string> words, Rect rect, Action action, bool fromRight = false)
+        /// <summary>A page tab: a plate of the title's (V5Plate, which follows the art itself), its words in the middle; the chosen tab
+        /// takes the plate's orange rim (Show).</summary>
+        (V5Plate plate, Text label) AddTab(string name, Func<string> words, int index, Action action)
         {
-            var go = Node(name, parent, typeof(Image), typeof(Button));
-            var image = go.GetComponent<Image>();
-            image.color = TabOff;
-            go.GetComponent<Button>().onClick.AddListener(() => action());
-            var label = Label(name + "Label", parent, 20, TextAnchor.MiddleCenter);
-            foreach (var placed in new[] { (RectTransform)go.transform, label.rectTransform })
-                if (fromRight) PlaceFromRight(placed, rect.x, rect.y, rect.width, rect.height);
-                else Place(placed, rect.x, rect.y, rect.width, rect.height);
-            label.raycastTarget = false;
-            label.transform.SetAsLastSibling();
+            var plate = V5Plate.Make(overlay.transform, name, V5Plate.Look.Plate, 9f, action);
+            plate.Place(Margin + index * 246f, 146f, 230f, 58f);
+            plate.HoverPitch = 1.06f - index * .03f;
+            var label = Label(name + "Label", plate.transform, 20, TextAnchor.MiddleCenter);
+            label.fontStyle = FontStyle.Bold;
+            label.color = V5TitleKit.Ink2;
+            Stretch(label.rectTransform);
             Fixed(label, words);
-            return image;
+            return (plate, label);
+        }
+
+        /// <summary>Back at the header's right end: a plate with its word and the Esc keycap that also closes the page (V5HudKey).</summary>
+        void AddBack(Transform parent)
+        {
+            var place = Node("CloseArea", parent, typeof(RectTransform)).GetComponent<RectTransform>();
+            PlaceFromRight(place, 16f, (90f - BackH) * .5f, BackW, BackH);
+            var plate = V5Plate.Make(place, "Close", V5Plate.Look.Plate, 9f, Close);
+            plate.Place(0f, 0f, BackW, BackH);
+            var key = V5HudKit.Key(plate.transform, "EscKey", "Esc", false, V5HudKit.HudCss).Rect;
+            key.anchorMin = key.anchorMax = key.pivot = new Vector2(1f, .5f);
+            key.anchoredPosition = new Vector2(-14f, 0f);
+            var label = Label("CloseLabel", plate.transform, 20, TextAnchor.MiddleCenter);
+            label.fontStyle = FontStyle.Bold;
+            label.color = V5TitleKit.OrangeHi;
+            Stretch(label.rectTransform);
+            label.rectTransform.offsetMax = new Vector2(-60f, 0f);
+            Fixed(label, () => ArenaText.Pair("返回", "Back"));
+        }
+
+        /// <summary>An image as one of the title's plates: the drawn plate with the art on (darker when dim), in whitebox a flat fill with
+        /// the thin edge (WhiteboxSkin).</summary>
+        static void DressPlate(Image image, bool art, float cut, bool lit)
+        {
+            if (!image) return;
+            V5TitleKit.Dress(image, art ? V5TitleKit.Piece("plate") : null,
+                art ? lit ? Color.white : Unmet : lit ? WhiteboxSkin.CardFill : WhiteboxSkin.PlateFill, V5TitleKit.PlateDensity(cut));
+            var edge = image.GetComponent<Outline>();
+            if (!art && !edge)
+            {
+                edge = image.gameObject.AddComponent<Outline>();
+                edge.useGraphicAlpha = false;
+                edge.effectColor = WhiteboxSkin.Edge;
+                edge.effectDistance = new Vector2(WhiteboxSkin.EdgeWidth, -WhiteboxSkin.EdgeWidth);
+            }
+            if (edge) edge.enabled = !art;
         }
 
         static GameObject Node(string name, Transform parent, params Type[] components)

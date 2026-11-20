@@ -124,7 +124,7 @@ namespace AnomalyArena
 
             var howTo = paused.transform.Find("Content/HowToPlay");
             Assert.That(howTo && howTo.gameObject.activeInHierarchy, Is.True, "the pause screen has the tutorial's button");
-            Assert.That(howTo.GetComponentInChildren<UnityEngine.UI.Text>().text, Is.EqualTo(ArenaText.Pair("教程", "HOW TO PLAY")));
+            Assert.That(howTo.GetComponentInChildren<UnityEngine.UI.Text>().text, Is.EqualTo(ArenaText.Pair("教学", "TUTORIAL")));
             Click((RectTransform)howTo);
             Assert.That(V2Tutorial.IsOpen && V2Tutorial.HoldsInput, Is.True, "it opens the pages, which hold the game's keys");
             await Awaitable.NextFrameAsync();
@@ -219,18 +219,25 @@ namespace AnomalyArena
             var table = screen.GetComponentInChildren<V2ControlsTable>(true);
             Assert.That(table && table.gameObject.activeInHierarchy, Is.True, "the pause screen shows the controls table");
 
-            // Document 3.2's inputs in its order. Space and Enter only close the weapon card, which says so itself.
-            Assert.That(table.keys.Select(key => key.text).ToArray(), Is.EqualTo(new[]
+            // Document 3.2's inputs in its order. Space and Enter only close the weapon card, which says so itself; the whole game's
+            // pages add the character screen's I before Esc. The void dash's Space is not there before the dash is won.
+            var shown = table.keys.Where(key => key.gameObject.activeInHierarchy).ToArray();
+            var expected = new List<string>
             {
                 "WASD", ArenaText.Pair("鼠标", "Mouse"), ArenaText.Pair("左键", "Left mouse button"), ArenaText.Pair("右键", "Right mouse button"),
                 "Shift", "1 / 2 / 3", "E", "Esc", "R", "T", "Tab",
-            }));
+            };
+            if (V5HudKit.On) expected.Insert(expected.IndexOf("Esc"), ArenaKeys.CharacterKey);
+            Assert.That(GameManager.Instance.VoidDashUnlocked, Is.False, "the trial is not won");
+            Assert.That(shown.Select(key => key.text).ToArray(), Is.EqualTo(expected.ToArray()));
+            Assert.That(V2Hud.ControlRows().Length, Is.EqualTo(V2Hud.ControlRowCount), "the count the layout uses is the rows' own");
             foreach (var key in new[] { KeyCode.Alpha1, KeyCode.Alpha2, KeyCode.Alpha3, KeyCode.Escape, KeyCode.R, KeyCode.T, KeyCode.Tab })
                 Assert.That(GameManager.ShownKeyCodes, Does.Contain(key), "the table names only keys the game reads");
 
             Canvas.ForceUpdateCanvases();
             var bounds = Bounds((RectTransform)screen.transform.Find("Content"));
-            foreach (var label in table.keys.Concat(table.actions))
+            var shownActions = table.actions.Where(action => action.gameObject.activeInHierarchy);
+            foreach (var label in shown.Concat(shownActions))
             {
                 string plain = Tags.Replace(label.text, "");
                 Assert.That(plain, Is.Not.Empty);

@@ -350,13 +350,13 @@ namespace AnomalyArena
             BuildFoot();
         }
 
-        enum FootUse { None, Go, GoAndDelete, Reset, Confirm }
+        enum FootUse { None, Go, GoAndDelete, Reset, Confirm, GoAndOpenMode }
 
-        V5Plate go, delete, reset, confirm, cancel;
-        Text goLabel, goSub, deleteLabel, resetLabel, confirmLabel, cancelLabel;
+        V5Plate go, delete, reset, confirm, cancel, openMode;
+        Text goLabel, goSub, deleteLabel, resetLabel, confirmLabel, cancelLabel, openModeLabel;
         RawImage goHazard;
         FootUse footUse;
-        const float DeleteW = 96f, FootSplit = 7.5f, GoTextLeft = 70f * Css;
+        const float DeleteW = 96f, FootSplit = 7.5f, GoTextLeft = 70f * Css, OpenModeW = 120f;
 
         void BuildFoot()
         {
@@ -381,6 +381,10 @@ namespace AnomalyArena
             cancel = V5Plate.Make(foot, "Cancel", V5Plate.Look.Plate, 10f, OnCancelOverwrite);
             cancelLabel = V5TitleKit.Label(cancel.transform, "Label", 17, V5TitleKit.OrangeHi, TextAnchor.MiddleCenter, true);
             V5TitleKit.Stretch(cancelLabel.rectTransform, 6f);
+            // The tutorial's second way in: the open mode's pages, beside the go button that opens the story's (V5Title.Lessons).
+            openMode = V5Plate.Make(foot, "OpenModeTutorial", V5Plate.Look.Plate, 10f, OpenOpenModeTutorial);
+            openModeLabel = V5TitleKit.Label(openMode.transform, "Label", 13, V5TitleKit.OrangeHi, TextAnchor.MiddleCenter, true);
+            V5TitleKit.Stretch(openModeLabel.rectTransform, 6f);
         }
 
         void ShowFoot(FootUse use)
@@ -388,13 +392,15 @@ namespace AnomalyArena
             footUse = use;
             bool shown = use != FootUse.None && !mapOpen;
             if (foot.gameObject.activeSelf != shown) foot.gameObject.SetActive(shown);
-            Show(go, use is FootUse.Go or FootUse.GoAndDelete);
+            Show(go, use is FootUse.Go or FootUse.GoAndDelete or FootUse.GoAndOpenMode);
             Show(delete, use == FootUse.GoAndDelete);
+            Show(openMode, use == FootUse.GoAndOpenMode);
             Show(reset, use == FootUse.Reset);
             Show(confirm, use == FootUse.Confirm);
             Show(cancel, use == FootUse.Confirm);
-            go.Place(0f, 0f, use == FootUse.GoAndDelete ? InnerW - DeleteW - FootSplit : InnerW, FootH);
+            go.Place(0f, 0f, use == FootUse.GoAndDelete ? InnerW - DeleteW - FootSplit : use == FootUse.GoAndOpenMode ? InnerW - OpenModeW - FootSplit : InnerW, FootH);
             delete.Place(InnerW - DeleteW, 0f, DeleteW, FootH);
+            openMode.Place(InnerW - OpenModeW, 0f, OpenModeW, FootH);
             reset.Place(0f, 0f, InnerW, FootH);
             float half = (InnerW - FootSplit) * .5f;
             confirm.Place(0f, 0f, half, FootH);

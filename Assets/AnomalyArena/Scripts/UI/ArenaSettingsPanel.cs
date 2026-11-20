@@ -262,8 +262,8 @@ namespace AnomalyArena
             GameAction.Skill1 => ArenaText.Pair("技能 1 / 面板选项 1", "Skill 1 / Option 1"),
             GameAction.Skill2 => ArenaText.Pair("技能 2 / 面板选项 2", "Skill 2 / Option 2"),
             GameAction.Skill3 => ArenaText.Pair("技能 3 / 面板选项 3", "Skill 3 / Option 3"),
-            GameAction.Lamp => ArenaText.Pair("放下矿灯", "Place a lamp"),
-            GameAction.CardPick => ArenaText.Pair("打开待选的升级", "Open a pending pick"),
+            GameAction.Lamp => ArenaText.Pair("放下矿灯", "Set down a lamp"),
+            GameAction.CardPick => ArenaText.Pair("打开待选卡", "Open card picks"),
             GameAction.Character => ArenaText.Pair("角色面板", "Character screen"),
             _ => action.ToString(),
         };
@@ -291,15 +291,20 @@ namespace AnomalyArena
         public static string KeysHint(bool listening) => listening ? ArenaText.Pair("按下你想用的键，按 Esc 取消", "Press the key you want, or Esc to cancel")
             : ArenaText.Pair("点右边的键，再按下想用的键", "Click a key on the right, then press the key you want");
 
-        /// <summary>What cannot be changed at all.</summary>
+        /// <summary>What cannot be changed at all. Once the void dash is the player's (GameManager.VoidDashUnlocked), one more sentence
+        /// says that Space is its key; nothing of the dash shows before it is won.</summary>
         public static string FixedNote => ArenaText.Pair("鼠标按键不能改：左键使用手上的武器，右键在两只手的武器之间切换。Esc、Tab、R、空格和回车是菜单专用键，不能分配给上面的动作。",
-            "Mouse buttons are fixed: left click uses the weapon in your hand, right click switches hands. Esc, Tab, R, Space and Enter are reserved for menus and can't be given to the actions above.");
+            "Mouse buttons are fixed: left click uses the weapon in your hand, right click switches hands. Esc, Tab, R, Space and Enter are reserved for menus and can't be given to the actions above.")
+            + (V2Hud.DashRowShown ? ArenaText.Pair("空格同时是虚空冲刺的固定按键。", " Space is also the Void Dash's fixed key.") : "");
 
         // ───── What it shows ─────
 
         void Refresh()
         {
-            SetText(title, ArenaText.Pair("设置", "SETTINGS"));
+            // The whole game's pages write the panel's own labels as the title's settings window does (V5Title); the English Alpha keeps
+            // the capitals it was graded with.
+            bool fifth = V5HudKit.On;
+            SetText(title, ArenaText.Pair("设置", fifth ? "Settings" : "SETTINGS"));
             SetText(volumeLabel, ArenaText.Pair("音量", "Volume"));
             SetText(volumeValue, Mathf.RoundToInt(ArenaVolume.Master * 100f) + "%");
 
@@ -330,8 +335,9 @@ namespace AnomalyArena
             }
             SetText(message, messageText);
             SetText(fixedNote, FixedNote);
-            SetText(resetLabel, ArenaText.Pair("恢复默认按键", "RESET KEYS"));
-            SetText(closeLabel, ArenaText.Pair("关闭  [Esc]", "CLOSE  [Esc]"));
+            SetText(resetLabel, ArenaText.Pair("恢复默认按键", fifth ? "Reset Keys" : "RESET KEYS"));
+            // There the Esc that also closes the panel is a keycap on the button (closeKey).
+            SetText(closeLabel, fifth ? ArenaText.Pair("关闭", "Close") : ArenaText.Pair("关闭  [Esc]", "CLOSE  [Esc]"));
         }
 
         static void Mark(Image mark, Text label, bool current)
@@ -454,7 +460,20 @@ namespace AnomalyArena
             Place((RectTransform)reset.transform, Margin, PanelH - Margin - BottomButtonH, BottomButtonW, BottomButtonH);
             close = MakeButton(body, "Close", true, 19, Back, out closeLabel);
             Place((RectTransform)close.transform, PanelW - Margin - BottomButtonW, PanelH - Margin - BottomButtonH, BottomButtonW, BottomButtonH);
+            // On the whole game's pages the Esc that also closes the panel stands at the button's right end as a keycap (V5HudKey), as
+            // keys do on the battle screens; the word keeps the rest of the button.
+            if (V5HudKit.On)
+            {
+                var cap = V5HudKit.Key(close.transform, "EscKey", "Esc", true, V5HudKit.HudCss).Rect;
+                cap.anchorMin = cap.anchorMax = cap.pivot = new Vector2(1f, .5f);
+                cap.anchoredPosition = new Vector2(-CloseKeyRight, 0f);
+                var word = closeLabel.rectTransform;
+                word.offsetMax = new Vector2(-(CloseKeyRight + CloseKeyRoom), word.offsetMax.y);
+            }
         }
+
+        // The close button's keycap: its distance from the button's right end, and the room kept for it there.
+        const float CloseKeyRight = 16f, CloseKeyRoom = 46f;
 
         Text RowLabel(Transform parent, string name, float top)
         {

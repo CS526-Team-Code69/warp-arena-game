@@ -556,6 +556,7 @@ namespace AnomalyArena
         {
             SavePhase.Morning => ArenaText.Pair("上午", "Morning"),
             SavePhase.Afternoon => ArenaText.Pair("下午", "Afternoon"),
+            SavePhase.Tyrant => ArenaText.Pair("最终决战", "Final Battle"),
             _ => ArenaText.Pair("夜晚", "Night"),
         };
 
@@ -563,6 +564,7 @@ namespace AnomalyArena
         {
             SavePhase.Morning => V5TitleKit.Gold,
             SavePhase.Afternoon => V5TitleKit.OrangeHi,
+            SavePhase.Tyrant => V5TitleKit.Crimson,
             _ => V5TitleKit.Moon,
         };
 
@@ -570,6 +572,7 @@ namespace AnomalyArena
         {
             SavePhase.Morning => V5TitleKit.Rgb(42, 26, 4),
             SavePhase.Afternoon => V5TitleKit.Rgb(42, 18, 6),
+            SavePhase.Tyrant => V5TitleKit.Rgb(44, 6, 12),
             _ => V5TitleKit.Rgb(7, 26, 44),
         };
 

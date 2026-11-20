@@ -19,6 +19,12 @@ and four closer looks:
 --runs ("runs" export) draws story-endings and --damage ("damage" export) story-damage; both sheets also hold the open mode, and only
 their story rows are read. --days draws story-days, --purchases story-spending and story-purchases (with the void purchases when
 --events is given too), --events story-weapons, story-hole-checks and story-tutorial.
+
+Fresh runs and runs continued from a save are counted apart (classify_runs): story-endings and story-days draw them apart, a continued
+run has no first purchase in story-spending, and with --runs and --days the script prints Day 0 and Day 1 on fresh runs and per
+player. Rows from builds before the continued run's run_start said where it continues are told apart by their rows, which needs
+--runs, --days and --events together; their empty dawn row of the night before a continued morning save is left out.
+--fresh-only draws the other charts from fresh runs only.
 --demo makes made-up runs with a fixed seed (no sheet needed), writes them next to the charts as demo-story-*.csv in the same columns
 as the sheets, and charts them. Every made-up row has the build "simulated-demo". Use it to preview the charts.
 
@@ -36,16 +42,29 @@ from plot_beta_metrics import (BAR_COLOR, GRID, INK, INK_2, INK_MUTED, OTHER_COL
                                parse_csv_text, write_csv)
 
 # How a day ends, in stack order. Categorical slots 1-6 of the shared palette in their validated order (adjacent pairs CVD
-# dE >= 9.1, normal >= 19.6), then the neutral grey for an unknown cause. Three slots are under 3:1 on the surface, so every chart
-# carries a legend or direct labels and the script prints the tables.
-DAY_ENDS = ["dawn", "dawn_night_death", "base", "died", "won", "left", "unknown"]
+# dE >= 9.1, normal >= 19.6), then the neutral grey for an unknown cause and the dark neutral grey for a tab closed during the day
+# (the two greys differ in lightness). Three slots are under 3:1 on the surface, so every chart carries a legend or direct labels and
+# the script prints the tables. "closed" is never a row's own end: it is counted for a run that began a day and sent nothing for it.
+DAY_ENDS = ["dawn", "dawn_night_death", "base", "died", "won", "left", "unknown", "closed"]
 DAY_END_LABELS = {
     "dawn": "Reached dawn", "dawn_night_death": "Reached dawn after dying at night", "base": "Run over: base destroyed",
     "died": "Run over: the player died", "won": "Run over: won", "left": "Run over: left the run", "unknown": "Run over: cause unknown",
+    "closed": "Run over: tab closed",
 }
 DAY_END_COLORS = {"dawn": "#2a78d6", "dawn_night_death": "#eb6834", "base": "#1baf7a", "died": "#eda100",
-                  "won": "#e87ba4", "left": "#008300", "unknown": OTHER_COLOR}
+                  "won": "#e87ba4", "left": "#008300", "unknown": OTHER_COLOR, "closed": "#5f5e5a"}
 RUN_OVER = DAY_ENDS[2:]
+DAWN_ENDS = ("dawn", "dawn_night_death")
+DEFEAT_ENDS = ("base", "died")
+
+# ---- Fresh and continued runs. A fresh run starts on Day 0 and sends its run_start with the stage "tutorial". A run continued from a
+# save sends the stage where the save continues (dawn, dusk, night or final_boss) and that day in "wave". Builds before that fix sent
+# every story run_start as Day 0 of the tutorial and, for a morning save, a v2_days row "reached dawn" for the night before it, with
+# nothing counted in it; such a run is told apart by its rows (classify_runs).
+FRESH, CONTINUED = "fresh", "continued"
+RUN_KINDS = [FRESH, CONTINUED]
+FRESH_STAGE = "tutorial"
+DAY_COUNTS = ("kills", "player_hits", "earned_alloy", "earned_energy", "earned_dark", "spent_alloy", "spent_energy", "spent_dark")
 LEFT_CAUSES = {"restart", "quit_to_title"}
 END_STAGES = ["tutorial", "day", "dusk", "night", "dawn", "void_trial", "final_boss", "ending", "other"]
 END_STAGE_LABELS = {
@@ -62,11 +81,13 @@ HOLE_COLORS = {"passed": "#2a78d6", "failed_timeout": "#eb6834", "failed_death":
 HOLE_FAILURES = HOLE_RESULTS[1:4]
 
 # Day 0's steps in the order they are taught; a step not listed here is drawn after them.
-TUTORIAL_STEPS = ["Move", "Fire", "Mine", "Crate", "Sprint", "Fight", "Collect", "Lamp", "DarkMatter"]
+# Day 0's steps in teaching order (the Gold build adds TryWeapon after the first crate). HoleEscape is taught on a later day, the
+# first time a run stands in the black hole's pull, so it is labelled but not part of Day 0's order.
+TUTORIAL_STEPS = ["Move", "Fire", "Mine", "Crate", "TryWeapon", "Sprint", "Fight", "Collect", "Lamp", "DarkMatter"]
 TUTORIAL_LABELS = {
     "Move": "1 Walk to the marker", "Fire": "2 Fire the pistol", "Mine": "3 Mine the ore", "Crate": "4 Open the weapon crate",
-    "Sprint": "5 Sprint once", "Fight": "6 Defeat the monsters", "Collect": "7 Collect the energy",
-    "Lamp": "Night: set a lamp", "DarkMatter": "Night: mine dark matter",
+    "TryWeapon": "5 Try the new weapon", "Sprint": "6 Sprint once", "Fight": "7 Defeat the monsters", "Collect": "8 Collect the energy",
+    "Lamp": "Night: set a lamp", "DarkMatter": "Night: mine dark matter", "HoleEscape": "Later: sprint out of a pull",
 }
 
 ROOMS = ["Control", "Armament", "Energy", "Ship", "Void"]
@@ -159,19 +180,174 @@ def day_end(row):
     return "died"
 
 
-def aggregate_days(rows, include_test=False):
-    agg = {"days": {}, "stages": {}, "runs": set(), "rows": 0}
+def _order(row, index):
+    """Sort key of a row: when the sheet received it, then its place in the export."""
+    return row.get("received_at", ""), index
+
+
+def _empty_day(row):
+    """A v2_days row with nothing counted in it: no kill, no hit taken, nothing earned or spent."""
+    return all(_num(row.get(name), 0.0) == 0 for name in DAY_COUNTS)
+
+
+def classify_runs(runs=None, days=None, events=None, include_test=False):
+    """Fresh runs and runs continued from a save, from whichever of the "runs", "v2_days" and "v2_events" exports are given.
+
+      kind        {run_id: FRESH or CONTINUED} for every story run seen
+      session     {run_id: session_id}: one page load, the nearest thing to one player that the rows have
+      order       {run_id: sort key} from its run_start row (else its first day row), to find a player's first run
+      start_day   {run_id: the day the run began}: 0 for a fresh run
+      started     the runs with a run_start row; ended: the runs with a run_end row
+      false_rows  {(run_id, day)}: the empty "reached dawn" row of the night before a continued morning save, sent by builds
+                  before the fix; it is not a day the run played
+      old_rule    the runs found continued by the rule for rows sent before the fix; silent: fresh runs that sent no row after
+                  their run_start (a fresh run left in its first seconds, or a save continued in an afternoon or a night and left
+                  before dawn: the rows of a build before the fix cannot tell which)
+      has_starts  the "runs" export was given; told: "v2_days" and "v2_events" were given, so the rule for older rows applies
+    A run whose run_start (a story row) has a stage other than "tutorial" is continued, on the day in its "wave". Before the fix every
+    run_start said "tutorial" on Day 0, so a run that sent v2_days rows and no tutorial_step row is continued too: a fresh run passes
+    the first step (walk to the marker) seconds after it starts, and a continued morning save sends its empty dawn row at once. Such
+    a run's first row is that empty "reached dawn" row (false_rows; the run began on the day after it), or a row of Day 1 or later
+    (a save continued in an afternoon or a night; the run began on that row's day). A fresh run left before its first step sends a
+    Day 0 row that did not reach dawn, so it stays fresh. Every other run is fresh.
+    """
+    split = {"kind": {}, "session": {}, "order": {}, "start_day": {}, "started": set(), "ended": set(), "false_rows": set(),
+             "old_rule": set(), "silent": set(), "has_starts": runs is not None, "told": days is not None and events is not None}
+    starts, day_rows, tutorial, active = {}, {}, set(), set()
+    story = story_run_ids(runs or [])
+    for index, row in enumerate(runs or []):
+        run, event = row.get("run_id", ""), _lower(row, "event")
+        if not run or run not in story or not keep(row, include_test) or event not in ("run_start", "run_end"):
+            continue
+        split["session"].setdefault(run, row.get("session_id", ""))
+        if event == "run_end":
+            split["ended"].add(run)
+            active.add(run)
+        elif run not in starts:
+            # A run_start sent as the open mode (a run marked as a campaign only at a later campaign event) says nothing of where
+            # the story began.
+            stage = _lower(row, "stage") if is_story(row) else None
+            starts[run] = (stage, max(0, int(_num(row.get("wave"), 0))), _order(row, index))
+    for index, row in enumerate(days or []):
+        run = row.get("run_id", "")
+        if run and keep(row, include_test) and row.get("event") == "v2_day" and _day(row) >= 0:
+            day_rows.setdefault(run, []).append((_day(row), _order(row, index), row))
+            split["session"].setdefault(run, row.get("session_id", ""))
+            active.add(run)
+    for row in events or []:
+        run = row.get("run_id", "")
+        if run and keep(row, include_test) and row.get("event") == "v2_event":
+            active.add(run)
+            split["session"].setdefault(run, row.get("session_id", ""))
+            if row.get("kind") == "tutorial_step":
+                tutorial.add(run)
+    split["started"] = set(starts)
+    for run in set(starts) | set(day_rows):
+        stage, wave, order = starts.get(run, (None, 0, None))
+        rows_of_run = sorted(day_rows.get(run, []), key=lambda r: (r[0], r[1]))
+        split["order"][run] = order if order is not None else rows_of_run[0][1]
+        if stage and stage != FRESH_STAGE:
+            split["kind"][run], split["start_day"][run] = CONTINUED, wave
+        elif split["told"] and rows_of_run and run not in tutorial and (
+                rows_of_run[0][0] >= 1 or _bool(rows_of_run[0][2].get("reached_dawn")) and _empty_day(rows_of_run[0][2])):
+            split["kind"][run] = CONTINUED
+            split["old_rule"].add(run)
+            first_day, _, first = rows_of_run[0]
+            if _bool(first.get("reached_dawn")) and _empty_day(first):
+                split["false_rows"].add((run, first_day))
+                split["start_day"][run] = first_day + 1
+            else:
+                split["start_day"][run] = first_day
+        else:
+            split["kind"][run], split["start_day"][run] = FRESH, 0
+            if split["told"] and run not in active:
+                split["silent"].add(run)
+    return split
+
+
+def run_kind(split, run):
+    """FRESH or CONTINUED; a run the split does not know (or no split) counts as fresh."""
+    return split["kind"].get(run, FRESH) if split else FRESH
+
+
+def aggregate_days(rows, include_test=False, split=None):
+    """How each day ended.
+
+      days      {day: {end: runs}} over all runs; by_kind: the same for FRESH and CONTINUED runs apart
+      stages    {end_stage: {end: runs}} for the days that ended a run; rows, runs: the rows counted and their runs
+      outcomes  {run_id: {day: end}}; dropped: the rows of split["false_rows"] left out
+    With a split that has the "runs" export, a run that began a day and sent nothing for it (no row for that day and no run_end)
+    counts on that day as "closed": the tab was closed during it. A day row is only sent at dawn or with the run's end.
+    """
+    agg = {"days": {}, "stages": {}, "runs": set(), "rows": 0, "by_kind": {k: {} for k in RUN_KINDS},
+           "kind_runs": {k: set() for k in RUN_KINDS}, "outcomes": {}, "dropped": 0}
+    false_rows = split["false_rows"] if split else set()
+
+    def count(run, day, end):
+        kind = run_kind(split, run)
+        agg["days"].setdefault(day, {e: 0 for e in DAY_ENDS})[end] += 1
+        agg["by_kind"][kind].setdefault(day, {e: 0 for e in DAY_ENDS})[end] += 1
+        agg["kind_runs"][kind].add(run)
+        agg["outcomes"].setdefault(run, {})[day] = end
+
     for row in rows:
         if not keep(row, include_test) or row.get("event") != "v2_day" or _day(row) < 0:
             continue
+        run, day = row.get("run_id", ""), _day(row)
+        if (run, day) in false_rows and _bool(row.get("reached_dawn")):
+            agg["dropped"] += 1
+            continue
         end = day_end(row)
         agg["rows"] += 1
-        agg["runs"].add(row.get("run_id", ""))
-        agg["days"].setdefault(_day(row), {e: 0 for e in DAY_ENDS})[end] += 1
+        agg["runs"].add(run)
+        count(run, day, end)
         if end in RUN_OVER:
             stage = row.get("end_stage", "")
             stage = stage if stage in END_STAGES else "other"
             agg["stages"].setdefault(stage, {e: 0 for e in RUN_OVER})[end] += 1
+    if split and split["has_starts"]:
+        for run in sorted(split["started"] - split["ended"]):
+            outcomes = agg["outcomes"].get(run, {})
+            if not outcomes:
+                count(run, split["start_day"].get(run, 0), "closed")
+            elif outcomes[max(outcomes)] in DAWN_ENDS:
+                count(run, max(outcomes) + 1, "closed")
+    return agg
+
+
+def day_share(counts, ends=DAWN_ENDS):
+    """(runs that ended the day in one of ends, runs that played the day) for one day's counts."""
+    return sum(counts.get(e, 0) for e in ends), sum(counts.values())
+
+
+def aggregate_players(days_agg, split):
+    """Per player (session_id), from aggregate_days' outcomes: for each day, the players who played it, those who reached its dawn
+    at least once, those defeated on it at least once, every attempt at it and how each player's first attempt ended. A player's
+    first attempt at a day is their earliest run (order) that played it; for Day 0 that is their first fresh run.
+
+      days      {day: {"played", "dawn", "defeated", "attempts", "most_attempts": n, "first": {end: players}}}
+      players   players with a story run; fresh_players: those with a fresh run
+    """
+    agg = {"days": {}, "players": 0, "fresh_players": 0}
+    if not split:
+        return agg
+    by_player = {}
+    for run, outcomes in days_agg["outcomes"].items():
+        by_player.setdefault(split["session"].get(run) or run, []).append(run)
+    agg["players"] = len(by_player)
+    agg["fresh_players"] = sum(1 for runs in by_player.values() if any(run_kind(split, r) == FRESH for r in runs))
+    for runs in by_player.values():
+        runs.sort(key=lambda r: split["order"].get(r) or ("", 0))
+        for day in sorted({d for r in runs for d in days_agg["outcomes"][r]}):
+            ends = [days_agg["outcomes"][r][day] for r in runs if day in days_agg["outcomes"][r]]
+            entry = agg["days"].setdefault(day, {"played": 0, "dawn": 0, "defeated": 0, "attempts": 0, "most_attempts": 0,
+                                                 "first": {e: 0 for e in DAY_ENDS}})
+            entry["played"] += 1
+            entry["dawn"] += any(e in DAWN_ENDS for e in ends)
+            entry["defeated"] += any(e in DEFEAT_ENDS for e in ends)
+            entry["attempts"] += len(ends)
+            entry["most_attempts"] = max(entry["most_attempts"], len(ends))
+            entry["first"][ends[0]] += 1
     return agg
 
 
@@ -279,18 +455,26 @@ def end_bucket(row):
     return min(max(int(_num(row.get("wave"), 0)), 0), 100)
 
 
-def aggregate_endings(rows, include_test=False):
+def _endings_table():
+    return {"buckets": {}, "causes": {c: 0 for c in END_CAUSES}, "defeats": {}, "ended": 0, "started": 0, "unfinished": 0}
+
+
+def aggregate_endings(rows, include_test=False, split=None):
     """Run endings of the story mode per bucket and cause.
 
       buckets     {day or FINAL: {cause: n}}
       causes      {cause: n}
       defeats     {day or FINAL: n} for the endings with the outcome "defeat"
-      enemies     {enemy kind: {"enemy": n, "status": n, "tyrant": n, "elite": n, "total": n}}
+      enemies     {enemy kind: {"enemy": n, "status": n, "tyrant": n, "elite": n, "total": n, "fresh": n}}
       started, ended, unfinished   distinct runs with a run_start row, run endings counted (one per run), started and never ended
       open_runs   distinct open-mode runs left out
+      by_kind     {FRESH or CONTINUED: {"buckets", "causes", "defeats", "started", "ended", "unfinished"}}: the same for fresh runs and
+                  for runs continued from a save apart (split, from classify_runs; without one, from the run_start rows alone)
     """
     story = story_run_ids(rows)
-    agg = {"buckets": {}, "causes": {c: 0 for c in END_CAUSES}, "defeats": {}, "enemies": {}, "ended": 0}
+    if split is None:
+        split = classify_runs(rows, include_test=include_test)
+    agg = dict(_endings_table(), enemies={}, by_kind={k: _endings_table() for k in RUN_KINDS})
     started, ended_ids, open_ids = set(), set(), set()
     for row in rows:
         event = _lower(row, "event")
@@ -308,19 +492,25 @@ def aggregate_endings(rows, include_test=False):
             if run in ended_ids:
                 continue  # a run ends once; ignore repeats
             ended_ids.add(run)
-        agg["ended"] += 1
+        kind = run_kind(split, run)
         cause, bucket = end_cause(row), end_bucket(row)
-        agg["buckets"].setdefault(bucket, {c: 0 for c in END_CAUSES})[cause] += 1
-        agg["causes"][cause] += 1
-        if _lower(row, "outcome") == "defeat":
-            agg["defeats"][bucket] = agg["defeats"].get(bucket, 0) + 1
+        for table in (agg, agg["by_kind"][kind]):
+            table["ended"] += 1
+            table["buckets"].setdefault(bucket, {c: 0 for c in END_CAUSES})[cause] += 1
+            table["causes"][cause] += 1
+            if _lower(row, "outcome") == "defeat":
+                table["defeats"][bucket] = table["defeats"].get(bucket, 0) + 1
         if cause in ENEMY_CAUSES and row.get("enemy"):
-            entry = agg["enemies"].setdefault(row["enemy"], dict({c: 0 for c in ENEMY_CAUSES}, elite=0, total=0))
+            entry = agg["enemies"].setdefault(row["enemy"], dict({c: 0 for c in ENEMY_CAUSES}, elite=0, total=0, fresh=0))
             entry[cause] += 1
             entry["total"] += 1
+            entry["fresh"] += kind == FRESH
             if _bool(row.get("elite")):
                 entry["elite"] += 1
     agg.update(started=len(started), unfinished=len(started - ended_ids), open_runs=len(open_ids))
+    for kind, table in agg["by_kind"].items():
+        mine = {run for run in started if run_kind(split, run) == kind}
+        table.update(started=len(mine), unfinished=len(mine - ended_ids))
     return agg
 
 
@@ -346,7 +536,7 @@ def worst_day(agg):
 
 # ---- Where the resources go ("v2_purchases" export)
 
-def aggregate_spending(rows, include_test=False):
+def aggregate_spending(rows, include_test=False, split=None):
     """Spending by room, and each run's first purchase.
 
       days         {day: {room: currency units spent}}: alloy + energy + dark matter as paid
@@ -356,12 +546,14 @@ def aggregate_spending(rows, include_test=False):
       first_item   {(room, item): runs whose first purchase it was}
       first_extra  {(room, item): runs whose first purchase other than a room upgrade it was}; extra_runs: the runs with one
       first_day    {day: runs whose first purchase came that day}
-    A run's first purchase is its earliest row: the lowest day, then the order of the rows in the sheet.
+      continued_runs  runs continued from a save that bought something (split): their spending counts, their first purchase does not
+    A run's first purchase is its earliest row: the lowest day, then the order of the rows in the sheet. A run continued from a save
+    did its first shopping in the run that made the save, so with a split only fresh runs have a first purchase.
     """
     agg = {"days": {}, "runs_by_day": {}, "rooms": {r: {c: 0.0 for c in CURRENCIES} for r in SPEND_ROOMS},
            "first_room": {r: 0 for r in SPEND_ROOMS}, "first_item": {}, "first_extra": {}, "first_day": {}, "purchases": 0,
-           "runs": 0, "extra_runs": 0}
-    first, extra = {}, {}
+           "runs": 0, "extra_runs": 0, "continued_runs": 0}
+    first, extra, continued = {}, {}, set()
     for index, row in enumerate(rows or []):
         day = _day(row)
         if not keep(row, include_test) or row.get("event") != "v2_purchase" or day < 0 or not row.get("item"):
@@ -375,6 +567,9 @@ def aggregate_spending(rows, include_test=False):
         run = row.get("run_id", "")
         agg["runs_by_day"].setdefault(day, set()).add(run)
         agg["purchases"] += 1
+        if run_kind(split, run) == CONTINUED:
+            continued.add(run)
+            continue
         for table in (first, extra) if row["item"] != ROOM_UPGRADE else (first,):
             if run not in table or (day, index) < table[run][0]:
                 table[run] = ((day, index), room, row["item"])
@@ -384,7 +579,7 @@ def aggregate_spending(rows, include_test=False):
         agg["first_day"][day] = agg["first_day"].get(day, 0) + 1
     for _, room, item in extra.values():
         agg["first_extra"][(room, item)] = agg["first_extra"].get((room, item), 0) + 1
-    agg.update(runs=len(first), extra_runs=len(extra))
+    agg.update(runs=len(first), extra_runs=len(extra), continued_runs=len(continued))
     return agg
 
 
@@ -552,14 +747,72 @@ def label_source(source):
 
 # ---------------------------------------------------------------- text tables
 
-def format_days(agg):
-    lines = ["Day rows: %d from %d runs" % (agg["rows"], len(agg["runs"])),
-             "  %-5s %6s " % ("Day", "Rows") + " ".join("%9s" % e[:9] for e in DAY_ENDS)]
-    for day in sorted(agg["days"]):
-        c = agg["days"][day]
+DAY_END_WORDS = {"dawn": "reached dawn", "dawn_night_death": "reached dawn after dying at night", "base": "base destroyed",
+                 "died": "died", "won": "won", "left": "left from the pause menu", "unknown": "cause unknown", "closed": "tab closed"}
+KIND_WORDS = {FRESH: "fresh runs", CONTINUED: "runs continued from a save"}
+
+
+def _day_table(days, title):
+    lines = ["  " + title, "  %-5s %6s " % ("Day", "Runs") + " ".join("%9s" % e[:9] for e in DAY_ENDS)]
+    for day in sorted(days):
+        c = days[day]
         lines.append("  %-5d %6d " % (day, sum(c.values())) + " ".join("%9d" % c[e] for e in DAY_ENDS))
+    return lines
+
+
+def format_days(agg):
+    lines = ["Day rows: %d from %d runs" % (agg["rows"], len(agg["runs"]))]
+    if agg["dropped"]:
+        lines[0] += "; %d more left out (the empty row of the night before a continued morning save)" % agg["dropped"]
+    lines += _day_table(agg["days"], "All runs (closed: the run began the day and the tab was closed during it)")
+    if agg["by_kind"][CONTINUED]:
+        for kind in RUN_KINDS:
+            lines += _day_table(agg["by_kind"][kind], KIND_WORDS[kind].capitalize())
     lines.append("  Where the last day ended: " + ", ".join(
         "%s %d" % (s, sum(agg["stages"][s].values())) for s in END_STAGES if s in agg["stages"]))
+    return "\n".join(lines)
+
+
+def _ends_text(counts, ends):
+    return ", ".join("%s %d" % (DAY_END_WORDS[e], counts[e]) for e in ends if counts.get(e)) or "none"
+
+
+def format_early_days(days_agg, players, split, last_day=1):
+    """Day 0 and Day 1 (up to last_day) on fresh runs, on continued attempts and per player."""
+    lines = ["Day 0 and Day 1: fresh runs, runs continued from a save, and per player"]
+    if split and split["has_starts"]:
+        kinds = [run_kind(split, run) for run in split["started"]]
+        lines.append("  Story runs started: %d, of them %d fresh and %d continued from a save (%d told apart by the rule for rows "
+                     "sent before the fix); %d fresh run%s sent no row after its start"
+                     % (len(kinds), kinds.count(FRESH), kinds.count(CONTINUED), len(split["old_rule"] & split["started"]),
+                        len(split["silent"]), "" if len(split["silent"]) == 1 else "s"))
+    if split and not split["told"]:
+        lines.append("  Rows sent before the fix are told apart only with --days and --events as well.")
+    for day in range(last_day + 1):
+        for kind in RUN_KINDS:
+            counts = days_agg["by_kind"][kind].get(day)
+            if not counts:
+                continue
+            dawn, played = day_share(counts)
+            lines.append("  Day %d, %s: %d played it; %d reached dawn (%.0f%%); the run was over: %s"
+                         % (day, KIND_WORDS[kind], played, dawn, _pct(dawn, played), _ends_text(counts, RUN_OVER)))
+    if players["players"]:
+        lines.append("  Per player (session_id, one page load; a player who reloads the page counts again): %d played the story mode, "
+                     "%d began a fresh run" % (players["players"], players["fresh_players"]))
+        for day in range(last_day + 1):
+            entry = players["days"].get(day)
+            if not entry:
+                continue
+            lines.append("    Day %d: %d played it, %d reached its dawn at least once (%.0f%%); %d attempts, at most %d by one player; "
+                         "their first attempt: %s" % (day, entry["played"], entry["dawn"], _pct(entry["dawn"], entry["played"]),
+                                                      entry["attempts"], entry["most_attempts"], _ends_text(entry["first"], DAY_ENDS)))
+        defeated = {d: e["defeated"] for d, e in players["days"].items() if e["defeated"]}
+        if defeated:
+            worst = min(defeated, key=lambda d: (-defeated[d], d))
+            total = sum(defeated.values())
+            lines.append("    Players defeated on each day (each player once a day): " + ", ".join(
+                "Day %d %d" % (d, n) for d, n in sorted(defeated.items())) + "; the most: Day %d with %d of %d (%.0f%%)"
+                % (worst, defeated[worst], total, _pct(defeated[worst], total)))
     return "\n".join(lines)
 
 
@@ -597,22 +850,32 @@ def format_tutorial(agg):
 
 def format_endings(agg):
     lines = ["Story runs started: %d   ended: %d   unfinished (closed tab): %d" % (agg["started"], agg["ended"], agg["unfinished"])]
+    fresh, cont = agg["by_kind"][FRESH], agg["by_kind"][CONTINUED]
+    lines.append("  Fresh runs: started %d, ended %d, unfinished %d. Continued from a save: started %d, ended %d, unfinished %d"
+                 % (fresh["started"], fresh["ended"], fresh["unfinished"], cont["started"], cont["ended"], cont["unfinished"]))
     shown = [c for c in END_CAUSES if agg["causes"][c]]
     if not shown:
         return "\n".join(lines + ["  No story run has ended yet."])
-    lines.append("  %-11s %6s " % ("Ended on", "Runs") + " ".join("%9s" % c[:9] for c in shown))
-    for bucket in ending_buckets(agg):
-        counts = agg["buckets"].get(bucket)
-        if counts:
-            lines.append("  %-11s %6d " % (bucket_label(bucket), sum(counts.values())) + " ".join("%9d" % counts[c] for c in shown))
-    worst = worst_day(agg)
-    if worst:
-        lines.append("  Most defeats: Day %d with %d of %d (%.0f%%)" % (worst[0], worst[1], worst[2], _pct(worst[1], worst[2])))
-    if agg["started"]:
-        day0 = sum(agg["buckets"].get(0, {}).values())
-        lines.append("  Ended on Day 0: %d of %d runs started (%.0f%%)" % (day0, agg["started"], _pct(day0, agg["started"])))
+    for kind in RUN_KINDS:
+        table = agg["by_kind"][kind]
+        if not table["ended"]:
+            continue
+        lines.append("  " + KIND_WORDS[kind].capitalize())
+        lines.append("  %-11s %6s " % ("Ended on", "Runs") + " ".join("%9s" % c[:9] for c in shown))
+        for bucket in ending_buckets(agg):
+            counts = table["buckets"].get(bucket)
+            if counts:
+                lines.append("  %-11s %6d " % (bucket_label(bucket), sum(counts.values())) + " ".join("%9d" % counts[c] for c in shown))
+        worst = worst_day(table)
+        if worst:
+            lines.append("  Most defeats: Day %d with %d of %d (%.0f%%)" % (worst[0], worst[1], worst[2], _pct(worst[1], worst[2])))
+        if kind == FRESH and table["started"]:
+            day0 = sum(table["buckets"].get(0, {}).values())
+            day0_defeats = table["defeats"].get(0, 0)
+            lines.append("  Ended on Day 0: %d of %d fresh runs started (%.0f%%), %d of them by a defeat"
+                         % (day0, table["started"], _pct(day0, table["started"]), day0_defeats))
     if agg["enemies"]:
-        lines.append("  Killed by: " + ", ".join("%s %d" % (label_source(k), e["total"]) for k, e in sorted(
+        lines.append("  Killed by: " + ", ".join("%s %d (fresh runs %d)" % (label_source(k), e["total"], e["fresh"]) for k, e in sorted(
             agg["enemies"].items(), key=lambda kv: (-kv[1]["total"], kv[0]))))
     if agg["open_runs"]:
         lines.append("  Open-mode runs left out: %d (plot_run_endings.py charts them)" % agg["open_runs"])
@@ -620,13 +883,16 @@ def format_endings(agg):
 
 
 def format_spending(agg):
-    lines = ["Purchases: %d in %d runs" % (agg["purchases"], agg["runs"]),
+    lines = ["Purchases: %d in %d runs" % (agg["purchases"], agg["runs"] + agg["continued_runs"])
+             + ("; %d of these runs continued from a save, so the first purchases count the other %d"
+                % (agg["continued_runs"], agg["runs"]) if agg["continued_runs"] else ""),
              "  First purchase by room: " + ", ".join("%s %d (%.0f%%)" % (r, n, _pct(n, agg["runs"]))
                                                       for r, n in agg["first_room"].items() if n),
              "  First purchase by item: " + ", ".join("%s %s %d" % (room, label_item(item), n)
                                                       for (room, item), n in first_items(agg)[:MAX_FIRST_ITEMS]),
-             "  First purchase other than a room upgrade (%d runs): " % agg["extra_runs"] + ", ".join(
-                 "%s %s %d" % (room, label_item(item), n) for (room, item), n in first_items(agg, "first_extra")[:MAX_FIRST_ITEMS]),
+             "  First purchase other than a room upgrade (%d runs): " % agg["extra_runs"] + (", ".join(
+                 "%s %s %d" % (room, label_item(item), n) for (room, item), n in first_items(agg, "first_extra")[:MAX_FIRST_ITEMS])
+                 or "none"),
              "  %-10s %8s %8s %8s" % ("Room", "Alloy", "Energy", "Dark")]
     for room in SPEND_ROOMS:
         paid = agg["rooms"][room]
@@ -736,8 +1002,8 @@ def _share_columns(ax, x, keys, shares, colors):
     ax.grid(axis="y", color=GRID, linewidth=0.8, zorder=0)
 
 
-def _day_columns(ax, days, keys, values, colors, labels, note, ylabel):
-    """Stacked columns per day, a note over each column (note(index, total)) and the legend above."""
+def _day_columns(ax, days, keys, values, colors, labels, note, ylabel, legend=True):
+    """Stacked columns per day, a note over each column (note(index, total)) and, unless legend is False, the legend above."""
     x = list(range(len(days)))
     shown = [k for k in keys if any(values[k])]
     totals, top = _stacked_columns(ax, x, shown, values, colors)
@@ -749,7 +1015,8 @@ def _day_columns(ax, days, keys, values, colors, labels, note, ylabel):
     ax.grid(axis="y", color=GRID, linewidth=0.8, zorder=0)
     _integer_axis(ax.yaxis)
     ax.set_ylabel(ylabel, color=INK_2)
-    _legend(ax, shown, labels, colors, 3)
+    if legend:
+        _legend(ax, shown, labels, colors, 3)
 
 
 def _count_bars(ax, labels, counts, whole, xlabel, colors=None):
@@ -778,17 +1045,35 @@ def _rate_axis(ax, top, xlabel):
     ax.set_xlabel(xlabel, color=INK_2)
 
 
+def _day_end_columns(ax, table, days, ylabel, legend=True):
+    """One stacked column per day of how the day ended (table: {day: {end: runs}}), with the share that reached dawn over it."""
+    values = {e: [table.get(d, {}).get(e, 0) for d in days] for e in DAY_ENDS}
+    _day_columns(ax, days, DAY_ENDS, values, DAY_END_COLORS, DAY_END_LABELS,
+                 lambda i, total: "%.0f%%" % _pct(values["dawn"][i] + values["dawn_night_death"][i], total) if total else "",
+                 ylabel, legend)
+
+
 def render_days(agg, out_path, source):
     plt = _plt()
-    fig, (left, right) = _figure(plt, "Story mode: how each day ends (%d runs)" % len(agg["runs"]), [1.6, 1.0])
-    left.set_title("Runs that played each day, by how the day ended", loc="left", color=INK, fontweight="semibold")
-    days = sorted(agg["days"])
-    if not days:
-        _empty(left, "No day rows yet")
+    fresh, cont = agg["by_kind"][FRESH], agg["by_kind"][CONTINUED]
+    fig, (left, upper, right) = _figure_split(
+        plt, "Story mode: how each day ends (%d fresh runs, %d continued from a save)"
+        % (len(agg["kind_runs"][FRESH]), len(agg["kind_runs"][CONTINUED])), [1.5, 1.0], "left")
+    left.set_title("Fresh runs that played each day, by how the day ended", loc="left", color=INK, fontweight="semibold")
+    upper.set_title("Runs continued from a save, by how the day ended", loc="left", color=INK, fontweight="semibold")
+    days = sorted(set(fresh) | set(cont))
+    if not fresh:
+        _empty(left, "No fresh run's day yet")
     else:
-        values = {e: [agg["days"][d][e] for d in days] for e in DAY_ENDS}
-        _day_columns(left, days, DAY_ENDS, values, DAY_END_COLORS, DAY_END_LABELS,
-                     lambda i, total: "%.0f%%" % _pct(values["dawn"][i] + values["dawn_night_death"][i], total), "Runs")
+        _day_end_columns(left, fresh, days, "Runs", legend=False)
+        # One legend for both panels, over the larger one.
+        _legend(left, [e for e in DAY_ENDS if any(t.get(e) for t in list(fresh.values()) + list(cont.values()))], DAY_END_LABELS,
+                DAY_END_COLORS, 3)
+    if not cont:
+        _empty(upper, "No run continued from a save")
+    else:
+        _day_end_columns(upper, cont, days, "Attempts", legend=False)
+        upper.tick_params(axis="x", labelsize=8)
 
     right.set_title("Where the last day ended", loc="left", color=INK, fontweight="semibold")
     stages = [s for s in END_STAGES if s in agg["stages"]]
@@ -810,9 +1095,10 @@ def render_days(agg, out_path, source):
         right.set_xlim(0, top * 1.25)
         right.grid(axis="x", color=GRID, linewidth=0.8, zorder=0)
         _integer_axis(right.xaxis)
-        right.set_xlabel("Runs that ended there (colours as on the left)", color=INK_2)
-    footer = ("Over each column: the share that reached dawn. A day counts from the dawn before it, so a dawn's base visit belongs to "
-              "the coming day. Source: %s." % source)
+        right.set_xlabel("Runs that ended there, tab closings aside (colours as on the left)", color=INK_2)
+    dropped = (" %d empty rows of the night before a continued morning save are left out." % agg["dropped"]) if agg["dropped"] else ""
+    footer = ("Over each column: the share that reached dawn. 'Tab closed': the run began the day and sent nothing more.%s "
+              "Source: %s." % (dropped, source))
     return _finish(fig, footer, out_path)
 
 
@@ -932,39 +1218,53 @@ def render_tutorial(agg, out_path, source):
     return _finish(fig, footer, out_path)
 
 
+def _ending_columns(ax, table, buckets, shown, ylabel, legend=True):
+    """Stacked columns of the runs ended in each bucket, by cause, with the total over each column."""
+    x = list(range(len(buckets)))
+    values = {c: [table["buckets"].get(b, {}).get(c, 0) for b in buckets] for c in shown}
+    totals, top = _stacked_columns(ax, x, shown, values, END_COLORS)
+    for xi, total in zip(x, totals):
+        if total:
+            ax.text(xi, total + top * 0.015, "%d" % total, ha="center", va="bottom", fontsize=9, color=INK_2, zorder=4)
+    ax.set_xticks(x, [bucket_label(b) for b in buckets])
+    ax.set_xlim(-0.6, len(buckets) - 0.4)
+    ax.set_ylim(0, top * 1.12)
+    ax.grid(axis="y", color=GRID, linewidth=0.8, zorder=0)
+    _integer_axis(ax.yaxis)
+    ax.set_ylabel(ylabel, color=INK_2)
+    if legend:
+        _legend(ax, shown, END_LABELS, END_COLORS, 5)
+
+
 def render_endings(agg, out_path, source):
     plt = _plt()
-    fig, (left, right) = _figure(plt, "Story mode: how runs end (%d run%s ended)" % (agg["ended"], "" if agg["ended"] == 1 else "s"),
-                                 [2.7, 1.0])
-    left.set_title("Runs ended on each day, by cause", loc="left", color=INK, fontweight="semibold")
+    fresh, cont = agg["by_kind"][FRESH], agg["by_kind"][CONTINUED]
+    fig, (left, upper, right) = _figure_split(
+        plt, "Story mode: how runs end (%d fresh run%s and %d continued from a save ended)"
+        % (fresh["ended"], "" if fresh["ended"] == 1 else "s", cont["ended"]), [2.0, 1.0], "left")
+    left.set_title("Fresh runs ended on each day, by cause", loc="left", color=INK, fontweight="semibold")
+    upper.set_title("Runs continued from a save, ended on each day", loc="left", color=INK, fontweight="semibold")
     buckets = ending_buckets(agg)
-    x = list(range(len(buckets)))
     shown = [c for c in END_CAUSES if agg["causes"][c]]
-    if not shown:
-        _empty(left, "No story run has ended yet")
+    if not fresh["ended"]:
+        _empty(left, "No fresh story run has ended yet")
     else:
-        values = {c: [agg["buckets"].get(b, {}).get(c, 0) for b in buckets] for c in shown}
-        totals, top = _stacked_columns(left, x, shown, values, END_COLORS)
-        for xi, total in zip(x, totals):
-            if total:
-                left.text(xi, total + top * 0.015, "%d" % total, ha="center", va="bottom", fontsize=9, color=INK_2, zorder=4)
-        left.set_xticks(x, [bucket_label(b) for b in buckets])
-        left.set_xlim(-0.6, len(buckets) - 0.4)
-        left.set_ylim(0, top * 1.1)
-        left.grid(axis="y", color=GRID, linewidth=0.8, zorder=0)
-        _integer_axis(left.yaxis)
-        left.set_ylabel("Runs ended", color=INK_2)
-        _legend(left, shown, END_LABELS, END_COLORS, 5)
+        _ending_columns(left, fresh, buckets, shown, "Runs ended")
         notes = []
-        if agg["started"]:
-            day0 = sum(agg["buckets"].get(0, {}).values())
-            notes.append("Day 0 ended %.0f%% of the runs started (%d of %d)." % (_pct(day0, agg["started"]), day0, agg["started"]))
-        worst = worst_day(agg)
+        if fresh["started"]:
+            day0 = sum(fresh["buckets"].get(0, {}).values())
+            notes.append("Day 0 ended %.0f%% of the fresh runs started (%d of %d)." % (_pct(day0, fresh["started"]), day0, fresh["started"]))
+        worst = worst_day(fresh)
         if worst:
-            notes.append("Day %d holds the most defeats: %.0f%% of all defeats (%d of %d)."
+            notes.append("Day %d holds the most defeats of fresh runs: %.0f%% (%d of %d)."
                          % (worst[0], _pct(worst[1], worst[2]), worst[1], worst[2]))
         if notes:
             _subtitle(fig, " ".join(notes))
+    if not cont["ended"]:
+        _empty(upper, "No run continued from a save has ended")
+    else:
+        _ending_columns(upper, cont, buckets, shown, "Runs ended", legend=False)
+        upper.tick_params(axis="x", labelsize=7.5)
 
     right.set_title("Killed by", loc="left", color=INK, fontweight="semibold")
     kinds = sorted(agg["enemies"].items(), key=lambda kv: (-kv[1]["total"], kv[0]))[:MAX_ENEMY_BARS]
@@ -980,24 +1280,30 @@ def render_endings(agg, out_path, source):
             lefts = [a + w for a, w in zip(lefts, widths)]
         top = max(lefts) or 1
         for yi, (_, entry) in zip(y, kinds):
-            elite = "  (%d elite)" % entry["elite"] if entry["elite"] else ""
-            right.text(entry["total"] + top * 0.03, yi, "%d%s" % (entry["total"], elite), va="center", fontsize=9, color=INK_2, zorder=4)
+            notes = ["%d elite" % entry["elite"]] if entry["elite"] else []
+            if cont["ended"]:
+                notes.append("%d in fresh runs" % entry["fresh"])
+            right.text(entry["total"] + top * 0.03, yi, "%d%s" % (entry["total"], "  (%s)" % ", ".join(notes) if notes else ""),
+                       va="center", fontsize=9, color=INK_2, zorder=4)
         right.set_yticks(y, [label_source(k) for k, _ in kinds])
         right.set_ylim(max(len(kinds), MAX_ENEMY_BARS) - 0.5, -0.5)
-        right.set_xlim(0, top * 1.6)
+        right.set_xlim(0, top * 2.2)
         right.grid(axis="x", color=GRID, linewidth=0.8, zorder=0)
         _integer_axis(right.xaxis)
-        right.set_xlabel("Runs ended (colours as on the left)", color=INK_2)
-    footer = ("Runs started: %d · ended: %d · unfinished (closed tab): %d. 'Final boss' holds every ending of the final battle, "
-              "victories included. Source: %s." % (agg["started"], agg["ended"], agg["unfinished"], source))
+        right.set_xlabel("All runs ended (colours as on the left)", color=INK_2)
+    footer = ("Runs started: %d (%d fresh, %d continued from a save) · ended: %d · unfinished (closed tab): %d. 'Final boss' holds every "
+              "ending of the final battle, victories included. Source: %s." % (agg["started"], fresh["started"], cont["started"],
+                                                                                agg["ended"], agg["unfinished"], source))
     return _finish(fig, footer, out_path)
 
 
 def render_spending(agg, out_path, source):
     plt = _plt()
     fig, (right, upper, lower) = _figure_split(
-        plt, "Story mode: where the resources go (%d purchases in %d runs)" % (agg["purchases"], agg["runs"]), [1.0, 1.6], "right")
-    upper.set_title("Room of each run's first purchase", loc="left", color=INK, fontweight="semibold")
+        plt, "Story mode: where the resources go (%d purchases in %d runs)" % (agg["purchases"], agg["runs"] + agg["continued_runs"]),
+        [1.0, 1.6], "right")
+    upper.set_title("Room of each %srun's first purchase" % ("fresh " if agg["continued_runs"] else ""), loc="left", color=INK,
+                    fontweight="semibold")
     lower.set_title("First item bought, room upgrades aside (top %d)" % MAX_FIRST_ITEMS, loc="left", color=INK,
                     fontweight="semibold")
     right.set_title("Share of each day's spending, by room", loc="left", color=INK, fontweight="semibold")
@@ -1024,8 +1330,9 @@ def render_spending(agg, out_path, source):
                              for d in days])
         right.tick_params(axis="x", labelsize=8.5)
         _legend(right, shown, ROOM_LABELS, ROOM_COLORS, len(shown))
-    footer = ("A run's first purchase is its earliest row; a room upgrade builds a room or raises its level. Spending adds the three "
-              "currencies as paid (alloy + energy + dark matter). Source: %s." % source)
+    continued = (" Runs continued from a save (%d) count in the spending only." % agg["continued_runs"]) if agg["continued_runs"] else ""
+    footer = ("A run's first purchase is its earliest row; a room upgrade builds or raises a room. Spending adds alloy, energy and "
+              "dark matter as paid.%s Source: %s." % (continued, source))
     return _finish(fig, footer, out_path)
 
 
@@ -1158,7 +1465,8 @@ def render_story_damage(agg, out_path, source):
 
 DEMO_BUILD = "simulated-demo"  # in the "build" column of every made-up row, so none can be taken for a real player's
 DEMO_TABS = ("runs", "damage", "v2_days", "v2_purchases", "v2_events")
-DEMO_STEP_SECONDS = {"Move": 9, "Fire": 4, "Mine": 22, "Crate": 26, "Sprint": 5, "Fight": 30, "Collect": 8, "Lamp": 18, "DarkMatter": 14}
+DEMO_STEP_SECONDS = {"Move": 9, "Fire": 4, "Mine": 22, "Crate": 26, "TryWeapon": 6, "Sprint": 5, "Fight": 30, "Collect": 8, "Lamp": 18,
+                     "DarkMatter": 14}
 # Income per day, Day 0 to Day 7: Days 1-7 from the design's table, Day 0 made up.
 DEMO_ALLOY = [22, 20, 30, 45, 70, 105, 160, 240]
 DEMO_ENERGY = [16, 25, 40, 65, 100, 150, 220, 300]
@@ -1522,7 +1830,17 @@ def build_parser():
     p.add_argument("--demo", action="store_true", help="chart made-up data instead (writes demo-story-*.csv too)")
     p.add_argument("--out-dir", default=".", help="folder for the PNGs (default: current folder)")
     p.add_argument("--include-test", action="store_true", help="keep edition = 'test' rows")
+    p.add_argument("--fresh-only", action="store_true",
+                   help="draw the spending, weapon, damage, purchase, black hole and tutorial charts from fresh runs only (needs "
+                        "--runs; the endings and days charts always count fresh and continued runs apart)")
     return p
+
+
+def only_runs(rows, split, kind):
+    """The rows of the runs of one kind (a run the split does not know counts as fresh); None stays None."""
+    if rows is None:
+        return None
+    return [row for row in rows if run_kind(split, row.get("run_id", "")) == kind]
 
 
 def main(argv=None):
@@ -1530,6 +1848,8 @@ def main(argv=None):
     given = {tab: getattr(args, name) for tab, name in zip(DEMO_TABS, ("runs", "damage", "days", "purchases", "events"))}
     if not args.demo and not any(given.values()):
         build_parser().error("give --demo or at least one of --runs, --damage, --days, --purchases, --events")
+    if args.fresh_only and not (args.demo or args.runs):
+        build_parser().error("--fresh-only needs --runs, which tells fresh runs from runs continued from a save")
     os.makedirs(args.out_dir, exist_ok=True)
     if args.demo:
         demo = demo_rows()
@@ -1541,28 +1861,40 @@ def main(argv=None):
         tables = {tab: load_rows(path) if path else None for tab, path in given.items()}
         source = "sheet export"
     runs, damage, days, purchases, events = (tables[tab] for tab in DEMO_TABS)
+    # Fresh runs and runs continued from a save, from whichever exports tell them apart (classify_runs).
+    split = classify_runs(runs, days, events, args.include_test) if runs is not None or days is not None else None
+    split_source = source  # the endings and days charts always draw both kinds of run
+    if args.fresh_only:
+        damage, purchases, events_fresh = (only_runs(t, split, FRESH) for t in (damage, purchases, events))
+        source += ", fresh runs only"
+    else:
+        events_fresh = events
     written = []
 
-    def chart(aggregate, describe, render, name, *rows):
-        agg = aggregate(*rows, args.include_test)
+    def chart(aggregate, describe, render, name, *rows, **extra):
+        shown = extra.pop("source", source)
+        agg = aggregate(*rows, args.include_test, **extra)
         print(describe(agg) + "\n")
-        written.append(render(agg, os.path.join(args.out_dir, name), source))
+        written.append(render(agg, os.path.join(args.out_dir, name), shown))
+        return agg
 
     if runs is not None:
-        chart(aggregate_endings, format_endings, render_endings, "story-endings.png", runs)
+        chart(aggregate_endings, format_endings, render_endings, "story-endings.png", runs, split=split, source=split_source)
     if purchases is not None:
-        chart(aggregate_spending, format_spending, render_spending, "story-spending.png", purchases)
+        chart(aggregate_spending, format_spending, render_spending, "story-spending.png", purchases, split=split)
     if events is not None:
-        chart(aggregate_weapons, format_weapons, render_weapons, "story-weapons.png", events)
+        chart(aggregate_weapons, format_weapons, render_weapons, "story-weapons.png", events_fresh)
     if damage is not None:
         chart(aggregate_story_damage, format_story_damage, render_story_damage, "story-damage.png", damage)
     if days is not None:
-        chart(aggregate_days, format_days, render_days, "story-days.png", days)
+        days_agg = chart(aggregate_days, format_days, render_days, "story-days.png", days, split=split, source=split_source)
+        if split and split["has_starts"]:
+            print(format_early_days(days_agg, aggregate_players(days_agg, split), split) + "\n")
     if purchases is not None:
-        chart(aggregate_purchases, format_purchases, render_purchases, "story-purchases.png", purchases, events)
+        chart(aggregate_purchases, format_purchases, render_purchases, "story-purchases.png", purchases, events_fresh)
     if events is not None:
-        chart(aggregate_hole, format_hole, render_hole, "story-hole-checks.png", events)
-        chart(aggregate_tutorial, format_tutorial, render_tutorial, "story-tutorial.png", events)
+        chart(aggregate_hole, format_hole, render_hole, "story-hole-checks.png", events_fresh)
+        chart(aggregate_tutorial, format_tutorial, render_tutorial, "story-tutorial.png", events_fresh)
     for path in written:
         print("Wrote " + path)
     return 0

@@ -53,7 +53,7 @@ namespace AnomalyArena
         readonly Dictionary<int, int> regionKills = new();
         readonly Dictionary<int, int> regionShadows = new();
         int lampStock, nightAlloy, nightDark;
-        bool knockedOut, nightWhispers;
+        bool knockedOut;
         Node mining; float mineProgress;
         string prompt = "";
         V2Darkness darkness;
@@ -66,6 +66,7 @@ namespace AnomalyArena
             regionKills.Clear(); regionKindKills.Clear(); regionShadows.Clear();
             lampStock = 0; nightAlloy = nightDark = 0; knockedOut = false;
             baseVisitFrom = CampaignStage.Off;
+            touchSaidNight = -1;
         }
 
         void BuildDarkness()
@@ -187,16 +188,52 @@ namespace AnomalyArena
                 : set.DamageFactor(tomorrow) / set.DamageFactor(today) - 1f;
             // Only what rises is named: a "+0%" says nothing.
             int hpUp = Mathf.RoundToInt(hp * 100f), damageUp = Mathf.RoundToInt(damage * 100f);
-            string zhRise = hpUp > 0 && damageUp > 0 ? $"明天的怪物生命 +{hpUp}%、伤害 +{damageUp}%。"
-                : hpUp > 0 ? $"明天的怪物生命 +{hpUp}%。" : damageUp > 0 ? $"明天的怪物伤害 +{damageUp}%。" : "明天的怪物和今天一样强。";
-            string enRise = hpUp > 0 && damageUp > 0 ? $"Tomorrow's monsters get HP +{hpUp}% and damage +{damageUp}%."
-                : hpUp > 0 ? $"Tomorrow's monsters get HP +{hpUp}%." : damageUp > 0 ? $"Tomorrow's monsters get damage +{damageUp}%." : "Tomorrow's monsters are as strong as today's.";
-            gm.hud?.Banner(ArenaText.Pair("下午 · 异星力量正在增强怪物", "AFTERNOON · ALIEN POWER STRENGTHENS THE MONSTERS"),
-                ArenaText.Pair(zhRise + "合金矿数量有限，采完就没了。", enRise + " The ore is limited; once mined, it's gone."));
+            string zhRise = hpUp > 0 && damageUp > 0 ? $"明天的怪物生命 +{hpUp}%、伤害 +{damageUp}%"
+                : hpUp > 0 ? $"明天的怪物生命 +{hpUp}%" : damageUp > 0 ? $"明天的怪物伤害 +{damageUp}%" : "明天的怪物和今天一样强";
+            string enRise = hpUp > 0 && damageUp > 0 ? $"Tomorrow's monsters get HP +{hpUp}% and damage +{damageUp}%"
+                : hpUp > 0 ? $"Tomorrow's monsters get HP +{hpUp}%" : damageUp > 0 ? $"Tomorrow's monsters get damage +{damageUp}%" : "Tomorrow's monsters are as strong as today's";
+            // The kinds tomorrow brings for the first time are named with them. The banner's line is a single line, so on those days the
+            // ore's sentence gives way (the afternoon's goal already counts the ore).
+            var newcomers = NewcomersOn(rules, Day + 1);
+            string names = KindList(newcomers), joins = newcomers.Count == 1 ? "joins" : "join";
+            string line = newcomers.Count == 0
+                ? ArenaText.Pair(zhRise + "。合金矿数量有限，采完就没了。", enRise + ". The ore is limited; once mined, it's gone.")
+                : hpUp > 0 || damageUp > 0 ? ArenaText.Pair($"{zhRise}，还会多出{names}。", $"{enRise}, and {names} {joins} them.")
+                : ArenaText.Pair($"{zhRise}，但会多出{names}。", $"{enRise}, but {names} {joins} them.");
+            gm.hud?.Banner(ArenaText.Pair("下午 · 异星力量正在增强怪物", "AFTERNOON · ALIEN POWER STRENGTHENS THE MONSTERS"), line);
+        }
+
+        /// <summary>The kinds day brings that no earlier day (from day 1) brought: the newcomers the afternoon before it names. A day past
+        /// the table brings nothing new, and neither does an empty table (it allows every kind on every day).</summary>
+        public static List<EnemyKind> NewcomersOn(CampaignRules rules, int day)
+        {
+            var newcomers = new List<EnemyKind>();
+            var table = rules ? rules.dayKinds : null;
+            if (table == null || table.Length == 0 || day < 1) return newcomers;
+            var kinds = table[Mathf.Min(day, table.Length) - 1].kinds;
+            if (kinds == null) return newcomers;
+            foreach (var kind in kinds)
+            {
+                bool met = false;
+                for (int earlier = 1; earlier < day && !met; earlier++) met = rules.KindOnDay(earlier, kind);
+                if (!met && !newcomers.Contains(kind)) newcomers.Add(kind);
+            }
+            return newcomers;
+        }
+
+        /// <summary>Kind names in one sentence, as the text table has them: "喷吐者和护卫者", "the Spitter and the Warden"; three or more
+        /// take commas before the last "and".</summary>
+        static string KindList(List<EnemyKind> kinds)
+        {
+            var names = new List<string>();
+            foreach (var kind in kinds) names.Add(ArenaText.Pair("", "the ") + ArenaText.Text("enemy." + kind));
+            if (names.Count <= 1) return names.Count == 1 ? names[0] : "";
+            return string.Join(ArenaText.Pair("、", ", "), names.GetRange(0, names.Count - 1)) + ArenaText.Pair("和", " and ") + names[names.Count - 1];
         }
 
         /// <summary>The afternoon's goal: how much of today's ore is left, with a marker on the ore trail's next node (the trail leads toward
-        /// the black hole; the hole itself never gets a marker), or once the trail is mined, on the nearest ore left; none when all is mined.</summary>
+        /// the black hole; the hole itself never gets a marker), or once the trail is mined, on the nearest ore left; none when all is mined.
+        /// While the day's weapon crate lies on the trail, a second sentence says so.</summary>
         void AfternoonObjective()
         {
             if (Stage != CampaignStage.Dusk) return;
@@ -206,9 +243,18 @@ namespace AnomalyArena
                 : ArenaText.Pair("回基地升级", "head back to the base to upgrade");
             Vector3? next = TrailFrontier();
             if (next == null && left > 0 && gm.player && TryNearestNode(NodeKind.Ore, gm.player.Position, out var nearest)) next = nearest;
-            Objective(left > 0 ? ArenaText.Pair($"采集合金矿（还剩 {left} 处）", $"Mine the alloy ore ({left} left)")
-                : ArenaText.Pair("合金矿采完了，", "The ore is mined out; ") + onward, next);
+            string goal = left > 0 ? ArenaText.Pair($"采集合金矿（还剩 {left} 处）", $"Mine the alloy ore ({left} left)")
+                : ArenaText.Pair("合金矿采完了，", "The ore is mined out; ") + onward;
+            // The crate's sentence stands after a full stop, so the goal plate shows it as the body under the goal (V5StoryGoal).
+            goalNamesCrate = AfternoonCrateOnMap;
+            if (goalNamesCrate) goal += ArenaText.Pair("。矿脉上还有一个武器箱。", ". A weapon crate lies on the ore trail.");
+            Objective(goal, next);
         }
+
+        // The afternoon's goal names the day's weapon crate (one lay on the trail when it was last written): TickDusk writes the goal
+        // again once the crate is opened or left.
+        bool goalNamesCrate;
+        bool AfternoonCrateOnMap => crates.Exists(c => c.kind == CrateKind.Afternoon);
 
         void TickDusk(float dt)
         {
@@ -226,6 +272,7 @@ namespace AnomalyArena
             TickPickups(dt);
             TickMining(dt, true);
             TickLampPlacement();
+            if (goalNamesCrate != AfternoonCrateOnMap) AfternoonObjective(); // the day's crate was opened or left
             if (TickBaseDoor()) return; // in the base the afternoon waits
             if (!EveningsOpenEnded && stageClock >= stageLength) BeginNight();
         }
@@ -271,7 +318,6 @@ namespace AnomalyArena
             SpawnShadows();
             SpawnNightOre(Day, SpawnDarkClusters());
             Say(Line.S02);
-            nightWhispers = true;
             NightObjective();
         }
 
@@ -298,7 +344,6 @@ namespace AnomalyArena
             TickMining(dt, false);
             TickLampPlacement();
             if (TickBaseDoor()) return; // in the base the night waits
-            TickWhispers(dt);
             if (Day == 0) TickTutorialNight(dt);
             if (!EveningsOpenEnded && stageClock >= stageLength) EndNight(false);
         }
@@ -317,7 +362,6 @@ namespace AnomalyArena
             ClearNight(false);
             DismissStragglers(); // a death in the afternoon skips the night: the side quest's monsters may still stand
             ApplyDaylight();
-            nightWhispers = false;
             Objective("", null);
             PlacePlayer(DoorPoint);
             if (Day >= rules.days && CanIgnite) { Ignite(); return; }
@@ -365,13 +409,14 @@ namespace AnomalyArena
                 return EveningsOpenEnded ? ArenaText.Pair("下午不会自己结束，想入夜时就回基地。", "The afternoon won't end on its own. Go back to the base when you're ready for the night.")
                     : ArenaText.Pair($"今天采到：合金 +{nightAlloy}", $"Mined today: alloy +{nightAlloy}");
             // At night the note names what a death would cost: everything gained since nightfall or the last base visit (the afternoon is kept).
+            // That weapons pass through shadows is said where it shows, the first time a shot crosses one (RippleUnderFire).
             var risk = TonightsHaul;
             // Named only while there is something to lose.
             string atRisk = risk.alloy + risk.energy + risk.dark <= 0 ? ""
-                : ArenaText.Pair($"现在倒下，会丢掉身上的合金 {risk.alloy}、能量 {risk.energy}、暗物质 {risk.dark}，回到基地就能存下。", $" If you fall now, you lose the {risk.alloy} alloy, {risk.energy} energy and {risk.dark} dark matter you carry; reach the base to keep them.");
-            return ArenaText.Pair("武器伤不到影子。", "Weapons can't hurt shadows.") + atRisk
-                + (EveningsOpenEnded ? ArenaText.Pair("想结束今晚，就回基地等待天亮。", " When you're done for the night, wait for dawn at the base.")
-                    : ArenaText.Pair($"今晚已采到合金 {nightAlloy}、暗物质 {nightDark}。", $" Tonight so far: {nightAlloy} alloy, {nightDark} dark matter."));
+                : ArenaText.Pair($"现在倒下，会丢掉身上的合金 {risk.alloy}、异星能量 {risk.energy}、暗物质 {risk.dark}，回到基地就能存下。",
+                    $"If you fall now, you lose the {risk.alloy} alloy, {risk.energy} alien energy and {risk.dark} dark matter you carry; reach the base to keep them. ");
+            return atRisk + (EveningsOpenEnded ? ArenaText.Pair("想结束今晚，就回基地等待天亮。", "When you're done for the night, wait for dawn at the base.")
+                : ArenaText.Pair($"今晚已采到合金 {nightAlloy}、暗物质 {nightDark}。", $"Tonight so far: {nightAlloy} alloy, {nightDark} dark matter."));
         }
 
         // ───── Lamps ─────
@@ -818,8 +863,8 @@ namespace AnomalyArena
             {
                 var model = Instantiate(prefab, root);
                 StripColliders(model);
-                // The core stands about as tall as a person's chest; the nodes are fitted by their footprint.
-                if (kind == NodeKind.Core) FitHeight(model.transform, 1.2f);
+                // The core, the story's last find, stands as tall as the player (1.8); the nodes are fitted by their footprint.
+                if (kind == NodeKind.Core) FitHeight(model.transform, 1.8f);
                 else FitFootprint(model.transform, kind == NodeKind.Dark ? 1.5f : 1.8f);
                 if (kind == NodeKind.VoidAlloy) PaintVoidAlloy(model);
             }
@@ -925,9 +970,9 @@ namespace AnomalyArena
             bool lit = dusk || InLampLight(node.position);
             string what = node.kind switch
             {
-                NodeKind.Ore => ArenaText.Pair($"异星合金（+{node.amount}）", $"alien alloy (+{node.amount})"),
+                NodeKind.Ore => ArenaText.Pair($"合金矿（+{node.amount}）", $"alloy ore (+{node.amount})"),
                 NodeKind.VoidAlloy => ArenaText.Pair($"虚空合金（+{node.amount}）", $"void alloy (+{node.amount})"),
-                _ when node.energy > 0 => ArenaText.Pair($"暗物质（+{node.amount}，能量 +{node.energy}）", $"dark matter (+{node.amount}, energy +{node.energy})"),
+                _ when node.energy > 0 => ArenaText.Pair($"暗物质（+{node.amount}，异星能量 +{node.energy}）", $"dark matter (+{node.amount}, alien energy +{node.energy})"),
                 _ => ArenaText.Pair($"暗物质（+{node.amount}）", $"dark matter (+{node.amount})")
             };
             if (!lit)
@@ -976,23 +1021,40 @@ namespace AnomalyArena
 
         // ───── Shadows (how they rise and move: V2Campaign.Shadows.cs) ─────
 
+        // Nights 0 to TouchHintNights say once what to do about a shadow's touch, at the first touch of the night; the night that said
+        // it last, or -1.
+        const int TouchHintNights = 2;
+        int touchSaidNight = -1;
+
         /// <summary>A shadow's touch costs a share of the player's max HP; the touch that empties it kills (since 2026-11-06 the night kills:
-        /// the player falls, loses tonight's haul and wakes at the base for the next day, see NightDeath).</summary>
+        /// the player falls, loses tonight's haul and wakes at the base for the next day, see NightDeath). On nights 0 to TouchHintNights
+        /// the first touch of the night also says what to do: back into the light, with the sprint key (the tutorial night's shadows are a
+        /// little slower than a walk and never put a light out; the later nights' are faster than a walk).</summary>
         void HitPlayerAtNight(Shadow s)
         {
             var p = gm.player;
             if (!p.IsAlive || knockedOut) return;
             // A tutorial night shadow's touch takes a share of a normal one (rules.tutorialShadowHitScale).
             float hit = Mathf.Max(1f, p.maxHp * rules.shadowHitShare * (s.tutorial ? rules.tutorialShadowHitScale : 1f));
+            if (Day <= TouchHintNights && touchSaidNight != Day)
+            {
+                touchSaidNight = Day;
+                string key = ArenaKeys.SprintKey;
+                ui.Flash(Day == 0
+                    ? ArenaText.Pair($"影子碰到你了。回到灯光里，它们就碰不到你；按住 {key} 冲刺能回得更快。",
+                        $"A shadow touched you. Get back into the light and they can't reach you; hold {key} to sprint there faster.")
+                    : ArenaText.Pair($"影子碰到你了。它们比你走得快，按住 {key} 冲刺回到灯光里。",
+                        $"A shadow touched you. They are faster than your walk, so hold {key} and sprint back into the light."), 4.5f);
+            }
             gm.hud?.FlashDamage();
             gm.Shake(.18f);
             V3WorldAudio.Instance?.Play(ArenaWorldCue.PlayerHit, p.Position, .7f);
             p.ReceiveDamage(new DamageInfo { amount = hit, source = DamageSource.Hit, knockDir = Query.Flat(p.Position - s.position).normalized });
         }
 
-        /// <summary>GameManager asks before a dead player loses the run: a death in the afternoon or at night is the campaign's (the rule since
-        /// 2026-11-06), a death in the morning still ends the run.</summary>
-        public bool CatchesPlayerDeath() => Running && (knockedOut || Stage is CampaignStage.Dusk or CampaignStage.Night);
+        /// <summary>GameManager asks before a dead player loses the run: a death on Day 0's walk, in the afternoon or at night is the
+        /// campaign's (NightDeath); a death in the morning or in the final battle still ends the run.</summary>
+        public bool CatchesPlayerDeath() => Running && (knockedOut || Stage is CampaignStage.Tutorial or CampaignStage.Dusk or CampaignStage.Night);
 
         bool CaughtNightDeath()
         {
@@ -1002,34 +1064,46 @@ namespace AnomalyArena
             return true;
         }
 
-        /// <summary>Died in the afternoon or at night. At night the player lies in the dark while the death animation plays, everything
-        /// mined or picked up tonight is lost (the base's stock, the rooms and the ship stay), and the player wakes at the base for the dawn.
-        /// In the afternoon nothing is lost: after the same pause the player
-        /// gets up at the base door and the afternoon goes on.</summary>
+        // Seconds a player woken on Day 0's walk cannot be hit, so that monsters of the first fight standing near do not drop them again at once.
+        const float TutorialWakeGrace = 2f;
+
+        /// <summary>Died on Day 0's walk, in the afternoon or at night. At night the player lies in the dark while the death animation
+        /// plays, everything mined or picked up tonight is lost (the base's stock, the rooms and the ship stay), and the player wakes at the
+        /// base for the dawn. In the afternoon nothing is lost: after the same pause the player gets up at the base door and the afternoon
+        /// goes on. On Day 0's walk nothing is lost either: the player gets up where the step being taught began (tutWake), and that step
+        /// goes on as it stood, its spotlight, its marker and the first fight's monsters still there.</summary>
         IEnumerator NightDeath()
         {
             knockedOut = true;
             mining = null; mineProgress = 0f;
-            // Since 2026-11-06 the afternoon can hold a fight (the black hole's side quest, the void trial behind its gate).
-            bool afternoon = Stage == CampaignStage.Dusk;
-            // The afternoon's haul is never at risk (only what comes in after nightfall is tonight's haul, see Gain), so this loses
-            // nothing in the afternoon.
-            var lost = LoseHaul(rules.nightDeathLoss);
-            // Only a death at night is a night death (2026-11-10): a fall in the afternoon raised the same event, and the analytics then
-            // marked the day's night_death although the player never died at night. The sheet has no column for afternoon falls yet;
-            // one comes with the next change of the analytics sheet (its Apps Script has to be deployed again).
-            if (!afternoon) CampaignEvents.RaiseNightDeath(lost, Day);
-            ui.Flash(afternoon
+            // The afternoon can hold a fight (the black hole's side quest, the void trial behind its gate), and Day 0's walk its first fight.
+            bool afternoon = Stage == CampaignStage.Dusk, walk = Stage == CampaignStage.Tutorial;
+            // Only what comes in after nightfall is tonight's haul (see Gain), so the afternoon loses nothing here; the walk is not touched.
+            var lost = walk ? default(CampaignCost) : LoseHaul(rules.nightDeathLoss);
+            // Only a death at night is a night death, which the analytics count as the day's night_death. The sheet has no column for
+            // falls in the afternoon or on the walk.
+            bool night = !afternoon && !walk;
+            if (night) CampaignEvents.RaiseNightDeath(lost, Day);
+            ui.Flash(walk
+                ? ArenaText.Pair("你倒下了，但什么都没有丢。你在这一步开始的地方醒来，教学从这里继续。",
+                    "You fell, but nothing is lost. You wake where this step began, and the tutorial goes on from here.")
+                : afternoon
                 ? ArenaText.Pair("你在下午倒下了。在基地醒来，什么都没丢，下午还在继续。",
                     "You fell in the afternoon. You wake at the base with nothing lost, and the afternoon goes on.")
-                : ArenaText.Pair($"你在黑暗中倒下了。今晚采到、捡到的全部丢失：合金 {lost.alloy}、能量 {lost.energy}、暗物质 {lost.dark}",
-                    $"You fell in the dark. Everything mined or picked up tonight is lost: {lost.alloy} alloy, {lost.energy} energy, {lost.dark} dark matter"), 5f);
-            if (!afternoon) Say(Line.K01); // its line says tonight's haul is lost, which a fall in the afternoon does not do
+                : ArenaText.Pair($"你在黑暗中倒下了。今晚采到、捡到的全部丢失：合金 {lost.alloy}、异星能量 {lost.energy}、暗物质 {lost.dark}",
+                    $"You fell in the dark. Everything mined or picked up tonight is lost: {lost.alloy} alloy, {lost.energy} alien energy, {lost.dark} dark matter"), 5f);
+            if (night) Say(Line.K01); // its line says tonight's haul is lost, which only a death at night does
             float until = Time.realtimeSinceStartup + rules.nightDeathSeconds;
             while (Time.realtimeSinceStartup < until) yield return null;
             var p = gm.player;
             if (p) p.ResetForSpawn(); // full HP, standing again (the death pose resets with the new spawn)
             knockedOut = false;
+            if (walk && Stage == CampaignStage.Tutorial)
+            {
+                PlacePlayer(tutWake);
+                if (p) p.ProtectFor(TutorialWakeGrace);
+                yield break;
+            }
             if (afternoon && Stage == CampaignStage.Dusk)
             {
                 PlacePlayer(DoorPoint);
@@ -1038,20 +1112,6 @@ namespace AnomalyArena
             }
             if (Stage is CampaignStage.Dusk) Stage = CampaignStage.Night; // EndNight takes it from the night
             EndNight(false);
-        }
-
-        float whisperClock;
-        void TickWhispers(float dt)
-        {
-            // Danger is heard: the closer and the more shadows, the more often their whisper plays.
-            if (!nightWhispers || shadows.Count == 0) return;
-            var p = gm.player;
-            float near = 0f;
-            foreach (var s in shadows) near += Mathf.Clamp01(1f - Query.Flat(s.position - p.Position).magnitude / 18f);
-            whisperClock -= dt * Mathf.Min(3f, near);
-            if (whisperClock > 0f) return;
-            whisperClock = 2.5f;
-            V3WorldAudio.Instance?.Play(ArenaWorldCue.NpcShadeSpawn, p.Position + Random.onUnitSphere * 4f, Random.Range(.55f, .75f), Mathf.Clamp01(.35f + near * .2f));
         }
 
         // ───── The darkness overlay ─────

@@ -316,6 +316,8 @@ namespace AnomalyArena
 
         void BuildPartMarkers()
         {
+            foreach (var glow in partGlows) if (glow) Destroy(glow);
+            partGlows.Clear();
             engineBlock = Box(shipRoot, "Engine", new Vector3(-6.2f, 1.4f, 0f), new Vector3(1.4f, 1.8f, 2.6f), new Color(.3f, .3f, .32f));
             armorPlates = Box(shipRoot, "ArmorPlates", new Vector3(0f, 2.75f, 0f), new Vector3(7f, .3f, 3f), new Color(.3f, .3f, .32f));
             fuelTank = Box(shipRoot, "FuelTank", new Vector3(-2.5f, 0.6f, -2.4f), new Vector3(3f, 1f, 1f), new Color(.2f, .1f, .25f));
@@ -683,14 +685,36 @@ namespace AnomalyArena
             }
             float f = rules ? fuel / (float)FuelUnits : 0f;
             if (wreckWhitebox) { PaintShipWhitebox(f); return; }
-            SetColour(engineBlock, engineFixed ? new Color(.45f, .8f, 1f) : new Color(.3f, .3f, .32f));
-            SetColour(armorPlates, armorFixed ? new Color(.92f, .92f, .95f) : new Color(.3f, .3f, .32f));
-            SetColour(fuelTank, Color.Lerp(new Color(.2f, .1f, .25f), new Color(.78f, .3f, 1f), f));
+            // The base page's colours for the same three parts (V5BaseShip): orange until repaired and teal once done; the fuel fills from
+            // a dark amber toward gold and turns teal when the tank is full.
+            SetStatusColour(engineBlock, engineFixed ? V5TitleKit.Teal : V5TitleKit.Orange);
+            SetStatusColour(armorPlates, armorFixed ? V5TitleKit.Teal : V5TitleKit.Orange);
+            SetStatusColour(fuelTank, f >= 1f ? V5TitleKit.Teal : Color.Lerp(FuelEmpty, V5TitleKit.Gold, f));
         }
 
-        void SetColour(Renderer r, Color c)
+        static readonly Color FuelEmpty = new(.25f, .19f, .08f);
+        // How strongly a part marker glows: its emission is its colour times this.
+        const float PartGlow = .6f;
+        // The part markers' own materials (one each), made by SetStatusColour and let go when the markers are built again.
+        readonly List<Material> partGlows = new();
+
+        /// <summary>A part marker's colour, lit from within so it reads as a status light rather than a grey box: the marker's own copy of
+        /// the lit material, its emission the colour times PartGlow.</summary>
+        void SetStatusColour(Renderer r, Color c)
         {
-            if (r && gm && gm.litMaterial) r.sharedMaterial = gm.Mat(c);
+            if (!r || !gm || !gm.litMaterial) return;
+            var glow = r.sharedMaterial;
+            if (!glow || !partGlows.Contains(glow))
+            {
+                glow = new Material(gm.litMaterial) { name = r.name + " status" };
+                partGlows.Add(glow);
+                r.sharedMaterial = glow;
+            }
+            glow.color = c;
+            if (!glow.HasProperty("_EmissionColor")) return;
+            glow.SetColor("_EmissionColor", c * PartGlow);
+            glow.EnableKeyword("_EMISSION");
+            glow.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
         }
 
         void TickBaseVisuals(float dt)
@@ -773,7 +797,7 @@ namespace AnomalyArena
             if (BaseHp <= 0f)
             {
                 BaseHp = 0f; BaseDestroyed = true;
-                V3WorldAudio.Instance?.Play(ArenaWorldCue.BossDeath, BaseCentre);
+                CampaignAudio.PlayAt(CampaignSfx.ShipCrash, BaseCentre); // metal tearing and debris settling: the base's own fall, not a boss's death
                 gm.Shake(.6f);
             }
         }
@@ -901,7 +925,7 @@ namespace AnomalyArena
         public static string UpgradeName(CampaignUpgrade kind) => kind switch
         {
             CampaignUpgrade.Stat => ArenaText.Pair("升级体质", "Upgrade the body"),
-            CampaignUpgrade.Skill => ArenaText.Pair("解锁异星技能", "Unlock an alien skill"),
+            CampaignUpgrade.Skill => ArenaText.Pair("学习技能", "Learn a skill"),
             CampaignUpgrade.Infusion => ArenaText.Pair("武器附魔", "Infuse a weapon"),
             CampaignUpgrade.Tame => ArenaText.Pair("驯化武器", "Tame a weapon"),
             _ => ArenaText.Pair("武器变招", "Twist a weapon")
@@ -917,15 +941,13 @@ namespace AnomalyArena
             var target = rules.sharedWeaponMk ? null : MkTarget;
             if (!rules.sharedWeaponMk && target == null)
             {
-                V2Audio.Instance?.PlayUI(ArenaUiSound.Cancel);
-                ui.Flash(ArenaText.Pair("小手枪不能升级型号。先在武装区研究一把异常武器。", "The pistol can't be upgraded. Research an anomaly weapon at the Armament Bay first."));
+                ui.Flash(ArenaText.Pair("小手枪不能升级型号。先在武装区买一把异常武器。", "The pistol can't be upgraded. Buy an anomaly weapon at the Armament Bay first."));
                 return false;
             }
             int before = NextMkFrom;
             var price = rules.MkPrice(before);
             if (price == null)
             {
-                V2Audio.Instance?.PlayUI(ArenaUiSound.Cancel);
                 ui.Flash(ArenaText.Pair($"武器型号已经到 Mk {before}，用合金最多只能升到这一级", $"Your weapons are already at Mk {before}, the highest alloy can buy"));
                 return false;
             }
@@ -934,7 +956,6 @@ namespace AnomalyArena
             if (target == null) SetTeamMk(before + 1);
             else target.mk = before + 1;
             Bought("weapon_mk", target == null ? $"shared Mk{before + 1}" : $"{target.form} Mk{before + 1}", CampaignRoom.Armament, price.Value);
-            V3WorldAudio.Instance?.Play(ArenaWorldCue.LevelUp, BaseCentre);
             ui.Flash(target == null
                 ? ArenaText.Pair($"全部异常武器升到 Mk {before + 1}：伤害 ×{damageBefore:0.##} → ×{damageAfter:0.##}", $"Every anomaly weapon is now Mk {before + 1}: damage ×{damageBefore:0.##} → ×{damageAfter:0.##}")
                 : ArenaText.Pair($"{target.FormName} 升到 Mk {before + 1}：伤害 ×{damageBefore:0.##} → ×{damageAfter:0.##}", $"{target.FormName} is now Mk {before + 1}: damage ×{damageBefore:0.##} → ×{damageAfter:0.##}"));
@@ -950,7 +971,7 @@ namespace AnomalyArena
             if (!NewWeaponForSale || !weapons || !gm.waves) return false;
             if (WeaponSlotsFull) { ui.Flash(ArenaText.Pair("武器栏都满了，放不下新武器", "All your weapon slots are full; there's no room for a new weapon")); return false; }
             var cost = NewWeaponCost;
-            if (!CanAfford(cost)) { TrySpend(cost); return false; }
+            if (!CanAfford(cost)) return false;
             RunWeapon got = null;
             string message = "";
             armoryMode = ArmoryMode.NewWeaponsOnly;
@@ -972,12 +993,11 @@ namespace AnomalyArena
                         got = weapon;
                         newWeaponsBought++;
                         Bought("new_weapon", $"{weapon.form} Mk{weapon.mk} {(weapon.IsAuto ? "auto" : "hand")}{(pistol != null ? ", replaces Pistol" : "")}", CampaignRoom.Armament, cost);
-                        V3WorldAudio.Instance?.Play(ArenaWorldCue.LevelUp, BaseCentre);
                         message = weapon.IsAuto
-                            ? ArenaText.Pair($"研究出了新的异常武器：{weapon.FormName}（{weapon.MkLabel}），已装进自动武器栏", $"New anomaly weapon researched: {weapon.FormName} ({weapon.MkLabel}), now in an auto slot")
+                            ? ArenaText.Pair($"获得了新的异常武器：{weapon.FormName}（{weapon.MkLabel}），已装进自动武器栏", $"New anomaly weapon: {weapon.FormName} ({weapon.MkLabel}), now in an auto slot")
                             : pistol != null
-                                ? ArenaText.Pair($"研究出了新的异常武器：{weapon.FormName}（{weapon.MkLabel}），换下了{pistol.FormName}", $"New anomaly weapon researched: {weapon.FormName} ({weapon.MkLabel}), in place of the {pistol.FormName}")
-                                : ArenaText.Pair($"研究出了新的异常武器：{weapon.FormName}（{weapon.MkLabel}），已放进空着的手", $"New anomaly weapon researched: {weapon.FormName} ({weapon.MkLabel}), now in your free hand");
+                                ? ArenaText.Pair($"获得了新的异常武器：{weapon.FormName}（{weapon.MkLabel}），换下了{pistol.FormName}", $"New anomaly weapon: {weapon.FormName} ({weapon.MkLabel}), in place of the {pistol.FormName}")
+                                : ArenaText.Pair($"获得了新的异常武器：{weapon.FormName}（{weapon.MkLabel}），已放进空着的手", $"New anomaly weapon: {weapon.FormName} ({weapon.MkLabel}), now in your free hand");
                         break;
                     }
                 }
@@ -989,7 +1009,7 @@ namespace AnomalyArena
             }
             if (got == null)
             {
-                ui.Flash(ArenaText.Pair("现在没有能研究的新武器", "There's no new weapon to research right now"));
+                ui.Flash(ArenaText.Pair("现在没有能买的新武器", "There's no new weapon to buy right now"));
                 return false;
             }
             AnnounceWeapon(got, message);
@@ -1026,7 +1046,7 @@ namespace AnomalyArena
         {
             if (!UpgradeForSale(kind) || !gm || !gm.progression) return false;
             var cost = UpgradeCost(kind);
-            if (!CanAfford(cost)) { TrySpend(cost); return false; }
+            if (!CanAfford(cost)) return false;
             int bankedBefore = gm.progression.BankedDrafts;
             string got = null;
             activeUpgrade = kind;
@@ -1051,7 +1071,6 @@ namespace AnomalyArena
             if (!TrySpend(cost)) return false;
             upgradesBought[(int)kind]++;
             Bought(UpgradeItem(kind), got, UpgradeRoom(kind), cost);
-            V3WorldAudio.Instance?.Play(ArenaWorldCue.LevelUp, BaseCentre);
             ui.Flash(ArenaText.Pair($"{UpgradeName(kind)}：{got}", $"{UpgradeName(kind)}: {got}"));
             return true;
         }
@@ -1084,14 +1103,23 @@ namespace AnomalyArena
             var old = weapons.GiveToHand(hand, WeaponForm.RocketLauncher);
             var rocket = weapons.Hand[hand];
             Bought("new_weapon", old != null ? $"RocketLauncher Mk1 hand, replaces {old.form}" : "RocketLauncher Mk1 hand", CampaignRoom.Armament, RocketCost);
-            V3WorldAudio.Instance?.Play(ArenaWorldCue.LevelUp, BaseCentre);
             AnnounceWeapon(rocket, old != null ? ArenaText.Pair($"解锁了火箭筒（异常武器，Mk 1），换下了{old.FormName}", $"Rocket Launcher unlocked (an anomaly weapon, Mk 1), in place of the {old.FormName}")
                 : ArenaText.Pair("解锁了火箭筒（异常武器，Mk 1），已放进空着的手", "Rocket Launcher unlocked (an anomaly weapon, Mk 1), now in your free hand"));
             return true;
         }
 
-        /// <summary>A purchase was paid and given: the analytics record (CampaignEvents.Purchased, one v2_purchase row).</summary>
-        void Bought(string item, string detail, CampaignRoom room, CampaignCost cost) => CampaignEvents.RaisePurchased(item, detail, room, cost, Day);
+        /// <summary>A purchase was paid and given: the analytics record (CampaignEvents.Purchased, one v2_purchase row), counted for the
+        /// guide to a first purchase (PurchaseCount). A purchase from Day 1 on shows the player knows how to buy, so that guide is not needed
+        /// any more.</summary>
+        void Bought(string item, string detail, CampaignRoom room, CampaignCost cost)
+        {
+            PurchaseCount++;
+            if (Day >= 1) buyGuideDone = true;
+            CampaignEvents.RaisePurchased(item, detail, room, cost, Day);
+        }
+
+        /// <summary>Purchases made since the game started, read by the guide to a first purchase to tell when its purchase was made.</summary>
+        public int PurchaseCount { get; private set; }
         static string UpgradeItem(CampaignUpgrade kind) => kind switch
         {
             CampaignUpgrade.Stat => "constitution",
@@ -1221,11 +1249,23 @@ namespace AnomalyArena
             bool atDoor = Query.Flat(p.Position - DoorPoint).magnitude < 3.2f;
             if (atDoor && ShieldLevel > 0)
             {
-                prompt = CanTopUpShield ? ArenaText.Pair($"按 {ArenaKeys.InteractKey} 紧急补充护盾（消耗 {rules.ShieldTopUpCost(Day)} 能量）", $"Press {ArenaKeys.InteractKey} for an emergency shield top-up ({rules.ShieldTopUpCost(Day)} energy)")
-                    : ArenaText.Pair("护盾补充还在冷却", "The shield top-up is still cooling down");
-                if (EPressed && !TryTopUpShield()) ui.Flash(ArenaText.Pair("能量不够，或护盾已满", "Not enough energy, or the shield is full"));
+                int price = rules.ShieldTopUpCost(Day);
+                string blocked = ShieldTopUpBlocked;
+                prompt = blocked ?? ArenaText.Pair($"按 {ArenaKeys.InteractKey} 紧急补充护盾（消耗 {price} 异星能量）", $"Press {ArenaKeys.InteractKey} for an emergency shield top-up ({price} alien energy)");
+                if (EPressed && !TryTopUpShield())
+                {
+                    // TrySpend makes no sound: the door gives the one refusal sound itself.
+                    if (!V5UiSound.Play(V5UiSound.Ui.Denied)) CampaignAudio.Play(CampaignSfx.UpgradeDenied);
+                    ui.Flash(blocked ?? ArenaText.Pair($"异星能量不够，补充一次护盾要 {price}", $"Not enough alien energy: a top-up costs {price}"));
+                }
             }
             else prompt = "";
         }
+
+        /// <summary>Why the door cannot top up the shield now, as its prompt says it; null when it can (CanTopUpShield).</summary>
+        string ShieldTopUpBlocked => CanTopUpShield ? null
+            : !ControlWorks ? ArenaText.Pair("总控区损坏了，修好后才能补充护盾", "Central Control is broken; repair it to top up the shield")
+            : BaseShield >= BaseMaxShield - .5f ? ArenaText.Pair("基地护盾是满的", "The base shield is full")
+            : ArenaText.Pair("护盾补充还在冷却", "The shield top-up is still cooling down");
     }
 }

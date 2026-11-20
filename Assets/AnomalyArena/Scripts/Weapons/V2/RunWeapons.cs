@@ -124,7 +124,10 @@ namespace AnomalyArena
         float frozenAutoClock;
         public event Action<RunWeapon> Revealed;
         void Awake(){player=GetComponent<PlayerController>();progression=GetComponent<RunProgression>();lastPosition=transform.position;}
-        public void ResetRun(){ClearWaveEffects();Hand=new RunWeapon[2];Auto=new RunWeapon[AutoSlotCount];Offers=new RunWeapon[ArmoryOfferCount];ActiveIndex=0;}
+        public void ResetRun(){ClearWaveEffects();Hand=new RunWeapon[2];Auto=new RunWeapon[AutoSlotCount];Offers=new RunWeapon[ArmoryOfferCount];ActiveIndex=0;SelfStatusWeapon=null;}
+        /// <summary>The weapon that last put a status of its own on the player (Stream's bursting tank, Wildfire's fence): its burn ticks name
+        /// the player as their dealer but carry no weapon, so the self-hit notice and the result screen read the weapon here.</summary>
+        public RunWeapon SelfStatusWeapon { get; private set; }
         /// <summary>A continued save: the weapons go back into their hand and auto slots (null: an empty slot) with full clips, no offer
         /// waits, and the saved hand is the one in use (the other while that one is empty).</summary>
         public void RestoreSlots(RunWeapon[] hand,RunWeapon[] auto,int activeIndex)
@@ -414,7 +417,7 @@ namespace AnomalyArena
             if(!player.IsAlive){dashLeft=0;dashWeapon=null;return;}
             if(wallHit)
             {
-                player.BounceFromWall(Query.Flat(hit.point)-dashDirection*player.radius,hit.normal,3,!weapon.Has(UpgradeAxis.Tame));
+                player.BounceFromWall(Query.Flat(hit.point)-dashDirection*player.radius,hit.normal,3,!weapon.Has(UpgradeAxis.Tame),weapon);
                 // Tame: a wall bounce costs no HP and refunds this flight's cooldown.
                 if(weapon.Has(UpgradeAxis.Tame))weapon.cooldown=0;
                 WeaponSound(weapon,WeaponAudioPhase.Impact);dashLeft=0;dashWeapon=null;return;
@@ -813,7 +816,7 @@ namespace AnomalyArena
             var upgrade=reinfuse?UpgradeAxis.Infusion:PickDirection(axes,wave>0?wave:CurrentWave);
             // Under a Void Walk enchant the card reads the element the weapon gets back, not the borrowed Void.
             ElementKind own=OwnElement(weapon),element=upgrade==UpgradeAxis.Infusion?RollElement(own):own;
-            string desc=upgrade==UpgradeAxis.Infusion?ArenaText.Pair("灌注 ","Infuse ")+ArenaTerms.Element(element)+(own!=ElementKind.None?ArenaText.Pair("，替换 ",", replaces ")+ArenaTerms.Element(own):""):upgrade switch{UpgradeAxis.Power=>ArenaText.Pair("伤害 +40%","Damage +40%"),UpgradeAxis.Tempo=>ArenaText.Pair("冷却、蓄力和装填 -30%","Cooldown, charge and reload -30%"),UpgradeAxis.Reach=>ArenaText.Pair("射程、范围或目标数 +40%","Range, area or targets +40%"),UpgradeAxis.Twist=>ArenaText.Pair("给这把武器的攻击方式加一个变招","Adds a twist to this weapon's attack"),_=>ArenaText.Pair("改良这个搭配的特性","Improves this pairing's trait")};
+            string desc=upgrade==UpgradeAxis.Infusion?ArenaText.Pair("附魔 ","Infuse ")+ArenaTerms.Element(element)+(own!=ElementKind.None?ArenaText.Pair("，替换 ",", replaces ")+ArenaTerms.Element(own):""):upgrade switch{UpgradeAxis.Power=>ArenaText.Pair("伤害 +40%","Damage +40%"),UpgradeAxis.Tempo=>ArenaText.Pair("冷却、蓄力和装填 -30%","Cooldown, charge and reload -30%"),UpgradeAxis.Reach=>ArenaText.Pair("射程、范围或目标数 +40%","Range, area or targets +40%"),UpgradeAxis.Twist=>ArenaText.Pair("给这把武器的攻击方式加一个变招","Adds a twist to this weapon's attack"),_=>ArenaText.Pair("改良这个搭配的特性","Improves this pairing's trait")};
             if(upgrade is UpgradeAxis.Twist or UpgradeAxis.Tame)desc=weapon.form is WeaponForm.Rifle or WeaponForm.Knife or WeaponForm.RocketLauncher?CoreAnomalyUpgradeDescription(weapon,upgrade):ArenaTerms.ExpandedUpgradeDescription(weapon.form,weapon.variant,upgrade);
             // The Infusion card also says what the element does, from the live element rules.
             if(upgrade==UpgradeAxis.Infusion){string rule=ArenaTerms.ElementRule(element);if(rule.Length>0)desc+="\n"+rule;}

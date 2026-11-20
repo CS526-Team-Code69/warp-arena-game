@@ -30,7 +30,7 @@ namespace AnomalyArena
         // Since 2026-11-10 a whitebox drop floats this high (a dead enemy's body used to hide it on the ground) at this size.
         const float SolidPickupHeight = .8f, SolidPickupSize = 1.3f;
         /// <summary>Height of the energy shard's model holding one unit, metres (it grows with SolidPickupGrowth).</summary>
-        const float EnergyShardHeight = .7f;
+        const float EnergyShardHeight = 1f;
         readonly List<Pickup> pickups = new();
         const int MaxPickups = 80;
 
@@ -45,11 +45,12 @@ namespace AnomalyArena
 
         public bool CanAfford(CampaignCost cost) => alloy >= cost.alloy && energy >= cost.energy && dark >= cost.dark;
 
+        /// <summary>Takes the price from the stock when the stock pays for it; false, taking nothing, when it does not. It makes no sound:
+        /// the screen that asked for the purchase owns its feedback (one refusal sound, or the purchase's own sound).</summary>
         public bool TrySpend(CampaignCost cost)
         {
-            if (!CanAfford(cost)) { V2Audio.Instance?.PlayUI(ArenaUiSound.Cancel); return false; }
+            if (!CanAfford(cost)) return false;
             alloy -= cost.alloy; energy -= cost.energy; dark -= cost.dark;
-            V2Audio.Instance?.PlayUI(ArenaUiSound.Confirm);
             if (!cost.IsFree) CampaignEvents.RaiseSpent(cost);
             return true;
         }
@@ -250,7 +251,7 @@ namespace AnomalyArena
 
         void SpawnCore(Vector3 at)
         {
-            at = FindOpen(at, .8f, 6f);
+            at = FindOpen(at, 1.1f, 6f); // an open spot wide enough for the core's model, clear of walls
             core = AddNode(NodeKind.Core, at, 1);
             Fx.Ring(at, 3f, new Color(.75f, .3f, 1f), .8f);
             V3WorldAudio.Instance?.Play(ArenaWorldCue.PortalOpen, at);

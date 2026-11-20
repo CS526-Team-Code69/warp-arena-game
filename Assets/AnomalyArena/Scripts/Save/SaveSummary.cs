@@ -5,8 +5,9 @@ namespace AnomalyArena
     /// <summary>Which mode a save belongs to.</summary>
     public enum SaveMode { Story, Open }
 
-    /// <summary>The part of a story day a save starts at: the morning (上午), the afternoon (下午) or the night (夜晚).</summary>
-    public enum SavePhase { Morning, Afternoon, Night }
+    /// <summary>The part of a story day a save starts at: the morning (上午), the afternoon (下午) or the night (夜晚), or the final
+    /// battle (最终决战) that begins after the failed ignition. New values go at the end: saves keep the number.</summary>
+    public enum SavePhase { Morning, Afternoon, Night, Tyrant }
 
     /// <summary>
     /// What the title's save windows show for one slot. An empty slot carries only its mode and slot number. Story saves fill the day,

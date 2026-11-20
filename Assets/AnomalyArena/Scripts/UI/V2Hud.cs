@@ -984,10 +984,11 @@ namespace AnomalyArena
                     SetText(screen.body, s.hideXp ? ArenaText.Pair("战场已暂停。", "The battlefield is paused.")
                         : ArenaText.Pair("战场与整备倒计时已暂停。", "The battlefield and the build clock are paused."));
                     if (pauseControls) pauseControls.Fill(screen.body ? screen.body.font : null);
+                    if (pauseRowsLaidOut != ControlRowCount) PlacePauseRowPlain();
                     RenderPauseSettings(screen.body ? screen.body.font : null);
                     if (tutorialLabel)
                     {
-                        tutorialLabel.text = ArenaText.Pair("教程", "HOW TO PLAY");
+                        tutorialLabel.text = ArenaText.Pair("教学", "TUTORIAL");
                         if (screen.body) tutorialLabel.font = screen.body.font;
                     }
                     break;
@@ -1006,14 +1007,15 @@ namespace AnomalyArena
         // ───── The tutorial and the pause screen's controls table (Wenbo Zhang's how-to-play branch) ─────
 
         /// <summary>The keys of a run, with what they do in the game now (the pages and this table follow the game): document 3.2's rows, with
-        /// two wider than the document's (1 / 2 / 3 picks on every panel, E also works inside the trial) and T saying when it answers. Space and Enter are not here:
-        /// they only close the weapon card, and the card says so itself. The input, the action, and what the action's brackets add. Built when asked, because
+        /// two wider than the document's (1 / 2 / 3 picks on every panel, E also works inside the trial) and T saying when it answers. Enter is not here:
+        /// it only closes the weapon card, and the card says so itself; Space is here only once it is the void dash's key (WithLaterRows). The input,
+        /// the action, and what the action's brackets add. Built when asked, because
         /// ArenaText answers only once its tables are ready, and because the rows name the keys as they are now: the ones an action is on
         /// can be changed in the settings (ArenaKeys).</summary>
         public static (string input, string action, string note)[] ControlRows() => CampaignControls ? CampaignControlRows() : ClassicControlRows();
 
         /// <summary>The classic run's rows, whatever is running: the tutorial's classic pages show them.</summary>
-        public static (string input, string action, string note)[] ClassicControlRows() => new[]
+        public static (string input, string action, string note)[] ClassicControlRows() => WithLaterRows(new[]
         {
             (ArenaKeys.MoveKeys, ArenaText.Pair("移动", "Move"), ""),
             (ArenaText.Pair("鼠标", "Mouse"), ArenaText.Pair("瞄准", "Aim"), ""),
@@ -1023,20 +1025,20 @@ namespace AnomalyArena
             (ArenaKeys.SprintKey, ArenaText.Pair("冲刺", "Sprint"), ""),
             (ArenaKeys.SkillKeys, ArenaText.Pair("释放技能；面板打开时选对应的一项", "Cast a skill; pick that option while a panel is open"), ""),
             (ArenaKeys.InteractKey, ArenaText.Pair("互动（站到能用的东西旁边时会有提示）", "Interact (a prompt shows when you stand next to something you can use)"), ""),
-            ("Esc", ArenaText.Pair("暂停 / 继续；在波次中的选卡面板上是“稍后再选”", "Pause / resume; on a mid-wave card panel, save the pick for later"), ""),
+            ("Esc", ArenaText.Pair("暂停 / 继续；在波次中的选卡面板上是「稍后再选」", "Pause / resume; on a mid-wave card panel, save the pick for later"), ""),
             ("R", ArenaText.Pair("结算时重开；选卡面板打开时重抽", "Restart on the result screen; reroll while a card panel is open"), ""),
-            (ArenaKeys.CardPickKey, ArenaText.Pair("打开之前留着没选的卡（有卡待选时屏幕上会提示）", "Open a card pick you saved for later (the screen shows when one is waiting)"), ""),
+            (ArenaKeys.CardPickKey, ArenaText.Pair("打开待选卡（有待选卡时，屏幕上方会提示）", "Open your saved card picks (the top of the screen shows when one is waiting)"), ""),
             ("Tab", ArenaText.Pair("整备时收起面板，再按一次回到面板", "Put the build panel away between waves; press again to bring it back"), ""),
-        };
+        });
 
         /// <summary>A V2 day campaign is running. It has no card picks and no build phase, so the pause table shows its
         /// own keys in place of T and Tab: mining, the base door and the lamps (V2Campaign: hold E, E, F).</summary>
         internal static bool CampaignControls => V2Campaign.Active && V2Campaign.Active.Running;
 
-        /// <summary>The campaign's rows. Same count as the classic rows: the table builds its rows and the pause panel its height from
-        /// that count before any run starts. The tutorial's story pages show them whatever is running: the title opens them before any
+        /// <summary>The campaign's rows. Same count as the classic rows (BaseControlRows): the table builds its rows and the pause panel
+        /// its height from that count. The tutorial's story pages show them whatever is running: the title opens them before any
         /// campaign runs.</summary>
-        internal static (string input, string action, string note)[] CampaignControlRows() => new[]
+        internal static (string input, string action, string note)[] CampaignControlRows() => WithLaterRows(new[]
         {
             (ArenaKeys.MoveKeys, ArenaText.Pair("移动", "Move"), ""),
             (ArenaText.Pair("鼠标", "Mouse"), ArenaText.Pair("瞄准", "Aim"), ""),
@@ -1048,20 +1050,57 @@ namespace AnomalyArena
             (ArenaText.Pair($"按住 {ArenaKeys.InteractKey}", $"Hold {ArenaKeys.InteractKey}"), ArenaText.Pair("采矿（夜里要站在矿灯的光里）", "Mine (at night, only in a lamp's light)"), ""),
             // Since 2026-11-06 the campaign's day is a morning, an afternoon and a night. The black hole's hidden gate is left out here: it
             // is a secret until it opens, and its own label says E.
-            (ArenaKeys.InteractKey, ArenaText.Pair("在基地门口：下午和夜里进入基地，上午花能量补充基地护盾", "At the base door: go inside in the afternoon or at night; in the morning, spend energy to top up its shield"), ""),
-            (ArenaKeys.LampKey, ArenaText.Pair("放下一盏矿灯", "Set down a mining lamp"), ""),
+            (ArenaKeys.InteractKey, ArenaText.Pair("在基地门口：下午和夜里进入基地，上午花异星能量补充基地护盾", "At the base door: go inside in the afternoon or at night; in the morning, spend alien energy to top up its shield"), ""),
+            (ArenaKeys.LampKey, ArenaText.Pair("放下一盏矿灯", "Set down a lamp"), ""),
             ("Esc", ArenaText.Pair("暂停 / 继续", "Pause / resume"), ""),
             ("R", ArenaText.Pair("结算时重开", "Restart on the result screen"), ""),
-        };
+        });
 
-        // The pause screen's table sits under the paused line; V5MenuSkin puts the buttons under PauseTableBottom.
+        // Both lists have this many rows of their own, the sprint on the fifth (SprintRow).
+        const int BaseControlRows = 11, SprintRow = 4;
+
+        /// <summary>The rows the whole game's pages add to both lists (the English Alpha keeps its eleven): the character screen's key
+        /// (V5CharacterScreen) just before Esc, and Space just after the sprint once the void dash is the player's. Nothing of the dash
+        /// shows before it is won.</summary>
+        static (string input, string action, string note)[] WithLaterRows((string input, string action, string note)[] rows)
+        {
+            if (!V5HudKit.On) return rows;
+            bool dash = DashRowShown;
+            var list = new System.Collections.Generic.List<(string input, string action, string note)>(rows.Length + 2);
+            for (int i = 0; i < rows.Length; i++)
+            {
+                if (rows[i].input == "Esc")
+                    list.Add((ArenaKeys.CharacterKey, ArenaText.Pair("打开角色面板，查看生命、武器、技能和加成", "Open the character screen: your health, weapons, skills and bonuses"), ""));
+                list.Add(rows[i]);
+                if (i == SprintRow && dash)
+                    list.Add(("Space", ArenaText.Pair("虚空冲刺：朝光标方向冲出一段距离", "Void Dash: dash toward the cursor"), ""));
+            }
+            return list.ToArray();
+        }
+
+        /// <summary>The void dash's row shows: the dash is the player's (GameManager.VoidDashUnlocked, never on the English Alpha).</summary>
+        internal static bool DashRowShown => GameManager.Instance && GameManager.Instance.VoidDashUnlocked;
+
+        /// <summary>How many rows the table shows now (the length of ControlRows), counted without writing them, so the layout can check
+        /// it every frame.</summary>
+        public static int ControlRowCount => BaseControlRows + (V5HudKit.On ? 1 + (DashRowShown ? 1 : 0) : 0);
+
+        /// <summary>The most rows the table can show on this page: it builds that many and hides those it does not show.</summary>
+        public static int ControlRowCapacity => BaseControlRows + (V5HudKit.On ? 2 : 0);
+
+        // The pause screen's table sits under the paused line; V5MenuSkin puts the buttons under PauseTableBottom, which follows the rows
+        // shown now.
         public const float PauseTableTop = 150f, PauseTableRow = 28f;
-        public static float PauseTableBottom => PauseTableTop + ControlRows().Length * PauseTableRow;
+        public static float PauseTableBottom => PauseTableTop + ControlRowCount * PauseTableRow;
         // The pause screen's row; a page without one of them (the Alpha has no collection) lays out the others.
         public static readonly string[] PauseButtons = { "ResumeRun", "RestartRun", "HowToPlay", ArenaCodex.ButtonName, "QuitToTitle" };
         V2ControlsTable pauseControls;
         UnityEngine.UI.Text tutorialLabel;
         bool tutorialPending;
+        // The pause screen's parts that follow the table's rows (PlacePauseRowPlain), and the row count they were last placed for.
+        Transform pauseContent;
+        V2UiScreen pauseScreen;
+        int pauseRowsLaidOut = -1;
 
         /// <summary>The open mode's map pick reloaded the scene for its map, and the run starts there without the title (GameManager): its
         /// first-time pages come on arrival as after a click on the title.</summary>
@@ -1090,22 +1129,36 @@ namespace AnomalyArena
                 rect.anchorMin = new Vector2(0f, 1f);
                 rect.anchorMax = new Vector2(1f, 1f);
                 rect.pivot = new Vector2(.5f, 1f);
-                rect.offsetMin = new Vector2(64f, -PauseTableBottom);
+                // The table holds every row it may show (ControlRowCapacity); those below the rows shown are hidden.
+                rect.offsetMin = new Vector2(64f, -(PauseTableTop + ControlRowCapacity * PauseTableRow));
                 rect.offsetMax = new Vector2(-64f, -PauseTableTop);
                 // Without the menu skin (the Editor's Play button keeps the loaded scene): paused line, table, then the buttons in a row.
                 if (screen.body) PlaceTopLeft(screen.body.rectTransform, 44f, 100f, 1012f, 40f);
-                float left = 44f, top = PauseTableBottom + 24f;
-                // The buttons the page has share the row's width (1012, as four of 237 with gaps of 18 did).
-                var row = new System.Collections.Generic.List<RectTransform>();
-                foreach (var name in PauseButtons) if (content.Find(name) is RectTransform button) row.Add(button);
-                float width = row.Count > 0 ? (1012f - 18f * (row.Count - 1)) / row.Count : 0f;
-                foreach (var button in row)
-                {
-                    PlaceTopLeft(button, left, top, width, 65f);
-                    left += width + 18f;
-                }
-                if (screen.summary) PlaceTopLeft(screen.summary.rectTransform, 44f, top + 80f, 1012f, 60f);
+                pauseContent = content;
+                pauseScreen = screen;
+                PlacePauseRowPlain();
             }
+        }
+
+        /// <summary>The pause screen's row of buttons and its summary under the rows the table shows now, placed again when that count
+        /// changes (the void dash's row joins in the middle of a run). The menu skin places its own look (V5MenuSkin) and follows the
+        /// count the same way.</summary>
+        void PlacePauseRowPlain()
+        {
+            if (!pauseContent) return;
+            pauseRowsLaidOut = ControlRowCount;
+            if (TryGetComponent<V5MenuSkin>(out var skin) && skin.Installed) return;
+            float left = 44f, top = PauseTableBottom + 24f;
+            // The buttons the page has share the row's width (1012, as four of 237 with gaps of 18 did).
+            var row = new System.Collections.Generic.List<RectTransform>();
+            foreach (var name in PauseButtons) if (pauseContent.Find(name) is RectTransform button) row.Add(button);
+            float width = row.Count > 0 ? (1012f - 18f * (row.Count - 1)) / row.Count : 0f;
+            foreach (var button in row)
+            {
+                PlaceTopLeft(button, left, top, width, 65f);
+                left += width + 18f;
+            }
+            if (pauseScreen && pauseScreen.summary) PlaceTopLeft(pauseScreen.summary.rectTransform, 44f, top + 80f, 1012f, 60f);
         }
 
         /// <summary>A copy of the restart button that opens the tutorial over the pause screen.</summary>

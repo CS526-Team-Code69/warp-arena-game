@@ -27,9 +27,9 @@ ui.energy,ENERGY {0} / {1},能量 {0} / {1},Arena v2 player-visible text; format
 ui.energy.void,VOID ENERGY {0} / {1},虚空能量 {0} / {1},Arena v2 player-visible text; format arguments come from current data.
 ui.xp,LV {0} · XP {1} / {2} · DRAFTS {3},等级 {0} · 经验 {1} / {2} · 待选卡组 {3},Arena v2 player-visible text; format arguments come from current data.
 ui.level.max,12 · MAX,12 · MAX,Arena v2 player-visible text; format arguments come from current data.
-ui.wave,WAVE {0} / {1} · {2}s,第 {0} / {1} 波 · {2} 秒,Arena v2 player-visible text; format arguments come from current data.
+ui.wave,WAVE {0} / {1} · {2} s,第 {0} / {1} 波 · {2} 秒,Arena v2 player-visible text; format arguments come from current data.
 ui.boss.hp,{0} · {1} / {2} · SHIELD {3},{0} · {1} / {2} · 护盾 {3},Arena v2 player-visible text; format arguments come from current data.
-ui.build.clock,BUILD TIME {0}s,整备剩余 {0} 秒,Arena v2 player-visible text; format arguments come from current data.
+ui.build.clock,BUILD TIME {0} s,整备剩余 {0} 秒,Arena v2 player-visible text; format arguments come from current data.
 ui.early.question,{0} picks are still open. Pick the rest at random and start the next wave?,还有 {0} 组卡没选。要随机选完剩下的，直接开始下一波吗？,Arena v2 player-visible text; format arguments come from current data.
 ui.slot,SLOT {0},槽位 {0},Arena v2 player-visible text; format arguments come from current data.
 ui.replace,REPLACE,替换,Arena v2 player-visible text; format arguments come from current data.
@@ -38,11 +38,7 @@ ui.paralysed,PARALYSED,麻痹,Arena v2 player-visible text; format arguments com
 ui.freeze.short,ICE,冻,Arena v2 player-visible text; format arguments come from current data.
 ui.paralysis.short,STUN,麻,Arena v2 player-visible text; format arguments come from current data.
 ui.hole.portal,VOID PORTAL,虚空传送门,Arena v2 player-visible text; format arguments come from current data.
-ui.hole.enter,"E · ENTER
-FAILURE ENDS RUN
-CLEARS STATUS & SHIELD","E · 进入
-失败会结束本局
-状态清除 · 护盾清 0",Arena v2 player-visible text; format arguments come from current data.
+ui.hole.enter,Failing it ends the run. Entering clears your statuses and your shield.,失败会结束本局。进入时，身上的状态会清除，护盾清零。,Arena v2 player-visible text; format arguments come from current data.
 ui.hole.remaining,{0} WAVES LEFT,还剩 {0} 波,Arena v2 player-visible text; format arguments come from current data.
 ui.hole.offscreen,VOID · {0} WAVES,虚空门 · 还剩 {0} 波,Arena v2 player-visible text; format arguments come from current data.
 ui.hole.black,BLACK HOLE,黑洞,Arena v2 player-visible text; format arguments come from current data.
@@ -93,8 +89,8 @@ card.kind.Skill,Skill,技能,Arena v2 player-visible text; format arguments come
 card.rarity.Common,Common,普通,Arena v2 player-visible text; format arguments come from current data.
 card.rarity.Rare,Rare,稀有,Arena v2 player-visible text; format arguments come from current data.
 card.rarity.Epic,Epic,史诗,Arena v2 player-visible text; format arguments come from current data.
-card.infusion,Infuse {0},灌注 {0},Arena v2 player-visible text; format arguments come from current data.
-card.infusion.replace,"Infuse {0}, replaces {1}",灌注 {0}，替换 {1},Arena v2 player-visible text; format arguments come from current data.
+card.infusion,Infuse {0},附魔 {0},Arena v2 player-visible text; format arguments come from current data.
+card.infusion.replace,"Infuse {0}, replaces {1}",附魔 {0}，替换 {1},Arena v2 player-visible text; format arguments come from current data.
 card.power,Damage +40%,伤害 +40%,Arena v2 player-visible text; format arguments come from current data.
 card.tempo,"Cooldown, charge and reload -30%",冷却、蓄力与换弹时间 -30%,Arena v2 player-visible text; format arguments come from current data.
 card.reach,"Range, area or targets +40%",射程、范围或目标数量 +40%,Arena v2 player-visible text; format arguments come from current data.
@@ -114,7 +110,7 @@ stat.Luck,Luck,幸运,影响属性卡稀有度概率。
 stat.MaxEnergy,Max Energy,能量上限,能量容量；提高上限不等于立即回满。
 stat.EnergySiphon,Energy Siphon,能量汲取,每个敌人死亡回复的能量；不只包括自己直接击杀。
 stat.ElementPenetration,Element Penetration,属性穿透,让元素对免疫目标部分生效的比例；不是穿墙或穿透护盾。
-axis.Infusion,Infusion,灌注,`灌注{元素}`；已有元素时：`灌注{新元素}，替换{旧元素}`。
+axis.Infusion,Infusion,附魔,`附魔{元素}`；已有元素时：`附魔{新元素}，替换{旧元素}`。
 axis.Power,Power,威力,`伤害 +40%`。
 axis.Tempo,Tempo,节奏,`冷却、蓄力与换弹时间 -30%`。
 axis.Reach,Reach,范围,`射程、范围或目标数量 +40%`；实际改变哪些值由这把武器确定。

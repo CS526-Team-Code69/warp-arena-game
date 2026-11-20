@@ -126,8 +126,10 @@ namespace AnomalyArena
             if (!VoidDashUnlocked) return;
             voidDashNoticePending = false;
             string cost = player.voidDash.CostWords;
-            hud?.Toast(ArenaText.Pair($"获得虚空冲刺：按空格朝光标方向冲刺，每次消耗{cost}。", $"Void Dash gained: press Space to dash toward the cursor. Each dash uses {cost}."),
+            hud?.Toast(ArenaText.Pair($"你获得了虚空冲刺。按空格朝光标方向虚空冲刺，每次消耗{cost}。", $"You now have the Void Dash. Press Space to dash toward the cursor; each dash uses {cost}."),
                 ElementCombat.ColorFor(ElementKind.Void), VoidDashNoticeSeconds);
+            // The story also teaches it with the spotlight's circle until the first dash (V2Campaign.TeachVoidDash).
+            if (CampaignRunning) campaign.TeachVoidDash();
         }
 
         // ───── What the bottom row flashes for ─────
@@ -215,8 +217,8 @@ namespace AnomalyArena
             // run's absorbed power (no enemy is on the map to look for either).
             if (CampaignRunning && campaign.rules)
                 hud?.Banner(ArenaText.Pair("虚空的馈赠", "THE GIFT OF THE VOID"),
-                    ArenaText.Pair($"虚空能量 +{campaign.rules.voidEnergyReward}，虚空合金 +{campaign.rules.voidAlloyReward}。回基地的能量研究区可以用它们研习。",
-                        $"Void energy +{campaign.rules.voidEnergyReward}, void alloy +{campaign.rules.voidAlloyReward}. Spend them at the base's Energy Lab."));
+                    ArenaText.Pair($"虚空能量 +{campaign.rules.voidEnergyReward}，虚空合金 +{campaign.rules.voidAlloyReward}。回基地打开研习，在「虚空」分类里用它们购买。",
+                        $"Void energy +{campaign.rules.voidEnergyReward}, void alloy +{campaign.rules.voidAlloyReward}. Spend them in the Study window's Void tabs at the base."));
             else
                 hud?.Banner(ArenaText.Pair("吸收虚空之力", "ABSORBING THE VOID"),
                     ArenaText.Pair($"战场冻结 {trialReturnFreeze:0.#} 秒，趁现在看清敌人的位置。", $"The battlefield is frozen for {trialReturnFreeze:0.#} s. Use it to see where the enemies are."));

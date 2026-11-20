@@ -89,8 +89,10 @@ namespace AnomalyArena
                 view.line.text = LessonLine(i);
                 ArenaTextFit.Refit(view.line, 10, 8);
             }
-            ShowFoot(FootUse.Go);
+            ShowFoot(FootUse.GoAndOpenMode);
             SetGo(ArenaText.Pair("开始教学", "Start Tutorial"), ArenaText.Pair($"共 {V2Tutorial.PageCount} 页", $"{V2Tutorial.PageCount} pages"), true);
+            openModeLabel.text = ArenaText.Pair("开放模式教学", "Open Mode Tutorial");
+            V5TitleKit.FitWidth(openModeLabel, 13, 9);
         }
 
         /// <summary>A lesson's keys as they are now; the mouse's buttons and Esc are fixed.</summary>
@@ -117,7 +119,7 @@ namespace AnomalyArena
                 $"In the afternoon, hold {ArenaKeys.InteractKey} to mine alloy ore; at night, press {ArenaKeys.LampKey} to set down a lamp and mine dark matter in its light."),
             4 => ArenaText.Pair($"下午或夜里在基地门口按 {ArenaKeys.InteractKey} 进去，就能建造各区、研习升级和修理飞船。",
                 $"In the afternoon or at night, press {ArenaKeys.InteractKey} at the base door to go in and build, study or repair the ship."),
-            _ => ArenaText.Pair("按 Esc 暂停，在暂停页可以查看按键、重看教程、重新开局或返回标题。",
+            _ => ArenaText.Pair("按 Esc 暂停，在暂停页可以查看按键、重看教学、重新开局或返回标题。",
                 "Press Esc to pause. From there you can check the keys, see the tutorial again, restart or quit to the title."),
         };
 
@@ -125,6 +127,14 @@ namespace AnomalyArena
         {
             V5UiSound.Play(V5UiSound.Ui.Start);
             V2Tutorial.ShowStory(ArenaText.Font);
+        }
+
+        /// <summary>The foot's second button: the open mode's pages (moving, aiming, swapping, the arena, the card panel and the pause),
+        /// which the lessons above do not cover.</summary>
+        static void OpenOpenModeTutorial()
+        {
+            V5UiSound.Play(V5UiSound.Ui.Start);
+            V2Tutorial.ShowClassic(ArenaText.Font);
         }
 
         /// <summary>A lesson clicked: the story pages open at its own page (the first lesson is the second page, after the story's

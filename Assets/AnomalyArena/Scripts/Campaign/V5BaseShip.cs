@@ -154,7 +154,7 @@ namespace AnomalyArena
             float shield = shielded ? Mathf.Max(0f, c.BaseShield) : 0f;
             hull.medal.SetIcons(set ? set.durability : null, WhiteboxIcons.Room(CampaignRoom.Control));
             hull.medal.SetRing(hp >= max - .5f ? V5TitleKit.Teal : V5TitleKit.Orange);
-            B5ShipWords(hull, ArenaText.Pair("基地外壳", "Base hull"), B5HullNumber(hp, max, shield, shielded), V5TitleKit.Ink, 15f, settled);
+            B5ShipWords(hull, ArenaText.Pair("基地耐久", "Base hull"), B5HullNumber(hp, max, shield, shielded), V5TitleKit.Ink, 15f, settled);
             hull.bar.Set(hp / max, shield / max);
             SetShown(hull.detail, false);
 

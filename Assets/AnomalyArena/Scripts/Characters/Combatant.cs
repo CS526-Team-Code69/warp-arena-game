@@ -40,9 +40,16 @@ namespace AnomalyArena
         public float Hp { get; protected set; }
         public CharacterState State { get; private set; } = CharacterState.Normal;
         public DeathCause DeathCause { get; private set; }
-        /// <summary>Who dealt the last hit or tick that cost HP or Shield (null for walls and other hazards), and its source; read by the run-end report.</summary>
+        /// <summary>Who dealt the last hit or tick that cost HP or Shield, or started the knock that ended in a wall slam (DamageInfo.By;
+        /// null for other hazards), and its source; read by the run-end report.</summary>
         public Combatant LastDamagedBy { get; private set; }
         public DamageSource LastDamageSource { get; private set; }
+        /// <summary>The weapon behind that damage: the hit's own weapon, or for a wall slam the weapon whose blast or flight started the
+        /// knock (null for anything else). Read by the self-hit notice and the result screen's first line.</summary>
+        public RunWeapon LastDamageWeapon { get; private set; }
+        /// <summary>Who started the knock this body is in now (null when it is in none, or nobody started it), and with which weapon.</summary>
+        public Combatant KnockedBy => knockBy;
+        public RunWeapon KnockedByWeapon => knockWeapon;
         public bool Protected => protectTimer > 0f;
         /// <summary>Enemy lab: hits still land (damage, stun, feedback) but the body cannot die; HP stops at 1 and a fall puts it back on safe ground.</summary>
         [System.NonSerialized] public bool Invulnerable;
@@ -66,6 +73,14 @@ namespace AnomalyArena
         float slideFxClock;
 
         KnockKind knockKind;
+
+        /// <summary>Who started the current knock (Knockback's by), kept through its rebounds and cleared when the body leaves the
+        /// knocked or thrown state. A wall slam the knock ends in carries it as DamageInfo.slamBy.</summary>
+        Combatant knockBy;
+        /// <summary>The weapon that started the current knock (Knockback's weapon), kept and cleared with knockBy.</summary>
+        RunWeapon knockWeapon;
+        /// <summary>The weapon of the wall slam being taken, read once by ReceiveDamage (DamageInfo carries no weapon for a slam).</summary>
+        RunWeapon slamWeapon;
 
         // Set while Thrown by the hook: what happens if this character crashes into another one, and the speed it was launched at
         ThrowImpact? throwImpact;
@@ -120,9 +135,9 @@ namespace AnomalyArena
         {
             SpawnVersion++;DeathVelocity=Vector3.zero;
             if(!rb)rb=GetComponent<Rigidbody>();
-            Hp=maxHp;State=CharacterState.Normal;DeathCause=DeathCause.None;eliminated=false;LastDamagedBy=null;LastDamageSource=DamageSource.Hit;
+            Hp=maxHp;State=CharacterState.Normal;DeathCause=DeathCause.None;eliminated=false;LastDamagedBy=null;LastDamageSource=DamageSource.Hit;LastDamageWeapon=null;
             stunTimer=0;wallSlams=0;movementModifiers.Clear();
-            protectTimer=fallTimer=0;knockVel=pushVel=slideVel=Vector3.zero;throwImpact=null;
+            protectTimer=fallTimer=0;knockVel=pushVel=slideVel=Vector3.zero;throwImpact=null;knockBy=null;knockWeapon=slamWeapon=null;
             SetFlash(false);flashTimer=squashTimer=0;LastHitDirection=Vector3.forward;
             if(squashTarget)squashTarget.localScale=squashBase;
             rb.isKinematic=false;rb.linearVelocity=Vector3.zero;rb.angularVelocity=Vector3.zero;
@@ -134,8 +149,10 @@ namespace AnomalyArena
         /// <summary>A continued save: the HP as it was saved, at least 1 and at most the maximum (push the maximum first).</summary>
         public void RestoreHp(float hp)=>Hp=Mathf.Clamp(hp,1f,Mathf.Max(1f,maxHp));
         public void CancelDisplacement(){knockVel=pushVel=slideVel=Vector3.zero;throwImpact=null;if(IsAlive)SetState(CharacterState.Normal);if(rb&&!rb.isKinematic)rb.linearVelocity=Vector3.zero;}
-        public void BounceFromWall(Vector3 at,Vector3 away,float bounceDistance,bool takeDamage)
-        {rb.position=at;transform.position=at;if(State is CharacterState.Dashing or CharacterState.Hooked)SetState(CharacterState.Normal);if(takeDamage)TakeWallDamage(away);if(IsAlive)Knockback(away,bounceDistance,KnockKind.Push);}
+        /// <summary>The human missile meeting a wall: the body stops there, takes a wall slam when takeDamage is set, and bounces back as a
+        /// push. Its own flight started both, so the slam names this body (a backfire in the run report) and weapon, the flight's weapon.</summary>
+        public void BounceFromWall(Vector3 at,Vector3 away,float bounceDistance,bool takeDamage,RunWeapon weapon=null)
+        {rb.position=at;transform.position=at;if(State is CharacterState.Dashing or CharacterState.Hooked)SetState(CharacterState.Normal);if(takeDamage)TakeWallDamage(away,this,weapon);if(IsAlive)Knockback(away,bounceDistance,KnockKind.Push,this,weapon);}
 
 
         /// <summary>Position above the head (where the HP bar goes): in illustrated mode this is the top of the billboard along the camera's up.</summary>
@@ -394,6 +411,7 @@ namespace AnomalyArena
 
             State = s;
             slideVel = Vector3.zero; // a slide is a walk: a knockback, a throw or a stop ends it
+            if (s != CharacterState.Knocked && s != CharacterState.Thrown) { knockBy = null; knockWeapon = null; } // the knock is over
 
             // Enter the new state
             switch (s)
@@ -519,7 +537,9 @@ namespace AnomalyArena
 
         /// <summary>Knockback by rigidbody impulse. Distance d maps to initial speed d × damping; exponential decay makes it slide exactly d.
         /// A knockback that body size scales to nothing changes nothing: no knocked state, so a wind-up is not cut short.</summary>
-        public void Knockback(Vector3 dir, float distance, KnockKind kind)
+        /// <param name="by">Who started the knock. A wall slam it ends in names them (DamageInfo.slamBy); no damage rule reads it.</param>
+        /// <param name="weapon">The weapon whose hit or blast started it (null for none); a wall slam it ends in names it too.</param>
+        public void Knockback(Vector3 dir, float distance, KnockKind kind, Combatant by = null, RunWeapon weapon = null)
         {
             if (!IsAlive || Immovable || State == CharacterState.Hooked || State == CharacterState.Dashing) return;
             // The Singularity's invincibility: nothing knocks the player back meanwhile, not even their own blast.
@@ -538,6 +558,8 @@ namespace AnomalyArena
             Vector3 cur = Query.Flat(rb.linearVelocity);
             rb.AddForce(knockVel - cur, ForceMode.VelocityChange);
             knockKind = kind;
+            knockBy = by;
+            knockWeapon = weapon;
             SetState(kind == KnockKind.Throw ? CharacterState.Thrown : CharacterState.Knocked);
         }
 
@@ -547,7 +569,7 @@ namespace AnomalyArena
         /// </summary>
         public void Throw(Vector3 dir, float distance, ThrowImpact impact)
         {
-            Knockback(dir, distance, KnockKind.Throw);
+            Knockback(dir, distance, KnockKind.Throw, impact.dealer?.Owner);
             if (State != CharacterState.Thrown) return;
             throwImpact = impact;
             throwLaunchSpeed = knockVel.magnitude;
@@ -617,24 +639,30 @@ namespace AnomalyArena
                 if (to.sqrMagnitude < 1e-6f) continue;
                 if (Vector3.Dot(knockVel, to.normalized) < GM.rules.wallHitSpeed) continue;
                 bool damage = knockKind != KnockKind.Push;
+                var by = knockBy; // read before the stop below ends the knock; a rebound is still the same knock
+                var byWeapon = knockWeapon;
                 Vector3 rebound=Vector3.Reflect(knockVel,c.GetContact(i).normal)*.5f;
                 SetState(CharacterState.Normal);
                 rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
-                if (damage) TakeWallDamage(-to.normalized);
+                if (damage) TakeWallDamage(-to.normalized, by, byWeapon);
                 if(IsAlive&&damage&&++wallSlams<3&&rebound.magnitude>.3f)
-                {knockVel=rebound;knockKind=KnockKind.Hit;SetState(CharacterState.Knocked);rb.linearVelocity=rebound*(Team==Team.Enemy?GM.WorldTimeScale:1);}
+                {knockVel=rebound;knockKind=KnockKind.Hit;knockBy=by;knockWeapon=byWeapon;SetState(CharacterState.Knocked);rb.linearVelocity=rebound*(Team==Team.Enemy?GM.WorldTimeScale:1);}
                 return;
             }
         }
 
         /// <param name="away">Direction away from the wall: shards fly this way</param>
-        void TakeWallDamage(Vector3 away)
+        /// <param name="by">Who started the knock or the flight that ended here (null for nobody); the run report names them.</param>
+        /// <param name="weapon">The weapon that started it (null for none): LastDamageWeapon names it.</param>
+        void TakeWallDamage(Vector3 away, Combatant by, RunWeapon weapon = null)
         {
             if (!IsAlive) return;
             float damage=GM.rules.wallDamage;
             // Impact is a wave-1 bonus that grows with the same HP multiplier as the wall damage itself.
             if(Team==Team.Enemy)damage=(damage+(GM.progression?GM.progression.Stats.impact:0))*GM.waves.HpMultiplier;
-            ReceiveDamage(new DamageInfo{amount=damage,knockDir=away,kind=HitKind.Slam,source=DamageSource.Wall});
+            slamWeapon = weapon;
+            try { ReceiveDamage(new DamageInfo{amount=damage,knockDir=away,kind=HitKind.Slam,source=DamageSource.Wall,slamBy=by}); }
+            finally { slamWeapon = null; }
         }
 
         // ───── Damage and death ─────
@@ -695,7 +723,7 @@ namespace AnomalyArena
             float hpDamage=Mathf.Min(beforeHp,Mathf.Max(0f,dealt));
             float shieldDamage=Mathf.Max(0f,beforeShield-(elementStatus?elementStatus.Shield:0));
             float actualDamage=hpDamage+shieldDamage;
-            if(actualDamage>0f){LastDamagedBy=info.dealer?.Owner;LastDamageSource=info.source;DamageTaken?.Invoke(info,actualDamage);}
+            if(actualDamage>0f){LastDamagedBy=info.By;LastDamageSource=info.source;LastDamageWeapon=info.weapon??(info.source==DamageSource.Wall?slamWeapon:null);DamageTaken?.Invoke(info,actualDamage);}
             if(actualDamage>0f&&Team==Team.Enemy&&!selfHit&&info.dealer?.Owner is Combatant{Team:Team.Player})PlayerOutput.Record(actualDamage);
             if(!tick&&actualDamage>0f)
             {
@@ -720,7 +748,7 @@ namespace AnomalyArena
                 // The player's own recoil does not come through here.
                 if (Team == Team.Player && info.dealer?.Owner is Enemy { IsBoss: true } && WorldMap.Active && WorldMap.Active.TrialActive)
                     distance = WorldMap.Active.LimitBossKnockback(Position, info.knockDir, distance * knockbackScale) / Mathf.Max(.0001f, knockbackScale);
-                if (distance > 0f) Knockback(info.knockDir, distance, KnockKind.Hit);
+                if (distance > 0f) Knockback(info.knockDir, distance, KnockKind.Hit, info.dealer?.Owner, info.weapon);
             }
             // Self-hits add no stacks, no Light/Earth/Void payoff and no lifesteal.
             if(!tick&&!selfHit&&info.source==DamageSource.Hit&&info.dealer?.Owner is Combatant { Team: Team.Player } source)
@@ -748,7 +776,7 @@ namespace AnomalyArena
         public void Kill(Combatant by = null)
         {
             if (!IsAlive || SkillInvincible || Invulnerable) return;
-            LastDamagedBy = by; LastDamageSource = DamageSource.Hit;
+            LastDamagedBy = by; LastDamageSource = DamageSource.Hit; LastDamageWeapon = null;
             PlayHitFeedback(Mathf.Max(Hp, GM.feedback.heavyDamage), Vector3.zero, HitKind.Pierce);
             Hp = 0f;
             Die(DeathCause.HpDepleted);

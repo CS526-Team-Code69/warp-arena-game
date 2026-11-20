@@ -327,7 +327,8 @@ namespace AnomalyArena
             }
 
             definition = data;
-            if (!WaveManager.Prewarming) ArenaCodexProgress.DiscoverEnemy(data.kind);
+            // A kind the collection had never met is new: the world labels name it this morning or wave and introduce it once.
+            if (!WaveManager.Prewarming && ArenaCodexProgress.MeetEnemy(data.kind)) V2WorldLabels.FirstMeeting(data.kind);
             if (GM && GM.waves) GM.waves.OnEnemyConfigured(this);
             Elite = elite;
             Mini = mini;

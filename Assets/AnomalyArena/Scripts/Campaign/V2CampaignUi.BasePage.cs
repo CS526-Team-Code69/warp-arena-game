@@ -95,16 +95,22 @@ namespace AnomalyArena
             RefreshBasePanel(true);
         }
 
-        /// <summary>A button's action; on failure its reason, unless it has none (a purchase that found nothing to give says so itself).</summary>
+        /// <summary>A button's action; on failure the one refusal sound and its reason, unless it has none (a purchase that found nothing
+        /// to give says so itself). A purchase that goes through makes the sound of what it changed (CampaignAudio watches the base).</summary>
         void Act(Func<bool> action, string failure)
         {
             if (!action())
             {
-                // Not enough material, or the room cannot do it now (2026-11-10).
-                CampaignAudio.Play(CampaignSfx.UpgradeDenied);
+                PlayRefused(); // not enough material, or the room cannot do it now
                 if (!string.IsNullOrEmpty(failure)) Flash(failure);
             }
             RefreshBasePanel(true);
+        }
+
+        /// <summary>A purchase refused: the one refusal sound, the fifth pass's iron-part refusal, or the campaign's own without it.</summary>
+        static void PlayRefused()
+        {
+            if (!V5UiSound.Play(V5UiSound.Ui.Denied)) CampaignAudio.Play(CampaignSfx.UpgradeDenied);
         }
 
         void RefreshBasePanel(bool rebuild)
@@ -114,7 +120,7 @@ namespace AnomalyArena
             baseHeading.text = c.BaseAfterTutorial ? ArenaText.Pair("基地 · 第 0 天", "BASE · DAY 0")
                 : c.BaseAtDawn ? ArenaText.Pair($"基地 · 第 {c.Day} 晚过后，天亮了", $"BASE · DAWN AFTER NIGHT {c.Day}")
                 : c.BaseFromDusk ? ArenaText.Pair($"基地 · 第 {c.Day} 天下午", $"BASE · DAY {c.Day}, AFTERNOON")
-                : ArenaText.Pair($"基地 · 第 {c.Day} 天夜里", $"BASE · NIGHT {c.Day}");
+                : ArenaText.Pair($"基地 · 第 {c.Day} 天夜晚", $"BASE · DAY {c.Day}, NIGHT");
             RefreshCurrencyStrip(baseStrip);
             int version = Hash(c);
             if (!rebuild && version == panelVersion) return;
@@ -158,7 +164,7 @@ namespace AnomalyArena
                         actions.Add((c.ShieldLevel == 0 ? ArenaText.Pair("解锁基地护盾", "Unlock the base shield") : ArenaText.Pair($"护盾升到 {c.ShieldLevel + 1} 级", $"Raise shield to level {c.ShieldLevel + 1}"),
                             sc, c.TryUpgradeShield, Why(sc), c.ControlWorks));
                     if (c.BaseHp < c.BaseMaxHp - .5f)
-                        actions.Add((ArenaText.Pair("把外壳修满", "Fully repair the hull"), new CampaignCost(c.HullRepairCost), c.TryRepairHull,
+                        actions.Add((ArenaText.Pair("把耐久修满", "Fully repair the hull"), new CampaignCost(c.HullRepairCost), c.TryRepairHull,
                             ArenaText.Pair("合金不够，或者总控区已损坏", "Not enough alloy, or Central Control is broken"), c.ControlWorks));
                     // The last day's overload is bought in the study window (V2CampaignUi.Study.cs), which says what it does.
                     if (c.OverloadOpen) actions.Add((ArenaText.Pair("决战过载", "Final overload"), null, () => { OpenStudy("ctl.overload"); return true; }, "", true));
@@ -389,7 +395,7 @@ namespace AnomalyArena
         static string CurrencyLabel(int which) => which switch
         {
             0 => ArenaText.Pair("异星能量", "Alien energy"),
-            1 => ArenaText.Pair("异星合金", "Alien alloy"),
+            1 => ArenaText.Pair("合金", "Alloy"),
             _ => ArenaText.Pair("暗物质", "Dark matter")
         };
 
@@ -424,7 +430,7 @@ namespace AnomalyArena
             var c = campaign;
             var missing = new List<string>();
             if (c.Alloy < cost.alloy) missing.Add(ArenaText.Pair($"合金还差 {cost.alloy - c.Alloy}", $"{cost.alloy - c.Alloy} alloy short"));
-            if (c.Energy < cost.energy) missing.Add(ArenaText.Pair($"能量还差 {cost.energy - c.Energy}", $"{cost.energy - c.Energy} energy short"));
+            if (c.Energy < cost.energy) missing.Add(ArenaText.Pair($"异星能量还差 {cost.energy - c.Energy}", $"{cost.energy - c.Energy} alien energy short"));
             if (c.Dark < cost.dark) missing.Add(ArenaText.Pair($"暗物质还差 {cost.dark - c.Dark}", $"{cost.dark - c.Dark} dark matter short"));
             return missing.Count > 0 ? string.Join(ArenaText.Pair("，", ", "), missing) : ArenaText.Pair("现在还做不了", "Can't do that yet");
         }

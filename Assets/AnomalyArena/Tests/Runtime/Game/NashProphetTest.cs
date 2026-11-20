@@ -204,7 +204,7 @@ namespace AnomalyArena
             var labels = Object.FindAnyObjectByType<V2WorldLabels>();
             Assume.That(labels && labels.holeLabels.Length > 0 && labels.holeLabels[0], Is.True, "the scene has its saved portal labels");
             var label = labels.holeLabels[0];
-            string offer = ArenaText.Pair("E · 传送", "E · TRAVEL");
+            string offer = ArenaText.Pair("按 E 传送", "Press E to travel");
 
             // Knocked: a short slide across the portal, E pressed while it runs.
             Vector3 across = Flat(portal - world.trialPlatform.position).normalized;

@@ -24,7 +24,7 @@ namespace AnomalyArena
     {
         Hit, // normal knockback: distance scaled by body size, wall hits deal damage
         Throw, // hook throw: fixed distance, wall hits deal damage
-        Push, // recoil push: wall hits deal no damage
+        Push, // a push (recoil, the human missile's bounce, a boss's phase burst): a wall stops it without damage; body size does not scale it
     }
 
     public enum DeathCause
@@ -56,6 +56,11 @@ namespace AnomalyArena
 
         public float knockDistance;
         public IDamageDealer dealer;
+
+        /// <summary>A wall slam's cause: whoever started the knock or flight that ended in the wall (the player's own blast or human
+        /// missile, an enemy's blow); null for other damage. Only the run report reads it: unlike dealer, it changes no hit protection,
+        /// self-damage or element rule.</summary>
+        public Combatant slamBy;
         public HitKind kind;
         public DamageSource source;
         public ElementKind element;
@@ -72,6 +77,9 @@ namespace AnomalyArena
         public HitFeel feel;
         /// <summary>The player weapon that dealt the hit (null for anything else): its Fire burns a share of the weapon's DPS.</summary>
         public RunWeapon weapon;
+
+        /// <summary>Who to name for this damage: the dealer's owner, or for a wall slam whoever started the knock.</summary>
+        public Combatant By => dealer != null ? dealer.Owner : slamBy;
 
         public static DamageInfo Attack(float amount, IDamageDealer dealer, Vector3 knockDir = default,
             float knockDistance = 0f,

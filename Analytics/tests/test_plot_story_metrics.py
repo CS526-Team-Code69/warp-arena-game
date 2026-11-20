@@ -69,7 +69,8 @@ class HoleTests(unittest.TestCase):
 class TutorialTests(unittest.TestCase):
     def test_seconds_per_step_in_teaching_order_with_other_steps_last(self):
         agg = m.aggregate_tutorial(m.load_rows(EVENTS))
-        self.assertEqual(m.tutorial_order(agg), m.TUTORIAL_STEPS + ["Swim"])
+        # The fixture's rows come from before the Gold build's TryWeapon step, so the order lists every other step it saw.
+        self.assertEqual(m.tutorial_order(agg), [s for s in m.TUTORIAL_STEPS if s != "TryWeapon"] + ["Swim"])
         self.assertEqual(agg["steps"]["Move"], [10, 20, 30, 40], "the test row's 999 is left out")
         self.assertEqual([m._quantile(agg["steps"]["Move"], q) for q in (.25, .5, .75)], [17.5, 25, 32.5])
         self.assertEqual({s: len(r) for s, r in agg["runs"].items()},
@@ -104,9 +105,9 @@ class EndingTests(unittest.TestCase):
         agg = m.aggregate_endings(m.load_rows(RUNS))
         self.assertEqual(agg["defeats"], {3: 3, m.FINAL: 1, 4: 1, 2: 1})
         self.assertEqual(m.worst_day(agg), (3, 3, 6), "the final battle is not a day")
-        self.assertEqual(agg["enemies"], {"Brute": {"enemy": 1, "status": 0, "tyrant": 0, "elite": 1, "total": 1},
-                                          "Tyrant": {"enemy": 0, "status": 0, "tyrant": 1, "elite": 0, "total": 1},
-                                          "Spitter": {"enemy": 0, "status": 1, "tyrant": 0, "elite": 0, "total": 1}})
+        self.assertEqual(agg["enemies"], {"Brute": {"enemy": 1, "status": 0, "tyrant": 0, "elite": 1, "total": 1, "fresh": 1},
+                                          "Tyrant": {"enemy": 0, "status": 0, "tyrant": 1, "elite": 0, "total": 1, "fresh": 1},
+                                          "Spitter": {"enemy": 0, "status": 1, "tyrant": 0, "elite": 0, "total": 1, "fresh": 1}})
         self.assertIsNone(m.worst_day(m.aggregate_endings([])))
 
     def test_a_day_after_the_seventh_adds_its_own_column(self):
@@ -116,6 +117,113 @@ class EndingTests(unittest.TestCase):
         agg = m.aggregate_endings(m.parse_csv_text(text))
         self.assertEqual(m.ending_buckets(agg), list(range(10)) + [m.FINAL])
         self.assertEqual({b: nonzero(c) for b, c in agg["buckets"].items()}, {9: {"enemy": 1}, m.FINAL: {"victory": 1}})
+
+
+RUN_COLUMNS = COMMON + ",outcome,cause,enemy,elite,stage,wave,run_seconds,level,kills,starting_weapon,mode\n"
+DAY_COLUMNS = COMMON + ",day,reached_dawn,end_stage,end_cause,kills,player_hits,earned_alloy\n"
+EVENT_COLUMNS = COMMON + ",day,stage,kind,detail,value\n"
+# f1, f2, f3 are fresh: f1 passed a tutorial step, f2 sent nothing after its start, f3 quit before its first step. c1 and c2 are saves
+# continued in a build before the fix: their run_start says "tutorial" and their first row is the empty dawn of the night before the
+# morning save. n1 is a morning save continued in a fixed build: its run_start says "dawn" on Day 2, and its first dawn is real even
+# with nothing counted in it.
+SPLIT_RUNS = (RUN_COLUMNS +
+              "2026-11-13 10:00:00,run_start,f1,s1,en,b,,,,FALSE,tutorial,0,0,1,0,Pistol,story\n"
+              "2026-11-13 10:01:00,run_start,f3,s3,en,b,,,,FALSE,tutorial,0,0,1,0,Pistol,story\n"
+              "2026-11-13 10:05:00,run_start,f2,s2,en,b,,,,FALSE,tutorial,0,0,1,0,Pistol,story\n"
+              "2026-11-13 10:06:00,run_end,f3,s3,en,b,abandoned,quit_to_title,,FALSE,tutorial,0,3,1,0,Pistol,story\n"
+              "2026-11-13 10:09:00,run_end,f1,s1,en,b,defeat,enemy,Spitter,FALSE,day,1,200,1,20,Pistol,story\n"
+              "2026-11-13 10:10:00,run_start,c1,s1,en,b,,,,FALSE,tutorial,0,0,1,0,Pistol,story\n"
+              "2026-11-13 10:12:00,run_end,c1,s1,en,b,defeat,backfire,,FALSE,day,1,90,1,8,Pistol,story\n"
+              "2026-11-13 10:20:00,run_start,c2,s1,en,b,,,,FALSE,tutorial,0,0,1,0,Pistol,story\n"
+              "2026-11-13 10:30:00,run_start,n1,s3,en,b,,,,FALSE,dawn,2,0,1,0,Pistol,story\n"
+              "2026-11-13 10:40:00,run_end,n1,s3,en,b,defeat,base_destroyed,,FALSE,day,3,600,1,90,Pistol,story\n")
+SPLIT_DAYS = (DAY_COLUMNS +
+              "2026-11-13 10:04:00,v2_day,f1,s1,en,b,0,TRUE,,,4,1,30\n"
+              "2026-11-13 10:06:00,v2_day,f3,s3,en,b,0,FALSE,tutorial,quit_to_title,0,0,0\n"
+              "2026-11-13 10:09:00,v2_day,f1,s1,en,b,1,FALSE,day,enemy,20,5,0\n"
+              "2026-11-13 10:10:00,v2_day,c1,s1,en,b,0,TRUE,,,0,0,0\n"
+              "2026-11-13 10:12:00,v2_day,c1,s1,en,b,1,FALSE,day,backfire,8,4,0\n"
+              "2026-11-13 10:20:00,v2_day,c2,s1,en,b,0,TRUE,,,0,0,0\n"
+              "2026-11-13 10:31:00,v2_day,n1,s3,en,b,2,TRUE,,,0,0,0\n"
+              "2026-11-13 10:40:00,v2_day,n1,s3,en,b,3,FALSE,day,base_destroyed,90,6,0\n")
+SPLIT_EVENTS = EVENT_COLUMNS + "2026-11-13 10:00:05,v2_event,f1,s1,en,b,0,tutorial,tutorial_step,Move,4\n"
+SPLIT_PURCHASES = (COMMON + ",day,stage,item,detail,room,alloy,energy,dark\n"
+                   "2026-11-13 10:11:00,v2_purchase,c1,s1,en,b,1,dusk,room_upgrade,Ship level 1,Ship,20,0,0\n"
+                   "2026-11-13 10:08:00,v2_purchase,f1,s1,en,b,1,dusk,weapon_mk,Rifle Mk2,Armament,8,0,0\n")
+
+
+def split_tables():
+    return tuple(m.parse_csv_text(t) for t in (SPLIT_RUNS, SPLIT_DAYS, SPLIT_EVENTS))
+
+
+class ContinuedRunTests(unittest.TestCase):
+    def test_runs_continued_from_a_save_are_told_apart_by_their_start_or_by_their_rows(self):
+        runs, days, events = split_tables()
+        split = m.classify_runs(runs, days, events)
+        self.assertEqual(split["kind"], {"f1": m.FRESH, "f2": m.FRESH, "f3": m.FRESH, "c1": m.CONTINUED, "c2": m.CONTINUED,
+                                         "n1": m.CONTINUED})
+        self.assertEqual(split["old_rule"], {"c1", "c2"}, "n1 says where it continues")
+        self.assertEqual(split["false_rows"], {("c1", 0), ("c2", 0)}, "only the empty dawn of a save continued before the fix")
+        self.assertEqual(split["start_day"], {"f1": 0, "f2": 0, "f3": 0, "c1": 1, "c2": 1, "n1": 2})
+        self.assertEqual(split["silent"], {"f2"})
+        older = m.classify_runs(runs, days)
+        self.assertEqual((older["kind"]["c1"], older["kind"]["n1"], older["false_rows"]), (m.FRESH, m.CONTINUED, set()),
+                         "without the events the rule for older rows cannot be applied")
+
+    def test_each_day_counts_fresh_and_continued_runs_apart_with_the_tabs_closed_during_a_day(self):
+        runs, days, events = split_tables()
+        split = m.classify_runs(runs, days, events)
+        agg = m.aggregate_days(days, split=split)
+        self.assertEqual(agg["dropped"], 2)
+        self.assertEqual({d: nonzero(c) for d, c in agg["by_kind"][m.FRESH].items()},
+                         {0: {"dawn": 1, "left": 1, "closed": 1}, 1: {"died": 1}})
+        self.assertEqual({d: nonzero(c) for d, c in agg["by_kind"][m.CONTINUED].items()},
+                         {1: {"died": 1, "closed": 1}, 2: {"dawn": 1}, 3: {"base": 1}})
+        self.assertEqual(m.day_share(agg["by_kind"][m.FRESH][0]), (1, 3))
+        self.assertEqual(m.aggregate_days(days)["days"][0]["dawn"], 3, "without a split every row counts, as before the fix")
+
+    def test_per_player_each_day_counts_a_player_once_and_names_their_first_attempt(self):
+        runs, days, events = split_tables()
+        split = m.classify_runs(runs, days, events)
+        players = m.aggregate_players(m.aggregate_days(days, split=split), split)
+        self.assertEqual((players["players"], players["fresh_players"]), (3, 3))
+        day0, day1 = players["days"][0], players["days"][1]
+        self.assertEqual((day0["played"], day0["dawn"], nonzero(day0["first"])), (3, 1, {"dawn": 1, "left": 1, "closed": 1}))
+        self.assertEqual((day1["played"], day1["dawn"], day1["defeated"], day1["attempts"], day1["most_attempts"], nonzero(day1["first"])),
+                         (1, 0, 1, 3, 3, {"died": 1}), "s1 tried Day 1 three times; its first attempt was the fresh run f1")
+        text = m.format_early_days(m.aggregate_days(days, split=split), players, split)
+        self.assertIn("Story runs started: 6, of them 3 fresh and 3 continued from a save (2 told apart by the rule for rows sent "
+                      "before the fix); 1 fresh run sent no row after its start", text)
+        self.assertIn("Day 0, fresh runs: 3 played it; 1 reached dawn (33%); the run was over: left from the pause menu 1, tab closed 1",
+                      text)
+        self.assertIn("Day 1, runs continued from a save: 2 played it; 0 reached dawn (0%); the run was over: died 1, tab closed 1", text)
+        self.assertIn("Players defeated on each day (each player once a day): Day 1 1, Day 3 1; the most: Day 1 with 1 of 2 (50%)", text)
+
+    def test_endings_count_fresh_and_continued_runs_apart(self):
+        runs, days, events = split_tables()
+        agg = m.aggregate_endings(runs, split=m.classify_runs(runs, days, events))
+        fresh, cont = agg["by_kind"][m.FRESH], agg["by_kind"][m.CONTINUED]
+        self.assertEqual((fresh["started"], fresh["ended"], fresh["unfinished"]), (3, 2, 1))
+        self.assertEqual((cont["started"], cont["ended"], cont["unfinished"]), (3, 2, 1))
+        self.assertEqual({b: nonzero(c) for b, c in fresh["buckets"].items()}, {0: {"left": 1}, 1: {"enemy": 1}})
+        self.assertEqual({b: nonzero(c) for b, c in cont["buckets"].items()}, {1: {"backfire": 1}, 3: {"base": 1}})
+        self.assertEqual(m.worst_day(fresh), (1, 1, 1))
+        self.assertEqual(agg["enemies"]["Spitter"]["fresh"], 1)
+        own = m.aggregate_endings(runs)["by_kind"][m.CONTINUED]
+        self.assertEqual(own["started"], 1, "from the runs export alone, only the run_start that says where it continues")
+        text = m.format_endings(agg)
+        self.assertIn("Fresh runs: started 3, ended 2, unfinished 1. Continued from a save: started 3, ended 2, unfinished 1", text)
+        self.assertIn("Ended on Day 0: 1 of 3 fresh runs started (33%), 0 of them by a defeat", text)
+
+    def test_fresh_only_needs_the_runs_export(self):
+        with self.assertRaises(SystemExit), contextlib.redirect_stderr(io.StringIO()):
+            m.main(["--days", DAYS, "--fresh-only"])
+
+    def test_a_continued_run_has_no_first_purchase_but_its_spending_counts(self):
+        runs, days, events = split_tables()
+        agg = m.aggregate_spending(m.parse_csv_text(SPLIT_PURCHASES), split=m.classify_runs(runs, days, events))
+        self.assertEqual((agg["runs"], agg["continued_runs"], nonzero(agg["first_room"])), (1, 1, {"Armament": 1}))
+        self.assertEqual(nonzero(agg["days"][1]), {"Ship": 20, "Armament": 8})
 
 
 class SpendingTests(unittest.TestCase):
@@ -266,6 +374,24 @@ class RenderTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as out:
             self.assertEqual(self.run_main(["--events", CRATES, "--out-dir", out]), 0)
             self.assertEqual(sorted(os.listdir(out)), ["story-hole-checks.png", "story-tutorial.png", "story-weapons.png"])
+
+    def test_fresh_and_continued_runs_render_apart_and_the_day_0_and_day_1_table_is_printed(self):
+        with tempfile.TemporaryDirectory() as out:
+            paths = {}
+            for name, text in (("runs", SPLIT_RUNS), ("days", SPLIT_DAYS), ("events", SPLIT_EVENTS), ("purchases", SPLIT_PURCHASES)):
+                paths[name] = os.path.join(out, name + ".csv")
+                with open(paths[name], "w", encoding="utf-8") as f:
+                    f.write(text)
+            charts = os.path.join(out, "charts")
+            printed = io.StringIO()
+            with contextlib.redirect_stdout(printed):
+                code = m.main(["--runs", paths["runs"], "--days", paths["days"], "--events", paths["events"],
+                               "--purchases", paths["purchases"], "--fresh-only", "--out-dir", charts])
+            self.assertEqual(code, 0)
+            for name in ("story-endings.png", "story-days.png", "story-spending.png", "story-weapons.png", "story-purchases.png"):
+                self.assertGreater(os.path.getsize(os.path.join(charts, name)), 1000, name)
+            self.assertIn("Day 1, fresh runs: 1 played it; 0 reached dawn (0%); the run was over: died 1", printed.getvalue())
+            self.assertIn("Purchases: 1 in 1 runs", printed.getvalue(), "--fresh-only leaves the continued run's purchase out")
 
     def test_empty_exports_still_render(self):
         with tempfile.TemporaryDirectory() as out:

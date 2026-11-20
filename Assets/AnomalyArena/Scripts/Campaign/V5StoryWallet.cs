@@ -219,7 +219,7 @@ namespace AnomalyArena
             lampCount.color = left > 0 ? V5TitleKit.Gold : V5TitleKit.OrangeHi;
             if (lampKey.text != ArenaKeys.LampKey) lampKey.text = ArenaKeys.LampKey;
             storyLampKey.SetText(ArenaKeys.LampKey);
-            StoryText(storyLampHint, ArenaText.Pair("放下矿灯", "Place a lamp"));
+            StoryText(storyLampHint, ArenaText.Pair("放下矿灯", "Set down a lamp"));
             float height = Sp(LampHeightPx), medal = Sp(LampMedalPx), x = Sp(14f);
             PlaceCentre(storyLampMedal.Rect, new Vector2(0f, .5f), new Vector2(x + medal * .5f, 0f), Vector2.one * medal);
             x += medal + Sp(14f);

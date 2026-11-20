@@ -470,7 +470,7 @@ namespace AnomalyArena
             StoryText(b5When, c.BaseAfterTutorial ? ArenaText.Pair("第 0 天", "DAY 0")
                 : c.BaseAtDawn ? ArenaText.Pair($"第 {c.Day} 晚过后 · 天亮", $"DAWN AFTER NIGHT {c.Day}")
                 : c.BaseFromDusk ? ArenaText.Pair($"第 {c.Day} 天 · 下午", $"DAY {c.Day} · AFTERNOON")
-                : ArenaText.Pair($"第 {c.Day} 天 · 夜里", $"NIGHT {c.Day}"));
+                : ArenaText.Pair($"第 {c.Day} 天 · 夜晚", $"DAY {c.Day} · NIGHT"));
             b5When.color = night ? V5TitleKit.Moon : V5TitleKit.Gold;
             float banner = Bp(B5BannerW), height = Bp(B5BannerH), gap = Bp(B5BannerGap);
             b5Title.fontSize = V5StoryKit.FontSize(50f);

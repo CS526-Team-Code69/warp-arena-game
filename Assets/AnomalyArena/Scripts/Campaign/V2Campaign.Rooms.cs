@@ -164,7 +164,6 @@ namespace AnomalyArena
             if (price == null || !TrySpend(price.Value)) return false;
             researchBought[(int)line]++;
             Bought("research_tier", $"{line} tier {tier + 1}", CampaignRoom.Energy, price.Value);
-            V3WorldAudio.Instance?.Play(ArenaWorldCue.LevelUp, BaseCentre);
             ui.Flash(ArenaText.Pair($"{ResearchName(line)}升到了 {tier + 1} 阶，更稀有的项目已解锁", $"{ResearchName(line)} is now tier {tier + 1}. Rarer items are unlocked."));
             return true;
         }
@@ -199,7 +198,6 @@ namespace AnomalyArena
             gm.progression.ApplyStat(offer);
             statsBought.Add((stat, rarity));
             Bought("constitution", $"{stat} {rarity}", CampaignRoom.Energy, price);
-            V3WorldAudio.Instance?.Play(ArenaWorldCue.LevelUp, BaseCentre);
             ui.Flash(ArenaText.Pair($"体质：{offer.Title}（{ArenaTerms.Rarity(rarity)}）", $"Body: {offer.Title} ({ArenaTerms.Rarity(rarity)})"));
             return true;
         }
@@ -229,11 +227,10 @@ namespace AnomalyArena
             var rarity = ArenaRarity.ForSkill(definition, next);
             if (next > SkillDefinition.MaxLevel || rules.RarityTier(rarity) > tier || !learned && (rules.SkillCategoryTier(definition.category) > tier || skills.OwnedCount >= skills.Slots.Length)) return false;
             var price = new CampaignCost(0, rules.RarityEnergy(rarity));
-            if (!CanAfford(price)) { TrySpend(price); return false; }
+            if (!CanAfford(price)) return false;
             if (!skills.Learn(id, -1, next)) return false;
             TrySpend(price);
             Bought("unlock_skill", $"{id} level {next}", CampaignRoom.Energy, price);
-            V3WorldAudio.Instance?.Play(ArenaWorldCue.LevelUp, BaseCentre);
             ui.Flash(learned ? ArenaText.Pair($"技能：{ArenaTerms.Skill(id)}升到 {next} 级", $"Skill: {ArenaTerms.Skill(id)} is now level {next}")
                 : ArenaText.Pair($"学会了新技能：{ArenaTerms.Skill(id)}", $"New skill learned: {ArenaTerms.Skill(id)}"));
             return true;
@@ -258,7 +255,6 @@ namespace AnomalyArena
             if (!TrySpend(price)) return false;
             weapons.Infuse(weapon, element);
             Bought("weapon_infusion", $"{weapon.form} {element}", CampaignRoom.Energy, price);
-            V3WorldAudio.Instance?.Play(ArenaWorldCue.LevelUp, BaseCentre);
             ui.Flash(ArenaText.Pair($"{weapon.FormName}附上了{ArenaTerms.Element(element)}属性", $"Your {weapon.FormName} is now infused with {ArenaTerms.Element(element)}"));
             return true;
         }
@@ -276,7 +272,6 @@ namespace AnomalyArena
             if (!TrySpend(price)) return false;
             weapon.axes |= axis;
             Bought(axis == UpgradeAxis.Tame ? "weapon_tame" : "weapon_twist", weapon.form.ToString(), CampaignRoom.Armament, price);
-            V3WorldAudio.Instance?.Play(ArenaWorldCue.LevelUp, BaseCentre);
             ui.Flash(ArenaText.Pair($"{weapon.FormName}的{ArenaTerms.Upgrade(axis)}已完成", $"{ArenaTerms.Upgrade(axis)} added to the {weapon.FormName}"));
             return true;
         }
@@ -314,17 +309,16 @@ namespace AnomalyArena
             newWeaponsBought++;
             SyncWeaponMk();
             Bought("new_weapon", $"{form} Mk{weapon.mk} {(auto ? "auto" : "hand")}{(old != null ? ", replaces " + old.form : "")}", CampaignRoom.Armament, price);
-            V3WorldAudio.Instance?.Play(ArenaWorldCue.LevelUp, BaseCentre);
             AnnounceWeapon(weapon, old != null
-                ? ArenaText.Pair($"研究出了新的异常武器：{weapon.FormName}（{weapon.MkLabel}），换下了{old.FormName}", $"New anomaly weapon researched: {weapon.FormName} ({weapon.MkLabel}), in place of the {old.FormName}")
-                : ArenaText.Pair($"研究出了新的异常武器：{weapon.FormName}（{weapon.MkLabel}）", $"New anomaly weapon researched: {weapon.FormName} ({weapon.MkLabel})"));
+                ? ArenaText.Pair($"获得了新的异常武器：{weapon.FormName}（{weapon.MkLabel}），换下了{old.FormName}", $"New anomaly weapon: {weapon.FormName} ({weapon.MkLabel}), in place of the {old.FormName}")
+                : ArenaText.Pair($"获得了新的异常武器：{weapon.FormName}（{weapon.MkLabel}）", $"New anomaly weapon: {weapon.FormName} ({weapon.MkLabel})"));
             return true;
         }
 
         // ───── The final overload (Central Control, last day) ─────
 
-        /// <summary>From CampaignRules.overloadDay with Central Control working, leftover alloy or energy turns into the Tyrant fight's
-        /// opening shield or its extra damage.</summary>
+        /// <summary>From CampaignRules.overloadDay with Central Control working, leftover alloy or alien energy turns into the Final
+        /// Battle's opening shield or its extra damage.</summary>
         public bool OverloadOpen => Running && Day >= rules.overloadDay && ControlWorks && Stage == CampaignStage.Base;
         public int OverloadShieldBuys => overloadShieldBuys;
         public int OverloadDamageBuys => overloadDamageBuys;
@@ -337,9 +331,10 @@ namespace AnomalyArena
             if (!TrySpend(price)) return false;
             bought++;
             Bought("overload", $"{(shield ? "shield" : "damage")} {bought}", CampaignRoom.Control, price);
-            V3WorldAudio.Instance?.Play(ArenaWorldCue.NpcShield, BaseCentre);
-            ui.Flash(shield ? ArenaText.Pair($"决战过载：暴君战开局护盾 +{bought * rules.overloadShieldShare * 100f:0}%", $"Final overload: the Tyrant's fight opens with +{bought * rules.overloadShieldShare * 100f:0}% shield")
-                : ArenaText.Pair($"决战过载：暴君战最终伤害 +{bought * rules.overloadDamageShare * 100f:0}%", $"Final overload: +{bought * rules.overloadDamageShare * 100f:0}% damage in the Tyrant's fight"));
+            // The base's own sounds: an energy shield refilling for the shield, the reactor pushed for the damage.
+            CampaignAudio.Play(shield ? CampaignSfx.ShieldRecharge : CampaignSfx.ShipEngineRepair);
+            ui.Flash(shield ? ArenaText.Pair($"决战过载：最终决战开局护盾 +{bought * rules.overloadShieldShare * 100f:0}%", $"Final overload: the Final Battle opens with +{bought * rules.overloadShieldShare * 100f:0}% shield")
+                : ArenaText.Pair($"决战过载：最终决战伤害 +{bought * rules.overloadDamageShare * 100f:0}%", $"Final overload: +{bought * rules.overloadDamageShare * 100f:0}% damage in the Final Battle"));
             return true;
         }
 

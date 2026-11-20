@@ -12,8 +12,8 @@ namespace AnomalyArena
     /// 2026-11-06) sends the player back to the base door to wait for dawn. The memory, the failed ignition before the Tyrant (the
     /// existing final boss) and the ending that sends the ship home are story cutscenes staged in whitebox (V2Cutscene), played by
     /// PlayCutscene.
-    /// The lines are the drafts of the asset plan's appendix A (to be rewritten); lines without a recording show as subtitles
-    /// only (D9: voice in English, subtitles per edition).
+    /// The lines are full spoken sentences: the base system speaks precisely and without feeling, Felix like a person talking;
+    /// lines without a recording show as subtitles only (D9: voice in English, subtitles per edition).
     /// </summary>
     public sealed partial class V2Campaign
     {
@@ -24,36 +24,36 @@ namespace AnomalyArena
         // Each line is an ArenaText.Pair, read when it is said: the English edition keeps only the English side.
         static (bool system, string text) LineText(Line id) => id switch
         {
-            Line.T01 => (false, ArenaText.Pair("这是哪……先四处看看。", "Where am I... Let me look around first.")),
+            Line.T01 => (false, ArenaText.Pair("这是哪儿……头还晕得厉害。先四处看看，弄清楚自己掉在了什么地方。", "Where am I... My head is still spinning. I'd better look around and work out where I've ended up.")),
             // T02 says to sprint, which Day 0 teaches only after the ore since 2026-11-10: T07 is said there instead. T02 keeps its
             // recording for when the lines are rewritten.
             Line.T02 => (false, ArenaText.Pair("角落里有东西在发光，冲过去看看。", "Something's glowing in that corner. Let me sprint over.")),
-            Line.T07 => (false, ArenaText.Pair("角落里有东西在发光，过去看看。", "Something's glowing in that corner. Let me take a look.")),
-            Line.T08 => (false, ArenaText.Pair("一个武器箱……居然没摔坏。", "A weapon crate... still in one piece.")),
-            Line.T09 => (false, ArenaText.Pair("这东西不属于这里。", "This doesn't belong here.")),
-            Line.D02 => (false, ArenaText.Pair("得去收集些矿物，顺便看看还有没有完好的武器箱。", "I need to gather some ore, and see if any weapon crates survived.")),
+            Line.T07 => (false, ArenaText.Pair("那边的角落里好像有东西在发光，我过去看看是什么。", "Something in that corner over there is glowing. I'll go and see what it is.")),
+            Line.T08 => (false, ArenaText.Pair("是个武器箱，居然没在坠毁时摔坏。打开看看，里面的东西也许还能用。", "It's a weapon crate, and it somehow made it through the crash. Let me open it; whatever's inside might still work.")),
+            Line.T09 => (false, ArenaText.Pair("这块晶体采不下来……它和周围的东西完全不一样，好像根本不属于这颗星球。", "I can't mine this crystal... It's nothing like anything else around here, as if it doesn't belong on this planet at all.")),
+            Line.D02 => (false, ArenaText.Pair("趁天还亮，我得多收集些矿物，顺便找找附近还有没有完好的武器箱。", "While it is still light, I should gather more ore and check whether any other weapon crates survived the crash.")),
             // After the first weapon is taken from a crate (2026-11-10): only then does the game say the weapons here have changed.
-            Line.T10 => (false, ArenaText.Pair("这把武器已经不是原来的样子了，应该是被异星能量改变的。用的时候我得多加留意。", "This weapon isn't what it was. The alien energy must have changed it. I'd better watch how I use it.")),
-            Line.T03 => (false, ArenaText.Pair("这块矿石……对修复飞船有大用。", "This ore... it'll go a long way toward fixing the ship.")),
-            Line.T04 => (false, ArenaText.Pair("有东西过来了，先解决它们。", "Something's coming. Deal with them first.")),
-            Line.T05 => (false, ArenaText.Pair("这东西以后应该能帮我活下去，带回基地研究一下。", "This should help me survive later. I'll take it back to base and study it.")),
-            Line.T06 => (false, ArenaText.Pair("基地还在运转，先回去。", "The base is still running. Head back.")),
-            Line.M01 => (false, ArenaText.Pair("飞船……烂成这样了。", "The ship... it's wrecked.")),
-            Line.S01 => (true, ArenaText.Pair("基地系统已自动部署。飞船严重受损。修复引擎与装甲，并合成反物质燃料，即可返航。", "Base system deployed automatically. Ship heavily damaged. Repair the engine and armor and synthesize antimatter fuel to return.")),
-            Line.S02 => (true, ArenaText.Pair("夜晚降临。无光区域无法视物，请携带光源行动。", "Night has fallen. Unlit areas are pitch dark. Carry a light source.")),
-            Line.S03 => (true, ArenaText.Pair("警告：该区域影子怪物过多，一处光源已被破坏。", "Warning: too many shadows in this area. A light source was destroyed.")),
-            Line.S04 => (true, ArenaText.Pair("基地外壁受损，{0}已停用，请在夜间修复。", "Hull damaged. {0} is offline. Repair it at night.")),
-            Line.S05 => (true, ArenaText.Pair("功能区修复完成。", "Room repaired.")),
-            Line.S06 => (true, ArenaText.Pair("基地护盾已恢复。", "Base shield restored.")),
-            Line.S07 => (true, ArenaText.Pair("天亮了。敌人来袭，守住基地。", "Daybreak. Enemies incoming. Defend the base.")),
-            Line.S08 => (true, ArenaText.Pair("飞船引擎修复完成。", "Ship engine repaired.")),
-            Line.S09 => (true, ArenaText.Pair("飞船装甲修复完成。", "Ship armor repaired.")),
+            Line.T10 => (false, ArenaText.Pair("这把武器已经不是原来的样子了，应该是被异星能量改变的。用的时候我得多加留意。", "This weapon isn't what it used to be. The alien energy must have changed it somehow, so I'd better be careful how I use it.")),
+            Line.T03 => (false, ArenaText.Pair("这块矿石很特别，拿来修飞船应该能派上大用场。", "There's something unusual about this ore. It should go a long way toward repairing the ship.")),
+            Line.T04 => (false, ArenaText.Pair("有东西朝我这边过来了，看样子来者不善，先把它们解决掉再说。", "Something's coming my way, and it doesn't look friendly. I'll deal with them first.")),
+            Line.T05 => (false, ArenaText.Pair("这块碎片里好像蕴含着某种能量，说不定以后能帮我活下去。先带回基地，让系统研究一下。", "There's some kind of energy in this shard. It might help me stay alive later on, so I'll take it back to the base and have the system study it.")),
+            Line.T06 => (false, ArenaText.Pair("基地好像还在运转。先回去看看，说不定那里有修飞船的办法。", "The base still seems to be running. I'll head back and see whether it can help me fix the ship.")),
+            Line.M01 => (false, ArenaText.Pair("飞船摔成了这个样子……想靠它回家，得花不少功夫来修。", "Look at the state of the ship... If I'm going to get home in it, it's going to take a lot of work.")),
+            Line.S01 => (true, ArenaText.Pair("基地系统已经部署完毕。飞船在坠毁中严重受损，要返回地球，需要先修复引擎和装甲，再合成足够的反物质燃料。", "The base system has finished deploying. The ship was badly damaged in the crash. To return to Earth, you must repair the engine and the armor, and then synthesize enough antimatter fuel.")),
+            Line.S02 => (true, ArenaText.Pair("夜晚已经降临。只有灯光照到的地方才看得见，外出时请随身携带光源。", "Night has fallen. You can only see where there is light, so carry a light source with you whenever you go out.")),
+            Line.S03 => (true, ArenaText.Pair("警告。这一带聚集的影子怪物太多，已经有一处光源被它们破坏了。", "Warning. Too many shadow monsters have gathered in this area, and they have destroyed one of your light sources.")),
+            Line.S04 => (true, ArenaText.Pair("警告。基地受损，{0}已经停止运转，请在夜间回到基地修复。", "Warning. The base's outer wall is damaged, and {0} has gone offline. Repairs can be carried out at night.")),
+            Line.S05 => (true, ArenaText.Pair("受损的功能区已经修复完毕，恢复正常运转。", "The damaged room has been repaired and is running normally again.")),
+            Line.S06 => (true, ArenaText.Pair("基地护盾已经完全恢复，可以再次抵挡攻击。", "The base shield has been restored to full strength and can absorb attacks again.")),
+            Line.S07 => (true, ArenaText.Pair("天已经亮了。检测到敌人正在逼近基地，请做好准备，守住基地。", "Day has broken. Enemies have been detected approaching the base. Prepare to defend it.")),
+            Line.S08 => (true, ArenaText.Pair("飞船引擎已经修复完毕，距离返航又近了一步。", "Repair of the ship's engine is complete. The ship is one step closer to being able to return.")),
+            Line.S09 => (true, ArenaText.Pair("飞船装甲已经修复完毕，距离返航又近了一步。", "Repair of the ship's armor is complete. The ship is one step closer to being able to return.")),
             // S10, F01 to F05, E01 to E03 and C01 to C09 are the story cutscenes' earlier lines: kept with their recordings, no longer said.
             Line.S10 => (true, ArenaText.Pair("反物质燃料已满。启动点火程序。", "Antimatter fuel full. Starting ignition sequence.")),
             Line.F01 => (true, ArenaText.Pair("点火失败。燃料无法激活。", "Ignition failed. Fuel cannot be activated.")),
             Line.F02 => (true, ArenaText.Pair("缺少暗物质核心。", "Dark matter core missing.")),
             Line.F03 => (false, ArenaText.Pair("那是……什么东西？", "What... is that?")),
-            Line.E00 => (false, ArenaText.Pair("它身上掉出来的……这就是暗物质核心？", "What fell out of it... is that the dark matter core?")),
+            Line.E00 => (false, ArenaText.Pair("这是从它身上掉出来的……这就是系统说的暗物质核心吧？有了它，飞船应该就能点火了。", "This fell out of it... It must be the dark matter core the system talked about. With this, the ship should finally be able to ignite.")),
             Line.E01 => (true, ArenaText.Pair("暗物质核心已安装。点火程序启动。", "Dark matter core installed. Ignition sequence started.")),
             Line.E02 => (true, ArenaText.Pair("跃迁坐标锁定：地球。", "Jump coordinates locked: Earth.")),
             Line.E03 => (false, ArenaText.Pair("该回家了。", "Time to go home.")),
@@ -69,39 +69,39 @@ namespace AnomalyArena
             Line.F04 => (true, ArenaText.Pair("警告：暗物质能量波动正在扩散。", "Warning: dark matter energy surge spreading.")),
             Line.F05 => (false, ArenaText.Pair("点火程序完成不了……它需要一股极其庞大的能量来驱动。", "The ignition can't finish... it needs an enormous source of energy.")),
             // The story cutscenes (V2Cutscene). The memory: Felix gives the base system his survivor's record.
-            Line.C10 => (true, ArenaText.Pair("请开始口述你的幸存者记录。", "Please begin your survivor's record.")),
-            Line.C11 => (false, ArenaText.Pair("我叫 Felix，是一名星际战士。", "I'm Felix, an interstellar soldier.")),
-            Line.C12 => (false, ArenaText.Pair("事情要从异星入侵说起。", "It began when the aliens invaded.")),
-            Line.C13 => (false, ArenaText.Pair("人类开始大征兵，能上战场的人都被征走了，我们被送往银河系参战。", "Humanity called up everyone who could fight, and sent us to war across the galaxy.")),
-            Line.C14 => (false, ArenaText.Pair("舰队在虫洞里跃迁到一半，撞上了异星乱流。", "My fleet was halfway through a wormhole jump when alien turbulence hit us.")),
-            Line.C15 => (false, ArenaText.Pair("我们掉在了这颗星球上。", "We came down on this planet.")),
-            Line.C16 => (false, ArenaText.Pair("飞船摔烂了，部队里的其他人，我一个也没找到。", "The ship is wrecked, and I can't find the rest of my unit.")),
-            Line.C17 => (true, ArenaText.Pair("飞船为了保护自己，自动把我这套基地系统部署了出来。", "The ship deployed me on its own, to protect itself.")),
-            Line.C18 => (true, ArenaText.Pair("这艘飞船在设计时，就为这类事故准备了我。我该通知你的哪位亲属？", "I was built into this ship for accidents like this one. Who should I notify?")),
-            Line.C19 => (false, ArenaText.Pair("我外婆。我是她带大的。", "My grandmother. She raised me.")),
-            Line.C20 => (false, ArenaText.Pair("不，什么都别发给她。我要自己回去告诉她。", "No. Don't send her anything. I'll tell her myself.")),
-            Line.C21 => (true, ArenaText.Pair("那我就什么都不发。我会帮你离开这里。", "Then I will send nothing. I will help you leave this place.")),
+            Line.C10 => (true, ArenaText.Pair("幸存者记录已经开始录制。请先说出你的姓名和身份，再讲你是怎么来到这颗星球的。", "I have started recording your survivor's record. Please state your name and your role first, and then tell me how you came to be on this planet.")),
+            Line.C11 => (false, ArenaText.Pair("我叫 Felix，是一名星际战士。我尽量把事情讲清楚，不过有些事，我自己到现在也没想明白。", "My name is Felix, and I'm an interstellar soldier. I'll tell it as clearly as I can, though there are parts I still haven't made sense of myself.")),
+            Line.C12 => (false, ArenaText.Pair("这一切，要从异星人入侵的那天说起。在那之前，我从没想过自己有一天会离开地球。", "It all started on the day the aliens invaded. Before that, I never imagined I would one day leave Earth.")),
+            Line.C13 => (false, ArenaText.Pair("为了反击，人类开始大规模征兵，只要拿得动枪的人都被征走了。我跟着成千上万的新兵上了舰队，被派往银河系的各个战场。", "To fight back, humanity called up anyone who could hold a rifle. I boarded the fleet with thousands of other new recruits, and we were sent to battlefields all across the galaxy.")),
+            Line.C14 => (false, ArenaText.Pair("舰队在虫洞里跃迁到一半，突然撞上了一股异星乱流。整艘船都在剧烈摇晃，我只记得警报响个不停。", "Our fleet was halfway through a wormhole jump when we ran into alien turbulence. The whole ship was shaking violently, and all I remember is the alarms that would not stop.")),
+            Line.C15 => (false, ArenaText.Pair("等我反应过来，飞船已经彻底失控，一头朝这颗星球栽了下去。", "By the time I understood what was happening, the ship was completely out of control and plunging toward this planet.")),
+            Line.C16 => (false, ArenaText.Pair("醒来的时候，飞船已经摔得不成样子。我在残骸附近找了很久，部队里的其他人，一个也没有找到。", "When I came to, the ship was a wreck. I searched around it for a long time, but I couldn't find a single person from my unit.")),
+            Line.C17 => (true, ArenaText.Pair("补充记录：坠毁之后，飞船为了保护自身，自动部署了基地系统，也就是我。", "Addendum to the record. After the crash, the ship deployed its base system automatically to protect itself. That base system is me.")),
+            Line.C18 => (true, ArenaText.Pair("这艘飞船在设计时，就为这类事故准备了我。按照规程，我需要通知你的亲属。请告诉我，应该通知谁？", "This ship was designed with me aboard for accidents of exactly this kind. Procedure requires me to notify your next of kin. Please tell me whom I should notify.")),
+            Line.C19 => (false, ArenaText.Pair("我外婆。我是她带大的，入伍那天，也是她站在家门口送我走的。", "My grandmother. She's the one who raised me, and on the day I shipped out, she stood at our front door to see me off.")),
+            Line.C20 => (false, ArenaText.Pair("不，还是什么都别发给她。她年纪大了，受不了这种消息。等我回去，我要当面告诉她。", "No, don't send her anything. She's old, and news like that would be too much for her. When I get back, I want to tell her myself, face to face.")),
+            Line.C21 => (true, ArenaText.Pair("明白，我不会发送任何通知。从现在起，我的首要任务是协助你离开这颗星球。", "Understood. I will not send any notification. From now on, my primary task is to help you leave this planet.")),
             // The failed ignition.
-            Line.F06 => (false, ArenaText.Pair("燃料加满了。带我们回家。", "The tank is full. Take us home.")),
-            Line.F07 => (true, ArenaText.Pair("现在启动点火程序。", "I am starting the ignition sequence.")),
-            Line.F08 => (false, ArenaText.Pair("燃料没有问题。点火程序走不完，它还缺一股极其庞大的能量来驱动。", "The fuel is fine. The sequence can't finish without an enormous source of energy.")),
-            Line.F09 => (true, ArenaText.Pair("警告：点火失败时，一股暗物质能量波扩散了出去。", "Warning. The failed ignition released a wave of dark matter energy.")),
-            Line.F10 => (true, ArenaText.Pair("有东西被这股能量引过来了。", "Something is coming for it.")),
-            Line.F11 => (true, ArenaText.Pair("它体内有一颗暗物质核心。我们缺的能量，全在那里面。", "It carries a dark matter core. That is all the energy we need.")),
-            Line.F12 => (false, ArenaText.Pair("那我就去把它拿过来。", "Then I'll go and get it.")),
+            Line.F06 => (false, ArenaText.Pair("反物质燃料终于加满了，这一天我等了很久。启动吧，带我们回家。", "The antimatter tank is finally full. I've been waiting a long time for this. Start it up and take us home.")),
+            Line.F07 => (true, ArenaText.Pair("收到。燃料储量已满，现在开始执行点火程序。", "Acknowledged. The fuel tank is full. Beginning the ignition sequence now.")),
+            Line.F08 => (false, ArenaText.Pair("燃料一点问题都没有，卡住的是点火程序。它停在最后一步，好像还缺一股极其庞大的能量来推动。", "There's nothing wrong with the fuel. It's the ignition sequence that's stuck. It stops at the last step, as if it still needs an enormous surge of energy to push it through.")),
+            Line.F09 => (true, ArenaText.Pair("警告。点火失败时释放出了一股暗物质能量波，正在向四周扩散，可能会引来附近的异星生物。", "Warning. The failed ignition released a wave of dark matter energy. It is spreading outward and may attract alien life nearby.")),
+            Line.F10 => (true, ArenaText.Pair("确认：有一个大型目标被这股能量吸引，正在朝基地移动。", "Confirmed. A large creature has been drawn by the energy and is moving toward the base.")),
+            Line.F11 => (true, ArenaText.Pair("扫描完成。目标体内有一颗暗物质核心，点火程序缺少的能量，全都可以从那颗核心里取得。", "Scan complete. The creature carries a dark matter core. All the energy the ignition sequence is missing can be taken from that core.")),
+            Line.F12 => (false, ArenaText.Pair("那就没什么好犹豫的了。我去把那颗核心拿回来。", "Then there's nothing left to decide. I'll go and take that core.")),
             // The ending.
-            Line.E04 => (false, ArenaText.Pair("装好了。再试一次。", "There. Try it now.")),
-            Line.E05 => (true, ArenaText.Pair("核心已经就位。现在启动点火程序。", "The core is in place. I am starting the ignition sequence.")),
-            Line.E06 => (false, ArenaText.Pair("部队里的其他人，我始终没有找到。回去以后，我会让人回来接着找。", "I never found the others. I'll make sure someone comes back to look.")),
-            Line.E07 => (true, ArenaText.Pair("跃迁坐标已经锁定地球。要关闭幸存者记录吗？", "The jump coordinates are locked on Earth. Shall I close the record?")),
-            Line.E08 => (false, ArenaText.Pair("关吧。我说过，要自己回去告诉她。", "Close it. I said I'd tell her myself.")),
-            // Since 2026-11-06 the screen calls this stage the afternoon; the English line stays as recorded.
-            Line.D01 => (true, ArenaText.Pair("下午了。异星力量会在夜里增强怪物，趁天还没黑，尽量补充物资。", "Dusk. Alien power strengthens the monsters at night. Gather what you can before dark.")),
-            Line.K01 => (true, ArenaText.Pair("生命体征消失。已将你带回基地，今晚的收获全部遗失。", "Vital signs lost. You have been brought back to the base. Tonight's haul is lost.")),
-            Line.N01 => (true, ArenaText.Pair($"按 {ArenaKeys.LampKey} 放下一盏矿灯，只有在灯光里才能采集。", $"Press {ArenaKeys.LampKey} to set down a mining lamp. You can only mine in its light.")),
-            Line.N02 => (true, ArenaText.Pair($"暗物质只在夜里出现。站在灯光里按住 {ArenaKeys.InteractKey} 采集。", $"Dark matter only shows at night. Hold {ArenaKeys.InteractKey} in the lamp light to mine it.")),
-            Line.N03 => (true, ArenaText.Pair("影子怪物怕光。上午杀敌越多的地方，夜里影子越多。回基地门口按 " + ArenaKeys.InteractKey + "，选择等待天亮。", "Shadows fear the light. Where you killed the most by day, more shadows walk at night. Press " + ArenaKeys.InteractKey + " at the base door to wait for dawn.")),
-            Line.B01 => (true, ArenaText.Pair("基地储备已开放。用合金和能量建造武装区与能量研究区。", "Base reserves released. Build the Armament Bay and the Energy Lab with alloy and energy.")),
+            Line.E04 => (false, ArenaText.Pair("核心已经装上了。再试一次吧，这回应该能行。", "The core is in. Try it again; this time it should work.")),
+            Line.E05 => (true, ArenaText.Pair("暗物质核心已经就位，能量读数正常。现在重新执行点火程序。", "The dark matter core is in place, and the energy readings are normal. Running the ignition sequence again now.")),
+            Line.E06 => (false, ArenaText.Pair("部队里的其他人，我到最后也没能找到。等回到地球，我一定会让人回来接着找他们。", "I never did find the rest of my unit. Once I'm back on Earth, I'll make sure someone comes back here to keep looking for them.")),
+            Line.E07 => (true, ArenaText.Pair("跃迁坐标已锁定地球。幸存者记录仍在录制，请确认是否现在关闭。", "The jump coordinates are locked on Earth. The survivor's record is still open. Please confirm whether I should close it now.")),
+            Line.E08 => (false, ArenaText.Pair("关掉吧，剩下的不用再记了。我说过，我要亲自回去告诉她。", "Close it. The rest doesn't need to be recorded. I told you I'd go back and tell her myself.")),
+            // The screen calls this stage the afternoon, and so does the line.
+            Line.D01 => (true, ArenaText.Pair("现在是下午。入夜以后，异星力量会让怪物变得更强，建议趁天黑之前尽量补充物资。", "It is now afternoon. After nightfall, alien power makes the monsters stronger. I recommend gathering as many supplies as you can before dark.")),
+            Line.K01 => (true, ArenaText.Pair("检测到你的生命体征消失，我已将你带回基地。你今晚收集的物资已经全部遗失。", "Your vital signs were lost, so I have brought you back to the base. Everything you collected tonight has been lost.")),
+            Line.N01 => (true, ArenaText.Pair($"按 {ArenaKeys.LampKey} 放下一盏矿灯。只有在灯光照到的范围内才能采集，所以请先把灯放在矿点旁边。", $"Press {ArenaKeys.LampKey} to set down a mining lamp. You can only mine inside its light, so place it next to the deposit first.")),
+            Line.N02 => (true, ArenaText.Pair($"暗物质只会在夜里出现。站在灯光照亮的范围内，按住 {ArenaKeys.InteractKey} 就能采集。", $"Dark matter only appears at night. Stand inside the lamp light and hold {ArenaKeys.InteractKey} to mine it.")),
+            Line.N03 => (true, ArenaText.Pair($"影子怪物害怕光亮。上午杀敌越多的地方，夜里聚集的影子也会越多。采集完毕后，请回到基地门口按 {ArenaKeys.InteractKey}，选择等待天亮。", $"Shadow monsters are afraid of light. The more enemies you kill in a place during the morning, the more shadows gather there at night. When you have finished mining, return to the base door and press {ArenaKeys.InteractKey} to wait for dawn.")),
+            Line.B01 => (true, ArenaText.Pair("基地的储备物资已经开放。你可以用合金和异星能量建造武装区与能量研究区，扩充基地的功能。", "The base reserves are now open to you. Use alloy and energy to build the Armament Bay and the Energy Lab and extend what the base can do.")),
             _ => (false, "")
         };
 
@@ -162,7 +162,7 @@ namespace AnomalyArena
 
         AudioClip VoiceClip(Line id, CampaignRoom? room = null)
         {
-            if (!art) return null;
+            if (!art || !RecordedKeysHeld(id)) return null;
             if (id == Line.S04 && room.HasValue)
             {
                 var takes = art.roomOfflineVoices;
@@ -178,6 +178,17 @@ namespace AnomalyArena
             }
             return voiceClips.TryGetValue(id.ToString(), out var clip) ? clip : null;
         }
+
+        /// <summary>N01 to N03 were recorded naming the default keys, F for the lamp and E to use. Once the player has moved that key in the
+        /// settings the line shows as a subtitle only, which names the key in use, so the voice never names a key that does nothing.</summary>
+        static bool RecordedKeysHeld(Line id) => id switch
+        {
+            Line.N01 => AtDefaultKey(GameAction.Lamp),
+            Line.N02 or Line.N03 => AtDefaultKey(GameAction.Interact),
+            _ => true
+        };
+
+        static bool AtDefaultKey(GameAction action) => ArenaKeys.KeyNameOf(action) == ArenaKeys.DefaultKeyNameOf(action);
 
         /// <summary>How long a scripted moment waits after a line: its recording's length when it has one, at least the planned time.</summary>
         float LineSeconds(Line id, float planned)
@@ -467,12 +478,11 @@ namespace AnomalyArena
             if (!CanIgnite) return;
             ui.HideBase();
             baseVisitFrom = CampaignStage.Off;
-            nightWhispers = false;
             StartCoroutine(IgnitionSequence());
         }
 
         /// <summary>The failed ignition (V2Cutscene.Ignition) while the run stands still with the player at the base door in daylight;
-        /// after it the Tyrant fight starts there.</summary>
+        /// after it the final battle's save is written and the Tyrant fight starts there.</summary>
         IEnumerator IgnitionSequence()
         {
             Stage = CampaignStage.Story;
@@ -483,6 +493,7 @@ namespace AnomalyArena
             PlacePlayer(DoorPoint);
             gm.CampaignSetPhase(ArenaUiState.Story);
             yield return PlayCutscene(V2Cutscene.Ignition);
+            SaveStoryPhase(SavePhase.Tyrant); // the final battle's save, before the fight begins (V2Campaign.Save.cs)
             Stage = CampaignStage.FinalBoss;
             gm.CampaignFinalBoss();
         }

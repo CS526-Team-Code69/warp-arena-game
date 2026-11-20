@@ -43,6 +43,9 @@ namespace AnomalyArena
         const float OctagonSize = 50f, OctagonRight = 12f, OctagonTop = 10f, OctagonRim = 2.5f, OctagonIcon = .78f, SkillChipTop = 43f, SkillChipH = 18f;
         const string Separator = " · ";
         static readonly Color Unready = new(.48f, .55f, .63f);
+        // The player's own weapon cost them HP: its slot flashes red over the plate, under the name and the words, and fades out.
+        const float HurtSeconds = .4f, HurtPeak = .55f;
+        static readonly Color HurtRed = new(1f, .16f, .14f);
         static readonly Regex LevelPart = new(@"^(?:等级|Lv)\s*(\d+)$");
         static readonly Regex MkPart = new(@"^Mk\s*(\d+)$");
 
@@ -57,6 +60,9 @@ namespace AnomalyArena
         V5HudKey key;
         Text keyWord, chipText;
         V5HudMedal medal;
+        Image hurt;
+        int seenSelfHits;
+        float hurtAt = -1f, hurtAlpha = -1f;
         ArenaUiSlot model;
         V2ArtSet art;
         readonly List<(string text, int weight)> words = new();
@@ -111,6 +117,10 @@ namespace AnomalyArena
             plate = V5HudKit.Plate(transform, "V5Plate", V5HudKit.PlateLook.Plain, CutPx, Css);
             V5TitleKit.Stretch(plate.Rect);
             plate.transform.SetAsFirstSibling();
+            hurt = V5TitleKit.Picture(transform, "V5Hurt", null, Color.clear);
+            V5TitleKit.Stretch(hurt.rectTransform);
+            hurt.transform.SetSiblingIndex(1);
+            hurt.enabled = false;
             // The saved key line keeps the words V2SlotFeedback writes (the tests read them); the keycap row below says it now.
             if (transform.Find("SlotKey") is { } savedKey && savedKey.TryGetComponent<Text>(out var savedWords))
             {
@@ -241,6 +251,8 @@ namespace AnomalyArena
         public void Render(ArenaUiSlot value, V2ArtSet set)
         {
             if (value == null || !plate) return;
+            // A slot bound to a new model starts from its count: only a self-hit from now on flashes.
+            if (!ReferenceEquals(model, value)) seenSelfHits = value.selfHits;
             model = value;
             art = set;
             bool empty = value.formIndex < 0 && value.skillIndex < 0;
@@ -510,9 +522,38 @@ namespace AnomalyArena
             }
         }
 
+        /// <summary>The red flash when this slot's weapon cost the player HP (the model's selfHits moved, written the moment it happened):
+        /// every frame, so it starts with the hit and not at the HUD's next refresh.</summary>
+        protected override void LateUpdate()
+        {
+            base.LateUpdate();
+            if (!hurt || model == null) return;
+            if (model.selfHits != seenSelfHits)
+            {
+                if (model.selfHits > seenSelfHits) hurtAt = Time.unscaledTime;
+                seenSelfHits = model.selfHits;
+            }
+            float t = hurtAt < 0f ? 1f : (Time.unscaledTime - hurtAt) / HurtSeconds;
+            float alpha = t >= 1f ? 0f : HurtPeak * (1f - t) * (1f - t);
+            if (Mathf.Approximately(alpha, hurtAlpha)) return;
+            hurtAlpha = alpha;
+            hurt.color = new Color(HurtRed.r, HurtRed.g, HurtRed.b, alpha);
+            hurt.enabled = alpha > 0f;
+        }
+
+        /// <summary>Whether the red self-hit flash is showing now (tests).</summary>
+        public bool HurtFlashing => hurt && hurt.enabled;
+
         protected override void Dress(bool artOn)
         {
             if (!plate) return;
+            // The red flash takes the plate's corner cut with the art on; the whitebox plate is a plain box.
+            if (hurt)
+            {
+                var red = new Color(HurtRed.r, HurtRed.g, HurtRed.b, Mathf.Max(0f, hurtAlpha));
+                if (artOn) V5TitleKit.Dress(hurt, V5TitleKit.Chamfer, red, V5HudKit.ChamferDensity(CutPx, Css));
+                else V5TitleKit.Dress(hurt, null, red);
+            }
             if (tab) V5TitleKit.Dress(tab, artOn ? V5TitleKit.Piece("hazard-tab") : null, artOn ? Color.white : V5TitleKit.Orange);
             if (octagonRim) octagonRim.color = artOn ? V5BattleKit.OctagonRim : WhiteboxSkin.Edge;
             if (octagonHole) octagonHole.color = artOn ? V5BattleKit.OctagonFill : WhiteboxSkin.PlateFill;

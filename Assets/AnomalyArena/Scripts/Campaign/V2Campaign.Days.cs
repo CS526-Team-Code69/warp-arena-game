@@ -181,8 +181,8 @@ namespace AnomalyArena
             return new StatCardOffer(row.stat, rarity, CampaignRules.StatLineStep(row.stat, from, row.At(rarity)), row.bonus, row.BonusAt(rarity) - bonusFrom);
         }
 
-        /// <summary>TryBuyStat with stat lines: only the line's next step sells (white first), its rarity needs its body research tier, and
-        /// its value takes the place of the step below.</summary>
+        /// <summary>TryBuyStat with stat lines: only the line's next step sells (Common first), its rarity needs its body research tier, and
+        /// its value takes the place of the step below. No sound of its own: the study window's button gives the purchase its one sound.</summary>
         bool TryBuyStatLine(StatId stat, CardRarity rarity)
         {
             var row = StatRow(stat);
@@ -194,7 +194,6 @@ namespace AnomalyArena
             gm.progression.ApplyStat(StatLineOffer(row, steps));
             statsBought.Add((stat, rarity));
             Bought("constitution", $"{stat} {rarity}", CampaignRoom.Energy, price);
-            V3WorldAudio.Instance?.Play(ArenaWorldCue.LevelUp, BaseCentre);
             var shown = new StatCardOffer(stat, rarity, row.At(rarity));
             ui.Flash(ArenaText.Pair($"体质：{shown.Title}升到了{ArenaTerms.Rarity(rarity)}档", $"Body: {shown.Title} raised to {ArenaTerms.Rarity(rarity)}"));
             return true;
@@ -209,8 +208,10 @@ namespace AnomalyArena
             if (rows == null) return;
             int tier = ResearchTierShown(ResearchLine.Body);
             bool works = Works(CampaignRoom.Energy, 1);
-            string rule = ArenaText.Pair("每项体质都按白、绿、蓝、紫、橙的顺序一档一档地买。买下高一档后，这一项的数值直接换成高一档的，不和低档叠加。买下立刻生效。",
-                "Each stat is bought one step at a time: white, green, blue, purple, then orange. A higher step replaces the value of the one below instead of adding to it. Each purchase takes effect at once.");
+            // The steps by the cards' own rarity names (ArenaTerms.Rarity), as the tiles and the purchase's line name them.
+            string Step(int i) => ArenaTerms.Rarity(CampaignRules.StatLineRarity(i) ?? CardRarity.Common);
+            string rule = ArenaText.Pair($"每项体质都按{Step(0)}、{Step(1)}、{Step(2)}、{Step(3)}、{Step(4)}的顺序一档一档地买。买下高一档后，这一项的数值直接换成高一档的，不和低档叠加。买下立刻生效。",
+                $"Each stat is bought one step at a time: {Step(0)}, {Step(1)}, {Step(2)}, {Step(3)}, then {Step(4)}. A higher step replaces the value of the one below instead of adding to it. Each purchase takes effect at once.");
             foreach (var row in rows)
             {
                 if (row == null || row.retired) continue;
@@ -246,6 +247,31 @@ namespace AnomalyArena
         string TameTwistBonusText(UpgradeAxis axis) => axis == UpgradeAxis.Tame
             ? ArenaText.Pair($"此外，这把武器的攻速 ×{rules.tameAttackSpeed:0.##}。", $"This weapon also attacks {rules.tameAttackSpeed:0.##}× as fast.")
             : ArenaText.Pair($"此外，这把武器的伤害 ×{rules.twistDamage:0.##}。", $"This weapon also deals {rules.twistDamage:0.##}× damage.");
+
+        // ───── The morning's goal from day 2 ─────
+
+        /// <summary>The morning's goal from day 2 (StartNextWave): hold the base, then what the ship still needs before it can fly home (a
+        /// part done drops out of the list), or once all three are done, that the ignition begins after the night of the last planned day
+        /// (after tonight from that day on). The goal plate takes the first sentence as its title and the rest as its body (V5StoryGoal).</summary>
+        string MorningGoal()
+        {
+            int parts = (engineFixed ? 0 : 1) + (armorFixed ? 0 : 1) + (FuelFull ? 0 : 1), listed = 0;
+            string zh = "", en = "";
+            void Add(string zhPart, string enPart)
+            {
+                listed++;
+                zh += (zh.Length > 0 ? "、" : "") + zhPart;
+                en += (en.Length > 0 ? listed == parts ? " and " : ", " : "") + enPart;
+            }
+            if (!engineFixed) Add("修好引擎", "the engine repaired");
+            if (!armorFixed) Add("修好装甲", "the armor repaired");
+            if (!FuelFull) Add($"燃料 {fuel}/{FuelUnits}", $"fuel {fuel}/{FuelUnits}");
+            if (parts > 0) return ArenaText.Pair($"守住基地。回家还差：{zh}。", $"Hold the base. Still needed to fly home: {en}.");
+            return Day >= rules.days
+                ? ArenaText.Pair("守住基地。飞船已经修好，燃料也加满了，今晚过后就开始点火。", "Hold the base. The ship is repaired and fueled, and the ignition begins after tonight.")
+                : ArenaText.Pair($"守住基地。飞船已经修好，燃料也加满了，第 {rules.days} 天的夜晚过后就开始点火。",
+                    $"Hold the base. The ship is repaired and fueled, and the ignition begins after the night of day {rules.days}.");
+        }
 
         // ───── Day 0's gifts ─────
 

@@ -45,8 +45,12 @@ namespace AnomalyArena
                 // Parent warning scale/position/facing is authoritative; normalize only when the shape changes.
                 illustration.transform.localScale = new Vector3(1f / Mathf.Max(.01f, sprite.bounds.size.x), 1f / Mathf.Max(.01f, sprite.bounds.size.y), 1f);
             }
+            // With the art on a boss's warning warms as it goes through its phases: amber, then orange, then red-orange. The Nash
+            // Prophet, a void boss, warns in the void's violet in its second phase.
+            bool prophet = enemy.definition && enemy.definition.kind == EnemyKind.Hollow;
             Color telegraphColor = Art.Enabled ? enemy.IsBoss && enemy.BossPhase == 3 ? new Color(1f, .44f, .22f, .75f)
-                : enemy.IsBoss && enemy.BossPhase == 2 ? new Color(.83f, .57f, 1f, .75f) : new Color(1f, .72f, .36f, .75f) : whiteboxColor;
+                : enemy.IsBoss && enemy.BossPhase == 2 ? prophet ? new Color(.83f, .57f, 1f, .75f) : new Color(1f, .58f, .28f, .75f)
+                : new Color(1f, .72f, .36f, .75f) : whiteboxColor;
             illustration.color = WithWindupAlpha(telegraphColor);
         }
 

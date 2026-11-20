@@ -23,6 +23,15 @@ namespace AnomalyArena
         public static void DiscoverSkill(SkillId id) => Set("skill", (int)id);
         public static void DiscoverEnemy(EnemyKind kind) => Set("enemy", (int)kind);
 
+        /// <summary>A monster of this kind was met (Enemy.Configure): it is recorded as DiscoverEnemy records it, and the answer says whether
+        /// the collection had never met the kind before, so this is the first body of it the profile has seen.</summary>
+        public static bool MeetEnemy(EnemyKind kind)
+        {
+            bool first = !EnemyDiscovered(kind);
+            DiscoverEnemy(kind);
+            return first;
+        }
+
         public static bool WeaponDiscovered(WeaponForm form) => Has("weapon", (int)form) || AnomalyRevealed(form, 0) || AnomalyRevealed(form, 1);
         public static bool AnomalyRevealed(WeaponForm form, int variant) => PlayerPrefs.GetInt("anomaly." + (int)form + "." + variant, 0) != 0;
         public static bool SkillDiscovered(SkillId id) => Has("skill", (int)id);

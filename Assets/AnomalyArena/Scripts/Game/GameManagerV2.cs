@@ -66,6 +66,7 @@ namespace AnomalyArena
             progression.ResetRun();skills.ResetRun();runWeapons.ResetRun();
             progression.HealingRequested+=player.Heal;
             player.DamageTaken+=(info,amount)=>RunAnalytics.PlayerDamaged(this,info,amount);
+            player.DamageTaken+=OnPlayerDamagedForNotice; // the player's own weapon cost them HP: its slot flashes and a notice names it
             progression.StatChanged+=(_,__)=>ApplyStats();
             progression.LevelGained+=level=>hud?.Banner(ArenaText.Pair("升到 "+level+" 级", "LEVEL "+level),ArenaText.Pair($"最大生命 +{progression.LastLevelHpGain:0.#}，最大能量 +{progression.LastLevelEnergyGain:0.#}。", $"Max HP +{progression.LastLevelHpGain:0.#}, Max Energy +{progression.LastLevelEnergyGain:0.#}."));
             runWeapons.Revealed+=w=>hud?.Toast(w.Label,ElementCombat.ColorFor(w.element));
@@ -175,7 +176,7 @@ namespace AnomalyArena
             if(State!=GameState.Playing)return;
             // Resolve both deaths once at frame end; the agreed final-boss double KO is a win.
             if(finalWaveCleared){State=GameState.Won;RunEndedForSaves();RunAnalytics.RunEnded(this,RunPhase==ArenaUiState.Paused?resumePhase:RunPhase);ClearTransients();skills.ClearWaveEffects();SetPhase(ArenaUiState.Result);}
-            else if(!player.IsAlive&&!(CampaignRunning&&campaign.CatchesPlayerDeath())||CampaignRunning&&campaign.BaseDestroyed){LoseCause=player.DeathCause;State=GameState.Lost;RunEndedForSaves();RunAnalytics.RunEnded(this,RunPhase==ArenaUiState.Paused?resumePhase:RunPhase);ClearTransients();skills.ClearWaveEffects();SetPhase(ArenaUiState.Result);}
+            else if(!player.IsAlive&&!(CampaignRunning&&campaign.CatchesPlayerDeath())||CampaignRunning&&campaign.BaseDestroyed){LoseCause=player.DeathCause;NoteDefeat(RunPhase==ArenaUiState.Paused?resumePhase:RunPhase);State=GameState.Lost;RunEndedForSaves();RunAnalytics.RunEnded(this,RunPhase==ArenaUiState.Paused?resumePhase:RunPhase);ClearTransients();skills.ClearWaveEffects();SetPhase(ArenaUiState.Result);}
         }
         void OnV2WaveEnded(int wave)
         {
@@ -311,13 +312,15 @@ namespace AnomalyArena
         void ShowWeaponIntro(RunWeapon weapon,System.Action then)
         {
             if(weapon==null){then?.Invoke();return;}
+            // Read before the reveal records it: a trait the player has never seen holds its card a moment longer.
+            introHold=WeaponCardHold(weapon.IsAnomalous&&!ArenaCodexProgress.AnomalyRevealed(weapon.form,weapon.variant));
             runWeapons.RevealNow(weapon);introWeapon=weapon;afterIntro=then;SetPhase(ArenaUiState.WeaponIntro);
         }
         /// <summary>Marks a taken card so the view plays its flourish; call it before the next screen opens.</summary>
         void NotifyCardPicked(ArenaUiState from,int index,CardRarity rarity){snapshot.cardPickSequence++;snapshot.cardPickState=from;snapshot.cardPickIndex=index;snapshot.cardPickRarity=rarity;}
         void DismissWeaponIntro()
         {
-            if(RunPhase!=ArenaUiState.WeaponIntro)return;
+            if(RunPhase!=ArenaUiState.WeaponIntro||IntroHeld)return;
             var next=afterIntro;afterIntro=null;introWeapon=null;next?.Invoke();
         }
         void FillWeaponIntro()
@@ -327,12 +330,19 @@ namespace AnomalyArena
             // The card opens with its lead (WeaponCardLead), then how the weapon attacks. It has no damage section (hit damage, use
             // interval); the Drain's shield wait is not damage, so it stays and follows the attack's description.
             string lead=WeaponCardLead(w.IsAuto,w.element,CampaignRunning&&w.IsAnomalous,BuildEdition.Current);
-            string trait=w.IsAnomalous?$"\n\n<b><color=#ff8a73>{ArenaText.Pair("特性","Trait")}</color></b>\n{WeaponGuide.Backfire(w.form,w.variant)}":"";
+            // The trait's heading says what kind of cost it is: one that can cost HP, one that only moves the player, or neither.
+            string traitHead=WeaponGuide.HurtsYou(w.form,w.variant)?ArenaText.Pair("特性 · 会伤到你","Trait · can hurt you")
+                :WeaponGuide.MovesYou(w.form,w.variant)?ArenaText.Pair("特性 · 会推动你","Trait · moves you"):ArenaText.Pair("特性","Trait");
+            string trait=w.IsAnomalous?$"\n\n<b><color=#ff8a73>{traitHead}</color></b>\n{WeaponGuide.Backfire(w.form,w.variant)}":"";
             float wait=w.form==WeaponForm.ShieldRing&&w.variant==1?runWeapons.DrainShieldWait(w):0f;
             string drainWait=wait>0f?"\n"+ArenaText.Pair($"连续 {wait:0.#} 秒没受到敌人攻击，就会生成能量盾。",$"The Energy Shield forms after {wait:0.#} s without an enemy hit."):"";
             snapshot.weaponIntroBody=$"{lead}<b><color=#ffd36e>{ArenaText.Pair("攻击方式","How it attacks")}</color></b>\n{WeaponGuide.How(w.form,w.variant)}{drainWait}{trait}";
-            snapshot.weaponIntroHint=ArenaText.Pair("点击任意处、按空格或回车继续","Click anywhere or press Space or Enter to continue");
-            snapshot.weaponIntroContinue=ArenaText.Pair("继续","CONTINUE");
+            // While a new trait's card holds, the button is dim and the line under the card says why nothing closes it yet.
+            bool held=NewTraitHeld;
+            snapshot.weaponIntroHint=held?ArenaText.Pair("这把武器的特性你还没见过，读完再继续。","You have not seen this trait before. Read it, then continue.")
+                :ArenaText.Pair("点击任意处、按空格或回车继续","Click anywhere or press Space or Enter to continue");
+            string continueWord=ArenaText.Pair("继续","CONTINUE");
+            snapshot.weaponIntroContinue=held?$"<color=#f2faff59>{continueWord}</color>":continueWord;
             snapshot.weaponIntroForm=(int)w.form;
         }
         /// <summary>The lines a weapon card opens with, a blank line after them: on the English Alpha, whether the weapon is held or
@@ -346,6 +356,187 @@ namespace AnomalyArena
                 lines.Add($"<color=#9ad8ff>{(auto?ArenaText.Pair("自动武器","Auto weapon"):ArenaText.Pair("手持武器","Hand weapon"))}</color>{ArenaText.Pair("　属性：","   Element: ")}{ArenaTerms.Element(element)}");
             if(anomalyNote)lines.Add($"<color=#c9a6ff>{ArenaText.Pair("异常武器：攻击方式和特性都与众不同，多用几次才能摸清它的脾气。","Anomaly weapon: its attack and trait are out of the ordinary. Use it a few times to get a feel for it.")}</color>");
             return lines.Count>0?string.Join("\n",lines)+"\n\n":"";
+        }
+
+        // ───── A trait never seen before holds its card ─────
+
+        /// <summary>Seconds a weapon card stays before it can be closed: NewTraitCardSeconds when its trait is one the player has never
+        /// seen, so the card is read and not clicked away; every other card keeps the usual input lock (CardLockSeconds).</summary>
+        public const float NewTraitCardSeconds=2f,CardLockSeconds=.4f;
+        /// <summary>Tests: every weapon card keeps the usual lock (the tests' set-up fixture turns this on), as DifficultyScales.Neutral
+        /// does for the difficulty scales.</summary>
+        public static bool ShortWeaponCardHold;
+        public static float WeaponCardHold(bool newTrait)=>newTrait&&!ShortWeaponCardHold?NewTraitCardSeconds:CardLockSeconds;
+        float introHold=CardLockSeconds;
+        bool IntroHeld=>RunPhase==ArenaUiState.WeaponIntro&&Time.unscaledTime-phaseOpenedAt<introHold;
+        /// <summary>The card of a new trait is still holding (not the usual short lock every card has).</summary>
+        public bool NewTraitHeld=>introHold>CardLockSeconds&&IntroHeld;
+
+        // ───── The player's own weapon cost them HP: said at the hit ─────
+
+        /// <summary>The notice names a weapon this many times a run at most (each weapon kind on its own); its slot flashes every time.</summary>
+        public const int SelfHitNoticesPerWeapon=2;
+        public const float SelfHitNoticeSeconds=4.5f;
+        readonly System.Collections.Generic.Dictionary<(WeaponForm form,int variant),int> selfHitNotices=new();
+        (WeaponForm form,int variant) selfHitShownKey;
+        float selfHitShownUntil=-1f;
+        bool selfHitShownWall;
+        // The last damage to the player: whether their own weapon dealt it, and which (null when unknown), for the result screen.
+        bool lastHurtSelf;
+        RunWeapon lastHurtWeapon;
+
+        /// <summary>How many notices this run has shown for a weapon kind (tests).</summary>
+        public int SelfHitNoticesShown(WeaponForm form,int variant)=>selfHitNotices.TryGetValue((form,variant==0?0:1),out int shown)?shown:0;
+
+        /// <summary>Any damage that cost the player HP or Shield. When their own weapon dealt it (a hit or a burn whose dealer is the
+        /// player, or a wall slam their own knock or flight started), the weapon's slot flashes red every time, and the first
+        /// SelfHitNoticesPerWeapon times a run for each weapon a notice names it with one plain line (WeaponGuide.SelfHit). A wall slam the
+        /// same blast's knock ends in a moment later turns the notice shown into the wall's and does not count again.</summary>
+        void OnPlayerDamagedForNotice(DamageInfo info,float amount)
+        {
+            bool self=player&&info.By==player;
+            var weapon=self?SelfHitWeapon(info):null;
+            lastHurtSelf=self;lastHurtWeapon=weapon;
+            if(!self||amount<=0f)return;
+            bool wall=info.source==DamageSource.Wall;
+            NoteSelfHit(weapon);
+            var key=weapon!=null?(weapon.form,weapon.variant==0?0:1):((WeaponForm)(-1),0);
+            float now=Time.unscaledTime;
+            if(now<selfHitShownUntil&&selfHitShownKey==key)
+            {
+                if(wall&&!selfHitShownWall){selfHitShownWall=true;selfHitShownUntil=now+SelfHitNoticeSeconds;ShowSelfHitNotice(weapon,true);}
+                return;
+            }
+            selfHitNotices.TryGetValue(key,out int shown);
+            if(shown>=SelfHitNoticesPerWeapon)return;
+            selfHitNotices[key]=shown+1;
+            selfHitShownKey=key;selfHitShownUntil=now+SelfHitNoticeSeconds;selfHitShownWall=wall;
+            ShowSelfHitNotice(weapon,wall);
+        }
+
+        /// <summary>Which of the player's weapons dealt them this damage: the hit's own weapon, the one whose knock or flight ended in the
+        /// wall (Combatant.LastDamageWeapon), or for a burn or poison tick the one that put the status on them (RunWeapons.SelfStatusWeapon).</summary>
+        RunWeapon SelfHitWeapon(DamageInfo info)
+        {
+            if(info.weapon!=null)return info.weapon;
+            if(player.LastDamageWeapon!=null)return player.LastDamageWeapon;
+            bool dot=info.source is DamageSource.Burn or DamageSource.Poison;
+            return dot&&runWeapons?runWeapons.SelfStatusWeapon:null;
+        }
+
+        /// <summary>The slot holding this weapon flashes red (ArenaUiSlot.selfHits, read by the dock's slot every frame).</summary>
+        void NoteSelfHit(RunWeapon weapon)
+        {
+            if(!runWeapons||weapon==null)return;
+            for(int i=0;i<runWeapons.Hand.Length&&i<snapshot.handSlots.Length;i++)if(runWeapons.Hand[i]==weapon)snapshot.handSlots[i].selfHits++;
+            for(int i=0;i<runWeapons.Auto.Length&&i<snapshot.autoSlots.Length;i++)if(runWeapons.Auto[i]==weapon)snapshot.autoSlots[i].selfHits++;
+        }
+
+        void ShowSelfHitNotice(RunWeapon weapon,bool wall)
+        {
+            string name=weapon!=null?weapon.FormName:ArenaText.Pair("武器","weapon");
+            string title=wall?ArenaText.Pair($"被自己的{name}推去撞了墙",$"YOUR OWN {name.ToUpperInvariant()} THREW YOU INTO A WALL")
+                :ArenaText.Pair($"被自己的{name}伤到了",$"YOUR OWN {name.ToUpperInvariant()} HIT YOU");
+            hud?.v2Hud?.ShowBanner(title+"\n"+WeaponGuide.SelfHit(weapon?.form,weapon?.variant??0,wall),SelfHitNoticeSeconds);
+        }
+
+        // ───── What ended the run: the result screen's first line ─────
+
+        string defeatCause="";
+        EnemyKind? defeatEnemy;
+        DamageSource defeatSource;
+        RunWeapon defeatWeapon;
+        bool defeatBase;
+
+        /// <summary>Keeps what ended a lost run at the moment it ends, in RunAnalytics' causes (the same the run_end row sends).</summary>
+        void NoteDefeat(ArenaUiState phase)
+        {
+            var by=player.LastDamagedBy;var enemy=by as Enemy;bool known=enemy&&enemy.definition;
+            defeatEnemy=known?enemy.definition.kind:(EnemyKind?)null;
+            defeatSource=player.LastDamageSource;
+            defeatCause=RunAnalytics.DefeatCause(phase,player.DeathCause,defeatSource,by&&by==player,defeatEnemy,known&&enemy.Elite).cause;
+            defeatWeapon=lastHurtSelf?lastHurtWeapon:null;
+            defeatBase=CampaignRunning&&campaign.BaseDestroyed;
+        }
+
+        /// <summary>The result screen's first line for a lost run, in both modes: what ended it and, where the player can learn from it,
+        /// how to keep clear of it. Empty for a won run and for a cause the game cannot name.</summary>
+        public string ResultCauseLine()=>State==GameState.Lost
+            ?ResultCauseLine(defeatCause,defeatEnemy,defeatSource,defeatWeapon?.form,defeatWeapon?.variant??0,defeatSource==DamageSource.Wall,defeatBase):"";
+
+        /// <summary>The line for one cause, by RunAnalytics.DefeatCause's names: the base, the Void Trial, the black hole, the player's own
+        /// weapon (a wall slam it started included), a wall slam an enemy started, an enemy's burn or poison, the Tyrant King, any other
+        /// enemy (with the collection's note on it).</summary>
+        public static string ResultCauseLine(string cause,EnemyKind? enemy,DamageSource source,WeaponForm? weapon,int variant,bool wall,bool baseDestroyed)
+        {
+            string gap=ArenaText.Pair("", " ");
+            if(baseDestroyed)return ArenaText.Pair("怪物拆毁了基地。上午要先清掉正在攻击基地的怪物。","The monsters tore the base down. In the morning, clear the ones attacking the base first.");
+            switch(cause)
+            {
+                case "void_trial":return ArenaText.Pair("你倒在了虚空试炼里。","You fell in the Void Trial.");
+                case "black_hole":
+                {
+                    string key=ArenaKeys.SprintKey;
+                    return ArenaText.Pair($"你掉进了黑洞。它的引力比走路快，被拉住时要按住 {key} 朝外冲刺。",$"You fell into the black hole. Its pull is faster than your walk; when it catches you, hold {key} and sprint outward.");
+                }
+                case "backfire":
+                {
+                    string name=weapon.HasValue?ArenaTerms.WeaponForm(weapon.Value):ArenaText.Pair("武器","weapon");
+                    string what=wall?ArenaText.Pair($"这一局结束于撞墙：你自己的{name}把你推到了墙上。",$"A wall ended this run: your own {name} threw you into it.")
+                        :ArenaText.Pair($"这一局结束于你自己的{name}。",$"Your own {name} ended this run.");
+                    return what+gap+WeaponGuide.SelfHit(weapon,variant,wall);
+                }
+                case "wall_slam":
+                    return enemy.HasValue?ArenaText.Pair($"这一局结束于撞墙：{MonsterName(enemy.Value)}把你撞到了墙上。",$"A wall ended this run: {AMonster(enemy.Value)} knocked you into it.")
+                        :ArenaText.Pair("这一局结束于撞墙。","A wall ended this run.");
+                case "status":
+                {
+                    string status=source==DamageSource.Burn?ArenaText.Pair("燃烧","burn"):ArenaText.Pair("中毒","poison");
+                    return enemy.HasValue?ArenaText.Pair($"这一局结束于{MonsterName(enemy.Value)}留在你身上的{status}。",$"The {status} {AMonster(enemy.Value)} left on you ended this run.")
+                        :ArenaText.Pair($"这一局结束于你身上的{status}。",$"The {status} on you ended this run.");
+                }
+                case "tyrant":return ArenaText.Pair("暴虐君王结束了这一局。","The Tyrant King ended this run.");
+                case "enemy" when enemy.HasValue:
+                {
+                    string note=ArenaCodex.MonsterNote(enemy.Value);
+                    string what=ArenaText.Pair($"这一局结束在{MonsterName(enemy.Value)}手里。",$"{Capital(AMonster(enemy.Value))} ended this run.");
+                    return string.IsNullOrEmpty(note)?what:what+gap+note;
+                }
+                default:return "";
+            }
+        }
+
+        /// <summary>A monster's name as the collection gives it; the two bosses by their titles.</summary>
+        static string MonsterName(EnemyKind kind)=>kind switch
+        {
+            EnemyKind.Tyrant=>ArenaText.Pair("暴虐君王","The Tyrant King"),
+            EnemyKind.Hollow=>ArenaText.Pair("纳什先知","The Nash Prophet"),
+            _=>ArenaText.Text("enemy."+kind),
+        };
+
+        /// <summary>The name inside an English sentence, with its article ("a Grunt", "an ..."); a boss's title and a Chinese name as they are.</summary>
+        static string AMonster(EnemyKind kind)
+        {
+            string name=MonsterName(kind);
+            if(ArenaText.IsChinese||kind is EnemyKind.Tyrant or EnemyKind.Hollow||name.Length==0)return name;
+            return ("AEIOU".IndexOf(char.ToUpperInvariant(name[0]))>=0?"an ":"a ")+name;
+        }
+
+        static string Capital(string text)=>string.IsNullOrEmpty(text)?text:char.ToUpperInvariant(text[0])+text.Substring(1);
+
+        // ───── The black hole's pull: the hint plate names the key that gets the player out ─────
+
+        /// <summary>The player stands in a black hole's pull outside the void trial; exhausted: their stamina is spent, so they walk out first.</summary>
+        bool InHolePull(out bool exhausted)
+        {
+            exhausted=false;
+            var world=WorldMap.Active;
+            if(!world||!player||!player.IsAlive||!CanPlayerMove||RunPhase==ArenaUiState.VoidTrial||world.TrialActive)return false;
+            if(world.GetPull(player.Position,player).sqrMagnitude<.01f)return false;
+            // The story's first pull of a run is taught by its own spotlight with the same key; the plate does not say it twice.
+            if(CampaignRunning&&campaign&&campaign.TeachingHoleEscape)return false;
+            exhausted=player.stamina.Exhausted;
+            return true;
         }
 
         void UpdatePenetrationEligibility()
@@ -481,7 +672,7 @@ namespace AnomalyArena
                     if(known)snapshot.bossImmunities+=(i==0?ArenaText.Pair("暴虐君王免疫：", "Tyrant King immunities: "):" · ")+ArenaTerms.Element(immune);
                 }
                 snapshot.banner=RunPhase==ArenaUiState.WaveIntro?ArenaText.Pair("第 "+snapshot.wave+" 波", "WAVE "+snapshot.wave):"";
-                snapshot.resultTitle=State==GameState.Won?ArenaText.Pair("即将重返地球", "EARTH IS WITHIN REACH"):ArenaText.Pair("探索者陨落", "EXPLORER LOST");snapshot.resultDetails=ArenaText.Pair($"第 {snapshot.wave} 波 · 等级 {snapshot.level} · 消灭 {snapshot.kills} 个敌人\n在星际战场坚持了 {Elapsed:0} 秒", $"Wave {snapshot.wave} · Level {snapshot.level} · {snapshot.kills} kills\nYou held out on the Interstellar Battlefield for {Elapsed:0} seconds");
+                snapshot.resultTitle=State==GameState.Won?ArenaText.Pair("即将重返地球", "EARTH IS WITHIN REACH"):ArenaText.Pair("探索者陨落", "EXPLORER LOST");string causeLine=ResultCauseLine();snapshot.resultDetails=(causeLine.Length>0?causeLine+"\n":"")+ArenaText.Pair($"第 {snapshot.wave} 波 · 等级 {snapshot.level} · 消灭 {snapshot.kills} 个敌人\n在星际战场坚持了 {Elapsed:0} 秒", $"Wave {snapshot.wave} · Level {snapshot.level} · {snapshot.kills} kills\nYou held out on the Interstellar Battlefield for {Elapsed:0} seconds");
                 if(runWeapons){for(int i=0;i<2;i++)WriteSlot(snapshot.handSlots[i],runWeapons.Hand[i],i==runWeapons.ActiveIndex);for(int i=0;i<snapshot.autoSlots.Length;i++)WriteSlot(snapshot.autoSlots[i],i<runWeapons.Auto.Length?runWeapons.Auto[i]:null,false);for(int i=0;i<snapshot.armoryOffers.Length;i++){var w=i<runWeapons.Offers.Length?runWeapons.Offers[i]:null;WriteArmoryOffer(snapshot.armoryOffers[i],w);}}
                 for(int i=0;i<snapshot.armoryOffers.Length;i++)
                 {
@@ -515,17 +706,25 @@ namespace AnomalyArena
         /// <summary>The hint line as the saved HUD shows it over the hands (snapshot.hint), and the same prompt in three parts for the fifth
         /// pass's plate at the top of the screen, which draws the key it names as a keycap: the words before the key, the key (ArenaKeys'
         /// name for it) and the words after it. The parts stay empty where the line only names the weapon in hand: its slot in the dock
-        /// shows it. Both carry the same words; only Tab differs: the English line writes it in capitals, the keycap as ArenaKeys names it.</summary>
+        /// shows it. Both carry the same words, each a sentence that ends in what the key does.</summary>
         void WriteHint()
         {
             string lead="",key="",tail="",line;
-            if(BuildWalking){lead=ArenaText.Pair("整备走动中 · ", "WALKING · ");key=ArenaKeys.Label(Key.Tab);tail=ArenaText.Pair(" 返回选卡", " BACK TO THE CARDS");line=lead+ArenaText.Pair(key,key.ToUpperInvariant())+tail;}
-            else if(BuildCrateWalking)line=lead=ArenaText.Pair("整备中可以走动 · 点击头顶的箱子打开", "YOU CAN WALK · CLICK THE CRATE ABOVE YOU");
+            // In a black hole's pull the way out comes first, over the card-pick prompt (the pull is faster than a walk).
+            if(InHolePull(out bool exhausted))
+            {
+                key=ArenaKeys.SprintKey;
+                if(exhausted){lead=ArenaText.Pair("体力耗尽了。先朝外走，等体力回满再按住 ","Out of stamina. Walk outward, then hold ");tail=ArenaText.Pair(" 冲刺。"," to sprint once the bar is full.");}
+                else{lead=ArenaText.Pair("黑洞的引力正在把你拉进去，按住 ","The black hole is pulling you in. Hold ");tail=ArenaText.Pair(" 朝外冲刺才能逃开。"," and sprint outward to break free.");}
+                line=lead+key+tail;
+            }
+            else if(BuildWalking){lead=ArenaText.Pair("整备时可以走动 · 按 ", "Walking between waves · Press ");key=ArenaKeys.Label(Key.Tab);tail=ArenaText.Pair(" 回到选卡", " to return to the cards");line=lead+key+tail;}
+            else if(BuildCrateWalking)line=lead=ArenaText.Pair("整备时可以走动。点击头顶的箱子打开它。", "You can walk around. Click the crate above you to open it.");
             else if(RunPhase==ArenaUiState.WaveActive&&progression&&progression.BankedDrafts>0)
             {
                 int picks=progression.BankedDrafts;key=ArenaKeys.CardPickKey;
-                lead=CampaignRunning?ArenaText.Pair($"待选升级 ×{picks} · 按 ", $"UPGRADES TO PICK ×{picks} · PRESS "):ArenaText.Pair($"可选卡 ×{picks} · 按 ", $"CARD PICKS ×{picks} · PRESS ");
-                tail=ArenaText.Pair(CampaignRunning?" 选择":" 选卡", "");
+                lead=ArenaText.Pair($"待选卡 ×{picks} · 按 ", $"Card picks ×{picks} · Press ");
+                tail=ArenaText.Pair(" 打开", " to open");
                 line=lead+key+tail;
             }
             else line=runWeapons&&runWeapons.Active!=null?runWeapons.Active.Label:"";
@@ -543,7 +742,7 @@ namespace AnomalyArena
                 float gain=runWeapons.MkDamage(w)/Mathf.Max(.01f,runWeapons.MkDamage(w.upgradeOf))-1f;
                 // A stronger version upgrades the held weapon itself; its pairing, upgrades and infusion stay.
                 card.title=w.FormName+" "+w.upgradeOf.MkLabel+" → "+w.MkLabel;card.kind=ArenaText.Pair("强化 · ", "UPGRADE · ")+hand;
-                card.body=ArenaText.Pair($"强化你现有的{w.upgradeOf.Label}，型号伤害提高 {gain*100f:0}%。它的攻击方式和特性不变，已有的强化和灌注也都保留。", $"Upgrades the {w.upgradeOf.Label} you already have, raising its Mk damage by {gain*100f:0}%. Its attack and trait stay the same, and it keeps its upgrades and infusion.");
+                card.body=ArenaText.Pair($"强化你现有的{w.upgradeOf.Label}，型号伤害提高 {gain*100f:0}%。它的攻击方式和特性不变，已有的强化和附魔也都保留。", $"Upgrades the {w.upgradeOf.Label} you already have, raising its Mk damage by {gain*100f:0}%. Its attack and trait stay the same, and it keeps its upgrades and infusion.");
                 return;
             }
             card.title=w.FormName;card.kind=hand;
@@ -551,7 +750,7 @@ namespace AnomalyArena
         }
         void WriteSlot(ArenaUiSlot slot,RunWeapon w,bool active)
         {
-            slot.title=w?.Label??ArenaText.Pair("空栏位", "Empty slot");slot.detail=w==null?ArenaText.Pair("没有武器", "No weapon"):ArenaText.Pair($"等级 {w.Level} · ", $"Lv {w.Level} · ")+ArenaTerms.Element(w.element)+(w.reload>0?ArenaText.Pair($" · 换弹 {w.reload:0.0} 秒", $" · Reload {w.reload:0.0}s"):"");slot.formIndex=w==null?-1:(int)w.form;slot.active=active;slot.elementIndex=w==null?-1:ElementIndex(w.element);slot.skillIndex=-1;slot.available=true;
+            slot.title=w?.Label??ArenaText.Pair("空栏位", "Empty slot");slot.detail=w==null?ArenaText.Pair("没有武器", "No weapon"):ArenaText.Pair($"等级 {w.Level} · ", $"Lv {w.Level} · ")+ArenaTerms.Element(w.element)+(w.reload>0?ArenaText.Pair($" · 换弹 {w.reload:0.0} 秒", $" · Reload {w.reload:0.0} s"):"");slot.formIndex=w==null?-1:(int)w.form;slot.active=active;slot.elementIndex=w==null?-1:ElementIndex(w.element);slot.skillIndex=-1;slot.available=true;
             slot.rarity=ArenaRarity.ForWeapon(w);if(w!=null)slot.detail=ArenaTerms.Rarity(slot.rarity)+" · "+slot.detail;
             // Chain Tame shows the jumps it holds for the next discharge.
             if(w!=null&&w.chainStoredJumps>0&&w.form==WeaponForm.ArcCoil&&w.variant==0)slot.detail+=ArenaText.Pair($" · +{w.chainStoredJumps} 跳",$" · +{w.chainStoredJumps} jumps");
@@ -561,7 +760,7 @@ namespace AnomalyArena
             if(w!=null&&w.revealed)slot.detail+=runWeapons.AnomalySlotDetail(w);
             // Meltdown shows its heat; a Spin-up minigun left firing in place shows how long it has left.
             if(w!=null&&w.revealed&&w.form==WeaponForm.Minigun&&w.variant==1){float heat=Mathf.Clamp01(w.heat/4f)*100f;slot.detail+=ArenaText.Pair($" · 热量 {heat:0}%",$" · Heat {heat:0}%");}
-            if(w!=null&&w.turretLeft>0f)slot.detail+=ArenaText.Pair($" · 架设中 {w.turretLeft:0.0} 秒",$" · Deployed {w.turretLeft:0.0}s");
+            if(w!=null&&w.turretLeft>0f)slot.detail+=ArenaText.Pair($" · 架设中 {w.turretLeft:0.0} 秒",$" · Deployed {w.turretLeft:0.0} s");
             // Document 5.4: a stowed Capacitor shows the charge it is losing; in hand the charge bar shows it.
             if(w!=null&&w.revealed&&w.form==WeaponForm.ArcCoil&&w.variant==1&&!active&&w.charge>0f){float stored=Mathf.Ceil(Mathf.Clamp01(w.charge/Mathf.Max(1f,runWeapons.upgrades.capacitorMax))*100f);slot.detail+=ArenaText.Pair($" · 电量 {stored:0}%",$" · Charge {stored:0}%");}
             float cooldown=runWeapons.GetCooldownDuration(w);

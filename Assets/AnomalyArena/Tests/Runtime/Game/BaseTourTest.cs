@@ -4,7 +4,8 @@ using UnityEngine;
 namespace AnomalyArena
 {
     /// <summary>The guided base tour on Day 0's arrival, the rules that need no scene: its steps in order, what each says, when each is
-    /// done, which are left out, and where its text plate stands beside the highlighted part.</summary>
+    /// done, which are left out, and where its text plate stands beside the highlighted part; and the same for the guide to a first
+    /// purchase on a later visit (BuyGuide).</summary>
     [TestFixture]
     public class BaseTourTest
     {
@@ -205,6 +206,97 @@ namespace AnomalyArena
             Assert.That(BaseTour.PlateSide(Area, hole, MinWidth, Gap, Margin), Is.EqualTo(TourPlateSide.Right));
             Assert.That(BaseTour.PlateWidth(TourPlateSide.Right, Area, hole, MinWidth, MaxWidth, Gap, Margin), Is.EqualTo(416f).Within(1e-3f));
             Assert.That(BaseTour.PlateWidth(TourPlateSide.Left, Area, Rect.MinMaxRect(250f, 0f, 260f, 10f), MinWidth, MaxWidth, Gap, Margin), Is.EqualTo(MinWidth));
+        }
+
+        // ───── The guide to a first purchase on a later visit ─────
+
+        /// <summary>A visit's page as it opens: Central Control's tab, the study window shut, nothing bought yet.</summary>
+        static BuyGuideState Visit(BuyGuideAim aim, CampaignRoom room) => new()
+        {
+            aim = aim,
+            room = room,
+            tab = CampaignRoom.Control,
+            baseOpen = true
+        };
+
+        [TestCase(0, 0, 3, true, true, BuyGuideAim.None, TestName = "BuyGuideAim_Day0_IsNothing")]
+        [TestCase(1, 0, 3, true, true, BuyGuideAim.Lamp, TestName = "BuyGuideAim_FewerLampsThanTheDaysAndOneBuyable_IsALamp")]
+        [TestCase(1, 3, 3, true, true, BuyGuideAim.Study, TestName = "BuyGuideAim_EnoughLamps_IsAStudyItem")]
+        [TestCase(1, 0, 3, false, true, BuyGuideAim.Study, TestName = "BuyGuideAim_NoLampBuyable_IsAStudyItem")]
+        [TestCase(2, 0, 3, false, false, BuyGuideAim.None, TestName = "BuyGuideAim_NothingBuyable_IsNothing")]
+        public void BuyGuideAim_FollowsTheLampsAndTheStock(int day, int lampStock, int lampsWanted, bool lampBuyable, bool studyBuyable, BuyGuideAim expected)
+        {
+            Assert.That(BuyGuide.Aim(day, lampStock, lampsWanted, lampBuyable, studyBuyable), Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void BuyGuide_ToALamp_ShowsTheLaunchBayThenItsLampRow_AndEndsOnThePurchase()
+        {
+            var s = Visit(BuyGuideAim.Lamp, CampaignRoom.Ship);
+            Assert.That(BuyGuide.FirstToRun(BuyGuideStep.None, s), Is.EqualTo(BuyGuideStep.Zone));
+            s.tab = CampaignRoom.Ship;
+            Assert.That(BuyGuide.FirstToRun(BuyGuide.After(BuyGuideStep.Zone), s), Is.EqualTo(BuyGuideStep.Lamp));
+            s.bought = true;
+            Assert.That(BuyGuide.Passed(BuyGuideStep.Lamp, s), Is.True, "the lamp made");
+            Assert.That(BuyGuide.FirstToRun(BuyGuide.After(BuyGuideStep.Lamp), s), Is.EqualTo(BuyGuideStep.Done), "the study's steps are left out");
+        }
+
+        [Test]
+        public void BuyGuide_ToAStudyItem_ShowsTheRoomThenItsStudyButtonThenTheBuyButton()
+        {
+            var s = Visit(BuyGuideAim.Study, CampaignRoom.Energy);
+            Assert.That(BuyGuide.FirstToRun(BuyGuideStep.None, s), Is.EqualTo(BuyGuideStep.Zone));
+            s.tab = CampaignRoom.Energy;
+            Assert.That(BuyGuide.FirstToRun(BuyGuide.After(BuyGuideStep.Zone), s), Is.EqualTo(BuyGuideStep.OpenStudy), "the lamp row is left out");
+            s.studyOpen = true;
+            Assert.That(BuyGuide.FirstToRun(BuyGuide.After(BuyGuideStep.OpenStudy), s), Is.EqualTo(BuyGuideStep.Buy));
+            s.bought = true;
+            Assert.That(BuyGuide.FirstToRun(BuyGuide.After(BuyGuideStep.Buy), s), Is.EqualTo(BuyGuideStep.Done));
+        }
+
+        [Test]
+        public void BuyGuide_TheRoomsTabShownAlready_IsNotAskedFor()
+        {
+            var s = Visit(BuyGuideAim.Study, CampaignRoom.Armament);
+            s.tab = CampaignRoom.Armament;
+            Assert.That(BuyGuide.FirstToRun(BuyGuideStep.None, s), Is.EqualTo(BuyGuideStep.OpenStudy));
+        }
+
+        [Test]
+        public void BuyGuide_TheBasePageClosed_EndsIt()
+        {
+            var s = Visit(BuyGuideAim.Lamp, CampaignRoom.Ship);
+            s.baseOpen = false;
+            Assert.That(BuyGuide.FirstToRun(BuyGuideStep.Lamp, s), Is.EqualTo(BuyGuideStep.Done));
+        }
+
+        [Test]
+        public void BuyGuideWords_EveryStepItCanShowSaysSomethingInBothLanguages_AndNothingOutsideIt()
+        {
+            var shown = new[]
+            {
+                (BuyGuideStep.Zone, BuyGuideAim.Lamp, CampaignRoom.Ship), (BuyGuideStep.Lamp, BuyGuideAim.Lamp, CampaignRoom.Ship),
+                (BuyGuideStep.Zone, BuyGuideAim.Study, CampaignRoom.Armament), (BuyGuideStep.Zone, BuyGuideAim.Study, CampaignRoom.Energy),
+                (BuyGuideStep.OpenStudy, BuyGuideAim.Study, CampaignRoom.Armament), (BuyGuideStep.OpenStudy, BuyGuideAim.Study, CampaignRoom.Energy),
+                (BuyGuideStep.Buy, BuyGuideAim.Study, CampaignRoom.Armament)
+            };
+            foreach (var (step, aim, room) in shown)
+            {
+                var (chinese, english) = BuyGuide.Words(step, aim, room);
+                Assert.That(chinese, Is.Not.Empty, $"{step} {aim} {room}");
+                Assert.That(english, Is.Not.Empty, $"{step} {aim} {room}");
+            }
+            Assert.That(BuyGuide.Words(BuyGuideStep.None, BuyGuideAim.Lamp, CampaignRoom.Ship).chinese, Is.Empty);
+            Assert.That(BuyGuide.Words(BuyGuideStep.Done, BuyGuideAim.Study, CampaignRoom.Armament).english, Is.Empty);
+        }
+
+        [Test]
+        public void BuyGuideWords_TheEnergyLabsItemsAreBoughtWithAlienEnergy_TheArmamentBaysWithAlloy()
+        {
+            Assert.That(BuyGuide.Words(BuyGuideStep.OpenStudy, BuyGuideAim.Study, CampaignRoom.Energy).chinese, Does.Contain("异星能量"));
+            Assert.That(BuyGuide.Words(BuyGuideStep.OpenStudy, BuyGuideAim.Study, CampaignRoom.Energy).english, Does.Contain("alien energy"));
+            Assert.That(BuyGuide.Words(BuyGuideStep.OpenStudy, BuyGuideAim.Study, CampaignRoom.Armament).chinese, Does.Contain("合金"));
+            Assert.That(BuyGuide.Words(BuyGuideStep.OpenStudy, BuyGuideAim.Study, CampaignRoom.Armament).english, Does.Contain("alloy"));
         }
     }
 }

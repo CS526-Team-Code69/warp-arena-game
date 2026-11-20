@@ -16,8 +16,9 @@ namespace AnomalyArena
     /// finds it: BlackHoleTarget) starts rules.holeCheckSeconds, in which its damage must reach the day's requirement (by default half the
     /// Nash Prophet's HP, HoleRequirement). From rules.holeCounterDelay on the Prophet answers through the hole with its own moves, void
     /// pillars round the player and its equilibrium ring out of the hole by turns (Enemy.HoleEcho.cs), more often as the damage grows.
-    /// While the check runs the hole shows its damage share and the seconds left (its world label and a bar of blocks over it), and in
-    /// the afternoon near the hole the afternoon turns into a fight so the weapons fire. Reached: the hole collapses into the hidden gate,
+    /// While the check runs the hole shows the damage dealt against the damage asked for and the seconds left, as numbers in its world
+    /// label and as a bar of blocks over it, and in the afternoon near the hole the afternoon turns into a fight so the weapons fire.
+    /// Reached: the hole collapses into the hidden gate,
     /// which stays open until the player goes through; E on it asks first, and yes enters the void trial against the Nash Prophet, whose
     /// win pays the void currencies (V2Campaign.Void.cs) and turns the hole into ground. Not reached in time, or the player falls meanwhile
     /// (in the afternoon they wake at the base; by day a fall ends the run as before): the side quest fails for the day, the hole is put
@@ -40,6 +41,7 @@ namespace AnomalyArena
         readonly HoleCheck holeCheck = new();
         BlackHoleTarget holeTarget;
         Transform holeCheckView, checkBar, checkDamage, checkTime;
+        // What the hole's world label shows now while the check runs: the whole damage dealt (labelPercent) and the seconds left.
         int labelPercent = -1, labelSeconds = -1;
         string sideQuestText;
 
@@ -59,6 +61,7 @@ namespace AnomalyArena
             EndHoleQuest();
             questMap = map;
             holeSeen = false;
+            holeEscapeTaught = false; // the pull's hint comes once a run (V2Campaign.Tutorial.cs TickLateTeaching)
             ResetHoleCheck();
             ResetHoleFeeding();
             holeCheckDay = -1;
@@ -126,13 +129,29 @@ namespace AnomalyArena
 
         bool InPlay => gm && gm.player && gm.player.IsAlive && Time.timeScale > 0f && gm.RunPhase is (ArenaUiState.WaveActive or ArenaUiState.Night);
 
+        /// <summary>The campaign's black hole is out and pulling: shown (by day or in the afternoon), still a hole, outside the void trial
+        /// and its first-sight cutscene.</summary>
+        bool HolePulling
+        {
+            get
+            {
+                var map = questMap;
+                var hole = map ? map.CampaignHole : null;
+                return hole && !map.CampaignHoleHidden && !map.TrialActive && !map.HoleIntroPlaying && hole.Phase == HolePhase.Active;
+            }
+        }
+
+        /// <summary>The player stands in the campaign hole's pull ring now (the pull's hint, V2Campaign.Tutorial.cs).</summary>
+        bool PlayerInHolePull(PlayerController p) => p && p.IsAlive && HolePulling && questMap.CampaignHole.InGravity(p.Position);
+
         void OnHoleIntroFinished()
         {
             holeSeen = true;
-            // Fed first: the side quest's line says how (V2Campaign.HoleFeed.cs); the flash only names what was just seen.
-            if (!HoleAwake) ui.Flash(ArenaText.Pair("黑洞会把靠近它的怪物吞进去。", "The black hole swallows the monsters that come near it."), 3f);
-            else ui.Flash(ArenaText.Pair($"黑洞里有东西。攻击它，从第一次打中开始计时，{Mathf.RoundToInt(rules.holeCheckSeconds)} 秒内打出足够的伤害，就能把它激怒。",
-                $"Something lies within the black hole. Attack it: once your first hit lands, you have {Mathf.RoundToInt(rules.holeCheckSeconds)} seconds to deal enough damage to enrage it."), 4.5f);
+            // Fed first: the side quest's line says how (V2Campaign.HoleFeed.cs); the flash names what was just seen, and that it takes the
+            // player as well.
+            if (!HoleAwake) ui.Flash(ArenaText.Pair("黑洞会把靠近它的怪物吞进去，你掉进去也一样。", "The black hole swallows the monsters that come near it, and you as well if you fall in."), 3.5f);
+            else ui.Flash(ArenaText.Pair($"黑洞里有东西。攻击它，从第一次打中开始计时，{Mathf.RoundToInt(rules.holeCheckSeconds)} 秒内打出足够的伤害，就能击破黑洞。",
+                $"Something lies within the black hole. Attack it: once your first hit lands, you have {Mathf.RoundToInt(rules.holeCheckSeconds)} seconds to deal enough damage to break it."), 4.5f);
         }
 
         /// <summary>E on the hidden gate: the question before the void trial. A no leaves the gate open; a yes enters on the next frame
@@ -141,10 +160,10 @@ namespace AnomalyArena
         {
             if (!ui) { yes?.Invoke(); return; }
             bool morning = Stage is CampaignStage.Day or CampaignStage.Lull;
-            string body = ArenaText.Pair("里面可能有非常强大的敌人。确定要进去吗？", "A very powerful enemy may be waiting in there. Do you want to go in?") + "\n\n"
-                + (morning ? ArenaText.Pair("在里面倒下会结束本局。", "Dying in there ends the run.")
+            string body = ArenaText.Pair("里面可能有非常强大的敌人。要进去吗？", "A very powerful enemy may be waiting in there. Do you want to go in?") + "\n\n"
+                + (morning ? ArenaText.Pair("如果在里面倒下，这一局就会结束。", "If you fall in there, the run ends.")
                     : ArenaText.Pair("如果在里面倒下，你会在基地醒来，什么都不会丢，下午照常继续。", "If you fall in there, you'll wake up at the base with nothing lost, and the afternoon goes on."));
-            ui.Confirm(ArenaText.Pair("虚空传送门", "THE VOID PORTAL"), body, yes, no);
+            ui.Confirm(ArenaText.Pair("虚空传送门", "The Void Portal"), body, yes, no);
         }
 
         /// <summary>The void trial is won (WorldMap.CompleteTrial): with the player standing, the gift of the void (V2Campaign.Void.cs),
@@ -186,8 +205,8 @@ namespace AnomalyArena
                 StopHoleAnswers(map);
             }
 
-            // Night (and Day 0: the tutorial never leads there, and a fall into it on the tutorial's walk would end the run) puts the hole
-            // away, and so does a failed check for the rest of its day (it follows once a trial is over).
+            // Night (and Day 0: the tutorial never leads there) puts the hole away, and so does a failed check for the rest of its day (it
+            // follows once a trial is over).
             bool evening = Stage == CampaignStage.Night || Stage == CampaignStage.Base && baseVisitFrom == CampaignStage.Night;
             map.SetCampaignHoleHidden(evening || Day <= 0 || holeFailedToday);
             TickHoleGuide(map); // its shards and its hum follow it (V2Campaign.Guide.cs)
@@ -281,7 +300,7 @@ namespace AnomalyArena
             hole.campaignLabel = "";
             hole.OpenGate(gm.waves ? gm.waves.WaveIndex + 1 : 0);
             CampaignEvents.RaiseMilestone(CampaignEvents.MilestoneHoleCheck, CampaignEvents.HoleCheckPassed, holeCheck.Progress, Day);
-            ui.Flash(ArenaText.Pair("里面的东西被激怒了，黑洞变成了一座传送门。", "What lies within is enraged. The black hole has become a portal."), 3f);
+            ui.Flash(ArenaText.Pair("黑洞被击破了，它变成了一座传送门。", "The black hole is broken, and it has become a portal."), 3f);
             V3WorldAudio.Instance?.Play(ArenaWorldCue.PortalOpen, hole.Centre);
         }
 
@@ -298,7 +317,7 @@ namespace AnomalyArena
                 hole.campaignLabel = "";
                 Fx.Ring(hole.Centre, hole.GravityRadius, PillarFillColour, .6f);
             }
-            if (timeUp) ui.Flash(ArenaText.Pair("今天没能激怒它，明天再来吧", "You couldn't enrage it today. Come back tomorrow."), 3.5f);
+            if (timeUp) ui.Flash(ArenaText.Pair("今天没能击破黑洞，明天再来。", "You didn't break the black hole today. Come back tomorrow."), 3.5f);
         }
 
         void ResetHoleCheck()
@@ -402,8 +421,9 @@ namespace AnomalyArena
         string PillarThreat() => ArenaText.Pair($"小心：它会还手。地上出现圆圈时马上走开，光柱落下时还站在里面会立刻倒下，{FallOutcome()}。",
             $"Careful: it strikes back. When a circle appears on the ground, leave it at once: the pillar that falls there drops you on the spot, and {FallOutcome()}.");
 
-        /// <summary>The hole's world label (V2WorldLabels reads BlackHole.campaignLabel): the damage share and the seconds left while the
-        /// check runs, nothing otherwise (no count of swallowed monsters any more). Written only when a shown number changes.</summary>
+        /// <summary>The hole's world label (V2WorldLabels reads BlackHole.campaignLabel): while the check runs, the damage dealt against
+        /// the damage asked for and the seconds left, as numbers beside the bar of blocks over it; while it is fed, its count; nothing
+        /// otherwise. Written only when a shown number changes.</summary>
         void UpdateHoleLabel(BlackHole hole)
         {
             if (holeCheck.State != HoleCheckState.Running)
@@ -414,10 +434,11 @@ namespace AnomalyArena
                 if (hole.campaignLabel != resting) hole.campaignLabel = resting;
                 return;
             }
-            int percent = Mathf.FloorToInt(holeCheck.Progress * 100f), seconds = Mathf.CeilToInt(holeCheck.SecondsLeft);
-            if (percent == labelPercent && seconds == labelSeconds) return;
-            labelPercent = percent; labelSeconds = seconds;
-            hole.campaignLabel = ArenaText.Pair($"伤害 {percent}% · 剩 {seconds} 秒", $"DAMAGE {percent}% · {seconds} S LEFT");
+            int dealt = Mathf.FloorToInt(holeCheck.Dealt), seconds = Mathf.CeilToInt(holeCheck.SecondsLeft);
+            if (dealt == labelPercent && seconds == labelSeconds) return;
+            labelPercent = dealt; labelSeconds = seconds;
+            int required = Mathf.CeilToInt(holeCheck.Required);
+            hole.campaignLabel = ArenaText.Pair($"伤害 {dealt} / {required} · 还剩 {seconds} 秒", $"Damage {dealt} / {required} · {seconds} s left");
         }
 
         // ───── The check's view: a bar of blocks over the hole, the pillars on the ground ─────

@@ -209,6 +209,41 @@ namespace AnomalyArena
             Assert.That((takenSkill.kind, takenSkill.id, takenSkill.rarity), Is.EqualTo((DraftCardKind.Skill, (int)SkillId.Blink, CardRarity.Exceptional)));
         }
 
+        // ───── A weapon's card, to read again ─────
+
+        [Test]
+        public void WeaponLines_AnAnomalyNotRevealedYet_SaysNothing()
+        {
+            var hidden = new RunWeapon { form = WeaponForm.Rifle, variant = 1, revealed = false };
+
+            CharacterSheet.WeaponLines(hidden, out string how, out string trait);
+
+            Assert.That(how, Is.Empty, "how it attacks stays hidden with its anomaly");
+            Assert.That(trait, Is.Empty, "and so does its trait");
+        }
+
+        [Test]
+        public void WeaponLines_ARevealedAnomaly_GivesTheWeaponCardsAttackAndTrait()
+        {
+            var shown = new RunWeapon { form = WeaponForm.Rifle, variant = 1, revealed = true };
+
+            CharacterSheet.WeaponLines(shown, out string how, out string trait);
+
+            Assert.That(how, Is.EqualTo(WeaponGuide.How(WeaponForm.Rifle, 1)));
+            Assert.That(trait, Is.EqualTo(WeaponGuide.Backfire(WeaponForm.Rifle, 1)));
+        }
+
+        [Test]
+        public void WeaponLines_ThePistol_HasItsAttackAndNoTrait()
+        {
+            var pistol = new RunWeapon { form = WeaponForm.Pistol, revealed = true };
+
+            CharacterSheet.WeaponLines(pistol, out string how, out string trait);
+
+            Assert.That(how, Is.EqualTo(WeaponGuide.How(WeaponForm.Pistol, 0)));
+            Assert.That(trait, Is.Empty, "a plain weapon has no trait, as its weapon card shows none");
+        }
+
         [Test]
         public void TakenCardSame_SameCardAndRarity_IsTheSame_AnotherRarityIsNot()
         {

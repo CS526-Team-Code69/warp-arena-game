@@ -32,6 +32,9 @@ namespace AnomalyArena
         CanvasGroup tipGroup;
         bool? fifthArt;
         Func<Vector3> target;
+        /// <summary>A plate in screen pixels the tip keeps clear of while it shows (null: none now): the campaign's flash in the middle
+        /// of the screen, which a tip beside a circle away from the screen's centre would otherwise lie over.</summary>
+        public Func<Rect?> KeepClearOf;
         Vector3 lastTarget;
         float worldRadius, dimAlpha, shownFor, passClock = -1f;
         bool dim;
@@ -184,6 +187,17 @@ namespace AnomalyArena
             if (x + size.x > area.width - 16f) x = c.x - r - 20f - size.x;
             x = Mathf.Clamp(x, 16f, Mathf.Max(16f, area.width - 16f - size.x));
             float y = Mathf.Clamp(c.y - size.y * .5f, 16f, Mathf.Max(16f, area.height - 16f - size.y));
+            // The flash keeps its place in the middle: the tip steps below it, or above it where below has no room.
+            if (KeepClearOf?.Invoke() is Rect clear)
+            {
+                var away = new Rect(clear.x * scale, clear.y * scale, clear.width * scale, clear.height * scale);
+                if (new Rect(x, y, size.x, size.y).Overlaps(away))
+                {
+                    float below = away.yMin - TipGap - size.y;
+                    y = below >= 16f ? below : Mathf.Min(away.yMax + TipGap, Mathf.Max(16f, area.height - 16f - size.y));
+                }
+            }
+
             SetRect(tip, new Vector2(x, y), size);
             if (tipGroup)
             {
@@ -245,6 +259,8 @@ namespace AnomalyArena
         }
 
         /// <summary>Anchored and pivoted at the bottom-left corner, so position and size are in the canvas's own units from there.</summary>
+        const float TipGap = 10f;
+
         static void Corner(RectTransform rect)
         {
             rect.anchorMin = rect.anchorMax = Vector2.zero;

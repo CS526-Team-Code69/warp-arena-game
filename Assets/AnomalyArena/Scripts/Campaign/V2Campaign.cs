@@ -118,7 +118,7 @@ namespace AnomalyArena
             gm.ClaimSaveSlot(SaveMode.Story); // a slot the title bound for this run takes its saves (ArenaSaves)
             PlacePlayer(CrashSite);
             Stage = CampaignStage.TitleCard; stageClock = 0f; stageLength = 3.2f;
-            ui.ShowTitleCard(ArenaText.Pair("第 0 天", "DAY 0"), ArenaText.Pair("坠落之后", "After the fall"), stageLength);
+            ui.ShowTitleCard(ArenaText.Pair("第 0 天", "DAY 0"), ArenaText.Pair("坠落之后", "AFTER THE FALL"), stageLength);
             // The black card's own sting (2026-11-10); the wave sound stands in while it is not installed.
             if (!CampaignAudio.Play(CampaignSfx.DayTitleStinger)) V3WorldAudio.Instance?.Play(ArenaWorldCue.WaveEnd, gm.player.Position, .7f);
             gm.CampaignHoldTitle();
@@ -133,6 +133,7 @@ namespace AnomalyArena
             Active = this; Running = true; Day = 0; WaveOfDay = 0; Overtime = false; BaseDestroyed = false; EndingDone = false;
             armoryRoundsLeft = 0; ArmoryRoundActive = false; armoryMode = ArmoryMode.Rooms; activeUpgrade = null;
             ResetEconomy(); ResetBase(); ResetNight(); ResetBaseTour();
+            buyGuideDone = false; buyGuideCheckAt = 0f; // the guide to a first purchase may come again in a new run
             InstallHooks();
             // Since 2026-11-06 the campaign plays on its own large map with terrain and a far black hole (V2Campaign.Map.cs). It is put in
             // place before the base and the ship are built on it.
@@ -243,7 +244,10 @@ namespace AnomalyArena
                 case CampaignStage.Night: TickNight(dt); break;
                 case CampaignStage.FinalBoss: TickPickups(dt); break;
                 case CampaignStage.Core: TickCore(dt); break;
-                case CampaignStage.Base: TickBaseTour(); break; // the base page's tour on Day 0's arrival (V2Campaign.BaseTour.cs)
+                case CampaignStage.Base:
+                    TickBaseTour(); // the base page's tour on Day 0's arrival (V2Campaign.BaseTour.cs)
+                    TickBuyGuide(); // the guide to a first purchase on a later visit
+                    break;
             }
             TickBaseVisuals(unscaled);
             ui.Refresh();
@@ -286,10 +290,11 @@ namespace AnomalyArena
                 BeginDayNumbers(); // the energy bar fills, the day's kill energy is ready (V2Campaign.Days.cs)
                 ApplyDaylight();
                 Say(Line.S07);
-                // The first morning says how the monsters behave; later mornings only say what to do (since 2026-11-10).
+                // The first morning says how the monsters behave; later mornings say what the way home still needs (MorningGoal,
+                // V2Campaign.Days.cs).
                 Objective(Day <= 1
                     ? ArenaText.Pair("守住基地。怪物会从四面八方涌向基地，离你近的会先冲着你来", "Hold the base. Monsters close in on it from every side, and any that get near you will come for you first")
-                    : ArenaText.Pair("守住基地", "Hold the base"), null);
+                    : MorningGoal(), null);
             }
             // The table's wave for today (rules.WaveNumber: since 2026-11-06 day d fights wave 2d, so day 7 is wave 14 before the Tyrant);
             // overtime repeats the last day's wave.
@@ -414,7 +419,9 @@ namespace AnomalyArena
             else if (gm.State == GameState.Lost)
             {
                 s.resultTitle = BaseDestroyed ? ArenaText.Pair("基地被摧毁", "THE BASE IS DESTROYED") : ArenaText.Pair("探索者陨落", "EXPLORER LOST");
-                s.resultDetails = ArenaText.Pair($"第 {Day} 天 · 消灭 {s.kills} 个敌人\n飞船修复：引擎{(engineFixed ? "✓" : "×")} 装甲{(armorFixed ? "✓" : "×")} 燃料 {fuel}/{FuelUnits}",
+                // The first line says what ended the run (the base, the black hole, an enemy, the player's own weapon …).
+                string cause = gm.ResultCauseLine();
+                s.resultDetails = (cause.Length > 0 ? cause + "\n" : "") + ArenaText.Pair($"第 {Day} 天 · 消灭 {s.kills} 个敌人\n飞船修复：引擎{(engineFixed ? "✓" : "×")} 装甲{(armorFixed ? "✓" : "×")} 燃料 {fuel}/{FuelUnits}",
                     $"Day {Day} · {s.kills} kills\nShip: engine {(engineFixed ? "✓" : "×")} armor {(armorFixed ? "✓" : "×")} fuel {fuel}/{FuelUnits}");
             }
         }
@@ -558,14 +565,57 @@ namespace AnomalyArena
             darkMatter = mining.kind == NodeKind.Dark;
             what = mining.kind switch
             {
-                NodeKind.Ore => ArenaText.Pair($"采集异星合金 +{mining.amount}", $"Mining alien alloy +{mining.amount}"),
+                NodeKind.Ore => ArenaText.Pair($"采集合金 +{mining.amount}", $"Mining alloy +{mining.amount}"),
                 NodeKind.VoidAlloy => ArenaText.Pair($"采集虚空合金 +{mining.amount}", $"Mining void alloy +{mining.amount}"),
-                _ when mining.energy > 0 => ArenaText.Pair($"采集暗物质 +{mining.amount} · 能量 +{mining.energy}", $"Mining dark matter +{mining.amount} · energy +{mining.energy}"),
+                _ when mining.energy > 0 => ArenaText.Pair($"采集暗物质 +{mining.amount} · 异星能量 +{mining.energy}", $"Mining dark matter +{mining.amount} · alien energy +{mining.energy}"),
                 _ => ArenaText.Pair($"采集暗物质 +{mining.amount}", $"Mining dark matter +{mining.amount}")
             };
             return true;
         }
 
+
+        // ───── The guide to a first purchase ─────
+
+        // The guide to a first purchase (V2CampaignUi.BaseTour.cs) has had its turn this run, or a purchase from Day 1 on made it needless
+        // (Bought): it never comes again.
+        bool buyGuideDone;
+        // When the guide next looks for something to guide to while a visit has nothing to buy (unscaled seconds).
+        float buyGuideCheckAt;
+
+        /// <summary>The guide to a first purchase has had its turn this run; the story's save keeps it so a continued run does not show it
+        /// again.</summary>
+        public bool BuyGuideDone { get => buyGuideDone; internal set => buyGuideDone = value; }
+
+        /// <summary>Each frame of a base visit (Update). On a visit from the afternoon or the night from Day 1 on, once nothing is being
+        /// said and nothing covers the base page, the guide to a first purchase starts if there is something to guide to (BuyGuide.Aim): a
+        /// mining lamp while the stock holds fewer than the day's lamps and alloy pays for one, otherwise an item that the Armament Bay's or
+        /// the Energy Lab's study sells and the stock pays for. A visit with nothing to buy leaves the guide for a later one. Only on the
+        /// fifth pass's page.</summary>
+        void TickBuyGuide()
+        {
+            if (buyGuideDone || !ui || !V5HudKit.On || Day < 1 || !OutdoorVisit || SpeechBusy || !ui.BuyGuideCanStart) return;
+            if (Time.unscaledTime < buyGuideCheckAt) return;
+            buyGuideCheckAt = Time.unscaledTime + 1f;
+            var studyRoom = GuideStudyRoom();
+            bool lampBuyable = LampsCraftable && CanAfford(new CampaignCost(rules.lampCost));
+            var aim = BuyGuide.Aim(Day, lampStock, CampaignRules.ByDay(rules.dayLampsToCraft, Day), lampBuyable, studyRoom.HasValue);
+            if (aim == BuyGuideAim.None) return;
+            buyGuideDone = true; // once begun it never comes again, followed or skipped
+            ui.StartBuyGuide(aim, aim == BuyGuideAim.Lamp ? CampaignRoom.Ship : studyRoom ?? CampaignRoom.Armament);
+        }
+
+        /// <summary>The room whose study button opens a tab with an item the stock pays for now: the Armament Bay (its first tab, the weapon
+        /// Mk and the armor) before the Energy Lab (its first tab, the body); null when neither first tab has one.</summary>
+        CampaignRoom? GuideStudyRoom()
+        {
+            foreach (var tab in BuildStudy())
+            {
+                if (tab.locked || !tab.entries.Exists(e => e.state == StudyState.Available)) continue;
+                if (tab.key == "arm.upgrade") return CampaignRoom.Armament;
+                if (tab.key == "eng.body") return CampaignRoom.Energy;
+            }
+            return null;
+        }
 
         // ───── For the campaign's sounds (CampaignAudio, 2026-11-10) ─────
         // CampaignAudio reads these each frame and plays a sound when they change. They read the night's lamps, shadows and mining

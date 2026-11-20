@@ -4,9 +4,9 @@ using UnityEngine;
 namespace AnomalyArena
 {
     /// <summary>
-    /// The world labels' rules that need no scene (V2WorldLabels): which builds name every enemy's kind; where an edge notice sits and
-    /// which way it points; and that the 2.5D view's orthographic camera does not turn a far place on its own side round to the opposite
-    /// edge.
+    /// The world labels' rules that need no scene (V2WorldLabels): when every enemy's kind is named, and which kinds a first sight names and
+    /// introduces; where an edge notice sits and which way it points; and that the 2.5D view's orthographic camera does not turn a far
+    /// place on its own side round to the opposite edge.
     /// </summary>
     [TestFixture]
     public class WorldLabelRulesTest
@@ -22,13 +22,43 @@ namespace AnomalyArena
             if (cameraObject) Object.DestroyImmediate(cameraObject);
         }
 
-        [TestCase(true, BuildEdition.Edition.EnglishAlpha, ExpectedResult = true, TestName = "The English Alpha in whitebox names every enemy")]
-        [TestCase(true, BuildEdition.Edition.EnglishBeta, ExpectedResult = true, TestName = "The English Beta in whitebox names every enemy")]
-        [TestCase(false, BuildEdition.Edition.EnglishBeta, ExpectedResult = false, TestName = "The English Beta in the art keeps names to specials")]
-        [TestCase(true, BuildEdition.Edition.Full, ExpectedResult = false, TestName = "The whole game in whitebox keeps names to specials")]
-        [TestCase(false, BuildEdition.Edition.Full, ExpectedResult = false, TestName = "The whole game in the art keeps names to specials")]
-        public bool OrdinaryNamesShown_OnlyOnTheEnglishBuildsInWhitebox(bool whitebox, BuildEdition.Edition edition) =>
-            V2WorldLabels.OrdinaryNamesShown(whitebox, edition);
+        [TestCase(EnemyKind.Grunt, ExpectedResult = false, TestName = "The Grunt, every player's first monster, gets no first-sight notice")]
+        [TestCase(EnemyKind.Hollow, ExpectedResult = false, TestName = "The Nash Prophet, named by its own plate, gets no first-sight notice")]
+        [TestCase(EnemyKind.Tyrant, ExpectedResult = false, TestName = "The Tyrant King, named by its own plate, gets no first-sight notice")]
+        [TestCase(EnemyKind.Spitter, ExpectedResult = true, TestName = "The Spitter is named and introduced at first sight")]
+        [TestCase(EnemyKind.Shade, ExpectedResult = true, TestName = "The Shade is named and introduced at first sight")]
+        public bool IntroducesOnFirstSight_EveryKindButTheGruntAndTheBosses(EnemyKind kind) => V2WorldLabels.IntroducesOnFirstSight(kind);
+
+        [Test]
+        public void FirstMeeting_AKindIntroduced_IsNamedForItsStretch_TheGruntAndAKindNotMetAreNot()
+        {
+            V2WorldLabels.ForgetFirstSights();
+            try
+            {
+                V2WorldLabels.FirstMeeting(EnemyKind.Spitter);
+                V2WorldLabels.FirstMeeting(EnemyKind.Grunt);
+
+                Assert.That(V2WorldLabels.NamedForFirstSight(EnemyKind.Spitter), Is.True, "named over its bar while the stretch it was met in lasts");
+                Assert.That(V2WorldLabels.NamedForFirstSight(EnemyKind.Grunt), Is.False, "the Grunt is never named for a first sight");
+                Assert.That(V2WorldLabels.NamedForFirstSight(EnemyKind.Warden), Is.False, "nor is a kind not met");
+            }
+            finally
+            {
+                V2WorldLabels.ForgetFirstSights();
+            }
+        }
+
+        [Test]
+        public void FirstSightNotice_TheGruntAndTheBosses_HaveNone()
+        {
+            Assert.That(V2WorldLabels.FirstSightNotice(EnemyKind.Grunt), Is.Empty);
+            Assert.That(V2WorldLabels.FirstSightNotice(EnemyKind.Hollow), Is.Empty);
+            Assert.That(V2WorldLabels.FirstSightNotice(EnemyKind.Tyrant), Is.Empty);
+        }
+
+        [TestCase(true, ExpectedResult = true, TestName = "Whitebox names every enemy, on every page")]
+        [TestCase(false, ExpectedResult = false, TestName = "The art keeps names to specials, elites and bosses")]
+        public bool OrdinaryNamesShown_InWhiteboxOnly(bool whitebox) => V2WorldLabels.OrdinaryNamesShown(whitebox);
 
         [Test]
         public void EdgePoint_FarToTheRight_SitsOnTheRightSide()

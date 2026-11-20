@@ -422,7 +422,8 @@ namespace AnomalyArena
             {
                 int broken = TyrantTerrain.For(world).BreakSwept(Position, Quaternion.Euler(0f, before, 0f) * facing, TailDirection,
                     sweepReach, TailHalfWidth, b.sweepWallPiece);
-                if (broken > 0) V2Audio.Instance?.PlayWorld(ArenaSoundCue.Impact, Position + TailDirection * (sweepReach * .5f));
+                // Rock breaking, not a weapon's hit: the Stomper's slam of cracking rock.
+                if (broken > 0) V5WeaponAudio.At(V5Sfx.StomperSlam, Position + TailDirection * (sweepReach * .5f), .7f, 1.1f);
             }
 
             if (!sweepLanded) SweepHit(player, before, sweepAngle);
@@ -615,7 +616,7 @@ namespace AnomalyArena
             {
                 Vector3 at = Query.Flat(Position);
                 int broken = TyrantTerrain.For(world).BreakAlong(at, at + facing * move, radius, b.rushWallPiece);
-                if (broken > 0) V2Audio.Instance?.PlayWorld(ArenaSoundCue.Impact, Position + facing * radius);
+                if (broken > 0) V5WeaponAudio.At(V5Sfx.StomperSlam, Position + facing * radius, .7f, 1.1f); // rock breaking, as in the sweep
             }
 
             ShoveAside(Query.Flat(Position), facing * move); // the enemies its body runs into on this step go aside

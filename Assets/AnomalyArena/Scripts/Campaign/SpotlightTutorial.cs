@@ -9,14 +9,17 @@ namespace AnomalyArena
     public enum PlayerAct { None = 0, Move = 1, Sprint = 2, Fire = 4, Switch = 8, All = Move | Sprint | Fire | Switch }
 
     /// <summary>Day 0's taught steps in order (implementation spec 2026-11-10, section A), then the two of the tutorial night. Switch
-    /// (the right button, taught the second time a crate is opened) was added after them and stands last so the others keep their numbers.</summary>
-    public enum TutorialStep { None, Move, Fire, Mine, Crate, Sprint, Fight, Collect, SecondCrate, Lamp, DarkMatter, Done, Switch }
+    /// (the right button, taught the second time a crate is opened) and TryWeapon (the first crate's weapon tried out between the crate
+    /// and the sprint) were added after them and stand last so the others keep their numbers.</summary>
+    public enum TutorialStep { None, Move, Fire, Mine, Crate, Sprint, Fight, Collect, SecondCrate, Lamp, DarkMatter, Done, Switch, TryWeapon }
 
     /// <summary>
     /// The rules of the forced spotlight tutorial, apart from the scene so they can be tested: which inputs a step lets through, what has
     /// been taught once a step is done, and the step conditions that are plain arithmetic. While a step is taught only its own input works
-    /// (spec A); a step at a thing the player must reach (the ore, the crate, the dropped energy)
-    /// also lets the player walk, or it could never be done. Between steps everything taught so far works.
+    /// (spec A); a step at a thing the player must reach (the ore, the crate, the dropped energy, the dark matter) also lets the player
+    /// walk, or it could never be done, and so does the tutorial night's lamp step, so that a player the night's shadows come for can
+    /// walk back toward the light (walking is not the taught key: only setting down the lamp ends the step). Between steps everything
+    /// taught so far works.
     /// </summary>
     public static class SpotlightTutorial
     {
@@ -25,10 +28,11 @@ namespace AnomalyArena
         {
             TutorialStep.Move => PlayerAct.Move,
             TutorialStep.Fire => PlayerAct.Fire,
-            TutorialStep.Mine or TutorialStep.Crate or TutorialStep.Collect or TutorialStep.DarkMatter => PlayerAct.Move,
+            // Trying the new weapon lets the player walk too, so one whose weapon can hurt them can step out of its way.
+            TutorialStep.TryWeapon => PlayerAct.Move | PlayerAct.Fire,
+            TutorialStep.Mine or TutorialStep.Crate or TutorialStep.Collect or TutorialStep.DarkMatter or TutorialStep.Lamp => PlayerAct.Move,
             TutorialStep.Sprint => PlayerAct.Move | PlayerAct.Sprint,
             TutorialStep.Fight => PlayerAct.Move | PlayerAct.Sprint | PlayerAct.Fire,
-            TutorialStep.Lamp => PlayerAct.None,
             TutorialStep.Switch => PlayerAct.Switch,
             _ => PlayerAct.All
         };
@@ -39,7 +43,7 @@ namespace AnomalyArena
         {
             TutorialStep.None => PlayerAct.None,
             TutorialStep.Move => PlayerAct.Move,
-            TutorialStep.Fire or TutorialStep.Mine or TutorialStep.Crate => PlayerAct.Move | PlayerAct.Fire,
+            TutorialStep.Fire or TutorialStep.Mine or TutorialStep.Crate or TutorialStep.TryWeapon => PlayerAct.Move | PlayerAct.Fire,
             TutorialStep.Sprint => PlayerAct.Move | PlayerAct.Fire | PlayerAct.Sprint,
             _ => PlayerAct.All
         };

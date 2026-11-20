@@ -45,6 +45,9 @@ namespace AnomalyArena
         V5Block shelfRow, grid, detail;
         Text found, detailTitle, detailBody;
         Image detailPlate, detailPicture;
+        // The details' words scroll in a view of their own when they are longer than it (a weapon with both anomalies and their traits).
+        RectTransform detailView;
+        ScrollRect detailScroll;
         Outline detailEdge;
         Shelf shelf;
 
@@ -90,9 +93,21 @@ namespace AnomalyArena
                 V5TitleKit.Stretch(text.rectTransform);
                 tags[t] = (back, text);
             }
-            detailBody = V5TitleKit.Label(detail.transform, "Text", 11, V5TitleKit.Ink2, TextAnchor.UpperLeft);
+            detailView = V5TitleKit.Rect(detail.transform, "TextView");
+            var wheel = detailView.gameObject.AddComponent<Image>();
+            wheel.color = Color.clear; // takes the wheel over the words and the gaps between their lines
+            detailView.gameObject.AddComponent<RectMask2D>();
+            detailScroll = detailView.gameObject.AddComponent<ScrollRect>();
+            detailBody = V5TitleKit.Label(detailView, "Text", 11, V5TitleKit.Ink2, TextAnchor.UpperLeft);
             V5TitleKit.Wrap(detailBody);
+            detailBody.verticalOverflow = VerticalWrapMode.Overflow;
             detailBody.lineSpacing = 1.1f;
+            detailScroll.viewport = detailView;
+            detailScroll.content = detailBody.rectTransform;
+            detailScroll.horizontal = false;
+            detailScroll.vertical = true;
+            detailScroll.movementType = ScrollRect.MovementType.Clamped;
+            detailScroll.scrollSensitivity = 20f;
         }
 
         void ListEntries()
@@ -224,6 +239,7 @@ namespace AnomalyArena
             bool any = index >= 0 && index < entries.Count && entries[index].met;
             Show(detailPicture, any);
             Show(detailTitle, any);
+            Show(detailView, any);
             Show(detailBody, any);
             foreach (var (back, _) in tags) Show(back, false);
             if (!any) return;
@@ -268,9 +284,15 @@ namespace AnomalyArena
                 V5TitleKit.Place(tags[t].back.rectTransform, x, DetailPad + 4.5f, widths[t], 13f);
                 x += widths[t] + TagGap;
             }
+            // The words take the largest size from 11 down to 10 at which they fit their view; longer words keep 10 and scroll inside it.
+            float bodyH = area.y - DetailPad - 31f - 12f;
+            V5TitleKit.Place(detailView, textLeft, DetailPad + 22f + 9f, textW, bodyH);
             detailBody.text = Details(entry);
-            V5TitleKit.Place(detailBody.rectTransform, textLeft, DetailPad + 22f + 9f, textW, area.y - DetailPad - 31f - 12f);
-            ArenaTextFit.Refit(detailBody, 11, 8);
+            V5TitleKit.Place(detailBody.rectTransform, 0f, 0f, textW, bodyH);
+            ArenaTextFit.Refit(detailBody, 11, 10);
+            V5TitleKit.Place(detailBody.rectTransform, 0f, 0f, textW, Mathf.Max(bodyH, detailBody.preferredHeight + 2f));
+            detailScroll.StopMovement();
+            detailBody.rectTransform.anchoredPosition = Vector2.zero;
         }
 
         static List<(string words, Color back, Color ink)> Tags(CodexEntry entry)
@@ -314,7 +336,11 @@ namespace AnomalyArena
                     if (!RunWeapon.IsAnomalousForm(form)) return $"<b>{ArenaTerms.WeaponAnomaly(form, 0)}</b> {WeaponGuide.How(form, 0)}";
                     var revealed = ArenaCodex.RevealedAnomalies(form, out int missing);
                     var lines = new List<string>();
-                    foreach (var (name, how) in revealed) lines.Add($"<b>{name}</b> {how}");
+                    foreach (var (name, how, trait) in revealed)
+                    {
+                        lines.Add($"<b>{name}</b> {how}");
+                        if (trait.Length > 0) lines.Add(ArenaCodex.TraitLine(trait));
+                    }
                     if (missing > 0) lines.Add($"<color=#7D8397>{ArenaCodex.MissingAnomalies(missing)}</color>");
                     return string.Join("\n", lines);
                 case Shelf.Skills:

@@ -80,16 +80,18 @@ namespace AnomalyArena.EditorTools
         // The props made on 2026-11-19 for what was still a box, a cylinder or a flat picture in the illustrated game; they install with
         // the rest, or on their own (InstallProps) without touching the voices, pictures, sounds or the scene.
         static readonly string[] Props1119 = { "WeaponCrate", "DarkMatterCore", "VoidCrystal", "CrashDebrisHull", "CrashDebrisEngine", "EnergyShard", "VoidPlatform" };
-        // Their glow, linear like DarkNodeGlow and multiplying the same colour map: the violet of the dark matter and the void where the
-        // design glows (the core's heart, the crystals' edges, the energy shard, the platform's runes and cracks).
+        // Their glow, linear like DarkNodeGlow, where the design glows (the core's heart, the crystals' edges, the energy shard, the
+        // platform's runes and cracks): it multiplies the prop's <Model>_Emission.png, the violet of its colour map with the rest black
+        // (work/gold-1117/models-1119/make_emission_masks.py), or the whole colour map where there is none (the energy shard is violet
+        // throughout).
         static readonly Dictionary<string, Color> PropGlow = new()
         {
-            ["DarkMatterCore"] = new Color(.9f, .2f, 1.1f), ["VoidCrystal"] = new Color(.7f, .15f, 1.1f),
-            ["EnergyShard"] = new Color(.9f, .35f, 1.2f), ["VoidPlatform"] = new Color(.6f, .15f, .95f),
+            ["DarkMatterCore"] = new Color(1.1f, .25f, 1.35f), ["VoidCrystal"] = new Color(1f, .2f, 1.5f),
+            ["EnergyShard"] = new Color(.9f, .35f, 1.2f), ["VoidPlatform"] = new Color(.8f, .2f, 1.25f),
         };
         static readonly Dictionary<string, string> Reuses = new() { ["DarkMatterNode"] = "OreAlloy", ["BaseDamaged"] = "Base" };
 
-        // The parts of the voice manifest (VoiceSource + manifest.json) the installer reads (JsonUtility skips the rest).
+        // The parts of a voice manifest (each of VoiceSources + manifest.json) the installer reads (JsonUtility skips the rest).
         [System.Serializable] class VoiceManifest { public VoiceLine[] lines; }
         [System.Serializable] class VoiceLine { public string id; public int default_take; public VoiceTake[] takes; public VoiceVariant[] variants; }
         [System.Serializable] class VoiceVariant { public string room; public int default_take; public VoiceTake[] takes; }
@@ -110,10 +112,12 @@ namespace AnomalyArena.EditorTools
         static string PictureSource => Work + "art-plans/v2-1104/gen/";
         static string ModelSource => Work + "art-plans/v2-1104/models/campaign/";
         static string PreparedPictures => Work + "v2-campaign-1106/pictures-1106/";
-        static string VoiceSource => Work + "gold-1117/voice-1118/";
+        // The voice manifests in order: the recordings of 2026-11-18, then the rewritten lines of 2026-11-19, whose takes replace the
+        // earlier ones of the same line.
+        static string[] VoiceSources => new[] { Work + "gold-1117/voice-1118/", Work + "gold-1117/voice-1119/" };
         static string SoundSource => Work + "art-plans/v2-1104/sfx-cg01/";
         static bool HasSources => Directory.Exists(IconSource) || Directory.Exists(PictureSource) || Directory.Exists(ModelSource)
-                                  || Directory.Exists(PreparedPictures) || Directory.Exists(VoiceSource) || Directory.Exists(SoundSource);
+                                  || Directory.Exists(PreparedPictures) || System.Array.Exists(VoiceSources, Directory.Exists) || Directory.Exists(SoundSource);
 
         [MenuItem("Anomaly Arena/V2 Campaign/Install")]
         public static void InstallMenu() => Install(true);
@@ -311,32 +315,36 @@ namespace AnomalyArena.EditorTools
             return paths;
         }
 
-        /// <summary>Copies each line's default take from the voice manifest: Voice/&lt;line&gt;.mp3, and Voice/S04-&lt;room&gt;.mp3 for the
-        /// line voiced once per room.</summary>
+        /// <summary>Copies each line's default take from the voice manifests, in order (a later manifest's take replaces an earlier one
+        /// of the same line): Voice/&lt;line&gt;.mp3, and Voice/S04-&lt;room&gt;.mp3 for the line voiced once per room.</summary>
         static void CopyVoices()
         {
-            string manifestPath = VoiceSource + "manifest.json";
-            if (!File.Exists(manifestPath)) { Log($"no voice manifest ({manifestPath}); voices keep what {ArtRoot}Voice has"); return; }
-            var manifest = JsonUtility.FromJson<VoiceManifest>(File.ReadAllText(manifestPath));
-            int copied = 0;
-            foreach (var line in manifest?.lines ?? new VoiceLine[0])
+            foreach (var source in VoiceSources)
             {
-                if (line.variants != null && line.variants.Length > 0)
+                string manifestPath = source + "manifest.json";
+                if (!File.Exists(manifestPath)) { Log($"no voice manifest ({manifestPath}); voices keep what {ArtRoot}Voice has"); continue; }
+                var manifest = JsonUtility.FromJson<VoiceManifest>(File.ReadAllText(manifestPath));
+                int copied = 0;
+                foreach (var line in manifest?.lines ?? new VoiceLine[0])
                 {
-                    foreach (var variant in line.variants)
-                        if (CopyTake(line.id + " " + variant.room, variant.takes, variant.default_take, $"{line.id}-{variant.room}")) copied++;
+                    if (line.variants != null && line.variants.Length > 0)
+                    {
+                        foreach (var variant in line.variants)
+                            if (CopyTake(source, line.id + " " + variant.room, variant.takes, variant.default_take, $"{line.id}-{variant.room}")) copied++;
+                    }
+                    else if (CopyTake(source, line.id, line.takes, line.default_take, line.id)) copied++;
                 }
-                else if (CopyTake(line.id, line.takes, line.default_take, line.id)) copied++;
+
+                Log($"voice: {copied} default takes from {manifestPath}");
             }
-            Log($"voice: {copied} default takes from {manifestPath}");
         }
 
-        static bool CopyTake(string what, VoiceTake[] takes, int chosen, string name)
+        static bool CopyTake(string source, string what, VoiceTake[] takes, int chosen, string name)
         {
             foreach (var take in takes ?? new VoiceTake[0])
                 if (take.take == chosen && !string.IsNullOrEmpty(take.file))
                 {
-                    CopyIn(VoiceSource + take.file, ArtRoot + "Voice/" + name + ".mp3");
+                    CopyIn(source + take.file, ArtRoot + "Voice/" + name + ".mp3");
                     return true;
                 }
             Log($"voice {what}: no take {chosen} in the manifest");
@@ -609,7 +617,8 @@ namespace AnomalyArena.EditorTools
             {
                 material.EnableKeyword("_EMISSION");
                 material.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
-                material.SetTexture("_EmissionMap", baseMap);
+                var emissionMap = propGlow ? MapAt(dir, "Emission", false) : null;
+                material.SetTexture("_EmissionMap", emissionMap ? emissionMap : baseMap);
                 // SetColor takes sRGB values and this linear-space project converts them on the way to the shader, so the dark node's
                 // glow, chosen in linear terms, goes in through .gamma.
                 material.SetColor("_EmissionColor", darkMatter ? DarkNodeGlow.gamma : propGlow ? glow.gamma : new Color(.6f, .9f, .9f) * .6f);

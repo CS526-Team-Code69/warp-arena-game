@@ -61,7 +61,7 @@ namespace AnomalyArena
             AimPage(),
             (ArenaText.Pair("冲刺", "SPRINT"), ArenaText.Pair("移动时按住 " + ArenaKeys.SprintKey + " 冲刺。冲刺消耗体力，体力用光后要等它回满才能再冲刺。", "Hold " + ArenaKeys.SprintKey + " while moving to sprint. Sprinting uses stamina; once it runs out, wait for a full bar before sprinting again."), () => new SprintDemo()),
             (ArenaText.Pair("换武器和技能", "SWAP & SKILLS"), ArenaText.Pair($"按右键在两只手的武器之间切换，按 {ArenaKeys.SkillKeys} 释放技能。", $"Right click switches between your two hand weapons, and {ArenaKeys.SkillKeysWith(", ")} cast your skills."), () => new SkillDemo()),
-            (ArenaText.Pair("利用地形", "USE THE ARENA"), ArenaText.Pair("把敌人打飞去撞墙，它们会额外受伤；把它们推进黑洞，它们会被吞掉。", "Knock enemies into a wall and the impact hurts them; push them into a black hole and it swallows them."), () => new TerrainDemo()),
+            (ArenaText.Pair("利用地形", "USE THE ARENA"), TerrainLine(), () => new TerrainDemo()),
             (ArenaText.Pair("收起选卡面板", "PUT THE PANEL AWAY"),
                 ArenaText.Pair("整备时按 Tab 收起选卡面板，就能四处走动、走上传送门；再按一次 Tab 回到面板。", "Between waves, press Tab to put the card panel away and walk around or onto a portal. Press Tab again to bring it back."),
                 () => new BuildWalkDemo()),
@@ -96,13 +96,24 @@ namespace AnomalyArena
             };
         }
 
+        /// <summary>The terrain page's line: walls and black holes used against the enemies, and on the whole game's pages that a black hole
+        /// swallows the player too and the sprint key (as the settings have it) breaks its pull. The English Alpha keeps its graded line.</summary>
+        static string TerrainLine()
+        {
+            string line = ArenaText.Pair("把敌人打飞去撞墙，它们会额外受伤；把它们推进黑洞，它们会被吞掉。", "Knock enemies into a wall and the impact hurts them; push them into a black hole and it swallows them.");
+            if (!V5HudKit.On) return line;
+            string key = ArenaKeys.SprintKey;
+            return line + ArenaText.Pair($"你自己掉进黑洞也会立刻倒下，被引力拉住时要按住 {key} 朝外冲刺才能逃开。",
+                $" It swallows you too: if its pull catches you, hold {key} and sprint out.");
+        }
+
         // The two pages both sets share.
         static (string title, string line, Func<Demo> demo) AimPage() => (ArenaText.Pair("瞄准和开火", "AIM & FIRE"),
             ArenaText.Pair("用鼠标瞄准，按左键使用手上的武器。按住时是蓄力还是连射，要看是哪种武器。", "Aim with the mouse. Left click uses the held weapon; hold it to charge or keep firing, depending on the weapon."),
             () => new FireDemo());
 
         static (string title, string line, Func<Demo> demo) PausePage() => (ArenaText.Pair("暂停", "PAUSE"),
-            ArenaText.Pair("按 Esc 暂停。在暂停页可以查看按键、重看教程、重新开局或返回标题。", "Press Esc to pause. From there you can check the keys, see How to Play again, restart the run or quit to the title."),
+            ArenaText.Pair("按 Esc 暂停。在暂停页可以查看按键、重看教学、重新开局或返回标题。", "Press Esc to pause. From there you can check the keys, see the tutorial again, restart the run or quit to the title."),
             () => new PauseDemo());
 
         // The story mode's pages while a campaign runs; the title starts no run, but its Start opens the story mode, so its button forces
@@ -163,6 +174,10 @@ namespace AnomalyArena
 
         /// <summary>The story mode's pages, whatever is running: the title's tutorial button, since the title's Start opens the story mode.</summary>
         public static void ShowStory(Font font) => ShowPages(font, true);
+
+        /// <summary>The open mode's pages: the title's lessons window offers them beside the story's (V5Title). No campaign runs on the
+        /// title, so these are the classic run's pages.</summary>
+        public static void ShowClassic(Font font) => ShowPages(font, false);
 
         /// <summary>The story mode's pages from one of them (0 is the background): the title's lessons open the pages at their own.</summary>
         public static void ShowStory(Font font, int page) => ShowPages(font, true, page);
@@ -747,7 +762,8 @@ namespace AnomalyArena
             }
         }
 
-        /// <summary>Esc stops the fight and brings up the pause screen, with the keys and its four buttons; Esc again goes back to where the fight stopped.</summary>
+        /// <summary>Esc stops the fight and brings up the pause screen, with the keys and its row of buttons (four on the Alpha, five with
+        /// the collection on the whole game's pages); Esc again goes back to where the fight stopped.</summary>
         sealed class PauseDemo : Demo
         {
             static readonly Vector2 Centre = new(60f, 0f);
@@ -772,16 +788,25 @@ namespace AnomalyArena
                     Label(rows[i].input, 13, KeyChipInk, new Vector2(-170f, y), 150f, sheet);
                     Label(rows[i].action, 14, Soft, new Vector2(70f, y), 300f, sheet, TextAnchor.MiddleLeft);
                 }
-                string[] names =
+                // The pause screen's own row (V2Hud.PauseButtons): the collection is there on every page but the Alpha's.
+                var names = new System.Collections.Generic.List<string>
                 {
-                    ArenaText.Pair("继续", "RESUME"), ArenaText.Pair("重新开局", "RESTART RUN"),
-                    ArenaText.Pair("教程", "HOW TO PLAY"), ArenaText.Pair("返回标题", "QUIT TO TITLE"),
+                    ArenaText.Pair("继续", "RESUME"), ArenaText.Pair("重新开局", "RESTART RUN"), ArenaText.Pair("教学", "TUTORIAL"),
                 };
-                for (int i = 0; i < names.Length; i++)
+                if (V5HudKit.On) names.Add(ArenaText.Pair("图鉴", "COLLECTION"));
+                names.Add(ArenaText.Pair("返回标题", "QUIT TO TITLE"));
+                float step = names.Count > 4 ? 106f : 132f, width = step - 8f;
+                for (int i = 0; i < names.Count; i++)
                 {
-                    var at = new Vector2(-198f + i * 132f, -100f);
-                    PanelButton(sheet, i == 0, new Vector2(124f, 46f), at);
-                    Label(names[i], 13, PanelButtonInk(i == 0), at, 120f, sheet);
+                    var at = new Vector2((i - (names.Count - 1) * .5f) * step, -100f);
+                    PanelButton(sheet, i == 0, new Vector2(width, 46f), at);
+                    var caption = Label(names[i], 13, PanelButtonInk(i == 0), at, width - 4f, sheet);
+                    // A long name draws smaller rather than breaking onto a second line.
+                    caption.horizontalOverflow = HorizontalWrapMode.Wrap;
+                    caption.verticalOverflow = VerticalWrapMode.Truncate;
+                    caption.resizeTextForBestFit = true;
+                    caption.resizeTextMinSize = 9;
+                    caption.resizeTextMaxSize = 13;
                 }
 
                 esc = Cap("Esc", new Vector2(-300f, -100f), 60f);
@@ -1056,7 +1081,7 @@ namespace AnomalyArena
                 gains = new[]
                 {
                     Label(ArenaText.Pair("异星能量 +1", "alien energy +1"), 16, EnergyTint, At, 200f),
-                    Label(ArenaText.Pair("异星合金 +3", "alien alloy +3"), 16, AlloyColour, Ore, 200f),
+                    Label(ArenaText.Pair("合金 +3", "alloy +3"), 16, AlloyColour, Ore, 200f),
                     Label(ArenaText.Pair("暗物质 +1", "dark matter +1"), 16, DarkText, Dark[0], 200f),
                 };
                 e = Cap(ArenaKeys.InteractKey, new Vector2(-300f, -110f));
@@ -1189,13 +1214,13 @@ namespace AnomalyArena
 
                 (sheet, fade) = Sheet(new Vector2(480f, 290f), SheetAt);
                 Label(ArenaText.Pair("基地", "BASE"), 18, Soft, new Vector2(0f, 118f), 300f, sheet);
-                Label(ArenaText.Pair("用异星能量、异星合金和暗物质购买", "Paid with alien energy, alien alloy and dark matter"), 12, Faint, new Vector2(0f, 94f), 440f, sheet);
+                Label(ArenaText.Pair("用异星能量、合金和暗物质购买", "Paid with alien energy, alloy and dark matter"), 12, Faint, new Vector2(0f, 94f), 440f, sheet);
                 // What each room sells, in short (the base panel's room texts).
                 string[] sells =
                 {
                     ArenaText.Pair("基地耐久和护盾", "base hull and shield"),
                     ArenaText.Pair("装甲、增强武器、异常武器", "armor, weapon boosts, anomaly weapons"),
-                    ArenaText.Pair("体质、异星技能、武器附魔", "body, alien skills, infusions"),
+                    ArenaText.Pair("体质、技能、武器附魔", "body, skills, infusions"),
                     ArenaText.Pair("修飞船、用暗物质合成燃料、矿灯", "ship repairs, fuel from dark matter, lamps"),
                 };
                 rows = new Image[Rooms.Length];

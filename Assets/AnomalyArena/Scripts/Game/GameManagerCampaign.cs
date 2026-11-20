@@ -22,14 +22,16 @@ namespace AnomalyArena
         internal void CampaignBeginLoadout() => SetPhase(ArenaUiState.Loadout);
 
         /// <summary>With the starting weapon in hand (since 2026-11-06 the pistol, no card): the run is on, Day 0 walks the map with combat
-        /// allowed but no wave running.</summary>
-        internal void CampaignEnterPlay()
+        /// allowed but no wave running. A continued save (V2Campaign.BeginFromSave) enters here too, with its story part: the run's
+        /// analytics row then says on which day and in which phase it continues instead of Day 0.</summary>
+        internal void CampaignEnterPlay(StorySave continued = null)
         {
             State = GameState.Playing;
             BeginWaveDrafts();
             SetPhase(ArenaUiState.WaveActive);
             V2Audio.Instance?.PlayWave();
-            RunAnalytics.RunStarted(this);
+            if (continued != null) RunAnalytics.RunContinued(this, continued.day, continued.phase);
+            else RunAnalytics.RunStarted(this);
         }
 
         /// <summary>A campaign phase (Night, Base, Story, WaveIntro for the lull). A story beat may keep the world's time running.</summary>

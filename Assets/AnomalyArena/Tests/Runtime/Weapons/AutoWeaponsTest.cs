@@ -470,8 +470,8 @@ namespace AnomalyArena
                 Assert.That(ArenaTerms.WeaponForm(WeaponForm.ShieldRing), Is.EqualTo("能量环"), "2026-10-27 (Q100)");
                 Assert.That(ArenaTerms.WeaponAnomaly(WeaponForm.ShieldRing, 0), Is.EqualTo("偏折"));
                 Assert.That(WeaponGuide.Backfire(WeaponForm.OrbitBlades, 0), Does.Contain("可拾取物").And.Contain("尸体"));
-                Assert.That(WeaponGuide.How(WeaponForm.ShieldRing, 1), Does.Contain("灌注后").And.Contain($"{tuning.drainInfuseRadius:0.##} 格内"), "the Drain card says what an Infusion does (P23)");
-                Assert.That(WeaponGuide.How(WeaponForm.ShieldRing, 0), Does.Contain("轻伤").And.Contain("灌注"), "the Deflect card states its light hit (P22)");
+                Assert.That(WeaponGuide.How(WeaponForm.ShieldRing, 1), Does.Contain("附魔后").And.Contain($"{tuning.drainInfuseRadius:0.##} 格内"), "the Drain card says what an Infusion does (P23)");
+                Assert.That(WeaponGuide.How(WeaponForm.ShieldRing, 0), Does.Contain("轻伤").And.Contain("附魔"), "the Deflect card states its light hit (P22)");
                 tuning.gunnerClip = 17;
                 Assert.That(WeaponGuide.How(WeaponForm.SentryDrone, 0), Does.Contain("17"), "the Gunner card reads the live magazine");
 

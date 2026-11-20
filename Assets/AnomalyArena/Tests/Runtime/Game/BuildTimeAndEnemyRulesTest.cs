@@ -232,6 +232,8 @@ namespace AnomalyArena
             foreach (var target in targets) target.DiscardWithoutReward();
             var labels = Object.FindAnyObjectByType<V2WorldLabels>();
             Assume.That(labels, Is.Not.Null, "the scene has its world labels");
+            // With the art on ordinary enemies show only their bar; in whitebox every kind is named (checked at the end).
+            Art.Enabled = true;
             Vector3 origin = game.player.Position;
             var kind = new[] { EnemyKind.Stomper, EnemyKind.Rammer, EnemyKind.Bloater, EnemyKind.Spire }
                 .First(k => game.waves.DefinitionOf(k) is { canElite: true, canAffix: true });
@@ -258,6 +260,10 @@ namespace AnomalyArena
 
             await Until(() => Texts(labels).Contains(eliteTag + " · " + chant), 3f, "inside the aura the elite's bar adds the chant tag after its affix");
             Assert.That(Texts(labels), Has.Member(chant), "an ordinary enemy shows the chant tag on its own");
+
+            // In whitebox every body is a plain shape, so every kind is named, on every page (V2WorldLabels.OrdinaryNamesShown).
+            Art.Enabled = false;
+            await Until(() => Texts(labels).Contains(grunt + " · " + chant), 3f, "in whitebox the Grunt's bar names its kind before the chant tag");
         }
 
         // ───── Time in the build phase (document 2.2) ─────

@@ -136,8 +136,9 @@ namespace AnomalyArena
             return true;
         }
 
-        /// <summary>The change's burst: heard and felt, and a player within its reach is thrown back without being hurt (never into an open
-        /// hole of the void trial, as with the boss's hits; not while the player cannot be seen or touched).</summary>
+        /// <summary>The change's burst: heard and felt, and a player within its reach is thrown back without being hurt. It is a push, so a
+        /// wall behind the player stops them without a wall slam; never into an open hole of the void trial, as with the boss's hits; not
+        /// while the player cannot be seen or touched. A push is not scaled by body size, so the distance is scaled here as a blow's is.</summary>
         void PhaseBurst(PlayerController player)
         {
             PhaseBurstSequence++;
@@ -153,7 +154,7 @@ namespace AnomalyArena
             Vector3 direction = away.sqrMagnitude > 1e-4f ? away.normalized : facing;
             float push = Mathf.Max(0f, b.shiftPushDistance), scale = Mathf.Max(.0001f, player.knockbackScale);
             if (world && world.TrialActive) push = world.LimitBossKnockback(player.Position, direction, push * scale) / scale;
-            if (push > 0f) player.Knockback(direction, push, KnockKind.Hit);
+            if (push > 0f) player.Knockback(direction, push * scale, KnockKind.Push, this);
         }
     }
 }

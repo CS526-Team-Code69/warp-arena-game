@@ -62,10 +62,13 @@ namespace AnomalyArena
                 game.ExecuteUiCommand(ArenaUiCommand.StartCampaign, -1);
                 await Awaitable.NextFrameAsync();
             }
-            // Day 0's walk: a death there is not the campaign's to catch (V2Campaign.CatchesPlayerDeath), so it ends the run as a death in
-            // the morning does.
             await Until(() => campaign.Stage == CampaignStage.Tutorial && game.State == GameState.Playing, 15f, "Day 0's walk begins");
             await Until(() => CampaignMusic.Instance.Current == CampaignMusic.Track.Day, 5f, "the day track plays on the walk");
+            // A fall on Day 0's walk is the campaign's to catch (V2Campaign.CatchesPlayerDeath), a death in the morning is not: Day 0's
+            // night is begun and ended at once (the campaign's calls for checks), so the death falls in day 1's morning and ends the run.
+            campaign.DebugBeginNight(0, Array.Empty<Vector3>(), Array.Empty<int>(), Array.Empty<EnemyKind>(), 0);
+            campaign.EndNight(false);
+            Assume.That((campaign.Day, campaign.Stage), Is.EqualTo((1, CampaignStage.Day)), "day 1's morning has begun");
             Assume.That(campaign.CatchesPlayerDeath(), Is.False, "a death now ends the run");
             // Wall damage is not an attack, so hit protection does not block it.
             Assert.That(game.player.ReceiveDamage(new DamageInfo { amount = 99999f, source = DamageSource.Wall }), Is.True, "the player dies");

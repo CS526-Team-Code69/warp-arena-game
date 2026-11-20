@@ -55,6 +55,34 @@ namespace AnomalyArena
             Assert.That(actual, Is.EqualTo(expected));
         }
 
+        // ───── The kinds a day brings for the first time (the afternoon banner before it names them) ─────
+
+        [TestCase(1, new[] { EnemyKind.Grunt, EnemyKind.Skitter, EnemyKind.Brute })]
+        [TestCase(2, new[] { EnemyKind.Spitter, EnemyKind.Warden })]
+        [TestCase(3, new[] { EnemyKind.Spire, EnemyKind.Chanter })]
+        [TestCase(4, new[] { EnemyKind.Bloater, EnemyKind.Rammer })]
+        [TestCase(5, new[] { EnemyKind.Stomper })]
+        [TestCase(6, new[] { EnemyKind.Shade })]
+        [TestCase(7, new[] { EnemyKind.Splitter })] // the Stomper came on day 5 (it sat out day 6), so it is no newcomer on day 7
+        [TestCase(8, new EnemyKind[0])]
+        public void NewcomersOn_Day_AreTheKindsNoEarlierDayBrought(int day, EnemyKind[] expected)
+        {
+            var sut = CreateRules();
+
+            var actual = V2Campaign.NewcomersOn(sut, day);
+
+            Assert.That(actual, Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void NewcomersOn_EmptyTableOrDayZero_NamesNone()
+        {
+            var sut = CreateRules();
+            Assert.That(V2Campaign.NewcomersOn(sut, 0), Is.Empty, "Day 0 has no afternoon banner before it");
+            sut.dayKinds = new DayKinds[0];
+            Assert.That(V2Campaign.NewcomersOn(sut, 2), Is.Empty, "an empty table allows every kind every day: nothing is new");
+        }
+
         // ───── HP by day ─────
 
         static readonly Dictionary<EnemyKind, int[]> PlainHp = new()

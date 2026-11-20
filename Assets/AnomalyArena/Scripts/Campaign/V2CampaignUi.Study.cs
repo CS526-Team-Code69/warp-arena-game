@@ -402,12 +402,14 @@ namespace AnomalyArena
             var entry = SelectedEntry;
             if (entry == null || entry.buy == null || entry.state is StudyState.Locked or StudyState.Owned)
             {
-                V2Audio.Instance?.PlayUI(ArenaUiSound.Cancel);
+                PlayRefused();
                 return;
             }
             studyEntryId = entry.id;
             bool bought = entry.buy();
-            if (!bought) CampaignAudio.Play(CampaignSfx.UpgradeDenied); // 2026-11-10: the purchase was refused
+            // One sound either way: the refusal, or the buy button's click (a purchase here has no sound of its own).
+            if (!bought) PlayRefused();
+            else if (!V5UiSound.Play(V5UiSound.Ui.Start)) V2Audio.Instance?.PlayUI(ArenaUiSound.Confirm);
             if (!bought && entry.state == StudyState.Unaffordable) Flash(ArenaText.Pair("现在还买不了", "You can't buy this yet"));
             if (StudyOpen) RebuildStudy();
         }

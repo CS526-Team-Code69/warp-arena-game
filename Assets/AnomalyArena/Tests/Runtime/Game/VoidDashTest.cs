@@ -81,7 +81,7 @@ namespace AnomalyArena
                 var word = Hint("DashWord");
                 await Until(() => key.gameObject.activeInHierarchy && word.gameObject.activeInHierarchy, 2f, "the dash's key joins the hints");
                 Assert.That(key.GetComponentInChildren<Text>().text, Is.EqualTo("Space"), "its cap says Space");
-                Assert.That(word.GetComponent<Text>().text, Is.EqualTo(ArenaText.Pair("冲刺", "Dash")), "and its word what it does");
+                Assert.That(word.GetComponent<Text>().text, Is.EqualTo(ArenaText.Pair("虚空冲刺", "Void Dash")), "and its word what it does");
                 Canvas.ForceUpdateCanvases();
                 foreach (var part in new[] { key, word })
                     foreach (var other in new[] { "InteractKey", "InteractWord", "PauseKey", "PauseWord" }.Select(Hint))

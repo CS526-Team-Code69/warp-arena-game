@@ -173,7 +173,7 @@
     {
       "key": "ui.wave",
       "zh": "第 {0} / {1} 波 · {2} 秒",
-      "en": "WAVE {0} / {1} · {2}s",
+      "en": "WAVE {0} / {1} · {2} s",
       "context": "Arena v2 player-visible text; format arguments come from current data."
     },
     {
@@ -185,7 +185,7 @@
     {
       "key": "ui.build.clock",
       "zh": "整备剩余 {0} 秒",
-      "en": "BUILD TIME {0}s",
+      "en": "BUILD TIME {0} s",
       "context": "Arena v2 player-visible text; format arguments come from current data."
     },
     {
@@ -238,8 +238,8 @@
     },
     {
       "key": "ui.hole.enter",
-      "zh": "E · 进入\n失败会结束本局\n状态清除 · 护盾清 0",
-      "en": "E · ENTER\nFAILURE ENDS RUN\nCLEARS STATUS & SHIELD",
+      "zh": "失败会结束本局。进入时，身上的状态会清除，护盾清零。",
+      "en": "Failing it ends the run. Entering clears your statuses and your shield.",
       "context": "Arena v2 player-visible text; format arguments come from current data."
     },
     {
@@ -520,13 +520,13 @@
     },
     {
       "key": "card.infusion",
-      "zh": "灌注 {0}",
+      "zh": "附魔 {0}",
       "en": "Infuse {0}",
       "context": "Arena v2 player-visible text; format arguments come from current data."
     },
     {
       "key": "card.infusion.replace",
-      "zh": "灌注 {0}，替换 {1}",
+      "zh": "附魔 {0}，替换 {1}",
       "en": "Infuse {0}, replaces {1}",
       "context": "Arena v2 player-visible text; format arguments come from current data."
     },
@@ -646,9 +646,9 @@
     },
     {
       "key": "axis.Infusion",
-      "zh": "灌注",
+      "zh": "附魔",
       "en": "Infusion",
-      "context": "`灌注{元素}`；已有元素时：`灌注{新元素}，替换{旧元素}`。"
+      "context": "`附魔{元素}`；已有元素时：`附魔{新元素}，替换{旧元素}`。"
     },
     {
       "key": "axis.Power",

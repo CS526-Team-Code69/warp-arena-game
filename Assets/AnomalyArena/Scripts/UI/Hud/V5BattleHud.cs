@@ -204,6 +204,11 @@ namespace AnomalyArena
                 dashShown = dash;
                 LayKeyHints();
             }
+            // In the open mode the dash's keycap pulses from the win until the player first dashes, so the new key is seen where it is
+            // listed; the story teaches the dash with its own hint. A dash is seen by its short cooldown (VoidDash.CoolingDown).
+            var player = GameManager.Instance ? GameManager.Instance.player : null;
+            if (dashShown && !dashTried && player && player.voidDash != null && player.voidDash.CoolingDown) dashTried = true;
+            dashPulsing = dashShown && !story && !dashTried;
             LayDock();
             PlaceEdgeFloor(story);
             // The character screen's key shows only while the screen can open: the player in play, no other page over the run.
@@ -231,6 +236,7 @@ namespace AnomalyArena
             TickBanner(dt);
             TickHint(dt);
             TickPulses();
+            TickDashPulse();
         }
 
         // ───── The dock ─────
@@ -356,7 +362,22 @@ namespace AnomalyArena
         V5HudKey interactKey, pauseKey, dashKey, characterKey;
         Text interactWord, pauseWord, dashWord, characterWord;
         CanvasGroup characterGroup;
-        bool dashShown;
+        bool dashShown, dashPulsing;
+        // The player has dashed once since the page opened: the keycap stops pulsing, also after a restart.
+        static bool dashTried;
+        const float DashPulseGrow = .12f, DashPulseRate = 1.2f;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetDashPulse() => dashTried = false;
+
+        /// <summary>The dash's keycap grows and shrinks a little while it pulses (Render), and keeps its size otherwise.</summary>
+        void TickDashPulse()
+        {
+            if (!dashKey) return;
+            var rect = dashKey.Rect;
+            float scale = dashPulsing ? 1f + DashPulseGrow * (.5f + .5f * Mathf.Sin(Time.unscaledTime * Mathf.PI * 2f * DashPulseRate)) : 1f;
+            if (!Mathf.Approximately(rect.localScale.x, scale)) rect.localScale = new Vector3(scale, scale, 1f);
+        }
 
         void BuildKeyHints()
         {
@@ -383,7 +404,7 @@ namespace AnomalyArena
         }
 
         /// <summary>"E 互动" and "Esc 暂停", right to left from the corner; the interact key is the one the player has it on (ArenaKeys).
-        /// Once the void dash is won, "Space 冲刺" stands left of them; nothing of it shows before. The character screen's key and "角色"
+        /// Once the void dash is won, "Space 虚空冲刺" stands left of them; nothing of it shows before. The character screen's key and "角色"
         /// stand at the left end, seen only while the screen can open (Render).</summary>
         void LayKeyHints()
         {
@@ -394,7 +415,7 @@ namespace AnomalyArena
             interactWord.text = ArenaText.Pair("互动", "Interact");
             pauseWord.text = ArenaText.Pair("暂停", "Pause");
             V5BattleKit.Sync(dashWord);
-            dashWord.text = ArenaText.Pair("冲刺", "Dash");
+            dashWord.text = ArenaText.Pair("虚空冲刺", "Void Dash");
             characterKey.SetText(ArenaKeys.CharacterKey);
             V5BattleKit.Sync(characterWord);
             characterWord.text = ArenaText.Pair("角色", "Character");
@@ -505,14 +526,14 @@ namespace AnomalyArena
             RenderBossPhase(s, shifting);
             if (shifting)
             {
-                bossImmune.text = ArenaText.Pair("阶段转换中，暂时无法受伤", "CHANGING PHASE · INVULNERABLE");
+                bossImmune.text = ArenaText.Pair("阶段转换中，暂时无法受伤", "Changing phase: it can't be hurt");
                 bossImmune.color = V5TitleKit.Gold;
                 V5BattleKit.Place(bossImmune.rectTransform, x, 8f, V5BattleKit.Width(bossImmune) / Css + 2f, 22f);
             }
             else if (any)
             {
                 bossImmune.color = V5TitleKit.Ink3;
-                bossImmune.text = ArenaText.Pair("免疫", "IMMUNE");
+                bossImmune.text = ArenaText.Pair("免疫", "Immune");
                 float wordWidth = V5BattleKit.Width(bossImmune) / Css;
                 V5BattleKit.Place(bossImmune.rectTransform, x, 8f, wordWidth + 2f, 22f);
                 x += wordWidth + 6f;

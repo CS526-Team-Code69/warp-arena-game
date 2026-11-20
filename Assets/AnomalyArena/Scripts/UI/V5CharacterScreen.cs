@@ -21,9 +21,10 @@ namespace AnomalyArena
     /// with its keys.
     /// Left: the health and the energy as bars with their numbers beside the portrait in its gauge ring (the energy once it is unlocked),
     /// then the bonuses, one plain line each for every number that differs from the run's start.
-    /// Middle: the weapons held, each a plate with its picture, name, slot, anomaly, its Mk chip, its element and what was added to it.
-    /// Right: the skills learned, each in its octagon with its level, cost, cooldown and key; then the upgrades: the study's purchases in
-    /// the story, the upgrade cards taken in the open mode.
+    /// Middle: the weapons held, each a plate with its picture, name, slot, anomaly, how it attacks and its trait once the anomaly has
+    /// shown (the plate grows with them), its Mk chip, its element and what was added to it.
+    /// Right: the skills learned, each in its octagon with its level, cost, cooldown and key, and the void dash once it is won; then the
+    /// upgrades: the study's purchases in the story, the upgrade cards taken in the open mode.
     /// A list longer than its column scrolls inside it (the mouse wheel or a drag). Nothing that is not owned or unlocked is shown, but
     /// every part keeps its caption, so the three columns always stand with their names: an empty part says so in one muted line under
     /// its caption. Every piece follows the art switch: the mock-up's pictures with the art on, flat fills with the thin edge and the
@@ -57,6 +58,9 @@ namespace AnomalyArena
         // for the hazard tab of the weapon in hand.
         const float WeaponH = 168f, WeaponGap = 14f, WeaponCut = 14f, ListPad = 8f, PictureW = 240f, PictureH = 96f, WordsLeft = 20f;
         const float ChipsTop = 124f, ChipH = 30f, ChipGap = 10f, ChipPad = 8f, MarkH = 24f, ElementMedal = 26f, TagIcon = 20f, TagPadL = 8f, TagPadR = 12f;
+        // How a weapon attacks and its trait: two paragraphs under its picture across the plate, 15 pixels, wrapping as they need; the
+        // chips follow them.
+        const float ParagraphTop = 116f, ParagraphPx = 15f, ParagraphGap = 6f, ParagraphChipsGap = 12f;
         // A skill's row and an upgrade's row.
         const float SkillH = 84f, SkillGap = 10f, Octagon = 60f, OctagonRim = 2.5f, SkillWords = 92f;
         const float EntryH = 64f, EntryGap = 8f, EntryMedal = 44f, EntryWords = 70f;
@@ -106,7 +110,7 @@ namespace AnomalyArena
             public RectTransform root, chips;
             public V5HudPlate plate;
             public Image tab, picture, mark;
-            public Text place, name, anomaly, markText, elementWord;
+            public Text place, name, anomaly, markText, elementWord, how, trait;
             public V5HudMedal element;
             public readonly List<TagView> tags = new();
         }
@@ -460,6 +464,8 @@ namespace AnomalyArena
                 V5TitleKit.Place(card.name.rectTransform, P(WordsLeft), P(36f), P(words), P(40f));
                 card.anomaly = V5StoryKit.Label(root, "Anomaly", 17f, V5TitleKit.Ink2, TextAnchor.MiddleLeft);
                 V5TitleKit.Place(card.anomaly.rectTransform, P(WordsLeft), P(78f), P(words), P(26f));
+                card.how = Paragraph(root, "How");
+                card.trait = Paragraph(root, "Trait");
                 // The chips' row, drawn smaller as a whole from its left end when it is wider than the plate.
                 card.chips = V5TitleKit.Rect(root, "Chips");
                 card.chips.anchorMin = card.chips.anchorMax = new Vector2(0f, 1f);
@@ -474,6 +480,16 @@ namespace AnomalyArena
                 weaponCards.Add(card);
             }
             return weaponCards[index];
+        }
+
+        /// <summary>A paragraph of a weapon's plate: it wraps in its width and is as tall as its lines (LayParagraph).</summary>
+        static Text Paragraph(Transform parent, string name)
+        {
+            var text = V5StoryKit.Label(parent, name, ParagraphPx, V5TitleKit.Ink2, TextAnchor.UpperLeft);
+            text.horizontalOverflow = HorizontalWrapMode.Wrap;
+            text.verticalOverflow = VerticalWrapMode.Overflow;
+            text.gameObject.SetActive(false);
+            return text;
         }
 
         static TagView TagAt(WeaponCard card, int index)
@@ -716,19 +732,23 @@ namespace AnomalyArena
             LayEmpty(weaponCaption, count == 0, ArenaText.Pair("还没有武器", "No weapons yet"), MidX, listTop, MidW);
             V5TitleKit.Place(weaponScroll.root, P(MidX), P(listTop), P(MidW), P(Floor - listTop));
             float y = ListPad;
-            for (int i = 0; i < count; i++)
-            {
-                LayWeapon(WeaponCardAt(i), sheet.weapons[i], y, art);
-                y += WeaponH + WeaponGap;
-            }
+            for (int i = 0; i < count; i++) y += LayWeapon(WeaponCardAt(i), sheet.weapons[i], y, art) + WeaponGap;
             for (int i = count; i < weaponCards.Count; i++) Shown(weaponCards[i].root, false);
             weaponScroll.content.sizeDelta = new Vector2(0f, count > 0 ? P(y - WeaponGap + ListPad) : 0f);
         }
 
-        void LayWeapon(WeaponCard card, CharacterWeapon weapon, float top, bool art)
+        /// <summary>One weapon's plate from top; its height in mock-up pixels: WeaponH, or taller by the paragraphs of how it attacks and its
+        /// trait when it has them, with its chips moved down under them.</summary>
+        float LayWeapon(WeaponCard card, CharacterWeapon weapon, float top, bool art)
         {
             Shown(card.root, true);
-            V5TitleKit.Place(card.root, 0f, P(top), P(MidW), P(WeaponH));
+            float y = ParagraphTop, foot = 0f;
+            if (LayParagraph(card.how, weapon.how.Length > 0 ? ArenaCodex.AttackLine(weapon.how) : "", y, out float howH)) foot = y += howH;
+            if (foot > 0f) y += ParagraphGap;
+            if (LayParagraph(card.trait, weapon.trait.Length > 0 ? ArenaCodex.TraitLine(weapon.trait) : "", y, out float traitH)) foot = y + traitH;
+            float chipsTop = foot > 0f ? Mathf.Max(ChipsTop, foot + ParagraphChipsGap) : ChipsTop, height = chipsTop + WeaponH - ChipsTop;
+            card.chips.anchoredPosition = new Vector2(P(WordsLeft), -P(chipsTop + ChipH * .5f));
+            V5TitleKit.Place(card.root, 0f, P(top), P(MidW), P(height));
             // The weapon in hand is warm with the hazard tab, as its slot on the dock.
             card.plate.SetLook(weapon.inUse ? V5HudKit.PlateLook.Warm : V5HudKit.PlateLook.Plain);
             Shown(card.tab, weapon.inUse);
@@ -749,6 +769,25 @@ namespace AnomalyArena
                 V5TitleKit.FitWidth(card.anomaly, F(17f), F(13f));
             }
             LayChips(card, weapon, art);
+            return height;
+        }
+
+        /// <summary>A paragraph across the plate from top, as tall as its words wrap to (its height in mock-up pixels); hidden, and false,
+        /// when it has no words.</summary>
+        bool LayParagraph(Text label, string words, float top, out float height)
+        {
+            height = 0f;
+            bool shown = !string.IsNullOrEmpty(words);
+            Shown(label, shown);
+            if (!shown) return false;
+            SetText(label, words);
+            label.fontSize = F(ParagraphPx);
+            float width = MidW - 2f * WordsLeft;
+            // Placed at its width first: a label's preferred height is worked out at its own width.
+            V5TitleKit.Place(label.rectTransform, P(WordsLeft), P(top), P(width), P(ParagraphPx * 2f));
+            height = Mathf.Ceil(label.preferredHeight / Css) + 2f;
+            V5TitleKit.Place(label.rectTransform, P(WordsLeft), P(top), P(width), P(height));
+            return true;
         }
 
         /// <summary>A weapon's chips along its plate's foot: its Mk (pale grey at Mk I, steel above, black for the story's void Mk), its
@@ -810,17 +849,25 @@ namespace AnomalyArena
         {
             V5TitleKit.Place(rightScroll.root, P(RightX), P(Top), P(RightW), P(Floor - Top));
             int skills = sheet.skills.Count, upgrades = sheet.upgrades.Count;
+            bool dash = sheet.dash != null;
             float y = 0f;
             LayCaption(skillCaption, "SKILLS", "技能", 0f, y, RightW);
             y += CaptionH + CaptionGap;
-            LayEmpty(skillCaption, skills == 0, ArenaText.Pair("还没有学会技能", "No skills learned yet"), 0f, y, RightW);
-            if (skills == 0) y += EmptyH;
+            LayEmpty(skillCaption, skills == 0 && !dash, ArenaText.Pair("还没有学会技能", "No skills learned yet"), 0f, y, RightW);
+            if (skills == 0 && !dash) y += EmptyH;
             for (int i = 0; i < skills; i++)
             {
                 LaySkill(SkillRowAt(i), sheet.skills[i], y, art);
                 y += SkillH + (i < skills - 1 ? SkillGap : 0f);
             }
-            for (int i = skills; i < skillRows.Count; i++) Shown(skillRows[i].root, false);
+            // The void dash once it is won, after the skills, in a row of their kind.
+            if (dash)
+            {
+                if (skills > 0) y += SkillGap;
+                LayDash(SkillRowAt(skills), sheet.dash, y, art);
+                y += SkillH;
+            }
+            for (int i = skills + (dash ? 1 : 0); i < skillRows.Count; i++) Shown(skillRows[i].root, false);
             y += SectionGap;
             LayCaption(upgradeCaption, "UPGRADES", "升级", 0f, y, RightW);
             y += CaptionH + CaptionGap;
@@ -835,41 +882,53 @@ namespace AnomalyArena
             rightScroll.content.sizeDelta = new Vector2(0f, P(y));
         }
 
-        void LaySkill(SkillRow row, CharacterSkill skill, float top, bool art)
+        // Its level on a chip (the void's mark for a greater void skill), then its cost in the energy's violet and its cooldown.
+        void LaySkill(SkillRow row, CharacterSkill skill, float top, bool art) =>
+            LayAbility(row, top, art, art && skill.art ? skill.art : skill.flat, skill.key, skill.name, ArenaRarity.InkFor(skill.rarity),
+                CharacterSheet.SkillLevel(skill), skill.greaterVoid ? V5HudKit.Violet : skill.level <= 1 ? V5BattleKit.TierOne : V5TitleKit.Steel,
+                skill.greaterVoid ? Color.white : V5BattleKit.TierInk,
+                ArenaText.Pair($"<color=#{Hex(V5HudKit.VioletHi)}>{skill.cost:0} 能量</color>  ·  冷却 {skill.cooldown:0.#} 秒",
+                    $"<color=#{Hex(V5HudKit.VioletHi)}>{skill.cost:0} energy</color>  ·  {skill.cooldown:0.#} s cooldown"));
+
+        // The void dash: the void's icon and mark, what one dash costs, and Space at the row's right end.
+        void LayDash(SkillRow row, CharacterDash dash, float top, bool art) =>
+            LayAbility(row, top, art, art && dash.art ? dash.art : dash.flat, CharacterDash.Key, dash.name, ArenaRarity.InkFor(CardRarity.Void),
+                ArenaText.Pair("虚空", "VOID"), V5HudKit.Violet, Color.white, dash.Detail);
+
+        /// <summary>A row of the skills column: the icon in its octagon, the name, a chip and the detail beside it, and the key at the right
+        /// end.</summary>
+        void LayAbility(SkillRow row, float top, bool art, Sprite icon, string keyName, string name, Color nameInk, string chip, Color chipBack,
+            Color chipInk, string detail)
         {
             Shown(row.root, true);
             V5TitleKit.Place(row.root, 0f, P(top), P(RightW), P(SkillH));
             row.rim.color = art ? V5BattleKit.OctagonRim : WhiteboxSkin.Edge;
             row.hole.color = art ? V5BattleKit.OctagonFill : WhiteboxSkin.PlateFill;
-            var icon = art && skill.art ? skill.art : skill.flat;
             row.icon.sprite = icon;
             row.icon.enabled = icon;
-            // The key it is cast with, at the row's right end.
-            bool keyed = skill.key.Length > 0;
+            // The key it is used with, at the row's right end.
+            bool keyed = !string.IsNullOrEmpty(keyName);
             Shown(row.key, keyed);
             float keyW = 0f;
             if (keyed)
             {
-                row.key.SetText(skill.key);
+                row.key.SetText(keyName);
                 keyW = row.key.Rect.sizeDelta.x;
                 var key = row.key.Rect;
                 key.anchorMin = key.anchorMax = key.pivot = new Vector2(1f, .5f);
                 key.anchoredPosition = new Vector2(-P(18f), 0f);
             }
             float words = P(RightW - SkillWords - 18f) - (keyed ? keyW + P(14f) : 0f);
-            SetText(row.name, skill.name);
-            row.name.color = ArenaRarity.InkFor(skill.rarity);
+            SetText(row.name, name);
+            row.name.color = nameInk;
             V5TitleKit.Place(row.name.rectTransform, P(SkillWords), P(10f), words, P(32f));
             V5TitleKit.FitWidth(row.name, F(22f), F(15f));
-            // Its level on a chip (the void's mark for a greater void skill), then its cost in the energy's violet and its cooldown.
-            string chip = CharacterSheet.SkillLevel(skill);
             SetText(row.chipText, chip);
-            row.chip.color = skill.greaterVoid ? V5HudKit.Violet : skill.level <= 1 ? V5BattleKit.TierOne : V5TitleKit.Steel;
-            row.chipText.color = skill.greaterVoid ? Color.white : V5BattleKit.TierInk;
+            row.chip.color = chipBack;
+            row.chipText.color = chipInk;
             float chipW = V5StoryKit.WidthOf(row.chipText, chip) + P(2f * ChipPad);
             V5TitleKit.Place(row.chip.rectTransform, P(SkillWords), P(48f), chipW, P(22f));
-            SetText(row.detail, ArenaText.Pair($"<color=#{Hex(V5HudKit.VioletHi)}>{skill.cost:0} 能量</color>  ·  冷却 {skill.cooldown:0.#} 秒",
-                $"<color=#{Hex(V5HudKit.VioletHi)}>{skill.cost:0} energy</color>  ·  {skill.cooldown:0.#} s cooldown"));
+            SetText(row.detail, detail);
             float detailLeft = P(SkillWords) + chipW + P(10f);
             V5TitleKit.Place(row.detail.rectTransform, detailLeft, P(46f), Mathf.Max(P(40f), P(SkillWords) + words - detailLeft), P(26f));
             V5TitleKit.FitWidth(row.detail, F(16f), F(12f));

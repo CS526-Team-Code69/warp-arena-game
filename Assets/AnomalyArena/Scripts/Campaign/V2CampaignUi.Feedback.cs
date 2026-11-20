@@ -161,7 +161,7 @@ namespace AnomalyArena
         int gainCursor;
 
         /// <summary>Says what was just gained where it was taken ("+3 alien energy" with its icon, rising and fading), and lets its number
-        /// in the corner swell for a moment. which: 0 alien energy, 1 alien alloy, 2 dark matter.</summary>
+        /// in the corner swell for a moment. which: 0 alien energy, 1 alloy, 2 dark matter.</summary>
         public void ShowGain(int which, int amount, Vector3 world)
         {
             if (amount <= 0 || which < 0 || which > 2 || gains[0] == null) return;
@@ -187,7 +187,7 @@ namespace AnomalyArena
         static string CurrencyName(int which) => which switch
         {
             0 => ArenaText.Pair("异星能量", "alien energy"),
-            1 => ArenaText.Pair("异星合金", "alien alloy"),
+            1 => ArenaText.Pair("合金", "alloy"),
             _ => ArenaText.Pair("暗物质", "dark matter")
         };
 

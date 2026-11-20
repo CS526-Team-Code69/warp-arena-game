@@ -386,9 +386,17 @@ namespace AnomalyArena
             if (screen.summary) screen.summary.color = FaintText;
         }
 
+        const float PauseW = 1040f;
+
+        // The pause panel, kept so that its row of buttons follows the controls table: the void dash's row joins the table in the
+        // middle of a run (V2Hud.ControlRowCount).
+        Panel pausePanel;
+        V2UiScreen pauseScreen;
+        float pauseLaidOutFor = -1f;
+
         void SkinPaused(V2UiScreen screen, RectTransform content)
         {
-            const float w = 1040f, buttonW = 226f, buttonGap = 18f;
+            const float w = PauseW;
             float top = V2Hud.PauseTableBottom + 24f, h = top + 64f + 16f + 128f + 24f;
             var panel = MakePanel(screen.gameObject, content, new Vector2(w, h));
             panel.heightWithoutSummary = top + 64f + 40f;
@@ -401,18 +409,9 @@ namespace AnomalyArena
             // The paused line; V2Hud puts the controls table under it.
             Style(screen.body, 40f, 106f, w - 80f, 36f, 18, TextAnchor.MiddleCenter);
             if (screen.body) screen.body.color = SoftText;
-            // The buttons the page has (the Alpha has no collection), centred, each at most buttonW wide.
-            var row = new List<(RectTransform rect, Button button, string name)>();
+            // The buttons the page has (the Alpha has no collection); PlacePauseRow puts them in their row.
             foreach (var name in V2Hud.PauseButtons)
-                if (content.Find(name) is RectTransform go && go.GetComponent<Button>() is { } button) row.Add((go, button, name));
-            float rowButtonW = row.Count > 0 ? Mathf.Min(buttonW, (w - 80f - buttonGap * (row.Count - 1)) / row.Count) : buttonW;
-            float left = (w - row.Count * (rowButtonW + buttonGap) + buttonGap) * .5f;
-            foreach (var (rect, button, name) in row)
-            {
-                SkinButton(button, name == "ResumeRun", 20);
-                Place(rect, left, top, rowButtonW, 64f);
-                left += rowButtonW + buttonGap;
-            }
+                if (content.Find(name) is RectTransform go && go.GetComponent<Button>() is { } button) SkinButton(button, name == "ResumeRun", 20);
             // The settings button stands alone in the panel's top-right corner, beside the centred heading, clear of the controls
             // table and of the row of buttons under it.
             if (content.Find(V2Hud.PauseSettingsButton) is RectTransform settings && settings.GetComponent<Button>() is { } settingsButton)
@@ -420,11 +419,41 @@ namespace AnomalyArena
                 SkinButton(settingsButton, false, 18);
                 Place(settings, w - 40f - 176f, 34f, 176f, 44f);
             }
-            top += 64f + 16f;
-            panel.summaryTop = top;
+            panel.summaryTop = top + 64f + 16f;
             Style(screen.summary, 40f, panel.summaryTop, w - 80f, 128f, 15, TextAnchor.UpperCenter);
             if (screen.summary) screen.summary.color = FaintText;
             Fit(panel, screen.summary, 15, 10);
+            pausePanel = panel;
+            pauseScreen = screen;
+            PlacePauseRow();
+        }
+
+        /// <summary>The pause panel's row of buttons (centred, each at most 226 wide), the summary under it and the panel's height, for
+        /// the rows the controls table shows now (V2Hud.PauseTableBottom). LateUpdate calls it again when that changes.</summary>
+        void PlacePauseRow()
+        {
+            if (pausePanel == null || !pausePanel.content) return;
+            const float w = PauseW, buttonW = 226f, buttonGap = 18f;
+            var content = pausePanel.content;
+            pauseLaidOutFor = V2Hud.PauseTableBottom;
+            float top = pauseLaidOutFor + 24f;
+            pausePanel.size = new Vector2(w, top + 64f + 16f + 128f + 24f);
+            pausePanel.heightWithoutSummary = top + 64f + 40f;
+            var row = new List<RectTransform>();
+            foreach (var name in V2Hud.PauseButtons)
+                if (content.Find(name) is RectTransform go && go.GetComponent<Button>()) row.Add(go);
+            float rowButtonW = row.Count > 0 ? Mathf.Min(buttonW, (w - 80f - buttonGap * (row.Count - 1)) / row.Count) : buttonW;
+            float left = (w - row.Count * (rowButtonW + buttonGap) + buttonGap) * .5f;
+            foreach (var rect in row)
+            {
+                Place(rect, left, top, rowButtonW, 64f);
+                left += rowButtonW + buttonGap;
+            }
+            pausePanel.summaryTop = top + 64f + 16f;
+            if (pauseScreen && pauseScreen.summary) Place(pauseScreen.summary, 40f, pausePanel.summaryTop, w - 80f, 128f);
+            // The panel's height: Tick fits it to the summary again; without a summary it is the whole height.
+            if (pausePanel.summary) pausePanel.summaryShown = null;
+            else content.sizeDelta = pausePanel.size;
         }
 
         /// <summary>The ready and result screens: a heading, some lines and one large button in the middle of the title art.</summary>
@@ -638,6 +667,8 @@ namespace AnomalyArena
             if (Keyboard.current != null && Keyboard.current.anyKey.wasPressedThisFrame) keyboardInUse = true;
             if (Mouse.current != null && Mouse.current.delta.ReadValue() != Vector2.zero) keyboardInUse = false;
             var selected = keyboardInUse && EventSystem.current ? EventSystem.current.currentSelectedGameObject : null;
+            if (pausePanel != null && pausePanel.root && pausePanel.root.activeInHierarchy && !Mathf.Approximately(V2Hud.PauseTableBottom, pauseLaidOutFor))
+                PlacePauseRow();
             foreach (var panel in panels)
             {
                 if (!panel.root || !panel.root.activeInHierarchy) { panel.wasOn = false; continue; }

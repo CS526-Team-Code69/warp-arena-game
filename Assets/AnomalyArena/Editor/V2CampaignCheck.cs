@@ -71,6 +71,7 @@ public static class V2CampaignCheck
         shopDay = grantDay = -1; boughtResearch = boughtNewWeapons = boughtUpgrades = 0;
         holeFailDay = -1; studyStage = voidStudyStage = 0; holeFailNoted = holePassNoted = giftNoted = holeFeedNoted = false; holeAngle = 0f; holdKey = null; studyBought.Clear();
         tourShot = 0;
+        holeMissDay = -1;
         startedAt = stepSince = lastAct = Time.realtimeSinceStartup;
         EditorApplication.LockReloadAssemblies();
         EditorApplication.update -= Tick; EditorApplication.update += Tick;
@@ -98,11 +99,14 @@ public static class V2CampaignCheck
     }
 
     static int tourShot;
+    // The day a black hole was not met although the check stood where it shows (noted once that day, with what the cutscene asks).
+    static int holeMissDay = -1;
 
     /// <summary>The base tour's first steps, each shot once its box has been up a while, then done as a player would: Central
     /// Control's zone clicked (its tab shows already, so only the click passes the step), the Armament Bay's tab shown, the bay built.
     /// The capture is written at the end of the frame, so each step's action waits for the next frame after its shot. True once done,
-    /// or when a step does not come in time (noted).</summary>
+    /// or when a step does not come in time (noted). The times count from the start of the arrival story, whose voiced lines run about
+    /// 17 s before the base opens; the tour then waits for the base's welcome line (about 9 s) before its first step.</summary>
     static bool TourShots()
     {
         var ui = campaign.Ui;
@@ -111,7 +115,7 @@ public static class V2CampaignCheck
         {
             case 0:
                 if (now == BaseTourStep.Control && Held("tour-control", 2f)) { Shot("06t1-tour-control"); tourShot = 1; }
-                else if (InStep > 25f) { Note($"PROBLEM: the base tour's first step never showed (step {now})"); tourShot = 9; }
+                else if (InStep > 50f) { Note($"PROBLEM: the base tour's first step never showed (step {now})"); tourShot = 9; }
                 return false;
             case 1:
                 var control = ui.transform.Find("BasePanel/Page5/ZoneControl");
@@ -122,7 +126,7 @@ public static class V2CampaignCheck
                 return false;
             case 2:
                 if (now == BaseTourStep.ArmamentZone && Held("tour-armament", 2f)) { Shot("06t2-tour-armament"); tourShot = 3; }
-                else if (InStep > 40f) { Note($"PROBLEM: the tour's Armament Bay step never showed (step {now})"); tourShot = 9; }
+                else if (InStep > 65f) { Note($"PROBLEM: the tour's Armament Bay step never showed (step {now})"); tourShot = 9; }
                 return false;
             case 3:
                 ui.ShowTab(CampaignRoom.Armament);
@@ -130,7 +134,7 @@ public static class V2CampaignCheck
                 return false;
             case 4:
                 if (now == BaseTourStep.BuildArmament && Held("tour-build", 2f)) { Shot("06t3-tour-build"); tourShot = 5; }
-                else if (InStep > 55f) { Note($"PROBLEM: the tour's build step never showed (step {now})"); tourShot = 9; }
+                else if (InStep > 80f) { Note($"PROBLEM: the tour's build step never showed (step {now})"); tourShot = 9; }
                 return false;
             case 5:
                 campaign.TryUpgradeRoom(CampaignRoom.Armament);
@@ -138,7 +142,7 @@ public static class V2CampaignCheck
                 return false;
             case 6:
                 if (now == BaseTourStep.OpenStudy && Held("tour-study", 2f)) { Shot("06t4-tour-study"); Note("base tour: four steps shot"); tourShot = 9; }
-                else if (InStep > 70f) { Note($"PROBLEM: the tour's study step never showed (step {now})"); tourShot = 9; }
+                else if (InStep > 95f) { Note($"PROBLEM: the tour's study step never showed (step {now})"); tourShot = 9; }
                 return false;
             default:
                 return true;
@@ -333,8 +337,8 @@ public static class V2CampaignCheck
                     return;
                 }
                 var teach = campaign.TutorialStepNow;
-                // The steps whose input the check cannot give (the walk, the shots, the sprint, the right button) are passed by the tutorial's own debug call.
-                if (campaign.TutorialStepForced && teach is TutorialStep.Move or TutorialStep.Fire or TutorialStep.Sprint or TutorialStep.Switch)
+                // The steps whose input the check cannot give (the walk, the shots, the new weapon tried, the sprint, the right button) are passed by the tutorial's own debug call.
+                if (campaign.TutorialStepForced && teach is TutorialStep.Move or TutorialStep.Fire or TutorialStep.TryWeapon or TutorialStep.Sprint or TutorialStep.Switch)
                 {
                     Shot($"03s-spotlight-{teach}");
                     if (Held("tut-" + teach, 1.2f)) { Note($"tutorial step {teach}: spotlight up, passed by the check (move allowed {PlayerLets(PlayerAct.Move)}, fire {PlayerLets(PlayerAct.Fire)}, sprint {PlayerLets(PlayerAct.Sprint)})"); campaign.DebugPassTutorialStep(); }
@@ -721,6 +725,14 @@ public static class V2CampaignCheck
         {
             // Where the hole is on screen, until its first-sight cutscene has played.
             Teleport(gm, hole.Centre + new Vector3(-ring, 0f, 0f));
+            if (Held("hole-sight" + campaign.Day, 15.5f) && holeMissDay != campaign.Day)
+            {
+                holeMissDay = campaign.Day;
+                Note($"PROBLEM: the black hole's first sight did not play on day {campaign.Day}: stage {campaign.Stage}, phase {gm.RunPhase}, " +
+                     $"time scale {Time.timeScale}, hole {hole.Phase}, hidden {map.CampaignHoleHidden}, on screen {SkillWorldAPI.IsOnScreen?.Invoke(hole.Centre)}, " +
+                     $"player {gm.player.Position} hole {hole.Centre}, cutscene playing {map.HoleIntroPlaying}, done {map.HoleIntroDone}");
+            }
+
             return !Held("hole-sight" + campaign.Day, 16f);
         }
         // Since 2026-11-10 the hole is fed first. The check stands near it until the afternoon's pack has come out, notes the side

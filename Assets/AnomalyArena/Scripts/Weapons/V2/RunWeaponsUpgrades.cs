@@ -875,7 +875,8 @@ namespace AnomalyArena
                 Fx.Ring(player.Position,upgrades.executeAuraRadius,arc);
                 return;
             }
-            if(upgrades.executeSelfShock>0f)player.ReceiveDamage(DamageInfo.Attack(upgrades.executeSelfShock,player)); // dealer: a death here is reported as backfire
+            // dealer: a death here is reported as backfire; weapon: the self-hit notice and the result screen name the Execute.
+            if(upgrades.executeSelfShock>0f){var shock=DamageInfo.Attack(upgrades.executeSelfShock,player);shock.weapon=w;player.ReceiveDamage(shock);}
             w.cooldown=Mathf.Max(w.cooldown,CycleSeconds(w)*Mathf.Max(1f,upgrades.executeMissCooldown));w.holeReturnSpan=w.cooldown;
             Fx.Ring(player.Position,.9f,arc);Fx.Burst(Query.AtCastHeight(player.Position),Vector3.zero,arc,6,4f,360f,.2f);
         }
@@ -1066,7 +1067,7 @@ namespace AnomalyArena
             WeaponSound(w,WeaponAudioPhase.Explosion);
             // Tame: the burst spares you and throws the enemies in its ring back instead (a real knockback; bosses are not knocked back).
             Area(w,player.Position,upgrades.fuelTankRadius,upgrades.fuelTankDamage*DamageScale(w),w.Has(UpgradeAxis.Tame)?upgrades.fuelTankTamePush:0,false);
-            if(!w.Has(UpgradeAxis.Tame))ElementStatus.For(player)?.Add(ElementKind.Fire,upgrades.fuelTankSelfFire,player);
+            if(!w.Has(UpgradeAxis.Tame)){SelfStatusWeapon=w;ElementStatus.For(player)?.Add(ElementKind.Fire,upgrades.fuelTankSelfFire,player);}
             if(V5Vfx.On){V5Vfx.I.Explosion(player.Position,upgrades.fuelTankRadius);return;}
             var fx=FxPool.Active;var art=V4CombatVfx.Active;
             if(fx&&art&&art.strikeFlash)fx.Emit(player.Position+Vector3.up*.8f,new Color(1f,.75f,.45f),upgrades.fuelTankRadius*1.8f,.3f,texture:art.strikeFlash,pulse:true);
@@ -1249,7 +1250,7 @@ namespace AnomalyArena
                 foreach(var body in elementTargets)
                 {
                     wildfireFenceHitAt[body]=autoClock+interval*.9f;
-                    if(body==player)ElementCombat.ApplyStacks(body,ElementKind.Fire,upgrades.wildfireFenceSelfFirePerSecond*interval,player);
+                    if(body==player){SelfStatusWeapon=w;ElementCombat.ApplyStacks(body,ElementKind.Fire,upgrades.wildfireFenceSelfFirePerSecond*interval,player);}
                     else ElementStatus.For(body)?.Ignite(upgrades.wildfireFenceFirePerSecond*ElementCombat.WaveScale,player);
                 }
             }

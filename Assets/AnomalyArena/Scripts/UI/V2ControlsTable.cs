@@ -21,7 +21,7 @@ namespace AnomalyArena
         float keyWidth;
         bool filled;
         Font filledWith;
-        bool filledForCampaign;
+        bool filledForCampaign, filledForDash;
         int filledForKeys;
 
         public static V2ControlsTable Create(Transform parent, float rowHeight, float keyWidth, int fontSize)
@@ -40,23 +40,29 @@ namespace AnomalyArena
         {
             // A V2 campaign run has its own rows (V2Hud.ControlRows): refill when one starts or ends, not only for a new font.
             bool campaign = V2Hud.CampaignControls;
+            // The void dash's row joins once the dash is won (V2Hud.DashRowShown), in the middle of a run too.
+            bool dash = V2Hud.DashRowShown;
             // The rows name the keys as they are now: a key changed in the settings (ArenaKeys) fills them again too.
-            if (filled && font == filledWith && campaign == filledForCampaign && filledForKeys == ArenaKeys.Revision) return;
+            if (filled && font == filledWith && campaign == filledForCampaign && dash == filledForDash && filledForKeys == ArenaKeys.Revision) return;
             filled = true;
             filledWith = font;
             filledForCampaign = campaign;
+            filledForDash = dash;
             filledForKeys = ArenaKeys.Revision;
             var rows = V2Hud.ControlRows();
-            for (int i = 0; i < rows.Length; i++)
+            // The table has a row for every line it may show (V2Hud.ControlRowCapacity); the rows past the lines shown now are hidden.
+            for (int i = 0; i < lines.Count; i++)
             {
-                keys[i].text = rows[i].input;
-                actions[i].text = rows[i].note == "" ? rows[i].action : $"{rows[i].action}  <color={NoteColour}>{rows[i].note}</color>";
+                bool shown = i < rows.Length;
+                if (lines[i].gameObject.activeSelf != shown) lines[i].gameObject.SetActive(shown);
+                keys[i].text = shown ? rows[i].input : "";
+                actions[i].text = !shown ? "" : rows[i].note == "" ? rows[i].action : $"{rows[i].action}  <color={NoteColour}>{rows[i].note}</color>";
             }
             if (font) foreach (var label in labels) if (label.font != font) label.font = font;
 
             // The rows stay left-aligned and the block sits in the middle of the panel: the Chinese lines are much shorter than the English ones.
             float widest = 0f;
-            foreach (var action in actions) widest = Mathf.Max(widest, action.preferredWidth);
+            for (int i = 0; i < rows.Length && i < actions.Count; i++) widest = Mathf.Max(widest, actions[i].preferredWidth);
             float left = Mathf.Max(0f, (Rect.rect.width - keyWidth - KeyGap - widest) * .5f);
             foreach (var line in lines) line.offsetMin = new Vector2(left, line.offsetMin.y);
         }
@@ -66,7 +72,7 @@ namespace AnomalyArena
             this.keyWidth = keyWidth;
             pill ??= LoadSprite(PillSprite, 16f);
             var area = Rect;
-            int rows = V2Hud.ControlRows().Length;
+            int rows = V2Hud.ControlRowCapacity;
             for (int i = 0; i < rows; i++)
             {
                 var line = new GameObject("Row" + (i + 1), typeof(RectTransform)).GetComponent<RectTransform>();

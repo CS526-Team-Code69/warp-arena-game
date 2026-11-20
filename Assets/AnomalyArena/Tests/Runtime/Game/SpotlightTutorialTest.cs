@@ -11,12 +11,13 @@ namespace AnomalyArena
     {
         [TestCase(TutorialStep.Move, PlayerAct.Move)]
         [TestCase(TutorialStep.Fire, PlayerAct.Fire)]
+        [TestCase(TutorialStep.TryWeapon, PlayerAct.Move | PlayerAct.Fire)]
         [TestCase(TutorialStep.Mine, PlayerAct.Move)]
         [TestCase(TutorialStep.Crate, PlayerAct.Move)]
         [TestCase(TutorialStep.Sprint, PlayerAct.Move | PlayerAct.Sprint)]
         [TestCase(TutorialStep.Fight, PlayerAct.Move | PlayerAct.Sprint | PlayerAct.Fire)]
         [TestCase(TutorialStep.Collect, PlayerAct.Move)]
-        [TestCase(TutorialStep.Lamp, PlayerAct.None)]
+        [TestCase(TutorialStep.Lamp, PlayerAct.Move)]
         [TestCase(TutorialStep.DarkMatter, PlayerAct.Move)]
         [TestCase(TutorialStep.Switch, PlayerAct.Switch)]
         public void Allowed_WhileAStepIsTaught_IsItsOwnInputAndWalkingWhereItMustReachSomething(TutorialStep step, PlayerAct expected)
@@ -40,6 +41,7 @@ namespace AnomalyArena
         [TestCase(TutorialStep.Move, PlayerAct.Move)]
         [TestCase(TutorialStep.Fire, PlayerAct.Move | PlayerAct.Fire)]
         [TestCase(TutorialStep.Crate, PlayerAct.Move | PlayerAct.Fire)]
+        [TestCase(TutorialStep.TryWeapon, PlayerAct.Move | PlayerAct.Fire)]
         [TestCase(TutorialStep.Sprint, PlayerAct.Move | PlayerAct.Fire | PlayerAct.Sprint)]
         [TestCase(TutorialStep.Fight, PlayerAct.All)]
         [TestCase(TutorialStep.Collect, PlayerAct.All)]
@@ -61,6 +63,13 @@ namespace AnomalyArena
             Assert.That(SpotlightTutorial.Lets(PlayerAct.Sprint, TutorialStep.None, TutorialStep.Fire), Is.False);
             // The firing step itself: the player stands still.
             Assert.That(SpotlightTutorial.Lets(PlayerAct.Move, TutorialStep.Fire, TutorialStep.Move), Is.False);
+            // Trying the first crate's weapon (between the crate and the sprint): firing and walking, but sprinting is not taught yet.
+            Assert.That(SpotlightTutorial.Lets(PlayerAct.Fire, TutorialStep.TryWeapon, TutorialStep.Crate), Is.True);
+            Assert.That(SpotlightTutorial.Lets(PlayerAct.Move, TutorialStep.TryWeapon, TutorialStep.Crate), Is.True);
+            Assert.That(SpotlightTutorial.Lets(PlayerAct.Sprint | PlayerAct.Switch, TutorialStep.TryWeapon, TutorialStep.Crate), Is.False);
+            // The tutorial night's lamp step: the player may walk back toward the light, but not fire or sprint.
+            Assert.That(SpotlightTutorial.Lets(PlayerAct.Move, TutorialStep.Lamp, TutorialStep.Done), Is.True);
+            Assert.That(SpotlightTutorial.Lets(PlayerAct.Fire | PlayerAct.Sprint, TutorialStep.Lamp, TutorialStep.Done), Is.False);
         }
 
         [Test]

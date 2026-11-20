@@ -36,6 +36,9 @@ namespace AnomalyArena
         public string name, place, anomaly;
         /// <summary>Its anomaly has not shown yet (the anomaly line says so in a dimmer colour).</summary>
         public bool anomalyHidden;
+        /// <summary>How it attacks and its trait, the weapon card's two parts, once its anomaly has shown (WeaponLines); a plain weapon has
+        /// its attack only. Both empty while the anomaly is hidden.</summary>
+        public string how = "", trait = "";
         public int mk;
         /// <summary>The story's void Mk, bought with void alloy: its mark is black.</summary>
         public bool voidMk;
@@ -62,6 +65,20 @@ namespace AnomalyArena
         public Sprite art, flat;
 
         public string Id => "skill." + id;
+    }
+
+    /// <summary>The void dash once it is the player's (GameManager.VoidDashUnlocked): the skills column lists it after the skills, with its
+    /// key and what one dash costs. Nothing of it shows before the void trial is won.</summary>
+    public sealed class CharacterDash
+    {
+        public const string Id = "skill.VoidDash";
+        /// <summary>Its key: Space, a fixed key the settings do not move, named as the battle screen's keycap names it.</summary>
+        public const string Key = "Space";
+        public string name, cost;
+        public Sprite art, flat;
+
+        /// <summary>What one dash costs, in a sentence (cost: VoidDash.CostWords).</summary>
+        public string Detail => ArenaText.Pair($"每次消耗{cost}", $"Each dash uses {cost}");
     }
 
     /// <summary>One upgrade in the right column: a study purchase in the story, an upgrade card taken in the open mode (count: how many of
@@ -228,8 +245,9 @@ namespace AnomalyArena
 
     /// <summary>
     /// Everything the character screen shows, read from the run as it is at one moment (Read), in both modes: the health and the energy
-    /// the skills spend, the weapons held (hand and auto) with their Mk, element and what was added to them, the skills learned with their
-    /// level, the upgrades (the study's purchases in the story, the upgrade cards taken in the open mode) and the bonus lines. Only what the
+    /// the skills spend, the weapons held (hand and auto) with their Mk, element, what was added to them and, once their anomaly has
+    /// shown, how they attack and their trait, the skills learned with their level and the void dash once it is won, the upgrades (the
+    /// study's purchases in the story, the upgrade cards taken in the open mode) and the bonus lines. Only what the
     /// player has makes a line: no empty slot, nothing locked, the energy only once it is unlocked. Rows gives the same in words for scripts.
     /// </summary>
     public sealed class CharacterSheet
@@ -241,6 +259,8 @@ namespace AnomalyArena
         public bool energyShown;
         public readonly List<CharacterWeapon> weapons = new();
         public readonly List<CharacterSkill> skills = new();
+        /// <summary>The void dash, once it is the player's; null before.</summary>
+        public CharacterDash dash;
         public readonly List<CharacterEntry> upgrades = new();
         public readonly List<CharacterBonus> bonuses = new();
 
@@ -257,6 +277,7 @@ namespace AnomalyArena
             sheet.heading = campaign ? campaign.CharacterHeading : OpenHeading(gm, progression);
             if (gm.runWeapons) ReadWeapons(sheet, gm.runWeapons, campaign, set);
             if (gm.skills) ReadSkills(sheet, gm.skills, set);
+            if (gm.VoidDashUnlocked && gm.player) sheet.dash = Dash(gm.player, set);
             if (campaign) campaign.CharacterUpgrades(sheet.upgrades);
             else if (progression) ReadCards(sheet, progression, set);
             if (progression && progression.Rules)
@@ -313,6 +334,7 @@ namespace AnomalyArena
                 view.anomalyHidden = !w.revealed;
                 view.anomaly = w.revealed ? ArenaTerms.WeaponAnomaly(w.form, w.variant) : ArenaText.Pair("异常还没揭晓", "Anomaly not revealed yet");
             }
+            WeaponLines(w, out view.how, out view.trait);
             view.voidMk = campaign && campaign.CharacterVoidMk(w);
             if (w.element != ElementKind.None)
             {
@@ -341,6 +363,32 @@ namespace AnomalyArena
             if (enchant != null)
                 view.tags.Add(new CharacterTag { text = enchant, colour = V5HudKit.VioletHi, art = At(set ? set.elementIcons : null, voidIndex), flat = WhiteboxIcons.Element(voidIndex) });
             return view;
+        }
+
+        /// <summary>What the weapon card said when the weapon was taken, to read again on the character screen: how it attacks and its trait
+        /// for an anomaly weapon whose anomaly has shown, the attack alone for a plain weapon (it has no trait), and nothing while the
+        /// anomaly is still hidden.</summary>
+        public static void WeaponLines(RunWeapon w, out string how, out string trait)
+        {
+            how = trait = "";
+            if (w == null) return;
+            if (!w.IsAnomalous) how = WeaponGuide.How(w.form, w.variant);
+            else if (w.revealed)
+            {
+                how = WeaponGuide.How(w.form, w.variant);
+                trait = WeaponGuide.Backfire(w.form, w.variant);
+            }
+        }
+
+        /// <summary>The void dash's line: its name, the void's icon, and what a dash costs on this player.</summary>
+        static CharacterDash Dash(PlayerController player, V2ArtSet set)
+        {
+            int voidIndex = (int)ElementKind.Void - 1;
+            return new CharacterDash
+            {
+                name = ArenaText.Pair("虚空冲刺", "Void Dash"), cost = player.voidDash != null ? player.voidDash.CostWords : "",
+                art = At(set ? set.elementIcons : null, voidIndex), flat = WhiteboxIcons.Element(voidIndex),
+            };
         }
 
         /// <summary>A direction's place in the art set's axisIcons (Infusion, Power, Tempo, Reach, Twist, Tame): its flag's bit.</summary>
@@ -480,9 +528,13 @@ namespace AnomalyArena
                 if (w.anomaly.Length > 0) parts.Add(w.anomaly);
                 if (w.element != ElementKind.None) parts.Add(ArenaTerms.Element(w.element));
                 foreach (var tag in w.tags) parts.Add(tag.text);
+                if (w.how.Length > 0) parts.Add(w.how);
+                if (w.trait.Length > 0) parts.Add(w.trait);
                 rows.Add(Row(CharacterSection.Weapon, w.Id, w.name, string.Join(" · ", parts), "MK " + V5BattleKit.Roman(w.mk)));
             }
             foreach (var s in skills) rows.Add(Row(CharacterSection.Skill, s.Id, s.name, SkillDetail(s), SkillLevel(s)));
+            if (dash != null)
+                rows.Add(Row(CharacterSection.Skill, CharacterDash.Id, dash.name, ArenaText.Pair($"空格 · {dash.Detail}", $"Space · {dash.Detail}"), ArenaText.Pair("虚空", "VOID")));
             foreach (var e in upgrades) rows.Add(Row(CharacterSection.Upgrade, e.id, e.title, e.detail, e.value));
             foreach (var b in bonuses) rows.Add(Row(CharacterSection.Bonus, b.Id, b.Name(chinese), "", b.Value(chinese)));
             return rows;

@@ -79,7 +79,7 @@ namespace AnomalyArena
             Click(Part(metCard));
             await Frames(2);
             Assert.That(Words(Page + "Detail/Name").text, Is.EqualTo(ArenaTerms.WeaponForm(met)), "a card met opens its details");
-            Assert.That(Words(Page + "Detail/Text").text, Is.Not.Empty, "with how it fights, or that it has not shown it yet");
+            Assert.That(Words(Page + "Detail/TextView/Text").text, Is.Not.Empty, "with how it fights, or that it has not shown it yet");
 
             Click(Part(unmetCard));
             await Frames(2);

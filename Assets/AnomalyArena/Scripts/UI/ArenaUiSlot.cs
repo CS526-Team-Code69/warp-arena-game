@@ -17,5 +17,9 @@ namespace AnomalyArena
 
         // Counts each attack of this slot's weapon or cast of its skill. Written the moment it happens, not at the snapshot's 10 Hz: the view flashes when it moves.
         public int pulses;
+
+        // Counts each time this slot's weapon cost the player HP (its own hit, burn or a wall slam its knock started), written the moment
+        // it happens: the dock's slot flashes red when it moves.
+        public int selfHits;
     }
 }

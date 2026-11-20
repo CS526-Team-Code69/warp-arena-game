@@ -159,7 +159,9 @@ namespace AnomalyArena
         public int cratesOpened;
 
         // lines said and hints given once in a run
-        public bool changedWeaponSaid, switchTaught, skillTaught, skillTeachPending, voidLineSaid;
+        public bool changedWeaponSaid, switchTaught, skillTaught, skillTeachPending, voidLineSaid, dashTaught, shadowFireSaid;
+        /// <summary>The guide to a first purchase has had its turn (V2Campaign.BuyGuideDone); false in a save made before it was kept.</summary>
+        public bool buyGuideDone;
 
         // the black hole's side quest
         public bool holeSeen, holeFailedToday, holeAwake;

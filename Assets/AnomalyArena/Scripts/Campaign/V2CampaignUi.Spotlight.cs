@@ -20,6 +20,7 @@ namespace AnomalyArena
             {
                 if (spotlight) return spotlight;
                 spotlight = V2Spotlight.Create(root);
+                spotlight.KeepClearOf = FlashOnScreen;
                 // Just under the HUD layer (the goal, the marker, the prompt), above the game world and the HUD canvas below this one.
                 spotlight.transform.SetSiblingIndex(hud ? hud.GetSiblingIndex() : 0);
                 return spotlight;
@@ -30,6 +31,16 @@ namespace AnomalyArena
         /// dim false shows only the circle's edge and the tip.</summary>
         public void ShowSpotlight(Func<Vector3> at, float worldRadius, string key, string phrase, bool dim = true) =>
             SpotlightView.Show(at, worldRadius, key, phrase, dim, campaign && campaign.rules ? campaign.rules.spotlightDim : .75f);
+
+        static readonly Vector3[] flashCorners = new Vector3[4];
+
+        /// <summary>The flash's plate in screen pixels while it shows (the canvas is an overlay), for the spotlight's tip to keep clear of.</summary>
+        Rect? FlashOnScreen()
+        {
+            if (!flashBack || !flashBack.gameObject.activeInHierarchy) return null;
+            flashBack.rectTransform.GetWorldCorners(flashCorners);
+            return Rect.MinMaxRect(flashCorners[0].x, flashCorners[0].y, flashCorners[2].x, flashCorners[2].y);
+        }
 
         /// <summary>The taught step is done: the circle flashes green and the dim fades out.</summary>
         public void PassSpotlight() { if (spotlight) spotlight.Pass(); }

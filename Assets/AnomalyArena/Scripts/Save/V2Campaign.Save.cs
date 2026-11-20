@@ -11,8 +11,9 @@ namespace AnomalyArena
     /// night in EnterNight. A save is that moment's state, so continuing it (BeginFromSave) goes through the same entry again: the morning
     /// through EndNight, the afternoon through BeginDusk, the night through BeginNight. Drops still lying on the ground are saved as
     /// picked up, lamps set down in the afternoon as back in the stock, and the afternoon's ore left unmined is not kept. The map and the
-    /// black hole's place come back from the saved map and seed; ore, crate offers and the monsters' affixes are rolled again. Nothing is
-    /// saved once the ignition has started.
+    /// black hole's place come back from the saved map and seed; ore, crate offers and the monsters' affixes are rolled again. The last
+    /// save is the final battle's, taken when the failed ignition's cutscene is over (IgnitionSequence): continuing it starts the Tyrant's
+    /// fight again at the base door in daylight, without the cutscene. Nothing is saved once that fight has begun.
     /// </summary>
     public sealed partial class V2Campaign
     {
@@ -22,12 +23,13 @@ namespace AnomalyArena
         /// <summary>The campaign can take a continued save: its screen is made (in Start), or it never will be.</summary>
         internal bool ReadyToContinue => ui || !gm || !rules;
 
-        /// <summary>The save at the start of a phase, into the run's slot (none when the run is bound to no slot, and none once the
-        /// ignition has started).</summary>
+        /// <summary>The save at the start of a phase, into the run's slot (none when the run is bound to no slot). The final battle's is
+        /// taken while the ignition's cutscene has just ended; no other story moment saves, and nothing does once the fight has begun.</summary>
         void SaveStoryPhase(SavePhase phase)
         {
             if (!Running || !gm || gm.RunSaveSlot < 0 || gm.RunSaveMode != SaveMode.Story) return;
-            if (EndingDone || Stage is CampaignStage.Story or CampaignStage.FinalBoss or CampaignStage.Core or CampaignStage.Ending) return;
+            if (EndingDone || Stage is CampaignStage.FinalBoss or CampaignStage.Core or CampaignStage.Ending) return;
+            if (Stage == CampaignStage.Story && phase != SavePhase.Tyrant) return;
             try
             {
                 var save = CaptureStory(phase);
@@ -118,6 +120,9 @@ namespace AnomalyArena
             s.skillTaught = skillTaught;
             s.skillTeachPending = skillTeachPending;
             s.voidLineSaid = voidLineSaid;
+            s.dashTaught = dashTaught;
+            s.shadowFireSaid = shadowFireSaid;
+            s.buyGuideDone = BuyGuideDone;
 
             var map = WorldMap.Active;
             s.holeSeen = holeSeen;
@@ -205,7 +210,7 @@ namespace AnomalyArena
                 crateLoopRunning = true;
                 StartCoroutine(CrateLoop());
             }
-            gm.CampaignEnterPlay(); // the run is on (its analytics row reads the restored totals)
+            gm.CampaignEnterPlay(s); // the run is on: its analytics row reads the restored totals and says where the save continues
             EnterSavedPhase(s.phase);
             return true;
         }
@@ -266,6 +271,10 @@ namespace AnomalyArena
             skillTaught = s.skillTaught;
             skillTeachPending = s.skillTeachPending;
             voidLineSaid = s.voidLineSaid;
+            dashTaught = s.dashTaught;
+            dashTeachPending = false;
+            shadowFireSaid = s.shadowFireSaid;
+            BuyGuideDone = s.buyGuideDone;
 
             regionKills.Clear();
             regionKindKills.Clear();
@@ -343,6 +352,15 @@ namespace AnomalyArena
                     ClearNight(false);
                     BeginDusk();
                     PlacePlayer(DoorPoint);
+                    break;
+                case SavePhase.Tyrant:
+                    // The final battle begins again as it did after the failed ignition, without the cutscene: in daylight, at the base
+                    // door. The overload bought for it was saved, and its shield goes on as the fight begins (TickRooms).
+                    ClearNight(false);
+                    ApplyDaylight();
+                    PlacePlayer(DoorPoint);
+                    Stage = CampaignStage.FinalBoss;
+                    gm.CampaignFinalBoss();
                     break;
                 default:
                     gm.CampaignSetPhase(ArenaUiState.Night);

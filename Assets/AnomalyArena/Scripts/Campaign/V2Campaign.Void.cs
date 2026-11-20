@@ -61,12 +61,13 @@ namespace AnomalyArena
             if (energyAmount > 0 || alloyAmount > 0) voidWalletSeen = true;
         }
 
+        /// <summary>Pays a void price, or refuses it. No sound of its own: the study window that buys gives the purchase or the refusal
+        /// its one sound.</summary>
         bool TrySpendVoid(int energyCost, int alloyCost)
         {
-            if (voidEnergy < energyCost || voidAlloy < alloyCost) { V2Audio.Instance?.PlayUI(ArenaUiSound.Cancel); return false; }
+            if (voidEnergy < energyCost || voidAlloy < alloyCost) return false;
             voidEnergy -= Mathf.Max(0, energyCost);
             voidAlloy -= Mathf.Max(0, alloyCost);
-            V2Audio.Instance?.PlayUI(ArenaUiSound.Confirm);
             return true;
         }
 
@@ -198,8 +199,9 @@ namespace AnomalyArena
         bool BuyVoidSkill(SkillId id, int cost)
         {
             var skills = gm ? gm.skills : null;
-            if (!Running || !prophetBeaten || !skills || SkillSlotOf(skills, id) >= 0 || voidEnergy < cost) { V2Audio.Instance?.PlayUI(ArenaUiSound.Cancel); return false; }
-            if (!skills.Learn(id, VoidSkillPlace(skills))) { V2Audio.Instance?.PlayUI(ArenaUiSound.Cancel); return false; }
+            // A refusal has no sound here either: the study window gives it one (TrySpendVoid).
+            if (!Running || !prophetBeaten || !skills || SkillSlotOf(skills, id) >= 0 || voidEnergy < cost) return false;
+            if (!skills.Learn(id, VoidSkillPlace(skills))) return false;
             CampaignEvents.RaiseMilestone(CampaignEvents.MilestoneVoidPurchase, "skill:" + id, cost, Day);
             return TrySpendVoid(cost, 0);
         }

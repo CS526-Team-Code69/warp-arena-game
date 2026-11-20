@@ -31,6 +31,10 @@ namespace AnomalyArena
         Image sideQuestBack; Text sideQuestText; string sideQuestBody;
         RectTransform confirmScreen; Text confirmTitle, confirmBody, confirmHint, confirmYesLabel, confirmNoLabel;
         Action confirmYes, confirmNo; float confirmOpenedAt; bool confirmHoldsRun; ArenaUiState confirmReturnPhase;
+        // The fifth pass's Esc keycap on the answer Esc gives (LayOutConfirmKeys).
+        V5HudKey confirmNoKey;
+        // The gap between a confirm answer's words and its keycap, and the room kept clear at the button's sides (canvas units).
+        const float ConfirmKeyGap = 10f, ConfirmButtonPad = 14f;
         readonly Image[] sidePips = new Image[4];
         Image[] currencyIcons;
         Text[] currencyLabels;
@@ -247,8 +251,8 @@ namespace AnomalyArena
             return layer;
         }
 
-        /// <summary>The yes / no question (since 2026-11-06): a dimmed screen that takes every click, so none reaches the game or the panels
-        /// under it, and a panel in the middle with a title, the question, OK and Cancel, and the keys that answer it.</summary>
+        /// <summary>The yes / no question: a dimmed screen that takes every click, so none reaches the game or the panels under it, and a
+        /// panel in the middle with a title, the question and its two answers, each written as the action it takes.</summary>
         void BuildConfirm()
         {
             confirmScreen = Box("Confirm", root, Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero, new Color(0f, .01f, .03f, .7f));
@@ -457,19 +461,22 @@ namespace AnomalyArena
             if (!Mathf.Approximately(at.y, -top)) baseBar.anchoredPosition = new Vector2(at.x, -top);
         }
 
-        /// <summary>A yes / no question over the run: a title, the question, OK and Cancel (a click on OK answers yes, Esc or Cancel no;
-        /// Enter does nothing here, only the weapon card reads Space and Enter, see SourceKeysTest). While it shows the
-        /// run holds still (the GameManager's Story phase: no clock, no combat, no pause key) and no click or key reaches the game; once
-        /// answered the run's phase comes back first, then onYes or onNo runs. A second question replaces an open one, which counts as no.</summary>
-        public void Confirm(string title, string body, Action onYes, Action onNo = null)
+        /// <summary>A yes / no question over the run: a title, the question and two answers written as the actions they take, yesWord and
+        /// noWord; without them the answers are going in and staying out for now, the words of the one question the story asks (whether to
+        /// go through the void portal). A click on the first answers yes; Esc, which the second answer shows as its keycap, or a click on
+        /// it answers no. Enter does nothing here: only the weapon card reads Space and Enter (SourceKeysTest). While it shows the run holds
+        /// still (the GameManager's Story phase: no clock, no combat, no pause key) and no click or key reaches the game; once answered the
+        /// run's phase comes back first, then onYes or onNo runs. A second question replaces an open one, which counts as no.</summary>
+        public void Confirm(string title, string body, Action onYes, Action onNo = null, string yesWord = null, string noWord = null)
         {
             ApplyFont();
             if (ConfirmOpen) CloseConfirm(false);
             confirmTitle.text = title ?? "";
             confirmBody.text = body ?? "";
-            confirmYesLabel.text = ArenaText.Pair("确定", "OK");
-            confirmNoLabel.text = ArenaText.Pair("取消", "Cancel");
+            confirmYesLabel.text = yesWord ?? ArenaText.Pair("进去", "Go in");
+            confirmNoLabel.text = noWord ?? ArenaText.Pair("先不进", "Not now");
             confirmHint.text = "";
+            LayOutConfirmKeys();
             confirmYes = onYes; confirmNo = onNo;
             confirmOpenedAt = Time.unscaledTime;
             // Only a running world is held (a question over the base panel or a frozen screen leaves that phase as it is).
@@ -481,6 +488,25 @@ namespace AnomalyArena
 
         /// <summary>A yes / no question is showing (the campaign reads no key meanwhile).</summary>
         public bool ConfirmOpen => confirmScreen && confirmScreen.gameObject.activeSelf;
+
+        /// <summary>On the fifth pass the answer Esc gives carries an Esc keycap, its words and the key centred together on the button. The
+        /// other answer shows no key, since Enter is not read here.</summary>
+        void LayOutConfirmKeys()
+        {
+            if (!V5HudKit.On || !confirmNoLabel || !(confirmNoLabel.transform.parent is RectTransform button)) return;
+            if (!confirmNoKey) confirmNoKey = V5HudKit.Key(button, "Key", "Esc", false, V5HudKit.StoryCss);
+            float keyWidth = confirmNoKey.Rect.sizeDelta.x;
+            float room = Mathf.Max(0f, button.rect.width - 2f * ConfirmButtonPad - keyWidth - ConfirmKeyGap);
+            float words = Mathf.Min(V5StoryKit.WidthOf(confirmNoLabel, confirmNoLabel.text), room);
+            float left = -(words + ConfirmKeyGap + keyWidth) * .5f;
+            var label = confirmNoLabel.rectTransform;
+            label.anchorMin = label.anchorMax = label.pivot = new Vector2(.5f, .5f);
+            label.anchoredPosition = new Vector2(left + words * .5f, 0f);
+            label.sizeDelta = new Vector2(words + 2f, button.rect.height);
+            var key = confirmNoKey.Rect;
+            key.anchorMin = key.anchorMax = key.pivot = new Vector2(.5f, .5f);
+            key.anchoredPosition = new Vector2(left + words + ConfirmKeyGap + keyWidth * .5f, 0f);
+        }
 
         void CloseConfirm(bool yes)
         {
@@ -498,7 +524,7 @@ namespace AnomalyArena
             answer?.Invoke();
         }
 
-        /// <summary>For automated checks: answers the open question as a click on OK or Cancel would.</summary>
+        /// <summary>For automated checks: answers the open question as a click on either answer would.</summary>
         public void DebugAnswerConfirm(bool yes) => CloseConfirm(yes);
 
         void TickConfirm()
@@ -752,7 +778,7 @@ namespace AnomalyArena
             foreach (var icon in currencyIcons) icon.enabled = icons && !V5HudKit.On; // the fifth pass draws medals (V5StoryWallet.cs)
             currencyLabels[0].text = $"{c.Energy}"; currencyLabels[1].text = $"{c.Alloy}"; currencyLabels[2].text = $"{c.Dark}";
             foreach (var label in currencyLabels) label.enabled = icons || V5HudKit.On;
-            currencyText.text = icons || V5HudKit.On ? "" : ArenaText.Pair($"能量 {c.Energy}　合金 {c.Alloy}　暗物质 {c.Dark}", $"Energy {c.Energy}   Alloy {c.Alloy}   Dark {c.Dark}");
+            currencyText.text = icons || V5HudKit.On ? "" : ArenaText.Pair($"异星能量 {c.Energy}　合金 {c.Alloy}　暗物质 {c.Dark}", $"Alien energy {c.Energy}   Alloy {c.Alloy}   Dark matter {c.Dark}");
             // One line in the short bar: the largest size at which the whole line fits, never wrapped into a second line.
             ArenaTextFit.Show(baseText, ArenaText.Pair($"基地 {Mathf.CeilToInt(c.BaseHp)}/{Mathf.CeilToInt(c.BaseMaxHp)}", $"BASE {Mathf.CeilToInt(c.BaseHp)}/{Mathf.CeilToInt(c.BaseMaxHp)}")
                 + (c.ShieldLevel > 0 ? ArenaText.Pair($" · 护盾 {Mathf.CeilToInt(c.BaseShield)}", $" · SHIELD {Mathf.CeilToInt(c.BaseShield)}") : "")

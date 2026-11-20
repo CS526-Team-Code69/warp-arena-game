@@ -37,6 +37,7 @@ namespace AnomalyArena
         [TestCase(ArenaUiState.WaveActive, DeathCause.FellIntoGap, DamageSource.Hit, true, ExpectedResult = "black_hole")]
         [TestCase(ArenaUiState.WaveActive, DeathCause.HpDepleted, DamageSource.Burn, true, ExpectedResult = "backfire")]
         [TestCase(ArenaUiState.WaveActive, DeathCause.HpDepleted, DamageSource.Wall, false, ExpectedResult = "wall_slam")]
+        [TestCase(ArenaUiState.WaveActive, DeathCause.HpDepleted, DamageSource.Wall, true, ExpectedResult = "backfire")]
         [TestCase(ArenaUiState.WaveActive, DeathCause.HpDepleted, DamageSource.Poison, false, ExpectedResult = "status")]
         [TestCase(ArenaUiState.FinalBoss, DeathCause.HpDepleted, DamageSource.Hit, false, ExpectedResult = "unknown")]
         public string DefeatCause_WithoutAnEnemy_FollowsTheDocumentedOrder(ArenaUiState phase, DeathCause death, DamageSource source, bool bySelf)
@@ -51,11 +52,19 @@ namespace AnomalyArena
                 Is.EqualTo(("tyrant", "Tyrant", false)));
             Assert.That(RunAnalytics.DefeatCause(ArenaUiState.WaveActive, DeathCause.HpDepleted, DamageSource.Burn, false, EnemyKind.Spitter, false),
                 Is.EqualTo(("status", "Spitter", false)), "an elite's burn keeps the enemy kind but counts as damage over time");
+            Assert.That(RunAnalytics.DefeatCause(ArenaUiState.WaveActive, DeathCause.HpDepleted, DamageSource.Wall, false, EnemyKind.Brute, true),
+                Is.EqualTo(("wall_slam", "Brute", true)), "a wall slam after an enemy's blow names that enemy");
             Assert.That(RunAnalytics.DefeatCause(ArenaUiState.VoidTrial, DeathCause.FellIntoGap, DamageSource.Hit, false, EnemyKind.Hollow, false),
                 Is.EqualTo(("void_trial", "Hollow", false)), "knocked off the platform by the Hollow");
             Assert.That(RunAnalytics.DefeatCause(ArenaUiState.VoidTrial, DeathCause.FellIntoGap, DamageSource.Hit, false, EnemyKind.Grunt, true),
                 Is.EqualTo(("void_trial", "", false)), "a hit from before the trial is not named");
         }
+
+        [TestCase(SavePhase.Morning, ExpectedResult = "dawn")]
+        [TestCase(SavePhase.Afternoon, ExpectedResult = "dusk")]
+        [TestCase(SavePhase.Night, ExpectedResult = "night")]
+        [TestCase(SavePhase.Tyrant, ExpectedResult = "final_boss")]
+        public string ContinuedStage_IsWhereTheSavedPhaseBegins_NeverTheTutorial(SavePhase phase) => RunAnalytics.ContinuedStage(phase);
 
         [TestCase(ArenaUiState.WaveActive, ExpectedResult = "wave")]
         [TestCase(ArenaUiState.LevelUp, ExpectedResult = "wave")]
@@ -103,7 +112,7 @@ namespace AnomalyArena
         [TestCase(DamageSource.Burn, true, null, false, ExpectedResult = "backfire")]
         [TestCase(DamageSource.Hit, true, null, false, ExpectedResult = "backfire")]
         [TestCase(DamageSource.Wall, false, EnemyKind.Rammer, false, ExpectedResult = "wall_slam")]
-        [TestCase(DamageSource.Wall, true, null, false, ExpectedResult = "wall_slam")]
+        [TestCase(DamageSource.Wall, true, null, false, ExpectedResult = "backfire")]
         [TestCase(DamageSource.Hit, false, EnemyKind.Tyrant, false, ExpectedResult = "Tyrant")]
         [TestCase(DamageSource.Hit, false, null, false, ExpectedResult = "other")]
         public string DamageSourceOf_NamesTheApplierAndKeepsWallsApart(DamageSource source, bool bySelf, EnemyKind? byEnemy, bool byElite)
@@ -294,6 +303,49 @@ namespace AnomalyArena
             Assert.That(DamageRows().Any(r => r.source == "wall_slam" && r.stage == "void_trial"), "the wall damage is reported as wall_slam in the trial");
         }
 
+        /// <summary>A wall slam names whoever started the knock (DamageInfo.slamBy): the player's own human missile bouncing off a wall is
+        /// a backfire, and a slam that ends an enemy's knock names that enemy, on the player (LastDamagedBy) and in the damage rows.</summary>
+        [Test, LoadScene(Scene), Timeout(90000)]
+        public async Task WallSlams_TheirOwnMissileIsABackfire_AndAnEnemysKnockNamesThatEnemy()
+        {
+            var game = await StartRun();
+            await Until(() => game.RunPhase == ArenaUiState.WaveActive && game.waves.Alive.Any(e => e && e.IsAlive && e.definition), 15f, "an enemy is in the arena");
+            var enemy = game.waves.Alive.First(e => e && e.IsAlive && e.definition);
+            var player = game.player;
+            player.Invulnerable = true; // the slams cost HP but never end the run
+            var slams = new List<(Combatant by, Combatant named)>();
+            void Count(DamageInfo info, float amount) { if (info.source == DamageSource.Wall) slams.Add((info.slamBy, player.LastDamagedBy)); }
+            player.DamageTaken += Count;
+            GameObject wall = null;
+            try
+            {
+                // The human missile meeting a wall, as RunWeapons calls it for a flight without Tame (no bounce distance here).
+                player.BounceFromWall(player.Position, Vector3.left, 0f, true);
+                Assert.That(slams, Has.Count.EqualTo(1), "the missile's bounce costs HP");
+                Assert.That(slams[0].by, Is.SameAs(player), "its own flight started that slam");
+                Assert.That(slams[0].named, Is.SameAs(player), "so the player is named for it");
+
+                Vector3 dir = Vector3.right;
+                wall = new GameObject("RunAnalyticsTestWall") { layer = GameManager.WallLayer };
+                wall.transform.SetPositionAndRotation(player.Position + dir * (player.Radius + .8f) + Vector3.up * 1.5f, Quaternion.LookRotation(dir));
+                wall.AddComponent<BoxCollider>().size = new Vector3(4f, 3f, .4f);
+                Physics.SyncTransforms();
+                player.Knockback(dir, 3f, KnockKind.Hit, enemy);
+                await Until(() => slams.Count > 1, 3f, "the knock ends in the wall");
+                Assert.That(slams[1].by, Is.SameAs(enemy), "the enemy's blow started that slam");
+                Assert.That(slams[1].named, Is.SameAs(enemy), "so the enemy is named for it");
+            }
+            finally
+            {
+                player.DamageTaken -= Count;
+                if (wall) UnityEngine.Object.Destroy(wall);
+            }
+
+            RunAnalytics.FlushDamage(game);
+            Assert.That(DamageRows().Any(r => r.source == "backfire" && r.wave == 1), "the missile's bounce is reported as a backfire");
+            Assert.That(DamageRows().Any(r => r.source == "wall_slam" && r.wave == 1), "the slam after the enemy's knock stays a wall slam");
+        }
+
         /// <summary>CampaignEvents raised by hand on a classic run (V2Campaign raises them through the same internal methods): the
         /// rows then carry the campaign day and its stage, a hit without a dealer at night is the shadows', each dawn sends the day's
         /// v2_day row, a purchase sends v2_purchase, card picks and air drops send nothing, and a fallen base is the run's cause. Needs
@@ -440,6 +492,49 @@ namespace AnomalyArena
             Assert.That(RunRows(), Is.Not.Empty, "a run-start row was sent");
             var start = Parse(RunRows()[0]);
             Assert.That((start.@event, start.stage, start.wave, start.mode), Is.EqualTo(("run_start", "tutorial", 0, "story")));
+        }
+
+        /// <summary>A continued save's run_start says where it continues: a morning save of Day 1 (saved as Day 0's night ended) starts at
+        /// "dawn" on day 1, and the dawn that ends Day 0's night again sends no v2_day row (that row came from the run that made the save),
+        /// while the next dawn does; an afternoon save starts at "dusk" on its own day, and its first dawn is a real one. RunContinued is
+        /// called directly, as GameManager.CampaignEnterPlay calls it for V2Campaign.BeginFromSave, in the frame the campaign starts.</summary>
+        [Test, LoadScene(Scene), Timeout(90000)]
+        public async Task CampaignRun_ContinuedFromASave_StartsWhereTheSaveContinues_WithoutTheNightBeforeIt()
+        {
+            await Awaitable.NextFrameAsync();
+            await Until(() => GameManager.Instance && ArenaText.Ready, 12f, "scene and localization");
+            var game = GameManager.Instance;
+            Assume.That(game.TryGetComponent(out V2Campaign campaign) && campaign.isActiveAndEnabled && campaign.rules, Is.True, "the scene has the V2 campaign");
+            await CommandUntil(game, ArenaUiCommand.StartCampaign, () => game.CampaignRunning);
+            ListenToCampaign();
+            sent.Clear();
+
+            RunAnalytics.RunContinued(game, 0, SavePhase.Morning);
+            var morning = Parse(RunRows().Single());
+            Assert.That((morning.@event, morning.stage, morning.wave, morning.mode), Is.EqualTo(("run_start", "dawn", 1, "story")),
+                "a morning save of Day 1 continues at the dawn that begins Day 1");
+            RaiseCampaign("RaisePhase", "dawn", 0);
+            RaiseCampaign("RaiseDawn", 0, new CampaignCost(10, 20, 30), new CampaignCost(100, 200, 300));
+            Assert.That(Days(), Is.Empty, "the night before the save is not reported again");
+            RaiseCampaign("RaiseDayStarted", 1, false);
+            RaiseCampaign("RaisePhase", "dawn", 1);
+            RaiseCampaign("RaiseDawn", 1, new CampaignCost(10, 20, 30), new CampaignCost(100, 200, 300));
+            RaiseCampaign("RaiseDayStarted", 2, false);
+            RunAnalytics.RunEnded(game, ArenaUiState.WaveActive, "quit_to_title");
+            Assert.That(Days().Select(d => (d.day, d.reached_dawn, d.end_cause)), Is.EqualTo(new[] { (1, true, ""), (2, false, "quit_to_title") }),
+                "the day played after continuing reaches dawn and is reported, and so is the day the run ended on");
+            Assert.That(Days().Select(d => d.run_id), Has.All.EqualTo(morning.run_id));
+
+            sent.Clear();
+            RunAnalytics.RunContinued(game, 2, SavePhase.Afternoon);
+            var afternoon = Parse(RunRows().Single());
+            Assert.That((afternoon.stage, afternoon.wave, afternoon.mode), Is.EqualTo(("dusk", 2, "story")), "an afternoon save continues on its own day");
+            Assert.That(afternoon.run_id, Is.Not.EqualTo(morning.run_id), "a continued save is a run of its own");
+            RaiseCampaign("RaisePhase", "night", 2);
+            RaiseCampaign("RaisePhase", "dawn", 2);
+            RaiseCampaign("RaiseDawn", 2, new CampaignCost(10, 20, 30), new CampaignCost(100, 200, 300));
+            Assert.That(Days().Select(d => (d.day, d.reached_dawn)), Is.EqualTo(new[] { (2, true) }), "its first dawn ends the day it continued");
+            RunAnalytics.RunEnded(game, ArenaUiState.WaveActive, "quit_to_title");
         }
 
         /// <summary>A campaign mark left by a run that never sent run_end (the same GameManager plays both modes) does not carry over: the

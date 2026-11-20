@@ -102,7 +102,7 @@ namespace AnomalyArena
             V5BattleKit.Sync(energyWord);
             lifeWord.text = ArenaText.Pair("生命", "HP");
             staminaWord.text = ArenaText.Pair("体力", "Stamina");
-            energyWord.text = ArenaText.Pair("能量", "ENERGY");
+            energyWord.text = ArenaText.Pair("能量", "Energy");
             sprintKey.SetText(ArenaKeys.SprintKey);
             float barsH = energyRow ? BarsHWithEnergy : BarsH;
             V5BattleKit.Place(barsPlate.Rect, FaceSize + BarsGap, (FaceSize - barsH) * .5f, BarsW, barsH);
@@ -357,7 +357,7 @@ namespace AnomalyArena
             float right = InfoW;
             if (waiting)
             {
-                picksWord.text = ArenaText.Pair("待选", "Picks");
+                picksWord.text = ArenaText.Pair("待选卡", "Picks");
                 picksCount.text = "×" + s.bankedDrafts;
                 if (shownPicks >= 0 && s.bankedDrafts > shownPicks) Pulse(picksCount);
                 picksKey.SetText(ArenaKeys.CardPickKey);

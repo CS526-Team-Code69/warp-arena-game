@@ -4,7 +4,9 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-    /// <summary>Fixed scene-authored label pool. Cloaked Shades do not reveal themselves through a health bar.</summary>
+    /// <summary>Fixed scene-authored label pool. Cloaked Shades do not reveal themselves through a health bar. A monster kind the player meets
+    /// for the first time is named over its bar for that morning or wave, and its first body on the screen brings a one-sentence notice;
+    /// the notices of this queue (Notice) show one at a time.</summary>
     public class V2WorldLabels : MonoBehaviour
     {
         [Serializable]
@@ -66,18 +68,201 @@ namespace AnomalyArena
 
         void Awake()
         {
+            active = this;
             bindings = new Enemy[enemyLabels.Length];
             models = new V2ModelPresentation[enemyLabels.Length];
             canvasRect = GetComponentInParent<Canvas>().transform as RectTransform;
             executeTicks = new UnityEngine.UI.Image[enemyLabels.Length];
             hpColors = new Color[enemyLabels.Length];
             executeBelow = new bool[enemyLabels.Length];
+            if (V5HudKit.On) DressFifthLabels();
             for (int i = 0; i < enemyLabels.Length; i++)
             {
                 hpColors[i] = enemyLabels[i].hp ? enemyLabels[i].hp.color : Color.white;
                 if (enemyLabels[i].name) AddNameShadow(enemyLabels[i].name);
             }
             if (V5HudKit.On) BuildFifthEdges();
+        }
+
+        void OnDestroy()
+        {
+            if (active == this) active = null;
+        }
+
+        // ───── A monster kind met for the first time, and the notices shown one at a time ─────
+
+        /// <summary>Seconds a first-sight notice stays on the screen, and the pause after any notice of this queue before the next one.</summary>
+        public const float FirstSightSeconds = 5f, NoticeGap = .5f;
+
+        struct QueuedNotice
+        {
+            public Func<string> words;
+            public float seconds;
+        }
+
+        // The kinds met for the first time on this profile (ArenaCodexProgress.MeetEnemy), each with the stretch of play it was met in
+        // (PlayStretch); the kinds whose notice has been queued; the notices waiting, shown one at a time; and the time before the next.
+        static readonly Dictionary<EnemyKind, int> firstSight = new();
+        static readonly HashSet<EnemyKind> introduced = new();
+        static readonly List<QueuedNotice> notices = new();
+        static float noticeWait;
+        static V2WorldLabels active;
+        // The run these belong to: a new run reloads the scene and so has a new GameManager (FollowRun).
+        static GameManager run;
+
+        // The editor keeps statics from one play to the next (domain reload is off).
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetForPlay()
+        {
+            ForgetFirstSights();
+            active = null;
+            run = null;
+        }
+
+        /// <summary>A new run (a new GameManager: restarting or leaving a run reloads the scene) starts with nothing named for a first sight
+        /// and no notice waiting, whenever its labels wake.</summary>
+        static void FollowRun()
+        {
+            var gm = GameManager.Instance;
+            if (run == gm) return;
+            run = gm;
+            ForgetFirstSights();
+        }
+
+        /// <summary>Forgets the kinds met and the notices waiting: a new run starts with none (FollowRun), and the tests clear them.</summary>
+        public static void ForgetFirstSights()
+        {
+            firstSight.Clear();
+            introduced.Clear();
+            notices.Clear();
+            noticeWait = 0f;
+            LastShown = "";
+        }
+
+        /// <summary>A body of a kind the collection had never met was set up (Enemy.Configure). On the whole game's pages the kind is named
+        /// over its bars for the stretch of play it was met in (the story's morning, the open mode's wave), with the art on as in whitebox,
+        /// and its first body on the screen queues its one-sentence notice. The Grunt, every player's first monster, and the bosses, whose
+        /// own plates and cutscenes name them, get neither.</summary>
+        public static void FirstMeeting(EnemyKind kind)
+        {
+            if (!V5HudKit.On || !IntroducesOnFirstSight(kind)) return;
+            FollowRun();
+            if (!firstSight.ContainsKey(kind)) firstSight[kind] = PlayStretch();
+        }
+
+        /// <summary>The kinds a first sight names and introduces: every kind but the Grunt and the bosses.</summary>
+        public static bool IntroducesOnFirstSight(EnemyKind kind) => kind != EnemyKind.Grunt && !EnemyRoles.IsBoss(kind);
+
+        /// <summary>A kind met for the first time is named over its bars while the stretch of play it was met in lasts.</summary>
+        public static bool NamedForFirstSight(EnemyKind kind) => firstSight.TryGetValue(kind, out int stretch) && stretch == PlayStretch();
+
+        /// <summary>The stretch of play now: in the story the day and the part of it (a morning's waves and the lull between them are one
+        /// stretch), in the open mode the wave.</summary>
+        static int PlayStretch()
+        {
+            var campaign = V2Campaign.Active;
+            if (campaign && campaign.Running)
+                return 1 + campaign.Day * 32 + (campaign.Stage is CampaignStage.Day or CampaignStage.Lull ? 0 : 1 + (int)campaign.Stage);
+            var gm = GameManager.Instance;
+            return gm && gm.waves ? -2 - gm.waves.WaveIndex : -1;
+        }
+
+        /// <summary>Queues a notice (a one-line toast, or a banner's title and line split by a line break) for the moment play allows, after
+        /// any notice of this queue still on the screen, so two never cover each other. first puts it ahead of those waiting, for a notice
+        /// about what has just happened (the black hole's first sight). Without the world labels it shows at once.</summary>
+        public static void Notice(Func<string> words, float seconds, bool first = false)
+        {
+            if (words == null) return;
+            FollowRun();
+            if (!active)
+            {
+                var hud = GameManager.Instance ? GameManager.Instance.hud : null;
+                if (hud) hud.Toast(words(), Color.white, seconds);
+                return;
+            }
+            var notice = new QueuedNotice { words = words, seconds = seconds };
+            if (first) notices.Insert(0, notice);
+            else notices.Add(notice);
+        }
+
+        /// <summary>How many notices of this queue wait to show.</summary>
+        public static int NoticesWaiting => notices.Count;
+
+        /// <summary>The words of the last notice this queue showed (empty before any), for checks.</summary>
+        public static string LastShown { get; private set; } = "";
+
+        /// <summary>A body of a kind met for the first time is on the screen: its notice is queued, once.</summary>
+        static void SeeFirstSight(EnemyKind kind)
+        {
+            if (!firstSight.ContainsKey(kind) || !introduced.Add(kind)) return;
+            Notice(() => FirstSightNotice(kind), FirstSightSeconds);
+        }
+
+        /// <summary>Shows the next notice once play runs (no card, pick, pause or cutscene over it) and the last one has had its time.</summary>
+        static void TickNotices(GameManager gm)
+        {
+            noticeWait = Mathf.Max(0f, noticeWait - Time.unscaledDeltaTime);
+            if (noticeWait > 0f || notices.Count == 0 || !gm.hud || !gm.CanPlayerMove) return;
+            var next = notices[0];
+            notices.RemoveAt(0);
+            string words = next.words();
+            if (string.IsNullOrEmpty(words)) return;
+            gm.hud.Toast(words, Color.white, next.seconds);
+            LastShown = words;
+            noticeWait = next.seconds + NoticeGap;
+        }
+
+        /// <summary>The sentence that introduces a kind the first time it is met: what it does and what to do about it. Empty for the kinds
+        /// a first sight does not introduce.</summary>
+        public static string FirstSightNotice(EnemyKind kind)
+        {
+            string name = KindName(kind);
+            return kind switch
+            {
+                EnemyKind.Brute => ArenaText.Pair($"新怪物 · {name}：它走得慢，但打得疼，也更耐打。", $"New monster · {name}: it is slow, but it hits hard and takes more to bring down."),
+                EnemyKind.Skitter => ArenaText.Pair($"新怪物 · {name}：它跑得最快，伤害不高，总是第一个贴上来。", $"New monster · {name}: it is the fastest one; it hits lightly but reaches you first."),
+                EnemyKind.Spitter => ArenaText.Pair($"新怪物 · {name}：它隔着一段距离吐毒刺，看到它蓄力就横着走开。", $"New monster · {name}: it spits poison darts from a distance. Sidestep when it winds up."),
+                EnemyKind.Warden => ArenaText.Pair($"新怪物 · {name}：它自己不出手，只给身边的怪加护盾，先打掉它。", $"New monster · {name}: it never attacks but shields the monsters near it. Kill it first."),
+                EnemyKind.Spire => ArenaText.Pair($"新怪物 · {name}：它不会移动。地上的光波追上你之前，离开它的圆圈。", $"New monster · {name}: it never moves. Leave its circle before the light wave reaches you."),
+                EnemyKind.Chanter => ArenaText.Pair($"新怪物 · {name}：它躲在后面让身边的怪打得更狠，先打掉它。", $"New monster · {name}: it stays back and makes nearby monsters hit harder. Kill it first."),
+                EnemyKind.Bloater => ArenaText.Pair($"新怪物 · {name}：它靠近你或被打死时都会爆炸，离远一点打它。", $"New monster · {name}: it explodes when it gets close or dies. Shoot it from a distance."),
+                EnemyKind.Rammer => ArenaText.Pair($"新怪物 · {name}：地上出现直线时往旁边躲，它会沿着线冲过来。", $"New monster · {name}: when a line appears on the ground, step aside. It charges along it."),
+                EnemyKind.Stomper => ArenaText.Pair($"新怪物 · {name}：它会把正前方扇形里的一切跺飞，别站在它面前。", $"New monster · {name}: its stamp hurls everything in front of it. Keep out of that cone."),
+                EnemyKind.Shade => ArenaText.Pair($"新怪物 · {name}：它隐身靠近，一击就能要你的命；打中它就会现形。", $"New monster · {name}: it creeps up unseen and can kill in one strike. Any hit reveals it."),
+                EnemyKind.Splitter => ArenaText.Pair($"新怪物 · {name}：它被打死时会裂成两只小的。", $"New monster · {name}: it splits into two small ones when it dies."),
+                _ => "",
+            };
+        }
+
+        /// <summary>The fifth pass's colours on the saved labels: each life bar in the battle HUD's life red over its dark track, and the
+        /// black hole's labels in the void's light violet (the names take the title's ink in RefreshEnemyData). It runs before each bar's
+        /// own colour is kept (hpColors), so the execute line still turns a bar red and gives it this colour back.</summary>
+        void DressFifthLabels()
+        {
+            foreach (var view in enemyLabels)
+            {
+                if (view.hp) view.hp.color = V5BattleKit.LifeTop;
+                DressTrack(view.hp, view.root);
+                DressTrack(view.shield, view.root);
+            }
+            if (holeLabels != null)
+                foreach (var label in holeLabels)
+                    if (label) label.color = V5HudKit.VioletHi;
+        }
+
+        /// <summary>The dark track behind a bar's fill: the fill's parent, when it has one of its own.</summary>
+        static void DressTrack(UnityEngine.UI.Image fill, RectTransform root)
+        {
+            var bar = fill ? fill.transform.parent : null;
+            if (bar && bar != root && bar.TryGetComponent<UnityEngine.UI.Image>(out var track)) track.color = V5HudKit.Track;
+        }
+
+        /// <summary>Shows or hides a bar (its fill's parent, else the fill itself).</summary>
+        static void ShowBar(UnityEngine.UI.Image fill, RectTransform root, bool shown)
+        {
+            if (!fill) return;
+            var bar = fill.transform.parent && fill.transform.parent != root ? fill.transform.parent.gameObject : fill.gameObject;
+            if (bar.activeSelf != shown) bar.SetActive(shown);
         }
 
         /// <summary>The fifth pass's edge notices (V5BattleEdge): a triangle in the notice's own colour pointing off the screen beside a
@@ -160,6 +345,9 @@ namespace AnomalyArena
             if (!gm || !gm.cam || !gm.waves || !canvasRect) return;
             refresh -= Time.unscaledDeltaTime;
             if (refresh <= 0f) { refresh = .1f; RefreshEnemyData(gm); }
+            FollowRun();
+            TickNotices(gm);
+            bool firstSightsPending = firstSight.Count > introduced.Count;
             for (int i = 0; i < bindings.Length; i++)
             {
                 var enemy = bindings[i]; var view = enemyLabels[i];
@@ -171,6 +359,8 @@ namespace AnomalyArena
                     // whitebox over the top of the whitebox look (Combatant.TryModelTop, 2026-11-10).
                     bool onModel = LabelPoint(models[i], gm.cam, out var top) || enemy.TryModelTop(gm.cam, out top);
                     show = PlaceWorld(view.root, onModel ? top : enemy.HeadPoint(gm.cam), gm.cam, onModel ? modelLabelLift : 0f);
+                    // The first body of a kind met for the first time is on the screen: its notice joins the queue.
+                    if (show && firstSightsPending && enemy.definition) SeeFirstSight(enemy.definition.kind);
                 }
                 if (view.root.gameObject.activeSelf != show) view.root.gameObject.SetActive(show);
             }
@@ -205,7 +395,9 @@ namespace AnomalyArena
                         if (hole.Phase == HolePhase.Portal)
                             PlaceEdge(edgeLabels[edges++], hole.Centre, gm.cam, ArenaText.Text("ui.hole.offscreen", hole.WavesLeft), true);
                         else
-                            PlaceHoleEdge(edgeLabels[edges++], hole.Centre, gm.cam, ArenaText.Pair("黑洞", "BLACK HOLE") + $"  {distance:0}m");
+                            // The whole game's pages say the hole is dangerous before how far it is (the English Alpha keeps the name alone).
+                            PlaceHoleEdge(edgeLabels[edges++], hole.Centre, gm.cam,
+                                (V5HudKit.On ? ArenaText.Pair("黑洞 · 危险", "BLACK HOLE · DANGER") : ArenaText.Pair("黑洞", "BLACK HOLE")) + $"  {distance:0}m");
                     }
                 }
                 // The campaign keeps one hole in play (none at night): the labels of the holes put away hide.
@@ -265,13 +457,12 @@ namespace AnomalyArena
             if (fifthEdges != null) ShowFifthEdges(edges);
         }
 
-        /// <summary>The open mode's portal while the interact key enters it: the text table's lines ("E · ENTER", then what entering
-        /// costs). The table names the key the game always had; when the player has put interacting on another key (ArenaKeys), that
-        /// key's name stands in for the leading E.</summary>
+        /// <summary>The open mode's portal while the interact key enters it: a sentence naming the key the player has interacting on
+        /// (ArenaKeys), then the text table's sentences on what entering costs (ui.hole.enter).</summary>
         static string PortalEnterText()
         {
-            string text = ArenaText.Text("ui.hole.enter"), key = ArenaKeys.InteractKey;
-            return key != "E" && text.StartsWith("E ", System.StringComparison.Ordinal) ? key + text.Substring(1) : text;
+            string key = ArenaKeys.InteractKey;
+            return ArenaText.Pair($"按 {key} 进入虚空试炼", $"Press {key} to enter the Void Trial") + "\n" + ArenaText.Text("ui.hole.enter");
         }
 
         /// <summary>The V2 day campaign's black hole: how many it has swallowed of what opens it, then over the hidden gate the E that takes
@@ -280,7 +471,7 @@ namespace AnomalyArena
         {
             HolePhase.Active => hole.campaignLabel ?? (world.CanFeed ? $"{hole.Feeds} / {hole.feedsToOpen}" : ""),
             // 2026-11-10: the portal carries no text of its own; only standing on it shows the key that enters.
-            HolePhase.Portal => canEnter ? ArenaText.Pair($"按 {ArenaKeys.InteractKey} 进入", $"{ArenaKeys.InteractKey} · ENTER") : "",
+            HolePhase.Portal => canEnter ? ArenaText.Pair($"按 {ArenaKeys.InteractKey} 进入", $"Press {ArenaKeys.InteractKey} to enter") : "",
             _ => ""
         };
 
@@ -296,7 +487,7 @@ namespace AnomalyArena
                 bool show = i == 0 && on;
                 if (show)
                 {
-                    string text = ArenaText.Pair($"{ArenaKeys.InteractKey} · 传送", $"{ArenaKeys.InteractKey} · TRAVEL");
+                    string text = ArenaText.Pair($"按 {ArenaKeys.InteractKey} 传送", $"Press {ArenaKeys.InteractKey} to travel");
                     if (label.text != text) label.text = text;
                     show = PlaceWorld(label.rectTransform, portal.Centre + gm.cam.transform.up * (portal.size * .5f + 1f), gm.cam);
                 }
@@ -345,22 +536,32 @@ namespace AnomalyArena
                 view.hp.fillAmount = enemy.maxHp > 0f ? Mathf.Clamp01(enemy.Hp / enemy.maxHp) : 0f;
                 view.shield.fillAmount = status && enemy.maxHp > 0f ? Mathf.Clamp01(status.Shield / enemy.maxHp) : 0f;
                 view.shield.gameObject.SetActive(status && status.Shield > 0f);
+                // On the whole game's pages the boss plate at the top of the screen carries a boss's name and life (V5BattleHud): over
+                // the boss stays only what the plate does not say, its statuses and its ward.
+                bool plateCarries = V5HudKit.On && enemy.IsBoss;
+                ShowBar(view.hp, view.root, !plateCarries);
+                ShowBar(view.shield, view.root, !plateCarries);
                 // Elites show their affix beside the bar; bodies inside a Chanter aura show the buff, an elite after its affix (document 9.2).
                 // Since 2026-10-28 every other enemy names its kind above its bar too, as the bosses do, in a softer white.
                 // Since 2026-11-06 ordinary enemies (the basics in EnemyRoles) show only their bar, so the name no longer covers the
                 // model; specials, elites and bosses keep their name. Status words (Chanted, Marked) still show on any enemy.
                 string kind = enemy.definition ? KindName(enemy.definition.kind) : "";
-                // The English builds in whitebox name every enemy's kind (OrdinaryNamesShown): there the bodies are plain shapes.
-                bool named = showOrdinaryEnemyNames || OrdinaryNamesShown(!Art.Enabled, BuildEdition.Current) || enemy.IsBoss || enemy.IsSpecial;
-                string name = enemy.IsBoss ? enemy.definition.kind == EnemyKind.Hollow ? ArenaText.Pair("纳什先知", "THE NASH PROPHET") : ArenaText.Pair("暴虐君王", "THE TYRANT KING")
+                // Whitebox names every enemy's kind (OrdinaryNamesShown): there the bodies are plain shapes. A kind met for the first time is
+                // named with the art on too, for the morning or the wave it was met in (NamedForFirstSight).
+                bool named = showOrdinaryEnemyNames || OrdinaryNamesShown(!Art.Enabled) || enemy.IsBoss || enemy.IsSpecial
+                             || firstSight.Count > 0 && enemy.definition && NamedForFirstSight(enemy.definition.kind);
+                string name = plateCarries ? ""
+                    : enemy.IsBoss ? enemy.definition.kind == EnemyKind.Hollow ? ArenaText.Pair("纳什先知", "THE NASH PROPHET") : ArenaText.Pair("暴虐君王", "THE TYRANT KING")
                     : enemy.Elite ? kind + " · " + ArenaText.Text("ui.elite") + (enemy.Affix != ElementKind.None ? " · " + ArenaTerms.Element(enemy.Affix) : "") : named ? kind : "";
-                Color nameColor = enemy.IsBoss || enemy.Elite ? Color.white : CommonNameColor;
+                // The fifth pass writes the names in the title's ink, an ordinary kind's a little fainter.
+                Color nameColor = V5HudKit.On ? enemy.IsBoss || enemy.Elite ? V5TitleKit.Ink : FifthCommonName
+                    : enemy.IsBoss || enemy.Elite ? Color.white : CommonNameColor;
                 if (view.name.color != nameColor) view.name.color = nameColor;
                 if (enemy.Chanted) name = (name.Length > 0 ? name + " · " : "") + ArenaText.Pair("吟唱强化", "CHANTED");
                 // Execute Twist: a marked enemy says so above its bar.
                 if (weapons && weapons.IsExecuteMarked(enemy)) name = (name.Length > 0 ? name + " · " : "") + ArenaText.Pair("处决标记", "MARKED");
                 // The Nash Prophet takes no damage while one of its summons lives (system doc 13.1).
-                if (enemy.ProphetWarded) name += " · " + ArenaText.Pair("无敌", "INVULNERABLE");
+                if (enemy.ProphetWarded) name = (name.Length > 0 ? name + " · " : "") + ArenaText.Pair("无敌", "INVULNERABLE");
                 if (view.name.text != name) view.name.text = name;
                 V2Hud.SetElementIcon(view.affix, art, (int)enemy.Affix - 1);
                 for (int j = 0; j < 4; j++)
@@ -406,11 +607,12 @@ namespace AnomalyArena
         }
 
         static readonly Color CommonNameColor = new(.86f, .89f, .94f, .92f);
+        static readonly Color FifthCommonName = new(V5TitleKit.Ink.r, V5TitleKit.Ink.g, V5TitleKit.Ink.b, .86f);
 
-        /// <summary>Whether ordinary enemies (the basics) name their kind above their bar: on the course's English builds (BuildEdition) in
-        /// whitebox, where every body is a plain shape and the name says what it is. The whole game (the Chinese page, the editor) keeps
-        /// names to specials, elites and bosses, so they do not cover the models.</summary>
-        public static bool OrdinaryNamesShown(bool whitebox, BuildEdition.Edition edition) => whitebox && edition != BuildEdition.Edition.Full;
+        /// <summary>Whether ordinary enemies (the basics) name their kind above their bar: in whitebox, on every page, where every body is a
+        /// plain shape and the name says what it is. With the art on, names stay with specials, elites and bosses, so they do not cover
+        /// the models.</summary>
+        public static bool OrdinaryNamesShown(bool whitebox) => whitebox;
         static readonly string[] kindNames = new string[Enum.GetValues(typeof(EnemyKind)).Length];
         static bool kindNamesChinese;
 

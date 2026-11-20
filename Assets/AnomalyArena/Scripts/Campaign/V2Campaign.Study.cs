@@ -114,7 +114,7 @@ namespace AnomalyArena
         {
             var parts = new List<string>();
             if (cost.alloy > 0) parts.Add(ArenaText.Pair($"合金 {cost.alloy}", $"{cost.alloy} alloy"));
-            if (cost.energy > 0) parts.Add(ArenaText.Pair($"能量 {cost.energy}", $"{cost.energy} energy"));
+            if (cost.energy > 0) parts.Add(ArenaText.Pair($"异星能量 {cost.energy}", $"{cost.energy} alien energy"));
             if (cost.dark > 0) parts.Add(ArenaText.Pair($"暗物质 {cost.dark}", $"{cost.dark} dark matter"));
             return parts.Count == 0 ? ArenaText.Pair("免费", "free") : string.Join(" + ", parts);
         }
@@ -123,7 +123,7 @@ namespace AnomalyArena
         {
             var missing = new List<string>();
             if (Alloy < cost.alloy) missing.Add(ArenaText.Pair($"合金还差 {cost.alloy - Alloy}", $"{cost.alloy - Alloy} alloy short"));
-            if (Energy < cost.energy) missing.Add(ArenaText.Pair($"能量还差 {cost.energy - Energy}", $"{cost.energy - Energy} energy short"));
+            if (Energy < cost.energy) missing.Add(ArenaText.Pair($"异星能量还差 {cost.energy - Energy}", $"{cost.energy - Energy} alien energy short"));
             if (Dark < cost.dark) missing.Add(ArenaText.Pair($"暗物质还差 {cost.dark - Dark}", $"{cost.dark - Dark} dark matter short"));
             return missing.Count > 0 ? string.Join(ArenaText.Pair("，", ", "), missing) : ArenaText.Pair("现在还买不了", "Can't buy this yet");
         }
@@ -166,7 +166,7 @@ namespace AnomalyArena
                 ArenaText.Pair($"{who} · 型号", $"{who} · Mk"),
                 $"Mk {from} ×{rules.MkDamage(from):0.##}", mkPrice != null ? $"Mk {from + 1} ×{rules.MkDamage(from + 1):0.##}" : "",
                 mkDetail, mkPrice, mkPrice == null,
-                !works ? RoomBroken(CampaignRoom.Armament) : !rules.sharedWeaponMk && target == null ? ArenaText.Pair("先研究一把异常武器", "Research an anomaly weapon first") : null,
+                !works ? RoomBroken(CampaignRoom.Armament) : !rules.sharedWeaponMk && target == null ? ArenaText.Pair("先在武装区买一把异常武器", "Buy an anomaly weapon at the Armament Bay first") : null,
                 TryBuyWeaponDamage));
             // Armor: five levels, each one player level (max HP and max energy).
             var progression = gm.progression;
@@ -200,7 +200,7 @@ namespace AnomalyArena
                 string id = "weapon." + form;
                 if (d.unlockWave > ResearchWave)
                 {
-                    tab.entries.Add(StudyUnknown(id, StudyRoom.Armament, tab.name, ArenaText.Pair("要过几天才能研究。", "Can be researched on a later day.")));
+                    tab.entries.Add(StudyUnknown(id, StudyRoom.Armament, tab.name, ArenaText.Pair("要过几天才能买。", "Available on a later day.")));
                     continue;
                 }
                 bool owned = weapons.OwnsForm(form), auto = RunWeapon.IsAutoForm(form), rocket = form == WeaponForm.RocketLauncher;
@@ -413,12 +413,12 @@ namespace AnomalyArena
                     // StudyRoom has no Central Control: these tiles carry Armament, and the window groups them under the tab's own room name.
                     tab.entries.Add(StudyItem($"overload.{(shield ? "shield" : "damage")}.{(withEnergy ? "energy" : "alloy")}", StudyRoom.Armament, tab.name, CardRarity.Legendary,
                         art ? shield ? art.shield : art.durability : null,
-                        shield ? ArenaText.Pair("暴君战开局护盾", "Tyrant fight: opening shield") : ArenaText.Pair("暴君战最终伤害", "Tyrant fight: final damage"),
+                        shield ? ArenaText.Pair("最终决战开局护盾", "Final Battle: opening shield") : ArenaText.Pair("最终决战伤害加成", "Final Battle: damage bonus"),
                         $"+{bought * share * 100f:0}%", full ? "" : $"+{(bought + 1) * share * 100f:0}%",
-                        (shield ? ArenaText.Pair($"暴君战开始时，每买一次，你开场就多得到相当于最大生命 {share * 100f:0}% 的护盾，可以超过平时的护盾上限。几秒后，它会像普通护盾一样慢慢消退。",
-                                $"When the Tyrant fight begins, each purchase gives you a shield worth {share * 100f:0}% of your max HP, even above the usual cap. After a few seconds it fades like any other shield.")
-                            : ArenaText.Pair($"暴君战中，每买一次，武器和技能的伤害就 +{share * 100f:0}%，可以叠加。", $"In the Tyrant fight, each purchase adds +{share * 100f:0}% to your weapon and skill damage. Purchases stack."))
-                        + "\n" + ArenaText.Pair($"护盾和伤害各最多买 {rules.overloadMaxBuys} 次，用合金买和用能量买都算在内。", $"You can buy the shield and the damage up to {rules.overloadMaxBuys} times each, whether you pay with alloy or energy."),
+                        (shield ? ArenaText.Pair($"最终决战开始时，每买一次，你开场就多得到相当于最大生命 {share * 100f:0}% 的护盾，可以超过平时的护盾上限。几秒后，它会像普通护盾一样慢慢消退。",
+                                $"When the Final Battle begins, each purchase gives you a shield worth {share * 100f:0}% of your max HP, even above the usual cap. After a few seconds it fades like any other shield.")
+                            : ArenaText.Pair($"最终决战中，每买一次，武器和技能的伤害就 +{share * 100f:0}%，可以叠加。", $"In the Final Battle, each purchase adds +{share * 100f:0}% to your weapon and skill damage. Purchases stack."))
+                        + "\n" + ArenaText.Pair($"护盾和伤害各最多买 {rules.overloadMaxBuys} 次，用合金买和用异星能量买都算在内。", $"You can buy the shield and the damage up to {rules.overloadMaxBuys} times each, whether you pay with alloy or alien energy."),
                         price, full, blocked, () => TryBuyOverload(s, e)));
                 }
         }

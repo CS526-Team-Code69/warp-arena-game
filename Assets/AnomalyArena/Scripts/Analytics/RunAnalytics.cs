@@ -127,8 +127,28 @@ namespace AnomalyArena
 
         public static string NewId() => Guid.NewGuid().ToString("N");
 
-        /// <summary>The first wave of a run is about to start (the starting weapon's card was just closed).</summary>
-        public static void RunStarted(GameManager game)
+        /// <summary>The first wave of a run is about to start (the starting weapon's card was just closed), or an open-mode save was
+        /// continued. A story run continued from a save starts through RunContinued instead.</summary>
+        public static void RunStarted(GameManager game) => Begin(game, null, 0);
+
+        /// <summary>A story run continued from a save is on (V2Campaign.BeginFromSave). Its run_start row carries the day the save
+        /// continues, as the save's slot shows it (ArenaSaves.StoryDay), and the stage where the saved phase begins (ContinuedStage), so
+        /// any stage other than "tutorial" marks a continued run, one that never played Day 0. day is the campaign's day as the save holds
+        /// it (StorySave.day: for a morning save, the day before the one that begins). A morning save continues through the end of the
+        /// night before it (V2Campaign.EnterSavedPhase), whose v2_day row the run that made the save has already sent: that first dawn
+        /// sends no row and only starts the counts of the coming day.</summary>
+        public static void RunContinued(GameManager game, int day, SavePhase phase) => Begin(game, phase, day);
+
+        /// <summary>The run_start stage of a run continued from a save: where the saved phase begins.</summary>
+        public static string ContinuedStage(SavePhase phase) => phase switch
+        {
+            SavePhase.Morning => "dawn",
+            SavePhase.Afternoon => "dusk",
+            SavePhase.Tyrant => "final_boss",
+            _ => "night",
+        };
+
+        static void Begin(GameManager game, SavePhase? continued, int day)
         {
             if (!game || game.waves && game.waves.labMode) return;
             runId = NewId();
@@ -137,13 +157,24 @@ namespace AnomalyArena
             damage.Clear();
             milestonesSent.Clear();
             milestoneRows = 0;
+            continuedDawn = false;
             // The GameManager is the same in both modes, so a campaign mark left by a run that never ended must not carry over. The mark
             // is set before the row is built: run_start reads its mode and stage from it.
             campaignGame = null;
-            if (game.CampaignRunning) StartCampaign(game, 0);
+            if (game.CampaignRunning)
+            {
+                if (continued is { } phase)
+                {
+                    StartCampaign(game, day, ContinuedStage(phase));
+                    continuedDawn = phase == SavePhase.Morning;
+                }
+                else StartCampaign(game, 0);
+            }
             var first = game.runWeapons ? game.runWeapons.Hand[0] : null;
             startingWeapon = first != null ? first.form.ToString() : "";
-            Send(Build(game, "run_start", StageOf(game.RunPhase)));
+            var e = Build(game, "run_start", StageOf(game.RunPhase));
+            if (continued is { } saved && Campaigning) e.wave = ArenaSaves.StoryDay(Mathf.Max(0, day), saved);
+            Send(e);
         }
 
         /// <summary>The run just ended: won, lost, or left from the pause menu (abandonedCause "restart" or "quit_to_title").
@@ -183,11 +214,13 @@ namespace AnomalyArena
             }
             Send(e);
             campaignGame = null;
+            continuedDawn = false;
         }
 
         /// <summary>Why a lost run ended, checked in this order: died in the void trial; swallowed by a black hole; the player's own
-        /// weapon; a wall slam; burn or poison; the Tyrant; any other enemy. The enemy kind is kept when an enemy dealt the last damage
-        /// (in the void trial only the Hollow, since the wave outside is frozen and an older hit says nothing about the trial).</summary>
+        /// weapon (a wall slam their own blast or human missile started counts here); a wall slam; burn or poison; the Tyrant; any other
+        /// enemy. The enemy kind is kept when an enemy dealt the last damage or started the knock that ended in the wall (in the void
+        /// trial only the Hollow, since the wave outside is frozen and an older hit says nothing about the trial).</summary>
         public static (string cause, string enemy, bool elite) DefeatCause(ArenaUiState phase, DeathCause death, DamageSource source,
             bool bySelf, EnemyKind? byEnemy, bool byElite)
         {
@@ -195,7 +228,7 @@ namespace AnomalyArena
             if (phase == ArenaUiState.VoidTrial) return byEnemy == EnemyKind.Hollow ? ("void_trial", kind, false) : ("void_trial", "", false);
             if (death == DeathCause.FellIntoGap) return ("black_hole", "", false);
             if (bySelf) return ("backfire", "", false);
-            if (source == DamageSource.Wall) return ("wall_slam", "", false);
+            if (source == DamageSource.Wall) return ("wall_slam", kind, byElite);
             if (source is DamageSource.Burn or DamageSource.Poison) return ("status", kind, byElite);
             if (byEnemy == EnemyKind.Tyrant) return ("tyrant", kind, byElite);
             if (byEnemy != null) return ("enemy", kind, byElite);
@@ -328,10 +361,11 @@ namespace AnomalyArena
 
         // ---------------------------------------------------------------- Beta metric 3: damage sources
 
-        // Burn and poison count for whoever applied them; wall slams are their own source, as in the death causes.
+        // Burn and poison count for whoever applied them. A wall slam is its own source, as in the death causes, except one the player's
+        // own blast or human missile started, which is a backfire.
         public static string DamageSourceOf(DamageSource source, bool bySelf, EnemyKind? byEnemy, bool byElite)
         {
-            if (source == DamageSource.Wall) return "wall_slam";
+            if (source == DamageSource.Wall) return bySelf ? "backfire" : "wall_slam";
             if (bySelf) return "backfire";
             if (byEnemy != null) return byElite ? byEnemy + "_elite" : byEnemy.ToString();
             return "other";
@@ -342,7 +376,7 @@ namespace AnomalyArena
         {
             if (!runOpen || !game || amount <= 0f) return;
             var player = game.player;
-            var owner = info.dealer?.Owner;
+            var owner = info.By; // for a wall slam, whoever started the knock
             var enemy = owner as Enemy;
             bool known = enemy && enemy.definition;
             string source = DamageSourceOf(info.source, player && owner == player, known ? enemy.definition.kind : (EnemyKind?)null, known && enemy.Elite);
@@ -399,8 +433,10 @@ namespace AnomalyArena
 
         /// <summary>V2 campaign, one row per day (sheet "v2_days"): sent at dawn for the day that just ended, counted from the dawn
         /// before (so a dawn's base visit and purchases belong to the coming day), and once more when the run ends, for the day that
-        /// never reached dawn. repairs counts the day's purchases of the item "repair". end_stage and end_cause are empty on a day that
-        /// reached dawn; on the run's last day they are the run_end row's stage and cause (where and how the run ended).</summary>
+        /// never reached dawn. A run continued from a save counts its first day from where it continued, and a run continued from a
+        /// morning save sends no row for the night before that morning (RunContinued). repairs counts the day's purchases of the item
+        /// "repair". end_stage and end_cause are empty on a day that reached dawn; on the run's last day they are the run_end row's
+        /// stage and cause (where and how the run ended).</summary>
         [Serializable]
         public class V2DayEvent : BetaEvent
         {
@@ -476,6 +512,8 @@ namespace AnomalyArena
         static CampaignCost earnedBefore;
         static readonly HashSet<string> milestonesSent = new(); // the once-only keys (MilestoneOnce) sent in this run
         static int milestoneRows;
+        // The run was continued from a morning save, and the dawn that ends the night before it has not come yet (RunContinued).
+        static bool continuedDawn;
 
         /// <summary>True while a V2 campaign run is on. A classic run raises no CampaignEvents and is not a campaign at its start, so
         /// this stays false and every row is exactly what the classic run sends.</summary>
@@ -508,12 +546,12 @@ namespace AnomalyArena
         }
 
         /// <summary>Marks the run of this GameManager as a campaign run: at run_start when the GameManager says a campaign is running
-        /// (day 0), or at the first campaign event of an open run.</summary>
-        static void StartCampaign(GameManager game, int day)
+        /// (day 0, or where a continued save begins, with its stage), or at the first campaign event of an open run.</summary>
+        static void StartCampaign(GameManager game, int day, string stage = null)
         {
             campaignGame = game;
             campaignDay = Mathf.Max(0, day);
-            campaignStage = campaignDay == 0 ? "tutorial" : "day";
+            campaignStage = stage ?? (campaignDay == 0 ? "tutorial" : "day");
             today = new V2DayEvent { @event = "v2_day", day = campaignDay };
             killsBefore = game.waves ? game.waves.Kills : 0;
             earnedBefore = game.TryGetComponent(out V2Campaign campaign) ? new CampaignCost(campaign.EarnedAlloy, campaign.EarnedEnergy, campaign.EarnedDark) : default;
@@ -641,8 +679,19 @@ namespace AnomalyArena
         static void OnDawn(int day, CampaignCost wallet, CampaignCost earned)
         {
             if (!InCampaign(day)) return;
-            today.day = day;
-            SendDay(campaignGame, true, wallet, earned);
+            if (continuedDawn)
+            {
+                // The night before a continued morning save ends again: its row came from the run that made the save, so this dawn only
+                // starts the coming day's counts from the totals the save brought back.
+                continuedDawn = false;
+                killsBefore = campaignGame && campaignGame.waves ? campaignGame.waves.Kills : 0;
+                earnedBefore = earned;
+            }
+            else
+            {
+                today.day = day;
+                SendDay(campaignGame, true, wallet, earned);
+            }
             today = new V2DayEvent { @event = "v2_day", day = day + 1 };
         }
 

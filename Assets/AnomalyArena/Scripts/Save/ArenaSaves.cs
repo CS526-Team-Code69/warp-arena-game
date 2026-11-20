@@ -6,7 +6,8 @@ namespace AnomalyArena
 {
     /// <summary>
     /// Three save slots for each mode. A run started from a slot writes itself into that slot by itself: the story mode at the start of
-    /// every morning, afternoon and night from day 1 on, the open mode just before every wave. Continuing a slot starts the run again at
+    /// every morning, afternoon and night from day 1 on and once more before the final battle, the open mode just before every wave
+    /// (the Tyrant's included). Continuing a slot starts the run again at
     /// the point it was saved. The English Alpha keeps its single "Start Game" and has no saves.
     /// Only a run bound to a slot writes saves: one the title bound (Bind) before it started, or a continued one. Every other run (the
     /// tests', or one whose start bound no slot) writes none. When a run ends its slot keeps its last save, in both modes: a lost run can
@@ -198,7 +199,7 @@ namespace AnomalyArena
         // ───── What the summaries show ─────
 
         /// <summary>The day a story save belongs to: a morning's save is taken as the night before ends, while V2Campaign.Day still counts
-        /// that night's day; the afternoon's and the night's within their own day.</summary>
+        /// that night's day; the afternoon's, the night's and the final battle's within their own day.</summary>
         public static int StoryDay(int campaignDay, SavePhase phase) => phase == SavePhase.Morning ? campaignDay + 1 : campaignDay;
 
         /// <summary>The open-mode wave about to start, from 1, after the last wave fought (WaveManager.WaveIndex, -1 before the first);

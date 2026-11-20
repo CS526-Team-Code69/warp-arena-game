@@ -27,7 +27,7 @@ namespace AnomalyArena
         [Tooltip("尘环展开的秒数。")] public float dustSeconds = .45f;
         [Tooltip("尘环最大直径，世界单位。")] public float dustDiameter = 3.3f;
         [Tooltip("头顶箱体的UI投影偏移；默认0，与世界箱体重合。")] public Vector2 uiOffset;
-        [Tooltip("复用已有Impact声音，仅实际落地边沿一次。")] public bool landingSound = true;
+        [Tooltip("Plays one heavy metal crash (the Rammer's ram-crash) on the frame the crate lands.")] public bool landingSound = true;
         [Tooltip("展示UI投影，使旧全屏选择页覆盖世界时仍能看见箱体。")] public bool showUiProjection = true;
         GameManager subscribedGame;
         MaterialPropertyBlock[] blocks;
@@ -119,7 +119,8 @@ namespace AnomalyArena
                 if (V5Vfx.On && game.player) V5Vfx.I.GroundSlam(game.player.Position, 1.8f, new Color(.82f, .76f, .66f), false);
                 // Opened by a click only; the button is not selected for a keyboard confirm (Enter and Space do nothing).
                 if (openButton) openButton.interactable = true;
-                if (landingSound) V2Audio.Instance?.PlayWorld(ArenaSoundCue.Impact, anchor);
+                // A steel crate landing, not a weapon's hit: the weapon impact sound stays the hits' own.
+                if (landingSound) V5WeaponAudio.At(V5Sfx.RamCrash, anchor, .8f, .9f);
             }
             SetCrateAlpha(alpha);
             float dust01 = landed ? Mathf.Clamp01(afterLand / Mathf.Max(.01f, dustSeconds)) : 0f;

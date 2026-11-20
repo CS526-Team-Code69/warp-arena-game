@@ -4,7 +4,9 @@ namespace AnomalyArena
 {
     /// <summary>Uses the boss's real phase; no independent phase timer or HP threshold. With the art off (2026-11-10) the phase is a row of
     /// the whitebox table's small tips over the boss's look (the elite's tip, "elite.tip"), one per phase reached: white in phase 1, amber in
-    /// phase 2, red in phase 3, turned to read across the screen.</summary>
+    /// phase 2, red in phase 3, turned to read across the screen. The saved crown over the model (art on) is left out wherever the fifth
+    /// pass draws the battle screens (V5HudKit.On): there the boss plate's phase lines (V5BattleHud) and the boss's own embers
+    /// (V5BossPhaseFx) show the phase, and the crown's violet belongs to the void, which the Tyrant is not.</summary>
     public sealed class V2BossPresentation : MonoBehaviour
     {
         public Enemy enemy;
@@ -31,7 +33,7 @@ namespace AnomalyArena
             ShowWhiteboxTips(enemy.IsAlive && !Art.Enabled, phase);
             if (!phaseMark) return;
             Sprite sprite = art && art.bossPhaseMarks != null && phase < art.bossPhaseMarks.Length ? art.bossPhaseMarks[phase] : null;
-            bool show = enemy.IsAlive && Art.Enabled && sprite;
+            bool show = enemy.IsAlive && Art.Enabled && sprite && !V5HudKit.On;
             phaseMark.enabled = show;
             if (!show) return;
             if (phaseMark.sprite != sprite) phaseMark.sprite = sprite;

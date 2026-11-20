@@ -73,7 +73,8 @@ namespace AnomalyArena
                 Is.EqualTo(new[] { (StatId.Damage, CardRarity.Epic), (StatId.MaxHp, CardRarity.Common) }), "the body items bought");
             Assert.That(st.crateKinds, Is.EqualTo(new[] { 2 }), "the crate on the map");
             Assert.That(st.cratePositions, Is.EqualTo(new[] { new Vector3(12.5f, 0f, -30.25f) }), "and where it lies");
-            Assert.That((st.cratesOpened, st.changedWeaponSaid, st.switchTaught), Is.EqualTo((2, true, true)), "the lines and hints given");
+            Assert.That((st.cratesOpened, st.changedWeaponSaid, st.switchTaught, st.dashTaught, st.shadowFireSaid), Is.EqualTo((2, true, true, true, true)), "the lines and hints given");
+            Assert.That(st.buyGuideDone, Is.True, "the guide to a first purchase has had its turn");
             Assert.That((st.holeSeen, st.holeAwake, st.holeFed, st.holeCheckDay), Is.EqualTo((true, true, 10, 4)), "the black hole's side quest");
             Assert.That((st.checkState, st.checkRequired, st.checkSeconds, st.checkDealt, st.checkElapsed), Is.EqualTo((HoleCheckState.Running, 900f, 30f, 450f, 12f)), "the day's timed check");
             Assert.That((st.hole.phase, st.hole.openedWave, st.hole.wavesLeft), Is.EqualTo((HolePhase.Portal, 3, 2)), "the hole");
@@ -241,6 +242,7 @@ namespace AnomalyArena
             Assert.That(ArenaSaves.StoryDay(0, SavePhase.Morning), Is.EqualTo(1), "the first save, as Day 0's night ends, is the start of day 1");
             Assert.That(ArenaSaves.StoryDay(3, SavePhase.Morning), Is.EqualTo(4), "a morning belongs to the day it begins");
             Assert.That((ArenaSaves.StoryDay(3, SavePhase.Afternoon), ArenaSaves.StoryDay(3, SavePhase.Night)), Is.EqualTo((3, 3)), "afternoons and nights to their own day");
+            Assert.That(ArenaSaves.StoryDay(7, SavePhase.Tyrant), Is.EqualTo(7), "the final battle to the day it begins on");
             Assert.That(ArenaSaves.OpenWave(-1), Is.EqualTo(1), "before the first wave: wave 1");
             Assert.That(ArenaSaves.OpenWave(0), Is.EqualTo(2), "after the first: wave 2");
             Assert.That(ArenaSaves.OpenWave(13), Is.EqualTo(15), "after the 14th ordinary wave: the Tyrant's, the 15th");
@@ -279,7 +281,7 @@ namespace AnomalyArena
             st.statsBoughtStat = new[] { (int)StatId.Damage, (int)StatId.MaxHp };
             st.statsBoughtRarity = new[] { (int)CardRarity.Epic, (int)CardRarity.Common };
             st.crateKinds = new[] { 2 }; st.cratePositions = new[] { new Vector3(12.5f, 0f, -30.25f) };
-            st.cratesOpened = 2; st.changedWeaponSaid = true; st.switchTaught = true;
+            st.cratesOpened = 2; st.changedWeaponSaid = true; st.switchTaught = true; st.dashTaught = true; st.shadowFireSaid = true; st.buyGuideDone = true;
             st.holeSeen = true; st.holeAwake = true; st.holeFed = 10; st.holeCheckDay = 4;
             st.checkState = HoleCheckState.Running; st.checkRequired = 900f; st.checkSeconds = 30f; st.checkDealt = 450f; st.checkElapsed = 12f;
             st.hole = new HoleSave { position = new Vector3(70f, 0f, 45f), phase = HolePhase.Portal, openedWave = 3, wavesLeft = 2 };

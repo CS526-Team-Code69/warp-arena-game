@@ -25,7 +25,8 @@ namespace AnomalyArena
                     CampaignStage.Dusk => ArenaText.Pair("下午", "AFTERNOON"),
                     CampaignStage.Night => ArenaText.Pair("夜晚", "NIGHT"),
                     CampaignStage.Tutorial => ArenaText.Pair("坠落之后", "AFTER THE FALL"),
-                    CampaignStage.FinalBoss or CampaignStage.Core => ArenaText.Pair("暴君之战", "THE TYRANT"),
+                    CampaignStage.FinalBoss => ArenaText.Pair("最终决战", "FINAL BATTLE"),
+                    CampaignStage.Core => ArenaText.Pair("暗物质核心", "THE CORE"),
                     _ => "",
                 };
                 return phase.Length > 0 ? day + " · " + phase : day;
@@ -128,7 +129,7 @@ namespace AnomalyArena
                 into.Add(new CharacterEntry
                 {
                     id = "study.overload.shield",
-                    title = ArenaText.Pair("暴君战开局护盾", "Tyrant fight: opening shield"),
+                    title = ArenaText.Pair("最终决战开局护盾", "Final Battle: opening shield"),
                     detail = ArenaText.Pair($"决战过载，买了 {overloadShieldBuys} 次", $"Final overload, bought {overloadShieldBuys} times"),
                     value = $"+{overloadShieldBuys * rules.overloadShieldShare * 100f:0}%",
                     rarity = CardRarity.Legendary,
@@ -138,7 +139,7 @@ namespace AnomalyArena
                 into.Add(new CharacterEntry
                 {
                     id = "study.overload.damage",
-                    title = ArenaText.Pair("暴君战最终伤害", "Tyrant fight: final damage"),
+                    title = ArenaText.Pair("最终决战伤害加成", "Final Battle: damage bonus"),
                     detail = ArenaText.Pair($"决战过载，买了 {overloadDamageBuys} 次", $"Final overload, bought {overloadDamageBuys} times"),
                     value = $"+{overloadDamageBuys * rules.overloadDamageShare * 100f:0}%",
                     rarity = CardRarity.Legendary,

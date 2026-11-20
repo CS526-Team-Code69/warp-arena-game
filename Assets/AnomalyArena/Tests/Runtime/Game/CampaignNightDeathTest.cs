@@ -10,7 +10,8 @@ namespace AnomalyArena
     /// <summary>top-C-P35 (2026-11-10): a fall in the campaign's afternoon is no night death. Only a death at night raises
     /// CampaignEvents.NightDeath, which the analytics count as the day's night_death; the afternoon fall still wakes the player at the
     /// base with the afternoon going on. The afternoon and the night are opened by hand (V2Campaign.BeginDusk and BeginNight, as the end
-    /// of a day's wave and the base door open them) so the test need not play through Day 0 and a whole morning.</summary>
+    /// of a day's wave and the base door open them) so the test need not play through Day 0 and a whole morning. A fall on Day 0's walk
+    /// is caught too: the player gets up and the tutorial goes on from the same step.</summary>
     [TestFixture]
     public class CampaignNightDeathTest
     {
@@ -78,6 +79,36 @@ namespace AnomalyArena
             await Awaitable.NextFrameAsync();
             await Awaitable.NextFrameAsync();
             Assert.That(Covered(flash, goal), Is.LessThan(15f), "the fall's line does not lie over the goal's lines (it may brush the panel's lower edge)");
+        }
+
+        [Test, LoadScene(Scene), Category("Integration"), Timeout(90000)]
+        public async Task FallOnDayZerosWalk_WakesThePlayer_AndTheTutorialGoesOnFromTheSameStep()
+        {
+            await Awaitable.NextFrameAsync();
+            await Until(() => GameManager.Instance && ArenaText.Ready, 12f, "scene and localization");
+            var game = GameManager.Instance;
+            Assume.That(game.TryGetComponent(out V2Campaign campaign) && campaign.isActiveAndEnabled && campaign.rules, Is.True, "the scene has the V2 campaign");
+            var knockedOut = typeof(V2Campaign).GetField("knockedOut", Private);
+            Assume.That(knockedOut, Is.Not.Null, "V2Campaign still has knockedOut");
+            bool KnockedOut() => (bool)knockedOut.GetValue(campaign);
+
+            float deadline = Time.realtimeSinceStartup + 5f;
+            while (!game.CampaignRunning)
+            {
+                if (Time.realtimeSinceStartup > deadline) Assert.Fail($"StartCampaign timed out in {game.RunPhase}");
+                game.ExecuteUiCommand(ArenaUiCommand.StartCampaign, -1);
+                await Awaitable.NextFrameAsync();
+            }
+            await Until(() => campaign.Stage == CampaignStage.Tutorial && game.State == GameState.Playing, 15f, "Day 0's walk begins");
+            var step = campaign.TutorialStepNow;
+            Assert.That(campaign.CatchesPlayerDeath(), Is.True, "the campaign catches a death on Day 0's walk");
+            // Wall damage is not an attack, so hit protection does not block it.
+            Assert.That(game.player.ReceiveDamage(new DamageInfo { amount = 99999f, source = DamageSource.Wall }), Is.True, "the player falls on the walk");
+            await Until(KnockedOut, 5f, "the campaign catches the fall");
+            await Until(() => !KnockedOut() && game.player.IsAlive, 10f, "the player gets up");
+            Assert.That((campaign.Stage, game.State, campaign.TutorialStepNow), Is.EqualTo((CampaignStage.Tutorial, GameState.Playing, step)),
+                "the walk goes on from the step it was at");
+            Assert.That(nightDeaths, Is.Zero, "a fall on the walk is no night death");
         }
 
         /// <summary>How much of the panel's height the plate lies over, in canvas units; 0 when they stand apart.</summary>

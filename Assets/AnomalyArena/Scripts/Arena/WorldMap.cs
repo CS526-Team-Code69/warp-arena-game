@@ -413,6 +413,21 @@ namespace AnomalyArena
             holeIntroRig?.ClearFocus(.8f);
             GM.EndCutscene();
             HoleIntroFinished?.Invoke();
+            // The open mode says at first sight that the hole swallows the player too and which key breaks its pull; the story says it in
+            // its own words after this cutscene. Ahead of any notice waiting, so it comes while the hole is still in view. The English
+            // Alpha stays as it was graded.
+            if (!CampaignMapApplied && V5HudKit.On) V2WorldLabels.Notice(HoleWarning, HoleWarningSeconds, true);
+        }
+
+        const float HoleWarningSeconds = 6f;
+
+        /// <summary>The open mode's banner after the black hole's first sight: it swallows the player too, and holding the sprint key (as the
+        /// settings have it) while moving outward breaks its pull.</summary>
+        static string HoleWarning()
+        {
+            string key = ArenaKeys.SprintKey;
+            return ArenaText.Pair("黑洞也会吞掉你", "THE BLACK HOLE SWALLOWS YOU TOO") + "\n" +
+                   ArenaText.Pair($"被它的引力拉住时，按住 {key} 朝外冲刺才能逃开。", $"If its pull catches you, hold {key} and sprint outward to break free.");
         }
 
         static void MoveBody(Combatant body, Vector3 pos)

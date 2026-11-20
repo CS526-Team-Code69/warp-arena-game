@@ -50,6 +50,8 @@ Text fields are trimmed and cut to 64 characters, and the text columns are forma
 
 `mode` is `story` only when the game sends exactly `story`; anything else, and a build that sends no mode, is stored as `open`. A story-mode row keeps what is true of the campaign instead of the open-mode values: `stage` is the campaign's stage (`tutorial`, `day`, `dusk`, `night`, `dawn`, `void_trial`, `final_boss`, `ending`, or `other` for anything else), `wave` holds the day, 0 (the tutorial) to 100, with a missing day stored as 0, and a defeat may also have the cause `base_destroyed`. A story-mode victory keeps its own stage and day; it is not moved to the final boss. Every open-mode count (the open-mode chart of the Dashboard, the Python chart) leaves story runs out.
 
+A story run started from the title's new game sends its `run_start` at the stage `tutorial` on day 0. A story run continued from a save is a run of its own (a new `run_id`) and sends its `run_start` with the day the save continues, as the save's slot shows it, and the stage where it continues: `dawn` for a morning save, `dusk` for an afternoon, `night` for a night, `final_boss` for the final battle's save. Any stage other than `tutorial` therefore marks a continued run, which never played Day 0; its `starting_weapon` is the weapon in its first hand when it continues. Builds before 2026-11-20 sent every story `run_start` as day 0 of the tutorial; `plot_story_metrics.py` tells their continued runs apart by their rows (see "Charts from CSV exports" below).
+
 ## Causes
 
 The open-mode chart of the Dashboard and the Python chart use this order.
@@ -224,7 +226,7 @@ The story mode sends three more events to the same endpoint, each with the same 
 
 ### `v2_day` -> sheet "v2_days"
 
-One row per day: sent at dawn for the day that just ended, and once more when the run ends, for the day that never reached dawn. A day counts from the dawn before it, so a dawn's base visit and its purchases belong to the coming day.
+One row per day: sent at dawn for the day that just ended, and once more when the run ends, for the day that never reached dawn. A day counts from the dawn before it, so a dawn's base visit and its purchases belong to the coming day. A run continued from a save counts its first day from where it continued. A morning save continues through the end of the night before it, whose row the run that made the save had sent already, so that dawn sends no row; builds before 2026-11-20 sent it again as a row that reached dawn with nothing counted in it.
 
 | Col | Field | Notes |
 |---|---|---|
@@ -312,6 +314,15 @@ and four closer looks:
 - `story-tutorial.png` (from `--events`): the median seconds per tutorial step with the middle half of runs, the runs that passed each step, and the share of runs that pressed E at the void crystals.
 
 The same numbers are printed as plain-text tables. `--demo` charts made-up runs (fixed seed) and writes them as `demo-story-*.csv` in the sheets' columns, every row with the build `simulated-demo`; `Analytics/mock-charts/` holds the eight demo charts.
+
+**Fresh runs and runs continued from a save** are counted apart, because one player who reloads the same save fifteen times would otherwise count as fifteen runs that started on Day 0. A run whose `run_start` says a stage other than `tutorial` is continued. For rows sent before 2026-11-20, which said `tutorial` for every run, a run is continued when it sent `v2_days` rows and no `tutorial_step` row, and its first row is either an empty row that reached dawn (the night before a continued morning save, which is then left out) or a row of Day 1 or later; this rule needs `--runs`, `--days` and `--events` together. With that split:
+
+- `story-endings.png` draws the fresh runs on the left and the runs continued from a save on their own small chart; the subtitle's Day 0 share and worst day are those of the fresh runs, and "Killed by" says how many of each kind's kills were in fresh runs.
+- `story-days.png` draws the fresh runs and the continued runs apart, leaves the empty rows out, and counts "Run over: tab closed" for a run that began a day and sent nothing more for it (no row for that day and no `run_end`), so each column counts the runs that played that day.
+- `story-spending.png` gives only fresh runs a first purchase; a continued run's purchases count in the spending by day.
+- With `--runs` and `--days`, the script also prints "Day 0 and Day 1": how the fresh runs and the continued runs ended each of those days, and the same per player. A player is a `session_id`, one page load, so a player who reloads the page counts again; each player counts once a day, with the number of attempts and how their first attempt ended, and the players defeated on each day give the per-player share of defeats.
+
+`--fresh-only` draws the weapon, damage, purchase, black hole and tutorial charts and the spending chart from fresh runs only (it needs `--runs`); the endings and days charts are the same with or without it.
 
 ### Deploying the story-mode sheets
 

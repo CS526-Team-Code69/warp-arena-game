@@ -131,7 +131,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 818548762
-    m_Localized: "WAVE {0} / {1} \xB7 {2}s"
+    m_Localized: "WAVE {0} / {1} \xB7 {2} s"
     m_Metadata:
       m_Items: []
   - m_Id: 818548763
@@ -139,7 +139,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 818548764
-    m_Localized: BUILD TIME {0}s
+    m_Localized: "BUILD TIME {0} s"
     m_Metadata:
       m_Items: []
   - m_Id: 818548765
@@ -175,7 +175,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 818548773
-    m_Localized: "E \xB7 ENTER\nFAILURE ENDS RUN\nCLEARS STATUS & SHIELD"
+    m_Localized: "Failing it ends the run. Entering clears your statuses and your shield."
     m_Metadata:
       m_Items: []
   - m_Id: 818548774

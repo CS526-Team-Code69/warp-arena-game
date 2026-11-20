@@ -844,7 +844,7 @@ namespace AnomalyArena
                     if(strike&&!chainChild&&weapon.Has(UpgradeAxis.Tame))
                         owner.Push(away.sqrMagnitude>.09f?away:owner.AimDirection,Shooter?Shooter.upgrades.strikeJumpDistance:6f);
                     else if(strike&&!chainChild || keepSelfPush)
-                        owner.Knockback(knock<0?-away:away,Mathf.Abs(knock),KnockKind.Hit);
+                        owner.Knockback(knock<0?-away:away,Mathf.Abs(knock),KnockKind.Hit,owner,weapon);
                     continue;
                 }
                 blastTargets.Add((body, away.sqrMagnitude > 0 ? away.normalized : direction));

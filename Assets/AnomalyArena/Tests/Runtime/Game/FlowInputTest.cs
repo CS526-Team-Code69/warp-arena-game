@@ -295,6 +295,23 @@ namespace AnomalyArena
             Assert.That(game.RunPhase, Is.EqualTo(ArenaUiState.Title), "the title is still there");
             Assert.That(V5Title.Active.Tab, Is.EqualTo(V5Title.TutorialTab), "with its lessons");
 
+            // Beside Start the foot opens the open mode's pages: the classic run's, which teach the card panel's Tab.
+            var openMode = (RectTransform)title.Find("Window/Foot/OpenModeTutorial");
+            Assert.That(openMode && openMode.gameObject.activeInHierarchy, Is.True, "the lessons' foot also offers the open mode's pages");
+            Click(openMode);
+            Assert.That(V2Tutorial.IsOpen, Is.True, "it opens the pages");
+            var classicLines = new System.Collections.Generic.List<string>();
+            for (int page = 0; page < V2Tutorial.PageCount; page++)
+            {
+                await Awaitable.NextFrameAsync();
+                classicLines.Add(line.text);
+                if (page < V2Tutorial.PageCount - 1) V2Tutorial.Next();
+            }
+            Assert.That(classicLines, Has.Some.Contains("Tab"), "they are the open mode's pages, which teach Tab");
+            V2Tutorial.Close();
+            await Awaitable.NextFrameAsync();
+            Assert.That(game.RunPhase, Is.EqualTo(ArenaUiState.Title), "closing them leaves the title");
+
             // Measured on the reference canvas, as the bottom row is in V3SmokeTest: a batch run's window is not 16:9. The canvas takes its own
             // size back a few frames later, so everything is measured at once.
             var hud = Object.FindAnyObjectByType<V2Hud>();
@@ -371,7 +388,7 @@ namespace AnomalyArena
                 Assert.That(ArenaText.Text(key), Does.Not.Contain("空格").IgnoreCase.And.Not.Contain("回车").IgnoreCase, key);
             // Since 2026-11-10 the title's keys no longer explain the portal: the portal shows its own E once the player stands on it.
             Assert.That(ArenaText.Text("ui.controls"), Does.Contain("Esc 暂停").IgnoreCase.And.Not.Contain("传送门"), "the saved line of key hints (no longer shown on the title) lists the pause key and says nothing of the portal");
-            Assert.That(ArenaText.Text("ui.hole.enter"), Does.Contain("护盾清 0").IgnoreCase, "the portal says entering empties the shield");
+            Assert.That(ArenaText.Text("ui.hole.enter"), Does.Contain("护盾清零"), "the portal says entering empties the shield");
         }
 
         [Test, BuildScene(SceneCn), Category("Integration"), Timeout(30000)]

@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -8,7 +7,8 @@ namespace AnomalyArena
     /// Day 0 as a forced spotlight tutorial (implementation spec 2026-11-10, section A; the V2 doc asks that every control be taught with a
     /// dark screen and a spotlight, moving on only once the player has done it and seen it work). From the crash site west of the base the
     /// player is taught, one step at a time: 1 walk 4 cells toward the marker, 2 fire three pistol shots anywhere, 3 hold E at the glowing
-    /// ore, 4 open the weapon crate with E and take one of three (it goes into the main hand, the pistol stays in the other), 5 sprint once,
+    /// ore, 4 open the weapon crate with E and take one of three (it goes into the main hand, the pistol stays in the other), then fire
+    /// the new weapon twice while no monster is out, to see how it attacks, 5 sprint once,
     /// 6 kill the first four monsters, 7 pick up the alien energy they drop. On the way home lie a second ore (not forced, to practise), a
     /// second weapon crate (not forced; its weapon replaces the pistol) and purple-black void crystals that cannot be mined. Then the base
     /// as before (Arrival, V2Campaign.Story.cs). The tutorial night's two steps, "F sets a lamp" and "mine dark matter in its light", are
@@ -26,6 +26,8 @@ namespace AnomalyArena
         // What comes after the step just passed: it starts once the spotlight's green flash and fade are over.
         System.Action tutNext;
         Vector3 tutStart, tutMarker, tutCluster;
+        // Where the step being taught began (the player's place then): a fall on Day 0's walk wakes the player there (NightDeath).
+        Vector3 tutWake;
         Node tutOre, tutSecondOre;
         Crate tutFirstCrate, tutSecondCrate;
         readonly List<Enemy> tutGrunts = new();
@@ -52,6 +54,7 @@ namespace AnomalyArena
             quietLinesWaiting = 0; speechUntil = 0f;
             tutPickupSaid = tutHomeSaid = voidLineSaid = secondCrateHint = changedWeaponSaid = false;
             cratesOpened = 0; switchTaught = skillTaught = skillTeachPending = false; lateHint = LateHint.None;
+            dashTaught = dashTeachPending = shadowFireSaid = false;
             tutGrunts.Clear(); voidCrystals.Clear(); crates.Clear();
             tutOre = tutSecondOre = null; tutFirstCrate = tutSecondCrate = null;
             PlayerController.InputGate = TutorialLets;
@@ -95,7 +98,7 @@ namespace AnomalyArena
         /// <summary>Puts a step's spotlight up: the bright circle on what at returns, the tip "[key] phrase", every other input held back.</summary>
         void Teach(TutorialStep step, System.Func<Vector3> at, float radius, string key, string phrase)
         {
-            if (step != tutStep) tutStepAt = Time.unscaledTime;
+            if (step != tutStep) BeginStep();
             tutStep = step; tutForced = true;
             ui.ShowSpotlight(at, radius, key, phrase);
             tutorialHint = WorkingKeys();
@@ -104,11 +107,18 @@ namespace AnomalyArena
         /// <summary>A step to walk to first (no spotlight yet): the goal and its marker.</summary>
         void Approach(TutorialStep step, string goal, Vector3? marker)
         {
-            if (step != tutStep) tutStepAt = Time.unscaledTime;
+            if (step != tutStep) BeginStep();
             tutStep = step; tutForced = false;
             ui.HideSpotlight();
             Objective(goal, marker);
             tutorialHint = WorkingKeys();
+        }
+
+        /// <summary>A new step begins: when (for its analytics row) and where the player stands (where a fall wakes them).</summary>
+        void BeginStep()
+        {
+            tutStepAt = Time.unscaledTime;
+            tutWake = Query.Flat(PlayerPoint());
         }
 
         /// <summary>The step is done: the circle flashes green with a sound and fades; then next starts (RunNextStep).</summary>
@@ -166,6 +176,16 @@ namespace AnomalyArena
             Teach(TutorialStep.Fire, PlayerPoint, 3f, MouseKey, ArenaText.Pair("按住开火", "Hold to fire"));
         }
 
+        /// <summary>The Fire and TryWeapon steps, each frame: whether the weapon in use fired since the last look (its cooldown jumped).</summary>
+        bool ActiveWeaponFired()
+        {
+            var weapon = gm.runWeapons ? gm.runWeapons.Active : null;
+            float cooldown = weapon != null ? weapon.cooldown : 0f;
+            bool fired = weapon != null && SpotlightTutorial.Fired(tutCooldown, cooldown);
+            tutCooldown = cooldown;
+            return fired;
+        }
+
         void ApproachOre()
         {
             Vector3 corner = FindOpen(TutorialCorner, 1.4f);
@@ -183,6 +203,19 @@ namespace AnomalyArena
             SayWhenQuiet(Line.T08, () => Stage == CampaignStage.Tutorial);
         }
 
+        // The first crate's weapon is fired this many times before the sprint (the goal's words say "twice").
+        const int TryWeaponUses = 2;
+
+        /// <summary>Right after the first crate's weapon card: the new weapon fired twice while no monster is out yet, so how it attacks
+        /// (and whether its trait can hurt the player) is seen in a calm moment before the first fight. Walking works too.</summary>
+        void TeachTryWeapon()
+        {
+            tutShots = 0;
+            tutCooldown = gm.runWeapons && gm.runWeapons.Active != null ? gm.runWeapons.Active.cooldown : 0f;
+            Objective(ArenaText.Pair("先试两下刚拿到的武器，看清它怎么攻击", "Fire your new weapon twice and watch how it attacks"), null);
+            Teach(TutorialStep.TryWeapon, PlayerPoint, 3f, MouseKey, ArenaText.Pair("试用新武器", "Try your new weapon"));
+        }
+
         void TeachSprint()
         {
             tutSprinted = 0f;
@@ -193,7 +226,7 @@ namespace AnomalyArena
         /// <summary>The hero speaks first ("something's coming"); the monsters come when he has finished (StartFight).</summary>
         void TeachFight()
         {
-            if (TutorialStep.Fight != tutStep) tutStepAt = Time.unscaledTime;
+            if (TutorialStep.Fight != tutStep) BeginStep();
             tutStep = TutorialStep.Fight; tutForced = false;
             ui.HideSpotlight();
             Objective(ArenaText.Pair("有东西过来了", "Something is coming"), null);
@@ -214,7 +247,7 @@ namespace AnomalyArena
         void TeachCollect()
         {
             Objective(ArenaText.Pair("走过去，捡起怪物掉落的异星能量", "Walk over the alien energy the monsters dropped to pick it up"), null);
-            Teach(TutorialStep.Collect, NearestPickup, 2.6f, ArenaKeys.MoveKeys, ArenaText.Pair("捡起能量", "Collect the energy"));
+            Teach(TutorialStep.Collect, NearestPickup, 2.6f, ArenaKeys.MoveKeys, ArenaText.Pair("捡起异星能量", "Pick up the alien energy"));
         }
 
         Vector3 NearestPickup()
@@ -239,6 +272,7 @@ namespace AnomalyArena
             tutSecondCrate = PlaceCrate(FindOpen(from + way * .55f - side * 2f, 1.2f), CrateKind.TutorialSecond);
             PlaceVoidCrystals(FindOpen(from + way * .74f + side * 4f, 1.2f));
             tutStep = TutorialStep.SecondCrate; tutForced = false;
+            tutWake = from;
             ui.HideSpotlight();
             homeLeg = HomeLeg.Ore;
             HomeObjective();
@@ -263,6 +297,8 @@ namespace AnomalyArena
         void TickTutorial(float dt)
         {
             prompt = "";
+            // A fall on the walk is caught: the player wakes where the step began and the step goes on (NightDeath).
+            if (CaughtNightDeath()) return;
             TickPickups(dt);
             var p = gm.player;
             if (!p || !p.IsAlive) return;
@@ -275,11 +311,13 @@ namespace AnomalyArena
                     break;
                 case TutorialStep.Fire:
                     if (!tutForced) break;
-                    var weapon = gm.runWeapons ? gm.runWeapons.Active : null;
-                    float cooldown = weapon != null ? weapon.cooldown : 0f;
-                    if (weapon != null && SpotlightTutorial.Fired(tutCooldown, cooldown)) tutShots++;
-                    tutCooldown = cooldown;
+                    if (ActiveWeaponFired()) tutShots++;
                     if (tutShots >= rules.tutorialShots) PassStep(ApproachOre);
+                    break;
+                case TutorialStep.TryWeapon:
+                    if (!tutForced) break;
+                    if (ActiveWeaponFired()) tutShots++;
+                    if (tutShots >= TryWeaponUses) PassStep(TeachSprint);
                     break;
                 case TutorialStep.Mine:
                     if (tutOre == null || tutOre.mined) break;
@@ -307,7 +345,8 @@ namespace AnomalyArena
                     {
                         var crate = tutFirstCrate;
                         tutFirstCrate = null;
-                        OpenCrate(crate, _ => PassStep(TeachSprint));
+                        // A weapon taken is tried out first; a crate with nothing new in it goes straight on to the sprint.
+                        OpenCrate(crate, taken => PassStep(taken ? (System.Action)TeachTryWeapon : TeachSprint));
                     }
                     else prompt = text;
                     break;
@@ -426,21 +465,28 @@ namespace AnomalyArena
             tutFirstCrate = tutSecondCrate = null;
         }
 
-        // ───── Taught after the first fight (2026-11-10): the right button and the first skill ─────
+        // ───── Taught after the first fight: the right button, the first skill and the void dash ─────
 
-        enum LateHint { None, Switch, Skill }
+        enum LateHint { None, Switch, Skill, Dash, HoleEscape }
 
-        // A hint of a later day stays this long at most; then it goes by itself.
+        // A hint of a later day stays this long at most, in game time (a pause or the character screen holds it); then it goes by itself.
         const float LateHintSeconds = 12f;
         // Crates whose panel was opened in this run: the right button is taught at the second one.
         int cratesOpened;
-        bool switchTaught, skillTaught, skillTeachPending;
+        bool switchTaught, skillTaught, skillTeachPending, dashTaught, dashTeachPending;
         int switchFrom, skillSlot;
         float skillCooldownSeen, lateHintUntil;
         LateHint lateHint;
+        // The black hole's pull was escaped once in this run (its hint passed; reset with the hole's quest at each run's start), and when
+        // the player last stepped into its ring.
+        bool holeEscapeTaught;
+        float holeEscapeSince;
 
-        /// <summary>For automated checks: the hint of a later day that is up now ("None", "Switch" or "Skill").</summary>
+        /// <summary>For automated checks: the hint of a later day that is up now ("None", "Switch", "Skill", "Dash" or "HoleEscape").</summary>
         public string LateHintNow => lateHint.ToString();
+
+        /// <summary>The spotlight that teaches the sprint out of the black hole's pull is up (the HUD's hint plate leaves the pull to it).</summary>
+        public bool TeachingHoleEscape => lateHint == LateHint.HoleEscape;
 
         /// <summary>Called as a crate's panel is done with (V2Campaign.Crates.cs). The right button is taught the second time a crate is
         /// opened, once both hands hold a weapon: on Day 0's walk as a forced step (only the right button works until it is pressed), on
@@ -471,21 +517,55 @@ namespace AnomalyArena
         void StartLateHint(LateHint hint, string key, string phrase)
         {
             lateHint = hint;
-            lateHintUntil = Time.unscaledTime + LateHintSeconds;
+            lateHintUntil = Time.time + LateHintSeconds;
             ui.ShowSpotlight(PlayerPoint, 3.2f, key, phrase);
         }
 
+        /// <summary>A hint of a later day that is up gives way to the black hole's: it is asked for again later (the skill and the void
+        /// dash at once, the right button at the next crate opened).</summary>
+        void SetAsideLateHint()
+        {
+            switch (lateHint)
+            {
+                case LateHint.Skill: skillTaught = false; break;
+                case LateHint.Dash: dashTeachPending = true; break;
+                case LateHint.Switch: switchTaught = false; break;
+            }
+            lateHint = LateHint.None;
+        }
+
+        /// <summary>The void dash was just gained (GameManagerFlow.TickVoidDashNotice): Space is taught once, as a hint of a later day,
+        /// as soon as play is back on the map and nothing else is being taught; it goes once the player has dashed.</summary>
+        internal void TeachVoidDash()
+        {
+            if (!Running || dashTaught) return;
+            dashTaught = dashTeachPending = true;
+        }
+
         /// <summary>Each frame (CrateLoop). The first skill is taught the first time the player is out in a fight after learning one
-        /// (skills cast only in a fight): the circle and the tip with the skill's own key. A hint of a later day holds no input back; it
-        /// goes with a green flash once its key has done its work, or by itself after LateHintSeconds.</summary>
+        /// (skills cast only in a fight): the circle and the tip with the key the skill is on. The void dash is taught once it was gained
+        /// (TeachVoidDash), when play is back on the map. A hint of a later day holds no input back; it goes with a green flash once its
+        /// key has done its work, or by itself after LateHintSeconds of play. The black hole's pull is taught the first time the player
+        /// stands in the campaign hole's ring (by day or in the afternoon): the sprint key and its words, ahead of any other hint. It
+        /// passes once the player is out of the ring alive (a tutorial_step row "HoleEscape" with the seconds spent inside) and comes
+        /// again after a fall.</summary>
         void TickLateTeaching()
         {
             if (!Running || !gm) return;
             var weapons = gm.runWeapons;
             var skills = gm.skills;
+            var player = gm.player;
             if (!skillTaught && !skillTeachPending && skills && skills.OwnedCount > 0) skillTeachPending = true;
             bool inFight = Stage is CampaignStage.Day or CampaignStage.Lull or CampaignStage.Dusk && gm.RunPhase == ArenaUiState.WaveActive
                 && gm.CanUseCombatInput && !(WorldMap.Active && WorldMap.Active.TrialActive);
+            // A hole's pull drops the player within seconds: its hint goes up at once, and a hint already up gives way to it.
+            bool inPull = PlayerInHolePull(player);
+            if (!holeEscapeTaught && inPull && lateHint != LateHint.HoleEscape && !tutForced && InPlay)
+            {
+                SetAsideLateHint();
+                holeEscapeSince = Time.time;
+                StartLateHint(LateHint.HoleEscape, ArenaKeys.SprintKey, ArenaText.Pair("冲刺逃出引力", "Sprint out of the pull"));
+            }
             if (skillTeachPending && lateHint == LateHint.None && !tutForced && inFight)
             {
                 skillSlot = System.Array.FindIndex(skills.Slots, slot => !slot.Empty);
@@ -493,12 +573,38 @@ namespace AnomalyArena
                 if (skillSlot >= 0)
                 {
                     skillCooldownSeen = skills.Slots[skillSlot].CooldownLeft;
-                    StartLateHint(LateHint.Skill, (skillSlot + 1).ToString(), ArenaText.Pair("释放技能", "Cast your skill"));
+                    // The key the skill is on, which the settings can move.
+                    StartLateHint(LateHint.Skill, ArenaKeys.Name(GameAction.Skill1 + skillSlot), ArenaText.Pair("释放技能", "Cast your skill"));
                 }
+            }
+            // The void dash: once the player can move on the map again (not in the base, a cutscene or the void trial).
+            if (dashTeachPending && lateHint == LateHint.None && !tutForced && player && gm.CanPlayerMove
+                && Stage is not (CampaignStage.Base or CampaignStage.Story or CampaignStage.Off) && !(WorldMap.Active && WorldMap.Active.TrialActive))
+            {
+                dashTeachPending = false;
+                StartLateHint(LateHint.Dash, ArenaText.Pair("空格", "Space"), ArenaText.Pair("朝光标方向虚空冲刺", "Void Dash toward the cursor"));
             }
             if (lateHint == LateHint.None) return;
             bool done;
-            if (lateHint == LateHint.Switch) done = weapons && weapons.ActiveIndex != switchFrom;
+            if (lateHint == LateHint.HoleEscape)
+            {
+                // Out of the ring alive, in play, passes it. A fall, or a hole that no longer pulls (put away, broken, its cutscene),
+                // takes it down without a pass, so the next time in the ring shows it again.
+                if (!player || !player.IsAlive || !inPull && !HolePulling)
+                {
+                    lateHint = LateHint.None;
+                    ui.HideSpotlight();
+                    return;
+                }
+                done = !inPull && InPlay;
+                if (done)
+                {
+                    holeEscapeTaught = true;
+                    CampaignEvents.RaiseMilestone(CampaignEvents.MilestoneTutorialStep, nameof(LateHint.HoleEscape), Time.time - holeEscapeSince, Day);
+                }
+            }
+            else if (lateHint == LateHint.Switch) done = weapons && weapons.ActiveIndex != switchFrom;
+            else if (lateHint == LateHint.Dash) done = player && player.voidDash.CoolingDown; // a dash starts its cooldown
             else
             {
                 float cooldown = skills && skillSlot >= 0 && skillSlot < skills.Slots.Length ? skills.Slots[skillSlot].CooldownLeft : 0f;
@@ -511,7 +617,8 @@ namespace AnomalyArena
                 ui.PassSpotlight();
                 V3WorldAudio.Instance?.Play(ArenaWorldCue.LevelUp, PlayerPoint(), 1.3f, .75f);
             }
-            else if (Time.unscaledTime >= lateHintUntil || Stage is CampaignStage.Base or CampaignStage.Story or CampaignStage.Off)
+            // The pull's hint has no time limit: it stays while the player is in the ring.
+            else if (lateHint != LateHint.HoleEscape && Time.time >= lateHintUntil || Stage is CampaignStage.Base or CampaignStage.Story or CampaignStage.Off)
             {
                 lateHint = LateHint.None;
                 ui.HideSpotlight();
@@ -538,7 +645,11 @@ namespace AnomalyArena
                 {
                     var model = Instantiate(art.voidCrystalPrefab, root);
                     StripColliders(model);
-                    FitHeight(model.transform, 1.5f * root.localScale.y);
+                    // The model stands on a pale slab of sand about a fifteenth of its height. It is fitted that much taller and sunk by
+                    // the slab, so the slab lies under the ground and the crystal shows at its height (1.5 for the first, 1.05 for the others).
+                    float scale = root.localScale.y;
+                    FitHeight(model.transform, 1.6f * scale);
+                    model.transform.position += Vector3.down * (.11f * scale);
                 }
                 else Whitebox.Build("voidore", root);
                 voidCrystals.Add(root);
@@ -585,19 +696,11 @@ namespace AnomalyArena
                 for (int i = 0; i < rules.tutorialNightOre; i++)
                     AddNode(NodeKind.Ore, FindOpen(cluster + new Vector3(2.6f + 1.4f * i, 0f, 1.8f - 3.6f * i), 1f, 2.5f), rules.tutorialNightOreAlloy);
             SpawnShadows();
-            tutNightStep = 0; tutDarkMined = 0;
+            tutNightStep = 0; tutDarkMined = 0; tutEdgeSaid = false;
             // Everything is taught by now: only the night's two forced steps hold anything back.
             tutNext = null; tutLastDone = TutorialStep.Done;
             Approach(TutorialStep.Lamp, ArenaText.Pair("去那片发着紫光的暗物质旁边", "Go to the glowing purple dark matter"), cluster);
             Say(Line.S02);
-            nightWhispers = true;
-            StartCoroutine(TutorialNightLine());
-        }
-
-        IEnumerator TutorialNightLine()
-        {
-            yield return new WaitForSecondsRealtime(4.5f);
-            if (Stage == CampaignStage.Night && Day == 0) Say(Line.N01);
         }
 
         /// <summary>The tutorial night, each frame (TickNight): walk to the dark matter, then two forced steps, F for a lamp beside it and
@@ -612,7 +715,9 @@ namespace AnomalyArena
                 case TutorialStep.Lamp when !tutForced:
                     if (Apart(PlayerPoint(), tutCluster) >= rules.tutorialTeachReach + 1f) break;
                     Objective(ArenaText.Pair("在暗物质旁放下一盏矿灯", "Set down a lamp next to the dark matter"), tutCluster);
-                    Teach(TutorialStep.Lamp, () => tutCluster, 4.5f, ArenaKeys.LampKey, ArenaText.Pair("放下矿灯", "Place a lamp"));
+                    Teach(TutorialStep.Lamp, () => tutCluster, 4.5f, ArenaKeys.LampKey, ArenaText.Pair("放下矿灯", "Set down a lamp"));
+                    // The base explains the lamp here, at the dark matter, once the line said at nightfall is over (a few seconds at most).
+                    SayWhenQuiet(Line.N01, () => Stage == CampaignStage.Night && Day == 0 && tutStep == TutorialStep.Lamp && tutForced, 3f);
                     break;
                 case TutorialStep.Lamp:
                     // Dark matter already mined out (under a lamp set on the way) has nothing left to light: the step is done too.
@@ -678,6 +783,7 @@ namespace AnomalyArena
             {
                 TutorialStep.Move => TeachFire,
                 TutorialStep.Fire => ApproachOre,
+                TutorialStep.TryWeapon => TeachSprint,
                 TutorialStep.Sprint => TeachFight,
                 TutorialStep.Switch => ResumeHomeward,
                 _ => null

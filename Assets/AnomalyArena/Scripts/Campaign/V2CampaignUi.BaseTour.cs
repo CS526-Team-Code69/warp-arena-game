@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.InputSystem;
 
 namespace AnomalyArena
 {
@@ -15,6 +16,9 @@ namespace AnomalyArena
     /// Central Control's own zone, whose tab shows already, is heard from its button (zones are built once and never redrawn). A step
     /// whose part is not on the page for a moment, or a room the stock cannot build, is left out rather than holding the player. The tour
     /// ends at once when the base page closes or the run ends. It is drawn on the fifth pass's page only (V5HudKit.On).
+    /// The same plate and highlight carry the guide to a first purchase, once a run on a later visit (BuyGuide holds its rules and words,
+    /// V2Campaign.TickBuyGuide starts it): the room's zone, then the lamp row, or the study button and the study window's buy button with
+    /// the cheapest item the stock pays for chosen. It holds the page's keys as the tour does, and Esc skips it.
     /// </summary>
     public sealed partial class V2CampaignUi
     {
@@ -30,9 +34,27 @@ namespace AnomalyArena
         UnityAction tourControlListener;
         static readonly Vector3[] tourCorners = new Vector3[4];
 
-        /// <summary>The base tour is on, or holds the page for its first step: only the highlighted part takes a click, and the keys that
-        /// would change the page do nothing.</summary>
-        public bool BaseTourRunning => tourHolding || tourStep is not (BaseTourStep.None or BaseTourStep.Done);
+        // The guide to a first purchase (BuyGuide): its step, what it leads to and in which room, the purchases made before it began, when
+        // it began (unscaled seconds), and the frame in which Esc skipped it (that Esc does nothing else).
+        BuyGuideStep guideStep = BuyGuideStep.None;
+        BuyGuideAim guideAim;
+        CampaignRoom guideRoom;
+        int guidePurchases, guideSkipFrame = -1;
+        float guideBegunAt;
+
+        /// <summary>The base tour or the guide to a first purchase is on, or the tour holds the page for its first step: only the
+        /// highlighted part takes a click, and the keys that would change the page do nothing.</summary>
+        public bool BaseTourRunning => tourHolding || tourStep is not (BaseTourStep.None or BaseTourStep.Done) || GuideRunning
+            || guideSkipFrame == Time.frameCount;
+
+        bool GuideRunning => guideStep is not (BuyGuideStep.None or BuyGuideStep.Done);
+
+        /// <summary>For automated checks: the guide's step now (None before it, Done after it).</summary>
+        public BuyGuideStep BuyGuideStepNow => guideStep;
+
+        /// <summary>The guide to a first purchase can start now: the fifth pass's base page open with nothing over it (no study window, no
+        /// question, no weapon card) and neither the tour nor the guide on.</summary>
+        public bool BuyGuideCanStart => CanTour && !BaseTourRunning && !StudyOpen && !ConfirmOpen && gm && gm.RunPhase == ArenaUiState.Base;
 
         /// <summary>For automated checks: the tour's step now (None before the tour, Done after it).</summary>
         public BaseTourStep BaseTourStepNow => tourStep;
@@ -68,14 +90,30 @@ namespace AnomalyArena
             return tourStep != BaseTourStep.Done;
         }
 
-        /// <summary>Ends the tour at once: its dim, its plate and the backing that takes the clicks go, and the page's keys work again.</summary>
+        /// <summary>Ends the tour, or the guide, at once: its dim, its plate and the backing that takes the clicks go, and the page's keys
+        /// work again.</summary>
         public void EndBaseTour()
         {
             if (tourView) tourView.Hide();
             var control = b5Built ? b5Zones[(int)CampaignRoom.Control] : null;
             if (tourControlListener != null && control != null && control.plate) control.plate.Button.onClick.RemoveListener(tourControlListener);
             if (tourStep != BaseTourStep.None) tourStep = BaseTourStep.Done;
+            if (guideStep != BuyGuideStep.None) guideStep = BuyGuideStep.Done;
             tourHolding = tourShown = tourPassed = false;
+        }
+
+        /// <summary>Starts the guide to a first purchase on the open base page, leading to aim in room (V2Campaign.TickBuyGuide picks
+        /// both). False when it cannot run: the old page, the base page closed or covered, the tour or the guide already on, or nothing on
+        /// the page to show.</summary>
+        public bool StartBuyGuide(BuyGuideAim aim, CampaignRoom room)
+        {
+            if (aim == BuyGuideAim.None || !BuyGuideCanStart) return false;
+            guideAim = aim;
+            guideRoom = room;
+            guidePurchases = campaign.PurchaseCount;
+            guideBegunAt = Time.unscaledTime;
+            BeginGuideStep(BuyGuideStep.Zone);
+            return GuideRunning;
         }
 
         /// <summary>Every frame (Update). The tour ends with the base page or the run; otherwise a done step's flash plays out and the
@@ -90,7 +128,12 @@ namespace AnomalyArena
                 return;
             }
             KeepTourOnTop();
-            if (tourHolding) return;
+            if (GuideRunning)
+            {
+                TickBuyGuide();
+                return;
+            }
+            if (tourHolding || tourStep is BaseTourStep.None or BaseTourStep.Done) return;
             var view = TourView;
             if (tourPassed)
             {
@@ -143,6 +186,105 @@ namespace AnomalyArena
                 baseOpen = BaseOpen,
                 controlClicked = tourControlClicked
             };
+        }
+
+        // ───── The guide to a first purchase ─────
+
+        /// <summary>Every frame while the guide runs (TickBaseTour). Esc skips it. Otherwise, as in the tour, a done step's flash plays out
+        /// and the next step begins, the step's box goes up once its part is on the page (or the step is left out when the part stays away),
+        /// and the step is done once what it asks for has happened. Before the buy step's box goes up, the cheapest item the stock pays for
+        /// is chosen, so the buy button buys it.</summary>
+        void TickBuyGuide()
+        {
+            var keys = Keyboard.current;
+            if (keys != null && keys.escapeKey.wasPressedThisFrame && Time.unscaledTime - guideBegunAt > .2f)
+            {
+                guideSkipFrame = Time.frameCount; // this Esc neither closes the study window nor leaves the base
+                V5UiSound.Play(V5UiSound.Ui.Back);
+                EndBaseTour();
+                return;
+            }
+            var view = TourView;
+            if (tourPassed)
+            {
+                if (!view.Busy) BeginGuideStep(BuyGuide.After(guideStep));
+                return;
+            }
+            if (tourShown && BuyGuide.Passed(guideStep, GuideState()))
+            {
+                tourPassed = true;
+                view.Pass();
+                var audio = V3WorldAudio.Instance;
+                if (audio) audio.Play(ArenaWorldCue.LevelUp, gm && gm.player ? gm.player.Position : Vector3.zero, 1.3f, .75f);
+                return;
+            }
+            if (!tourShown && guideStep == BuyGuideStep.Buy) ChooseCheapestStudyTile();
+            if (GuideTarget(guideStep) == null)
+            {
+                tourMissing += Time.unscaledDeltaTime;
+                if (tourMissing >= TourMissingSeconds) BeginGuideStep(BuyGuide.After(guideStep));
+                return;
+            }
+            tourMissing = 0f;
+            if (tourShown) return;
+            var step = guideStep;
+            view.Show(() => GuideTarget(step), BuyGuide.Text(step, guideAim, guideRoom), BuyGuide.Hint, campaign.rules ? campaign.rules.spotlightDim : .75f);
+            tourShown = true;
+        }
+
+        /// <summary>Goes on to the first step from step on that has something to show (BuyGuide.FirstToRun); past the last one the guide
+        /// ends.</summary>
+        void BeginGuideStep(BuyGuideStep step)
+        {
+            tourShown = tourPassed = false;
+            tourMissing = 0f;
+            guideStep = BuyGuide.FirstToRun(step, GuideState());
+            if (guideStep == BuyGuideStep.Done) EndBaseTour();
+        }
+
+        BuyGuideState GuideState() => new()
+        {
+            aim = guideAim,
+            room = guideRoom,
+            tab = tab,
+            studyOpen = StudyOpen,
+            baseOpen = BaseOpen,
+            bought = campaign && campaign.PurchaseCount > guidePurchases
+        };
+
+        /// <summary>Where a guide step's part is on the screen now, or null while it is not on the page: the room's zone, the launch bay's
+        /// lamp row, the room's study button, the study window's buy button while it can buy.</summary>
+        Rect? GuideTarget(BuyGuideStep step) => step switch
+        {
+            BuyGuideStep.Zone => TourZone(guideRoom),
+            BuyGuideStep.Lamp => TourRow(CampaignRoom.Ship, B5Deed.Lamp),
+            BuyGuideStep.OpenStudy => TourRow(guideRoom, B5Deed.Study),
+            BuyGuideStep.Buy => StudyOpen && s5Built && s5Go && s5Go.gameObject.activeInHierarchy && s5Go.Button.interactable ? TourRect(s5Go.Rect) : null,
+            _ => null
+        };
+
+        /// <summary>Chooses the cheapest item of the open study tab that the stock pays for now (the buy button buys the chosen item).</summary>
+        void ChooseCheapestStudyTile()
+        {
+            var shown = CurrentStudyTab;
+            if (shown == null || shown.locked) return;
+            int best = -1, bestCost = int.MaxValue;
+            for (int i = 0; i < shown.entries.Count; i++)
+            {
+                var entry = shown.entries[i];
+                if (entry.state != StudyState.Available || entry.price is not { } price) continue;
+                int cost = price.alloy + price.energy + price.dark;
+                if (cost < bestCost)
+                {
+                    best = i;
+                    bestCost = cost;
+                }
+            }
+            if (best < 0 || best == studySelected) return;
+            studySelected = best;
+            studyEntryId = shown.entries[best].id;
+            StyleTiles();
+            ScrollToSelected();
         }
 
         /// <summary>The room's next level can be bought now, as its button would: Central Control works, the room is whole and the stock

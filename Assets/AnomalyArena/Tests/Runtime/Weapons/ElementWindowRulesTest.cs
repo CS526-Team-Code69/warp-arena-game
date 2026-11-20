@@ -674,7 +674,7 @@ namespace AnomalyArena
                     }
                     foreach (var element in elements)
                     {
-                        string body = ArenaText.Pair("灌注 ", "Infuse ") + ArenaTerms.Element(element) + "\n" + ArenaTerms.ElementRule(element);
+                        string body = ArenaText.Pair("附魔 ", "Infuse ") + ArenaTerms.Element(element) + "\n" + ArenaTerms.ElementRule(element);
                         if (!FitsTheCard(choice, body, out string fit)) overflow.Add($"{code} {element}: {fit}");
                     }
                 }

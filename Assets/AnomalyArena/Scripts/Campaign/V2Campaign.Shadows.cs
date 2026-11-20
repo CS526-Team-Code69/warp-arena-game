@@ -10,7 +10,8 @@ namespace AnomalyArena
     /// crowd of them (rules.overrunShadows) waits at one lamp they go in together, put the lamp out and attack; the base's light is
     /// never put out. Weapons and skills work at night and pass through shadows: nothing hurts one.
     /// The tutorial night's shadows hunt wherever the player goes, a little slower than a walk, and touch for a share of a normal hit
-    /// (rules.tutorialShadowHitScale), so the first night shows that a touch hurts; they never join a crowd at a lamp.
+    /// (rules.tutorialShadowHitScale), so the first night shows that a touch hurts; they never join a crowd at a lamp. The first of them
+    /// to reach a lamp's edge while the player stands in its light says that they stop there.
     /// </summary>
     public sealed partial class V2Campaign
     {
@@ -39,11 +40,17 @@ namespace AnomalyArena
         const float ShadowSpacing = 1.25f;
         // A crowd's touches land one after another, this many seconds apart, and not all in one instant.
         const float SwarmHitGap = .35f;
-        // A tutorial night shadow hunts at this share of the player's walk, so walking away always gets a new player back to the light.
+        // A tutorial night shadow hunts at this share of the player's walk, so walking away always gets a new player back to the light
+        // (the night's lamp step lets the player walk: SpotlightTutorial.Allowed).
         const float TutorialChaseShare = .9f;
         // A crowd at a lamp shows itself this long before it goes in: the ring turns violet and the lamp flickers.
         const float CrowdWarning = 1.5f;
         float swarmHitAt;
+        // That weapons pass through shadows has been said in this run: the first ripple says it (RippleUnderFire).
+        bool shadowFireSaid;
+        // The tutorial night's "they stopped at the edge of the light" was said; a shadow this far beyond a lamp's edge stands at it.
+        bool tutEdgeSaid;
+        const float TutorialEdgeSeen = 1.6f;
         MaterialPropertyBlock shadowBlock;
 
         void NoteKillKind(int region, Enemy enemy)
@@ -240,7 +247,8 @@ namespace AnomalyArena
                     lamp.crowdSince = Time.time;
                     DrawLampEdge(lamp);
                     Fx.Ring(lamp.position, LampRadius + rules.lampGatherBand, ShadowEye, .6f);
-                    V3WorldAudio.Instance?.Play(ArenaWorldCue.NpcShadeSpawn, lamp.position, .7f, 1f);
+                    // The crowd's low drone with its whispers (CampaignAudio plays it at most every few seconds).
+                    CampaignAudio.PlayAt(CampaignSfx.ZoneOverrunWarning, lamp.position);
                 }
                 else if (Time.time - lamp.crowdSince >= CrowdWarning) Smother(lamp);
             }
@@ -285,6 +293,13 @@ namespace AnomalyArena
                     target = centre + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * (radius + .9f);
                     speed = Query.Flat(target - s.position).magnitude > 2.5f ? chase : rules.shadowSpeed * .35f;
                     if (!inBase && !s.tutorial) s.waitingAt = shelter;
+                    // The tutorial night: the first shadow at a lamp's edge while the player stands in its light shows what the light
+                    // does (that night's shadows never crowd a lamp, so the light holds).
+                    if (s.tutorial && !inBase && !tutEdgeSaid && Query.Flat(s.position - centre).magnitude <= radius + TutorialEdgeSeen)
+                    {
+                        tutEdgeSaid = true;
+                        ui.Flash(ArenaText.Pair("影子停在了灯光外面：它们不会走进光里。", "The shadows have stopped at the edge of the light: they will not walk into it."), 4f);
+                    }
                 }
                 else
                 {
@@ -386,12 +401,12 @@ namespace AnomalyArena
         {
             lamp.smothered = true;
             Fx.Ring(lamp.position, LampRadius, ShadowEye, .5f);
-            V3WorldAudio.Instance?.Play(ArenaWorldCue.NpcShadeSpawn, lamp.position, .5f, 1f);
+            CampaignAudio.PlayAt(CampaignSfx.LightFlicker, lamp.position);
             DrawLampEdge(lamp);
         }
 
         /// <summary>A shot or a blast that crosses a shadow goes through it: the shadow only ripples, so the player sees that nothing
-        /// landed.</summary>
+        /// landed. The first ripple of a run also says so, with what does work against shadows.</summary>
         void RippleUnderFire()
         {
             var pool = AttackPool.Instance;
@@ -406,6 +421,11 @@ namespace AnomalyArena
                     s.rippleUntil = Time.time + .35f;
                     Fx.Pop(s.position + Vector3.up * 1.1f, ShadowEye, .7f);
                     Fx.Ring(s.position, .9f, ShadowEye, .2f);
+                    if (!shadowFireSaid)
+                    {
+                        shadowFireSaid = true;
+                        ui.Flash(ArenaText.Pair("武器伤不到影子，只有光能挡住它们。", "Weapons can't hurt shadows. Only light keeps them back."), 3f);
+                    }
                 }
             }
         }

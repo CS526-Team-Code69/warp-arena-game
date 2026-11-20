@@ -8,7 +8,8 @@ using UnityEngine;
 namespace AnomalyArena
 {
     /// <summary>The first-sight black-hole cutscene (document 12): it starts the first time an active, unfed hole is on screen during a
-    /// wave, three fodder spiral in and feed the hole, and play resumes. It lives in run memory only, so a new run plays it again.</summary>
+    /// wave, three fodder spiral in and feed the hole, and play resumes with the open mode's banner that the hole swallows the player too
+    /// and the sprint key breaks its pull. It lives in run memory only, so a new run plays it again.</summary>
     [TestFixture]
     public class HoleIntroTest
     {
@@ -49,6 +50,10 @@ namespace AnomalyArena
             Assert.That(Time.timeScale, Is.Zero, "the battlefield is frozen during the cutscene");
             await Until(() => game.RunPhase == ArenaUiState.WaveActive, 12f, "the cutscene ends and play resumes");
             Assert.That(map.holes.Any(h => h && h.Feeds >= 3), Is.True, "the three fodder fed the hole");
+            string warning = ArenaText.Pair("黑洞也会吞掉你", "THE BLACK HOLE SWALLOWS YOU TOO");
+            await Until(() => V2WorldLabels.LastShown.StartsWith(warning, StringComparison.Ordinal), 8f,
+                "the open mode's banner says that the hole swallows the player too");
+            Assert.That(V2WorldLabels.LastShown, Does.Contain(ArenaKeys.SprintKey), "and names the sprint key that breaks its pull");
         }
 
         static async Task CommandUntil(GameManager game, ArenaUiCommand command, Func<bool> completed, int index = -1)

@@ -52,6 +52,20 @@ namespace AnomalyArena
         }
 
         [Test]
+        public void MeetEnemy_TheFirstBodyOfAKind_IsNew_LaterOnesAreNot()
+        {
+            Assume.That(ArenaCodexProgress.EnemyDiscovered(EnemyKind.Brute), Is.False, "the tests' settings start empty");
+
+            bool first = ArenaCodexProgress.MeetEnemy(EnemyKind.Brute);
+            bool second = ArenaCodexProgress.MeetEnemy(EnemyKind.Brute);
+            ArenaCodexProgress.ForgetCache();
+
+            Assert.That(first, Is.True, "the first Brute the profile meets is new");
+            Assert.That(second, Is.False, "the next one is not");
+            Assert.That(ArenaCodexProgress.EnemyDiscovered(EnemyKind.Brute), Is.True, "and the meeting is kept as a discovery");
+        }
+
+        [Test]
         public void DiscoverSkill_IsKept()
         {
             var skill = (SkillId)Enum.GetValues(typeof(SkillId)).GetValue(0);
