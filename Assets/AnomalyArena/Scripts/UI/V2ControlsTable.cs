@@ -87,10 +87,12 @@ namespace AnomalyArena
                 var cap = new GameObject("KeyCap", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image)).GetComponent<Image>();
                 cap.transform.SetParent(line, false);
                 cap.raycastTarget = false;
-                cap.sprite = pill;
+                // The whole game's pages: the fifth pass's keycap (V5HudKey's piece); the Alpha keeps the menus' pill.
+                bool fifth = V5HudKit.On;
+                cap.sprite = fifth ? V5TitleKit.Piece("keycap") : pill;
                 cap.type = Image.Type.Sliced;
-                cap.pixelsPerUnitMultiplier = 2f;
-                cap.color = pill ? KeyTint : KeyFill;
+                cap.pixelsPerUnitMultiplier = fifth ? V5TitleKit.PieceDensity : 2f;
+                cap.color = fifth ? Color.white : pill ? KeyTint : KeyFill;
                 var capRect = cap.rectTransform;
                 capRect.anchorMin = new Vector2(0f, .5f);
                 capRect.anchorMax = new Vector2(0f, .5f);
@@ -98,7 +100,7 @@ namespace AnomalyArena
                 capRect.sizeDelta = new Vector2(keyWidth, Mathf.Min(rowHeight - 6f, 30f));
                 capRect.anchoredPosition = Vector2.zero;
                 var keyLabel = NewText(capRect, "Key", fontSize, TextAnchor.MiddleCenter, FontStyle.Bold);
-                keyLabel.color = KeyText;
+                keyLabel.color = fifth ? V5HudKit.KeyInk : KeyText;
                 keyLabel.rectTransform.anchorMin = Vector2.zero;
                 keyLabel.rectTransform.anchorMax = Vector2.one;
                 keyLabel.rectTransform.offsetMin = new Vector2(6f, 0f);
@@ -109,7 +111,7 @@ namespace AnomalyArena
                 // One size for every row: a long one wraps onto a second line instead of shrinking.
                 action.resizeTextForBestFit = false;
                 action.lineSpacing = .92f;
-                action.color = ActionText;
+                action.color = fifth ? V5TitleKit.Ink : ActionText;
                 var actionRect = action.rectTransform;
                 actionRect.anchorMin = Vector2.zero;
                 actionRect.anchorMax = Vector2.one;

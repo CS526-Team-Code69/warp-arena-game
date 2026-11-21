@@ -68,6 +68,24 @@ namespace AnomalyArena
             Capture(game.cam, "result-defeat-whitebox");
         }
 
+        [Test, LoadScene(Scene), Category("Integration"), Timeout(120000)]
+        public async Task Pause_AndItsSettings_WearTheFifthPassLook()
+        {
+            var game = await StartRun();
+            Assume.That(V5HudKit.On, Is.True, "the fifth pass's look is on outside the Alpha");
+            await CommandUntil(game, ArenaUiCommand.Pause, () => game.RunPhase == ArenaUiState.Paused);
+            await Frames(20);
+            var banner = GameObject.Find("HeadingBanner");
+            Assert.That(banner, Is.Not.Null, "the pause heading stands on the hull-plate banner");
+            Capture(game.cam, "pause-art");
+            var settings = Object.FindObjectsByType<Button>(FindObjectsInactive.Exclude, FindObjectsSortMode.None).FirstOrDefault(b => b.name == V2Hud.PauseSettingsButton);
+            Assert.That(settings, Is.Not.Null, "the pause screen's Settings button");
+            settings.onClick.Invoke();
+            await Until(() => ArenaSettingsPanel.IsOpen, 3f, "the settings panel");
+            await Frames(20);
+            Capture(game.cam, "pause-settings-art");
+        }
+
         static async Task<GameManager> StartRun()
         {
             await Awaitable.NextFrameAsync();

@@ -387,6 +387,11 @@ namespace AnomalyArena
         }
 
         const float PauseW = 1040f;
+        // The fifth pass's pieces on the pause screen: the plate's and the buttons' corner cuts, the banner behind the heading.
+        const float FifthPanelCut = 16f, FifthButtonCut = 10f, PauseBannerW = 460f, PauseBannerH = 84f;
+        // The pause screen's go button (Resume) in the fifth pass's look: dark words on the orange piece with the art on, white on the
+        // flat button in whitebox (LateUpdate follows the switch).
+        Text pauseGoLabel;
 
         // The pause panel, kept so that its row of buttons follows the controls table: the void dash's row joins the table in the
         // middle of a run (V2Hud.ControlRowCount).
@@ -398,30 +403,50 @@ namespace AnomalyArena
         {
             const float w = PauseW;
             float top = V2Hud.PauseTableBottom + 24f, h = top + 64f + 16f + 128f + 24f;
-            var panel = MakePanel(screen.gameObject, content, new Vector2(w, h));
+            // The whole game's pages wear the fifth pass's look here as on the title, the base and the character screen: the plate, the
+            // painted heading on a hull-plate banner, plates for the buttons and the orange go piece for Resume. The Alpha keeps the menus'.
+            bool fifth = V5HudKit.On;
+            var panel = MakePanel(screen.gameObject, content, new Vector2(w, h), fifth ? V5TitleKit.Piece("plate") : null);
             panel.heightWithoutSummary = top + 64f + 40f;
             panel.summary = screen.summary;
             // The frozen battlefield stays in view around the panel.
             Backdrop(screen, false);
             Style(screen.heading, 40f, 28f, w - 80f, 56f, 36, TextAnchor.MiddleCenter);
-            Gradient(screen.heading);
-            Rule(content, "HeadingRule", 40f, 86f, w - 80f, 14f, AccentCyan);
+            if (fifth)
+            {
+                var banner = V5TitleKit.Picture(content, "HeadingBanner", null, Color.white);
+                banner.gameObject.AddComponent<V5StoryBannerFrame>();
+                Place(banner.rectTransform, (w - PauseBannerW) * .5f, 14f, PauseBannerW, PauseBannerH);
+                if (screen.heading) banner.transform.SetSiblingIndex(screen.heading.transform.GetSiblingIndex());
+                V5TitleKit.Painted(screen.heading);
+            }
+            else
+            {
+                Gradient(screen.heading);
+                Rule(content, "HeadingRule", 40f, 86f, w - 80f, 14f, AccentCyan);
+            }
+
             // The paused line; V2Hud puts the controls table under it.
             Style(screen.body, 40f, 106f, w - 80f, 36f, 18, TextAnchor.MiddleCenter);
-            if (screen.body) screen.body.color = SoftText;
+            if (screen.body) screen.body.color = fifth ? V5TitleKit.Ink2 : SoftText;
             // The buttons the page has (the Alpha has no collection); PlacePauseRow puts them in their row.
             foreach (var name in V2Hud.PauseButtons)
-                if (content.Find(name) is RectTransform go && go.GetComponent<Button>() is { } button) SkinButton(button, name == "ResumeRun", 20);
+                if (content.Find(name) is RectTransform go && go.GetComponent<Button>() is { } button)
+                {
+                    bool resume = name == "ResumeRun";
+                    SkinButton(button, resume, 20, fifth ? V5TitleKit.Piece(resume ? "button-go" : "plate") : null);
+                    if (fifth && resume) pauseGoLabel = button.GetComponentInChildren<Text>(true);
+                }
             // The settings button stands alone in the panel's top-right corner, beside the centred heading, clear of the controls
             // table and of the row of buttons under it.
             if (content.Find(V2Hud.PauseSettingsButton) is RectTransform settings && settings.GetComponent<Button>() is { } settingsButton)
             {
-                SkinButton(settingsButton, false, 18);
+                SkinButton(settingsButton, false, 18, fifth ? V5TitleKit.Piece("plate") : null);
                 Place(settings, w - 40f - 176f, 34f, 176f, 44f);
             }
             panel.summaryTop = top + 64f + 16f;
             Style(screen.summary, 40f, panel.summaryTop, w - 80f, 128f, 15, TextAnchor.UpperCenter);
-            if (screen.summary) screen.summary.color = FaintText;
+            if (screen.summary) screen.summary.color = fifth ? V5TitleKit.Ink3 : FaintText;
             Fit(panel, screen.summary, 15, 10);
             pausePanel = panel;
             pauseScreen = screen;
@@ -505,25 +530,32 @@ namespace AnomalyArena
             }
         }
 
-        Panel MakePanel(GameObject root, RectTransform content, Vector2 size)
+        /// <summary>face: the fifth pass's plate for the panel (the pause screen on the whole game's pages), without the nebula; null
+        /// keeps the menus' drawn panel.</summary>
+        Panel MakePanel(GameObject root, RectTransform content, Vector2 size, Sprite face = null)
         {
             var panel = new Panel { root = root, content = content, size = size };
             content.sizeDelta = size;
             if (content.GetComponent<Image>() is { } image)
             {
-                image.sprite = panelSprite;
+                image.sprite = face ? face : panelSprite;
                 image.type = Image.Type.Sliced;
-                image.pixelsPerUnitMultiplier = Density;
+                image.pixelsPerUnitMultiplier = face ? V5TitleKit.PlateDensity(FifthPanelCut) : Density;
                 image.color = Color.white;
                 flat.Add(image, WhiteboxSkin.Look.Panel);
             }
-            var nebula = NewImage(content, "Nebula", nebulaSprite, Color.white, Image.Type.Simple);
-            flat.Add(nebula, WhiteboxSkin.Look.Hide);
-            nebula.rectTransform.anchorMin = Vector2.zero;
-            nebula.rectTransform.anchorMax = Vector2.one;
-            nebula.rectTransform.offsetMin = Vector2.one * 14f;
-            nebula.rectTransform.offsetMax = Vector2.one * -14f;
-            nebula.transform.SetAsFirstSibling();
+
+            if (!face)
+            {
+                var nebula = NewImage(content, "Nebula", nebulaSprite, Color.white, Image.Type.Simple);
+                flat.Add(nebula, WhiteboxSkin.Look.Hide);
+                nebula.rectTransform.anchorMin = Vector2.zero;
+                nebula.rectTransform.anchorMax = Vector2.one;
+                nebula.rectTransform.offsetMin = Vector2.one * 14f;
+                nebula.rectTransform.offsetMax = Vector2.one * -14f;
+                nebula.transform.SetAsFirstSibling();
+            }
+
             panel.group = content.GetComponent<CanvasGroup>();
             if (!panel.group) panel.group = content.gameObject.AddComponent<CanvasGroup>();
             panels.Add(panel);
@@ -556,14 +588,16 @@ namespace AnomalyArena
             flat.Add(image, WhiteboxSkin.Look.Dim);
         }
 
-        void SkinButton(Button button, bool primary, int textSize)
+        /// <summary>face: the fifth pass's piece for the button (its plate, or the orange go button for the primary one); null keeps
+        /// the menus' drawn buttons.</summary>
+        void SkinButton(Button button, bool primary, int textSize, Sprite face = null)
         {
             if (!button) return;
             if (button.GetComponent<Image>() is { } image)
             {
-                image.sprite = primary ? buttonPrimary : buttonSprite;
+                image.sprite = face ? face : primary ? buttonPrimary : buttonSprite;
                 image.type = Image.Type.Sliced;
-                image.pixelsPerUnitMultiplier = Density;
+                image.pixelsPerUnitMultiplier = face ? V5TitleKit.PlateDensity(FifthButtonCut) : Density;
                 image.color = Color.white;
                 button.targetGraphic = image;
                 flat.Add(image, primary ? WhiteboxSkin.Look.PrimaryButton : WhiteboxSkin.Look.Button);
@@ -661,6 +695,12 @@ namespace AnomalyArena
         void LateUpdate()
         {
             flat.Follow();
+            if (pauseGoLabel)
+            {
+                var ink = Art.Enabled ? V5TitleKit.Dark : Color.white;
+                if (pauseGoLabel.color != ink) pauseGoLabel.color = ink;
+                if (pauseGoLabel.TryGetComponent<Shadow>(out var shadow) && shadow.enabled == Art.Enabled) shadow.enabled = !Art.Enabled;
+            }
             Vector2 canvas = ((RectTransform)transform).rect.size;
             float dt = Time.unscaledDeltaTime, now = Time.unscaledTime;
             var pointer = Mouse.current != null ? Mouse.current.position.ReadValue() : new Vector2(-1f, -1f);

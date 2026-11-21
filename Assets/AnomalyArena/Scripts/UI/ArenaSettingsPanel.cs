@@ -38,8 +38,22 @@ namespace AnomalyArena
         // character screen.
         const int LeftRows = 6;
 
-        static readonly Color Soft = new(.86f, .90f, .96f), Faint = new(.62f, .72f, .85f), Cyan = new(.50f, .86f, 1f), Waiting = new(1f, .84f, .36f);
-        static readonly Color Trough = new(.10f, .15f, .22f, 1f), Backing = new(.03f, .05f, .10f, .96f);
+        static readonly Color SoftMenus = new(.86f, .90f, .96f), FaintMenus = new(.62f, .72f, .85f), CyanMenus = new(.50f, .86f, 1f),
+            WaitingMenus = new(1f, .84f, .36f);
+        static readonly Color TroughMenus = new(.10f, .15f, .22f, 1f), Backing = new(.03f, .05f, .10f, .96f);
+        // The whole game's pages show the panel in the fifth pass's look (the title's settings window's pieces and inks); the Alpha keeps
+        // the menus' drawn look.
+        static Color Soft => V5HudKit.On ? V5TitleKit.Ink : SoftMenus;
+        static Color Faint => V5HudKit.On ? V5TitleKit.Ink3 : FaintMenus;
+        static Color Cyan => V5HudKit.On ? V5TitleKit.Ink : CyanMenus;
+        static Color Waiting => V5HudKit.On ? V5TitleKit.Orange : WaitingMenus;
+        static Color Trough => V5HudKit.On ? V5HudKit.Track : TroughMenus;
+        // A key's letters: dark on the fifth pass's light keycap, cyan on the menus' button.
+        static Color KeyLetters => V5HudKit.On ? V5HudKit.KeyInk : CyanMenus;
+        // The mark under the art mode showing and the volume's fill.
+        static Color Accent => V5HudKit.On ? V5TitleKit.Orange : CyanMenus;
+        // The fifth pass's pieces' corner cuts: the panel, the buttons.
+        const float FifthPanelCut = 16f, FifthButtonCut = 10f;
 
         static ArenaSettingsPanel instance;
         static Sprite panelSprite, buttonSprite, primarySprite;
@@ -330,7 +344,7 @@ namespace AnomalyArena
                 SetText(rowNames[i], ActionName((GameAction)i));
                 bool waiting = listening == i;
                 SetText(rowKeys[i], waiting ? ArenaText.Pair("按一个键…", "Press a key…") : ArenaKeys.Name((GameAction)i));
-                var colour = waiting ? Waiting : Cyan;
+                var colour = waiting ? Waiting : KeyLetters;
                 if (rowKeys[i].color != colour) rowKeys[i].color = colour;
             }
             SetText(message, messageText);
@@ -338,6 +352,9 @@ namespace AnomalyArena
             SetText(resetLabel, ArenaText.Pair("恢复默认按键", fifth ? "Reset Keys" : "RESET KEYS"));
             // There the Esc that also closes the panel is a keycap on the button (closeKey).
             SetText(closeLabel, fifth ? ArenaText.Pair("关闭", "Close") : ArenaText.Pair("关闭  [Esc]", "CLOSE  [Esc]"));
+            // Dark words on the orange go piece with the art on, white on the flat button in whitebox.
+            var closeInk = fifth && Art.Enabled ? V5TitleKit.Dark : Color.white;
+            if (closeLabel && closeLabel.color != closeInk) closeLabel.color = closeInk;
         }
 
         static void Mark(Image mark, Text label, bool current)
@@ -363,9 +380,18 @@ namespace AnomalyArena
 
         static ArenaSettingsPanel Build()
         {
-            if (!panelSprite) panelSprite = Load("V5/UI/ui-panel", 112f);
-            if (!buttonSprite) buttonSprite = Load("V5/UI/ui-button", 40f);
-            if (!primarySprite) primarySprite = Load("V5/UI/ui-button-primary", 40f);
+            if (V5HudKit.On)
+            {
+                panelSprite = V5TitleKit.Piece("plate");
+                buttonSprite = V5TitleKit.Piece("plate");
+                primarySprite = V5TitleKit.Piece("button-go");
+            }
+            else
+            {
+                if (!panelSprite) panelSprite = Load("V5/UI/ui-panel", 112f);
+                if (!buttonSprite) buttonSprite = Load("V5/UI/ui-button", 40f);
+                if (!primarySprite) primarySprite = Load("V5/UI/ui-button-primary", 40f);
+            }
 
             var root = new GameObject(RootName, typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
             var overlay = root.GetComponent<Canvas>();
@@ -395,13 +421,15 @@ namespace AnomalyArena
             // A solid backing inside the drawn frame's cut corners, so what is behind does not show through the text.
             var backing = NewImage(window, "Backing", null, Backing).rectTransform;
             backing.sizeDelta = new Vector2(PanelW - 56f, PanelH - 56f);
-            var frame = NewImage(window, "Panel", panelSprite, panelSprite ? Color.white : WhiteboxSkin.PanelFill, Image.Type.Sliced, 2f);
+            var frame = NewImage(window, "Panel", panelSprite, panelSprite ? Color.white : WhiteboxSkin.PanelFill, Image.Type.Sliced,
+                V5HudKit.On ? V5TitleKit.PlateDensity(FifthPanelCut) : 2f);
             frame.raycastTarget = true;
             if (panelSprite) flat.Add(frame, WhiteboxSkin.Look.Panel);
             var body = frame.rectTransform;
             body.sizeDelta = new Vector2(PanelW, PanelH);
 
             title = NewText(body, "Title", 30, Soft, FontStyle.Bold, TextAnchor.MiddleLeft);
+            if (V5HudKit.On) V5TitleKit.Painted(title);
             Place(title.rectTransform, Margin, 26f, 420f, 44f);
             var rule = NewImage(body, "TitleRule", null, new Color(Cyan.r, Cyan.g, Cyan.b, .35f));
             Place(rule.rectTransform, Margin - 8f, 78f, PanelW - (Margin - 8f) * 2f, 2f);
@@ -443,9 +471,10 @@ namespace AnomalyArena
                 rowNames[i] = NewText(row, "Name", 18, Soft, FontStyle.Normal, TextAnchor.MiddleLeft);
                 Place(rowNames[i].rectTransform, 0f, 0f, KeyColumnW - KeyButtonW - 12f, RowH);
                 Shrink(rowNames[i], 12);
-                var key = MakeButton(row, "Key", false, 18, () => Listen(action), out rowKeys[i]);
+                var key = MakeButton(row, "Key", false, 18, () => Listen(action), out rowKeys[i], V5HudKit.On ? V5TitleKit.Piece("keycap") : null);
                 Place((RectTransform)key.transform, KeyColumnW - KeyButtonW, (RowH - KeyButtonH) * .5f, KeyButtonW, KeyButtonH);
-                rowKeys[i].color = Cyan;
+                rowKeys[i].color = KeyLetters;
+                if (V5HudKit.On && rowKeys[i].TryGetComponent<Shadow>(out var keyShadow)) keyShadow.enabled = false;
             }
 
             // What the last key press did, then what cannot be changed at all.
@@ -484,10 +513,12 @@ namespace AnomalyArena
         }
 
         /// <summary>A button in the menus' look: the drawn plate with the art on, a flat one in whitebox (WhiteboxSkin follows the switch).</summary>
-        Button MakeButton(Transform parent, string name, bool primary, int textSize, Action click, out Text label)
+        /// <param name="face">A piece of its own (the fifth pass's keycap for a key), or null for the panel's buttons.</param>
+        Button MakeButton(Transform parent, string name, bool primary, int textSize, Action click, out Text label, Sprite face = null)
         {
-            var sprite = primary ? primarySprite : buttonSprite;
-            var image = NewImage(parent, name, sprite, sprite ? Color.white : primary ? WhiteboxSkin.PrimaryFill : WhiteboxSkin.ButtonFill, Image.Type.Sliced, 2f);
+            var sprite = face ? face : primary ? primarySprite : buttonSprite;
+            float density = !V5HudKit.On ? 2f : face ? V5TitleKit.PieceDensity : V5TitleKit.PlateDensity(FifthButtonCut);
+            var image = NewImage(parent, name, sprite, sprite ? Color.white : primary ? WhiteboxSkin.PrimaryFill : WhiteboxSkin.ButtonFill, Image.Type.Sliced, density);
             image.raycastTarget = true;
             if (sprite) flat.Add(image, primary ? WhiteboxSkin.Look.PrimaryButton : WhiteboxSkin.Look.Button);
             var button = image.gameObject.AddComponent<Button>();
@@ -511,7 +542,7 @@ namespace AnomalyArena
         /// <summary>The line under the art mode that is showing.</summary>
         static Image MakeMark(Transform button)
         {
-            var mark = NewImage(button, "Mark", null, Cyan);
+            var mark = NewImage(button, "Mark", null, Accent);
             var rect = mark.rectTransform;
             rect.anchorMin = new Vector2(0f, 0f);
             rect.anchorMax = new Vector2(1f, 0f);
@@ -533,7 +564,7 @@ namespace AnomalyArena
             trough.raycastTarget = true;
             var fillArea = NewRect(root.transform, "Fill Area");
             Stretch(fillArea, 4f);
-            var fill = NewImage(fillArea, "Fill", null, new Color(Cyan.r, Cyan.g, Cyan.b, .85f));
+            var fill = NewImage(fillArea, "Fill", null, new Color(Accent.r, Accent.g, Accent.b, .9f));
             fill.rectTransform.anchorMin = Vector2.zero;
             fill.rectTransform.anchorMax = new Vector2(0f, 1f);
             fill.rectTransform.offsetMin = fill.rectTransform.offsetMax = Vector2.zero;
