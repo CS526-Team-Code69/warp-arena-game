@@ -14,11 +14,21 @@ namespace AnomalyArena
     /// </summary>
     public sealed partial class V2CampaignUi
     {
-        // In mock-up pixels: left 24, top 124, 340 wide, corners cut at 11, padding 12 / 16 / 11 / 18; the head 14 tall (the triangle
-        // 11 x 13, 8 to its 12-pixel spaced capitals), the title 7 under it (20 pixels), the body 4 under that (14 pixels). The side
-        // quest's strip 11 in from the plate's sides and foot, padding 6 / 10, a 3-pixel bar, a 26-pixel medal 9 before its 14-pixel text.
-        const float GoalLeftPx = 24f, GoalTopPx = 124f, GoalWidthPx = 340f, GoalPadTopPx = 12f, GoalPadRightPx = 16f, GoalPadBottomPx = 11f, GoalPadLeftPx = 18f;
-        const float GoalHeadPx = 14f, GoalTitleGapPx = 7f, GoalBodyGapPx = 4f, SideInsetPx = 11f, SidePadXPx = 10f, SidePadYPx = 6f, SideMedalPx = 26f;
+        /// <summary>How much larger than the mock-up the goal plate is drawn: its width, padding, words, triangle, bar and medal (its place
+        /// on the screen stays). At 1.2 the body's words are 17 mock-up pixels, about 11 on a window 1280 wide.</summary>
+        const float GoalScale = 1.2f;
+
+        // In mock-up pixels, each size the mock-up's times GoalScale: left 24, top 124, 340 wide, corners cut at 11, padding 12 / 16 /
+        // 11 / 18; the head 14 tall (the triangle 11 x 13, 8 to its 12-pixel spaced capitals), the title 7 under it (20 pixels), the body
+        // 4 under that (14 pixels). The side quest's strip 11 in from the plate's sides and foot, padding 6 / 10, a 3-pixel bar, a
+        // 26-pixel medal 9 before its 14-pixel text.
+        const float GoalLeftPx = 24f, GoalTopPx = 124f, GoalWidthPx = 340f * GoalScale, GoalPadTopPx = 12f * GoalScale, GoalPadRightPx = 16f * GoalScale, GoalPadBottomPx = 11f * GoalScale, GoalPadLeftPx = 18f * GoalScale;
+        const float GoalHeadPx = 14f * GoalScale, GoalTitleGapPx = 7f * GoalScale, GoalBodyGapPx = 4f * GoalScale, SideInsetPx = 11f * GoalScale, SidePadXPx = 10f * GoalScale, SidePadYPx = 6f * GoalScale, SideMedalPx = 26f * GoalScale;
+        const float GoalCapTextPx = 12f * GoalScale, GoalTitleTextPx = 20f * GoalScale, GoalBodyTextPx = 14f * GoalScale, GoalPointerWPx = 13f * GoalScale, GoalPointerDepthPx = 11f * GoalScale;
+        const float GoalCapGapPx = 8f * GoalScale, SideBarPx = 3f * GoalScale, SideTextGapPx = 9f * GoalScale;
+
+        /// <summary>The goal plate's right edge in mock-up pixels: the HUD's hint plate keeps clear of it on a window narrower than 16:9.</summary>
+        internal const float GoalRightPx = GoalLeftPx + GoalWidthPx;
 
         Image storyGoalPointer;
         Text storyGoalCap, storyGoalTitle, storyGoalBody;
@@ -35,7 +45,7 @@ namespace AnomalyArena
         Color goalFlashColour;
         bool goalFlashSide;
         const float GoalFlashSeconds = 1.6f, GoalFlashPulses = 3f, GoalFlashPeak = .42f, GoalFlashGrow = .05f, GoalFlashGrowSeconds = .3f;
-        const float GoalCutPx = 11f; // the plate's corner cut, which its flash keeps
+        const float GoalCutPx = 11f * GoalScale; // the plate's corner cut, which its flash keeps
 
         /// <summary>The goal panel's left edge, top edge (as its anchored position, from the screen's top) and width: the fifth pass's
         /// plate, or the old panel's.</summary>
@@ -61,12 +71,12 @@ namespace AnomalyArena
             storyGoalFlash.raycastTarget = false;
             storyGoalFlash.color = Color.clear;
             // A triangle that points up, turned to point right: 13 across its base, 11 deep.
-            storyGoalPointer = V5HudKit.Arrow(back, "Pointer", new Vector2(Sp(13f), Sp(11f)), V5TitleKit.Orange, -90f);
-            storyGoalCap = V5StoryKit.Label(back, "Cap", 12f, V5TitleKit.OrangeHi, TextAnchor.MiddleLeft, true);
-            storyGoalTitle = V5StoryKit.Label(back, "Title", 20f, Color.white, TextAnchor.UpperLeft, true);
+            storyGoalPointer = V5HudKit.Arrow(back, "Pointer", new Vector2(Sp(GoalPointerWPx), Sp(GoalPointerDepthPx)), V5TitleKit.Orange, -90f);
+            storyGoalCap = V5StoryKit.Label(back, "Cap", GoalCapTextPx, V5TitleKit.OrangeHi, TextAnchor.MiddleLeft, true);
+            storyGoalTitle = V5StoryKit.Label(back, "Title", GoalTitleTextPx, Color.white, TextAnchor.UpperLeft, true);
             StoryWrap(storyGoalTitle, .9f);
             V5TitleKit.Painted(storyGoalTitle);
-            storyGoalBody = V5StoryKit.Label(back, "Body", 14f, V5TitleKit.Ink2, TextAnchor.UpperLeft);
+            storyGoalBody = V5StoryKit.Label(back, "Body", GoalBodyTextPx, V5TitleKit.Ink2, TextAnchor.UpperLeft);
             StoryWrap(storyGoalBody, 1f);
             objectiveText.enabled = false;
 
@@ -76,16 +86,16 @@ namespace AnomalyArena
             sideQuestBack.color = V5StoryKit.VioletWash;
             if (side.Find("Bar") is RectTransform edge)
             {
-                edge.sizeDelta = new Vector2(Sp(3f), 0f);
+                edge.sizeDelta = new Vector2(Sp(SideBarPx), 0f);
                 if (edge.TryGetComponent<Image>(out var line)) line.color = V5HudKit.Violet;
             }
             storySideMedal = V5HudKit.Medal(side, "Medal", Sp(SideMedalPx));
             PlaceCentre(storySideMedal.Rect, new Vector2(0f, .5f), new Vector2(Sp(SidePadXPx + SideMedalPx * .5f), 0f), Vector2.one * Sp(SideMedalPx));
-            sideQuestText.fontSize = V5StoryKit.FontSize(14f);
+            sideQuestText.fontSize = V5StoryKit.FontSize(GoalBodyTextPx);
             sideQuestText.fontStyle = FontStyle.Bold;
             sideQuestText.color = V5TitleKit.Ink;
             sideQuestText.alignment = TextAnchor.MiddleLeft;
-            Stretch(sideQuestText.rectTransform, Sp(SidePadXPx + SideMedalPx + 9f), Sp(SidePadYPx), Sp(SidePadXPx), Sp(SidePadYPx));
+            Stretch(sideQuestText.rectTransform, Sp(SidePadXPx + SideMedalPx + SideTextGapPx), Sp(SidePadYPx), Sp(SidePadXPx), Sp(SidePadYPx));
             back.anchoredPosition = new Vector2(GoalLeft, GoalTop);
         }
 
@@ -144,8 +154,8 @@ namespace AnomalyArena
                 y = Sp(GoalPadTopPx);
                 string cap = title.Length > 0 ? ArenaText.Pair("目标 · OBJECTIVE", "OBJECTIVE") : ArenaText.Pair("提示 · NOTE", "NOTE");
                 StoryText(storyGoalCap, V5TitleKit.Spaced(cap));
-                V5TitleKit.Place(storyGoalCap.rectTransform, left + Sp(11f + 8f), y, inner - Sp(19f), Sp(GoalHeadPx));
-                PlaceCentre(storyGoalPointer.rectTransform, new Vector2(0f, 1f), new Vector2(left + Sp(5.5f), -(y + Sp(GoalHeadPx * .5f))), new Vector2(Sp(13f), Sp(11f)));
+                V5TitleKit.Place(storyGoalCap.rectTransform, left + Sp(GoalPointerDepthPx + GoalCapGapPx), y, inner - Sp(GoalPointerDepthPx + GoalCapGapPx), Sp(GoalHeadPx));
+                PlaceCentre(storyGoalPointer.rectTransform, new Vector2(0f, 1f), new Vector2(left + Sp(GoalPointerDepthPx * .5f), -(y + Sp(GoalHeadPx * .5f))), new Vector2(Sp(GoalPointerWPx), Sp(GoalPointerDepthPx)));
                 y += Sp(GoalHeadPx);
                 if (title.Length > 0)
                 {

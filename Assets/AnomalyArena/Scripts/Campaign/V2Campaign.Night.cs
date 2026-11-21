@@ -369,6 +369,7 @@ namespace AnomalyArena
         public void EndNight(bool waitedAtBase)
         {
             if (Stage != CampaignStage.Night && Stage != CampaignStage.Base) return;
+            if (Day == 0) RememberDayZeroFinished(); // the pause menu may offer to skip Day 0 from now on (V2Campaign.DayZeroSkip.cs)
             if (Stage == CampaignStage.Base) ui.HideBase();
             baseVisitFrom = CampaignStage.Off;
             CampaignEvents.RaisePhase("dawn", Day);

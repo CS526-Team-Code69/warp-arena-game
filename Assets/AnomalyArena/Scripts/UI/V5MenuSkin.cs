@@ -398,6 +398,13 @@ namespace AnomalyArena
         Panel pausePanel;
         V2UiScreen pauseScreen;
         float pauseLaidOutFor = -1f;
+        // The number of buttons the row was last placed for: Day 0's skip comes and goes (V2Hud.ShownPauseRow).
+        int pauseButtonsLaidOut = -1;
+        // A row button's label keeps this much room inside its button. In a row fuller than the buttons always there (six leave each
+        // about 145 wide) a longer label draws smaller, down to PauseLabelSmallest; each label's own size is kept to give it back.
+        const float PauseLabelPadding = 20f;
+        const int PauseLabelSmallest = 12;
+        readonly Dictionary<Text, int> pauseLabelSizes = new();
 
         void SkinPaused(V2UiScreen screen, RectTransform content)
         {
@@ -429,8 +436,9 @@ namespace AnomalyArena
             // The paused line; V2Hud puts the controls table under it.
             Style(screen.body, 40f, 106f, w - 80f, 36f, 18, TextAnchor.MiddleCenter);
             if (screen.body) screen.body.color = fifth ? V5TitleKit.Ink2 : SoftText;
-            // The buttons the page has (the Alpha has no collection); PlacePauseRow puts them in their row.
-            foreach (var name in V2Hud.PauseButtons)
+            // The buttons the page has (the Alpha has no collection; Day 0's skip shows only while it is offered); PlacePauseRow puts
+            // those shown in their row.
+            foreach (var name in V2Hud.PauseRow)
                 if (content.Find(name) is RectTransform go && go.GetComponent<Button>() is { } button)
                 {
                     bool resume = name == "ResumeRun";
@@ -453,8 +461,9 @@ namespace AnomalyArena
             PlacePauseRow();
         }
 
-        /// <summary>The pause panel's row of buttons (centred, each at most 226 wide), the summary under it and the panel's height, for
-        /// the rows the controls table shows now (V2Hud.PauseTableBottom). LateUpdate calls it again when that changes.</summary>
+        /// <summary>The pause panel's row of the buttons shown now (centred, each at most 226 wide), the summary under it and the panel's
+        /// height, for the rows the controls table shows now (V2Hud.PauseTableBottom). LateUpdate calls it again when that changes or a
+        /// button comes or goes (Day 0's skip).</summary>
         void PlacePauseRow()
         {
             if (pausePanel == null || !pausePanel.content) return;
@@ -465,13 +474,14 @@ namespace AnomalyArena
             pausePanel.size = new Vector2(w, top + 64f + 16f + 128f + 24f);
             pausePanel.heightWithoutSummary = top + 64f + 40f;
             var row = new List<RectTransform>();
-            foreach (var name in V2Hud.PauseButtons)
-                if (content.Find(name) is RectTransform go && go.GetComponent<Button>()) row.Add(go);
+            pauseButtonsLaidOut = V2Hud.ShownPauseRow(content, row);
             float rowButtonW = row.Count > 0 ? Mathf.Min(buttonW, (w - 80f - buttonGap * (row.Count - 1)) / row.Count) : buttonW;
             float left = (w - row.Count * (rowButtonW + buttonGap) + buttonGap) * .5f;
+            float labelRoom = row.Count > V2Hud.PauseButtons.Length ? rowButtonW - PauseLabelPadding : float.MaxValue;
             foreach (var rect in row)
             {
                 Place(rect, left, top, rowButtonW, 64f);
+                FitPauseLabel(rect, labelRoom);
                 left += rowButtonW + buttonGap;
             }
             pausePanel.summaryTop = top + 64f + 16f;
@@ -479,6 +489,17 @@ namespace AnomalyArena
             // The panel's height: Tick fits it to the summary again; without a summary it is the whole height.
             if (pausePanel.summary) pausePanel.summaryShown = null;
             else content.sizeDelta = pausePanel.size;
+        }
+
+        /// <summary>A row button's label at its own size, or smaller when it is wider than room (never under PauseLabelSmallest).</summary>
+        void FitPauseLabel(RectTransform button, float room)
+        {
+            var label = button.GetComponentInChildren<Text>();
+            if (!label) return;
+            if (!pauseLabelSizes.TryGetValue(label, out int size)) pauseLabelSizes[label] = size = label.fontSize;
+            label.fontSize = size;
+            float wide = label.preferredWidth;
+            if (wide > room && wide > 0f) label.fontSize = Mathf.Max(PauseLabelSmallest, Mathf.FloorToInt(size * room / wide));
         }
 
         /// <summary>The ready and result screens: a heading, some lines and one large button in the middle of the title art.</summary>
@@ -707,7 +728,8 @@ namespace AnomalyArena
             if (Keyboard.current != null && Keyboard.current.anyKey.wasPressedThisFrame) keyboardInUse = true;
             if (Mouse.current != null && Mouse.current.delta.ReadValue() != Vector2.zero) keyboardInUse = false;
             var selected = keyboardInUse && EventSystem.current ? EventSystem.current.currentSelectedGameObject : null;
-            if (pausePanel != null && pausePanel.root && pausePanel.root.activeInHierarchy && !Mathf.Approximately(V2Hud.PauseTableBottom, pauseLaidOutFor))
+            if (pausePanel != null && pausePanel.root && pausePanel.root.activeInHierarchy
+                && (!Mathf.Approximately(V2Hud.PauseTableBottom, pauseLaidOutFor) || V2Hud.ShownPauseRow(pausePanel.content) != pauseButtonsLaidOut))
                 PlacePauseRow();
             foreach (var panel in panels)
             {

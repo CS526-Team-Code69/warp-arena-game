@@ -7,7 +7,9 @@ using UnityEngine;
 namespace AnomalyArena.EditorTools
 {
     /// <summary>
-    /// 打包可在 GitHub Pages 上运行的 V2 网页包。Gzip + 解压回退：Pages 不发送 Content-Encoding 头，由加载器在浏览器里解压。
+    /// 打包可在 GitHub Pages 上运行的 V2 网页包。Brotli + 解压回退：Pages 不发送 Content-Encoding 头，由加载器在浏览器里解压。
+    /// Brotli 比 Gzip 压得更小（四个文件合计约小一成，数据文件离 GitHub 单个文件 100 MB 的上限更远），代价是加载器在浏览器里解压更久：
+    /// 在一台台式机上从本地服务器打开，加载完成从约 3.0 秒变成约 4.5 秒；网速越慢，少下载的部分省下的时间越多。
     /// 菜单 "2. Build WebGL" 打的是 1.0 原型 Arena.unity，不要用它发布当前游戏。
     /// 2026-11-10 起只有一个游戏、两种语言：两个菜单项都打 ArenaV2 这一个场景，同一个包放在英文页和 /zh/ 页，语言由地址决定
     /// （ArenaLanguage）。两个输出文件夹的名字照旧，好让现有的打包脚本不用改。
@@ -33,7 +35,7 @@ namespace AnomalyArena.EditorTools
         static void BuildScene(string scene, string output)
         {
             if (!File.Exists(scene)) throw new FileNotFoundException("Missing scene", scene);
-            PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Gzip;
+            PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Brotli;
             PlayerSettings.WebGL.decompressionFallback = true;
             // The published page uses the project's own template (Assets/WebGLTemplates/WarpArena): the canvas fills the browser window at 16:9.
             if (Directory.Exists(Template)) PlayerSettings.WebGL.template = "PROJECT:WarpArena";

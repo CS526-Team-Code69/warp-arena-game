@@ -144,7 +144,7 @@ namespace AnomalyArena
             holeFedNoticed = false;
         }
 
-        /// <summary>The open mode's count over a black hole that is being fed: the same words as the story's (已吞噬 3/40, FED 3/40). The
+        /// <summary>The open mode's count over a black hole that is being fed: the same words as the story's (已吞噬 3/20, FED 3/20). The
         /// English Alpha keeps its bare count.</summary>
         public static string OpenHoleCount(int fed, int goal) =>
             BuildEdition.IsAlpha ? $"{fed} / {goal}" : ArenaText.Pair($"已吞噬 {fed}/{goal}", $"FED {fed}/{goal}");

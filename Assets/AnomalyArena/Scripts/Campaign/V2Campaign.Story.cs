@@ -302,7 +302,8 @@ namespace AnomalyArena
         /// <summary>Where the player steps out when the visit ends: the base door, or the spot beside the ship the visit began from.</summary>
         Vector3 visitExitAt;
 
-        /// <summary>The base panel's way back out: after the arrival on Day 0 the memory CG and the tutorial night; otherwise out at the door
+        /// <summary>The base panel's way back out: after the arrival on Day 0 the memory CG and the tutorial night (day 1's dawn at once
+        /// once Day 0 was skipped, V2Campaign.DayZeroSkip.cs); otherwise out at the door
         /// into the afternoon or the night the player came in from.</summary>
         public void LeaveBase()
         {
@@ -310,7 +311,12 @@ namespace AnomalyArena
             ui.HideBase();
             var from = baseVisitFrom;
             baseVisitFrom = CampaignStage.Off;
-            if (Day == 0 && from == CampaignStage.Story) { StartCoroutine(MemoryCg()); return; }
+            if (Day == 0 && from == CampaignStage.Story)
+            {
+                if (dayZeroSkipped) SkipToDayOne();
+                else StartCoroutine(MemoryCg());
+                return;
+            }
             Stage = from == CampaignStage.Dusk ? CampaignStage.Dusk : CampaignStage.Night;
             gm.CampaignSetPhase(Stage == CampaignStage.Dusk ? DuskPhase : ArenaUiState.Night);
             PlacePlayer(visitExitAt);

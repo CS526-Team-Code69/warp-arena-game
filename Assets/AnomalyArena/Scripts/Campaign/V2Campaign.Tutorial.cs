@@ -51,6 +51,7 @@ namespace AnomalyArena
             Stage = CampaignStage.Tutorial;
             tutStep = tutLastDone = TutorialStep.None;
             tutForced = false; tutNext = null;
+            dayZeroSkipped = false;
             quietLinesWaiting = 0; speechUntil = 0f;
             tutPickupSaid = tutHomeSaid = voidLineSaid = secondCrateHint = changedWeaponSaid = false;
             cratesOpened = 0; switchTaught = skillTaught = skillTeachPending = false; lateHint = LateHint.None;

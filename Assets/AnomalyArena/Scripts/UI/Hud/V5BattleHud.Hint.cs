@@ -16,7 +16,7 @@ namespace AnomalyArena
         // units, 253 mock-up pixels), and on a narrow window it keeps its sides clear of the story's goal plate (to 364 across, from 124
         // down) by drawing itself smaller.
         const float HintTop = BossTop, HintH = 38f, HintPadLeft = 14f, HintPadRight = 18f, HintPointerW = 11f, HintPointerH = 13f;
-        const float HintPointerGap = 9f, HintCapGap = 7f, HintMaxW = 860f, HintSideClear = 388f, HintStackGap = 12f;
+        const float HintPointerGap = 9f, HintCapGap = 7f, HintMaxW = 860f, HintSideClear = V2CampaignUi.GoalRightPx + 24f, HintStackGap = 12f;
         const float HintFadeIn = .18f, HintFadeOut = .18f;
 
         RectTransform hintPlate;

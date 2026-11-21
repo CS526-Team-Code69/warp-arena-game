@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-    /// <summary>The open mode's black hole: its count reads like the story's (已吞噬 3/40, FED 3/40), and the first monster it swallows in a
+    /// <summary>The open mode's black hole: its count reads like the story's (已吞噬 3/20, FED 3/20), and the first monster it swallows in a
     /// run brings one banner on what feeding it opens; the monsters it swallows after that bring none.</summary>
     [TestFixture]
     public class HoleFeedNoticeTest
@@ -26,9 +26,9 @@ namespace AnomalyArena
         {
             await Until(() => ArenaText.Ready, 12f, "localization initializes");
 
-            string expected = BuildEdition.IsAlpha ? "3 / 40" : ArenaText.Pair("已吞噬 3/40", "FED 3/40");
+            string expected = BuildEdition.IsAlpha ? "3 / 20" : ArenaText.Pair("已吞噬 3/20", "FED 3/20");
 
-            Assert.That(V2WorldLabels.OpenHoleCount(3, 40), Is.EqualTo(expected));
+            Assert.That(V2WorldLabels.OpenHoleCount(3, 20), Is.EqualTo(expected));
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(90000)]

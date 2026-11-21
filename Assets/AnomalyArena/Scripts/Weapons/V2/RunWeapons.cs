@@ -353,9 +353,26 @@ namespace AnomalyArena
             if(!held&&!pressed||w.cooldown>0||w.reload>0||w.inFlight||w.charging)return;
             bool charge=(w.form==WeaponForm.Rifle&&w.variant==0)||(w.form==WeaponForm.Railgun&&w.variant==0)||(w.form==WeaponForm.ScatterCannon&&w.variant==1);
             if(charge){if(pressed){w.charging=true;w.charge=0;Reveal(w);WeaponSound(w,WeaponAudioPhase.ChargeStart);if(w.form==WeaponForm.ScatterCannon)V3WorldAudio.Instance?.Play(ArenaWorldCue.WeaponFocusCharge,player.Position);}return;}
-            // The Pistol (since 2026-11-06) fires again at its fixed interval for as long as the button is held.
-            bool repeat=w.form==WeaponForm.Rifle&&w.variant==1||w.form==WeaponForm.Flamethrower&&w.variant==0||w.form==WeaponForm.CryoCannon&&w.variant==1||w.form==WeaponForm.SporeLauncher&&w.variant==1||w.form==WeaponForm.Minigun||w.form==WeaponForm.Pistol;
-            if(pressed||repeat&&held)Fire(w,false);
+            // Held, a weapon fires again as soon as it is ready (RepeatsWhileHeld): the pace of its cooldown, so the DPS of clicking it.
+            if(pressed||held&&RepeatsWhileHeld(w))Fire(w,false);
+        }
+        /// <summary>Holding the button fires the weapon again each time it is ready, at the pace of its cooldown (the cooldown a click
+        /// sets, so the DPS does not change): the pistol, the hold weapons and every single shot whose trait does not punish a careless
+        /// shot. These fire once per click: the Thrown Blade (it flies back to where it was thrown), the Human Rocket (it flies you into
+        /// walls), both Swarm Launchers (spare missiles and their blasts turn on you), the Railgun's heavy shot (a shot that kills nothing
+        /// shocks you), the Chain Lightning (with too few enemies near it shocks you) and the Capacitor (it stores its charge for one
+        /// release). The charged attacks (Rifle, Railgun and Scatter Cannon Focus) charge while held and fire on release, before this.</summary>
+        public static bool RepeatsWhileHeld(RunWeapon w)
+        {
+            if(w==null)return false;
+            int variant=w.variant==0?0:1;
+            return w.form switch
+            {
+                WeaponForm.Pistol or WeaponForm.Rifle or WeaponForm.ScatterCannon or WeaponForm.Flamethrower or WeaponForm.CryoCannon or WeaponForm.SporeLauncher or WeaponForm.Minigun=>true,
+                WeaponForm.Knife=>variant==1,
+                WeaponForm.RocketLauncher=>variant==0,
+                _=>false,
+            };
         }
         /// <summary>Reveals a weapon at once: the weapon card explains it the moment it is taken.</summary>
         public void RevealNow(RunWeapon w)=>Reveal(w);

@@ -699,9 +699,10 @@ namespace AnomalyArena
             }
             // A weapon card (a weapon just bought at the base, GameManager.CampaignShowWeaponCard) fills the middle of the screen: a line
             // said meanwhile waits under it instead of covering the card's lower half (v2-P52), and shows again once the card is closed
-            // if its time is not up.
+            // if its time is not up. The pause screen and the character screen opened from it do the same: their row of buttons stands
+            // where the line would (the voice itself goes on, as it ignores the pause).
             // The night's first words show in the night banner instead of a subtitle (V5StoryLines.cs).
-            bool subtitleShown = now <= subtitleUntil && !(gm && gm.RunPhase == ArenaUiState.WeaponIntro) && !storySubtitleInBanner;
+            bool subtitleShown = now <= subtitleUntil && !(gm && gm.RunPhase is ArenaUiState.WeaponIntro or ArenaUiState.Paused) && !storySubtitleInBanner;
             if (subtitleRoot.gameObject.activeSelf != subtitleShown) subtitleRoot.gameObject.SetActive(subtitleShown);
             // Over the base panel the subtitle stands in the strip the panel keeps free for it, above its ways out.
             subtitleRoot.anchoredPosition = new Vector2(0f, baseScreen.gameObject.activeSelf ? BaseSubtitleOver() : SubtitlePlayBottom);

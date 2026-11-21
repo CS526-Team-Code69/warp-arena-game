@@ -240,13 +240,15 @@ namespace AnomalyArena
         /// <summary>Tests only: the saves are kept in memory now (as long as ArenaPrefs keeps the settings there, the whole test run).</summary>
         public static bool InMemoryForTests => SaveStore.InMemoryForTests;
 
-        /// <summary>Tests only: every slot of the memory store is emptied, and the bindings and a waiting continue are forgotten. Nothing
-        /// happens while the saves are kept for real.</summary>
+        /// <summary>Tests only: every slot of the memory store is emptied, and the bindings, a waiting continue and a Day 0 finished
+        /// before (V2Campaign.DayZeroFinishedBefore, which offers the pause menu's skip) are forgotten. Nothing happens while the saves
+        /// are kept for real.</summary>
         public static void ResetForTests()
         {
             if (!SaveStore.InMemoryForTests) return;
             SaveStore.ClearMemoryForTests();
             ResetForPlay();
+            V2Campaign.SetDayZeroFinishedForTests(false);
         }
 
         /// <summary>Tests only: the slot's stored text as it is (null when the store holds no entry for it), and whether it holds one.</summary>

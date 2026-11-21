@@ -10,7 +10,8 @@ namespace AnomalyArena
         [Tooltip("圆形黑核的直径，单位：世界格。")] public float size = 7f;
         [Tooltip("Gravity border beyond each side, in cells.")] public float gravityCells = 2f;
         public float pullSpeed = 3f;
-        public int feedsToOpen = 40;
+        [Tooltip("开放模式：黑洞吞掉多少只怪物后打开虚空试炼的门。剧情模式的黑洞用 CampaignRules.holeFeedGoal，不读这里。")]
+        public int feedsToOpen = 20;
         public Transform killVisual;
         public Transform gravityVisual;
         public Transform portalVisual;

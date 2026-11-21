@@ -74590,7 +74590,7 @@ MonoBehaviour:
   size: 3
   gravityCells: 1
   pullSpeed: 3
-  feedsToOpen: 40
+  feedsToOpen: 20
   killVisual: {fileID: 903230770}
   gravityVisual: {fileID: 20189139}
   portalVisual: {fileID: 755125702}
@@ -259518,7 +259518,7 @@ MonoBehaviour:
   size: 3
   gravityCells: 1
   pullSpeed: 3
-  feedsToOpen: 40
+  feedsToOpen: 20
   killVisual: {fileID: 1773747731}
   gravityVisual: {fileID: 2095752098}
   portalVisual: {fileID: 1309348817}
@@ -291928,7 +291928,7 @@ MonoBehaviour:
   size: 3
   gravityCells: 3
   pullSpeed: 8
-  feedsToOpen: 40
+  feedsToOpen: 20
   killVisual: {fileID: 1299945899}
   gravityVisual: {fileID: 1709811794}
   portalVisual: {fileID: 575432522}
@@ -313223,7 +313223,7 @@ MonoBehaviour:
   size: 3
   gravityCells: 1
   pullSpeed: 3
-  feedsToOpen: 40
+  feedsToOpen: 20
   killVisual: {fileID: 750821202}
   gravityVisual: {fileID: 204044649}
   portalVisual: {fileID: 636953053}
@@ -340058,7 +340058,7 @@ MonoBehaviour:
   size: 3
   gravityCells: 1
   pullSpeed: 3
-  feedsToOpen: 40
+  feedsToOpen: 20
   killVisual: {fileID: 363344950}
   gravityVisual: {fileID: 290714772}
   portalVisual: {fileID: 817379274}
@@ -377028,7 +377028,7 @@ MonoBehaviour:
   size: 3
   gravityCells: 1
   pullSpeed: 3
-  feedsToOpen: 40
+  feedsToOpen: 20
   killVisual: {fileID: 1794961020}
   gravityVisual: {fileID: 791009564}
   portalVisual: {fileID: 915347344}
@@ -511699,7 +511699,7 @@ MonoBehaviour:
   size: 3
   gravityCells: 1
   pullSpeed: 3
-  feedsToOpen: 40
+  feedsToOpen: 20
   killVisual: {fileID: 167224362}
   gravityVisual: {fileID: 74780139}
   portalVisual: {fileID: 93974852}
@@ -543675,7 +543675,7 @@ MonoBehaviour:
   size: 7
   gravityCells: 3
   pullSpeed: 8
-  feedsToOpen: 40
+  feedsToOpen: 20
   killVisual: {fileID: 1097929229}
   gravityVisual: {fileID: 1347839846}
   portalVisual: {fileID: 2018898719}

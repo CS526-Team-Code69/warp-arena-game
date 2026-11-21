@@ -980,11 +980,11 @@ namespace AnomalyArena
                     if (screen.icon) SetWeaponIcon(screen.icon, art, s.weaponIntroForm);
                     break;
                 case ArenaUiState.Paused:
-                    // V2 day campaign: there is no build phase, so no build clock either.
-                    SetText(screen.body, s.hideXp ? ArenaText.Pair("战场已暂停。", "The battlefield is paused.")
+                    // V2 day campaign: there is no build phase, so no build clock either. Day 0's skip brings its button and a sentence.
+                    RenderPausedLine(screen, s.hideXp ? ArenaText.Pair("战场已暂停。", "The battlefield is paused.")
                         : ArenaText.Pair("战场与整备倒计时已暂停。", "The battlefield and the build clock are paused."));
                     if (pauseControls) pauseControls.Fill(screen.body ? screen.body.font : null);
-                    if (pauseRowsLaidOut != ControlRowCount) PlacePauseRowPlain();
+                    if (pauseRowsLaidOut != ControlRowCount || pauseButtonsLaidOut != ShownPauseRow(pauseContent)) PlacePauseRowPlain();
                     RenderPauseSettings(screen.body ? screen.body.font : null);
                     if (tutorialLabel)
                     {
@@ -1050,7 +1050,7 @@ namespace AnomalyArena
             (ArenaText.Pair($"按住 {ArenaKeys.InteractKey}", $"Hold {ArenaKeys.InteractKey}"), ArenaText.Pair("采矿（夜里要站在矿灯的光里）", "Mine (at night, only in a lamp's light)"), ""),
             // Since 2026-11-06 the campaign's day is a morning, an afternoon and a night. The black hole's hidden gate is left out here: it
             // is a secret until it opens, and its own label says E.
-            (ArenaKeys.InteractKey, ArenaText.Pair("在基地门口：下午和夜里进入基地，上午花异星能量补充基地护盾", "At the base door: go inside in the afternoon or at night; in the morning, spend alien energy to top up its shield"), ""),
+            (ArenaKeys.InteractKey, ArenaText.Pair("下午和夜里：在基地门口进整备页，在飞船旁进火箭页", "Afternoon and night: the workshop at the base door, the rocket page beside the ship"), ""),
             (ArenaKeys.LampKey, ArenaText.Pair("放下一盏矿灯", "Set down a lamp"), ""),
             ("Esc", ArenaText.Pair("暂停 / 继续", "Pause / resume"), ""),
             ("R", ArenaText.Pair("结算时重开", "Restart on the result screen"), ""),
@@ -1094,13 +1094,39 @@ namespace AnomalyArena
         public static float PauseTableBottom => PauseTableTop + ControlRowCount * PauseTableRow;
         // The pause screen's row; a page without one of them (the Alpha has no collection) lays out the others.
         public static readonly string[] PauseButtons = { "ResumeRun", "RestartRun", "HowToPlay", ArenaCodex.ButtonName, "QuitToTitle" };
+        /// <summary>The pause screen's "Skip Day 0" (V2Campaign.SkipDayZero), a copy of its restart button on the whole game's pages. It
+        /// shows only while the campaign offers the skip (V2Campaign.DayZeroSkipOffered), so PauseButtons, the buttons always there, leaves
+        /// it out.</summary>
+        public const string PauseSkipDayZeroButton = "SkipDayZero";
+        /// <summary>The buttons the pause screen's row may hold, in its order: Day 0's skip comes after Resume.</summary>
+        public static readonly string[] PauseRow = { "ResumeRun", PauseSkipDayZeroButton, "RestartRun", "HowToPlay", ArenaCodex.ButtonName, "QuitToTitle" };
+
+        /// <summary>The row's buttons shown now, in the row's order (one the page lacks or hides for now is left out), into row when it is
+        /// given; returns how many. Both layouts place only these and place the row again when the count changes.</summary>
+        public static int ShownPauseRow(Transform content, System.Collections.Generic.List<RectTransform> row = null)
+        {
+            row?.Clear();
+            if (!content) return 0;
+            int count = 0;
+            foreach (var name in PauseRow)
+            {
+                if (content.Find(name) is not RectTransform button || !button.gameObject.activeSelf || !button.GetComponent<UnityEngine.UI.Button>()) continue;
+                count++;
+                row?.Add(button);
+            }
+            return count;
+        }
+
         V2ControlsTable pauseControls;
         UnityEngine.UI.Text tutorialLabel;
+        UnityEngine.UI.Button skipDayZero;
+        UnityEngine.UI.Text skipDayZeroLabel;
         bool tutorialPending;
-        // The pause screen's parts that follow the table's rows (PlacePauseRowPlain), and the row count they were last placed for.
+        // The pause screen's parts that follow the table's rows (PlacePauseRowPlain), and the row count and the number of buttons shown
+        // they were last placed for.
         Transform pauseContent;
         V2UiScreen pauseScreen;
-        int pauseRowsLaidOut = -1;
+        int pauseRowsLaidOut = -1, pauseButtonsLaidOut = -1;
 
         /// <summary>The open mode's map pick reloaded the scene for its map, and the run starts there without the title (GameManager): its
         /// first-time pages come on arrival as after a click on the title.</summary>
@@ -1124,6 +1150,7 @@ namespace AnomalyArena
                 if (!content) continue;
                 AddTutorialButton(content);
                 AddPauseSettingsButton(content);
+                AddSkipDayZeroButton(content);
                 pauseControls = V2ControlsTable.Create(content, PauseTableRow, 190f, 18);
                 var rect = pauseControls.Rect;
                 rect.anchorMin = new Vector2(0f, 1f);
@@ -1141,17 +1168,18 @@ namespace AnomalyArena
         }
 
         /// <summary>The pause screen's row of buttons and its summary under the rows the table shows now, placed again when that count
-        /// changes (the void dash's row joins in the middle of a run). The menu skin places its own look (V5MenuSkin) and follows the
-        /// count the same way.</summary>
+        /// changes (the void dash's row joins in the middle of a run) or a button comes or goes (Day 0's skip). The menu skin places its
+        /// own look (V5MenuSkin) and follows both the same way.</summary>
         void PlacePauseRowPlain()
         {
             if (!pauseContent) return;
             pauseRowsLaidOut = ControlRowCount;
+            pauseButtonsLaidOut = ShownPauseRow(pauseContent);
             if (TryGetComponent<V5MenuSkin>(out var skin) && skin.Installed) return;
             float left = 44f, top = PauseTableBottom + 24f;
-            // The buttons the page has share the row's width (1012, as four of 237 with gaps of 18 did).
+            // The buttons shown share the row's width (1012, as four of 237 with gaps of 18 did).
             var row = new System.Collections.Generic.List<RectTransform>();
-            foreach (var name in PauseButtons) if (pauseContent.Find(name) is RectTransform button) row.Add(button);
+            ShownPauseRow(pauseContent, row);
             float width = row.Count > 0 ? (1012f - 18f * (row.Count - 1)) / row.Count : 0f;
             foreach (var button in row)
             {
@@ -1166,6 +1194,46 @@ namespace AnomalyArena
         {
             if (content.Find("HowToPlay") || content.Find("RestartRun") is not { } restart) return;
             tutorialLabel = CopyAsPlainButton(restart, "HowToPlay", () => V2Tutorial.Show(appliedFont)).GetComponentInChildren<UnityEngine.UI.Text>();
+        }
+
+        /// <summary>A copy of the restart button that skips Day 0, hidden until the campaign offers the skip (RenderPausedLine). The
+        /// English Alpha has none.</summary>
+        void AddSkipDayZeroButton(Transform content)
+        {
+            if (!V5HudKit.On || content.Find(PauseSkipDayZeroButton) || content.Find("RestartRun") is not { } restart) return;
+            skipDayZero = CopyAsPlainButton(restart, PauseSkipDayZeroButton, SkipDayZero);
+            skipDayZeroLabel = skipDayZero.GetComponentInChildren<UnityEngine.UI.Text>(true);
+            skipDayZero.gameObject.SetActive(false);
+        }
+
+        /// <summary>The skip's click: the pause closes first (Resume, which makes the same sound as its own button), then the campaign
+        /// skips Day 0.</summary>
+        void SkipDayZero()
+        {
+            var campaign = V2Campaign.Active;
+            if (!campaign || !campaign.DayZeroSkipOffered) return;
+            Dispatch(ArenaUiCommand.Resume);
+            campaign.SkipDayZero();
+        }
+
+        /// <summary>The paused line, and Day 0's skip: while the campaign offers it, its button shows in the row and a sentence after the
+        /// paused line says what it does. The line may then take two lines, which reach a little over and under its own box.</summary>
+        void RenderPausedLine(V2UiScreen screen, string paused)
+        {
+            var campaign = V2Campaign.Active;
+            bool skip = skipDayZero && campaign && campaign.DayZeroSkipOffered;
+            if (skipDayZero && skipDayZero.gameObject.activeSelf != skip) skipDayZero.gameObject.SetActive(skip);
+            if (skip && skipDayZeroLabel)
+            {
+                SetText(skipDayZeroLabel, ArenaText.Pair("跳过第 0 天", "SKIP DAY 0"));
+                if (screen.body) skipDayZeroLabel.font = screen.body.font;
+            }
+            if (screen.body)
+            {
+                screen.body.horizontalOverflow = HorizontalWrapMode.Wrap;
+                screen.body.verticalOverflow = VerticalWrapMode.Overflow;
+            }
+            SetText(screen.body, skip ? paused + ArenaText.Pair("", " ") + campaign.DayZeroSkipWords : paused);
         }
 
         /// <summary>A copy of a saved command button, beside it, that runs click instead of a command: it keeps the look and drops the relay

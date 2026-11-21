@@ -57,14 +57,16 @@ namespace AnomalyArena
         /// <summary>The ways out of the open base visit, the secondary first and the main one last. In the afternoon: "Head out · back to the
         /// afternoon" and "Nightfall" (its line: take the lamps and mine dark matter). At night: "Head out · back to the night" and "Wait
         /// for dawn", whose line from the last planned day on says whether the ignition follows or another day begins. On Day 0's arrival
-        /// only "Head out (night falls)". Empty when no visit is open. Each go closes the base (V2CampaignUi.HideBase) as it leaves.</summary>
+        /// only "Head out (night falls)", or "Head out (day 1 begins)" once Day 0 was skipped (V2Campaign.DayZeroSkip.cs). Empty when no
+        /// visit is open. Each go closes the base (V2CampaignUi.HideBase) as it leaves.</summary>
         public List<BaseExit> BaseExits()
         {
             var exits = new List<BaseExit>();
             if (!Running || !rules || Stage != CampaignStage.Base) return exits;
             if (BaseAfterTutorial)
             {
-                exits.Add(new BaseExit { label = ArenaText.Pair("出发（夜幕降临）", "Head out (night falls)"), note = "", primary = true, go = LeaveBase });
+                string label = dayZeroSkipped ? ArenaText.Pair("出发（进入第 1 天）", "Head out (day 1 begins)") : ArenaText.Pair("出发（夜幕降临）", "Head out (night falls)");
+                exits.Add(new BaseExit { label = label, note = "", primary = true, go = LeaveBase });
                 return exits;
             }
             if (!OutdoorVisit) return exits;
