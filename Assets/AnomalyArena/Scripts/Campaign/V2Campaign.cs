@@ -202,14 +202,14 @@ namespace AnomalyArena
         public bool PlayerLevelsForSale => Running && Works(CampaignRoom.Armament, 1);
         public bool ArmoryUpgrades => !Running || Works(CampaignRoom.Armament, 1);
         public bool ArmoryNewWeapons => !Running || Works(CampaignRoom.Armament, 2);
-        // The upgrade kinds the draws may offer. During a purchase (TryBuyUpgrade) only the bought kind; otherwise every kind the rooms
-        // have unlocked (an upgrade from elsewhere, such as the void trial).
-        public bool TameCards => KindOpen(CampaignUpgrade.Tame, CampaignRoom.Armament, 2);
-        public bool TwistCards => KindOpen(CampaignUpgrade.Twist, CampaignRoom.Armament, 3);
-        public bool StatCards => KindOpen(CampaignUpgrade.Stat, CampaignRoom.Energy, 1);
-        public bool SkillCards => KindOpen(CampaignUpgrade.Skill, CampaignRoom.Energy, 2);
-        public bool InfusionCards => KindOpen(CampaignUpgrade.Infusion, CampaignRoom.Energy, 3);
-        bool KindOpen(CampaignUpgrade kind, CampaignRoom room, int level) => !Running || (activeUpgrade.HasValue ? activeUpgrade.Value == kind : Works(room, level));
+        // The upgrade kinds the draws may offer. During a purchase (TryBuyUpgrade) only the bought kind; otherwise every kind open by
+        // today (OpensOnDay: an upgrade from elsewhere, such as the void trial, offers nothing that opens on a later day).
+        public bool TameCards => KindOpen(CampaignUpgrade.Tame, StudyFeature.Tame);
+        public bool TwistCards => KindOpen(CampaignUpgrade.Twist, StudyFeature.Twist);
+        public bool StatCards => KindOpen(CampaignUpgrade.Stat, StudyFeature.Body);
+        public bool SkillCards => KindOpen(CampaignUpgrade.Skill, StudyFeature.Skills);
+        public bool InfusionCards => KindOpen(CampaignUpgrade.Infusion, StudyFeature.Infuse);
+        bool KindOpen(CampaignUpgrade kind, StudyFeature feature) => !Running || (activeUpgrade.HasValue ? activeUpgrade.Value == kind : FeatureOpen(feature));
 
         /// <summary>The upgrade being bought right now (TryBuyUpgrade), or null.</summary>
         CampaignUpgrade? activeUpgrade;
@@ -424,13 +424,21 @@ namespace AnomalyArena
                 s.resultTitle = BaseDestroyed ? ArenaText.Pair("基地被摧毁", "THE BASE IS DESTROYED") : ArenaText.Pair("探索者陨落", "EXPLORER LOST");
                 // The first line says what ended the run (the base, the black hole, an enemy, the player's own weapon …).
                 string cause = gm.ResultCauseLine();
-                s.resultDetails = (cause.Length > 0 ? cause + "\n" : "") + ArenaText.Pair($"第 {Day} 天 · 消灭 {s.kills} 个敌人\n飞船修复：引擎{(engineFixed ? "✓" : "×")} 装甲{(armorFixed ? "✓" : "×")} 燃料 {fuel}/{FuelUnits}",
-                    $"Day {Day} · {s.kills} kills\nShip: engine {(engineFixed ? "✓" : "×")} armor {(armorFixed ? "✓" : "×")} fuel {fuel}/{FuelUnits}");
+                s.resultDetails = (cause.Length > 0 ? cause + "\n" : "") + ArenaText.Pair($"第 {Day} 天 · 消灭 {s.kills} 个敌人\n飞船修复：{ShipLine(true, " ")}",
+                    $"Day {Day} · {s.kills} kills\nShip: {ShipLine(false, " ")}");
                 s.resultWhere = ArenaText.Pair($"第 {Day} 天", $"Day {Day}");
                 s.resultCause = cause;
-                s.resultStats = ArenaText.Pair($"消灭 {s.kills} 个敌人\n飞船修复：引擎{(engineFixed ? "✓" : "×")}　装甲{(armorFixed ? "✓" : "×")}　燃料 {fuel}/{FuelUnits}",
-                    $"{s.kills} kills\nShip: engine {(engineFixed ? "✓" : "×")}, armor {(armorFixed ? "✓" : "×")}, fuel {fuel}/{FuelUnits}");
+                s.resultStats = ArenaText.Pair($"消灭 {s.kills} 个敌人\n飞船修复：{ShipLine(true, "　")}", $"{s.kills} kills\nShip: {ShipLine(false, ", ")}");
             }
+        }
+
+        /// <summary>The ship on the results: the engine, the hull and the fuel tank, each ✓ or ×, then the fuel x/100, apart by gap.</summary>
+        string ShipLine(bool chinese, string gap)
+        {
+            static string Mark(bool done) => done ? "✓" : "×";
+            return chinese
+                ? $"引擎{Mark(engineFixed)}{gap}船体{Mark(armorFixed)}{gap}燃料舱{Mark(fuelTankFitted)}{gap}燃料 {fuel}/{FuelTop}"
+                : $"engine {Mark(engineFixed)}{gap}hull {Mark(armorFixed)}{gap}fuel tank {Mark(fuelTankFitted)}{gap}fuel {fuel}/{FuelTop}";
         }
 
         // ───── Helpers ─────
@@ -566,16 +574,25 @@ namespace AnomalyArena
         /// <summary>E is held on a node: how far the mining has come (0..1), what it gives, and whether it is dark matter.</summary>
         public bool MiningProgress(out float progress, out string what, out bool darkMatter)
         {
-            progress = 0f; what = ""; darkMatter = false;
+            bool held = MiningProgress(out progress, out what, out NodeKind kind);
+            darkMatter = held && kind == NodeKind.Dark;
+            return held;
+        }
+
+        /// <summary>E is held on a node: how far the mining has come (0..1), what it gives ("采集 合金 +5"), and the node's kind, which
+        /// sets the bar's icon and fill colour.</summary>
+        public bool MiningProgress(out float progress, out string what, out NodeKind kind)
+        {
+            progress = 0f; what = ""; kind = NodeKind.Ore;
             if (!Running || mining == null) return false;
             progress = Mathf.Clamp01(mineProgress);
-            darkMatter = mining.kind == NodeKind.Dark;
+            kind = mining.kind;
             what = mining.kind switch
             {
-                NodeKind.Ore => ArenaText.Pair($"采集合金 +{mining.amount}", $"Mining alloy +{mining.amount}"),
-                NodeKind.VoidAlloy => ArenaText.Pair($"采集虚空合金 +{mining.amount}", $"Mining void alloy +{mining.amount}"),
-                _ when mining.energy > 0 => ArenaText.Pair($"采集暗物质 +{mining.amount} · 异星能量 +{mining.energy}", $"Mining dark matter +{mining.amount} · alien energy +{mining.energy}"),
-                _ => ArenaText.Pair($"采集暗物质 +{mining.amount}", $"Mining dark matter +{mining.amount}")
+                NodeKind.Ore => ArenaText.Pair($"采集 合金 +{mining.amount}", $"Mining alloy +{mining.amount}"),
+                NodeKind.VoidAlloy => ArenaText.Pair($"采集 虚空合金 +{mining.amount}", $"Mining void alloy +{mining.amount}"),
+                _ when mining.energy > 0 => ArenaText.Pair($"采集 暗物质 +{mining.amount} · 异星能量 +{mining.energy}", $"Mining dark matter +{mining.amount} · alien energy +{mining.energy}"),
+                _ => ArenaText.Pair($"采集 暗物质 +{mining.amount}", $"Mining dark matter +{mining.amount}")
             };
             return true;
         }
@@ -600,28 +617,15 @@ namespace AnomalyArena
         /// fifth pass's page.</summary>
         void TickBuyGuide()
         {
-            if (buyGuideDone || !ui || !V5HudKit.On || Day < 1 || !OutdoorVisit || SpeechBusy || !ui.BuyGuideCanStart) return;
+            // Day 1's first visit only: the one step to the rocket page, where the night's lamps are made.
+            if (buyGuideDone || !ui || !V5HudKit.On || Day != 1 || !OutdoorVisit || SpeechBusy || !ui.BuyGuideCanStart) return;
             if (Time.unscaledTime < buyGuideCheckAt) return;
             buyGuideCheckAt = Time.unscaledTime + 1f;
-            var studyRoom = GuideStudyRoom();
             bool lampBuyable = LampsCraftable && CanAfford(new CampaignCost(rules.lampCost));
-            var aim = BuyGuide.Aim(Day, lampStock, CampaignRules.ByDay(rules.dayLampsToCraft, Day), lampBuyable, studyRoom.HasValue);
+            var aim = BuyGuide.Aim(Day, lampStock, CampaignRules.ByDay(rules.dayLampsToCraft, Day), lampBuyable, false);
             if (aim == BuyGuideAim.None) return;
             buyGuideDone = true; // once begun it never comes again, followed or skipped
-            ui.StartBuyGuide(aim, aim == BuyGuideAim.Lamp ? CampaignRoom.Ship : studyRoom ?? CampaignRoom.Armament);
-        }
-
-        /// <summary>The room whose study button opens a tab with an item the stock pays for now: the Armament Bay (its first tab, the weapon
-        /// Mk and the armor) before the Energy Lab (its first tab, the body); null when neither first tab has one.</summary>
-        CampaignRoom? GuideStudyRoom()
-        {
-            foreach (var tab in BuildStudy())
-            {
-                if (tab.locked || !tab.entries.Exists(e => e.state == StudyState.Available)) continue;
-                if (tab.key == "arm.upgrade") return CampaignRoom.Armament;
-                if (tab.key == "eng.body") return CampaignRoom.Energy;
-            }
-            return null;
+            ui.StartBuyGuide(aim, CampaignRoom.Ship);
         }
 
         // ───── For the campaign's sounds (CampaignAudio, 2026-11-10) ─────

@@ -54,6 +54,7 @@ namespace AnomalyArena
             quietLinesWaiting = 0; speechUntil = 0f;
             tutPickupSaid = tutHomeSaid = voidLineSaid = secondCrateHint = changedWeaponSaid = false;
             cratesOpened = 0; switchTaught = skillTaught = skillTeachPending = false; lateHint = LateHint.None;
+            tryWeapon = null; tryWeaponPending = false;
             dashTaught = dashTeachPending = shadowFireSaid = false;
             tutGrunts.Clear(); voidCrystals.Clear(); crates.Clear();
             tutOre = tutSecondOre = null; tutFirstCrate = tutSecondCrate = null;
@@ -172,8 +173,15 @@ namespace AnomalyArena
         {
             tutShots = 0;
             tutCooldown = gm.runWeapons && gm.runWeapons.Active != null ? gm.runWeapons.Active.cooldown : 0f;
-            Objective(ArenaText.Pair($"用小手枪开 {rules.tutorialShots} 枪，朝哪打都行", $"Fire the pistol {rules.tutorialShots} times, in any direction"), null);
+            FireObjective();
             Teach(TutorialStep.Fire, PlayerPoint, 3f, MouseKey, ArenaText.Pair("按住开火", "Hold to fire"));
+        }
+
+        /// <summary>The firing step's goal with the shots fired so far after it, "(1/3)", written again at every shot.</summary>
+        void FireObjective()
+        {
+            int need = rules.tutorialShots, done = Mathf.Clamp(tutShots, 0, need);
+            Objective(ArenaText.Pair($"用小手枪开 {need} 枪，朝哪打都行（{done}/{need}）", $"Fire the pistol {need} times, in any direction ({done}/{need})"), null);
         }
 
         /// <summary>The Fire and TryWeapon steps, each frame: whether the weapon in use fired since the last look (its cooldown jumped).</summary>
@@ -311,7 +319,7 @@ namespace AnomalyArena
                     break;
                 case TutorialStep.Fire:
                     if (!tutForced) break;
-                    if (ActiveWeaponFired()) tutShots++;
+                    if (ActiveWeaponFired()) { tutShots++; FireObjective(); }
                     if (tutShots >= rules.tutorialShots) PassStep(ApproachOre);
                     break;
                 case TutorialStep.TryWeapon:
@@ -465,12 +473,20 @@ namespace AnomalyArena
             tutFirstCrate = tutSecondCrate = null;
         }
 
-        // ───── Taught after the first fight: the right button, the first skill and the void dash ─────
+        // ───── Taught after the first fight: the right button, the first skill, the void dash and an afternoon crate's new weapon ─────
 
-        enum LateHint { None, Switch, Skill, Dash, HoleEscape }
+        enum LateHint { None, Switch, Skill, Dash, HoleEscape, TryWeapon }
 
         // A hint of a later day stays this long at most, in game time (a pause or the character screen holds it); then it goes by itself.
         const float LateHintSeconds = 12f;
+        // The circle a hint of a later day draws round the player, in cells.
+        const float LateHintRadius = 3.2f;
+        // The afternoon crate's hand weapon to be tried out: its hint is waiting (pending) or up, and asks for the right button first while
+        // the weapon is not the hand in use; the weapon's shots so far and its cooldown at the last look.
+        RunWeapon tryWeapon;
+        bool tryWeaponPending, tryWeaponSwitching;
+        int tryWeaponShots;
+        float tryWeaponCooldown;
         // Crates whose panel was opened in this run: the right button is taught at the second one.
         int cratesOpened;
         bool switchTaught, skillTaught, skillTeachPending, dashTaught, dashTeachPending;
@@ -482,15 +498,19 @@ namespace AnomalyArena
         bool holeEscapeTaught;
         float holeEscapeSince;
 
-        /// <summary>For automated checks: the hint of a later day that is up now ("None", "Switch", "Skill", "Dash" or "HoleEscape").</summary>
+        /// <summary>For automated checks: the hint of a later day that is up now ("None", "Switch", "Skill", "Dash", "HoleEscape" or
+        /// "TryWeapon").</summary>
         public string LateHintNow => lateHint.ToString();
+
+        /// <summary>For automated checks: the try-weapon hint is up and asks for the right button (its weapon is not the hand in use).</summary>
+        public bool TryWeaponAsksSwitch => lateHint == LateHint.TryWeapon && tryWeaponSwitching;
 
         /// <summary>The spotlight that teaches the sprint out of the black hole's pull is up (the HUD's hint plate leaves the pull to it).</summary>
         public bool TeachingHoleEscape => lateHint == LateHint.HoleEscape;
 
         /// <summary>Called as a crate's panel is done with (V2Campaign.Crates.cs). The right button is taught the second time a crate is
         /// opened, once both hands hold a weapon: on Day 0's walk as a forced step (only the right button works until it is pressed), on
-        /// a later day as the circle and the tip alone, which hold nothing back.</summary>
+        /// a later day as the circle and the tip alone, without the dim, which hold nothing back.</summary>
         void MaybeTeachSwitch()
         {
             if (switchTaught || cratesOpened < 2 || !Running) return;
@@ -514,11 +534,13 @@ namespace AnomalyArena
             HomeObjective();
         }
 
+        /// <summary>A hint of a later day: the circle round the player and the tip "[key] phrase", without the dim (only Day 0's forced
+        /// steps dim the screen), so the fight or the walk round the player stays in full view.</summary>
         void StartLateHint(LateHint hint, string key, string phrase)
         {
             lateHint = hint;
             lateHintUntil = Time.time + LateHintSeconds;
-            ui.ShowSpotlight(PlayerPoint, 3.2f, key, phrase);
+            ui.ShowSpotlight(PlayerPoint, LateHintRadius, key, phrase, false);
         }
 
         /// <summary>A hint of a later day that is up gives way to the black hole's: it is asked for again later (the skill and the void
@@ -530,8 +552,89 @@ namespace AnomalyArena
                 case LateHint.Skill: skillTaught = false; break;
                 case LateHint.Dash: dashTeachPending = true; break;
                 case LateHint.Switch: switchTaught = false; break;
+                case LateHint.TryWeapon: tryWeaponPending = true; break;
             }
             lateHint = LateHint.None;
+        }
+
+        /// <summary>An afternoon crate's weapon was taken and its card dismissed (CrateLoop): a hand weapon is tried out with a hint, after
+        /// the right button's when that one comes up too (MaybeTeachSwitch runs right after this). An auto weapon gets none.</summary>
+        void QueueTryWeapon(RunWeapon weapon)
+        {
+            if (weapon == null || weapon.IsAuto) return;
+            if (lateHint == LateHint.TryWeapon) { lateHint = LateHint.None; ui.HideSpotlight(); }
+            tryWeapon = weapon;
+            tryWeaponPending = true;
+        }
+
+        /// <summary>The try-weapon hint waits until no other hint is up (and the green flash of one just passed is over), the player is out
+        /// in the afternoon in play and no monster stands within rules.tryWeaponClearance cells. It is dropped once the afternoon is over
+        /// or its weapon has left the hands.</summary>
+        void MaybeStartTryWeapon()
+        {
+            int hand = TryWeaponHand();
+            if (hand < 0 || Stage is not (CampaignStage.Dusk or CampaignStage.Base or CampaignStage.Story))
+            {
+                tryWeaponPending = false;
+                tryWeapon = null;
+                return;
+            }
+            if (lateHint != LateHint.None || ui.SpotlightBusy || tutForced || Stage != CampaignStage.Dusk || !InPlay || !gm.CanPlayerMove
+                || WorldMap.Active && WorldMap.Active.TrialActive || MonsterWithin(PlayerPoint(), rules.tryWeaponClearance)) return;
+            tryWeaponPending = false;
+            tryWeaponShots = 0;
+            tryWeaponCooldown = tryWeapon.cooldown;
+            bool inUse = gm.runWeapons.ActiveIndex == hand;
+            tryWeaponSwitching = !inUse;
+            StartLateHint(LateHint.TryWeapon, TryWeaponKey(inUse), TryWeaponPhrase(inUse));
+        }
+
+        /// <summary>The try-weapon hint, each frame: the right button's tip while its weapon is not the hand in use, the left button's once
+        /// it is (for a full LateHintSeconds from then), and back should the player switch away again; done after TryWeaponUses shots of
+        /// it. False when it was taken down without a pass: its weapon left the hands, or the player fell.</summary>
+        bool TickTryWeapon(out bool done)
+        {
+            done = false;
+            int hand = TryWeaponHand();
+            if (hand < 0 || !gm.player || !gm.player.IsAlive)
+            {
+                lateHint = LateHint.None;
+                tryWeapon = null;
+                ui.HideSpotlight();
+                return false;
+            }
+            bool inUse = gm.runWeapons.ActiveIndex == hand;
+            if (inUse == tryWeaponSwitching)
+            {
+                tryWeaponSwitching = !inUse;
+                ui.ShowSpotlight(PlayerPoint, LateHintRadius, TryWeaponKey(inUse), TryWeaponPhrase(inUse), false);
+                if (inUse) lateHintUntil = Time.time + LateHintSeconds;
+            }
+            float cooldown = tryWeapon.cooldown;
+            if (inUse && SpotlightTutorial.Fired(tryWeaponCooldown, cooldown)) tryWeaponShots++;
+            tryWeaponCooldown = cooldown;
+            done = tryWeaponShots >= TryWeaponUses;
+            return true;
+        }
+
+        /// <summary>The hand that holds the weapon to try out, or -1 when it is in neither.</summary>
+        int TryWeaponHand()
+        {
+            var weapons = gm ? gm.runWeapons : null;
+            return tryWeapon == null || !weapons || weapons.Hand == null ? -1 : System.Array.IndexOf(weapons.Hand, tryWeapon);
+        }
+
+        static string TryWeaponKey(bool inUse) => inUse ? MouseKey : ArenaText.Pair("右键", "RMB");
+        static string TryWeaponPhrase(bool inUse) => inUse ? ArenaText.Pair("试用新武器", "Try your new weapon") : ArenaText.Pair("换到新武器", "Switch to your new weapon");
+
+        /// <summary>A living monster stands within reach cells of a point.</summary>
+        bool MonsterWithin(Vector3 at, float reach)
+        {
+            var waves = gm ? gm.waves : null;
+            if (!waves || reach <= 0f) return false;
+            foreach (var enemy in waves.Alive)
+                if (enemy && enemy.IsAlive && Query.Flat(enemy.Position - at).sqrMagnitude <= reach * reach) return true;
+            return false;
         }
 
         /// <summary>The void dash was just gained (GameManagerFlow.TickVoidDashNotice): Space is taught once, as a hint of a later day,
@@ -544,11 +647,12 @@ namespace AnomalyArena
 
         /// <summary>Each frame (CrateLoop). The first skill is taught the first time the player is out in a fight after learning one
         /// (skills cast only in a fight): the circle and the tip with the key the skill is on. The void dash is taught once it was gained
-        /// (TeachVoidDash), when play is back on the map. A hint of a later day holds no input back; it goes with a green flash once its
-        /// key has done its work, or by itself after LateHintSeconds of play. The black hole's pull is taught the first time the player
-        /// stands in the campaign hole's ring (by day or in the afternoon): the sprint key and its words, ahead of any other hint. It
-        /// passes once the player is out of the ring alive (a tutorial_step row "HoleEscape" with the seconds spent inside) and comes
-        /// again after a fall.</summary>
+        /// (TeachVoidDash), when play is back on the map. A hand weapon from an afternoon crate is tried out (QueueTryWeapon) once the
+        /// hints before it are done and no monster is near. A hint of a later day holds no input back and leaves the screen undimmed; it
+        /// goes with a green flash once its key has done its work, or by itself after LateHintSeconds of play. The black hole's pull is
+        /// taught the first time the player stands in the campaign hole's ring (by day or in the afternoon): the sprint key and its words,
+        /// ahead of any other hint. It passes once the player is out of the ring alive (a tutorial_step row "HoleEscape" with the seconds
+        /// spent inside) and comes again after a fall.</summary>
         void TickLateTeaching()
         {
             if (!Running || !gm) return;
@@ -566,6 +670,7 @@ namespace AnomalyArena
                 holeEscapeSince = Time.time;
                 StartLateHint(LateHint.HoleEscape, ArenaKeys.SprintKey, ArenaText.Pair("冲刺逃出引力", "Sprint out of the pull"));
             }
+            if (tryWeaponPending) MaybeStartTryWeapon();
             if (skillTeachPending && lateHint == LateHint.None && !tutForced && inFight)
             {
                 skillSlot = System.Array.FindIndex(skills.Slots, slot => !slot.Empty);
@@ -605,6 +710,10 @@ namespace AnomalyArena
             }
             else if (lateHint == LateHint.Switch) done = weapons && weapons.ActiveIndex != switchFrom;
             else if (lateHint == LateHint.Dash) done = player && player.voidDash.CoolingDown; // a dash starts its cooldown
+            else if (lateHint == LateHint.TryWeapon)
+            {
+                if (!TickTryWeapon(out done)) return;
+            }
             else
             {
                 float cooldown = skills && skillSlot >= 0 && skillSlot < skills.Slots.Length ? skills.Slots[skillSlot].CooldownLeft : 0f;
@@ -623,13 +732,15 @@ namespace AnomalyArena
                 lateHint = LateHint.None;
                 ui.HideSpotlight();
             }
+            if (lateHint != LateHint.TryWeapon && !tryWeaponPending) tryWeapon = null;
         }
 
 
         // ───── The void crystals by the way home ─────
 
         /// <summary>Purple-black crystals of void matter (CampaignArt.voidCrystalPrefab while the art is on, else the whitebox look
-        /// "voidore"): they cannot be mined; E only says so.</summary>
+        /// "voidore"): they cannot be mined; E only says so. They lie low on the ground, matte and without a glow (VoidCrystal.mat), so
+        /// they do not read as the night's dark matter, which stands tall on the same model and glows violet at its edges.</summary>
         void PlaceVoidCrystals(Vector3 at)
         {
             voidCrystalsAt = at;
@@ -645,22 +756,25 @@ namespace AnomalyArena
                 {
                     var model = Instantiate(art.voidCrystalPrefab, root);
                     StripColliders(model);
-                    // The model stands on a pale slab of sand about a fifteenth of its height. It is fitted that much taller and sunk by
-                    // the slab, so the slab lies under the ground and the crystal shows at its height (1.5 for the first, 1.05 for the others).
-                    float scale = root.localScale.y;
-                    FitHeight(model.transform, 1.6f * scale);
-                    model.transform.position += Vector3.down * (.11f * scale);
+                    // Squashed to VoidCrystalSquash of its own height, then fitted to VoidCrystalHeight (the others at .7 of it). The model
+                    // stands on a pale slab of sand about a fifteenth of its height, which is sunk under the ground.
+                    float height = VoidCrystalHeight * root.localScale.y;
+                    model.transform.localScale = new Vector3(1f, VoidCrystalSquash, 1f);
+                    FitHeight(model.transform, height);
+                    model.transform.position += Vector3.down * (height * VoidCrystalSlab);
                 }
-                else Whitebox.Build("voidore", root);
+                else Whitebox.Build("voidore", root).localScale = new Vector3(1f, VoidCrystalSquash, 1f);
                 voidCrystals.Add(root);
             }
         }
 
+        // The void crystals' height with their slab (the first; the others are .7 of it), how much of the model's own height they keep,
+        // and the slab's share of the height.
+        const float VoidCrystalHeight = .75f, VoidCrystalSquash = .45f, VoidCrystalSlab = .07f;
+
         void TickVoidCrystals(Vector3 pp)
         {
             if (voidCrystals.Count == 0) return;
-            if (Random.value < Time.deltaTime * 3f)
-                Fx.Pop(voidCrystalsAt + new Vector3(Random.Range(-1f, 1f), Random.Range(.4f, 1.4f), Random.Range(-1f, 1f)), new Color(.42f, .12f, .58f), Random.Range(.4f, .7f));
             if (Apart(pp, voidCrystalsAt) > rules.crateReach + 1f) return;
             prompt = ArenaText.Pair($"紫黑色的晶体（按 {ArenaKeys.InteractKey}）", $"A purple-black crystal ({ArenaKeys.InteractKey})");
             if (!EPressed) return;

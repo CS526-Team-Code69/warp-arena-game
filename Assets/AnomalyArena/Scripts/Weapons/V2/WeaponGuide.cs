@@ -77,6 +77,72 @@ namespace AnomalyArena
         /// <summary>What its backfire (the card's trait, 特性) does to the player.</summary>
         public static string Backfire(WeaponForm form, int variant) => Entry(form, variant).backfire + Stowed(form, variant);
 
+        /// <summary>How this anomaly attacks in a few words, its reach and then its manner ("远程 · 蓄力单发"), as the weapon crate's card shows
+        /// it before the weapon is taken; empty for a form without one (the Pistol and the retired forms).</summary>
+        public static string Style(WeaponForm form, int variant)
+        {
+            var (chinese, english) = StyleWords(form, variant);
+            return chinese.Length == 0 ? "" : ArenaText.Pair(chinese, english);
+        }
+
+        /// <summary>A starting weapon's attack before it is taken, when which of its form's two anomalies comes is decided only then: both
+        /// attacks, "A 或 B", the reach said once when the two share it ("远程 · 蓄力单发 或 按住连射").</summary>
+        public static string EitherStyle(WeaponForm form)
+        {
+            var (c0, e0) = StyleWords(form, 0);
+            var (c1, e1) = StyleWords(form, 1);
+            if (c0.Length == 0 || c1.Length == 0) return Style(form, 0);
+            if (c0 == c1) return ArenaText.Pair(c0, e0);
+            return ArenaText.Pair(Either(c0, c1, " 或 "), Either(e0, e1, " or "));
+
+            static string Either(string a, string b, string or)
+            {
+                const string Dot = " · ";
+                int i = a.IndexOf(Dot, System.StringComparison.Ordinal), j = b.IndexOf(Dot, System.StringComparison.Ordinal);
+                return i > 0 && j > 0 && a.Substring(0, i) == b.Substring(0, j) ? a + or + b.Substring(j + Dot.Length) : a + or + b;
+            }
+        }
+
+        /// <summary>Style's words in both languages, read without the language settings.</summary>
+        public static (string chinese, string english) StyleWords(WeaponForm form, int variant) =>
+            Styles.TryGetValue((form, variant == 0 ? 0 : 1), out var words) ? words : ("", "");
+
+        // A hand weapon's reach is its attack's reach in the roster (WeaponRoster.asset, rangeA and rangeB, with the Blizzard's spray cut at
+        // RunWeaponsUpgrades.blizzardMaxRange): close up to 7 cells, mid range 8 to 15, long range from 20. The auto weapons say
+        // "automatic"; the rocket launcher's two attacks say where they land instead of how far they reach, and the Capacitor that it
+        // strikes all round. The manner is what the attack does in the code (RunWeapons.Fire).
+        static readonly Dictionary<(WeaponForm, int), (string chinese, string english)> Styles = new()
+        {
+            { (WeaponForm.Rifle, 0), ("远程 · 蓄力单发", "Long range · charged shot") },
+            { (WeaponForm.Rifle, 1), ("远程 · 按住连射", "Long range · hold to fire") },
+            { (WeaponForm.Knife, 0), ("中距 · 掷出飞刃", "Mid range · thrown blade") },
+            { (WeaponForm.Knife, 1), ("中距 · 钩住敌人", "Mid range · hook and swing") },
+            { (WeaponForm.RocketLauncher, 0), ("定点 · 延时轰炸", "Targeted · delayed strike") },
+            { (WeaponForm.RocketLauncher, 1), ("冲锋 · 撞伤沿途敌人", "Charge · rams enemies in the way") },
+            { (WeaponForm.ScatterCannon, 0), ("近距 · 扇形散射", "Close · spread shot") },
+            { (WeaponForm.ScatterCannon, 1), ("远程 · 蓄力连射", "Long range · charged burst") },
+            { (WeaponForm.Flamethrower, 0), ("近距 · 按住喷火", "Close · hold to spray") },
+            { (WeaponForm.Flamethrower, 1), ("中距 · 抛射火球", "Mid range · lobbed fireball") },
+            { (WeaponForm.CryoCannon, 0), ("中距 · 三向冰锥", "Mid range · three-way shards") },
+            { (WeaponForm.CryoCannon, 1), ("近距 · 按住喷雪", "Close · hold to spray") },
+            { (WeaponForm.ArcCoil, 0), ("中距 · 连锁电击", "Mid range · chain lightning") },
+            { (WeaponForm.ArcCoil, 1), ("周身 · 充能放电", "Around you · charged discharge") },
+            { (WeaponForm.SporeLauncher, 0), ("中距 · 抛射毒云", "Mid range · lobbed cloud") },
+            { (WeaponForm.SporeLauncher, 1), ("中距 · 按住连射", "Mid range · hold to fire") },
+            { (WeaponForm.OrbitBlades, 0), ("自动 · 绕身刀刃", "Automatic · orbiting blades") },
+            { (WeaponForm.OrbitBlades, 1), ("自动 · 绕身刀刃", "Automatic · orbiting blades") },
+            { (WeaponForm.SentryDrone, 0), ("自动 · 无人机射击", "Automatic · drone fire") },
+            { (WeaponForm.SentryDrone, 1), ("自动 · 无人机抓取", "Automatic · drone grab") },
+            { (WeaponForm.ShieldRing, 0), ("自动 · 减速力场", "Automatic · slowing field") },
+            { (WeaponForm.ShieldRing, 1), ("自动 · 挡下一击", "Automatic · blocks a hit") },
+            { (WeaponForm.Minigun, 0), ("中距 · 按住扫射", "Mid range · hold to sweep") },
+            { (WeaponForm.Minigun, 1), ("中距 · 按住扫射", "Mid range · hold to sweep") },
+            { (WeaponForm.SwarmLauncher, 0), ("中距 · 追踪导弹", "Mid range · homing missiles") },
+            { (WeaponForm.SwarmLauncher, 1), ("中距 · 连串爆炸", "Mid range · chain of blasts") },
+            { (WeaponForm.Railgun, 0), ("远程 · 蓄力贯穿", "Long range · charged piercing beam") },
+            { (WeaponForm.Railgun, 1), ("远程 · 重击单发", "Long range · heavy single shot") },
+        };
+
         /// <summary>Document 5.4: a switch never clears what a trait has built up; stowed, it wears off. Kept beside the
         /// table so the sentence stays with the rule (RunWeapons.DrainStowedCapacitor).</summary>
         static string Stowed(WeaponForm form, int variant) => form == WeaponForm.ArcCoil && variant == 1

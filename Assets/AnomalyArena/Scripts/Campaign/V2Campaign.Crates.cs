@@ -14,7 +14,8 @@ namespace AnomalyArena
     /// rolled the way the open mode's armory rolls them (RunWeapons.RollArmory, new weapons only), on the crate's own panel
     /// (V2CratePanel; on every page but the English Alpha's the fifth pass's window, V5PickCrate, over it) while the run holds still. The weapon goes where the base's research puts one (CrateSlots: a free hand, else the
     /// pistol's hand, else the hand not in use; an auto weapon only into a free auto slot), and its weapon card shows as after a purchase
-    /// (GameManager.CampaignShowWeaponCard). A crate left gives nothing instead and is gone.
+    /// (GameManager.CampaignShowWeaponCard). A crate left gives nothing instead and is gone. A hand weapon taken from an afternoon crate
+    /// is then tried out with a hint (QueueTryWeapon, V2Campaign.Tutorial.cs).
     /// </summary>
     public sealed partial class V2Campaign
     {
@@ -34,6 +35,8 @@ namespace AnomalyArena
         bool crateLoopRunning;
         // The hero's line about the first weapon taken from a crate (T10) was said in this run.
         bool changedWeaponSaid;
+        // The weapon the last crate gave, set as its card is dismissed and before the caller's step runs (the afternoon's try-weapon hint).
+        RunWeapon crateWeaponTaken;
 
         /// <summary>For automated checks: a crate's panel is open; how many crates lie on the map.</summary>
         public bool CratePanelOpen => crateOpen != null;
@@ -237,9 +240,9 @@ namespace AnomalyArena
             if (!panel) return;
             var weapons = new List<V5PickCrate.Offer>();
             foreach (var weapon in crateOffers) weapons.Add(DescribeForWindow(weapon));
-            // The line under the banner says only that a weapon's attack and trait are not known until it is taken: the rule the
-            // cards' "???" rows follow.
-            string line = ArenaText.Pair("拿到之前，不知道它的攻击方式和特性", "Its attack and trait stay unknown until you take it");
+            // The line under the banner says only that a weapon's trait is not known until it is taken: the rule the cards' "???" trait
+            // rows follow (each card names the weapon's attack).
+            string line = ArenaText.Pair("拿到以后，才会知道它的特性", "You learn its trait once you take it");
             V5PickCrate.Over(panel, heading, line, weapons, canLeave,
                 index =>
                 {
@@ -268,6 +271,7 @@ namespace AnomalyArena
                 name = weapon.FormName,
                 mk = Mathf.Max(1, weapon.mk),
                 formIndex = (int)weapon.form,
+                style = WeaponGuide.Style(weapon.form, weapon.variant),
                 replaces = there == null ? "" : there.form == WeaponForm.Pistol ? ArenaText.Pair("小手枪", "pistol") : there.FormName,
                 replacedUpgrades = there != null && HasUpgrades(there),
             };
@@ -324,6 +328,7 @@ namespace AnomalyArena
                 ui.Flash(message, 3.5f);
                 // The first weapon taken from a crate (2026-11-10): with its card read, the hero says it is not what it was.
                 if (!changedWeaponSaid) { changedWeaponSaid = true; Say(Line.T10); }
+                crateWeaponTaken = weapon;
                 done?.Invoke(true);
             });
         }
@@ -379,7 +384,8 @@ namespace AnomalyArena
                 if (near == null) continue;
                 bool open = CrateUse(near, out string text);
                 ui.OverridePrompt(text);
-                if (open) OpenCrate(near, null);
+                // A hand weapon taken is tried out with a hint once its card is dismissed (after the right button's, should that come).
+                if (open) OpenCrate(near, taken => { if (taken) QueueTryWeapon(crateWeaponTaken); });
             }
         }
 

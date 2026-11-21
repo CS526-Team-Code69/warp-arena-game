@@ -5,9 +5,10 @@ using Object = UnityEngine.Object;
 
 namespace AnomalyArena
 {
-    /// <summary>V2 doc section E (2026-11-10): the rooms' prices and effects, the shared weapon Mk, armor, the base's levels and shield, the
-    /// Energy Lab's research and the overload, as the pure rules of CampaignRules.Rooms.cs give them with their default values, and the hooks
-    /// the campaign sets on weapons and skills (neutral when unset, so the open mode is untouched).</summary>
+    /// <summary>The base's rules as the pure rules of CampaignRules.Rooms.cs give them with their default values: what opens on which day,
+    /// the alloy income scale, the shared weapon Mk, armor, the base's fortification levels and its daily self-repair, the ship's three
+    /// parts and the fuel in dark matter, the energy research and what the body research sells, and the hooks the campaign sets on weapons
+    /// and skills (neutral when unset, so the open mode is untouched).</summary>
     [TestFixture]
     public class CampaignRoomsRulesTest
     {
@@ -29,46 +30,56 @@ namespace AnomalyArena
             SkillLoadout.DamageScale = null;
         }
 
-        // ───── Rooms ─────
+        // ───── What opens on which day, and the alloy income ─────
 
-        [TestCase(CampaignRoom.Ship, 1, 20, 0)]
-        [TestCase(CampaignRoom.Ship, 2, 45, 0)]
-        [TestCase(CampaignRoom.Ship, 3, 85, 0)]
-        [TestCase(CampaignRoom.Armament, 1, 10, 0)]
-        [TestCase(CampaignRoom.Armament, 2, 35, 0)]
-        [TestCase(CampaignRoom.Armament, 3, 75, 0)]
-        [TestCase(CampaignRoom.Energy, 1, 0, 15)]
-        [TestCase(CampaignRoom.Energy, 2, 0, 35)]
-        [TestCase(CampaignRoom.Energy, 3, 0, 70)]
-        public void RoomLevelPrice_EachLevel_IsTheDocTable(CampaignRoom room, int level, int alloy, int energy)
+        [TestCase(V2Campaign.StudyFeature.Body, 0)]
+        [TestCase(V2Campaign.StudyFeature.Skills, 0)]
+        [TestCase(V2Campaign.StudyFeature.Tame, 1)]
+        [TestCase(V2Campaign.StudyFeature.Infuse, 2)]
+        [TestCase(V2Campaign.StudyFeature.Twist, 4)]
+        public void OpenDay_EachFeature_IsItsDay(V2Campaign.StudyFeature feature, int expected)
         {
             var sut = CreateRules();
 
-            var actual = sut.RoomLevelPrice(room, level);
+            int actual = sut.OpenDay(feature);
 
-            Assert.That(actual, Is.EqualTo(new CampaignCost(alloy, energy)));
-        }
-
-        [TestCase(CampaignRoom.Ship)]
-        [TestCase(CampaignRoom.Armament)]
-        [TestCase(CampaignRoom.Energy)]
-        public void RoomLevelPrice_PastLevelThree_IsNull(CampaignRoom room)
-        {
-            var sut = CreateRules();
-
-            var actual = sut.RoomLevelPrice(room, 4);
-
-            Assert.That(actual, Is.Null);
+            Assert.That(actual, Is.EqualTo(expected));
         }
 
         [Test]
-        public void RoomLevelPrice_CentralControl_IsNullBecauseItsShieldIsPricedApart()
+        public void OpenDay_TheBody_IsDayZeroWhateverTheOtherDays()
+        {
+            var sut = CreateRules();
+            sut.skillsOpenDay = 3;
+            sut.tameOpenDay = 5;
+
+            int actual = sut.OpenDay(V2Campaign.StudyFeature.Body);
+
+            Assert.That(actual, Is.Zero);
+        }
+
+        [TestCase(false, .85f)]
+        [TestCase(true, .85f * 1.3f)]
+        public void AfternoonAlloyScale_WithOrWithoutTheEngine_IsTheIncomeScaleTimesItsBonus(bool engine, float expected)
         {
             var sut = CreateRules();
 
-            var actual = sut.RoomLevelPrice(CampaignRoom.Control, 1);
+            float actual = sut.AfternoonAlloyScale(engine);
 
-            Assert.That(actual, Is.Null);
+            Assert.That(actual, Is.EqualTo(expected).Within(.0001f));
+        }
+
+        [TestCase(1, false, 17)]
+        [TestCase(1, true, 22)]
+        [TestCase(3, false, 38)]
+        [TestCase(7, true, 265)]
+        public void AfternoonAlloyTotal_WithTheIncomeScale_IsTheTableScaledAndRounded(int day, bool engine, int expected)
+        {
+            var sut = CreateRules();
+
+            int actual = CampaignRules.AfternoonAlloyTotal(sut.afternoonAlloy, day, sut.AfternoonAlloyScale(engine));
+
+            Assert.That(actual, Is.EqualTo(expected));
         }
 
         // ───── Weapon Mk ─────
@@ -132,7 +143,7 @@ namespace AnomalyArena
             Assert.That(actual, Is.EqualTo(250));
         }
 
-        // ───── Armor, base, shield ─────
+        // ───── Armor and the base's fortification ─────
 
         [Test]
         public void ArmorAlloy_FiveLevels_Cost150()
@@ -213,52 +224,74 @@ namespace AnomalyArena
             Assert.That(actual, Is.Null);
         }
 
-        [TestCase(0, 0f)]
-        [TestCase(1, .33f)]
-        [TestCase(3, .58f)]
-        public void ShieldCapShare_ShieldLevel_IsTheShare(int level, float expected)
+        [Test]
+        public void NightSelfRepair_ByDefault_IsAQuarterOfTheMaxHp()
         {
             var sut = CreateRules();
 
-            float actual = sut.ShieldCapShare(level);
+            float actual = sut.nightSelfRepair;
 
-            Assert.That(actual, Is.EqualTo(expected).Within(.0001f));
+            Assert.That(actual, Is.EqualTo(.25f).Within(.0001f));
         }
 
-        [TestCase(0, 20)]
-        [TestCase(2, 85)]
-        public void ShieldPrice_NextShieldLevel_IsInEnergy(int level, int energy)
+        // ───── The ship's three parts and the fuel ─────
+
+        [TestCase(V2Campaign.ShipPartKind.Engine, 26)]
+        [TestCase(V2Campaign.ShipPartKind.Hull, 54)]
+        [TestCase(V2Campaign.ShipPartKind.Tank, 85)]
+        public void ShipPartPrice_EachPart_IsItsAlloy(V2Campaign.ShipPartKind kind, int alloy)
         {
             var sut = CreateRules();
 
-            var actual = sut.ShieldPrice(level);
+            var actual = sut.ShipPartPrice(kind);
 
-            Assert.That(actual, Is.EqualTo(new CampaignCost(0, energy)));
-        }
-
-        [TestCase(100f, 1000f, 30f)]
-        [TestCase(100f, 10f, 10f)]
-        [TestCase(100f, 0f, 0f)]
-        public void ShieldGuardTakes_Hit_TakesThirtyPercentUpToTheShieldLeft(float hit, float shield, float expected)
-        {
-            var sut = CreateRules();
-
-            float actual = sut.ShieldGuardTakes(hit, shield);
-
-            Assert.That(actual, Is.EqualTo(expected).Within(.0001f));
+            Assert.That(actual, Is.EqualTo(new CampaignCost(alloy)));
         }
 
         [Test]
-        public void FuelUnitsFull_TimesDarkPerFuel_IsAHundredDarkMatter()
+        public void ShipPartPrice_AllThreeParts_Cost165Alloy()
         {
             var sut = CreateRules();
 
-            int actual = sut.FuelUnitsFull * sut.DarkPerFuel;
+            int actual = sut.ShipPartPrice(V2Campaign.ShipPartKind.Engine).alloy + sut.ShipPartPrice(V2Campaign.ShipPartKind.Hull).alloy
+                + sut.ShipPartPrice(V2Campaign.ShipPartKind.Tank).alloy;
+
+            Assert.That(actual, Is.EqualTo(165));
+        }
+
+        [Test]
+        public void FuelTop_ByDefault_IsAHundredDarkMatter()
+        {
+            var sut = CreateRules();
+
+            int actual = sut.FuelTop;
 
             Assert.That(actual, Is.EqualTo(100));
         }
 
-        // ───── Energy Lab ─────
+        [TestCase(37, 0, 100, 37)]
+        [TestCase(150, 37, 100, 63)]
+        [TestCase(5, 100, 100, 0)]
+        [TestCase(0, 10, 100, 0)]
+        public void FuelPoured_DarkMatterHeld_GoesInUpToAFullTank(int held, int fuel, int top, int expected)
+        {
+            int actual = CampaignRules.FuelPoured(held, fuel, top);
+
+            Assert.That(actual, Is.EqualTo(expected));
+        }
+
+        [TestCase(false, false, false, 0, 4)]
+        [TestCase(true, false, true, 37, 2)]
+        [TestCase(true, true, true, 99, 1)]
+        [TestCase(true, true, true, 100, 0)]
+        public void HomeSteps_PartsAndFuel_CountOneStepEach(bool engine, bool hull, bool tank, int fuel, int expected)
+        {
+            int actual = CampaignRules.HomeSteps(engine, hull, tank, fuel, 100);
+
+            Assert.That(actual, Is.EqualTo(expected));
+        }
+
+        // ───── Energy research ─────
 
         [TestCase(CardRarity.Common, 5, 1)]
         [TestCase(CardRarity.Rare, 8, 1)]
@@ -272,6 +305,19 @@ namespace AnomalyArena
             var actual = (sut.RarityEnergy(rarity), sut.RarityTier(rarity));
 
             Assert.That(actual, Is.EqualTo((energy, tier)));
+        }
+
+        [TestCase(StatId.MaxHp, false)]
+        [TestCase(StatId.MaxEnergy, false)]
+        [TestCase(StatId.Damage, true)]
+        [TestCase(StatId.CritChance, true)]
+        public void BodySells_AStat_LeavesMaxHpAndMaxChargeToArmor(StatId stat, bool expected)
+        {
+            var sut = CreateRules();
+
+            bool actual = sut.BodySells(stat);
+
+            Assert.That(actual, Is.EqualTo(expected));
         }
 
         [TestCase(1, 45)]

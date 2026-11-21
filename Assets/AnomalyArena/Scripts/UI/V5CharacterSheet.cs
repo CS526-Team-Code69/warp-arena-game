@@ -125,7 +125,7 @@ namespace AnomalyArena
         public string Name(bool chinese) => Kind switch
         {
             CharacterBonusKind.MaxHp => chinese ? "最大生命" : "Max HP",
-            CharacterBonusKind.MaxEnergy => chinese ? "最大能量" : "Max energy",
+            CharacterBonusKind.MaxEnergy => chinese ? "充能上限" : "Max charge",
             CharacterBonusKind.Damage => chinese ? "伤害" : "Damage",
             CharacterBonusKind.AttackSpeed => chinese ? "攻击速度" : "Attack speed",
             CharacterBonusKind.CritChance => chinese ? "暴击率" : "Crit chance",
@@ -135,17 +135,17 @@ namespace AnomalyArena
             CharacterBonusKind.Sprint => chinese ? "冲刺时长" : "Sprint duration",
             CharacterBonusKind.Regeneration => chinese ? "生命回复" : "Regeneration",
             CharacterBonusKind.PickupRange => chinese ? "拾取范围" : "Pickup range",
-            CharacterBonusKind.EnergyPerKill => chinese ? "击杀回复能量" : "Energy per kill",
+            CharacterBonusKind.EnergyPerKill => chinese ? "击杀回复充能" : "Charge per kill",
             CharacterBonusKind.Penetration => chinese ? "伤害穿透" : "Damage penetration",
             CharacterBonusKind.Knockback => chinese ? "击退" : "Knockback",
             CharacterBonusKind.WallSlam => chinese ? "撞墙伤害" : "Wall slam damage",
             CharacterBonusKind.WeaponDamage => chinese ? "武器伤害" : "Weapon damage",
             CharacterBonusKind.SkillDamage => chinese ? "技能伤害" : "Skill damage",
             CharacterBonusKind.SkillCooldown => chinese ? "技能冷却" : "Skill cooldowns",
-            CharacterBonusKind.SkillCost => chinese ? "技能能量消耗" : "Skill energy cost",
+            CharacterBonusKind.SkillCost => chinese ? "技能充能消耗" : "Skill charge cost",
             CharacterBonusKind.BossPenetration => chinese ? "对 Boss 的穿透" : "Penetration against bosses",
             CharacterBonusKind.StatusFloor => chinese ? "燃烧和中毒的保底伤害" : "Burn and poison floor",
-            CharacterBonusKind.EnergyRegeneration => chinese ? "能量回复" : "Energy regeneration",
+            CharacterBonusKind.EnergyRegeneration => chinese ? "充能回复" : "Charge regeneration",
             _ => Kind.ToString(),
         };
 
@@ -520,7 +520,7 @@ namespace AnomalyArena
             bool chinese = ArenaText.IsChinese;
             rows.Add(Row(CharacterSection.Vitals, "vitals.hp", ArenaText.Pair("生命", "HP"), "", $"{Mathf.CeilToInt(hp)} / {Mathf.CeilToInt(maxHp)}"));
             if (shield > 0f) rows.Add(Row(CharacterSection.Vitals, "vitals.shield", ArenaText.Pair("护盾", "Shield"), "", $"{Mathf.CeilToInt(shield)}"));
-            if (energyShown) rows.Add(Row(CharacterSection.Vitals, "vitals.energy", ArenaText.Pair("能量", "Energy"), "", $"{Mathf.CeilToInt(energy)} / {Mathf.CeilToInt(maxEnergy)}"));
+            if (energyShown) rows.Add(Row(CharacterSection.Vitals, "vitals.energy", ArenaText.Pair("充能", "Charge"), "", $"{Mathf.CeilToInt(energy)} / {Mathf.CeilToInt(maxEnergy)}"));
             foreach (var w in weapons)
             {
                 var parts = new List<string> { w.place };
@@ -543,9 +543,9 @@ namespace AnomalyArena
         /// <summary>A skill's level as its chip shows it: "LV 3", or the void's mark for a greater void skill.</summary>
         public static string SkillLevel(CharacterSkill skill) => skill.greaterVoid ? ArenaText.Pair("虚空", "VOID") : "LV " + skill.level;
 
-        /// <summary>A skill's energy cost and cooldown, as the screen shows them.</summary>
+        /// <summary>A skill's charge cost and cooldown, as the screen shows them.</summary>
         public static string SkillDetail(CharacterSkill skill) =>
-            ArenaText.Pair($"{skill.cost:0} 能量 · 冷却 {skill.cooldown:0.#} 秒", $"{skill.cost:0} energy · {skill.cooldown:0.#} s cooldown");
+            ArenaText.Pair($"{skill.cost:0} 充能 · 冷却 {skill.cooldown:0.#} 秒", $"{skill.cost:0} charge · {skill.cooldown:0.#} s cooldown");
 
         static CharacterRow Row(CharacterSection section, string id, string title, string detail, string value) =>
             new() { section = section, id = id, title = title ?? "", detail = detail ?? "", value = value ?? "" };

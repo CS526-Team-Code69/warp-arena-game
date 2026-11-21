@@ -471,7 +471,13 @@ namespace AnomalyArena
                 {
                     if (!hole.Contains(combatant.Position)) continue;
                     if (combatant is Enemy boss && boss.IsBoss) continue;
-                    if (combatant.Team == Team.Enemy) { hole.Feed(1, GM.waves.WaveIndex + 1); HoleFed?.Invoke(hole); }
+                    if (combatant.Team == Team.Enemy)
+                    {
+                        int fedBefore = hole.Feeds;
+                        hole.Feed(1, GM.waves.WaveIndex + 1);
+                        HoleFed?.Invoke(hole);
+                        NoteOpenFeed(hole, fedBefore);
+                    }
                     combatant.OnEnterFallZone(Vector3.zero);
                     swallowed = true;
                     break;
@@ -588,7 +594,15 @@ namespace AnomalyArena
         void FeedCorpse(BlackHole hole,Enemy source,int version)
         {
             if(!source||!source.TryConsumeCorpseFeed(version))return;
-            if(!hole.Temporary&&CanFeed){hole.Feed(1,GM.waves.WaveIndex+1);HoleFed?.Invoke(hole);}
+            if(!hole.Temporary&&CanFeed){int fedBefore=hole.Feeds;hole.Feed(1,GM.waves.WaveIndex+1);HoleFed?.Invoke(hole);NoteOpenFeed(hole,fedBefore);}
+        }
+
+        /// <summary>The open mode's hole counted a monster or a corpse: the first in a run brings the banner on what feeding it opens
+        /// (V2WorldLabels.HoleFirstFed). The story's hole and the first-sight cutscene's three are not counted here.</summary>
+        void NoteOpenFeed(BlackHole hole, int fedBefore)
+        {
+            if (CampaignMapApplied || HoleIntroPlaying || !hole || hole.Feeds <= fedBefore) return;
+            V2WorldLabels.HoleFirstFed();
         }
 
         /// <summary>E on an open portal (document 12.5): the player must stand on it in the normal state, during a wave or

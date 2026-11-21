@@ -8,140 +8,106 @@ using UnityEngine.UI;
 namespace AnomalyArena
 {
     /// <summary>
-    /// The base page in the fifth interface pass (work/art-plans/style-1112/ui-e/base.html), built only when V5HudKit.On: the English
-    /// Alpha keeps the page it was graded with. It stands on the base panel's full-screen backing, laid out as the 1920 x 1080 mock-up
-    /// times the story layer's scale, and is drawn from the very lists the old page is built from (RefreshBasePanel hands them over), so
-    /// every button does what it did. The old page stays built under it, hidden, its texts up to date; its picture moves into the new
-    /// view.
-    /// Top: the banner with where and when, the wallet, and a close button while Esc leaves (a visit from the afternoon or the night).
-    /// Left: the four zones, each a hexagonal frame round the zone's picture and a plate with its name, its level as diamonds and one line
-    /// of state; the chosen one warm with an orange pointer. A click, W or S (the arrows too) changes zone.
-    /// Middle: the zone's view (the room's picture; for the launch bay the live view of the ship with its status over it, V5BaseShip.cs:
-    /// the base's hull, the engine, the armour and the fuel along its foot, the ignition at its top right), its name and level, the lines
-    /// that matter now and, for the three rooms with levels, the levels as numbered steps (done in teal, the next one in orange, the fuel's
-    /// count in gold; a level not reached keeps its "? ? ?").
-    /// Right: what can be done there, one plate each with its medal, its title, its price in the currencies' icons and its button; the
-    /// one to do now is warm with an orange button.
-    /// Bottom: the keys, and the ways out; the one that moves the story on is the orange go button at the right.
-    /// Every piece follows the art switch: the mock-up's pictures with the art on, flat fills with the thin edge and the whitebox icons
-    /// without.
+    /// The base's two pages in the fifth interface pass (work/art-plans/style-1112/ui-f/workshop.html and rocket.html), built only when
+    /// V5HudKit.On: the English Alpha keeps the page it was graded with (V2CampaignUi.BasePage.cs). Both stand on the base panel's
+    /// full-screen backing, laid out as the 1920 x 1080 mock-up times the story layer's scale and shrunk to fit a screen that is not 16:9,
+    /// and share the frame drawn here: the banner with the page's name and its line in gold, the wallet, the button to the other page, the
+    /// close button while Esc leaves (a visit from the afternoon or the night), the keys, and the ways out of the visit
+    /// (V2Campaign.BaseExits: the main one orange at the right, its line under it). The workshop (V5WorkshopPage.cs) and the rocket page
+    /// (V5RocketPage.cs, V5BaseShip.cs) fill the middle. Everything is read and bought through the campaign's interface for the two pages
+    /// (V2Campaign.Redesign.cs, BuildStudy and StudyEntry.buy), and the page is drawn again after each purchase. Nothing of the columns
+    /// reaches below B5Floor, so a subtitle over the page (its foot at BaseSubtitleBottom) never covers them; the keys and the ways out
+    /// stand along the foot, under the subtitle's strip. A card's details show beside it while the pointer is on it. The keys and a pad
+    /// move a focus over the page's buttons (the arrows, the move keys, the pad's cross or stick), the interact key or the pad's A presses
+    /// the focused one, LB and RB change the research tab, and Esc or B closes the page while it can be closed. Every piece follows the
+    /// art switch: the mock-up's pictures with the art on, flat fills with the thin edge and the whitebox icons without.
     /// </summary>
     public sealed partial class V2CampaignUi
     {
-        // The page in mock-up pixels (1920 x 1080). Nothing of the three columns reaches below B5Floor, so a subtitle over the page (its
-        // foot at BaseSubtitleBottom) never covers them; the keys and the ways out stand along the foot, under the subtitle's strip.
-        const float B5Css = V5HudKit.StoryCss, B5Width = 1920f, B5Height = 1080f, B5Margin = 36f, B5Top = 178f, B5Floor = 870f;
-        // The banner (600 x 111, its painted ends B5BannerEnds wide), its title 50 pixels and the time 20, 22 apart. The wallet 38 from the
-        // top and 70 tall (50-pixel medals, 27-pixel numbers), 172 from the right beside the close button (58 tall, 48 from the top, 30
-        // from the right), 36 from the right without it.
-        const float B5BannerTop = 26f, B5BannerW = 600f, B5BannerH = 111f, B5BannerEnds = 78f, B5BannerGap = 22f;
-        const float B5WalletTop = 38f, B5WalletBeside = 172f, B5WalletH = 70f, B5WalletMedal = 50f, B5WalletNumber = 27f;
-        const float B5CloseRight = 30f, B5CloseTop = 48f, B5CloseH = 58f;
-        // Zones: rows 114 tall and 16 apart; the hexagon 132 x 114 with the picture inside it at 13 % / 14 %, 74 % x 72 %; 12 to the
-        // plate (270 x 96, corners cut at 12); the pointer's tip 24 beyond the plate.
-        const float B5ZoneH = 114f, B5ZoneGap = 16f, B5HexW = 132f, B5HexH = 114f, B5HexGap = 12f, B5ZonePlateW = 270f, B5ZonePlateH = 96f, B5ZoneCut = 12f;
-        // Middle: 484 from the left, 808 wide; the view 440 tall (480 in the mock-up: shortened so the steps end above the floor), corners
-        // cut at 18; the name 30 under it; the steps 62 tall and 250 wide.
-        const float B5MidLeft = 484f, B5MidW = 808f, B5ViewH = 440f, B5ViewCut = 18f, B5NameGap = 30f, B5NameH = 48f, B5StepH = 62f, B5StepW = 250f;
-        // Actions: 1322 from the left, 566 wide, under their caption; rows at most 112 tall and 14 apart (10 when there are more than
-        // five), the medal 72 across, the button 52 tall and at least 108 wide. Rows of what is done already follow while there are fewer
-        // than B5DoneRowsBelow rows.
-        const float B5ActLeft = 1322f, B5ActW = 566f, B5RowsTop = 206f, B5RowMax = 112f, B5RowGap = 14f, B5RowGapTight = 10f, B5ActMedal = 72f;
-        const float B5ActButtonH = 52f, B5ActButtonW = 108f;
-        const int B5DoneRowsBelow = 5;
-        // Foot: 26 over the screen's foot; the go button 72 tall (its hazard stripes 16 in, 48 wide), the other ways out 60 tall and 14
-        // apart, each no wider than its cap; the keys' plate 52 tall, centred on the go button's middle.
-        const float B5FootBottom = 26f, B5GoH = 72f, B5WayH = 60f, B5WayGap = 14f, B5GoMaxW = 560f, B5WayMaxW = 460f, B5HintsH = 52f;
+        // The pages in mock-up pixels (1920 x 1080). Nothing of the columns reaches below B5Floor: a subtitle over the page stands between
+        // it and the foot.
+        const float B5Css = V5HudKit.StoryCss, B5Width = 1920f, B5Height = 1080f, B5Margin = 36f, B5Top = 170f, B5Floor = 886f;
+        // The banner (600 x 111, its painted ends B5BannerEnds wide): the page's name in 52-pixel letters, its line in 22, 24 apart.
+        const float B5BannerTop = 26f, B5BannerW = 600f, B5BannerH = 111f, B5BannerEnds = 78f, B5BannerGap = 24f, B5TitlePx = 52f, B5LinePx = 22f;
+        // The top right, every piece centred B5HeadMiddle down: the wallet B5WalletH tall, the button to the other page and the close
+        // button B5HeadButtonH tall, B5HeadGap apart, the last one B5Margin from the right edge. The void's two currencies in a plate of
+        // their own B5VoidWalletH tall, B5VoidWalletGap under the wallet and level with its right edge (above the columns' heads).
+        const float B5HeadMiddle = 80f, B5WalletH = 78f, B5HeadButtonH = 64f, B5HeadGap = 18f, B5VoidWalletH = 40f, B5VoidWalletGap = 6f;
+        // The foot: the keys' plate and the ways out B5FootH tall from B5FootTop, B5WayGap apart; the main way out at least B5GoMinW wide,
+        // its line (B5NotePx letters) B5NoteGap under it.
+        const float B5FootTop = 964f, B5FootH = 62f, B5WayGap = 22f, B5GoMinW = 210f, B5NoteGap = 10f, B5NotePx = 18f;
+        // A card's details beside it: B5TipW wide.
+        const float B5TipW = 430f;
+        // Whether a card shows its details beside it while the pointer is on it.
+        const bool B5Details = true;
 
-        // Colours of the mock-up the kits do not name: the page's abyss, a price the stock is short of, the chosen zone's glow, the view's
-        // chips' backing, the diamonds (off, their rim, and the gold of one reached) and the go button's stripes.
-        static readonly Color B5Abyss = V5TitleKit.Rgb(7, 10, 20), B5Short = V5TitleKit.Rgb(255, 107, 122), B5ZoneGlow = V5TitleKit.Rgb(242, 106, 43, .5f),
-            B5ChipBack = V5TitleKit.Rgb(6, 12, 24, .82f), B5DiamondOff = V5TitleKit.Rgb(160, 170, 190, .25f), B5DiamondRim = V5TitleKit.Rgb(200, 210, 225, .4f),
-            B5DiamondTop = V5TitleKit.Rgb(255, 224, 154), B5DiamondBottom = V5TitleKit.Rgb(213, 148, 32), B5HazardInk = V5TitleKit.Rgb(27, 14, 6, .55f),
-            B5UnbuiltTint = new(.5f, .52f, .58f, 1f), B5BrokenTint = new(1f, .6f, .55f, 1f), B5TrackFlat = new(.3f, .55f, .85f, .5f);
+        // Colours of the mock-ups the kits do not name: the page's abyss, a price the stock is short of, a chip's dark backing, the go
+        // button's stripes, a locked row's grey, the check of a part done, the white rarity's bar.
+        static readonly Color B5Abyss = V5TitleKit.Rgb(7, 10, 20), B5Short = V5TitleKit.Rgb(255, 107, 122), B5ChipBack = V5TitleKit.Rgb(6, 12, 24, .86f),
+            B5HazardInk = V5TitleKit.Rgb(27, 14, 6, .55f), B5Lock = V5TitleKit.Rgb(107, 113, 131), B5Ok = V5TitleKit.Rgb(111, 211, 111),
+            B5CommonBar = V5TitleKit.Rgb(217, 221, 230), B5DiamondRim = V5TitleKit.Rgb(200, 210, 225, .45f), B5DiamondOff = V5TitleKit.Rgb(26, 31, 43);
 
-        // A step's hexagon by its state (done, next, a count, not reached): the top and the foot of its fill, its digit's ink and the
-        // colour of the word under its title.
-        enum B5StepLook { Done, Next, Count, Later }
-        static readonly Color[] B5StepTop = { V5TitleKit.Rgb(111, 240, 222), V5TitleKit.Rgb(255, 176, 122), V5TitleKit.Rgb(255, 224, 154), V5TitleKit.Rgb(163, 172, 190) };
-        static readonly Color[] B5StepFoot = { V5TitleKit.Rgb(18, 142, 127), V5TitleKit.Rgb(201, 71, 26), V5TitleKit.Rgb(201, 138, 28), V5TitleKit.Rgb(75, 84, 104) };
-        static readonly Color[] B5StepInk = { V5TitleKit.Rgb(4, 33, 29), V5TitleKit.Rgb(42, 14, 2), V5TitleKit.Rgb(42, 24, 4), V5TitleKit.Rgb(20, 24, 31) };
-        static readonly Color[] B5StepWord = { V5TitleKit.Teal, V5TitleKit.OrangeHi, V5TitleKit.Gold, V5TitleKit.Ink3 };
-
-        /// <summary>What an action does, read from the action itself (the medal and the button's word follow it).</summary>
-        enum B5Deed { Other, Build, Upgrade, RepairRoom, Durability, Shield, Hull, Overload, Engine, Armor, Fuel, Lamp, Ignite, Study }
-
-        sealed class B5Zone
+        /// <summary>One cell of the wallet: its medal, its name (the void's two have none) and its amount.</summary>
+        sealed class B5Purse
         {
-            public V5Plate plate;
-            public V5HudPlate warm;
-            public Image glow, frame, window, house, pointer;
-            public RawImage picture;
-            public Text name, level, line;
-            public readonly List<Image> diamonds = new();
-        }
-
-        sealed class B5Step
-        {
-            public Image fill;
-            public Text number, title, state;
-        }
-
-        sealed class B5Row
-        {
-            public RectTransform root;
-            public CanvasGroup fade;
-            public V5HudPlate plate;
-            public Image tab;
             public V5HudMedal medal;
-            public Text title, note, done, verb;
-            public readonly Image[] holes = new Image[3], coins = new Image[3];
-            public readonly Text[] amounts = new Text[3];
-            public V5Plate button;
-            public Func<bool> act;
-            public string fail;
-            // What the row does (B5DeedOf): the base tour finds its rows by it.
-            public B5Deed deed;
+            public Text name, amount;
+            public int shown = -1;
         }
 
+        /// <summary>One way out of the visit along the foot: its plate, its words, the line under it and what it does.</summary>
         sealed class B5Way
         {
             public V5Plate plate;
-            public Text label;
-            public RawImage hazard;
+            public Text label, note;
             public Action act;
             public bool go;
         }
 
-        /// <summary>One row of the actions: the game's action with its words split into a title and a note, or a row of what is done.</summary>
-        sealed class B5Item
+        /// <summary>A price drawn as up to three coins: each a round icon (cut round with the art on; a violet ring for the void's
+        /// currencies) and its amount.</summary>
+        sealed class B5Coins
         {
-            public string title, note, done, fail;
-            public CampaignCost? cost;
-            public Func<bool> act;
-            public bool enabled;
-            public B5Deed deed;
+            public readonly Image[] holes = new Image[3], icons = new Image[3], rings = new Image[3];
+            public readonly Text[] amounts = new Text[3];
+            public float numberPx;
         }
 
-        bool b5Built;
-        bool? b5Art;
-        int b5TickFrame = -10;
-        RectTransform b5Page, b5Wallet, b5Window, b5Steps;
-        RawImage b5Backdrop, b5Track;
-        Image b5Banner, b5Cutout, b5WindowShape;
-        Text b5Title, b5When, b5CloseLabel, b5Caption, b5Name, b5Broken, b5Lines, b5ActsCaption, b5ActsEmpty, b5ZonesWord, b5CloseWord;
-        V5Plate b5Close;
-        V5HudKey b5CloseKey, b5KeyW, b5KeyS, b5KeyEsc;
-        V5HudPlate b5ViewPlate, b5Hints;
-        readonly B5Zone[] b5Zones = new B5Zone[4];
-        readonly B5Step[] b5StepViews = new B5Step[3];
-        readonly List<Image> b5NameDiamonds = new();
-        readonly List<B5Row> b5Rows = new();
+        /// <summary>A part of the page the keys can focus: its id, its rect, what pressing it does (false: refused) and how it shows the
+        /// focus.</summary>
+        sealed class B5Focus
+        {
+            public string id;
+            public RectTransform rect;
+            public Func<bool> press;
+            public Action<bool> mark;
+        }
+
+        bool b5Built, b5PadKeys, b5StickHeld;
+        bool? b5Art, b5Chinese;
+        Font b5Font;
+        int b5TickFrame = -10, b5Version;
+        float b5OpenedAt;
+        V2Campaign.BaseScreen b5Screen;
+        RectTransform b5Page, b5Wallet, b5VoidWallet, b5WorkshopRoot, b5RocketRoot, b5Tip, b5TipOver;
+        RawImage b5Backdrop;
+        Image b5Banner;
+        Text b5Title, b5When, b5SwitchLabel, b5SwitchArrow, b5CloseLabel, b5TipTitle, b5TipBody;
+        V5Plate b5Switch, b5Close;
+        V5HudMedal b5SwitchMedal;
+        V5HudKey b5CloseKey;
+        V5HudPlate b5Hints;
+        CanvasGroup b5TipFade;
+        string b5FocusId;
+        readonly V5HudKey[] b5HintKeys = new V5HudKey[2];
+        readonly Text[] b5HintWords = new Text[2];
         readonly List<B5Way> b5Ways = new();
-        readonly V5HudMedal[] b5WalletMedals = new V5HudMedal[4];
-        readonly Text[] b5WalletNumbers = new Text[4];
-        readonly int[] b5WalletShown = { -1, -1, -1, -1 };
-        static Texture2D b5BackdropTexture, b5TrackTexture;
+        readonly List<B5Focus> b5Focus = new();
+        readonly B5Purse[] b5Purse = new B5Purse[6];
+        // The price being drawn: which currency (0 alien energy, 1 alloy, 2 dark matter, 3 void energy, 4 void alloy), how much, how much is held.
+        readonly List<(int which, int amount, int held)> b5Price = new();
+        static readonly string[] B5PurseNames = { "Energy", "Alloy", "Dark", "Lamps", "VoidEnergy", "VoidAlloy" };
+        static Texture2D b5BackdropTexture;
 
         /// <summary>Canvas units of so many mock-up pixels.</summary>
         static float Bp(float px) => px * B5Css;
@@ -149,11 +115,19 @@ namespace AnomalyArena
         /// <summary>The title's plates (V5Plate) take their corner cut in pixels of the title's scale: this many of the page's.</summary>
         static float B5Cut(float px) => px * B5Css / V5TitleKit.Css;
 
-        // ───── Building ─────
+        /// <summary>A rect placed in mock-up pixels from its parent's top-left corner.</summary>
+        static void B5Rect(RectTransform rect, float left, float top, float width, float height) => V5TitleKit.Place(rect, Bp(left), Bp(top), Bp(width), Bp(height));
+
+        static void B5Place(V5Plate plate, float left, float top, float width, float height) => plate.Place(Bp(left), Bp(top), Bp(width), Bp(height));
+
+        /// <summary>How wide a label draws this text on one line at its size now, in mock-up pixels.</summary>
+        static float B5W(Text label, string text) => V5StoryKit.WidthOf(label, text) / B5Css;
+
+        // ───── Building (BuildBasePanel, when V5HudKit.On) ─────
 
         void BuildBase5()
         {
-            // The old page stays built and keeps its texts, hidden; its picture moves into the new view (BuildBase5Middle).
+            // The old page stays built and hidden; the two pages are drawn instead.
             basePage.gameObject.SetActive(false);
             b5Backdrop = V5TitleKit.Raw(baseScreen, "Backdrop", B5BackdropTexture, Color.white);
             V5TitleKit.Stretch(b5Backdrop.rectTransform);
@@ -161,11 +135,15 @@ namespace AnomalyArena
             b5Page = V5TitleKit.Rect(baseScreen, "Page5");
             V5TitleKit.Centre(b5Page, new Vector2(Bp(B5Width), Bp(B5Height)));
             b5Page.gameObject.AddComponent<V5BaseTicker>().Tick = TickBase5;
+            b5WorkshopRoot = V5TitleKit.Rect(b5Page, "Workshop");
+            V5TitleKit.Stretch(b5WorkshopRoot);
+            b5RocketRoot = V5TitleKit.Rect(b5Page, "Rocket");
+            V5TitleKit.Stretch(b5RocketRoot);
             BuildBase5Head();
-            BuildBase5Zones();
-            BuildBase5Middle();
-            BuildBase5Actions();
+            BuildWorkshop5(b5WorkshopRoot);
+            BuildRocket5(b5RocketRoot);
             BuildBase5Foot();
+            BuildBase5Tip();
             b5Built = true;
         }
 
@@ -173,189 +151,87 @@ namespace AnomalyArena
         {
             b5Banner = V5TitleKit.Picture(b5Page, "Banner", null, Color.white);
             b5Banner.gameObject.AddComponent<V5StoryBannerFrame>();
-            V5TitleKit.Place(b5Banner.rectTransform, Bp(B5Margin), Bp(B5BannerTop), Bp(B5BannerW), Bp(B5BannerH));
-            b5Title = V5StoryKit.Label(b5Banner.transform, "Title", 50f, Color.white, TextAnchor.MiddleLeft, true);
+            B5Rect(b5Banner.rectTransform, B5Margin, B5BannerTop, B5BannerW, B5BannerH);
+            b5Title = V5StoryKit.Label(b5Banner.transform, "Title", B5TitlePx, Color.white, TextAnchor.MiddleLeft, true);
             V5TitleKit.Painted(b5Title);
-            b5When = V5StoryKit.Label(b5Banner.transform, "When", 20f, V5TitleKit.Gold, TextAnchor.MiddleLeft, true);
+            b5When = V5StoryKit.Label(b5Banner.transform, "When", B5LinePx, V5TitleKit.Gold, TextAnchor.MiddleLeft, true);
 
             b5Wallet = V5TitleKit.Rect(b5Page, "Wallet");
-            b5Wallet.anchorMin = b5Wallet.anchorMax = b5Wallet.pivot = new Vector2(1f, 1f);
             V5TitleKit.Stretch(V5HudKit.Plate(b5Wallet, "Plate", V5HudKit.PlateLook.Plain, 12f, B5Css).Rect);
-            for (int i = 0; i < 4; i++)
+            b5VoidWallet = V5TitleKit.Rect(b5Page, "VoidWallet");
+            V5TitleKit.Stretch(V5HudKit.Plate(b5VoidWallet, "Plate", V5HudKit.PlateLook.Plain, 10f, B5Css).Rect);
+            for (int i = 0; i < b5Purse.Length; i++)
             {
-                b5WalletMedals[i] = V5HudKit.Medal(b5Wallet, WalletMedalNames[i], Bp(B5WalletMedal));
-                b5WalletNumbers[i] = V5StoryKit.Label(b5Wallet, "Amount" + i, B5WalletNumber, i < 3 ? WalletColour(i) : V5TitleKit.Gold, TextAnchor.MiddleCenter, true);
+                var purse = b5Purse[i] = new B5Purse();
+                var holder = i >= 4 ? b5VoidWallet : b5Wallet;
+                purse.medal = V5HudKit.Medal(holder, B5PurseNames[i] + "Medal", Bp(56f));
+                purse.name = V5StoryKit.Label(holder, B5PurseNames[i] + "Name", 20f, V5TitleKit.Ink2, TextAnchor.MiddleLeft);
+                purse.amount = V5StoryKit.Label(holder, B5PurseNames[i] + "Amount", 34f, V5TitleKit.Ink, TextAnchor.MiddleCenter, true);
             }
-            b5WalletMedals[3].SetGlow(V5StoryKit.Amber);
-
-            b5Close = V5Plate.Make(b5Page, "Close", V5Plate.Look.Plate, B5Cut(10f), CloseBase5);
-            b5Close.Button.navigation = new Navigation { mode = Navigation.Mode.None };
-            b5CloseLabel = V5StoryKit.Label(b5Close.transform, "Label", 19f, V5TitleKit.Ink, TextAnchor.MiddleLeft, true);
-            b5CloseKey = V5HudKit.Key(b5Close.transform, "Key", "Esc", false, B5Css);
-        }
-
-        void BuildBase5Zones()
-        {
-            var hexMask = V5TitleKit.Piece("hex-mask");
-            for (int i = 0; i < 4; i++)
+            b5Purse[0].medal.SetRing(ResourceColours.Energy);
+            b5Purse[1].medal.SetRing(ResourceColours.Alloy);
+            b5Purse[2].medal.SetGlow(V5StoryKit.VioletGlow);
+            b5Purse[3].medal.SetGlow(V5StoryKit.Amber);
+            for (int i = 4; i < 6; i++)
             {
-                var room = (CampaignRoom)i;
-                var zone = b5Zones[i] = new B5Zone();
-                float top = B5Top + i * (B5ZoneH + B5ZoneGap);
-                zone.plate = V5Plate.Make(b5Page, "Zone" + room, V5Plate.Look.Plate, B5Cut(B5ZoneCut), () => PickBase5Zone(room), true);
-                zone.plate.Place(Bp(B5Margin + B5HexW + B5HexGap), Bp(top + (B5ZoneH - B5ZonePlateH) * .5f), Bp(B5ZonePlateW), Bp(B5ZonePlateH));
-                zone.plate.HoverPitch = 1.08f - i * .03f;
-                zone.plate.Button.navigation = new Navigation { mode = Navigation.Mode.None };
-                var plate = zone.plate.transform;
-                // The chosen zone's warm plate lies over the plate's own surface.
-                zone.warm = V5HudKit.Plate(plate, "Warm", V5HudKit.PlateLook.Warm, B5ZoneCut, B5Css);
-                V5TitleKit.Stretch(zone.warm.Rect);
-                // The hexagon stands left of the plate and belongs to it: a click on the picture picks the zone too.
-                var hex = V5TitleKit.Rect(plate, "Hex");
-                hex.anchorMin = hex.anchorMax = hex.pivot = new Vector2(0f, .5f);
-                hex.anchoredPosition = new Vector2(-Bp(B5HexW + B5HexGap), 0f);
-                hex.sizeDelta = new Vector2(Bp(B5HexW), Bp(B5HexH));
-                zone.glow = V5TitleKit.Picture(hex, "Glow", V5HudKit.Glow, B5ZoneGlow);
-                V5TitleKit.Centre(zone.glow.rectTransform, new Vector2(Bp(B5HexW), Bp(B5HexH)) * 1.4f);
-                zone.frame = V5TitleKit.Picture(hex, "Frame", null, Color.white);
-                V5TitleKit.Stretch(zone.frame.rectTransform);
-                zone.frame.raycastTarget = true;
-                zone.window = V5TitleKit.Picture(hex, "Window", hexMask, Color.white);
-                B5Fraction(zone.window.rectTransform, .13f, .14f, .74f, .72f);
-                zone.window.gameObject.AddComponent<Mask>().showMaskGraphic = false;
-                zone.picture = V5TitleKit.Raw(zone.window.transform, "Picture", null, Color.white);
-                V5TitleKit.Stretch(zone.picture.rectTransform);
-                zone.house = V5TitleKit.Picture(zone.window.transform, "House", null, Color.white);
-                V5TitleKit.Centre(zone.house.rectTransform, Vector2.one * Bp(58f));
-                zone.house.preserveAspect = true;
-                zone.name = V5StoryKit.Label(plate, "Name", 24f, V5TitleKit.Ink, TextAnchor.MiddleLeft, true);
-                V5TitleKit.Place(zone.name.rectTransform, Bp(22f), Bp(13f), Bp(B5ZonePlateW - 40f), Bp(30f));
-                zone.level = V5StoryKit.Label(plate, "Level", 15f, V5TitleKit.Ink3, TextAnchor.MiddleLeft, true);
-                zone.line = V5StoryKit.Label(plate, "Line", 14f, V5TitleKit.Ink3, TextAnchor.MiddleLeft);
-                V5TitleKit.Place(zone.line.rectTransform, Bp(22f), Bp(69f), Bp(B5ZonePlateW - 40f), Bp(20f));
-                // The pointer: a triangle 18 wide and 26 tall pointing right, its tip 24 beyond the plate.
-                zone.pointer = V5HudKit.Arrow(plate, "Pointer", new Vector2(Bp(26f), Bp(18f)), V5TitleKit.Orange, -90f);
-                var pointer = zone.pointer.rectTransform;
-                pointer.anchorMin = pointer.anchorMax = new Vector2(1f, .5f);
-                pointer.pivot = new Vector2(.5f, .5f);
-                pointer.anchoredPosition = new Vector2(Bp(24f - 9f), 0f);
+                b5Purse[i].medal.SetRing(V5HudKit.Violet);
+                b5Purse[i].medal.SetGlow(V5StoryKit.VioletGlow);
             }
-        }
 
-        void BuildBase5Middle()
-        {
-            var mid = V5TitleKit.Rect(b5Page, "Middle");
-            V5TitleKit.Place(mid, Bp(B5MidLeft), Bp(B5Top), Bp(B5MidW), Bp(B5Floor - B5Top));
-            b5ViewPlate = V5HudKit.Plate(mid, "View", V5HudKit.PlateLook.Teal, B5ViewCut, B5Css);
-            V5TitleKit.Place(b5ViewPlate.Rect, 0f, 0f, Bp(B5MidW), Bp(B5ViewH));
-            var window = V5TitleKit.Picture(b5ViewPlate.transform, "Window", V5TitleKit.Chamfer, Color.white, V5HudKit.ChamferDensity(B5ViewCut - 1f, B5Css));
-            V5TitleKit.Stretch(window.rectTransform, Bp(3f));
-            window.gameObject.AddComponent<Mask>().showMaskGraphic = false;
-            b5Window = window.rectTransform;
-            b5WindowShape = window;
-            // The old page's picture (the room's picture, the ship's live view, the whitebox blocks) moves into the view: RefreshBasePanel
-            // keeps setting it, RefreshBase5View fits it to the view.
-            roomPicture.rectTransform.SetParent(b5Window, false);
-            V5TitleKit.Stretch(roomPicture.rectTransform);
-            roomPicture.transform.SetAsFirstSibling();
-            // The crashed ship cut out, for the launch bay when there is no live view of it with the art on.
-            b5Cutout = V5TitleKit.Picture(b5Window, "Ship", V5TitleKit.Piece("ship-cutout"), Color.white);
-            b5Cutout.preserveAspect = true;
-            var ship = b5Cutout.rectTransform;
-            ship.anchorMin = ship.anchorMax = ship.pivot = new Vector2(.5f, .59f);
-            ship.anchoredPosition = Vector2.zero;
-            var shipSize = V5TitleKit.PieceSize("ship-cutout");
-            ship.sizeDelta = new Vector2(Bp(520f), Bp(520f * shipSize.y / Mathf.Max(1f, shipSize.x)));
-            b5Caption = V5StoryKit.Label(b5Window, "Caption", 14f, V5TitleKit.Teal, TextAnchor.MiddleLeft, true);
-            V5TitleKit.Place(b5Caption.rectTransform, Bp(25f), Bp(16f), Bp(B5MidW - 60f), Bp(20f));
-            // The ship's status over the view, shown on the launch bay's page (V5BaseShip.cs).
-            BuildBase5Ship(b5Window);
+            b5Switch = B5Button(b5Page, "OtherPage", V5Plate.Look.Plate, () => SwitchBase5());
+            b5SwitchMedal = V5HudKit.Medal(b5Switch.transform, "Medal", Bp(46f));
+            b5SwitchLabel = V5StoryKit.Label(b5Switch.transform, "Label", 22f, V5TitleKit.Ink, TextAnchor.MiddleLeft, true);
+            b5SwitchArrow = V5StoryKit.Label(b5Switch.transform, "Arrow", 28f, V5TitleKit.Steel, TextAnchor.MiddleLeft, true);
 
-            b5Name = V5StoryKit.Label(mid, "Name", 42f, Color.white, TextAnchor.MiddleLeft, true);
-            V5TitleKit.Painted(b5Name);
-            b5Broken = V5StoryKit.Label(mid, "Broken", 18f, V5TitleKit.OrangeHi, TextAnchor.MiddleLeft, true);
-            b5Lines = V5StoryKit.Label(mid, "Lines", 18f, V5TitleKit.Ink2, TextAnchor.UpperLeft);
-            b5Lines.horizontalOverflow = HorizontalWrapMode.Wrap;
-            b5Lines.lineSpacing = 1.3f;
-            b5Steps = V5TitleKit.Rect(mid, "Steps");
-            // The line that runs through the three hexagons, behind them.
-            b5Track = V5TitleKit.Raw(b5Steps, "Track", null, Color.white);
-            V5TitleKit.Place(b5Track.rectTransform, Bp(40f), Bp(B5StepH * .5f - 2f), Bp(B5MidW - 80f), Bp(4f));
-            var hexMask = V5TitleKit.Piece("hex-mask");
-            for (int i = 0; i < 3; i++)
-            {
-                var step = b5StepViews[i] = new B5Step();
-                var root = V5TitleKit.Rect(b5Steps, "Step" + (i + 1));
-                V5TitleKit.Place(root, Bp(i * (B5MidW - B5StepW) * .5f), 0f, Bp(B5StepW), Bp(B5StepH));
-                var hex = V5TitleKit.Picture(root, "Hex", hexMask, Color.white);
-                V5TitleKit.Place(hex.rectTransform, 0f, 0f, Bp(70f), Bp(B5StepH));
-                hex.gameObject.AddComponent<Mask>().showMaskGraphic = false;
-                step.fill = V5TitleKit.Picture(hex.transform, "Fill", null, Color.white);
-                V5TitleKit.Stretch(step.fill.rectTransform);
-                step.number = V5StoryKit.Label(root, "Number", 26f, Color.black, TextAnchor.MiddleCenter, true);
-                V5TitleKit.Place(step.number.rectTransform, 0f, 0f, Bp(70f), Bp(B5StepH));
-                step.number.text = (i + 1).ToString();
-                step.title = V5StoryKit.Label(root, "Title", 17f, V5TitleKit.Ink, TextAnchor.MiddleLeft, true);
-                V5TitleKit.Place(step.title.rectTransform, Bp(82f), Bp(8f), Bp(B5StepW - 86f), Bp(24f));
-                step.state = V5StoryKit.Label(root, "State", 15f, V5TitleKit.Teal, TextAnchor.MiddleLeft, true);
-                V5TitleKit.Place(step.state.rectTransform, Bp(82f), Bp(35f), Bp(B5StepW - 86f), Bp(20f));
-            }
-        }
-
-        void BuildBase5Actions()
-        {
-            b5ActsCaption = V5StoryKit.Label(b5Page, "ActionsCaption", 14f, V5TitleKit.Ink3, TextAnchor.MiddleLeft, true);
-            V5TitleKit.Place(b5ActsCaption.rectTransform, Bp(B5ActLeft + 4f), Bp(B5Top - 2f), Bp(B5ActW - 4f), Bp(20f));
-            b5ActsEmpty = V5StoryKit.Label(b5Page, "ActionsEmpty", 16f, V5TitleKit.Ink3, TextAnchor.MiddleLeft);
-            V5TitleKit.Place(b5ActsEmpty.rectTransform, Bp(B5ActLeft + 4f), Bp(B5RowsTop), Bp(B5ActW - 4f), Bp(24f));
+            b5Close = B5Button(b5Page, "Close", V5Plate.Look.Plate, CloseBase5Button);
+            b5CloseLabel = V5StoryKit.Label(b5Close.transform, "Label", 22f, V5TitleKit.Ink, TextAnchor.MiddleLeft, true);
+            b5CloseKey = V5HudKit.Key(b5Close.transform, "Key", "Esc", false, B5Css, 30f, 16f);
         }
 
         void BuildBase5Foot()
         {
             b5Hints = V5HudKit.Plate(b5Page, "Keys", V5HudKit.PlateLook.Plain, 10f, B5Css);
-            b5KeyW = V5HudKit.Key(b5Hints.transform, "W", "W", false, B5Css);
-            b5KeyS = V5HudKit.Key(b5Hints.transform, "S", "S", false, B5Css);
-            b5ZonesWord = V5StoryKit.Label(b5Hints.transform, "Zones", 16f, V5TitleKit.Ink2, TextAnchor.MiddleLeft);
-            b5KeyEsc = V5HudKit.Key(b5Hints.transform, "Esc", "Esc", false, B5Css);
-            b5CloseWord = V5StoryKit.Label(b5Hints.transform, "Close", 16f, V5TitleKit.Ink2, TextAnchor.MiddleLeft);
+            for (int i = 0; i < 2; i++)
+            {
+                b5HintKeys[i] = V5HudKit.Key(b5Hints.transform, "Key" + (i + 1), "", false, B5Css, 32f, 18f);
+                b5HintWords[i] = V5StoryKit.Label(b5Hints.transform, "Word" + (i + 1), 20f, V5TitleKit.Ink2, TextAnchor.MiddleLeft);
+            }
         }
 
-        /// <summary>The action row at index, made when first needed (rows are kept and reused, so a plate under the pointer stays the same
-        /// plate when the page is refreshed).</summary>
-        B5Row B5RowAt(int index)
+        /// <summary>A card's details beside it: a plate over everything (the base tour's dim included) that takes no click, with the card's
+        /// name and what it does.</summary>
+        void BuildBase5Tip()
         {
-            while (b5Rows.Count <= index)
+            b5Tip = V5TitleKit.Rect(root, "BaseDetails");
+            b5Tip.anchorMin = b5Tip.anchorMax = b5Tip.pivot = Vector2.zero;
+            b5TipFade = b5Tip.gameObject.AddComponent<CanvasGroup>();
+            b5TipFade.blocksRaycasts = false;
+            b5TipFade.interactable = false;
+            V5TitleKit.Stretch(V5HudKit.Plate(b5Tip, "Plate", V5HudKit.PlateLook.Plain, 12f, B5Css).Rect);
+            b5TipTitle = V5StoryKit.Label(b5Tip, "Title", 22f, V5TitleKit.Ink, TextAnchor.UpperLeft, true);
+            b5TipBody = V5StoryKit.Label(b5Tip, "Body", 18f, V5TitleKit.Ink2, TextAnchor.UpperLeft);
+            foreach (var label in new[] { b5TipTitle, b5TipBody })
             {
-                var row = new B5Row();
-                int n = b5Rows.Count;
-                row.root = V5TitleKit.Rect(b5Page, "Action" + (n + 1));
-                row.fade = row.root.gameObject.AddComponent<CanvasGroup>();
-                row.plate = V5HudKit.Plate(row.root, "Plate", V5HudKit.PlateLook.Plain, 14f, B5Css);
-                V5TitleKit.Stretch(row.plate.Rect);
-                row.tab = V5TitleKit.Picture(row.root, "Tab", null, Color.white);
-                V5TitleKit.Place(row.tab.rectTransform, Bp(26f), -Bp(5f), Bp(72f), Bp(10f));
-                row.medal = V5HudKit.Medal(row.root, "Medal", Bp(B5ActMedal));
-                row.title = V5StoryKit.Label(row.root, "Title", 22f, V5TitleKit.Ink, TextAnchor.MiddleLeft, true);
-                var disc = V5TitleKit.Piece("disc");
-                for (int k = 0; k < 3; k++)
-                {
-                    row.holes[k] = V5TitleKit.Picture(row.root, "Coin" + k, disc, Color.white);
-                    row.holes[k].gameObject.AddComponent<Mask>().showMaskGraphic = false;
-                    row.coins[k] = V5TitleKit.Picture(row.holes[k].transform, "Icon", null, Color.white);
-                    V5TitleKit.Stretch(row.coins[k].rectTransform);
-                    row.coins[k].preserveAspect = true;
-                    row.amounts[k] = V5StoryKit.Label(row.root, "Amount" + k, 22f, V5TitleKit.Steel, TextAnchor.MiddleLeft, true);
-                }
-                row.note = V5StoryKit.Label(row.root, "Note", 14f, V5TitleKit.Ink3, TextAnchor.MiddleLeft);
-                row.done = V5StoryKit.Label(row.root, "Done", 18f, V5TitleKit.Teal, TextAnchor.MiddleRight, true);
-                row.button = V5Plate.Make(row.root, "Button", V5Plate.Look.Plate, B5Cut(10f), () => ClickBase5Row(row), true);
-                row.button.Button.navigation = new Navigation { mode = Navigation.Mode.None };
-                row.button.HoverPitch = 1.06f - n * .02f;
-                row.verb = V5StoryKit.Label(row.button.transform, "Verb", 19f, V5TitleKit.Ink, TextAnchor.MiddleCenter, true);
-                V5TitleKit.Stretch(row.verb.rectTransform);
-                b5Rows.Add(row);
+                label.horizontalOverflow = HorizontalWrapMode.Wrap;
+                label.verticalOverflow = VerticalWrapMode.Overflow;
+                var rect = label.rectTransform;
+                rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0f, 1f);
             }
-            return b5Rows[index];
+            b5TipBody.lineSpacing = 1.15f;
+            b5Tip.gameObject.SetActive(false);
+        }
+
+        /// <summary>A button of the page (a plate the keys can focus too): it lets go of the keyboard's selection once clicked, so Space and
+        /// Enter, which the UI would read as a second click, do nothing here.</summary>
+        static V5Plate B5Button(Transform parent, string name, V5Plate.Look look, Action click)
+        {
+            var plate = V5Plate.Make(parent, name, look, B5Cut(10f), () =>
+            {
+                B5Deselect();
+                click?.Invoke();
+            }, look == V5Plate.Look.Go);
+            plate.Button.navigation = new Navigation { mode = Navigation.Mode.None };
+            return plate;
         }
 
         /// <summary>The way out at index (counted from the right), made when first needed and reused.</summary>
@@ -364,49 +240,65 @@ namespace AnomalyArena
             while (b5Ways.Count <= index)
             {
                 var way = new B5Way();
-                way.plate = V5Plate.Make(b5Page, "Way" + (b5Ways.Count + 1), V5Plate.Look.Plate, B5Cut(10f), () => ClickBase5Way(way), true);
-                way.plate.Button.navigation = new Navigation { mode = Navigation.Mode.None };
-                way.plate.HoverPitch = 1f - b5Ways.Count * .03f;
-                way.hazard = V5TitleKit.Raw(way.plate.transform, "Hazard", V5TitleKit.Stripes, B5HazardInk);
-                way.label = V5StoryKit.Label(way.plate.transform, "Label", 26f, V5TitleKit.Ink, TextAnchor.MiddleLeft, true);
+                int n = b5Ways.Count;
+                way.plate = B5Button(b5Page, "Way" + (n + 1), V5Plate.Look.Plate, () => ClickBase5Way(way));
+                way.plate.HoverPitch = 1f - n * .03f;
+                way.label = V5StoryKit.Label(way.plate.transform, "Label", 22f, V5TitleKit.Ink, TextAnchor.MiddleCenter, true);
+                V5TitleKit.Stretch(way.label.rectTransform);
+                way.note = V5StoryKit.Label(way.plate.transform, "Note", B5NotePx, V5TitleKit.Ink2, TextAnchor.MiddleCenter);
+                var note = way.note.rectTransform;
+                note.anchorMin = new Vector2(0f, 0f);
+                note.anchorMax = new Vector2(1f, 0f);
+                note.pivot = new Vector2(.5f, 1f);
+                note.anchoredPosition = new Vector2(0f, -Bp(B5NoteGap));
+                note.sizeDelta = new Vector2(0f, Bp(B5NotePx * 1.3f));
                 b5Ways.Add(way);
             }
             return b5Ways[index];
         }
 
-        // ───── Acting ─────
+        // ───── Opening, switching, closing (ShowBase, BaseScreenRequested, HideBase) ─────
 
-        void PickBase5Zone(CampaignRoom room)
+        /// <summary>The base opens (ShowBase): on the page the campaign asks for, with nothing focused.</summary>
+        void OpenBase5(V2Campaign.BaseScreen screen)
         {
-            B5Deselect();
-            if (!BaseOpen || room == tab) return;
-            tab = room;
-            V5UiSound.Play(V5UiSound.Ui.Tab);
-            RefreshBasePanel(true);
+            b5Screen = screen;
+            b5OpenedAt = Time.unscaledTime;
+            b5FocusId = null;
+            B5HideTip();
+            OpenWorkshop5();
         }
 
-        /// <summary>An action's button: what the old page's button did (Act: the action, its refusal sound and reason, the refresh).</summary>
-        void ClickBase5Row(B5Row row)
+        /// <summary>The campaign asks for one of the two pages (V2Campaign.BaseScreenRequested): the base door and the ship open the
+        /// visit on their page through ShowBase; this switches between the two while the visit is open.</summary>
+        void OnBaseScreenRequested(V2Campaign.BaseScreen screen)
         {
-            B5Deselect();
-            if (row.act == null || !BaseOpen) return;
-            V5UiSound.Play(V5UiSound.Ui.Press, 1f, .7f);
-            Act(row.act, row.fail);
+            if (!b5Built || !BaseOpen || b5Screen == screen) return;
+            b5Screen = screen;
+            b5FocusId = null;
+            B5HideTip();
+            V5UiSound.Play(V5UiSound.Ui.Panel);
+            RefreshBase5(true);
         }
 
-        void ClickBase5Way(B5Way way)
+        /// <summary>The button at the top right: the other page of the same visit.</summary>
+        void SwitchBase5()
         {
-            B5Deselect();
-            if (way.act == null || !BaseOpen) return;
-            V5UiSound.Play(way.go ? V5UiSound.Ui.Start : V5UiSound.Ui.Press);
-            way.act();
+            if (!BaseOpen || !campaign) return;
+            campaign.RequestBaseScreen(b5Screen == V2Campaign.BaseScreen.Workshop ? V2Campaign.BaseScreen.Rocket : V2Campaign.BaseScreen.Workshop);
+        }
+
+        /// <summary>The base closes (HideBase): the details and the focus go with it.</summary>
+        void CloseBase5()
+        {
+            B5HideTip();
+            b5FocusId = null;
         }
 
         /// <summary>The close button does what Esc does on the page (V2CampaignUi.Update): back out to where the visit came from.</summary>
-        void CloseBase5()
+        void CloseBase5Button()
         {
-            B5Deselect();
-            if (!B5CanClose(campaign)) return;
+            if (!B5CanClose(campaign) || BaseTourRunning) return;
             V5UiSound.Play(V5UiSound.Ui.Back);
             campaign.LeaveBase();
         }
@@ -414,12 +306,32 @@ namespace AnomalyArena
         /// <summary>Esc leaves the page now (a visit from the afternoon or the night): the close button and its key hint show only then.</summary>
         static bool B5CanClose(V2Campaign c) => c && c.Stage == CampaignStage.Base && !c.BaseAtDawn && c.NightTimeLeft(out _);
 
+        void ClickBase5Way(B5Way way)
+        {
+            if (way.act == null || !BaseOpen) return;
+            V5UiSound.Play(way.go ? V5UiSound.Ui.Start : V5UiSound.Ui.Press);
+            way.act();
+        }
+
+        /// <summary>A button of either page: the purchase or the action, the refusal sound when it was refused, then the page drawn again
+        /// (a purchase that goes through makes the sound of what it changed: CampaignAudio watches the base).</summary>
+        void B5Act(Func<bool> action)
+        {
+            if (action == null || !BaseOpen) return;
+            V5UiSound.Play(V5UiSound.Ui.Press, 1f, .7f);
+            if (!action()) PlayRefused();
+            if (BaseOpen) RefreshBase5(true);
+        }
+
         /// <summary>A plate let go of the keyboard's selection once clicked: Space and Enter, which the UI would read as a second click,
         /// do nothing on this page.</summary>
         static void B5Deselect()
         {
             if (EventSystem.current) EventSystem.current.SetSelectedGameObject(null);
         }
+
+        /// <summary>The ship's live view draws only while the rocket page (on the old page, the launch bay's tab) is open.</summary>
+        bool ShipViewWanted => BaseOpen && (b5Built ? b5Screen == V2Campaign.BaseScreen.Rocket : tab == CampaignRoom.Ship);
 
         // ───── The frame ─────
 
@@ -431,761 +343,673 @@ namespace AnomalyArena
             var size = root.rect.size;
             float scale = Mathf.Min(1f, Mathf.Min(size.x / Bp(B5Width), size.y / Bp(B5Height)));
             if (scale > 0f && !Mathf.Approximately(b5Page.localScale.x, scale)) b5Page.localScale = new Vector3(scale, scale, 1f);
-            if (b5Art != Art.Enabled) RefreshBasePanel(true);
+            if (b5Art != Art.Enabled || b5Chinese != ArenaText.IsChinese || b5Font != V5TitleKit.Font) RefreshBase5(true);
+            if (b5Screen == V2Campaign.BaseScreen.Rocket) TickRocket5();
+            PlaceB5Tip();
+            TickBase5Keys();
+        }
+
+        /// <summary>The keys and a pad on the page, unless something else holds them (the base tour, a question, the settings, the codex)
+        /// or the page has only just opened (the key that opened it does not act in it).</summary>
+        void TickBase5Keys()
+        {
             if (!BaseOpen || StudyOpen || ConfirmOpen || BaseTourRunning || V2Tutorial.HoldsInput || ArenaSettingsPanel.HoldsInput || ArenaCodex.HoldsInput) return;
             if (gm && gm.RunPhase != ArenaUiState.Base) return;
             var keys = Keyboard.current;
-            if (keys == null) return;
-            int step = 0;
-            if (keys.wKey.wasPressedThisFrame || keys.upArrowKey.wasPressedThisFrame) step--;
-            if (keys.sKey.wasPressedThisFrame || keys.downArrowKey.wasPressedThisFrame) step++;
-            int next = Mathf.Clamp((int)tab + step, 0, 3);
-            if (step != 0 && next != (int)tab) PickBase5Zone((CampaignRoom)next);
+            var pad = Gamepad.current;
+            // The keys' hints name the pad's buttons while the pad is in use, the keyboard's once a key is pressed or the mouse moves.
+            bool padNow = b5PadKeys;
+            if (pad != null && (pad.dpad.ReadValue().sqrMagnitude > .25f || pad.leftStick.ReadValue().sqrMagnitude > .36f || pad.buttonSouth.wasPressedThisFrame
+                    || pad.buttonEast.wasPressedThisFrame || pad.leftShoulder.wasPressedThisFrame || pad.rightShoulder.wasPressedThisFrame))
+                padNow = true;
+            else if (keys != null && keys.anyKey.wasPressedThisFrame || Mouse.current != null && Mouse.current.delta.ReadValue().sqrMagnitude > 4f)
+                padNow = false;
+            if (padNow != b5PadKeys)
+            {
+                b5PadKeys = padNow;
+                RefreshBase5(true);
+            }
+            if (Time.unscaledTime - b5OpenedAt < .2f) return;
+            var step = Vector2.zero;
+            bool press = false, close = false;
+            int tabStep = 0;
+            if (keys != null)
+            {
+                if (keys.upArrowKey.wasPressedThisFrame || ArenaKeys.Pressed(GameAction.MoveUp)) step.y += 1f;
+                if (keys.downArrowKey.wasPressedThisFrame || ArenaKeys.Pressed(GameAction.MoveDown)) step.y -= 1f;
+                if (keys.leftArrowKey.wasPressedThisFrame || ArenaKeys.Pressed(GameAction.MoveLeft)) step.x -= 1f;
+                if (keys.rightArrowKey.wasPressedThisFrame || ArenaKeys.Pressed(GameAction.MoveRight)) step.x += 1f;
+                press |= ArenaKeys.Pressed(GameAction.Interact);
+            }
+            if (pad != null)
+            {
+                if (pad.dpad.up.wasPressedThisFrame) step.y += 1f;
+                if (pad.dpad.down.wasPressedThisFrame) step.y -= 1f;
+                if (pad.dpad.left.wasPressedThisFrame) step.x -= 1f;
+                if (pad.dpad.right.wasPressedThisFrame) step.x += 1f;
+                // The stick moves one step per push: it has to come back toward the centre before the next.
+                var stick = pad.leftStick.ReadValue();
+                if (!b5StickHeld && stick.magnitude > .6f)
+                {
+                    b5StickHeld = true;
+                    if (Mathf.Abs(stick.x) > Mathf.Abs(stick.y)) step.x += Mathf.Sign(stick.x);
+                    else step.y += Mathf.Sign(stick.y);
+                }
+                else if (stick.magnitude < .3f) b5StickHeld = false;
+                press |= pad.buttonSouth.wasPressedThisFrame;
+                close |= pad.buttonEast.wasPressedThisFrame;
+                if (pad.leftShoulder.wasPressedThisFrame) tabStep--;
+                if (pad.rightShoulder.wasPressedThisFrame) tabStep++;
+            }
+            if (close)
+            {
+                CloseBase5Button();
+                return;
+            }
+            if (tabStep != 0 && b5Screen == V2Campaign.BaseScreen.Workshop) StepResearchTab5(tabStep);
+            else if (step != Vector2.zero) MoveB5Focus(step);
+            if (press) PressB5Focus();
         }
 
-        // ───── Refreshing (RefreshBasePanel, whenever what the page shows changed) ─────
+        // ───── Refreshing (RefreshBasePanel: on opening, after each purchase, and whenever what the page shows changed) ─────
 
-        void RefreshBase5(List<(string label, CampaignCost? cost, Func<bool> act, string fail, bool enabled)> actions, List<(string label, Action act)> leaves)
+        void RefreshBase5(bool rebuild)
         {
-            if (!b5Built) return;
+            if (!b5Built || !campaign || !campaign.Running) return;
+            int version = B5Version();
+            if (!rebuild && version == b5Version) return;
+            b5Version = version;
             var c = campaign;
-            bool art = Art.Enabled;
+            bool art = Art.Enabled, workshop = b5Screen == V2Campaign.BaseScreen.Workshop, canClose = B5CanClose(c);
             b5Art = art;
-            bool canClose = B5CanClose(c);
+            b5Chinese = ArenaText.IsChinese;
+            b5Font = V5TitleKit.Font;
             if (baseScreen.TryGetComponent<Image>(out var back)) back.color = art ? B5Abyss : PageBack;
             b5Backdrop.enabled = art;
-            RefreshBase5Head(c, art, canClose);
-            RefreshBase5Zones(c, art);
-            RefreshBase5View(c, art);
-            RefreshBase5Words(c, art);
-            RefreshBase5Actions(c, art, actions);
-            RefreshBase5Foot(art, leaves, canClose);
+            SetShown(b5WorkshopRoot, workshop);
+            SetShown(b5RocketRoot, !workshop);
+            foreach (var focus in b5Focus) focus.mark(false);
+            b5Focus.Clear();
+            float walletLeft = RefreshBase5Head(c, art, workshop, canClose);
+            if (workshop) RefreshWorkshop5(c, art, walletLeft);
+            else RefreshRocket5(c, art);
+            RefreshBase5Foot(c, art, canClose);
+            B5MarkFocus();
+            if (b5TipOver && !b5TipOver.gameObject.activeInHierarchy) B5HideTip();
         }
 
-        void RefreshBase5Head(V2Campaign c, bool art, bool canClose)
+        /// <summary>A number that changes whenever what the page shows does: the page, the stock, what was bought, the day, the hands,
+        /// the research tab, the art switch, the language and the keys' hints.</summary>
+        int B5Version()
         {
-            // The banner: "基地" and when, gold by day and moonlight blue on a visit at night, centred between its painted ends.
-            bool night = !c.BaseAfterTutorial && !c.BaseAtDawn && !c.BaseFromDusk;
-            StoryText(b5Title, ArenaText.IsChinese ? "基 地" : V5TitleKit.Spaced("BASE"));
-            StoryText(b5When, c.BaseAfterTutorial ? ArenaText.Pair("第 0 天", "DAY 0")
-                : c.BaseAtDawn ? ArenaText.Pair($"第 {c.Day} 晚过后 · 天亮", $"DAWN AFTER NIGHT {c.Day}")
-                : c.BaseFromDusk ? ArenaText.Pair($"第 {c.Day} 天 · 下午", $"DAY {c.Day} · AFTERNOON")
-                : ArenaText.Pair($"第 {c.Day} 天 · 夜晚", $"DAY {c.Day} · NIGHT"));
-            b5When.color = night ? V5TitleKit.Moon : V5TitleKit.Gold;
-            float banner = Bp(B5BannerW), height = Bp(B5BannerH), gap = Bp(B5BannerGap);
-            b5Title.fontSize = V5StoryKit.FontSize(50f);
-            float titleW = V5StoryKit.WidthOf(b5Title, b5Title.text);
-            float room = Mathf.Max(Bp(40f), banner - Bp(B5BannerEnds) * 2f - titleW - gap);
-            B5PlaceLeft(b5When, 0f, room, height);
-            V5TitleKit.FitWidth(b5When, V5StoryKit.FontSize(20f), V5StoryKit.FontSize(14f));
-            float whenW = Mathf.Min(room, V5StoryKit.WidthOf(b5When, b5When.text));
-            float left = (banner - titleW - gap - whenW) * .5f;
-            B5PlaceLeft(b5Title, left, titleW, height);
-            B5PlaceLeft(b5When, left + titleW + gap, room, height);
-
-            // The wallet: the three currencies and, from the first night on, the lamps; a number that changes while the page shows swells once.
-            var set = c.art;
-            b5WalletMedals[0].SetIcons(set ? set.energy : null, WhiteboxIcons.CurrencyIcon(WhiteboxIcons.Currency.Energy));
-            b5WalletMedals[1].SetIcons(set ? set.alloy : null, WhiteboxIcons.CurrencyIcon(WhiteboxIcons.Currency.Alloy));
-            b5WalletMedals[2].SetIcons(set ? set.dark : null, WhiteboxIcons.CurrencyIcon(WhiteboxIcons.Currency.Dark));
-            b5WalletMedals[3].SetIcons(set ? set.lamp : null, V5StoryKit.LampIcon);
-            B5DarkIcon(b5WalletMedals[2].transform.Find("Hole/Icon"), art);
-            int[] values = { c.Energy, c.Alloy, c.Dark, c.LampStock };
-            bool lamps = c.LampStock > 0 || c.Day > 0;
-            bool settled = Time.frameCount - b5TickFrame <= 1;
-            float walletH = Bp(B5WalletH), medal = Bp(B5WalletMedal), x = Bp(12f);
-            for (int i = 0; i < 4; i++)
+            var c = campaign;
+            unchecked
             {
-                var number = b5WalletNumbers[i];
-                bool shown = i < 3 || lamps;
-                SetShown(b5WalletMedals[i], shown);
-                SetShown(number, shown);
-                if (!shown) continue;
-                string text = i < 3 ? values[i].ToString() : "×" + values[i];
-                if (settled && b5WalletShown[i] >= 0 && b5WalletShown[i] != values[i]) PulseOnce(number.transform);
-                b5WalletShown[i] = values[i];
-                StoryText(number, text);
-                if (i > 0) x += Bp(6f);
-                PlaceCentre(b5WalletMedals[i].Rect, new Vector2(0f, .5f), new Vector2(x + medal * .5f, 0f), Vector2.one * medal);
-                x += medal + Bp(8f);
-                // Never narrower than three digits (the lamps: one), so the row does not shift as numbers grow and shrink.
-                float w = Mathf.Max(V5StoryKit.WidthOf(number, text), DigitsWidth(number, i < 3 ? "000" : "×0"));
-                PlaceSpan(number, x, w, walletH);
-                x += w + Bp(10f);
+                int h = (int)b5Screen * 7919 + c.Alloy * 31 + c.Energy * 131 + c.Dark * 521 + c.VoidEnergy * 37 + c.VoidAlloy * 41 + c.LampStock * 23 + c.Fuel * 17;
+                h = h * 31 + c.FortifyLevel * 3 + c.PurchaseCount * 7 + c.Day * 11 + c.TeamMk * 13 + c.ArmorLevel * 19 + c.HomeStepsLeft;
+                h = h * 4 + (B5CanClose(c) ? 1 : 0) + (c.BaseFromDusk ? 2 : 0);
+                if (gm && gm.runWeapons)
+                {
+                    foreach (var w in gm.runWeapons.Hand) h = h * 37 + (w == null ? 0 : 1 + (int)w.form * 2 + (w.revealed ? 1 : 0));
+                    foreach (var w in gm.runWeapons.Auto) h = h * 37 + (w == null ? 0 : 1 + (int)w.form);
+                }
+                h = h * 31 + (w5TabKey?.GetHashCode() ?? 0);
+                h = h * 2 + (c.ProphetBeaten ? 1 : 0);
+                h = h * 2 + (Art.Enabled ? 1 : 0);
+                h = h * 2 + (ArenaText.IsChinese ? 1 : 0);
+                h = h * 2 + (b5PadKeys ? 1 : 0);
+                return h;
             }
-            b5Wallet.sizeDelta = new Vector2(x + Bp(16f), walletH);
-            b5Wallet.anchoredPosition = new Vector2(-Bp(canClose ? B5WalletBeside : B5Margin), -Bp(B5WalletTop));
+        }
 
-            // The close button with its Esc key, only while Esc leaves.
+        /// <summary>The top row: the banner, then from the right the close button, the button to the other page and the wallet. Returns
+        /// where the wallet begins (mock-up pixels from the left), for the workshop's fortification between it and the banner.</summary>
+        float RefreshBase5Head(V2Campaign c, bool art, bool workshop, bool canClose)
+        {
+            // The banner: the page's name and its line (when, on the workshop; the steps still to go home, on the rocket page), centred
+            // between the banner's painted ends.
+            bool night = !c.BaseAfterTutorial && !c.BaseFromDusk;
+            StoryText(b5Title, workshop ? ArenaText.Pair("整 备", "WORKSHOP") : ArenaText.Pair("火 箭", "ROCKET"));
+            StoryText(b5When, workshop ? B5When(c) : B5HomeLine(c));
+            b5When.color = workshop && night ? V5TitleKit.Moon : V5TitleKit.Gold;
+            b5Title.fontSize = V5StoryKit.FontSize(B5TitlePx);
+            b5When.fontSize = V5StoryKit.FontSize(B5LinePx);
+            float inside = B5BannerW - B5BannerEnds * 2f;
+            float titleW = Mathf.Min(B5W(b5Title, b5Title.text), inside * .6f);
+            float room = Mathf.Max(40f, inside - titleW - B5BannerGap);
+            B5PlaceLeft(b5When, 0f, Bp(room), Bp(B5BannerH));
+            V5TitleKit.FitWidth(b5When, V5StoryKit.FontSize(B5LinePx), V5StoryKit.FontSize(15f));
+            float lineW = Mathf.Min(room, B5W(b5When, b5When.text));
+            float left = (B5BannerW - titleW - B5BannerGap - lineW) * .5f;
+            B5PlaceLeft(b5Title, Bp(left), Bp(titleW), Bp(B5BannerH));
+            V5TitleKit.FitWidth(b5Title, V5StoryKit.FontSize(B5TitlePx), V5StoryKit.FontSize(34f));
+            B5PlaceLeft(b5When, Bp(left + titleW + B5BannerGap), Bp(room), Bp(B5BannerH));
+
+            float right = B5Width - B5Margin, top = B5HeadMiddle - B5HeadButtonH * .5f;
+            // The close button with its key, only while Esc leaves.
             SetShown(b5Close, canClose);
-            if (!canClose) return;
-            StoryText(b5CloseLabel, ArenaText.Pair("关闭", "Close"));
-            float labelW = V5StoryKit.WidthOf(b5CloseLabel, b5CloseLabel.text), keyW = b5CloseKey.Rect.sizeDelta.x;
-            float closeW = Bp(22f) + labelW + Bp(12f) + keyW + Bp(22f), closeH = Bp(B5CloseH);
-            b5Close.Place(Bp(B5Width - B5CloseRight) - closeW, Bp(B5CloseTop), closeW, closeH);
-            B5PlaceLeft(b5CloseLabel, Bp(22f), labelW, closeH);
-            B5PlaceKey(b5CloseKey, Bp(22f) + labelW + Bp(12f));
-        }
-
-        void RefreshBase5Zones(V2Campaign c, bool art)
-        {
-            var frame = art ? V5TitleKit.Piece("hex-frame") : null;
-            var hexMask = V5TitleKit.Piece("hex-mask");
-            float window = .74f * B5HexW / (.72f * B5HexH);
-            for (int i = 0; i < 4; i++)
-            {
-                var room = (CampaignRoom)i;
-                var zone = b5Zones[i];
-                var state = c.Room(room);
-                bool chosen = room == tab, unbuilt = room != CampaignRoom.Control && state.level <= 0;
-                zone.plate.Chosen = chosen;
-                SetShown(zone.warm, chosen);
-                SetShown(zone.pointer, chosen);
-                zone.glow.enabled = art && chosen;
-                // The hexagon: the machined frame with the art on; a flat hexagon with the thin edge (orange while chosen) in whitebox.
-                bool framed = frame;
-                V5TitleKit.Dress(zone.frame, framed ? frame : hexMask, framed ? Color.white : WhiteboxSkin.PlateFill);
-                B5Edge(zone.frame, !framed, chosen ? V5TitleKit.Orange : WhiteboxSkin.Edge);
-                // Inside it the zone's picture with the art on (darker before it is built, reddened while broken), the room's house in
-                // whitebox or where there is no picture.
-                var picture = B5ZoneTexture(c, room, out var uv);
-                bool pictured = art && picture;
-                zone.picture.enabled = pictured;
-                zone.house.enabled = !pictured;
-                if (pictured)
-                {
-                    zone.picture.texture = picture;
-                    float shape = picture.width * uv.width / Mathf.Max(1f, picture.height * uv.height);
-                    zone.picture.uvRect = B5Cover(uv, shape, window);
-                    zone.picture.color = state.damaged ? B5BrokenTint : unbuilt ? B5UnbuiltTint : Color.white;
-                }
-                else
-                {
-                    zone.house.sprite = WhiteboxIcons.Room(room);
-                    zone.house.color = state.damaged ? RoomBroken : unbuilt ? RoomUnbuilt : Color.white;
-                }
-                StoryText(zone.name, V2Campaign.RoomName(room));
-                zone.name.color = chosen ? V5TitleKit.Chosen : V5TitleKit.Ink;
-                V5TitleKit.FitWidth(zone.name, V5StoryKit.FontSize(24f), V5StoryKit.FontSize(17f));
-                B5LevelOf(c, room, out int count, out int filled);
-                float after = B5Diamonds(zone.diamonds, zone.plate.transform, count, filled, Bp(13f), Bp(5f), Bp(22f), Bp(56.5f), art);
-                StoryText(zone.level, "LV " + filled);
-                V5TitleKit.Place(zone.level.rectTransform, after + Bp(11f), Bp(47f), Bp(70f), Bp(20f));
-                StoryText(zone.line, B5ZoneLine(c, room, out var colour));
-                zone.line.color = colour;
-                V5TitleKit.FitWidth(zone.line, V5StoryKit.FontSize(14f), V5StoryKit.FontSize(11f));
-            }
-        }
-
-        void RefreshBase5View(V2Campaign c, bool art)
-        {
-            bool ship = tab == CampaignRoom.Ship;
-            b5ViewPlate.SetLook(ship ? V5HudKit.PlateLook.Teal : V5HudKit.PlateLook.Plain);
-            // The view's inside follows the plate's shape: cut corners with the art on, a plain rectangle in whitebox.
-            V5TitleKit.Dress(b5WindowShape, art ? V5TitleKit.Chamfer : null, Color.white, V5HudKit.ChamferDensity(B5ViewCut - 1f, B5Css));
-            // The launch bay shows the live view of the ship (it shows each repair as it is bought); with the art on and no live view, the
-            // crashed ship cut out on the teal plate.
-            bool cutout = ship && art && !c.ShipViewTexture && b5Cutout.sprite;
-            SetShown(b5Cutout, cutout);
-            roomPicture.enabled = !cutout;
-            var picture = roomPicture.texture;
-            if (picture && picture.height > 0)
-            {
-                var size = b5Window.rect.size;
-                roomPicture.uvRect = B5Cover(new Rect(0f, 0f, 1f, 1f), picture.width / (float)picture.height, size.x / Mathf.Max(1f, size.y));
-            }
-            SetShown(b5Caption, ship);
-            if (ship) StoryText(b5Caption, ArenaText.IsChinese ? V5TitleKit.Spaced("SHIP STATUS") + "   ·   飞船状态" : V5TitleKit.Spaced("SHIP STATUS"));
-            // Over the view the ship's status: the base's hull, the engine, the armour and the fuel along its foot, the ignition at its top
-            // right (V5BaseShip.cs).
-            RefreshBase5Ship(c, art, ship);
-        }
-
-        /// <summary>Under the view: the zone's name in the cream paint with its level as diamonds ("损坏" after them while it is broken), the
-        /// lines that matter now, and the steps.</summary>
-        void RefreshBase5Words(V2Campaign c, bool art)
-        {
-            var state = c.Room(tab);
-            float top = B5ViewH + B5NameGap;
-            StoryText(b5Name, V2Campaign.RoomName(tab));
-            V5TitleKit.Place(b5Name.rectTransform, 0f, Bp(top), Bp(B5MidW * .7f), Bp(B5NameH));
-            V5TitleKit.FitWidth(b5Name, V5StoryKit.FontSize(42f), V5StoryKit.FontSize(28f));
-            float nameW = Mathf.Min(Bp(B5MidW * .7f), V5StoryKit.WidthOf(b5Name, b5Name.text));
-            B5LevelOf(c, tab, out int count, out int filled);
-            float after = B5Diamonds(b5NameDiamonds, b5Name.transform.parent, count, filled, Bp(15f), Bp(6f), nameW + Bp(18f), Bp(top + B5NameH * .5f), art);
-            SetShown(b5Broken, state.damaged);
-            if (state.damaged)
-            {
-                StoryText(b5Broken, ArenaText.Pair("损坏", "BROKEN"));
-                V5TitleKit.Place(b5Broken.rectTransform, after + Bp(16f), Bp(top + (B5NameH - 24f) * .5f), Bp(160f), Bp(24f));
-            }
-            top += B5NameH + 10f;
-            string lines = B5Lines(c, tab);
-            bool any = lines.Length > 0;
-            SetShown(b5Lines, any);
-            if (any)
-            {
-                V5TitleKit.Place(b5Lines.rectTransform, 0f, Bp(top), Bp(B5MidW), Bp(30f));
-                b5Lines.text = lines;
-                float height = Mathf.Ceil(b5Lines.preferredHeight);
-                b5Lines.rectTransform.sizeDelta = new Vector2(Bp(B5MidW), height + 2f);
-                top += height / B5Css + 18f;
-            }
-            bool steps = tab != CampaignRoom.Control;
-            SetShown(b5Steps, steps);
-            if (!steps) return;
-            V5TitleKit.Place(b5Steps, 0f, Bp(top), Bp(B5MidW), Bp(B5StepH));
-            RefreshBase5Steps(c, art);
-        }
-
-        void RefreshBase5Steps(V2Campaign c, bool art)
-        {
-            var state = c.Room(tab);
-            int lv = state.level;
-            bool ship = tab == CampaignRoom.Ship, nextGiven = false;
-            b5Track.texture = art ? B5TrackTexture : null;
-            b5Track.color = art ? new Color(1f, 1f, 1f, .6f) : B5TrackFlat;
-            b5Track.uvRect = new Rect(1f / 6f, 0f, 2f / 3f, 1f);
-            for (int i = 0; i < 3; i++)
-            {
-                int level = i + 1;
-                bool reached = lv >= level;
-                bool done = ship ? (level == 1 ? c.EngineFixed : level == 2 ? c.ArmorFixed : c.FuelFull) : reached;
-                B5StepLook look;
-                string line;
-                if (done)
-                {
-                    look = B5StepLook.Done;
-                    line = !ship ? ArenaText.Pair("已解锁", "Unlocked") : level == 3 ? ArenaText.Pair("已加满", "Full") : ArenaText.Pair("已修好", "Repaired");
-                }
-                else if (reached && state.damaged)
-                {
-                    look = B5StepLook.Later;
-                    line = ArenaText.Pair("先修好这个区", "Repair the room first");
-                }
-                else if (reached)
-                {
-                    // Only the launch bay's parts are reached and not done: a part to repair now, or the fuel's count.
-                    look = level == 3 ? B5StepLook.Count : B5StepLook.Next;
-                    line = level == 3 ? $"{c.Fuel} / {c.FuelUnits}" : ArenaText.Pair("可以修了", "Ready to repair");
-                    nextGiven = true;
-                }
-                else if (level == lv + 1 && !nextGiven)
-                {
-                    look = B5StepLook.Next;
-                    line = level == 1 ? ArenaText.Pair("建造后解锁", "Unlocks once built") : ArenaText.Pair($"升到 {level} 级解锁", $"Unlocks at level {level}");
-                    nextGiven = true;
-                }
-                else
-                {
-                    look = B5StepLook.Later;
-                    line = ArenaText.Pair($"{level} 级解锁", $"Unlocks at level {level}");
-                }
-                var step = b5StepViews[i];
-                int k = (int)look;
-                V5TitleKit.Dress(step.fill, art ? V5StoryKit.Fill(B5StepTop[k], B5StepFoot[k]) : WhiteboxSkin.Square,
-                    art ? Color.white : Color.Lerp(B5StepTop[k], B5StepFoot[k], .5f));
-                step.number.color = B5StepInk[k];
-                // A level not reached keeps its "? ? ?": what it brings is seen only once it is unlocked.
-                StoryText(step.title, reached || done ? B5StepWords(tab, level) : ArenaText.Pair("？？？", "? ? ?"));
-                V5TitleKit.FitWidth(step.title, V5StoryKit.FontSize(17f), V5StoryKit.FontSize(12f));
-                StoryText(step.state, line);
-                step.state.color = B5StepWord[k];
-                V5TitleKit.FitWidth(step.state, V5StoryKit.FontSize(15f), V5StoryKit.FontSize(11f));
-            }
-        }
-
-        void RefreshBase5Actions(V2Campaign c, bool art, List<(string label, CampaignCost? cost, Func<bool> act, string fail, bool enabled)> actions)
-        {
-            StoryText(b5ActsCaption, ArenaText.IsChinese ? V5TitleKit.Spaced("ACTIONS") + "   ·   可做的事" : V5TitleKit.Spaced("ACTIONS"));
-            var items = new List<B5Item>();
-            bool repairFirst = c.Room(tab).damaged;
-            for (int i = 0; i < actions.Count; i++)
-            {
-                var (label, cost, act, fail, enabled) = actions[i];
-                B5Split(label, out string head, out string note);
-                items.Add(new B5Item { title = head, note = note, cost = cost, act = act, fail = fail, enabled = enabled, deed = B5DeedOf(c, act, label, i == 0 && repairFirst) });
-            }
-            int go = B5GoItem(c, items);
-            // The launch bay's repairs and its fuel leave the list once done: while there is room they stay at its foot as done.
-            if (tab == CampaignRoom.Ship)
-            {
-                if (c.EngineFixed && items.Count < B5DoneRowsBelow)
-                    items.Add(new B5Item { title = ArenaText.Pair("修复引擎", "Repair the engine"), done = ArenaText.Pair("✓ 已修好", "✓ Repaired"), deed = B5Deed.Engine });
-                if (c.ArmorFixed && items.Count < B5DoneRowsBelow)
-                    items.Add(new B5Item { title = ArenaText.Pair("修复装甲", "Repair the armor"), done = ArenaText.Pair("✓ 已修好", "✓ Repaired"), deed = B5Deed.Armor });
-                if (c.FuelFull && items.Count < B5DoneRowsBelow)
-                    items.Add(new B5Item { title = ArenaText.Pair("合成反物质燃料", "Synthesize antimatter fuel"), done = ArenaText.Pair("✓ 已加满", "✓ Full"), deed = B5Deed.Fuel });
-            }
-            int n = items.Count;
-            SetShown(b5ActsEmpty, n == 0);
-            if (n == 0) StoryText(b5ActsEmpty, ArenaText.Pair("这里现在没有可做的事", "Nothing to do here right now"));
-            float gap = n > 5 ? B5RowGapTight : B5RowGap;
-            float h = n > 0 ? Mathf.Min(B5RowMax, (B5Floor - B5RowsTop - (n - 1) * gap) / n) : 0f;
-            for (int i = 0; i < n; i++) B5LayRow(c, art, B5RowAt(i), items[i], i == go, B5RowsTop + i * (h + gap), h);
-            for (int i = n; i < b5Rows.Count; i++) SetShown(b5Rows[i].root, false);
-        }
-
-        /// <summary>One action's plate: warm with the hazard tab and an orange button when it is the one to do now, teal with "✓" when done,
-        /// faded with its button off while it cannot be done; its medal, its title, then its price (each currency's icon and amount, the
-        /// amount red while the stock is short of it) and its note.</summary>
-        void B5LayRow(V2Campaign c, bool art, B5Row row, B5Item item, bool go, float top, float h)
-        {
-            SetShown(row.root, true);
-            V5TitleKit.Place(row.root, Bp(B5ActLeft), Bp(top), Bp(B5ActW), Bp(h));
-            bool done = item.done != null;
-            row.deed = item.deed;
-            row.plate.SetLook(done ? V5HudKit.PlateLook.Teal : go ? V5HudKit.PlateLook.Warm : V5HudKit.PlateLook.Plain);
-            row.fade.alpha = done || item.enabled ? 1f : .55f;
-            SetShown(row.tab, go);
-            if (go) V5TitleKit.Dress(row.tab, art ? V5TitleKit.Piece("hazard-tab") : null, art ? Color.white : V5TitleKit.Orange);
-
-            float m = Mathf.Min(B5ActMedal, h - 30f);
-            B5MedalIcons(c, item.deed, out var artIcon, out var flatIcon);
-            row.medal.SetSize(Bp(m));
-            row.medal.SetIcons(artIcon, flatIcon);
-            row.medal.SetRing(done ? V5TitleKit.Teal : go ? V5TitleKit.Orange : Color.clear);
-            row.medal.SetGlow(item.deed == B5Deed.Lamp ? V5StoryKit.Amber : Color.clear);
-            PlaceCentre(row.medal.Rect, new Vector2(0f, 1f), new Vector2(Bp(18f + m * .5f), -Bp(h * .5f)), Vector2.one * Bp(m));
-            float textLeft = 18f + m + 18f, right;
-
-            SetShown(row.button, !done);
-            SetShown(row.done, done);
-            if (done)
-            {
-                row.act = null;
-                StoryText(row.done, item.done);
-                float w = V5StoryKit.WidthOf(row.done, item.done) / B5Css;
-                V5TitleKit.Place(row.done.rectTransform, Bp(B5ActW - 20f - w - 4f), Bp((h - 26f) * .5f), Bp(w + 4f), Bp(26f));
-                right = 20f + w + 18f;
-            }
-            else
-            {
-                row.act = item.act;
-                row.fail = item.fail;
-                row.button.SetLook(go ? V5Plate.Look.Go : V5Plate.Look.Plate);
-                row.button.Button.interactable = item.enabled;
-                row.button.Dim = !item.enabled;
-                string verb = B5Verb(c, item.deed);
-                StoryText(row.verb, verb);
-                row.verb.color = go ? (art ? V5TitleKit.Dark : Color.white) : V5TitleKit.Ink;
-                float bw = Mathf.Max(B5ActButtonW, V5StoryKit.WidthOf(row.verb, verb) / B5Css + 44f), bh = Mathf.Min(B5ActButtonH, h - 28f);
-                row.button.Place(Bp(B5ActW - 20f - bw), Bp((h - bh) * .5f), Bp(bw), Bp(bh));
-                right = 20f + bw + 18f;
-            }
-            float textW = B5ActW - textLeft - right;
-
-            var cost = item.cost ?? default;
-            bool priced = item.cost.HasValue && !cost.IsFree, noted = !string.IsNullOrEmpty(item.note);
-            float titleTop = priced || noted ? (h - 62f) * .5f : (h - 26f) * .5f;
-            StoryText(row.title, item.title);
-            V5TitleKit.Place(row.title.rectTransform, Bp(textLeft), Bp(titleTop), Bp(textW), Bp(26f));
-            V5TitleKit.FitWidth(row.title, V5StoryKit.FontSize(22f), V5StoryKit.FontSize(15f));
-
-            float x = Bp(textLeft), lineTop = Bp(titleTop + 36f), lineH = Bp(26f);
-            int[] held = { c.Energy, c.Alloy, c.Dark };
-            for (int k = 0; k < 3; k++)
-            {
-                int amount = !priced ? 0 : k == 0 ? cost.energy : k == 1 ? cost.alloy : cost.dark;
-                bool shown = amount > 0;
-                SetShown(row.holes[k], shown);
-                SetShown(row.amounts[k], shown);
-                if (!shown) continue;
-                var sprite = CurrencySprite(k);
-                // With the art on the currency's picture is cut round; whitebox shows its icon whole.
-                var round = row.holes[k].GetComponent<Mask>();
-                if (round.enabled != art) round.enabled = art;
-                row.holes[k].enabled = art;
-                row.coins[k].sprite = sprite;
-                row.coins[k].enabled = sprite;
-                B5DarkIcon(k == 2 ? row.coins[k].transform : null, art);
-                V5TitleKit.Place(row.holes[k].rectTransform, x, lineTop, Bp(26f), lineH);
-                if (sprite) x += Bp(26f + 6f);
-                string text = sprite ? amount.ToString() : $"{CurrencyLabel(k)} {amount}";
-                StoryText(row.amounts[k], text);
-                row.amounts[k].color = held[k] >= amount ? WalletColour(k) : B5Short;
-                float w = V5StoryKit.WidthOf(row.amounts[k], text);
-                V5TitleKit.Place(row.amounts[k].rectTransform, x, lineTop, w + 2f, lineH);
-                x += w + Bp(14f);
-            }
-            SetShown(row.note, noted);
-            if (!noted) return;
-            if (priced) x -= Bp(6f);
-            StoryText(row.note, item.note);
-            V5TitleKit.Place(row.note.rectTransform, x, lineTop, Mathf.Max(Bp(20f), Bp(textLeft + textW) - x), lineH);
-            V5TitleKit.FitWidth(row.note, V5StoryKit.FontSize(14f), V5StoryKit.FontSize(11f));
-        }
-
-        void RefreshBase5Foot(bool art, List<(string label, Action act)> leaves, bool canClose)
-        {
-            // The keys: W and S change zone; Esc closes while it does.
-            float x = Bp(20f), h = Bp(B5HintsH);
-            B5PlaceKey(b5KeyW, x);
-            x += b5KeyW.Rect.sizeDelta.x + Bp(8f);
-            B5PlaceKey(b5KeyS, x);
-            x += b5KeyS.Rect.sizeDelta.x + Bp(8f);
-            StoryText(b5ZonesWord, ArenaText.Pair("换区域", "Change room"));
-            float w = V5StoryKit.WidthOf(b5ZonesWord, b5ZonesWord.text);
-            B5PlaceLeft(b5ZonesWord, x, w, h);
-            x += w;
-            SetShown(b5KeyEsc, canClose);
-            SetShown(b5CloseWord, canClose);
             if (canClose)
             {
-                x += Bp(26f);
-                B5PlaceKey(b5KeyEsc, x);
-                x += b5KeyEsc.Rect.sizeDelta.x + Bp(8f);
-                StoryText(b5CloseWord, ArenaText.Pair("关闭", "Close"));
-                w = V5StoryKit.WidthOf(b5CloseWord, b5CloseWord.text);
-                B5PlaceLeft(b5CloseWord, x, w, h);
+                StoryText(b5CloseLabel, ArenaText.Pair("关闭", "Close"));
+                b5CloseKey.SetText(b5PadKeys ? "B" : "Esc");
+                b5CloseLabel.fontSize = V5StoryKit.FontSize(22f);
+                float labelW = B5W(b5CloseLabel, b5CloseLabel.text), keyW = b5CloseKey.Rect.sizeDelta.x / B5Css;
+                float width = 24f + labelW + 12f + keyW + 20f;
+                B5Place(b5Close, right - width, top, width, B5HeadButtonH);
+                B5PlaceLeft(b5CloseLabel, Bp(24f), Bp(labelW), Bp(B5HeadButtonH));
+                B5PlaceKey(b5CloseKey, Bp(24f + labelW + 12f));
+                B5AddFocus("h.close", b5Close);
+                right -= width + B5HeadGap;
+            }
+
+            // The button to the other page: its medal, its name and "›".
+            var set = c.art;
+            b5SwitchMedal.SetIcons(workshop ? set ? set.shipBay : null : set ? set.armament : null,
+                WhiteboxIcons.Room(workshop ? CampaignRoom.Ship : CampaignRoom.Armament));
+            b5SwitchMedal.SetRing(workshop ? V5TitleKit.Steel : Color.clear);
+            StoryText(b5SwitchLabel, workshop ? ArenaText.Pair("火箭", "Rocket") : ArenaText.Pair("整备", "Workshop"));
+            StoryText(b5SwitchArrow, "›");
+            b5SwitchArrow.color = workshop ? V5TitleKit.Steel : V5TitleKit.Ink2;
+            b5SwitchLabel.fontSize = V5StoryKit.FontSize(22f);
+            float medal = 46f, nameW = B5W(b5SwitchLabel, b5SwitchLabel.text), arrowW = B5W(b5SwitchArrow, "›");
+            float switchW = 10f + medal + 14f + nameW + 6f + arrowW + 22f;
+            B5Place(b5Switch, right - switchW, top, switchW, B5HeadButtonH);
+            PlaceCentre(b5SwitchMedal.Rect, new Vector2(0f, .5f), new Vector2(Bp(10f + medal * .5f), 0f), Vector2.one * Bp(medal));
+            B5PlaceLeft(b5SwitchLabel, Bp(10f + medal + 14f), Bp(nameW), Bp(B5HeadButtonH));
+            B5PlaceLeft(b5SwitchArrow, Bp(10f + medal + 14f + nameW + 6f), Bp(arrowW), Bp(B5HeadButtonH));
+            B5AddFocus("h.switch", b5Switch);
+            right -= switchW + B5HeadGap;
+
+            float walletW = RefreshBase5Wallet(c, art, workshop);
+            B5Rect(b5Wallet, right - walletW, B5HeadMiddle - B5WalletH * .5f, walletW, B5WalletH);
+            // The void's two currencies, once the Nash Prophet is beaten and only on the workshop (its void tab spends them).
+            bool voids = workshop && c.ProphetBeaten;
+            SetShown(b5VoidWallet, voids);
+            if (voids)
+            {
+                float voidW = RefreshBase5VoidWallet(c);
+                B5Rect(b5VoidWallet, right - voidW, B5HeadMiddle + B5WalletH * .5f + B5VoidWalletGap, voidW, B5VoidWalletH);
+            }
+            return right - walletW;
+        }
+
+        /// <summary>The banner's line on the workshop: the day and its part, gold by day and moonlight blue at night.</summary>
+        static string B5When(V2Campaign c) => c.BaseAfterTutorial ? ArenaText.Pair("第 0 天", "DAY 0")
+            : c.BaseFromDusk ? ArenaText.Pair($"第 {c.Day} 天 · 下午", $"DAY {c.Day} · AFTERNOON")
+            : ArenaText.Pair($"第 {c.Day} 天 · 夜晚", $"DAY {c.Day} · NIGHT");
+
+        /// <summary>The banner's line on the rocket page: how many of the four steps home are left (V2Campaign.HomeStepsLeft).</summary>
+        static string B5HomeLine(V2Campaign c)
+        {
+            int left = c.HomeStepsLeft;
+            return left <= 0 ? ArenaText.Pair("可以点火回家", "READY TO IGNITE")
+                : ArenaText.Pair($"回家还差 {left} 步", left == 1 ? "1 STEP FROM HOME" : $"{left} STEPS FROM HOME");
+        }
+
+        /// <summary>The wallet: on the workshop the alloy and the alien energy, on the rocket page the alloy, the dark matter and the lamps;
+        /// each a medal, its name and its amount in its own colour. A number that changes while the page shows swells once. Returns the
+        /// wallet's width in mock-up pixels.</summary>
+        float RefreshBase5Wallet(V2Campaign c, bool art, bool workshop)
+        {
+            var set = c.art;
+            b5Purse[0].medal.SetIcons(set ? set.energy : null, WhiteboxIcons.CurrencyIcon(WhiteboxIcons.Currency.Energy));
+            b5Purse[1].medal.SetIcons(set ? set.alloy : null, WhiteboxIcons.CurrencyIcon(WhiteboxIcons.Currency.Alloy));
+            b5Purse[2].medal.SetIcons(set ? set.dark : null, WhiteboxIcons.CurrencyIcon(WhiteboxIcons.Currency.Dark));
+            b5Purse[3].medal.SetIcons(set ? set.lamp : null, V5StoryKit.LampIcon);
+            b5Purse[4].medal.SetIcons(set ? set.energy : null, WhiteboxIcons.CurrencyIcon(WhiteboxIcons.Currency.Energy));
+            b5Purse[5].medal.SetIcons(set ? set.alloy : null, WhiteboxIcons.Look("voidalloy"));
+            B5DarkIcon(b5Purse[2].medal.transform.Find("Hole/Icon"), art);
+            int[] shown = workshop ? new[] { 1, 0 } : new[] { 1, 2, 3 };
+            int[] values = { c.Energy, c.Alloy, c.Dark, c.LampStock, c.VoidEnergy, c.VoidAlloy };
+            float medal = workshop ? 56f : 52f, namePx = workshop ? 20f : 19f, numberPx = workshop ? 34f : 32f;
+            bool settled = Time.frameCount - b5TickFrame <= 1;
+            float x = 14f;
+            for (int i = 0; i < 4; i++)
+            {
+                var purse = b5Purse[i];
+                bool on = Array.IndexOf(shown, i) >= 0;
+                SetShown(purse.medal, on);
+                SetShown(purse.name, on);
+                SetShown(purse.amount, on);
+                if (!on) purse.shown = -1;
+            }
+            for (int k = 0; k < shown.Length; k++)
+            {
+                int i = shown[k];
+                var purse = b5Purse[i];
+                bool lamps = i == 3;
+                if (k > 0) x += 28f;
+                PlaceCentre(purse.medal.Rect, new Vector2(0f, .5f), new Vector2(Bp(x + medal * .5f), 0f), Vector2.one * Bp(medal));
+                purse.medal.SetSize(Bp(medal));
+                x += medal + 12f;
+                string name = i < 3 ? CurrencyLabel(i) : ArenaText.Pair("矿灯", "Lamps");
+                StoryText(purse.name, name);
+                purse.name.fontSize = V5StoryKit.FontSize(namePx);
+                purse.name.color = workshop ? V5TitleKit.Ink2 : V5TitleKit.Ink;
+                float nameW = B5W(purse.name, name);
+                B5PlaceLeft(purse.name, Bp(x), Bp(nameW), Bp(B5WalletH));
+                x += nameW + 10f;
+                x += B5LayPurseAmount(purse, values[i], lamps ? "×" + values[i] : values[i].ToString(), numberPx, lamps ? V5TitleKit.Gold : ResourceColours.Of(i),
+                    lamps ? "×0" : "000", x, B5WalletH, settled);
+            }
+            return x + 24f;
+        }
+
+        /// <summary>The void's two currencies (energy, alloy) in their own plate: each a violet-ringed medal and its number, no names.
+        /// Returns the plate's width in mock-up pixels.</summary>
+        float RefreshBase5VoidWallet(V2Campaign c)
+        {
+            bool settled = Time.frameCount - b5TickFrame <= 1;
+            float x = 10f, medal = 30f;
+            int[] values = { c.VoidEnergy, c.VoidAlloy };
+            for (int k = 0; k < 2; k++)
+            {
+                var purse = b5Purse[4 + k];
+                SetShown(purse.name, false);
+                if (k > 0) x += 16f;
+                PlaceCentre(purse.medal.Rect, new Vector2(0f, .5f), new Vector2(Bp(x + medal * .5f), 0f), Vector2.one * Bp(medal));
+                purse.medal.SetSize(Bp(medal));
+                x += medal + 8f;
+                x += B5LayPurseAmount(purse, values[k], values[k].ToString(), 24f, V5HudKit.VioletHi, "00", x, B5VoidWalletH, settled);
+            }
+            return x + 14f;
+        }
+
+        /// <summary>A wallet cell's amount from left (mock-up pixels) in a row height tall, never narrower than sample (so the row does
+        /// not shift as numbers grow and shrink); it swells once when it changes while the page shows. Returns its width.</summary>
+        float B5LayPurseAmount(B5Purse purse, int value, string text, float px, Color colour, string sample, float left, float height, bool settled)
+        {
+            if (settled && purse.shown >= 0 && purse.shown != value) PulseOnce(purse.amount.transform);
+            purse.shown = value;
+            StoryText(purse.amount, text);
+            purse.amount.fontSize = V5StoryKit.FontSize(px);
+            purse.amount.color = colour;
+            float w = Mathf.Max(B5W(purse.amount, text), DigitsWidth(purse.amount, sample) / B5Css);
+            PlaceSpan(purse.amount, Bp(left), Bp(w), Bp(height));
+            return w;
+        }
+
+        /// <summary>The foot: the keys that work on the page, and the ways out of the visit (V2Campaign.BaseExits) from the right, the main
+        /// one at the right end in orange with its line under it.</summary>
+        void RefreshBase5Foot(V2Campaign c, bool art, bool canClose)
+        {
+            bool pad = b5PadKeys;
+            float x = 22f;
+            for (int i = 0; i < 2; i++)
+            {
+                bool shown = i == 0 || canClose;
+                SetShown(b5HintKeys[i], shown);
+                SetShown(b5HintWords[i], shown);
+                if (!shown) continue;
+                if (i > 0) x += 34f;
+                b5HintKeys[i].SetText(i == 0 ? pad ? "A" : ArenaKeys.InteractKey : pad ? "B" : "Esc");
+                B5PlaceKey(b5HintKeys[i], Bp(x));
+                x += b5HintKeys[i].Rect.sizeDelta.x / B5Css + 10f;
+                string word = i == 0 ? ArenaText.Pair("购买", "Buy") : ArenaText.Pair("关闭", "Close");
+                StoryText(b5HintWords[i], word);
+                float w = B5W(b5HintWords[i], word);
+                B5PlaceLeft(b5HintWords[i], Bp(x), Bp(w), Bp(B5FootH));
                 x += w;
             }
-            float middle = B5Height - B5FootBottom - B5GoH * .5f;
-            V5TitleKit.Place(b5Hints.Rect, Bp(B5Margin), Bp(middle - B5HintsH * .5f), x + Bp(20f), h);
+            B5Rect(b5Hints.Rect, B5Margin, B5FootTop, x + 24f, B5FootH);
 
-            // The ways out along the foot from the right: the one that moves the story on (the ignition, the night, the dawn, or the only
-            // one) is the orange go button at the right end; the others keep the game's order to its left.
-            var c = campaign;
-            int go = -1;
-            foreach (var forward in new Action[] { c.Ignite, c.EnterNight, c.WaitForDawn })
-            {
-                for (int i = 0; i < leaves.Count && go < 0; i++)
-                    if (B5Same(leaves[i].act, forward)) go = i;
-                if (go >= 0) break;
-            }
-            if (go < 0) go = leaves.Count - 1;
-            float right = Bp(B5Width - B5Margin);
+            var exits = c.BaseExits();
+            float right = B5Width - B5Margin;
             int used = 0;
-            if (go >= 0) right = B5LayWay(B5WayAt(used++), leaves[go], true, right, art) - Bp(B5WayGap);
-            for (int i = leaves.Count - 1; i >= 0; i--)
+            for (int i = exits.Count - 1; i >= 0; i--)
             {
-                if (i == go) continue;
-                right = B5LayWay(B5WayAt(used++), leaves[i], false, right, art) - Bp(B5WayGap);
+                var way = B5WayAt(used++);
+                right = B5LayWay(way, exits[i], art, right) - B5WayGap;
+                // The main way out is "f.go" (the base tour's last step points at it), the others "f.exit.N" by their place in BaseExits.
+                B5AddFocus(exits[i].primary ? "f.go" : "f.exit." + i, way.plate);
             }
             for (int i = used; i < b5Ways.Count; i++) SetShown(b5Ways[i].plate, false);
         }
 
-        /// <summary>One way out, its right edge at right (canvas units from the page's left); returns its left edge. Its words are the game's,
-        /// what stood in brackets after a "·".</summary>
-        float B5LayWay(B5Way way, (string label, Action act) leave, bool go, float right, bool art)
+        /// <summary>One way out, its right edge at right (mock-up pixels); returns its left edge. The main one is the orange go button with
+        /// "›" after its words and its line under it, never narrower than that line.</summary>
+        float B5LayWay(B5Way way, V2Campaign.BaseExit exit, bool art, float right)
         {
             SetShown(way.plate, true);
-            way.act = leave.act;
-            way.go = go;
-            way.plate.SetLook(go ? V5Plate.Look.Go : V5Plate.Look.Plate);
-            B5Split(leave.label, out string head, out string note);
-            string text = string.IsNullOrEmpty(note) ? head : head + " · " + note;
+            way.act = exit.go;
+            way.go = exit.primary;
+            way.plate.SetLook(way.go ? V5Plate.Look.Go : V5Plate.Look.Plate);
+            string text = way.go ? exit.label + " ›" : exit.label;
+            float px = way.go ? 26f : 22f, pad = way.go ? 30f : 28f;
             StoryText(way.label, text);
-            float px = go ? 26f : 21f, h = go ? B5GoH : B5WayH, padLeft = go ? 84f : 22f, padRight = go ? 26f : 22f;
-            float room = Bp((go ? B5GoMaxW : B5WayMaxW) - padLeft - padRight);
-            B5PlaceLeft(way.label, Bp(padLeft), room, Bp(h));
-            V5TitleKit.FitWidth(way.label, V5StoryKit.FontSize(px), V5StoryKit.FontSize(px * .65f));
-            float w = Mathf.Min(room, V5StoryKit.WidthOf(way.label, text));
-            way.label.color = go ? (art ? V5TitleKit.Dark : Color.white) : V5TitleKit.Ink;
-            float width = Bp(padLeft + padRight) + w;
-            way.plate.Place(right - width, Bp(B5Height - B5FootBottom - B5GoH * .5f - h * .5f), width, Bp(h));
-            bool stripes = go && art;
-            SetShown(way.hazard, stripes);
-            if (stripes)
+            way.label.fontSize = V5StoryKit.FontSize(px);
+            way.label.color = way.go ? art ? V5TitleKit.Dark : Color.white : V5TitleKit.Ink;
+            bool noted = !string.IsNullOrEmpty(exit.note);
+            SetShown(way.note, noted);
+            float noteW = 0f;
+            if (noted)
             {
-                float repeat = 14f * 1.41421f * B5Css;
-                V5TitleKit.Place(way.hazard.rectTransform, Bp(16f), Bp(14f), Bp(48f), Bp(h - 28f));
-                way.hazard.uvRect = new Rect(0f, 0f, Bp(48f) / repeat, Bp(h - 28f) / repeat);
+                StoryText(way.note, exit.note);
+                way.note.fontSize = V5StoryKit.FontSize(B5NotePx);
+                noteW = B5W(way.note, exit.note) + 12f;
             }
+            float width = Mathf.Min(640f, Mathf.Max(way.go ? B5GoMinW : 0f, B5W(way.label, text) + pad * 2f, noteW));
+            B5Place(way.plate, right - width, B5FootTop, width, B5FootH);
+            V5TitleKit.FitWidth(way.label, V5StoryKit.FontSize(px), V5StoryKit.FontSize(px * .7f));
+            if (noted) V5TitleKit.FitWidth(way.note, V5StoryKit.FontSize(B5NotePx), V5StoryKit.FontSize(13f));
             return right - width;
         }
 
-        // ───── What the page says ─────
+        // ───── The keys' focus ─────
 
-        /// <summary>A zone's level as diamonds: Central Control's hull level of its levels, a room's level of three.</summary>
-        static void B5LevelOf(V2Campaign c, CampaignRoom room, out int count, out int filled)
+        /// <summary>A button the keys can focus: the pointer's arrival focuses it too, the focus shows as its chosen rim, and pressing it
+        /// clicks it (a button that cannot be pressed now gives the refusal).</summary>
+        void B5AddFocus(string id, V5Plate plate)
         {
-            bool control = room == CampaignRoom.Control;
-            count = control ? Mathf.Clamp(c.MaxDurability, 1, 5) : 3;
-            filled = control ? c.Durability : c.Room(room).level;
-        }
-
-        /// <summary>A zone plate's line of state: broken (orange: repair it), Central Control's hull and shield, the Armament Bay's armour and
-        /// weapons, the Energy Lab ready to study (violet: the energy research), the launch bay's next repair (orange) or its fuel (gold).</summary>
-        static string B5ZoneLine(V2Campaign c, CampaignRoom room, out Color colour)
-        {
-            var state = c.Room(room);
-            colour = V5TitleKit.Ink3;
-            if (state.damaged)
+            if (!plate || !plate.gameObject.activeInHierarchy) return;
+            if (!plate.TryGetComponent<V5BaseHover>(out var hover)) hover = plate.gameObject.AddComponent<V5BaseHover>();
+            hover.Hovered = on =>
             {
-                colour = V5TitleKit.OrangeHi;
-                return ArenaText.Pair("损坏 · 需要修复", "Broken · needs repair");
-            }
-            switch (room)
+                if (on) SetB5Focus(id, false);
+            };
+            b5Focus.Add(new B5Focus
             {
-                case CampaignRoom.Control:
-                    return c.ShieldLevel > 0 ? ArenaText.Pair($"耐久 {c.Durability} 级 · 护盾 {c.ShieldLevel} 级", $"Hull {c.Durability} · shield {c.ShieldLevel}")
-                        : ArenaText.Pair($"耐久 {c.Durability} 级 · 护盾未解锁", $"Hull {c.Durability} · shield locked");
-                case CampaignRoom.Armament:
-                    return state.level <= 0 ? ArenaText.Pair("未建造", "Not built")
-                        : ArenaText.Pair($"装甲 {c.ArmorLevel} 级 · 武器 Mk {c.TeamMk}", $"Armor {c.ArmorLevel} · weapons Mk {c.TeamMk}");
-                case CampaignRoom.Energy:
-                    if (state.level <= 0) return ArenaText.Pair("未建造", "Not built");
-                    colour = V5HudKit.VioletHi;
-                    return ArenaText.Pair("可以研习", "Ready to study");
-                default:
-                    if (state.level <= 0) return ArenaText.Pair("未建造", "Not built");
-                    colour = V5TitleKit.OrangeHi;
-                    if (c.CanIgnite) return ArenaText.Pair("可以点火返航", "Ready to launch");
-                    if (!c.EngineFixed) return ArenaText.Pair("引擎可以修了", "Engine ready to repair");
-                    if (!c.ArmorFixed && state.level >= 2) return ArenaText.Pair("装甲可以修了", "Armor ready to repair");
-                    colour = V5TitleKit.Gold;
-                    if (!c.FuelFull && state.level >= 3) return ArenaText.Pair($"燃料 {c.Fuel} / {c.FuelUnits}", $"Fuel {c.Fuel} / {c.FuelUnits}");
-                    colour = V5TitleKit.Ink3;
-                    return ArenaText.Pair($"{state.level} / 3 级", $"Level {state.level} / 3");
-            }
+                id = id, rect = plate.Rect,
+                press = () =>
+                {
+                    if (plate && plate.isActiveAndEnabled && plate.Button.interactable)
+                    {
+                        plate.Button.onClick.Invoke();
+                        return true;
+                    }
+                    PlayRefused();
+                    return false;
+                },
+                mark = on =>
+                {
+                    if (plate) plate.Chosen = on;
+                }
+            });
         }
 
-        /// <summary>The lines that matter in a zone now (its levels are the steps under them): Central Control's life, hull and shield and
-        /// its warning while broken; the Armament Bay's armour and weapons; the launch bay's two notes.</summary>
-        string B5Lines(V2Campaign c, CampaignRoom room)
+        /// <summary>A part the keys can focus that is not a plate (a research tab): what pressing it does and how it shows the focus.</summary>
+        void B5AddFocus(string id, RectTransform rect, Func<bool> press, Action<bool> mark)
         {
-            var r = c.rules;
-            var lines = new List<string>();
-            string Tint(string text, Color colour) => $"<color=#{HexOf(colour)}>{text}</color>";
-            switch (room)
+            if (!rect || !rect.gameObject.activeInHierarchy) return;
+            b5Focus.Add(new B5Focus { id = id, rect = rect, press = press, mark = mark });
+        }
+
+        void SetB5Focus(string id, bool byKey)
+        {
+            if (b5FocusId == id) return;
+            b5FocusId = id;
+            B5MarkFocus();
+            if (!byKey) return;
+            V5UiSound.Play(V5UiSound.Ui.Hover);
+            var focus = b5Focus.Find(f => f.id == id);
+            if (focus != null) RevealInWorkshop5(focus.rect);
+        }
+
+        void B5MarkFocus()
+        {
+            foreach (var focus in b5Focus) focus.mark(focus.id == b5FocusId);
+        }
+
+        /// <summary>The focus moves to the nearest part in the direction pressed (up is +y): the nearest along it, leaning against parts far
+        /// to its side. With nothing focused yet, the first part of the page's middle takes the focus.</summary>
+        void MoveB5Focus(Vector2 direction)
+        {
+            var current = b5Focus.Find(f => f.id == b5FocusId);
+            if (current == null)
             {
-                case CampaignRoom.Control:
-                    lines.Add(ArenaText.Pair($"基地生命 {Mathf.CeilToInt(c.BaseHp)} / {Mathf.CeilToInt(c.BaseMaxHp)}　·　耐久 {c.Durability} / {c.MaxDurability} 级",
-                        $"Base HP {Mathf.CeilToInt(c.BaseHp)} / {Mathf.CeilToInt(c.BaseMaxHp)}   ·   hull level {c.Durability} / {c.MaxDurability}"));
-                    lines.Add(c.ShieldLevel > 0
-                        ? ArenaText.Pair($"护盾 {Mathf.CeilToInt(c.BaseShield)} / {Mathf.CeilToInt(c.BaseMaxShield)}　·　{c.ShieldLevel} / {c.MaxShieldLevel} 级　·　每晚回满",
-                            $"Shield {Mathf.CeilToInt(c.BaseShield)} / {Mathf.CeilToInt(c.BaseMaxShield)}   ·   level {c.ShieldLevel} / {c.MaxShieldLevel}   ·   refills each night")
-                        : ArenaText.Pair("护盾：未解锁", "Shield: locked"));
-                    if (c.Room(room).damaged)
-                        lines.Add(Tint(ArenaText.Pair("总控区损坏了。先在这里把它修好：在那之前，其他三个区不能建造、升级或修复，基地护盾在夜里也不会回满。",
-                            "Central Control is broken. Repair it here first: until then, the other three rooms can't be built, upgraded or repaired, and the base shield won't refill at night."), V5TitleKit.OrangeHi));
-                    else if (r && c.BaseHp < c.BaseMaxHp - .5f)
-                        lines.Add(Tint(ArenaText.Pair($"基地每晚会自动修复最大生命的 {r.nightSelfRepair * 100f:0}%。", $"Each night the base repairs {r.nightSelfRepair * 100f:0}% of its max HP on its own."),
-                            V5TitleKit.Ink3));
-                    break;
-                case CampaignRoom.Armament:
-                    if (c.Room(room).level >= 1) lines.Add(ArenaText.Pair($"装甲 {c.ArmorLevel} 级　·　武器 Mk {c.TeamMk}", $"Armor level {c.ArmorLevel}   ·   weapons Mk {c.TeamMk}"));
-                    break;
-                case CampaignRoom.Ship:
-                    if (r) lines.Add(ArenaText.Pair($"矿灯每盏 {r.lampCost} 合金。夜里放下矿灯，就能在它的光里采矿；用不完的会留到下一晚。",
-                        $"Mining lamps cost {r.lampCost} alloy each. Set one down at night to mine in its light; unused lamps carry over to the next night."));
-                    lines.Add(ArenaText.Pair("修好引擎和装甲、加满燃料，就能点火返航。", "Repair the engine and the armor and fill the tank, and the ship can head home."));
-                    break;
+                var first = b5Focus.Find(f => f.id.StartsWith("c.", StringComparison.Ordinal)) ?? (b5Focus.Count > 0 ? b5Focus[0] : null);
+                if (first != null) SetB5Focus(first.id, true);
+                return;
             }
-            return string.Join("\n", lines);
-        }
-
-        /// <summary>What a room's level brings, as the old page's lines name it.</summary>
-        static string B5StepWords(CampaignRoom room, int level) => room switch
-        {
-            CampaignRoom.Armament => level == 1 ? ArenaText.Pair("装甲和武器型号升级", "Armor and weapon Mk upgrades")
-                : level == 2 ? ArenaText.Pair("新武器和驯化", "New weapons and taming") : ArenaText.Pair("武器变招", "Weapon twists"),
-            CampaignRoom.Energy => level == 1 ? ArenaText.Pair("体质研究", "Body research")
-                : level == 2 ? ArenaText.Pair("技能研究", "Skill research") : ArenaText.Pair("附魔研究", "Infusion research"),
-            _ => level == 1 ? ArenaText.Pair("修复飞船引擎", "Repair the ship's engine")
-                : level == 2 ? ArenaText.Pair("修复飞船装甲", "Repair the ship's armor") : ArenaText.Pair("合成反物质燃料", "Synthesize antimatter fuel"),
-        };
-
-        /// <summary>What an action does. The campaign's own methods are known by the delegate; the few actions the page writes as lambdas
-        /// by their place (a broken room's repair comes first) and their words, which the old page sets in the same frame.</summary>
-        B5Deed B5DeedOf(V2Campaign c, Func<bool> act, string label, bool repairFirst)
-        {
-            if (B5Same(act, c.TryUpgradeDurability)) return B5Deed.Durability;
-            if (B5Same(act, c.TryUpgradeShield)) return B5Deed.Shield;
-            if (B5Same(act, c.TryRepairHull)) return B5Deed.Hull;
-            if (B5Same(act, c.TryRepairEngine)) return B5Deed.Engine;
-            if (B5Same(act, c.TryRepairArmor)) return B5Deed.Armor;
-            if (B5Same(act, c.TrySynthesiseFuel)) return B5Deed.Fuel;
-            if (B5Same(act, c.TryCraftLamp)) return B5Deed.Lamp;
-            if (repairFirst) return B5Deed.RepairRoom;
-            if (label == UpgradeLabel(tab)) return c.Room(tab).level <= 0 ? B5Deed.Build : B5Deed.Upgrade;
-            if (label == ArenaText.Pair("研习", "Study")) return B5Deed.Study;
-            if (label == ArenaText.Pair("决战过载", "Final overload")) return B5Deed.Overload;
-            if (label == ArenaText.Pair("启动点火程序", "Start the ignition sequence")) return B5Deed.Ignite;
-            return B5Deed.Other;
-        }
-
-        static bool B5Same(Func<bool> act, Func<bool> method) => act != null && act.Equals(method);
-
-        static bool B5Same(Action act, Action method) => act != null && act.Equals(method);
-
-        /// <summary>The row of the one action to do now (warm, an orange button): the ignition once it can start; otherwise the first action
-        /// in the list that can be done and that the stock pays for. Opening the study window is never it. -1 for none.</summary>
-        int B5GoItem(V2Campaign c, List<B5Item> items)
-        {
-            for (int i = 0; i < items.Count; i++)
-                if (items[i].deed == B5Deed.Ignite && items[i].enabled) return i;
-            for (int i = 0; i < items.Count; i++)
+            var dir = direction.normalized;
+            var from = B5Centre(current.rect);
+            B5Focus best = null;
+            float bestScore = float.MaxValue;
+            foreach (var focus in b5Focus)
             {
-                var item = items[i];
-                if (!item.enabled || item.deed is B5Deed.Study or B5Deed.Overload or B5Deed.Other) continue;
-                if (item.deed == B5Deed.RepairRoom && tab != CampaignRoom.Control && !c.ControlWorks) continue; // Central Control first
-                if (!item.cost.HasValue || item.cost.Value.IsFree) continue;
-                var cost = item.cost.Value;
-                if (c.Energy >= cost.energy && c.Alloy >= cost.alloy && c.Dark >= cost.dark) return i;
+                if (focus == current || focus.id == current.id || !focus.rect || !focus.rect.gameObject.activeInHierarchy) continue;
+                var d = B5Centre(focus.rect) - from;
+                float along = Vector2.Dot(d, dir);
+                if (along <= 1f) continue;
+                float across = Mathf.Abs(d.x * dir.y - d.y * dir.x);
+                if (across > along * 2.5f) continue;
+                float score = along + across * 2f;
+                if (score < bestScore)
+                {
+                    bestScore = score;
+                    best = focus;
+                }
             }
-            return -1;
+            if (best != null) SetB5Focus(best.id, true);
         }
 
-        string B5Verb(V2Campaign c, B5Deed deed) => deed switch
+        void PressB5Focus()
         {
-            B5Deed.Build => ArenaText.Pair("建造", "Build"),
-            B5Deed.Upgrade or B5Deed.Durability => ArenaText.Pair("升级", "Upgrade"),
-            B5Deed.Shield => c.ShieldLevel == 0 ? ArenaText.Pair("解锁", "Unlock") : ArenaText.Pair("升级", "Upgrade"),
-            B5Deed.RepairRoom or B5Deed.Hull or B5Deed.Engine or B5Deed.Armor => ArenaText.Pair("修复", "Repair"),
-            B5Deed.Fuel => ArenaText.Pair("合成", "Synthesize"),
-            B5Deed.Lamp => ArenaText.Pair("制造", "Craft"),
-            B5Deed.Ignite => ArenaText.Pair("点火", "Ignite"),
-            B5Deed.Study or B5Deed.Overload => ArenaText.Pair("打开", "Open"),
-            _ => ArenaText.Pair("进行", "Go"),
-        };
+            var focus = b5Focus.Find(f => f.id == b5FocusId);
+            focus?.press();
+        }
 
-        /// <summary>An action's medal: the painted icon of what it does with the art on, the whitebox's icon for it in whitebox.</summary>
-        void B5MedalIcons(V2Campaign c, B5Deed deed, out Sprite artIcon, out Sprite flatIcon)
+        /// <summary>A rect's centre in the canvas's own units.</summary>
+        Vector2 B5Centre(RectTransform rect) => root.InverseTransformPoint(rect.TransformPoint(rect.rect.center));
+
+        // ───── A card's details ─────
+
+        /// <summary>A card's details beside it: its name and what it does (StudyEntry.detail), shown while the pointer is on the card.</summary>
+        void B5ShowTip(RectTransform over, string title, string body)
         {
-            var set = c.art;
-            switch (deed)
+            if (!B5Details || !b5Tip || !over || string.IsNullOrEmpty(body)) return;
+            b5TipOver = over;
+            StoryText(b5TipTitle, title ?? "");
+            StoryText(b5TipBody, body);
+            float width = Bp(B5TipW), pad = Bp(18f), inner = width - pad * 2f;
+            float titleH = B5FitHeight(b5TipTitle, inner), bodyH = B5FitHeight(b5TipBody, inner);
+            bool titled = titleH > 0f && !string.IsNullOrEmpty(b5TipTitle.text);
+            SetShown(b5TipTitle, titled);
+            b5TipTitle.rectTransform.anchoredPosition = new Vector2(pad, -pad);
+            float bodyTop = pad + (titled ? titleH + Bp(8f) : 0f);
+            b5TipBody.rectTransform.anchoredPosition = new Vector2(pad, -bodyTop);
+            b5Tip.sizeDelta = new Vector2(width, bodyTop + bodyH + pad);
+            b5Tip.gameObject.SetActive(true);
+            b5Tip.SetAsLastSibling();
+            PlaceB5Tip();
+        }
+
+        /// <summary>Hides the details (only those of over, when given).</summary>
+        void B5HideTip(RectTransform over = null)
+        {
+            if (over && over != b5TipOver) return;
+            b5TipOver = null;
+            if (b5Tip && b5Tip.gameObject.activeSelf) b5Tip.gameObject.SetActive(false);
+        }
+
+        /// <summary>The details stand right of their card (left of it where the screen has no room), their tops level, inside the screen.</summary>
+        void PlaceB5Tip()
+        {
+            if (!b5Tip || !b5Tip.gameObject.activeSelf) return;
+            if (!BaseOpen || !b5TipOver || !b5TipOver.gameObject.activeInHierarchy || !(TourRect(b5TipOver) is Rect box))
             {
-                case B5Deed.Durability:
-                    artIcon = set ? set.durability : null;
-                    flatIcon = WhiteboxIcons.Room(CampaignRoom.Control);
-                    break;
-                case B5Deed.Shield:
-                    artIcon = set ? set.shield : null;
-                    flatIcon = WhiteboxIcons.Mark(WhiteboxIcons.Glyph.Ring);
-                    break;
-                case B5Deed.Hull:
-                case B5Deed.RepairRoom:
-                    artIcon = set ? set.repair : null;
-                    flatIcon = WhiteboxIcons.Room(deed == B5Deed.Hull ? CampaignRoom.Control : tab);
-                    break;
-                case B5Deed.Overload:
-                    artIcon = set ? set.control : null;
-                    flatIcon = WhiteboxIcons.Room(CampaignRoom.Control);
-                    break;
-                case B5Deed.Engine:
-                case B5Deed.Ignite:
-                    artIcon = set ? set.engine : null;
-                    flatIcon = V5StoryKit.EngineIcon;
-                    break;
-                case B5Deed.Armor:
-                    artIcon = set ? set.armor : null;
-                    flatIcon = V5StoryKit.ArmorIcon;
-                    break;
-                case B5Deed.Fuel:
-                    artIcon = set ? set.fuel : null;
-                    flatIcon = V5StoryKit.FuelIcon;
-                    break;
-                case B5Deed.Lamp:
-                    artIcon = set ? set.lamp : null;
-                    flatIcon = V5StoryKit.LampIcon;
-                    break;
-                case B5Deed.Study:
-                    artIcon = set ? (tab == CampaignRoom.Armament ? set.armament : set.skill) : null;
-                    flatIcon = WhiteboxIcons.Room(tab);
-                    break;
-                default:
-                    artIcon = B5RoomArt(c, tab);
-                    flatIcon = WhiteboxIcons.Room(tab);
-                    break;
+                B5HideTip();
+                return;
+            }
+            var area = root.rect.size;
+            var size = b5Tip.sizeDelta;
+            float gap = Bp(14f), margin = Bp(12f);
+            float x = box.xMax + gap;
+            if (x + size.x > area.x - margin) x = box.xMin - gap - size.x;
+            x = Mathf.Clamp(x, margin, Mathf.Max(margin, area.x - margin - size.x));
+            float y = Mathf.Clamp(box.yMax - size.y, margin, Mathf.Max(margin, area.y - margin - size.y));
+            b5Tip.anchoredPosition = new Vector2(x, y);
+        }
+
+        /// <summary>Gives a wrapping label this width and returns how tall its text is there, the label made that tall.</summary>
+        static float B5FitHeight(Text label, float width)
+        {
+            var rect = label.rectTransform;
+            rect.sizeDelta = new Vector2(width, 10f);
+            float height = string.IsNullOrEmpty(label.text) ? 0f : Mathf.Ceil(label.preferredHeight);
+            rect.sizeDelta = new Vector2(width, height);
+            return height;
+        }
+
+        /// <summary>A part that shows its details beside it while the pointer is on it (hit: the graphic that takes the pointer for that).</summary>
+        void B5HoverDetails(Image hit, RectTransform over, Func<(string title, string body)> details)
+        {
+            hit.raycastTarget = true;
+            if (!hit.TryGetComponent<V5BaseHover>(out var hover)) hover = hit.gameObject.AddComponent<V5BaseHover>();
+            hover.Hovered = on =>
+            {
+                if (!on)
+                {
+                    B5HideTip(over);
+                    return;
+                }
+                var (title, body) = details();
+                B5ShowTip(over, title, body);
+            };
+        }
+
+        // ───── Prices ─────
+
+        static B5Coins B5BuildCoins(Transform parent, float numberPx)
+        {
+            var coins = new B5Coins { numberPx = numberPx };
+            var disc = V5TitleKit.Piece("disc");
+            for (int k = 0; k < 3; k++)
+            {
+                coins.holes[k] = V5TitleKit.Picture(parent, "Coin" + k, disc, Color.white);
+                coins.holes[k].gameObject.AddComponent<Mask>().showMaskGraphic = false;
+                coins.icons[k] = V5TitleKit.Picture(coins.holes[k].transform, "Icon", null, Color.white);
+                V5TitleKit.Stretch(coins.icons[k].rectTransform);
+                coins.icons[k].preserveAspect = true;
+                coins.rings[k] = V5TitleKit.Picture(parent, "CoinRing" + k, V5HudKit.RingLine, V5HudKit.Violet);
+                coins.amounts[k] = V5StoryKit.Label(parent, "Amount" + k, numberPx, V5TitleKit.Steel, TextAnchor.MiddleLeft, true);
+            }
+            return coins;
+        }
+
+        /// <summary>A price into b5Price, alloy first, then the alien energy, the dark matter and the void's two; how many coins to draw (at
+        /// most three).</summary>
+        int B5PriceOf(CampaignCost? cost, int voidEnergy = 0, int voidAlloy = 0)
+        {
+            b5Price.Clear();
+            var c = campaign;
+            if (cost is { } p)
+            {
+                if (p.alloy > 0) b5Price.Add((1, p.alloy, c.Alloy));
+                if (p.energy > 0) b5Price.Add((0, p.energy, c.Energy));
+                if (p.dark > 0) b5Price.Add((2, p.dark, c.Dark));
+            }
+            if (voidEnergy > 0) b5Price.Add((3, voidEnergy, c.VoidEnergy));
+            if (voidAlloy > 0) b5Price.Add((4, voidAlloy, c.VoidAlloy));
+            return Mathf.Min(3, b5Price.Count);
+        }
+
+        /// <summary>A study entry's price into b5Price (none while it is owned or locked).</summary>
+        int B5PriceOf(StudyEntry entry) => entry == null || entry.state is StudyState.Owned or StudyState.Locked ? B5PriceOf(null)
+            : B5PriceOf(entry.price, entry.voidEnergyCost, entry.voidAlloyCost);
+
+        /// <summary>How wide the price in b5Price draws (mock-up pixels): its icons size across.</summary>
+        float B5CoinsWidth(B5Coins coins, int n, float size, bool art)
+        {
+            float width = 0f;
+            for (int k = 0; k < n; k++)
+            {
+                var (which, amount, _) = b5Price[k];
+                var label = coins.amounts[k];
+                label.fontSize = V5StoryKit.FontSize(coins.numberPx);
+                bool icon = B5CoinSprite(which, art);
+                width += (k > 0 ? 14f : 0f) + (icon ? size + 8f : 0f) + B5W(label, icon ? amount.ToString() : $"{B5CoinName(which)} {amount}");
+            }
+            return width;
+        }
+
+        /// <summary>The price in b5Price as coins from left (mock-up pixels), their middle middle down from the parent's top: each icon
+        /// size across and its amount in the currency's colour, red while the stock is short of it, grey when nothing is short but it
+        /// cannot be bought for another reason. Returns where the row ends.</summary>
+        float B5LayCoins(B5Coins coins, int n, float left, float middle, float size, bool art, bool blocked)
+        {
+            float x = left;
+            for (int k = 0; k < 3; k++)
+            {
+                bool shown = k < n;
+                SetShown(coins.holes[k], shown);
+                SetShown(coins.amounts[k], shown);
+                if (!shown)
+                {
+                    SetShown(coins.rings[k], false);
+                    continue;
+                }
+                var (which, amount, held) = b5Price[k];
+                var sprite = B5CoinSprite(which, art);
+                // With the art on the currency's picture is cut round; whitebox shows its icon whole.
+                var round = coins.holes[k].GetComponent<Mask>();
+                if (round.enabled != art) round.enabled = art;
+                coins.holes[k].enabled = art;
+                coins.icons[k].sprite = sprite;
+                coins.icons[k].enabled = sprite;
+                coins.icons[k].transform.localScale = Vector3.one * (art && which == 2 ? DarkIconScale : 1f);
+                if (k > 0) x += 14f;
+                B5Rect(coins.holes[k].rectTransform, x, middle - size * .5f, size, size);
+                bool ringed = which >= 3 && sprite;
+                SetShown(coins.rings[k], ringed);
+                if (ringed) B5Rect(coins.rings[k].rectTransform, x - size * .1f, middle - size * .6f, size * 1.2f, size * 1.2f);
+                if (sprite) x += size + 8f;
+                string text = sprite ? amount.ToString() : $"{B5CoinName(which)} {amount}";
+                var label = coins.amounts[k];
+                label.fontSize = V5StoryKit.FontSize(coins.numberPx);
+                StoryText(label, text);
+                label.color = held < amount ? B5Short : blocked ? V5TitleKit.Ink3 : B5CoinColour(which);
+                float w = B5W(label, text);
+                B5Rect(label.rectTransform, x, middle - coins.numberPx * .75f, w + 2f, coins.numberPx * 1.5f);
+                x += w;
+            }
+            return x;
+        }
+
+        static void B5HideCoins(B5Coins coins)
+        {
+            for (int k = 0; k < 3; k++)
+            {
+                SetShown(coins.holes[k], false);
+                SetShown(coins.rings[k], false);
+                SetShown(coins.amounts[k], false);
             }
         }
 
-        static Sprite B5RoomArt(V2Campaign c, CampaignRoom room)
+        /// <summary>A currency's icon: the art's or the whitebox's; the void's two are the alien energy's and alloy's (the whitebox has a
+        /// void alloy of its own).</summary>
+        Sprite B5CoinSprite(int which, bool art)
         {
-            var set = c.art;
+            if (which < 3) return CurrencySprite(which);
+            if (!art) return which == 3 ? WhiteboxIcons.CurrencyIcon(WhiteboxIcons.Currency.Energy) : WhiteboxIcons.Look("voidalloy");
+            var set = campaign ? campaign.art : null;
             if (!set) return null;
-            return room switch { CampaignRoom.Control => set.control, CampaignRoom.Armament => set.armament, CampaignRoom.Energy => set.energyLab, _ => set.shipBay };
+            return which == 3 ? set.energy : set.alloy;
         }
 
-        /// <summary>A zone's picture in its hexagon: Central Control's room, the Armament Bay's and the Energy Lab's room at their level, the
-        /// launch bay's icon (uv: the part of the texture that is the picture).</summary>
-        static Texture B5ZoneTexture(V2Campaign c, CampaignRoom room, out Rect uv)
-        {
-            uv = new Rect(0f, 0f, 1f, 1f);
-            var set = c.art;
-            if (!set) return null;
-            int level = c.Room(room).level;
-            switch (room)
-            {
-                case CampaignRoom.Control: return set.roomControl;
-                case CampaignRoom.Armament: return LevelPicture(set.roomArmamentLevels, level, set.roomArmament);
-                case CampaignRoom.Energy: return LevelPicture(set.roomEnergyLevels, level, set.roomEnergy);
-            }
-            var icon = set.shipBay;
-            if (!icon || !icon.texture || icon.packed && icon.packingMode == SpritePackingMode.Tight) return null;
-            var texture = icon.texture;
-            var area = icon.textureRect;
-            uv = new Rect(area.x / texture.width, area.y / texture.height, area.width / texture.width, area.height / texture.height);
-            return texture;
-        }
+        static string B5CoinName(int which) => which < 3 ? CurrencyLabel(which)
+            : which == 3 ? ArenaText.Pair("虚空能量", "Void energy") : ArenaText.Pair("虚空合金", "Void alloy");
 
-        /// <summary>The part of uv that fills a box of the given shape (width over height) from a picture of shape: cut at the edges, never
-        /// stretched.</summary>
-        static Rect B5Cover(Rect uv, float shape, float box)
-        {
-            if (shape <= 0f || box <= 0f) return uv;
-            if (shape < box)
-            {
-                float height = uv.height * shape / box;
-                return new Rect(uv.x, uv.y + (uv.height - height) * .5f, uv.width, height);
-            }
-            float width = uv.width * box / shape;
-            return new Rect(uv.x + (uv.width - width) * .5f, uv.y, width, uv.height);
-        }
-
-        /// <summary>A label's words before and in its brackets ("制造矿灯（现有 3 盏）": "制造矿灯" and "现有 3 盏"; English " (...)").</summary>
-        static void B5Split(string label, out string head, out string note)
-        {
-            head = label ?? "";
-            note = "";
-            int open = head.IndexOf('（'), close = head.LastIndexOf('）');
-            int skip = 1;
-            if (open <= 0 || close <= open)
-            {
-                open = head.IndexOf(" (", StringComparison.Ordinal);
-                close = head.LastIndexOf(')');
-                skip = 2;
-            }
-            if (open <= 0 || close <= open) return;
-            note = head.Substring(open + skip, close - open - skip).Trim();
-            head = (head.Substring(0, open) + head.Substring(close + 1)).Trim();
-        }
+        /// <summary>A currency's number colour: each of the three its own (ResourceColours), violet for the void's two.</summary>
+        static Color B5CoinColour(int which) => which < 3 ? ResourceColours.Of(which) : V5HudKit.VioletHi;
 
         // ───── Small pieces ─────
 
-        /// <summary>Diamonds in a row (size across before they are turned, gap apart), the first left canvas units in and their centres
-        /// centreFromTop down from the parent's top; filled ones gold. Returns where the row ends.</summary>
-        static float B5Diamonds(List<Image> pool, Transform parent, int count, int filled, float size, float gap, float left, float centreFromTop, bool art)
+        /// <summary>A rarity's colour on the dark plates: the white rarity a light grey, the void's own (near black) the void's violet.</summary>
+        static Color B5RarityColour(CardRarity rarity) => rarity switch
         {
-            while (pool.Count < count)
-            {
-                var made = V5TitleKit.Picture(parent, "Diamond" + (pool.Count + 1), null, Color.white);
-                made.rectTransform.localRotation = Quaternion.Euler(0f, 0f, 45f);
-                var rim = made.gameObject.AddComponent<UnityEngine.UI.Outline>();
-                rim.useGraphicAlpha = false;
-                rim.effectColor = B5DiamondRim;
-                rim.effectDistance = new Vector2(1f, -1f);
-                pool.Add(made);
-            }
-            for (int k = 0; k < pool.Count; k++)
-            {
-                var diamond = pool[k];
-                bool shown = k < count;
-                SetShown(diamond, shown);
-                if (!shown) continue;
-                bool on = k < filled;
-                V5TitleKit.Dress(diamond, on && art ? V5StoryKit.Fill(B5DiamondTop, B5DiamondBottom) : WhiteboxSkin.Square,
-                    on ? (art ? Color.white : V5TitleKit.Gold) : B5DiamondOff);
-                if (diamond.TryGetComponent<UnityEngine.UI.Outline>(out var rim)) rim.enabled = !on;
-                var rect = diamond.rectTransform;
-                rect.anchorMin = rect.anchorMax = new Vector2(0f, 1f);
-                rect.pivot = new Vector2(.5f, .5f);
-                rect.anchoredPosition = new Vector2(left + size * .5f + k * (size + gap), -centreFromTop);
-                rect.sizeDelta = Vector2.one * size;
-            }
-            return left + count * size + Mathf.Max(0, count - 1) * gap;
+            CardRarity.Common => B5CommonBar,
+            CardRarity.Void => V5HudKit.Violet,
+            _ => ArenaRarity.ColorFor(rarity)
+        };
+
+        /// <summary>An entry's whitebox icon: the whitebox's for its kind, a plain grey square for a kind it does not know where the entry
+        /// has a picture.</summary>
+        static Sprite B5FlatIcon(StudyEntry entry)
+        {
+            if (entry == null) return null;
+            var sprite = WhiteboxIcons.ForStudy(entry.id);
+            return sprite ? sprite : entry.icon ? WhiteboxIcons.Unknown() : null;
         }
 
         /// <summary>The dark matter's picture has more empty margin than the other two currencies': with the art on it is drawn larger by
@@ -1219,7 +1043,7 @@ namespace AnomalyArena
             if (edge.effectColor != colour) edge.effectColor = colour;
         }
 
-        /// <summary>A label from left in its row, as wide as width and as tall as the row, its middle on the row's middle.</summary>
+        /// <summary>A label from left in its row (canvas units), as wide as width and as tall as the row, its middle on the row's middle.</summary>
         static void B5PlaceLeft(Text label, float left, float width, float height)
         {
             var rect = label.rectTransform;
@@ -1235,12 +1059,56 @@ namespace AnomalyArena
             rect.anchoredPosition = new Vector2(left, 0f);
         }
 
-        /// <summary>A rect at fractions of its parent: left and top from the parent's top-left corner, width and height.</summary>
-        static void B5Fraction(RectTransform rect, float left, float top, float width, float height)
+        /// <summary>A label of several lines at the largest size, from largest down to smallest, at which all its lines fit its box (no best
+        /// fit: pitfall T-015); what still does not fit at the smallest is cut.</summary>
+        static void B5FitLines(Text label, int largest, int smallest)
         {
-            rect.anchorMin = new Vector2(left, 1f - top - height);
-            rect.anchorMax = new Vector2(left + width, 1f - top);
-            rect.offsetMin = rect.offsetMax = Vector2.zero;
+            float height = label.rectTransform.rect.height;
+            label.horizontalOverflow = HorizontalWrapMode.Wrap;
+            label.verticalOverflow = VerticalWrapMode.Overflow;
+            int size = largest;
+            for (; size > smallest; size--)
+            {
+                label.fontSize = size;
+                if (label.preferredHeight <= height + .5f) break;
+            }
+            label.fontSize = size;
+            label.verticalOverflow = VerticalWrapMode.Truncate;
+        }
+
+        /// <summary>A button that cannot be pressed now is grey: dimmed, its words grey, faded, and it takes no click.</summary>
+        static void B5Live(V5Plate button, Text words, bool live, Color ink)
+        {
+            button.Button.interactable = live;
+            button.Dim = !live;
+            button.Alpha = live ? 1f : .55f;
+            if (words) words.color = live ? ink : V5TitleKit.Ink3;
+        }
+
+        /// <summary>The words after the last "→" in a colour ("×1.26 → ×1.59": the number after it), the rest as it is.</summary>
+        static string B5Gain(string text, Color colour)
+        {
+            if (string.IsNullOrEmpty(text)) return "";
+            int arrow = text.LastIndexOf('→');
+            if (arrow < 0 || arrow >= text.Length - 1) return text;
+            return text.Substring(0, arrow + 1) + $"<color=#{HexOf(colour)}>{text.Substring(arrow + 1)}</color>";
+        }
+
+        /// <summary>"now → after", the arrow dim and what the purchase gives in a colour; or what there is of it.</summary>
+        static string B5NowAfter(string now, string after, Color colour)
+        {
+            bool hasNow = !string.IsNullOrEmpty(now), hasAfter = !string.IsNullOrEmpty(after);
+            string arrow = $"<color=#{HexOf(V5TitleKit.Ink3)}>  →  </color>", gain = hasAfter ? $"<color=#{HexOf(colour)}>{after}</color>" : "";
+            return hasNow && hasAfter ? now + arrow + gain : hasNow ? now : hasAfter ? arrow.TrimStart() + gain : "";
+        }
+
+        /// <summary>A clear image that takes the pointer (a research tab's hit area): drawn, so the raycaster sees it.</summary>
+        static Image B5Hit(Transform parent, string name)
+        {
+            var hit = V5TitleKit.Picture(parent, name, null, Color.clear);
+            hit.raycastTarget = true;
+            hit.canvasRenderer.cullTransparentMesh = false;
+            return hit;
         }
 
         /// <summary>The page's backing with the art on: deep navy at the foot to a lighter navy at the top, leaning to indigo on the right
@@ -1260,20 +1128,21 @@ namespace AnomalyArena
             }
         }
 
-        /// <summary>The steps' line with the art on: teal, orange and gold, blended (the mock-up's track).</summary>
-        static Texture2D B5TrackTexture
+        // ───── For automated checks ─────
+
+        /// <summary>For automated checks: the base's page shown, or null while the base is closed (or on the English Alpha's old page).</summary>
+        public V2Campaign.BaseScreen? BaseScreenShown => b5Built && BaseOpen ? b5Screen : null;
+
+        /// <summary>For automated checks: the ids of the parts of the base's page the keys can focus now ("h.switch", "c.mk", "c.card.skill.Blink",
+        /// "c.part.Engine", "f.go" ...).</summary>
+        public List<string> DebugBaseParts() => b5Focus.ConvertAll(f => f.id);
+
+        /// <summary>For automated checks: presses a part of the base's page by its id as a click on it would; false when it is not on the
+        /// page or cannot be pressed now.</summary>
+        public bool DebugPressBase(string id)
         {
-            get
-            {
-                if (b5TrackTexture) return b5TrackTexture;
-                var texture = new Texture2D(3, 1, TextureFormat.RGBA32, false)
-                {
-                    name = "V5Base track", wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear, hideFlags = HideFlags.DontSave
-                };
-                texture.SetPixels32(new Color32[] { V5TitleKit.Teal, V5TitleKit.Orange, V5TitleKit.Gold });
-                texture.Apply(false, true);
-                return b5TrackTexture = texture;
-            }
+            var focus = b5Focus.Find(f => f.id == id);
+            return focus != null && focus.press();
         }
     }
 }

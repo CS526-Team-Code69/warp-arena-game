@@ -9,10 +9,11 @@ namespace AnomalyArena
     /// phase in the same colour, the clock (the morning wave's time left; the afternoon's and the night's only where evenings have a
     /// clock), and on the right the foes alive and still to come, or at night the way to dawn. Under it the base row: the control room's
     /// medal (its ring orange while a room of the base is broken), the base's life in a segmented teal bar with its number (a shield, when
-    /// the base has one, along the bar's upper part and after the number), and after a hairline the ship's engine, armour and fuel with
-    /// their marks. It replaces the old base bar and shows what the HUD's wave clock showed for the story. On Day 0's walk (the base is
-    /// not reached yet) and in the last fight (the ship is ready and the boss's bar has the reading) the plate keeps the dial and the head
-    /// row, which then stands in the middle of the plate.
+    /// the base has one, along the bar's upper part and after the number). It replaces the old base bar and shows what the HUD's wave
+    /// clock showed for the story. Under the plate stands the way home (work/art-plans/style-1112/ui-f/hud-home.html): "回家", then the
+    /// ship's engine, hull and fuel tank, each with a green check once done or its price in alloy until then, and last the fuel in dark
+    /// matter, x / 100. On Day 0's walk (the base is not reached yet) and in the last fight (the ship is ready and the boss's bar has the
+    /// reading) the plate keeps the dial and the head row, which then stands in the middle of the plate, and the way home is not shown.
     /// </summary>
     public sealed partial class V2CampaignUi
     {
@@ -28,16 +29,34 @@ namespace AnomalyArena
         const float MorningArc = 1f / 3f, AfternoonArc = .5f, TutorialArc = 1f / 6f, NightArcReach = .92f, ArcEase = 5f;
 
         RectTransform storyDay, storyDayHead, storyDayBase;
-        Image storyArc, storyFoesMark, storyHairline;
+        Image storyArc, storyFoesMark;
         Text storyDayNumber, storyDayCap, storyPhase, storyClock, storyUntil, storyFoes, storyBaseNumber;
         V5HudMedal storyControl;
         V5StoryBar storyBaseBar;
-        readonly V5HudMedal[] storyShip = new V5HudMedal[3];
-        readonly Text[] storyShipMarks = new Text[3];
         float storyArcShown = -1f, storyArcWanted, storyBaseNumberWidth;
         Color storyArcColour = V5TitleKit.Gold;
         int storyDayShown = -1;
-        static readonly string[] ShipPartNames = { "Engine", "Armor", "Fuel" };
+
+        // The way home in mock-up pixels: 18 under the day plate, padding 8 / 22 / 8 / 18, corners cut at 10; "回家" in 20-pixel steel
+        // letters, 4 and then 18 to the first part; 40-pixel medals, 8 to their mark (a 24-pixel check, or a 25-pixel alloy coin, 4, and the
+        // 22-pixel price); 18 on either side of the small grey arrows between the parts; the fuel's "/ 100" at 17 pixels.
+        const float HomeTopPx = 18f, HomePadYPx = 8f, HomePadLeftPx = 18f, HomePadRightPx = 22f, HomeWordGapPx = 4f, HomeGapPx = 18f;
+        const float HomeMedalPx = 40f, HomeMarkGapPx = 8f, HomeCoinPx = 25f, HomeCoinGapPx = 4f, HomeStepWPx = 10f, HomeStepHPx = 14f, HomeCutPx = 10f;
+        static readonly Color HomeDone = V5TitleKit.Rgb(111, 211, 111), HomeStep = V5TitleKit.Rgb(163, 172, 190, .45f);
+        static readonly string[] HomeNames = { "Engine", "Hull", "Tank", "Fuel" };
+        RectTransform storyHome;
+        /// <summary>The way home's bottom edge in mock-up pixels from the top of the screen (the day plate ends 104 down; the way home
+        /// stands 18 under it and is 56 tall), for the battle HUD's hint plate, which goes under it while it shows.</summary>
+        public const float StoryHomeBottomPx = DayTopPx + DayPadYPx * 2f + DialPx + HomeTopPx + HomePadYPx * 2f + HomeMedalPx;
+        static RectTransform homeShown;
+        /// <summary>The way home stands on the screen now (the story layer and the day plate's base row are shown).</summary>
+        public static bool StoryHomeShown => homeShown && homeShown.gameObject.activeInHierarchy;
+        Text storyHomeWord;
+        readonly V5HudMedal[] homeMedals = new V5HudMedal[4];
+        // Each part's check or price, and the fuel's number; the alloy coin before a price; the arrows between the parts.
+        readonly Text[] homeMarks = new Text[4];
+        readonly Image[] homeCoins = new Image[3];
+        readonly Image[] homeSteps = new Image[3];
         // The foes the head row words (LayOutStoryHead), and the head row as last laid out: it is laid out again only when one changed.
         int storyFoesAlive, storyFoesPending, headAlive = -1, headPending = -1;
         bool storyFoesShown, storyFoesExpired, headFoes, headExpired, headClockRight;
@@ -77,12 +96,33 @@ namespace AnomalyArena
             storyControl.SetRing(V5TitleKit.Teal);
             storyBaseBar = V5StoryBar.Create(storyDayBase, "Bar", V5StoryKit.BaseTop, V5StoryKit.BaseBottom, V5TitleKit.Steel, 10);
             storyBaseNumber = V5StoryKit.Label(storyDayBase, "Number", 15f, V5TitleKit.Ink, TextAnchor.MiddleCenter, true);
-            storyHairline = V5TitleKit.Picture(storyDayBase, "Hairline", null, V5HudKit.Hairline);
-            for (int i = 0; i < 3; i++)
+            BuildStoryHome();
+        }
+
+        /// <summary>The way home, a plate of its own centred under the day plate (its child, so it fades with it in the void trial).</summary>
+        void BuildStoryHome()
+        {
+            storyHome = V5TitleKit.Rect(storyDay, "Home");
+            homeShown = storyHome;
+            storyHome.anchorMin = storyHome.anchorMax = new Vector2(.5f, 0f);
+            storyHome.pivot = new Vector2(.5f, 1f);
+            storyHome.anchoredPosition = new Vector2(0f, -Sp(HomeTopPx));
+            storyHome.sizeDelta = new Vector2(Sp(600f), Sp(HomePadYPx * 2f + HomeMedalPx));
+            V5TitleKit.Stretch(V5HudKit.Plate(storyHome, "Plate", V5HudKit.PlateLook.Plain, HomeCutPx, V5HudKit.StoryCss).Rect);
+            storyHomeWord = V5StoryKit.Label(storyHome, "Word", 20f, V5TitleKit.Steel, TextAnchor.MiddleCenter, true);
+            for (int i = 0; i < HomeNames.Length; i++)
             {
-                storyShip[i] = V5HudKit.Medal(storyDayBase, ShipPartNames[i], Sp(RowMedalPx));
-                storyShipMarks[i] = V5StoryKit.Label(storyDayBase, ShipPartNames[i] + "Mark", 14f, V5TitleKit.Teal, TextAnchor.MiddleCenter, true);
+                // A triangle that points up, turned to point right: 14 across its base, 10 deep.
+                if (i > 0) homeSteps[i - 1] = V5HudKit.Arrow(storyHome, "Step" + i, new Vector2(Sp(HomeStepHPx), Sp(HomeStepWPx)), HomeStep, -90f);
+                homeMedals[i] = V5HudKit.Medal(storyHome, HomeNames[i], Sp(HomeMedalPx));
+                if (i < homeCoins.Length)
+                {
+                    homeCoins[i] = V5TitleKit.Picture(storyHome, HomeNames[i] + "Coin", null, Color.white);
+                    homeCoins[i].preserveAspect = true;
+                }
+                homeMarks[i] = V5StoryKit.Label(storyHome, HomeNames[i] + "Mark", 22f, V5TitleKit.Ink, TextAnchor.MiddleCenter, true);
             }
+            homeMedals[3].SetGlow(V5HudKit.Violet);
         }
 
         /// <summary>A row of the information column, as wide as the column and heightPx mock-up pixels tall (placed by RefreshStoryDay).</summary>
@@ -188,7 +228,10 @@ namespace AnomalyArena
             storyDayHead.anchoredPosition = new Vector2(0f, -Sp(baseRow ? pairTop : (DialPx - HeadPx) * .5f));
             storyDayBase.anchoredPosition = new Vector2(0f, -Sp(pairTop + HeadPx + BaseRowGapPx));
             SetShown(storyDayBase, baseRow);
-            if (baseRow) RefreshStoryBase(c);
+            SetShown(storyHome, baseRow);
+            if (!baseRow) return;
+            RefreshStoryBase(c);
+            RefreshStoryHome(c);
         }
 
         /// <summary>The foes' words at a size, the counts larger (16 to 13 at the mock-up's size, in proportion at a smaller one), bold and
@@ -321,13 +364,79 @@ namespace AnomalyArena
             StoryText(storyBaseNumber, BaseNumber(hp, max, shield));
             // As wide as the number at full life, so the bar does not shift while the base takes damage.
             storyBaseNumberWidth = V5StoryKit.WidthOf(storyBaseNumber, BaseNumber(max, max, shield));
-            ShipPart(0, art ? art.engine : null, V5StoryKit.EngineIcon, c.EngineFixed);
-            ShipPart(1, art ? art.armor : null, V5StoryKit.ArmorIcon, c.ArmorFixed);
-            // The fuel counts its units: gold while it fills, teal once the tank is full.
-            storyShip[2].SetIcons(art ? art.fuel : null, V5StoryKit.FuelIcon);
-            storyShip[2].SetRing(c.FuelFull ? V5TitleKit.Teal : V5TitleKit.Gold);
-            ShipMark(2, $"{c.Fuel}/{c.FuelUnits}", c.FuelFull ? V5TitleKit.Teal : V5TitleKit.Gold);
             LayOutStoryBase();
+        }
+
+        /// <summary>The way home from the campaign's ship (ShipParts, Fuel, FuelTop): each part's medal with a steel ring and a green check
+        /// once done, or the alloy coin and its price until then; the fuel's medal (dark matter, a violet glow) with x / 100 in violet,
+        /// green once full. A mark that changes swells once.</summary>
+        void RefreshStoryHome(V2Campaign c)
+        {
+            var art = c.art;
+            StoryText(storyHomeWord, ArenaText.Pair("回家", "HOME"));
+            var parts = c.ShipParts();
+            Sprite coin = Art.Enabled && art && art.alloy ? art.alloy : WhiteboxIcons.CurrencyIcon(WhiteboxIcons.Currency.Alloy);
+            for (int i = 0; i < homeCoins.Length && i < parts.Count; i++)
+            {
+                var part = parts[i];
+                var (artIcon, flatIcon) = part.kind switch
+                {
+                    V2Campaign.ShipPartKind.Engine => (art ? art.engine : null, V5StoryKit.EngineIcon),
+                    V2Campaign.ShipPartKind.Hull => (art ? art.armor : null, V5StoryKit.ArmorIcon),
+                    _ => (art ? art.fuel : null, V5StoryKit.FuelIcon)
+                };
+                homeMedals[i].SetIcons(artIcon, flatIcon);
+                homeMedals[i].SetRing(part.done ? V5TitleKit.Steel : Color.clear);
+                SetShown(homeCoins[i], !part.done);
+                if (homeCoins[i].sprite != coin) homeCoins[i].sprite = coin;
+                HomeMark(i, part.done ? "✓" : part.price.alloy.ToString(), part.done ? HomeDone : ResourceColours.Alloy, part.done ? 24f : 22f);
+            }
+            homeMedals[3].SetIcons(art ? art.dark : null, WhiteboxIcons.CurrencyIcon(WhiteboxIcons.Currency.Dark));
+            bool full = c.Fuel >= c.FuelTop;
+            HomeMark(3, $"{c.Fuel}<size={V5StoryKit.FontSize(17f)}><color=#{HexOf(V5TitleKit.Ink3)}> / {c.FuelTop}</color></size>",
+                full ? HomeDone : ResourceColours.Dark, 22f);
+            LayOutStoryHome();
+        }
+
+        void HomeMark(int index, string mark, Color ink, float mockPixels)
+        {
+            var label = homeMarks[index];
+            label.fontSize = V5StoryKit.FontSize(mockPixels);
+            if (label.text != mark)
+            {
+                if (label.text.Length > 0) PulseOnce(label.transform);
+                label.text = mark;
+            }
+            label.color = ink;
+        }
+
+        /// <summary>The way home from the left: the word, then each part (its medal, 8 to its coin and price or its check) with an arrow
+        /// between parts, the plate as wide as all of it and centred under the day plate.</summary>
+        void LayOutStoryHome()
+        {
+            float height = Sp(HomePadYPx * 2f + HomeMedalPx), medal = Sp(HomeMedalPx), gap = Sp(HomeGapPx), x = Sp(HomePadLeftPx);
+            float word = storyHomeWord.preferredWidth;
+            PlaceSpan(storyHomeWord, x, word, height);
+            x += word + Sp(HomeWordGapPx) + gap;
+            for (int i = 0; i < HomeNames.Length; i++)
+            {
+                if (i > 0)
+                {
+                    PlaceCentre(homeSteps[i - 1].rectTransform, new Vector2(0f, .5f), new Vector2(x + Sp(HomeStepWPx) * .5f, 0f), new Vector2(Sp(HomeStepHPx), Sp(HomeStepWPx)));
+                    x += Sp(HomeStepWPx) + gap;
+                }
+                PlaceCentre(homeMedals[i].Rect, new Vector2(0f, .5f), new Vector2(x + medal * .5f, 0f), Vector2.one * medal);
+                x += medal + Sp(HomeMarkGapPx);
+                if (i < homeCoins.Length && homeCoins[i].gameObject.activeSelf)
+                {
+                    PlaceCentre(homeCoins[i].rectTransform, new Vector2(0f, .5f), new Vector2(x + Sp(HomeCoinPx) * .5f, 0f), Vector2.one * Sp(HomeCoinPx));
+                    x += Sp(HomeCoinPx) + Sp(HomeCoinGapPx);
+                }
+                float w = homeMarks[i].preferredWidth;
+                PlaceSpan(homeMarks[i], x, w, height);
+                x += w;
+            }
+            storyHome.sizeDelta = new Vector2(x + Sp(HomePadRightPx), height);
         }
 
         /// <summary>The base's life over its most ("1250 / 1500", the second part smaller and dimmer) and its shield after it in steel.</summary>
@@ -339,43 +448,11 @@ namespace AnomalyArena
             return number;
         }
 
-        /// <summary>The engine or the armour: a teal ring and a tick once repaired, an orange ring and "!" until then.</summary>
-        void ShipPart(int index, Sprite artIcon, Sprite flatIcon, bool fixedNow)
-        {
-            storyShip[index].SetIcons(artIcon, flatIcon);
-            storyShip[index].SetRing(fixedNow ? V5TitleKit.Teal : V5TitleKit.Orange);
-            ShipMark(index, fixedNow ? "✓" : "!", fixedNow ? V5TitleKit.Teal : V5TitleKit.OrangeHi);
-        }
-
-        void ShipMark(int index, string mark, Color ink)
-        {
-            var label = storyShipMarks[index];
-            if (label.text != mark)
-            {
-                if (label.text.Length > 0) PulseOnce(label.transform);
-                label.text = mark;
-            }
-            label.color = ink;
-        }
-
-        /// <summary>The base row from the right: fuel, armour and engine (each its medal, 4 to its mark, 9 between parts), a hairline 12
-        /// before them, the number 9 before that; from the left the control room's medal and 8 after it the bar up to 8 before the number.</summary>
+        /// <summary>The base row: the number at the right end; from the left the control room's medal and 8 after it the bar up to 8
+        /// before the number.</summary>
         void LayOutStoryBase()
         {
             float height = Sp(BaseRowPx), medal = Sp(RowMedalPx), right = Sp(InfoPx);
-            for (int i = 2; i >= 0; i--)
-            {
-                var label = storyShipMarks[i];
-                float w = label.preferredWidth;
-                PlaceSpan(label, right - w, w, height);
-                right -= w + Sp(4f);
-                PlaceCentre(storyShip[i].Rect, new Vector2(0f, .5f), new Vector2(right - medal * .5f, 0f), Vector2.one * medal);
-                right -= medal;
-                if (i > 0) right -= Sp(9f);
-            }
-            right -= Sp(12f);
-            PlaceCentre(storyHairline.rectTransform, new Vector2(0f, .5f), new Vector2(right, 0f), new Vector2(1f, height));
-            right -= Sp(9f);
             float number = Mathf.Max(storyBaseNumber.preferredWidth, storyBaseNumberWidth);
             PlaceSpan(storyBaseNumber, right - number, number, height);
             right -= number + Sp(8f);

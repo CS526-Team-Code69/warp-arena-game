@@ -24,10 +24,9 @@ namespace AnomalyArena
     }
 
     /// <summary>
-    /// Numbers of the V2 day campaign: waves become days with a day and a night, a base with HP, a shield and four rooms, three currencies,
-    /// shadow monsters at night. The defaults equal work/v2-campaign-1106/economy/ledger.py, which checks that a weak, a typical and a strong
-    /// player (kills measured by the XP pacing driver on 2026-10-27) all finish every room, the ship and the fuel by the dawn after the last
-    /// night. Change a price or a drop here and rerun the ledger with the same value.
+    /// Numbers of the V2 day campaign: waves become days with a day and a night, a base with HP, a workshop and a ship of three parts
+    /// (CampaignRules.Rooms.cs), three currencies, shadow monsters at night. The older defaults came from
+    /// work/v2-campaign-1106/economy/ledger.py; change a price or a drop here and rerun the number ledger with the same value.
     /// </summary>
     [CreateAssetMenu(menuName = "Anomaly Arena/Campaign/Rules")]
     public sealed partial class CampaignRules : ScriptableObject
@@ -98,6 +97,10 @@ namespace AnomalyArena
         [Min(0f), Tooltip("Cells within which a shadow notices the player and comes: to the edge of the light the player stands in, or all the way in the dark.")] public float shadowSense = 26f;
         [Min(1f), Tooltip("Cells from the place a shadow rose at within which it hunts: a player farther from that place is left alone, and a shadow on the hunt turns back. It keeps the danger in and beside the regions where the kills fell, so the regions far from them can still be mined.")] public float shadowTerritory = 16f;
         [Min(0f), Tooltip("Cells past a lamp's edge within which a shadow counts toward the crowd at that lamp.")] public float lampGatherBand = 3.5f;
+        [Min(0f), Tooltip("Seconds a crowd of shadows (overrunShadows) shows itself at a lamp's edge before it rushes into the light: meanwhile the lamp's ring is violet and the lamp flickers hard.")]
+        public float lampCrowdWarning = 3f;
+        [Min(1), Tooltip("Shadows gathered at the lamp the player stands in from which the goal panel's note names them, as this many of overrunShadows. The lamp's ring turns from its warm colour toward violet with every shadow that gathers, whatever this is.")]
+        public int lampCrowdNotice = 3;
         [Range(0f, 1f), Tooltip("Share of the player's max HP one shadow touch takes.")] public float shadowHitShare = .15f;
         [Min(.1f)] public float shadowHitInterval = .9f;
         [Min(.1f), Tooltip("Seconds of light that burn a shadow away. A shadow in a lamp's or the base's light loses itself second by second and leaves by the nearest edge; what it lost stays lost all night, and at this many seconds in all it dissolves.")]
@@ -115,6 +118,10 @@ namespace AnomalyArena
         public float ShadowChaseSpeed(float playerWalkSpeed) => Mathf.Max(shadowSpeed, playerWalkSpeed * shadowChaseFactor);
         /// <summary>This many shadows at one lamp are a crowd: they go into its light.</summary>
         public bool Crowd(int shadows) => shadows >= overrunShadows;
+        /// <summary>How far a lamp's ring has turned from its warm colour toward violet: the shadows gathered there as a share of a crowd.</summary>
+        public float LampCrowdShare(int shadows) => Mathf.Clamp01(shadows / (float)Mathf.Max(1, overrunShadows));
+        /// <summary>This many shadows gathered at the lamp the player stands in are named in the goal panel's note.</summary>
+        public bool LampCrowdNoticed(int shadows) => shadows >= Mathf.Max(1, lampCrowdNotice);
         /// <summary>A shadow hunts a player it can sense who stands inside its territory, the ground round the place it rose at.</summary>
         public bool ShadowHunts(float shadowToPlayer, float homeToPlayer) => shadowToPlayer <= shadowSense && homeToPlayer <= shadowTerritory;
         /// <summary>A shadow's light exposure after dt more seconds: it grows only while the shadow stands in light and never falls back
@@ -135,9 +142,7 @@ namespace AnomalyArena
         [Min(1f), Tooltip("Base max HP at durability level 1; each level multiplies it by baseHpGrowth (explosive growth, like the enemy pressure).")]
         public float baseHp = 300f;
         [Min(1f)] public float baseHpGrowth = 1.5f;
-        [Range(0f, 1f), Tooltip("Shield cap per shield level, as a share of the base max HP.")] public float shieldShare = .15f;
-        [Range(0f, 1f), Tooltip("HP the base repairs by itself each night, as a share of its max HP.")] public float nightSelfRepair = .3f;
-        [Range(.05f, 1f), Tooltip("A side breaks its room once it takes this share of the base max HP in one day.")] public float sideBreakShare = .25f;
+        [Range(0f, 1f), Tooltip("HP the base mends by itself each day, as the afternoon begins, as a share of its max HP (never past the max). The base has no shield and no paid repair: this and the fortification levels are what keep it standing.")] public float nightSelfRepair = .25f;
         [Min(0f), Tooltip("Every monster of a day wave raids the base (since 2026-11-06; bosses and monsters that cannot walk excepted). A raider within this many cells of the player fights the player instead; 0 = never.")]
         public float raiderAggroRadius = 7f;
 
@@ -151,7 +156,9 @@ namespace AnomalyArena
         [Min(0f), Tooltip("Cells from the base centre of the near spawn ring, which brings part of each morning close at once.")] public float nearSpawnRing = 30f;
         [Range(0f, 1f), Tooltip("Share of a morning's monsters born on the near ring; the rest come from the far one (daySpawnRing).")] public float nearSpawnShare = .4f;
         [Min(0f), Tooltip("Seconds monsters keep coming each morning, the same every day (the open mode keeps its wave table's).")] public float morningSeconds = 60f;
-        [Min(0f), Tooltip("Each morning's concurrent monsters: the wave table's target times this.")] public float morningCrowd = 1f;
+        [Min(0f), Tooltip("Each morning's concurrent monsters: the wave table's target times this (and times the day's morningCrowdByDay).")] public float morningCrowd = 1f;
+        [Tooltip("A factor by day (days 1, 2, 3 ...) on each story morning's concurrent monsters, times the wave table's target and morningCrowd and rounded up; a day past the table takes its last entry. 0.66 and 0.85 bring day 1 to 8 at once (the table's 12) and day 2 to 14 (its 16); from day 3 the table's own number. The open mode keeps its wave table's.")]
+        public float[] morningCrowdByDay = { .66f, .85f, 1f };
         [Min(0f), Tooltip("Monsters walk at their table speed times this in the story (the open mode keeps WaveManager.movementSpeedMultiplier): a Grunt then walks at 0.85 of the player's 6 cells a second.")] public float monsterWalkScale = .944f;
         [Range(.1f, 1f), Tooltip("No monster walks faster than this share of the player's walking speed, so a black hole (BlackHole.PullOverWalk of it) always takes it.")] public float monsterWalkCap = .95f;
         [Min(0), Tooltip("Ore nodes among each night's nodes, each beside one of the night's dark matter clusters; the rest of the night's nodes are dark matter. 0 since 2026-11-06 (it was 1): its alloy went to the afternoon's scattered nodes (scatterNodes), and afternoon ore left unmined still lies there at night.")] public int nightOreNodes = 0;
@@ -172,12 +179,8 @@ namespace AnomalyArena
         [Header("Black hole hum (heard only while the hole is out)")]
         [Min(1f), Tooltip("Cells from the black hole's centre within which its hum is heard: silent this far out, growing to full at the hole's gravity ring.")] public float holeHumReach = 45f;
         [Range(0f, 1f), Tooltip("Volume of the hum at the gravity ring, times V3WorldAudio's master gain. The hum is the Nash Prophet's gravity pull loop (Resources/V5/Audio/loop-gravity), which plays at 0.116 during his pull.")] public float holeHumVolume = .15f;
-        [Header("Raids and the shield top-up")]
+        [Header("Raids")]
         [Min(0f), Tooltip("Base damage per raider strike, as a share of that raider's attack damage. 0.15 since 2026-11-06, when every day monster became a raider (it was 0.6 for a fifth of the melee swarm).")] public float raidDamage = .15f;
-        [Min(0), Tooltip("Energy cost of an emergency shield top-up at the base door by day: this + shieldTopUpCostPerDay per day.")] public int shieldTopUpCost = 4;
-        [Min(0)] public int shieldTopUpCostPerDay = 1;
-        [Range(0f, 1f)] public float shieldTopUpShare = .25f;
-        [Min(0f)] public float shieldTopUpCooldown = 15f;
 
         [Header("Player levels (bought at the Armament Bay since 2026-11-06)")]
         [Tooltip("Price of the armor upgrade to level 2 (the player's level); each later level costs playerLevelCostPerLevel more. A level gives what an XP level gives in the classic run: max HP and max energy. Kills give no XP in the campaign.")]
@@ -229,6 +232,10 @@ namespace AnomalyArena
         public float hullRepair = 6f;
         [Min(0f)] public float hullRepairPerLevel = 3f;
 
+        [Header("Hints after Day 0")]
+        [Min(0f), Tooltip("A hand weapon taken from an afternoon crate gets the hint \"Try your new weapon\" (the right button first when it is not the hand in use) once no monster stands within this many cells of the player.")]
+        public float tryWeaponClearance = 16f;
+
         [Header("Day 0 tutorial")]
         [Min(0)] public int tutorialOreAlloy = 8;
         [Min(0)] public int tutorialGrunts = 6;
@@ -241,6 +248,9 @@ namespace AnomalyArena
         public float NightLength(int day) => day <= 0 ? tutorialNightSeconds : nightSeconds + nightSecondsPerDay * (day - 1);
         public int OreYield(int day) => oreYield + oreYieldStep * ((Mathf.Max(1, day) - 1) / Mathf.Max(1, oreYieldStepDays));
         public int OreNodes(int day) => oreNodes + Mathf.Max(0, day - 1);
+        /// <summary>A story morning's concurrent monsters as a factor on the wave table's target (WaveManager rounds the product up):
+        /// morningCrowd times the day's morningCrowdByDay (its last entry past the table, 1 with the table empty or on Day 0).</summary>
+        public float MorningCrowdOn(int day) => morningCrowd * Mathf.Max(0f, ByDay(morningCrowdByDay, day, 1f));
         public float BaseMaxHp(int durability) => baseHp * Mathf.Pow(baseHpGrowth, Mathf.Max(0, durability - 1));
         public int MaxDurability => durabilityLevels.Length + 1;
         public int MaxShield => shieldLevels.Length;
@@ -249,7 +259,6 @@ namespace AnomalyArena
         public int ControlRepairCost(int day) => controlRepair + controlRepairPerDay * Mathf.Max(0, day);
         /// <summary>The table's wave number (from 1) of a day's k-th wave (k from 0): day d, wave k is ((d - 1) x wavesPerDay + k + 1) x waveStride.</summary>
         public int WaveNumber(int day, int waveOfDay) => ((Mathf.Max(1, day) - 1) * wavesPerDay + waveOfDay + 1) * Mathf.Max(1, waveStride);
-        public int ShieldTopUpCost(int day) => shieldTopUpCost + shieldTopUpCostPerDay * Mathf.Max(0, day);
         /// <summary>A room purchase's price after `bought` earlier purchases of the same kind: the base price plus one step per purchase.</summary>
         public static CampaignCost Rising(CampaignCost price, CampaignCost step, int bought)
         {

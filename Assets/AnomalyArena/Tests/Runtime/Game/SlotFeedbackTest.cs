@@ -55,10 +55,13 @@ namespace AnomalyArena
                 Assert.That(hud.hintLabel.enabled, Is.False, "and the saved line over the charge bar is not drawn");
             }
             Assert.That(Key(hud, other), Is.EqualTo(ArenaText.Pair($"手持{other + 1}", $"HAND {other + 1}")), "right click does nothing with the other slot empty, so it names no button");
+            AssertKeyRow(hud, held, ArenaText.Pair("左键", "LMB"), ArenaText.Pair("开火", "Fire"), "the hand in use fires with the left button");
+            AssertKeyRow(hud, other, "", ArenaText.Pair($"手持 {other + 1}", $"Hand {other + 1}"), "an empty slot has no button and keeps its place's name");
 
             weapons.Hand[other] = new RunWeapon { form = WeaponForm.Knife, variant = 0, revealed = true };
             await Refreshed(hud);
             Assert.That(Key(hud, other), Is.EqualTo(ArenaText.Pair($"手持{other + 1} [右键切换]", $"HAND {other + 1} [RMB SWITCH]")));
+            AssertKeyRow(hud, other, ArenaText.Pair("右键", "RMB"), ArenaText.Pair("换手", "Swap"), "the other hand, once filled, swaps with the right button");
 
             weapons.Switch();
             await Refreshed(hud);
@@ -66,6 +69,8 @@ namespace AnomalyArena
             AssertInUse(hud, other);
             Assert.That(game.UiSnapshot.hint, Is.EqualTo(weapons.Active.Label), "and follows the swap, whichever weapon was revealed last");
             Assert.That(Key(hud, held), Is.EqualTo(ArenaText.Pair($"手持{held + 1} [右键切换]", $"HAND {held + 1} [RMB SWITCH]")), "the buttons move with the swap");
+            AssertKeyRow(hud, other, ArenaText.Pair("左键", "LMB"), ArenaText.Pair("开火", "Fire"), "after the swap the new hand in use fires");
+            AssertKeyRow(hud, held, ArenaText.Pair("右键", "RMB"), ArenaText.Pair("换手", "Swap"), "and the hand put away swaps");
 
             var dimmed = hud.handSlots[held].GetComponent<CanvasGroup>();
             var lit = hud.handSlots[other].GetComponent<CanvasGroup>();
@@ -188,6 +193,24 @@ namespace AnomalyArena
         // ───── Helpers ─────
 
         static string Key(V2Hud hud, int index) => hud.handSlots[index].transform.Find("SlotKey").GetComponent<Text>().text;
+
+        /// <summary>The fifth pass's keycap row of a hand slot (V5BattleSlot): the keycap's letters (empty when no keycap shows) and the
+        /// word after it. The English Alpha has no such row.</summary>
+        static void AssertKeyRow(V2Hud hud, int index, string cap, string word, string because)
+        {
+            if (!V5HudKit.On) return;
+            var slot = hud.handSlots[index].transform;
+            var key = slot.Find("V5Key");
+            var keyWord = slot.Find("V5KeyWord");
+            Assert.That(key && keyWord, Is.True, $"hand {index + 1} has the fifth pass's key row");
+            if (cap.Length == 0) Assert.That(key.gameObject.activeSelf, Is.False, $"hand {index + 1}: {because}");
+            else
+            {
+                Assert.That(key.gameObject.activeSelf, Is.True, $"hand {index + 1} shows a keycap: {because}");
+                Assert.That(key.GetComponent<V5HudKey>().Label.text, Is.EqualTo(cap), $"hand {index + 1}'s keycap: {because}");
+            }
+            Assert.That(keyWord.GetComponent<Text>().text, Is.EqualTo(word), $"hand {index + 1}'s word: {because}");
+        }
 
         /// <summary>Draws the current run into the HUD and gives the feedback its frame.</summary>
         static async Task Refreshed(V2Hud hud)

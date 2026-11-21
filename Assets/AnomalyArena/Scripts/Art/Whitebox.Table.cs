@@ -10,7 +10,7 @@ namespace AnomalyArena
     public static partial class Whitebox
     {
         /// <summary>SHA-256 of the looks.json this file was made from, with its line ends read as LF.</summary>
-        public const string TableSha256 = "fd336ee3c7fb9f55287c48e9242127edeaaf32a76c3883f93894d1e55c27e9d3";
+        public const string TableSha256 = "a12d669cc1ec20c594494247f474ed5284abdde925b98d1a071c6c2323f77f6f";
 
         /// <summary>The table's colours by key, 0..1.</summary>
         static readonly Dictionary<string, Color> TableColours = new()
@@ -70,6 +70,7 @@ namespace AnomalyArena
             ["lock"] = new Color(0.9f, 0.15f, 0.15f),
             ["gate"] = new Color(0.78f, 0.7f, 1f),
             ["damaged"] = new Color(1f, 0.2f, 0.15f),
+            ["copper"] = new Color(0.89f, 0.6f, 0.33f),
         };
 
         /// <summary>Every look of the table by id, then the named pieces of them (make_whitebox_cs.py, VARIANTS). Metres, z forward,
@@ -293,12 +294,12 @@ namespace AnomalyArena
                 new Part(Prim.Box, 0.2f, 0.2f, 0.2f, 0f, 0f, 0.85f, "energy", 1f),
                 new Part(Prim.Box, 0.2f, 0.2f, 0.2f, 0f, 0f, 1.2f, "energy", 1f),
             },
-            // 合金矿: 灰褐岩块上立着淡蓝方块晶体
+            // 合金矿: 灰褐岩块上立着两根铜色方柱
             ["ore"] = new[]
             {
                 new Part(Prim.Box, 1.4f, 0.7f, 1.1f, 0f, 0.35f, 0f, "rock", 1f),
-                new Part(Prim.Box, 0.35f, 0.9f, 0.35f, 0f, 0.95f, 0.2f, "alloy", 1f),
-                new Part(Prim.Box, 0.25f, 0.6f, 0.25f, 0f, 0.8f, -0.3f, "alloy", 1f),
+                new Part(Prim.Box, 0.35f, 0.9f, 0.35f, 0f, 0.95f, 0.2f, "copper", 1f),
+                new Part(Prim.Box, 0.25f, 0.6f, 0.25f, 0f, 0.8f, -0.3f, "copper", 1f),
             },
             // 暗物质节点: 黑紫岩块上浮着紫色八面体晶体
             ["dark"] = new[]

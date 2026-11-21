@@ -78,7 +78,7 @@ namespace AnomalyArena
             foreach (var skill in catalog.skills.Where(s => s))
             for (int level = 1; level <= SkillDefinition.MaxLevel; level++)
                 yield return ($"{skill.id} L{level}",
-                    skill.Description(level) + ArenaText.Pair($"\n消耗 {skill.cost:0} 能量", $"\n{skill.cost:0} Energy"));
+                    skill.Description(level) + ArenaText.Pair($"\n消耗 {skill.cost:0} 充能", $"\n{skill.cost:0} Charge"));
             for (int form = (int)WeaponForm.GravGun; form <= (int)WeaponForm.SwarmLauncher; form++)
             for (int variant = 0; variant < 2; variant++)
             foreach (var axis in new[] { UpgradeAxis.Twist, UpgradeAxis.Tame })

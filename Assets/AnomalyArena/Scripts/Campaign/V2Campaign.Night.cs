@@ -35,6 +35,8 @@ namespace AnomalyArena
             public bool hidden;
             /// <summary>Place on today's ore trail toward the black hole (0 nearest the base), or -1 for a node off the trail.</summary>
             public int trailIndex = -1;
+            /// <summary>The height of the top of its view (world units), where its name stands (V2WorldLabels).</summary>
+            public float top;
         }
 
         sealed class Lamp
@@ -46,6 +48,8 @@ namespace AnomalyArena
             public float crowdSince;
             /// <summary>The lamp radius its ring and light were last drawn for (the ship's night light can widen it during a night).</summary>
             public float drawnRadius;
+            /// <summary>The crowd its ring was last drawn for: the ring turns toward violet as shadows gather.</summary>
+            public int drawnCrowd;
         }
 
         readonly List<Node> nodes = new();
@@ -233,19 +237,19 @@ namespace AnomalyArena
         }
 
         /// <summary>The afternoon's goal: how much of today's ore is left, with a marker on the ore trail's next node (the trail leads toward
-        /// the black hole; the hole itself never gets a marker), or once the trail is mined, on the nearest ore left; none when all is mined.
-        /// While the day's weapon crate lies on the trail, a second sentence says so.</summary>
+        /// the black hole; the hole itself never gets a marker), or once the trail is mined, on the nearest ore left. Once all of it is
+        /// mined: back to the base for nightfall, the marker on the base door. While the day's weapon crate lies on the trail, a second
+        /// sentence says so.</summary>
         void AfternoonObjective()
         {
             if (Stage != CampaignStage.Dusk) return;
             int left = OreLeftToday;
-            // Short since 2026-11-10: the goal says what to do, the keys are on the hint line and the prompts.
-            string onward = EveningsOpenEnded ? ArenaText.Pair("回基地升级或入夜", "head back to the base to upgrade or start the night")
-                : ArenaText.Pair("回基地升级", "head back to the base to upgrade");
+            // The goal says what to do; the keys are on the hint line and the prompts.
             Vector3? next = TrailFrontier();
             if (next == null && left > 0 && gm.player && TryNearestNode(NodeKind.Ore, gm.player.Position, out var nearest)) next = nearest;
+            if (left <= 0) next = DoorPoint;
             string goal = left > 0 ? ArenaText.Pair($"采集合金矿（还剩 {left} 处）", $"Mine the alloy ore ({left} left)")
-                : ArenaText.Pair("合金矿采完了，", "The ore is mined out; ") + onward;
+                : ArenaText.Pair("合金矿采完了，可以回基地入夜", "The alloy ore is mined out. Head back to the base for nightfall");
             // The crate's sentence stands after a full stop, so the goal plate shows it as the body under the goal (V5StoryGoal).
             goalNamesCrate = AfternoonCrateOnMap;
             if (goalNamesCrate) goal += ArenaText.Pair("。矿脉上还有一个武器箱。", ". A weapon crate lies on the ore trail.");
@@ -274,7 +278,7 @@ namespace AnomalyArena
             TickMining(dt, true);
             TickLampPlacement();
             if (goalNamesCrate != AfternoonCrateOnMap) AfternoonObjective(); // the day's crate was opened or left
-            if (TickBaseDoor()) return; // in the base the afternoon waits
+            if (TickBaseDoor() || TickShipDoor()) return; // in the base the afternoon waits
             if (!EveningsOpenEnded && stageClock >= stageLength) BeginNight();
         }
 
@@ -323,16 +327,24 @@ namespace AnomalyArena
         }
 
         /// <summary>The night's goal (from day 1; the tutorial night has its own), with a marker on the nearest dark matter left (the night's
-        /// clusters lie in regions that touch, PlaceDarkClusters). Once it is all mined the marker points to the base door.</summary>
+        /// clusters lie in regions that touch, PlaceDarkClusters). Once it is all mined, or no lamp is lit on the ground and none is left
+        /// in hand, the goal sends the player back to the base to wait for dawn and the marker points to the base door.</summary>
         void NightObjective()
         {
             if (Stage != CampaignStage.Night || Day <= 0) return;
             Vector3 from = gm.player ? gm.player.Position : DoorPoint;
-            if (TryNearestNode(NodeKind.Dark, from, out var dark))
+            nightGoalUnlit = NoLampLeft;
+            if (!nightGoalUnlit && TryNearestNode(NodeKind.Dark, from, out var dark))
                 Objective(ArenaText.Pair("在灯光里采集暗物质", "Mine dark matter in the lamplight"), dark);
             else
-                Objective(ArenaText.Pair("暗物质采完了，回基地等待天亮", "The dark matter is mined out. Wait for dawn at the base"), DoorPoint);
+                Objective(ArenaText.Pair("可以回基地等天亮", "You can head back to the base and wait for dawn"), DoorPoint);
         }
+
+        // The night's goal was last written with no lamp lit and none in hand (TickNight writes it again when that changes).
+        bool nightGoalUnlit;
+
+        /// <summary>No lamp is left to mine by: none in hand and none lit on the ground (one a crowd of shadows has gone into lights nothing).</summary>
+        bool NoLampLeft => lampStock <= 0 && !lamps.Exists(l => !l.smothered);
 
         void TickNight(float dt)
         {
@@ -344,7 +356,8 @@ namespace AnomalyArena
             TickLamps(dt);
             TickMining(dt, false);
             TickLampPlacement();
-            if (TickBaseDoor()) return; // in the base the night waits
+            if (Day > 0 && nightGoalUnlit != NoLampLeft) NightObjective(); // the last lamp went out, or one was set down again
+            if (TickBaseDoor() || TickShipDoor()) return; // in the base the night waits
             if (Day == 0) TickTutorialNight(dt);
             if (!EveningsOpenEnded && stageClock >= stageLength) EndNight(false);
         }
@@ -369,10 +382,8 @@ namespace AnomalyArena
             if (Day >= rules.days)
             {
                 // The last planned day is over and the ship cannot leave yet: the days go on (the last day's wave again) until it can.
-                string missing = !engineFixed ? ArenaText.Pair("引擎还没修好", "The engine isn't repaired")
-                    : !armorFixed ? ArenaText.Pair("装甲还没修好", "The armor isn't repaired")
-                    : ArenaText.Pair("燃料还没满", "The fuel tank isn't full");
-                ui.Flash(ArenaText.Pair($"{missing}，飞船飞不起来，得再撑一天。", $"{missing}, so the ship can't leave yet. Hold out one more day."), 3.5f);
+                ui.Flash(ArenaText.Pair($"回家还差：{StillToDo(true)}。飞船飞不起来，得再撑一天。",
+                    $"Still needed to fly home: {StillToDo(false)}. The ship can't leave yet; hold out one more day."), 3.5f);
             }
             SaveStoryPhase(SavePhase.Morning); // the morning's save, before the new day's one-shot effects (V2Campaign.Save.cs)
             Stage = CampaignStage.Build; // StartNextWave begins a new day from this stage
@@ -393,6 +404,42 @@ namespace AnomalyArena
             if (everything) { ClearPickups(); lampStock = 0; }
         }
 
+        /// <summary>What the ship still needs before the ignition, in a list (the engine, the hull, the fuel tank, the fuel x/100; a step
+        /// done drops out), in Chinese or in English.</summary>
+        string StillToDo(bool chinese)
+        {
+            var parts = new List<string>();
+            if (!engineFixed) parts.Add(chinese ? "修好引擎" : "the engine repaired");
+            if (!armorFixed) parts.Add(chinese ? "修好船体" : "the hull repaired");
+            if (!fuelTankFitted) parts.Add(chinese ? "装上燃料舱" : "the fuel tank fitted");
+            if (!FuelFull) parts.Add(chinese ? $"燃料 {fuel}/{FuelTop}" : $"fuel {fuel}/{FuelTop}");
+            if (chinese || parts.Count < 2) return string.Join("、", parts);
+            return string.Join(", ", parts.GetRange(0, parts.Count - 1)) + " and " + parts[parts.Count - 1];
+        }
+
+        /// <summary>E beside the ship, in the afternoon or at night, opens the base on the rocket page (RequestBaseScreen), as the base door
+        /// opens it on the workshop. True when the base opened this frame (the caller ends its tick there).</summary>
+        bool TickShipDoor()
+        {
+            var p = gm.player;
+            if (!p || mining != null || ShipGap(p.Position) >= ShipReach) return false;
+            prompt = ArenaText.Pair($"按 {ArenaKeys.InteractKey} 查看飞船", $"Press {ArenaKeys.InteractKey} to check the ship");
+            if (!EPressed) return false;
+            RequestBaseScreen(BaseScreen.Rocket);
+            return Stage == CampaignStage.Base;
+        }
+
+        /// <summary>How near the ship's footprint the player stands for its E (cells from its edge). The ship is a wall of
+        /// ShipHalfLength x ShipHalfWidth round ShipCentre, so the player is measured from its edge rather than its centre.</summary>
+        const float ShipReach = 2.4f;
+
+        /// <summary>Cells from a point to the edge of the ship's footprint (0 on or inside it).</summary>
+        static float ShipGap(Vector3 at)
+        {
+            float dx = Mathf.Max(0f, Mathf.Abs(at.x - ShipCentre.x) - ShipHalfLength), dz = Mathf.Max(0f, Mathf.Abs(at.z - ShipCentre.z) - ShipHalfWidth);
+            return Mathf.Sqrt(dx * dx + dz * dz);
+        }
+
         /// <summary>E at the base door, in the afternoon or at night, goes into the base (without open-ended evenings that clock waits while
         /// the panel is open). True when the base opened this frame (the caller ends its tick there).</summary>
         bool TickBaseDoor()
@@ -410,6 +457,9 @@ namespace AnomalyArena
             if (Stage == CampaignStage.Dusk)
                 return EveningsOpenEnded ? ArenaText.Pair("下午不会自己结束，想入夜时就回基地。", "The afternoon won't end on its own. Go back to the base when you're ready for the night.")
                     : ArenaText.Pair($"今天采到：合金 +{nightAlloy}", $"Mined today: alloy +{nightAlloy}");
+            // Shadows gathering at the lamp the player stands in come first: how many of a crowd are there, and what a full crowd does.
+            string crowd = LampCrowdNote();
+            if (crowd.Length > 0) return crowd;
             // At night the note names what a death would cost: everything gained since nightfall or the last base visit (the afternoon is kept).
             // That weapons pass through shadows is said where it shows, the first time a shot crosses one (RippleUnderFire).
             var risk = TonightsHaul;
@@ -421,6 +471,28 @@ namespace AnomalyArena
                 : ArenaText.Pair($"今晚已采到合金 {nightAlloy}、暗物质 {nightDark}。", $"Tonight so far: {nightAlloy} alloy, {nightDark} dark matter."));
         }
 
+        /// <summary>The note while rules.lampCrowdNotice or more shadows have gathered at the lamp the player stands in (one no crowd has
+        /// gone into yet): how many of the overrunShadows that make a crowd, and that a full crowd rushes in and puts the lamp out. Empty
+        /// otherwise.</summary>
+        string LampCrowdNote()
+        {
+            var p = gm ? gm.player : null;
+            if (Stage != CampaignStage.Night || !p) return "";
+            Vector3 pp = Query.Flat(p.Position);
+            float radius = LampRadius;
+            Lamp at = null;
+            float nearest = float.MaxValue;
+            foreach (var lamp in lamps)
+            {
+                float d = Query.Flat(pp - lamp.position).sqrMagnitude;
+                if (!lamp.smothered && d <= radius * radius && d < nearest) { nearest = d; at = lamp; }
+            }
+            if (at == null || !rules.LampCrowdNoticed(at.crowd)) return "";
+            int full = Mathf.Max(1, rules.overrunShadows), gathered = Mathf.Min(at.crowd, full);
+            return ArenaText.Pair($"灯外聚了 {gathered}/{full} 只影子，聚满会冲进来灭灯。",
+                $"{gathered} of {full} shadows have gathered at this lamp. At {full} they rush in and put it out.");
+        }
+
         // ───── Lamps ─────
 
         void TickLampPlacement()
@@ -428,7 +500,7 @@ namespace AnomalyArena
             if (!FPressed || WorldMap.Active && WorldMap.Active.TrialActive) return;
             var p = gm.player;
             if (!p || !p.IsAlive) return;
-            if (lampStock <= 0) { ui.Flash(ArenaText.Pair("矿灯用完了。可以在基地的飞船发射区用合金制造。", "You're out of lamps. Craft more with alloy at the base's Ship Launch Bay.")); return; }
+            if (lampStock <= 0) { ui.Flash(ArenaText.Pair("矿灯用完了。可以回基地，在火箭那边用合金造。", "You're out of lamps. Craft more with alloy at the rocket, back at the base.")); return; }
             Vector3 at = Query.Flat(p.Position + p.AimDirection.normalized * .8f);
             if (WorldMap.Active && (WorldMap.Active.IsWall(at, .4f) || !WorldMap.Active.Contains(at, .5f))) at = Query.Flat(p.Position);
             PlaceLamp(at);
@@ -471,21 +543,30 @@ namespace AnomalyArena
             Fx.Ring(at, LampRadius, new Color(1f, .9f, .6f), .45f);
         }
 
-        /// <summary>The ring on the ground at the edge of a lamp's light: what stands inside it is lit, can be mined, and is out of the
-        /// shadows' reach. It turns violet once a crowd of shadows has gone in.</summary>
         // A lamp's own light only warms the ground round it (the darkness cut away is what shows its reach): full and worn down.
         const float LampLightFull = 1.5f, LampLightWorn = .5f;
         // The line at a light's edge: thin and faint, so it marks where the light ends without glowing; a crowd's warning shows stronger.
-        const float LightEdgeWidth = .16f, LightEdgeAlpha = .5f, LightEdgeGlow = .7f;
+        // While shadows gather it widens up to LightEdgeGatherWidth times and brightens up to a crowd's glow (LightEdgeCrowdGlow).
+        const float LightEdgeWidth = .16f, LightEdgeAlpha = .5f, LightEdgeGlow = .7f, LightEdgeGatherWidth = 1.5f, LightEdgeCrowdGlow = 1.1f;
+        // The ring's warm colour with no shadow at the lamp, and its violet once a crowd stands at it.
+        static readonly Color LampEdgeWarm = new(1f, .9f, .7f, LightEdgeAlpha), LampEdgeCrowd = new(.75f, .3f, 1f, .9f);
 
+        /// <summary>The ring on the ground at the edge of a lamp's light: what stands inside it is lit, can be mined, and is out of the
+        /// shadows' reach. It turns from its warm colour toward violet as shadows gather at the lamp (CampaignRules.LampCrowdShare), and
+        /// is violet and wider once a crowd stands at it or has gone in.</summary>
         void DrawLampEdge(Lamp lamp)
         {
             bool crowded = lamp.smothered || lamp.crowdSince > 0f;
+            float share = crowded ? 1f : rules.LampCrowdShare(lamp.crowd);
             lamp.drawnRadius = LampRadius;
+            lamp.drawnCrowd = lamp.crowd;
             if (lamp.light) lamp.light.range = LampRadius * 1.15f;
-            if (lamp.ring) lamp.ring.Draw(lamp.position, LampRadius, crowded ? LightEdgeWidth * 2.2f : LightEdgeWidth,
-                crowded ? new Color(.75f, .3f, 1f, .9f) : new Color(1f, .9f, .7f, LightEdgeAlpha), crowded ? 1.1f : LightEdgeGlow);
+            if (lamp.ring) lamp.ring.Draw(lamp.position, LampRadius, crowded ? LightEdgeWidth * 2.2f : LightEdgeWidth * Mathf.Lerp(1f, LightEdgeGatherWidth, share),
+                LampEdgeColour(share), crowded ? LightEdgeCrowdGlow : Mathf.Lerp(LightEdgeGlow, LightEdgeCrowdGlow, share));
         }
+
+        /// <summary>A lamp ring's colour for a share of a crowd gathered at it (0 none, 1 a crowd): from the warm edge to the violet.</summary>
+        public static Color LampEdgeColour(float share) => Color.Lerp(LampEdgeWarm, LampEdgeCrowd, Mathf.Clamp01(share));
 
         void TickLamps(float dt)
         {
@@ -664,7 +745,7 @@ namespace AnomalyArena
             if (next == null) return;
             next.hidden = false;
             BuildNodeView(next);
-            Fx.Ring(next.position, 2.4f, new Color(.6f, .85f, 1f), .6f);
+            Fx.Ring(next.position, 2.4f, ResourceColours.Alloy, .6f);
             V3WorldAudio.Instance?.Play(ArenaWorldCue.PickupEnergy, next.position, .7f, .7f);
             ui.Flash(ArenaText.Pair("更远处又露出了一处合金矿", "More ore has surfaced further out"), 2f);
         }
@@ -854,7 +935,8 @@ namespace AnomalyArena
             root.SetParent(worldRoot, false);
             root.position = node.position;
             root.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
-            // Void alloy is the alloy ore's model in the void's black and violet (VoidAlloyMaterial).
+            // Void alloy is the alloy ore's model in the void's black and violet (VoidAlloyMaterial). The dark matter node is the void
+            // crystal's model (DarkMatterNode.prefab): a black body with violet edges, a shape of its own beside the copper alloy ore.
             var prefab = !art || !Art.Enabled ? null
                 : kind switch
                 {
@@ -865,9 +947,17 @@ namespace AnomalyArena
             {
                 var model = Instantiate(prefab, root);
                 StripColliders(model);
-                // The core, the story's last find, stands as tall as the player (1.8); the nodes are fitted by their footprint.
+                // The core, the story's last find, stands as tall as the player (1.8); the dark matter node is fitted by its height, the
+                // alloy ore (and the void alloy on its model) by its footprint.
                 if (kind == NodeKind.Core) FitHeight(model.transform, 1.8f);
-                else FitFootprint(model.transform, kind == NodeKind.Dark ? 1.5f : 1.8f);
+                else if (kind == NodeKind.Dark)
+                {
+                    // The crystal's model stands on a pale slab of sand about a fifteenth of its height: it is fitted that much taller
+                    // and sunk by the slab, so the slab lies under the ground and the crystal shows at about 1.5.
+                    FitHeight(model.transform, DarkNodeHeight);
+                    model.transform.position += Vector3.down * (DarkNodeHeight * DarkNodeSlab);
+                }
+                else FitFootprint(model.transform, 1.8f);
                 if (kind == NodeKind.VoidAlloy) PaintVoidAlloy(model);
             }
             else if (kind == NodeKind.VoidAlloy) Whitebox.Build("voidalloy", root);
@@ -882,10 +972,62 @@ namespace AnomalyArena
             else
             {
                 Box(root, "Rock", new Vector3(0f, .35f, 0f), new Vector3(1.4f, .7f, 1.1f), kind == NodeKind.Ore ? new Color(.45f, .4f, .36f) : new Color(.16f, .1f, .22f));
-                Box(root, "Crystal", new Vector3(.15f, .9f, 0f), new Vector3(.35f, .9f, .35f), kind == NodeKind.Ore ? new Color(.6f, .75f, .9f) : new Color(.55f, .15f, .85f));
+                Box(root, "Crystal", new Vector3(.15f, .9f, 0f), new Vector3(.35f, .9f, .35f), kind == NodeKind.Ore ? ResourceColours.Alloy : new Color(.55f, .15f, .85f));
             }
             node.view = root;
+            node.top = TopOf(root, node.position.y + 1.5f);
         }
+
+        // The dark matter node's height with its slab (DarkMatterNode.prefab, the void crystal's model) and the slab's share of it.
+        const float DarkNodeHeight = 1.6f, DarkNodeSlab = .07f;
+
+        /// <summary>The highest point of a view's renderers; fallback when it has none.</summary>
+        static float TopOf(Transform view, float fallback)
+        {
+            bool any = false;
+            float top = fallback;
+            foreach (var r in view.GetComponentsInChildren<Renderer>())
+            {
+                top = any ? Mathf.Max(top, r.bounds.max.y) : r.bounds.max.y;
+                any = true;
+            }
+            return top;
+        }
+
+        // ───── The names over the nodes near the player (V2WorldLabels) ─────
+
+        /// <summary>How near the player a node must be for its name to show over it, in cells.</summary>
+        public const float NodeNameReach = 6f;
+
+        /// <summary>The name a node that can be mined shows over it (empty for the core, which has its own prompt).</summary>
+        public static string NodeName(NodeKind kind) => kind switch
+        {
+            NodeKind.Ore => ArenaText.Pair("合金矿", "Alloy ore"),
+            NodeKind.Dark => ArenaText.Pair("暗物质", "Dark matter"),
+            NodeKind.VoidAlloy => ArenaText.Pair("虚空合金", "Void alloy"),
+            _ => ""
+        };
+
+        /// <summary>The nodes that can be mined (surfaced, not mined, not the core) within reach of a point, nearest first, each with the
+        /// point over its view where its name stands. Fills into, which it clears first; empty while the story is not out on the map.</summary>
+        public void NodesNear(Vector3 from, float reach, List<(NodeKind kind, Vector3 top)> into)
+        {
+            into.Clear();
+            if (!Running || Stage is not (CampaignStage.Tutorial or CampaignStage.Dusk or CampaignStage.Night)) return;
+            foreach (var node in nodes)
+            {
+                if (node.mined || node.hidden || node.kind == NodeKind.Core || !node.view) continue;
+                if (Query.Flat(node.position - from).sqrMagnitude > reach * reach) continue;
+                into.Add((node.kind, new Vector3(node.position.x, node.top, node.position.z)));
+            }
+            if (into.Count < 2) return;
+            sortFrom = from;
+            into.Sort(NearerFirst);
+        }
+
+        static Vector3 sortFrom;
+        static readonly System.Comparison<(NodeKind kind, Vector3 top)> NearerFirst =
+            (a, b) => Query.Flat(a.top - sortFrom).sqrMagnitude.CompareTo(Query.Flat(b.top - sortFrom).sqrMagnitude);
 
         static Material voidAlloyMaterial;
 
@@ -983,8 +1125,8 @@ namespace AnomalyArena
             {
                 prompt = lampStock > 0
                     ? ArenaText.Pair($"太黑了，先按 {ArenaKeys.LampKey} 放一盏矿灯", $"It's too dark. Press {ArenaKeys.LampKey} to set down a lamp first")
-                    : ArenaText.Pair($"太黑了，手里也没有矿灯。回基地，在飞船发射区造一盏（{rules.lampCost} 合金）",
-                        $"It's too dark, and you have no lamps left. Craft one at the base's Ship Launch Bay ({rules.lampCost} alloy)");
+                    : ArenaText.Pair($"太黑了，手里也没有矿灯。回基地，在火箭那边造一盏（{rules.lampCost} 合金）",
+                        $"It's too dark, and you have no lamps left. Craft one at the rocket, back at the base ({rules.lampCost} alloy)");
                 mining = null; mineProgress = 0f;
                 return;
             }
@@ -992,7 +1134,7 @@ namespace AnomalyArena
             if (mining != node) { mining = node; mineProgress = 0f; }
             mineProgress += dt / Mathf.Max(.05f, rules.mineSeconds);
             prompt = ""; // the mining bar shows the progress (V2CampaignUi.Feedback.cs)
-            if (Random.value < dt * 12f) Fx.Pop(node.position + Vector3.up * Random.Range(.4f, 1.2f), node.kind == NodeKind.Ore ? new Color(.7f, .85f, 1f) : new Color(.7f, .3f, 1f), .5f);
+            if (Random.value < dt * 12f) Fx.Pop(node.position + Vector3.up * Random.Range(.4f, 1.2f), node.kind == NodeKind.Ore ? ResourceColours.Alloy : ResourceColours.Dark, .5f);
             if (mineProgress < 1f) return;
             CompleteMining(node);
         }
@@ -1014,7 +1156,7 @@ namespace AnomalyArena
                 ui.ShowGain(2, node.amount, node.position);
                 if (node.energy > 0) ui.ShowGain(0, node.energy, node.position + Vector3.up * .9f);
             }
-            Fx.Burst(node.position + Vector3.up, Vector3.up, node.kind == NodeKind.Ore ? new Color(.7f, .85f, 1f) : new Color(.7f, .3f, 1f), 12, 7f, 360f, .35f);
+            Fx.Burst(node.position + Vector3.up, Vector3.up, node.kind == NodeKind.Ore ? ResourceColours.Alloy : ResourceColours.Dark, 12, 7f, 360f, .35f);
             if (node.view) Destroy(node.view.gameObject);
             OnTutorialMined(node.kind);
             if (node.trailIndex >= 0) SurfaceNextTrailNode(node.trailIndex);

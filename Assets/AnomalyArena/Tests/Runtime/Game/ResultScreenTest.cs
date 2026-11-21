@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using TestHelper.Attributes;
+using TestHelper.RuntimeInternals;
 using UnityEngine;
 using UnityEngine.UI;
 using Object = UnityEngine.Object;
@@ -13,22 +14,31 @@ namespace AnomalyArena
 {
     /// <summary>
     /// The end of a run in the fifth pass's look (V5ResultScreen): after a defeat its page shows over the old result screen with the
-    /// result, where the run ended, what ended it and the run's numbers, in both art modes. The two looks are saved to the copy's
-    /// Logs/result-*.png for a look by eye.
+    /// result, where the run ended, what ended it and the run's numbers, in both art modes; a run bound to no slot has only the orange way
+    /// back to the title. A lost run whose slot holds a save gets the orange retry from that save (Enter) named by the save, and the way
+    /// back becomes a plain plate (R) beside it, in both languages. The looks are saved to the copy's Logs/result-*.png for a look by eye.
+    /// The saves are kept in memory.
     /// </summary>
     [TestFixture]
     public class ResultScreenTest
     {
         const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
+        const int Slot = 0;
         bool savedArt;
 
         [SetUp]
-        public void SetUp() => savedArt = Art.Enabled;
+        public void SetUp()
+        {
+            savedArt = Art.Enabled;
+            ArenaSaves.ResetForTests();
+        }
 
         [TearDown]
         public void TearDown()
         {
             Art.Enabled = savedArt;
+            ArenaSaves.ResetForTests();
+            TestStartLanguage.Reset();
             Time.timeScale = 1f;
         }
 
@@ -60,12 +70,78 @@ namespace AnomalyArena
             Assert.That(Part("Cause").text, Is.EqualTo(s.resultCause.Split('\n')[0].Trim()), "the cause's first line");
             Assert.That(Part("Stats").text, Does.Contain(s.kills.ToString()), "the run's numbers");
             Assert.That(Part("Label").text, Is.Not.Empty, "the way back to the title");
+            Assert.That(game.RetrySave, Is.Null, "a run bound to no slot has no save to retry");
+            var retry = page.GetComponentsInChildren<V5Plate>(true).FirstOrDefault(p => p.name == "Retry");
+            Assert.That(retry && retry.gameObject.activeInHierarchy, Is.False, "so the page has no retry");
+            Assert.That(Plate(page, "BackToTitle").Kind, Is.EqualTo(V5Plate.Look.Go), "and the way back to the title stays the orange button");
             Capture(game.cam, "result-defeat-art");
 
             Art.Enabled = false;
             // The font's letters are drawn again for the plain look; give them time before the picture is taken.
             await Frames(30);
             Capture(game.cam, "result-defeat-whitebox");
+        }
+
+        /// <summary>A lost open-mode run bound to a slot: its page offers the retry from the slot's wave 1 save as the orange button with
+        /// Enter on its key, and the way back to the title is a plain plate with R right of it, each word and key inside its button, in the
+        /// language the game started in (Chinese with the art, English in whitebox). The story's saves are named by their day and part of
+        /// the day, the final battle by itself.</summary>
+        [TestCase(StartupLanguage.Chinese)]
+        [TestCase(StartupLanguage.English)]
+        [BuildScene(Scene), Category("Integration"), Timeout(120000)]
+        public async Task LostBoundRun_OffersTheRetryFromItsLastSave_InTheStartLanguage(string language)
+        {
+            Assume.That(ArenaSaves.InMemoryForTests, Is.True, "the saves are kept in memory during the tests");
+            bool zh = language == StartupLanguage.Chinese;
+            string Words(string chinese, string english) => zh ? chinese : english;
+            TestStartLanguage.Use(language);
+            ArenaSaves.Bind(SaveMode.Open, Slot);
+            await SceneManagerHelper.LoadSceneAsync(Scene);
+            var game = await StartRun();
+            Assume.That(V5HudKit.On, Is.True, "the fifth pass's look is on outside the Alpha");
+            Assume.That(ArenaText.IsChinese, Is.EqualTo(zh), "the game started in the language asked for");
+            var saved = ArenaSaves.List(SaveMode.Open)[Slot];
+            Assume.That((saved.empty, saved.wave), Is.EqualTo((false, 1)), "wave 1 was saved as the run began");
+
+            // Wall damage is no attack, so the protection does not hold it back.
+            Assume.That(game.player.ReceiveDamage(new DamageInfo { amount = 99999f, source = DamageSource.Wall }), Is.True, "the player falls");
+            await Until(() => game.RunPhase == ArenaUiState.Result && V5ResultScreen.IsShown, 12f, "the fifth pass's result page");
+            await Frames(3);
+
+            var retrySave = game.RetrySave;
+            Assert.That(retrySave, Is.Not.Null, "a lost run whose slot holds a save has a retry");
+            Assert.That((retrySave.mode, retrySave.slot, retrySave.wave, retrySave.cleared), Is.EqualTo((SaveMode.Open, Slot, 1, false)), "from its own slot's last save");
+            Assert.That(game.CanRetryFromSave, Is.True, "and the page offers it");
+            var page = V5ResultScreen.PageObject;
+            var retry = Plate(page, "Retry");
+            var back = Plate(page, "BackToTitle");
+            Assert.That(retry.gameObject.activeInHierarchy, Is.True, "the retry is on the page");
+            Assert.That((retry.Kind, back.Kind), Is.EqualTo((V5Plate.Look.Go, V5Plate.Look.Plate)), "the retry is the orange button, the way back a plain plate");
+            var retryLabel = Label(retry, "RetryLabel");
+            var backLabel = Label(back, "Label");
+            var retryKey = retry.GetComponentInChildren<V5HudKey>(true);
+            var backKey = back.GetComponentInChildren<V5HudKey>(true);
+            Assert.That(retryLabel.text, Is.EqualTo(Words("从第 1 波重来", "Retry wave 1")), "the retry names the saved wave");
+            Assert.That(retryKey.Label.text, Is.EqualTo(Words("回车", "Enter")), "its key is Enter");
+            Assert.That(backLabel.text, Is.EqualTo(Words("回到标题", "Back to Title")), "the way back to the title stays");
+            Assert.That(backKey.Label.text, Is.EqualTo("R"), "with R on its key");
+
+            Canvas.ForceUpdateCanvases();
+            Rect retryBox = Box(retry), backBox = Box(back);
+            Assert.That(retryBox.xMax, Is.LessThan(backBox.xMin), "the retry left of the way back, apart");
+            Assert.That(retryBox.center.y, Is.EqualTo(backBox.center.y).Within(.5f), "on one row");
+            Assert.That(Inside(Box(retryLabel), retryBox) && Inside(Box(retryKey), retryBox), Is.True, "the retry's words and key inside its button");
+            Assert.That(Inside(Box(backLabel), backBox) && Inside(Box(backKey), backBox), Is.True, "the way back's words and key inside its button");
+            Rect windowBox = Box(page.GetComponentsInChildren<RectTransform>(true).First(r => r.name == "Window"));
+            Assert.That(Inside(retryBox, windowBox) && Inside(backBox, windowBox), Is.True, "both inside the window");
+
+            Assert.That(V5ResultScreen.RetryWords(new SaveSummary { mode = SaveMode.Story, day = 1, phase = SavePhase.Morning }), Is.EqualTo(Words("从第 1 天上午重来", "Retry day 1 morning")));
+            Assert.That(V5ResultScreen.RetryWords(new SaveSummary { mode = SaveMode.Story, day = 3, phase = SavePhase.Afternoon }), Is.EqualTo(Words("从第 3 天下午重来", "Retry day 3 afternoon")));
+            Assert.That(V5ResultScreen.RetryWords(new SaveSummary { mode = SaveMode.Story, day = 2, phase = SavePhase.Night }), Is.EqualTo(Words("从第 2 天夜晚重来", "Retry day 2 night")));
+            Assert.That(V5ResultScreen.RetryWords(new SaveSummary { mode = SaveMode.Story, day = 7, phase = SavePhase.Tyrant }), Is.EqualTo(Words("从最终决战重来", "Retry the final battle")));
+            Assert.That(V5ResultScreen.RetryWords(new SaveSummary { mode = SaveMode.Open, wave = 15, waveCount = 15 }), Is.EqualTo(Words("从第 15 波重来", "Retry wave 15")));
+            Assert.That(V5ResultScreen.RetryWords(null), Is.Empty, "no save, no words");
+            Capture(game.cam, $"result-retry-{(zh ? "zh" : "en")}-{(Art.Enabled ? "art" : "whitebox")}");
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(120000)]
@@ -108,6 +184,32 @@ namespace AnomalyArena
             }, 20f, "the first wave runs");
             return game;
         }
+
+        /// <summary>The page's button of this name.</summary>
+        static V5Plate Plate(GameObject page, string name)
+        {
+            var plate = page.GetComponentsInChildren<V5Plate>(true).FirstOrDefault(p => p.name == name);
+            Assert.That(plate, Is.Not.Null, $"the page's {name}");
+            return plate;
+        }
+
+        static Text Label(Component parent, string name)
+        {
+            var label = parent.GetComponentsInChildren<Text>(true).FirstOrDefault(t => t.name == name);
+            Assert.That(label, Is.Not.Null, $"{parent.name}'s {name}");
+            return label;
+        }
+
+        /// <summary>A part's box on the screen (its world corners).</summary>
+        static Rect Box(Component part)
+        {
+            var corners = new Vector3[4];
+            ((RectTransform)part.transform).GetWorldCorners(corners);
+            return Rect.MinMaxRect(corners[0].x, corners[0].y, corners[2].x, corners[2].y);
+        }
+
+        static bool Inside(Rect inner, Rect outer) =>
+            inner.xMin >= outer.xMin - .5f && inner.xMax <= outer.xMax + .5f && inner.yMin >= outer.yMin - .5f && inner.yMax <= outer.yMax + .5f;
 
         /// <summary>The camera's frame with every overlay canvas drawn into it (as GddCaptureTest does), 1920 x 1080, into the copy's Logs.</summary>
         static void Capture(Camera cam, string name)

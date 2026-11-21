@@ -246,7 +246,7 @@ namespace AnomalyArena
                     Assume.That(game.skills.Learn(id, -1, level), Is.True, "the skill can be learned");
                     var value = game.UiSnapshot.skillSlots[0];
                     CollectCutOffDetail(hud, hud.skillSlots[0], value, cutOff);
-                    if (!hud.skillSlots[0].detail.text.Contains(ArenaText.Pair("能量", "Energy"))) cutOff.Add($"{id} level {level} lost its cost: {hud.skillSlots[0].detail.text}");
+                    if (!hud.skillSlots[0].detail.text.Contains(ArenaText.Pair("充能", "Charge"))) cutOff.Add($"{id} level {level} lost its cost: {hud.skillSlots[0].detail.text}");
                 }
             Assert.That(cutOff, Is.Empty, $"{cutOff.Count} detail lines are cut off, first ones: {string.Join("; ", cutOff.Take(12))}");
 
@@ -484,7 +484,7 @@ namespace AnomalyArena
                     game.skills.ResetRun();
                     Assume.That(game.skills.Learn(id, -1, level), Is.True, "the skill can be learned");
                     CollectFifthCutOffDetail(hud, hud.skillSlots[0], game.UiSnapshot.skillSlots[0], false, cutOff);
-                    if (!FifthWords(hud.skillSlots[0]).Contains(ArenaText.Pair("能量", "Energy"))) cutOff.Add($"{id} level {level} lost its cost: {FifthWords(hud.skillSlots[0])}");
+                    if (!FifthWords(hud.skillSlots[0]).Contains(ArenaText.Pair("充能", "Charge"))) cutOff.Add($"{id} level {level} lost its cost: {FifthWords(hud.skillSlots[0])}");
                 }
             Assert.That(cutOff, Is.Empty, $"{cutOff.Count} bottom rows are cut off, first ones: {string.Join("; ", cutOff.Take(12))}");
 
@@ -505,7 +505,7 @@ namespace AnomalyArena
             Assume.That(game.skills.Learn(SkillId.GravityWell), Is.True, "a skill with a level");
             hud.skillSlots[0].Render(game.UiSnapshot.skillSlots[0], hud.art);
             Assert.That(FifthChip(hud.skillSlots[0]), Is.EqualTo("LV 1"), "the level on the chip");
-            Assert.That(FifthWords(hud.skillSlots[0]), Does.Contain(ArenaText.Pair("能量", "Energy")), "the cost in the words");
+            Assert.That(FifthWords(hud.skillSlots[0]), Does.Contain(ArenaText.Pair("充能", "Charge")), "the cost in the words");
         }
 
         static void CollectFifthCutOffDetail(V2Hud hud, V2UiSlot view, ArenaUiSlot value, bool weapon, List<string> cutOff)

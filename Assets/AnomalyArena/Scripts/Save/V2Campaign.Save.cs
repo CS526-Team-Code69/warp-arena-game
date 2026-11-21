@@ -74,19 +74,12 @@ namespace AnomalyArena
             s.hasVoidOreCentre = voidOreCentre.HasValue;
             s.voidOreCentre = voidOreCentre ?? Vector3.zero;
 
-            s.roomLevels = new int[rooms.Length];
-            s.roomDamaged = new bool[rooms.Length];
-            for (int i = 0; i < rooms.Length; i++)
-            {
-                s.roomLevels[i] = rooms[i].level;
-                s.roomDamaged[i] = rooms[i].damaged;
-            }
+            // The base and the ship (the rooms and the shield are gone: their fields stay at their defaults).
             s.durability = Durability;
-            s.shieldLevel = ShieldLevel;
             s.baseHp = BaseHp;
-            s.baseShield = BaseShield;
             s.engineFixed = engineFixed;
             s.armorFixed = armorFixed;
+            s.fuelTank = fuelTankFitted;
             s.fuel = fuel;
 
             s.newWeaponsBought = newWeaponsBought;
@@ -164,8 +157,9 @@ namespace AnomalyArena
             summary.phase = phase;
             summary.engineFixed = engineFixed;
             summary.armorFixed = armorFixed;
+            summary.fuelTank = fuelTankFitted;
             summary.fuel = fuel;
-            summary.fuelMax = FuelUnits;
+            summary.fuelMax = FuelTop;
             summary.mapFamily = ArenaSaves.MapFamily(map ? map.biome : null);
             summary.weapons = ArenaSaves.WeaponsOf(gm.runWeapons);
             return save;
@@ -177,8 +171,9 @@ namespace AnomalyArena
             summary.day = Mathf.Max(1, Day);
             summary.engineFixed = engineFixed;
             summary.armorFixed = armorFixed;
+            summary.fuelTank = fuelTankFitted;
             summary.fuel = fuel;
-            summary.fuelMax = FuelUnits;
+            summary.fuelMax = FuelTop;
         }
 
         /// <summary>A continued save, in the scene loaded for it: the run starts as a new one does on the same map (WorldMap laid the
@@ -237,18 +232,14 @@ namespace AnomalyArena
             voidArmor = s.voidArmor;
             voidOreCentre = s.hasVoidOreCentre ? s.voidOreCentre : null;
 
-            for (int i = 0; i < rooms.Length; i++)
-            {
-                if (s.roomLevels != null && i < s.roomLevels.Length) rooms[i].level = Mathf.Max(0, s.roomLevels[i]);
-                rooms[i].damaged = s.roomDamaged != null && i < s.roomDamaged.Length && s.roomDamaged[i];
-            }
-            Durability = Mathf.Max(1, s.durability);
-            ShieldLevel = Mathf.Max(0, s.shieldLevel);
+            // The base and the ship, in version 2's terms (ArenaSaves.Load converted a version 1 save): the rooms stay as a new run left
+            // them, all open.
+            Durability = Mathf.Clamp(s.durability, 1, MaxDurability);
             BaseHp = Mathf.Clamp(s.baseHp, 1f, BaseMaxHp);
-            BaseShield = Mathf.Clamp(s.baseShield, 0f, BaseMaxShield);
             engineFixed = s.engineFixed;
             armorFixed = s.armorFixed;
-            fuel = Mathf.Clamp(s.fuel, 0, FuelUnits);
+            fuelTankFitted = s.fuelTank;
+            fuel = Mathf.Clamp(s.fuel, 0, FuelTop);
             RefreshShip();
 
             newWeaponsBought = Mathf.Max(0, s.newWeaponsBought);
@@ -262,6 +253,7 @@ namespace AnomalyArena
             overloadShieldBuys = Mathf.Max(0, s.overloadShieldBuys);
             overloadDamageBuys = Mathf.Max(0, s.overloadDamageBuys);
             overloadShieldGiven = s.overloadShieldGiven;
+            ApplyShipEffects(); // the afternoon this save enters takes the engine's bonus and the hull's lamps at once
 
             for (int i = 0; s.crateKinds != null && s.cratePositions != null && i < s.crateKinds.Length && i < s.cratePositions.Length; i++)
                 if (Enum.IsDefined(typeof(CrateKind), s.crateKinds[i])) PlaceCrate(s.cratePositions[i], (CrateKind)s.crateKinds[i]);

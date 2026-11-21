@@ -5,9 +5,10 @@ using UnityEngine.UI;
 namespace AnomalyArena
 {
     /// <summary>
-    /// The story's wallet in the fifth pass (the mock-up's .wallet, top right): the old currency row restyled where it stands, each
-    /// currency a ringed medal with its number (energy and dark matter in violet, alloy in steel) and, from the first night on, the lamps
-    /// ("×3" in gold beside a lamp with an amber glow). The void currencies stand in a second plate under it, their medals ringed and lit
+    /// The story's wallet in the fifth pass (the mock-up's .wallet, top right; the names from ui-f/resources.html): the old currency row
+    /// restyled where it stands, each currency a ringed medal, its name and its number in its own colour (ResourceColours: alloy copper,
+    /// alien energy teal-green, dark matter violet), alloy first, and, from the first night on, the lamps ("×3" in gold beside a lamp
+    /// with an amber glow). The void currencies stand in a second plate under it, their medals ringed and lit
     /// in violet. The old lamp counter becomes the mock-up's lamp box above the key hints (bottom right): the lamp, "×2" in gold, the key
     /// that sets one down and its words. A number that changes swells once.
     /// </summary>
@@ -21,10 +22,16 @@ namespace AnomalyArena
         const float VoidGapPx = 6f, VoidHeightPx = 50f, VoidMedalPx = 34f, VoidNumberPx = 19f;
         const float LampRightPx = 26f, LampBottomPx = 82f, LampHeightPx = 84f, LampMedalPx = 60f, LampCountPx = 36f;
         static readonly string[] WalletMedalNames = { "EnergyMedal", "AlloyMedal", "DarkMedal", "LampMedal" };
+        static readonly string[] WalletNameIds = { "EnergyName", "AlloyName", "DarkName" };
         static readonly string[] VoidNames = { "VoidEnergy", "VoidAlloy" };
+        // The wallet's order on the screen, by the currency index (0 alien energy, 1 alloy, 2 dark matter): alloy, alien energy, dark
+        // matter. Each name stands 6 mock-up pixels before its number, in 16-pixel letters.
+        static readonly int[] WalletOrder = { 1, 0, 2 };
+        const float WalletNamePx = 16f, WalletNameGapPx = 6f;
 
         RectTransform storyWallet;
         readonly V5HudMedal[] storyWalletMedals = new V5HudMedal[4];
+        readonly Text[] storyWalletNames = new Text[3];
         readonly int[] storyWalletShown = { -1, -1, -1, -1 };
         Text storyLampAmount;
         V5HudMedal[] storyVoidMedals;
@@ -37,8 +44,24 @@ namespace AnomalyArena
         int storyLampStock = -1;
         readonly Dictionary<(Font, int, int), float> storyDigitWidths = new();
 
-        /// <summary>A wallet number's colour (energy, alloy, dark matter): violet for the energy and the dark matter, steel for the alloy.</summary>
-        static Color WalletColour(int which) => which == 1 ? V5TitleKit.Steel : V5HudKit.VioletHi;
+        /// <summary>A wallet number's colour (energy, alloy, dark matter): each currency's own (ResourceColours).</summary>
+        static Color WalletColour(int which) => ResourceColours.Of(which);
+
+        /// <summary>A currency's name in the wallet (energy, alloy, dark matter).</summary>
+        static string WalletName(int which) => which switch
+        {
+            0 => ArenaText.Pair("异星能量", "Alien energy"),
+            1 => ArenaText.Pair("合金", "Alloy"),
+            _ => ArenaText.Pair("暗物质", "Dark matter")
+        };
+
+        /// <summary>The wallet cell a gain flies into (the fifth pass's medal, the old row's icon): energy, alloy or dark matter.</summary>
+        RectTransform WalletCell(int which)
+        {
+            if (which < 0 || which > 2) return null;
+            if (V5HudKit.On && storyBuilt) return storyWalletMedals[which] ? storyWalletMedals[which].Rect : null;
+            return currencyIcons != null && currencyIcons[which] ? currencyIcons[which].rectTransform : null;
+        }
 
         void BuildStoryWallet()
         {
@@ -53,6 +76,7 @@ namespace AnomalyArena
             for (int i = 0; i < 4; i++) storyWalletMedals[i] = V5HudKit.Medal(storyWallet, WalletMedalNames[i], Sp(WalletMedalPx));
             storyWalletMedals[3].SetGlow(V5StoryKit.Amber);
             for (int i = 0; i < 3; i++) StyleNumber(currencyLabels[i], WalletNumberPx, WalletColour(i));
+            for (int i = 0; i < 3; i++) storyWalletNames[i] = V5StoryKit.Label(storyWallet, WalletNameIds[i], WalletNamePx, V5TitleKit.Ink2, TextAnchor.MiddleCenter);
             storyLampAmount = V5StoryKit.Label(storyWallet, "LampAmount", WalletNumberPx, V5TitleKit.Gold, TextAnchor.MiddleCenter, true);
         }
 
@@ -78,9 +102,10 @@ namespace AnomalyArena
             int[] values = { c.Energy, c.Alloy, c.Dark };
             for (int i = 0; i < 3; i++)
             {
-                // A number gained pulses through ShowGain already; one that changes otherwise (spent at the base) pulses here.
-                if (storyWalletShown[i] >= 0 && values[i] != storyWalletShown[i] && currencyPulse[i] <= 0f) currencyPulse[i] = 1f;
+                // A number gained pulses when its icon lands (ShowGain's flight); one that changes otherwise (spent at the base) pulses here.
+                if (storyWalletShown[i] >= 0 && values[i] != storyWalletShown[i] && currencyPulse[i] <= 0f && !Flying(i)) currencyPulse[i] = 1f;
                 storyWalletShown[i] = values[i];
+                StoryText(storyWalletNames[i], WalletName(i));
             }
             if (storyWalletShown[3] >= 0 && c.LampStock != storyWalletShown[3]) PulseOnce(storyLampAmount.transform);
             storyWalletShown[3] = c.LampStock;
@@ -92,16 +117,23 @@ namespace AnomalyArena
         void LayOutStoryWallet(bool lamps)
         {
             float height = Sp(WalletHeightPx), medal = Sp(WalletMedalPx), x = Sp(10f);
-            for (int i = 0; i < 4; i++)
+            for (int slot = 0; slot < 4; slot++)
             {
+                int i = slot < 3 ? WalletOrder[slot] : 3;
                 var label = i < 3 ? currencyLabels[i] : storyLampAmount;
                 bool shown = i < 3 || lamps;
                 SetShown(storyWalletMedals[i], shown);
                 SetShown(label, shown);
                 if (!shown) continue;
-                if (i > 0) x += Sp(4f);
+                if (slot > 0) x += Sp(4f);
                 PlaceCentre(storyWalletMedals[i].Rect, new Vector2(0f, .5f), new Vector2(x + medal * .5f, 0f), Vector2.one * medal);
                 x += medal + Sp(7f);
+                if (i < 3)
+                {
+                    float name = storyWalletNames[i].preferredWidth;
+                    PlaceSpan(storyWalletNames[i], x, name, height);
+                    x += name + Sp(WalletNameGapPx);
+                }
                 // Never narrower than three digits (the lamps: one), so the row does not shift as numbers grow and shrink.
                 float w = Mathf.Max(label.preferredWidth, DigitsWidth(label, i < 3 ? "000" : "×0"));
                 PlaceSpan(label, x, w, height);
@@ -236,5 +268,16 @@ namespace AnomalyArena
             x += words + Sp(20f);
             lampBox.sizeDelta = new Vector2(x, height);
         }
+    }
+
+    /// <summary>The story's three currencies' colours wherever they are shown (the wallet's numbers, the mining bar, the names over the
+    /// nodes, the icon that flies to the wallet, the sparks of mining): alloy copper, alien energy teal-green, dark matter a light violet
+    /// (on dark ground; violet is kept for dark matter and the void).</summary>
+    public static class ResourceColours
+    {
+        public static readonly Color Alloy = V5TitleKit.Rgb(0xE3, 0x9A, 0x55), Energy = V5TitleKit.Rgb(0x3F, 0xE0, 0xB0), Dark = V5TitleKit.Rgb(0xB4, 0x8C, 0xFF);
+
+        /// <summary>By the campaign's currency index (V2CampaignUi.ShowGain's): 0 alien energy, 1 alloy, 2 dark matter.</summary>
+        public static Color Of(int which) => which switch { 0 => Energy, 1 => Alloy, _ => Dark };
     }
 }

@@ -106,7 +106,7 @@ namespace AnomalyArena
                 + (level >= 2 ? "比 1 级护盾更厚、击退更远、墙更长" + (level >= MaxLevel ? $"；满级时护盾特别厚，减伤也更高，打在这层护盾上的直接伤害只算 {bulwarkShieldDirectFactor * 100:0}%" : "") + "。" : ""),
             SkillId.Radiance => $"清除你身上所有状态；之后攻击吸血，异常抗性提高（{Duration(level):0.#} 秒，吸血 {Strength(level) * 100:0}%，抗性 {StatusResistance(level) * 100:0}%）。"
                 + (level >= 2 ? "比 1 级持续更久、抗性更高" + (level >= MaxLevel ? $"，满级时释放还会立刻回 {healOnCast:0.#} 点生命" : "") + "。" : ""),
-            SkillId.Devour => $"在你周围 {Range(level):0.#} 单位内、生命低于 {Strength(level) * 100:0}% 的敌人里，吞掉离光标最近的一个，回复 {energyReward:0.#} 能量；精英也能吞，Boss 不行（冷却 {Cooldown(level):0.#} 秒）。"
+            SkillId.Devour => $"在你周围 {Range(level):0.#} 单位内、生命低于 {Strength(level) * 100:0}% 的敌人里，吞掉离光标最近的一个，回复 {energyReward:0.#} 充能；精英也能吞，Boss 不行（冷却 {Cooldown(level):0.#} 秒）。"
                 + (level >= 2 ? "比 1 级能吞的血线更高" + (level >= MaxLevel ? "，满级时冷却更短" : "") + "。" : ""),
             SkillId.Blink => $"朝光标瞬移，并取消正在进行的击退（最远 {Range(level):0.#} 单位）。"
                 + (level >= 2 ? "比 1 级距离更远" + (level >= MaxLevel ? "，满级时有两次充能，各自冷却" : "") + "。" : ""),
@@ -140,7 +140,7 @@ namespace AnomalyArena
                 + (level >= 2 ? " A thicker Shield, farther knockback and a longer wall than at level 1" + (level >= MaxLevel ? $"; at max level the Shield is very thick and direct hits on it count {bulwarkShieldDirectFactor * 100f:0}%" : "") + "." : ""),
             SkillId.Radiance => $"Clear your statuses; then your attacks heal you and status resistance rises ({Duration(level):0.#} s, {Strength(level) * 100f:0}% lifesteal, {StatusResistance(level) * 100f:0}% resistance)."
                 + (level >= 2 ? " Lasts longer and resists more than at level 1" + (level >= MaxLevel ? $"; at max level it also heals {healOnCast:0.#} HP the moment you cast it" : "") + "." : ""),
-            SkillId.Devour => $"Of the enemies within {Range(level):0.#} of you and below {Strength(level) * 100f:0}% HP, swallow the one nearest the cursor and restore {energyReward:0.#} Energy. Elites can be swallowed, bosses never (cooldown {Cooldown(level):0.#} s)."
+            SkillId.Devour => $"Of the enemies within {Range(level):0.#} of you and below {Strength(level) * 100f:0}% HP, swallow the one nearest the cursor and restore {energyReward:0.#} Charge. Elites can be swallowed, bosses never (cooldown {Cooldown(level):0.#} s)."
                 + (level >= 2 ? " Takes enemies at higher HP than at level 1" + (level >= MaxLevel ? "; at max level the cooldown is shorter" : "") + "." : ""),
             SkillId.Blink => $"Teleport toward the cursor, cancelling any knockback (up to {Range(level):0.#})."
                 + (level >= 2 ? " Reaches farther than at level 1" + (level >= MaxLevel ? "; at max level it has two charges, each with its own cooldown" : "") + "." : ""),

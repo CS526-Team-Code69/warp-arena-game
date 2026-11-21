@@ -102,7 +102,7 @@ namespace AnomalyArena
             V5BattleKit.Sync(energyWord);
             lifeWord.text = ArenaText.Pair("生命", "HP");
             staminaWord.text = ArenaText.Pair("体力", "Stamina");
-            energyWord.text = ArenaText.Pair("能量", "Energy");
+            energyWord.text = ArenaText.Pair("充能", "Charge");
             sprintKey.SetText(ArenaKeys.SprintKey);
             float barsH = energyRow ? BarsHWithEnergy : BarsH;
             V5BattleKit.Place(barsPlate.Rect, FaceSize + BarsGap, (FaceSize - barsH) * .5f, BarsW, barsH);

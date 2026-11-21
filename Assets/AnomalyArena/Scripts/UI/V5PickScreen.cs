@@ -36,6 +36,8 @@ namespace AnomalyArena
             public bool unknown, body = true, showTier;
             public int mk = 1;
             public string swapText = "";
+            /// <summary>The attack row's words while the card is unknown: a starting form's two attacks, an offered weapon's own; empty for "? ? ?".</summary>
+            public string attack = "";
             public string laid;
         }
 
@@ -380,12 +382,15 @@ namespace AnomalyArena
             part.body = true;
             part.showTier = false;
             part.swapText = "";
+            part.attack = "";
             switch (s.state)
             {
                 case ArenaUiState.Loadout:
                     // A starting weapon's attack and trait show only once it is taken: the rows say so, the explanation says why.
                     part.unknown = true;
                     part.body = false;
+                    // Which of the form's two anomalies comes is decided when it is taken: the row names both, the trait stays hidden.
+                    part.attack = WeaponGuide.EitherStyle(GameManager.LoadoutForm(i));
                     break;
                 case ArenaUiState.Armory:
                     var offer = weapons && weapons.Offers != null && i < weapons.Offers.Length ? weapons.Offers[i] : null;
@@ -393,6 +398,8 @@ namespace AnomalyArena
                     part.showTier = true;
                     part.mk = Mathf.Max(1, offer.mk);
                     part.unknown = offer.upgradeOf == null && !offer.revealed;
+                    // An offered weapon is rolled already: its attack shows, its trait stays hidden until it is taken.
+                    if (part.unknown) part.attack = WeaponGuide.Style(offer.form, offer.variant);
                     // A new weapon that finds no free slot replaces one the player chooses next.
                     if (offer.upgradeOf == null && SlotsFull(weapons, offer))
                         part.swapText = ArenaText.Pair("会换下一把武器", "Replaces a weapon you hold");
@@ -416,6 +423,7 @@ namespace AnomalyArena
                 part.rowLabels[0].text = ArenaText.Pair("攻击方式", "Attack");
                 part.rowLabels[1].text = ArenaText.Pair("特性", "Trait");
                 for (int r = 0; r < 2; r++) V5PickKit.Show(part.rows[r], part.unknown);
+                part.rowMarks[0].text = string.IsNullOrEmpty(part.attack) ? "? ? ?" : part.attack;
             }
             V5PickKit.SetText(part.swap, part.swapText);
             V5PickKit.Show(part.swap, part.swapText.Length > 0);
@@ -526,7 +534,7 @@ namespace AnomalyArena
             bool glyph = choice.contentIcon && choice.contentIcon.gameObject.activeSelf;
             bool element = choice.icon && choice.icon.gameObject.activeSelf;
             // Laid out again only when what the card shows changes.
-            string signature = $"{weapon}{glyph}{element}{part.unknown}{part.body}{part.showTier}{part.swapText.Length > 0}{part.key.Rect.sizeDelta.x:0}"
+            string signature = $"{weapon}{glyph}{element}{part.unknown}{part.attack}{part.body}{part.showTier}{part.swapText.Length > 0}{part.key.Rect.sizeDelta.x:0}"
                 + $"{(part.rarity.gameObject.activeSelf ? part.rarity.Width : 0f):0}{(part.showTier ? part.tier.Width : 0f):0}{(choice.title ? choice.title.text : "")}";
             if (signature == part.laid) return;
             part.laid = signature;
@@ -585,6 +593,7 @@ namespace AnomalyArena
                     V5PickKit.Place(part.rowMarks[r].rectTransform, w * .4f, 0f, w * .6f - 12f, RowH);
                     y += RowH + RowGap6;
                 }
+            if (part.rows != null && part.unknown && part.attack.Length > 0) V5TitleKit.FitWidth(part.rowMarks[0], 16, 10);
             bool swap = part.swapText.Length > 0;
             float foot = y0 + h - (swap ? 24f : 0f);
             if (swap)

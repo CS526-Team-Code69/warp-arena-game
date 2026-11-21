@@ -156,6 +156,31 @@ namespace AnomalyArena
         public float ShadowBurnShare_FollowsTheLightTaken(float exposure) => rules.ShadowBurnShare(exposure);
 
         [Test]
+        public void LampCrowdWarning_ByDefault_GivesThreeSecondsBeforeACrowdGoesIn() =>
+            Assert.That(rules.lampCrowdWarning, Is.EqualTo(3f), "a crowd at a lamp shows itself for three seconds, time to move or set another lamp");
+
+        [TestCase(2, ExpectedResult = false, TestName = "Two shadows at the player's lamp are not named yet")]
+        [TestCase(3, ExpectedResult = true, TestName = "Three are named in the note")]
+        [TestCase(5, ExpectedResult = true, TestName = "A full crowd is named too")]
+        public bool LampCrowdNoticed_FromThreeShadows_TheNoteNamesThem(int shadows) => rules.LampCrowdNoticed(shadows);
+
+        [TestCase(0, ExpectedResult = 0f, TestName = "No shadow: the ring keeps its warm colour")]
+        [TestCase(3, ExpectedResult = .6f, TestName = "Three of five: the ring is three fifths of the way to violet")]
+        [TestCase(5, ExpectedResult = 1f, TestName = "A crowd: the ring is violet")]
+        [TestCase(8, ExpectedResult = 1f, TestName = "Never past violet")]
+        public float LampCrowdShare_ShadowsGathered_AreTheirShareOfACrowd(int shadows) => rules.LampCrowdShare(shadows);
+
+        [Test]
+        public void LampEdgeColour_FromNoShadowToACrowd_TurnsFromWarmToViolet()
+        {
+            Color none = V2Campaign.LampEdgeColour(0f), some = V2Campaign.LampEdgeColour(rules.LampCrowdShare(3)), crowd = V2Campaign.LampEdgeColour(1f);
+
+            Assert.That(none.r > none.b && crowd.b > crowd.r, Is.True, "warm with no shadow, violet with a crowd");
+            Assert.That(some.b, Is.GreaterThan(none.b).And.LessThan(crowd.b), "three of five on the way: bluer than warm, not yet the crowd's violet");
+            Assert.That(some.g, Is.LessThan(none.g).And.GreaterThan(crowd.g), "and its green fading on the way");
+        }
+
+        [Test]
         public void Crowd_ThatGoesIntoALampTogether_WearsItOutBeforeTheLightBurnsItAway() =>
             Assert.That(V2Campaign.LampSecondsAgainst(rules.lampHp, rules.overrunShadows), Is.LessThan(rules.shadowLightSeconds),
                 "the smallest crowd puts a lamp out before it dissolves, so a crowd still puts lamps out");

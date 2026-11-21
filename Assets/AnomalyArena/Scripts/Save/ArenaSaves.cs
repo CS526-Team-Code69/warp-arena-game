@@ -11,7 +11,8 @@ namespace AnomalyArena
     /// the point it was saved. The English Alpha keeps its single "Start Game" and has no saves.
     /// Only a run bound to a slot writes saves: one the title bound (Bind) before it started, or a continued one. Every other run (the
     /// tests', or one whose start bound no slot) writes none. When a run ends its slot keeps its last save, in both modes: a lost run can
-    /// be continued from there, and a won run's save is marked cleared (SaveSummary.cleared, MarkCleared), which cannot be continued. A
+    /// be continued from there, from the title or at once from its result page (GameManager.RetryFromSave), and a won run's save is
+    /// marked cleared (SaveSummary.cleared, MarkCleared), which cannot be continued. A
     /// new game in a filled slot empties it first (Delete), then binds it. Each slot holds one SaveData, kept as JSON by SaveStore (the
     /// browser's storage on the web, a file on a desktop and in the editor, memory in the tests).
     /// </summary>
@@ -83,15 +84,25 @@ namespace AnomalyArena
         }
 
         /// <summary>The slot holds a save that can be continued: not empty, not cleared.</summary>
-        public static bool CanContinue(SaveMode mode, int slot)
+        public static bool CanContinue(SaveMode mode, int slot) => Continuable(mode, slot) != null;
+
+        /// <summary>The summary of the slot's save when it can be continued (CanContinue), its mode and slot number filled in; else null.</summary>
+        public static SaveSummary Continuable(SaveMode mode, int slot)
         {
             var save = Enabled ? Load(mode, slot) : null;
-            return save != null && !save.summary.cleared;
+            if (save == null || save.summary.cleared) return null;
+            var summary = save.summary;
+            summary.mode = mode;
+            summary.slot = slot;
+            summary.empty = false;
+            summary.weapons ??= Array.Empty<WeaponForm>();
+            return summary;
         }
 
         /// <summary>Starts the saved run of this slot where it was saved: the scene loads again with the saved map, and the run goes on
-        /// from the start of the saved phase (story) or wave (open mode), its later saves into the same slot. Only from the title; an
-        /// empty or cleared slot starts nothing (CanContinue). The caller plays the click's sound (the scene loads a moment later).</summary>
+        /// from the start of the saved phase (story) or wave (open mode), its later saves into the same slot. Only from the title, or from
+        /// a lost run's result page (GameManager.CanContinueSave); an empty or cleared slot starts nothing (CanContinue). The caller plays
+        /// the click's sound (the scene loads a moment later).</summary>
         public static void Continue(SaveMode mode, int slot)
         {
             if (!Enabled || !ValidSlot(slot) || pendingSave != null) return;
@@ -109,7 +120,7 @@ namespace AnomalyArena
             var game = GameManager.Instance;
             if (!game || !game.CanContinueSave)
             {
-                Debug.LogWarning("[Saves] a save is continued from the title only");
+                Debug.LogWarning("[Saves] a save is continued from the title or a lost run's result page only");
                 return;
             }
             pendingSave = save;
@@ -119,6 +130,9 @@ namespace AnomalyArena
             WorldMap.NextMapIndex = save.run.mapIndex;
             game.ReloadForSave();
         }
+
+        /// <summary>A continue was asked for and waits for the scene that loads for it.</summary>
+        public static bool ContinueWaiting => pendingSave != null;
 
         /// <summary>A continue waits for the scene loaded for it; mode is its mode.</summary>
         internal static bool ContinuePending(out SaveMode mode)
@@ -159,6 +173,7 @@ namespace AnomalyArena
                 save.run ??= new RunSave();
                 save.story ??= new StorySave();
                 save.open ??= new OpenSave();
+                save.Upgrade(); // an earlier version's fields in this one's terms (SaveData.Upgrade)
                 return save;
             }
             catch (Exception e)

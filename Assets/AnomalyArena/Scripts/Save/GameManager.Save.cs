@@ -11,7 +11,8 @@ namespace AnomalyArena
     /// (V2Campaign.Save.cs). Both keep the player alike (CaptureRun, ApplyRun). A continue loads the scene again with the saved map
     /// pinned (ArenaSaves.Continue, ReloadForSave); the scene that loads takes it on its title (StartPendingContinue) and starts the run
     /// there, without the title, the supply crate, the starting weapon or the first-time pages. When a run ends its slot keeps its last
-    /// save; a won run's is marked cleared (RunEndedForSaves).
+    /// save; a won run's is marked cleared (RunEndedForSaves). A lost run's result page can go on from that save at once (RetrySave,
+    /// RetryFromSave): the same continue as the title's, taken from the result phase.
     /// </summary>
     public partial class GameManager
     {
@@ -26,8 +27,35 @@ namespace AnomalyArena
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void ResetContinueRequester() => continueRequester = null;
 
-        /// <summary>A continue may start now: on the title, with no map pick reloading the scene.</summary>
-        internal bool CanContinueSave => RunPhase == ArenaUiState.Title && !openModeStartPending;
+        /// <summary>A continue may start now: on the title, with no map pick reloading the scene, or on a lost run's result page (its
+        /// retry, RetryFromSave).</summary>
+        internal bool CanContinueSave => RunPhase == ArenaUiState.Title && !openModeStartPending || RunPhase == ArenaUiState.Result && State == GameState.Lost;
+
+        /// <summary>The save a lost run can be retried from on its result page: the summary of the run's own slot, its mode and slot
+        /// number filled in, read as the run ended (RunEndedForSaves). Null when the run was won, wrote into no slot, or its slot holds
+        /// nothing that can be continued (Day 0 writes no save).</summary>
+        public SaveSummary RetrySave { get; private set; }
+
+        // The retry was taken: the scene loads again a moment later.
+        bool retryStarted;
+
+        /// <summary>The result page offers the retry now: the fifth pass's page (V5HudKit.On) of a lost run with a save to go on from, and
+        /// no retry taken yet.</summary>
+        public bool CanRetryFromSave => RetrySave != null && !retryStarted && V5HudKit.On && RunPhase == ArenaUiState.Result && State == GameState.Lost;
+
+        /// <summary>The result page's retry (its orange button, Enter): the lost run's slot is continued the way the title's Continue
+        /// continues it (ArenaSaves.Continue), so the scene loads again and the run goes on from that save, its later saves into the same
+        /// slot. It waits for the same input lock as the page's way back to the title (ExecuteUiCommand). False when nothing started.</summary>
+        public bool RetryFromSave()
+        {
+            if (!CanRetryFromSave || !MenuInputReady || Time.unscaledTime - menuCommandAt < .15f || ArenaSaves.ContinuePending(out _)) return false;
+            menuCommandAt = Time.unscaledTime;
+            ArenaSaves.Continue(RetrySave.mode, RetrySave.slot);
+            if (!ArenaSaves.ContinuePending(out _)) return false;
+            retryStarted = true;
+            V5UiSound.Play(V5UiSound.Ui.Start);
+            return true;
+        }
 
         /// <summary>ArenaSaves.Continue: the scene loads again a moment later (the click's sound plays meanwhile), and the scene that loads
         /// takes the continue.</summary>
@@ -78,16 +106,29 @@ namespace AnomalyArena
             }
         }
 
-        /// <summary>The run ended: its slot keeps its last save. A won run's save is marked cleared, its summary showing the run as it
+        /// <summary>The run ended: its slot keeps its last save. A lost run's save stays as it is, and its summary is kept for the result
+        /// page's retry when it can be continued (RetrySave). A won run's save is marked cleared, its summary showing the run as it
         /// finished (the story's day and ship, the open mode's last wave, the weapons held). The run writes no more. A failure here is
         /// logged and never stops the result screen that follows.</summary>
         void RunEndedForSaves()
         {
+            RetrySave = null;
             if (RunSaveSlot < 0) return;
             var mode = RunSaveMode;
             int slot = RunSaveSlot;
             RunSaveSlot = -1;
-            if (State != GameState.Won) return;
+            if (State != GameState.Won)
+            {
+                try
+                {
+                    RetrySave = ArenaSaves.Continuable(mode, slot);
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError($"[Saves] the lost run's slot could not be read for its retry. {e}");
+                }
+                return;
+            }
             try
             {
                 ArenaSaves.MarkCleared(mode, slot, summary =>

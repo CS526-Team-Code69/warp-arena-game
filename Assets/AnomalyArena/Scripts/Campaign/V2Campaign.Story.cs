@@ -47,7 +47,8 @@ namespace AnomalyArena
             Line.S06 => (true, ArenaText.Pair("基地护盾已经完全恢复，可以再次抵挡攻击。", "The base shield has been restored to full strength and can absorb attacks again.")),
             Line.S07 => (true, ArenaText.Pair("天已经亮了。检测到敌人正在逼近基地，请做好准备，守住基地。", "Day has broken. Enemies have been detected approaching the base. Prepare to defend it.")),
             Line.S08 => (true, ArenaText.Pair("飞船引擎已经修复完毕，距离返航又近了一步。", "Repair of the ship's engine is complete. The ship is one step closer to being able to return.")),
-            Line.S09 => (true, ArenaText.Pair("飞船装甲已经修复完毕，距离返航又近了一步。", "Repair of the ship's armor is complete. The ship is one step closer to being able to return.")),
+            // Said when the hull is repaired. The English side keeps "armor", the word its recording says.
+            Line.S09 => (true, ArenaText.Pair("飞船船体已经修复完毕，距离返航又近了一步。", "Repair of the ship's armor is complete. The ship is one step closer to being able to return.")),
             // S10, F01 to F05, E01 to E03 and C01 to C09 are the story cutscenes' earlier lines: kept with their recordings, no longer said.
             Line.S10 => (true, ArenaText.Pair("反物质燃料已满。启动点火程序。", "Antimatter fuel full. Starting ignition sequence.")),
             Line.F01 => (true, ArenaText.Pair("点火失败。燃料无法激活。", "Ignition failed. Fuel cannot be activated.")),
@@ -111,9 +112,6 @@ namespace AnomalyArena
         public static string NightFallWords => LineText(Line.S02).text;
 
         void Say(Line id, params object[] args) => SayWith(id, VoiceClip(id), args);
-
-        /// <summary>S04 names the broken room: its voice is the take recorded for that room.</summary>
-        void SayRoomOffline(CampaignRoom room) => SayWith(Line.S04, VoiceClip(Line.S04, room), new object[] { RoomName(room) });
 
         void SayWith(Line id, AudioClip voice, object[] args)
         {
@@ -258,10 +256,10 @@ namespace AnomalyArena
             Say(Line.S01);
             yield return new WaitForSecondsRealtime(LineSeconds(Line.S01, 5.2f));
             if (rig) rig.ClearFocus(.8f);
-            // Since 2026-11-10 the arrival tops Day 0 up to rules.dayZeroAlloy and dayZeroEnergy (V2Campaign.Days.cs): with both ores
-            // mined and the first fight's energy picked up that is arrivalAlloy and 11 energy.
+            // The arrival tops Day 0 up to rules.dayZeroAlloy and dayZeroEnergy (V2Campaign.Days.cs): with both ores mined and the first
+            // fight's energy picked up that is arrivalAlloy and 11 energy. B01 (build the Armament Bay and the Energy Lab) is no longer
+            // said: nothing at the base is built.
             Gain(DayZeroArrivalGift());
-            Say(Line.B01);
             OpenBase();
         }
 
@@ -280,11 +278,15 @@ namespace AnomalyArena
         CampaignStage baseVisitFrom = CampaignStage.Off;
         bool OutdoorVisit => Stage == CampaignStage.Base && baseVisitFrom is (CampaignStage.Dusk or CampaignStage.Night);
 
-        /// <summary>Opens the base panel: on arrival at the end of Day 0, or from the door in the afternoon or at night (without open-ended
-        /// evenings that clock waits while the panel is open).</summary>
-        void OpenBase()
+        /// <summary>Opens the base on one of its pages: on arrival at the end of Day 0, or in the afternoon or at night from the base door
+        /// (the workshop) or the ship (the rocket page, RequestBaseScreen). Without open-ended evenings that clock waits while it is open.</summary>
+        void OpenBase(BaseScreen screen = BaseScreen.Workshop)
         {
             baseVisitFrom = (Stage is CampaignStage.Dusk or CampaignStage.Night) ? Stage : CampaignStage.Story;
+            BaseScreenNow = screen;
+            // The way back out is where the visit began: beside the ship when it began there (RequestBaseScreen from the field),
+            // otherwise at the base door.
+            visitExitAt = screen == BaseScreen.Rocket && baseVisitFrom != CampaignStage.Story && gm && gm.player ? gm.player.Position : DoorPoint;
             // What the player carried in is the base's stock now: a later death that night no longer loses it (in the afternoon nothing is at risk).
             if (baseVisitFrom == CampaignStage.Night)
             {
@@ -297,6 +299,9 @@ namespace AnomalyArena
             ui.ShowBase();
         }
 
+        /// <summary>Where the player steps out when the visit ends: the base door, or the spot beside the ship the visit began from.</summary>
+        Vector3 visitExitAt;
+
         /// <summary>The base panel's way back out: after the arrival on Day 0 the memory CG and the tutorial night; otherwise out at the door
         /// into the afternoon or the night the player came in from.</summary>
         public void LeaveBase()
@@ -308,7 +313,7 @@ namespace AnomalyArena
             if (Day == 0 && from == CampaignStage.Story) { StartCoroutine(MemoryCg()); return; }
             Stage = from == CampaignStage.Dusk ? CampaignStage.Dusk : CampaignStage.Night;
             gm.CampaignSetPhase(Stage == CampaignStage.Dusk ? DuskPhase : ArenaUiState.Night);
-            PlacePlayer(DoorPoint);
+            PlacePlayer(visitExitAt);
             // The goal's marker points on from the door: the next ore in the afternoon, the nearest dark matter at night.
             AfternoonObjective();
             NightObjective();
@@ -322,7 +327,7 @@ namespace AnomalyArena
             ui.HideBase();
             baseVisitFrom = CampaignStage.Off;
             gm.CampaignSetPhase(ArenaUiState.Night);
-            PlacePlayer(DoorPoint);
+            PlacePlayer(visitExitAt);
             SaveStoryPhase(SavePhase.Night); // the night's save, before its shadows and dark matter (V2Campaign.Save.cs)
             BeginNight();
         }

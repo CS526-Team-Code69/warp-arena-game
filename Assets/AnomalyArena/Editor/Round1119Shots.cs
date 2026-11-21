@@ -11,7 +11,8 @@ namespace AnomalyArena.EditorTools
 {
     /// <summary>
     /// Screenshots for the round of 2026-11-19, taken in the editor's Play mode: enter Play, wait for the title, then pick one of the
-    /// menus (a fresh domain for each: RequestScriptReload while stopped, then Play). Story: the base tour's four steps on Day 0's arrival,
+    /// menus (a fresh domain for each: RequestScriptReload while stopped, then Play). Story: the base tour's four steps on Day 0's arrival
+    /// (a skill, the weapon Mk, the rocket page, the way out),
     /// Day 1's afternoon crate, an energy shard and the dark matter core beside the player, and the character screen. Open mode: the
     /// supply crate falling and landed, the battle HUD with its hint, the character screen and the void trial's platform with the player
     /// on it. Some things are put in front of the camera through the campaign's own private methods (the arrival, an energy shard, the
@@ -62,28 +63,26 @@ namespace AnomalyArena.EditorTools
             await Until(() => campaign.Stage == CampaignStage.Tutorial && gm.State == GameState.Playing, 20f, "Day 0's walk");
             gm.player.ProtectFor(900f);
 
-            // The arrival at the end of Day 0, then the base tour as a player would take it.
+            // The arrival at the end of Day 0, then the base tour as a player would take it, through the page's own buttons.
             var arrival = (IEnumerator)typeof(V2Campaign).GetMethod("Arrival", Private).Invoke(campaign, null);
             campaign.StartCoroutine(arrival);
             var ui = campaign.Ui;
-            await Until(() => ui.BaseTourStepNow == BaseTourStep.Control, 45f, "the tour's first step");
+            await Until(() => ui.BaseTourStepNow == BaseTourStep.Skill, 45f, "the tour's skill step");
             await Seconds(1.6f);
-            await Shot("t1-tour-control");
-            var control = ui.transform.Find("BasePanel/Page5/ZoneControl");
-            var button = control ? control.GetComponentInChildren<UnityEngine.UI.Button>(true) : null;
-            if (!button) throw new Exception("no button on BasePanel/Page5/ZoneControl");
-            button.onClick.Invoke();
-            await Until(() => ui.BaseTourStepNow == BaseTourStep.ArmamentZone, 10f, "the tour's Armament Bay step");
+            await Shot("t1-tour-skill");
+            string skill = ui.DebugBaseParts().Find(id => id.StartsWith("c.card.skill.", StringComparison.Ordinal));
+            if (skill == null || !ui.DebugPressBase(skill)) throw new Exception("no skill to learn on the workshop");
+            await Until(() => ui.BaseTourStepNow == BaseTourStep.WeaponMk, 10f, "the tour's weapon Mk step");
             await Seconds(1.8f);
-            await Shot("t2-tour-armament");
-            ui.ShowTab(CampaignRoom.Armament);
-            await Until(() => ui.BaseTourStepNow == BaseTourStep.BuildArmament, 10f, "the tour's build step");
+            await Shot("t2-tour-mk");
+            if (!ui.DebugPressBase("c.mk")) throw new Exception("the weapon Mk's button did not press");
+            await Until(() => ui.BaseTourStepNow == BaseTourStep.Rocket, 10f, "the tour's rocket step");
             await Seconds(1.8f);
-            await Shot("t3-tour-build");
-            campaign.TryUpgradeRoom(CampaignRoom.Armament);
-            await Until(() => ui.BaseTourStepNow == BaseTourStep.OpenStudy, 10f, "the tour's study step");
+            await Shot("t3-tour-rocket");
+            if (!ui.DebugPressBase("h.switch")) throw new Exception("the button to the rocket page did not press");
+            await Until(() => ui.BaseTourStepNow == BaseTourStep.Leave, 10f, "the tour's way-out step");
             await Seconds(1.8f);
-            await Shot("t4-tour-study");
+            await Shot("t4-tour-leave");
 
             // Day 1's afternoon: its crate on the ore trail, then an energy shard and the core put beside the player.
             // The afternoon begins at the base door, but the debug call leaves Day 0's base page up: it is closed as leaving would.
@@ -108,7 +107,7 @@ namespace AnomalyArena.EditorTools
             // The character screen as the I key opens it, after a few study purchases so it has something to list: the HUD with
             // its hint first, then the page.
             campaign.DebugGrant(160, 160, 0);
-            Note($"study: weapon Mk {campaign.TryBuyWeaponDamage()}, armor {campaign.TryBuyPlayerLevel()}, energy lab {campaign.TryUpgradeRoom(CampaignRoom.Energy)}");
+            Note($"study: weapon Mk {campaign.TryBuyWeaponDamage()}, armor {campaign.TryBuyPlayerLevel()}, fortification {campaign.TryFortify()}");
             await Seconds(.6f);
             await Shot("s3-hud-hint");
             await Character("s4-character-story");

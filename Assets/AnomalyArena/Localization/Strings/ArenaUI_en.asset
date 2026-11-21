@@ -115,11 +115,11 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 818548758
-    m_Localized: ENERGY {0} / {1}
+    m_Localized: CHARGE {0} / {1}
     m_Metadata:
       m_Items: []
   - m_Id: 818548759
-    m_Localized: VOID ENERGY {0} / {1}
+    m_Localized: VOID CHARGE {0} / {1}
     m_Metadata:
       m_Items: []
   - m_Id: 818548760
@@ -263,7 +263,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 818548795
-    m_Localized: Energy refilled. Pick the card after the wave.
+    m_Localized: Charge refilled. Pick the card after the wave.
     m_Metadata:
       m_Items: []
   - m_Id: 818548796
@@ -307,7 +307,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 818548806
-    m_Localized: No Energy
+    m_Localized: No Charge
     m_Metadata:
       m_Items: []
   - m_Id: 818548807
@@ -435,11 +435,11 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 818548838
-    m_Localized: Max Energy
+    m_Localized: Max Charge
     m_Metadata:
       m_Items: []
   - m_Id: 818548839
-    m_Localized: Energy Siphon
+    m_Localized: Charge Siphon
     m_Metadata:
       m_Items: []
   - m_Id: 818548840

@@ -13,7 +13,9 @@ namespace AnomalyArena
     /// on the panel, "&lt;crate kind&gt;:&lt;weapon form&gt;" with its place, 1 to 3, on the campaign's day. The crate's own record follows when
     /// the player decides and names one of the weapons offered, so the sheet can work out how often a weapon was taken when it was on
     /// offer. The afternoon is opened by the campaign's own call for checks, so the test need not play a morning, and the crate is opened
-    /// with the campaign's stand-in for the E key. The network is replaced by RunAnalytics.Transport, so nothing leaves the machine.</summary>
+    /// with the campaign's stand-in for the E key. The network is replaced by RunAnalytics.Transport, so nothing leaves the machine. On the
+    /// pages with the fifth pass's crate window, each card names its weapon's attack (WeaponGuide.Style) and keeps its trait unknown, under
+    /// the line that says the trait shows once the weapon is taken.</summary>
     [TestFixture]
     public class CampaignCrateOfferTest
     {
@@ -98,6 +100,7 @@ namespace AnomalyArena
 
             for (int i = 0; i < 5; i++) await Awaitable.NextFrameAsync();
             Assert.That(raised, Has.Count.EqualTo(forms.Length), "an open panel records its weapons once, not every frame");
+            if (V5HudKit.On) CheckCrateWindow(forms);
 
             // The last weapon on the panel is taken, so its place is not 1 unless the panel holds a single weapon.
             int pick = forms.Length - 1;
@@ -116,6 +119,30 @@ namespace AnomalyArena
             Assert.That(rows.Select(r => (r.run_id, r.day, r.stage)).Distinct().Count(), Is.EqualTo(1),
                 "the offers and the crate's own row share the run, the day they count in and the stage");
             Assert.That(rows[0].stage, Is.EqualTo("dusk"), "an afternoon crate is opened in the afternoon");
+        }
+
+        /// <summary>The fifth pass's crate window over the open panel: the line under its banner, and on each card the weapon's attack in a
+        /// few words (one of its form's two, as the crate rolled it) with the trait still "? ? ?".</summary>
+        static void CheckCrateWindow(WeaponForm[] forms)
+        {
+            var window = UnityEngine.Object.FindAnyObjectByType<V5PickCrate>();
+            Assert.That(window, Is.Not.Null, "the fifth pass draws the crate's window");
+            string Words(string path)
+            {
+                var part = window.transform.Find("V5Crate/" + path);
+                Assert.That(part, Is.Not.Null, path);
+                var text = part.GetComponent<UnityEngine.UI.Text>();
+                Assert.That(text, Is.Not.Null, path + " is a text");
+                return text.text;
+            }
+            Assert.That(Words("Sub"), Is.EqualTo(ArenaText.Pair("拿到以后，才会知道它的特性", "You learn its trait once you take it")), "the line under the banner");
+            for (int i = 0; i < forms.Length; i++)
+            {
+                string style = Words($"Weapon{i + 1}/Attack/Style");
+                Assert.That(style, Is.Not.Empty.And.Not.EqualTo("? ? ?"), $"card {i + 1} names its attack");
+                Assert.That(style, Is.EqualTo(WeaponGuide.Style(forms[i], 0)).Or.EqualTo(WeaponGuide.Style(forms[i], 1)), $"card {i + 1}: one of the {forms[i]}'s two attacks");
+                Assert.That(Words($"Weapon{i + 1}/Trait/Unknown"), Is.EqualTo("? ? ?"), $"card {i + 1} keeps its trait unknown");
+            }
         }
 
         // RunAnalytics listens to the campaign's record points from the start of a play; the test makes sure of it, as RunAnalyticsTest does.

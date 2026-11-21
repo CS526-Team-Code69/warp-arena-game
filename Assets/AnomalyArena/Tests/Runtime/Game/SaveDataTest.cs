@@ -9,7 +9,8 @@ namespace AnomalyArena
     /// <summary>The save slots without a scene (ArenaSaves, SaveData). A save keeps every part through its JSON; each mode has three
     /// slots, apart from each other and from the other mode's; the summaries show what each slot holds, an empty slot only its mode and
     /// number; a won run's slot is marked cleared and cannot be continued; a deleted slot leaves nothing behind, so a new save there
-    /// starts clean; text that cannot be read, or a save of a later version, reads as an empty slot. The tests keep the saves in memory
+    /// starts clean; text that cannot be read, or a save of a later version, reads as an empty slot; a version 1 story save is read in
+    /// version 2's terms (no rooms or shield, the fuel tank, the fuel in dark matter). The tests keep the saves in memory
     /// (TestSavedSettings switches ArenaPrefs to memory for the whole run, and the saves follow it): no player's saves are read or
     /// touched.</summary>
     [TestFixture]
@@ -41,7 +42,7 @@ namespace AnomalyArena
             Assert.That(back.version, Is.EqualTo(SaveData.CurrentVersion), "the version");
             var s = back.summary;
             Assert.That((s.mode, s.slot, s.empty, s.cleared, s.day, s.phase), Is.EqualTo((SaveMode.Story, 1, false, false, 4, SavePhase.Night)), "the summary's slot and day");
-            Assert.That((s.engineFixed, s.armorFixed, s.fuel, s.fuelMax, s.mapFamily), Is.EqualTo((true, false, 37, 100, 1)), "the summary's ship and map");
+            Assert.That((s.engineFixed, s.armorFixed, s.fuelTank, s.fuel, s.fuelMax, s.mapFamily), Is.EqualTo((true, false, true, 37, 100, 1)), "the summary's ship and map");
             Assert.That(s.weapons, Is.EqualTo(new[] { WeaponForm.Pistol, WeaponForm.Railgun, WeaponForm.OrbitBlades }), "the summary's weapons");
 
             var r = back.run;
@@ -66,6 +67,7 @@ namespace AnomalyArena
             Assert.That(st.roomLevels, Is.EqualTo(new[] { 1, 2, 3, 0 }), "the rooms' levels");
             Assert.That(st.roomDamaged, Is.EqualTo(new[] { false, true, false, false }), "the broken room");
             Assert.That((st.durability, st.shieldLevel, st.baseHp, st.baseShield), Is.EqualTo((2, 1, 333.5f, 40f)), "the base");
+            Assert.That((st.engineFixed, st.armorFixed, st.fuelTank, st.fuel), Is.EqualTo((true, false, true, 37)), "the ship, its fuel in dark matter as written");
             Assert.That((st.newWeaponsBought, st.teamMk, st.shipOreFromDay, st.overloadDamageBuys), Is.EqualTo((2, 4, 3, 1)), "the purchase counters");
             Assert.That(st.upgradesBought, Is.EqualTo(new[] { 1, 0, 2, 0, 0 }), "the upgrades bought");
             Assert.That(st.researchBought, Is.EqualTo(new[] { 0, 1, 0 }), "the research tiers bought");
@@ -82,6 +84,46 @@ namespace AnomalyArena
             Assert.That(st.killRegion.Zip(st.killCount, (region, kills) => (region, kills)), Is.EqualTo(new[] { (5, 12), (9, 3) }), "the morning's kills by region");
             Assert.That(st.kindRegion.Zip(st.kindKill, (region, kind) => (region, (EnemyKind)kind)),
                 Is.EqualTo(new[] { (5, EnemyKind.Grunt), (9, EnemyKind.Grunt) }), "the kinds killed by region");
+        }
+
+        [Test]
+        public void Load_AVersionOneStorySave_ReadsItInTheNewTerms()
+        {
+            var old = StorySample();
+            old.version = 1;
+            old.story.fuel = 6;
+            old.story.roomLevels = new[] { 1, 2, 3, 3 };
+            old.summary.fuel = 6;
+            old.summary.fuelMax = 10;
+            old.summary.fuelTank = false;
+            ArenaSaves.WriteRawForTests(SaveMode.Story, 0, JsonUtility.ToJson(old));
+
+            var back = ArenaSaves.Load(SaveMode.Story, 0);
+
+            Assert.That(back, Is.Not.Null, "an earlier version's save is read");
+            Assert.That(back.version, Is.EqualTo(SaveData.CurrentVersion), "in this version's terms");
+            var st = back.story;
+            Assert.That((st.fuelTank, st.fuel), Is.EqualTo((true, 60)), "the Ship Launch Bay at level 3 is the fitted fuel tank, six units of fuel are 60 dark matter");
+            Assert.That((st.engineFixed, st.armorFixed, st.durability), Is.EqualTo((true, false, 2)), "the engine and the armor (the hull) as they were, the durability level is the fortification level");
+            Assert.That((st.shieldLevel, st.baseShield), Is.EqualTo((0, 0f)), "the shield is dropped");
+            Assert.That((back.summary.fuel, back.summary.fuelMax, back.summary.fuelTank), Is.EqualTo((60, 100, true)), "the slot's summary shows the fuel in dark matter too");
+        }
+
+        [Test]
+        public void Load_AVersionOneStorySaveBelowBayLevelThree_HasNoFuelTank_AndTheEngineBonusWaitsForTheEngine()
+        {
+            var old = StorySample();
+            old.version = 1;
+            old.story.roomLevels = new[] { 1, 0, 0, 2 };
+            old.story.engineFixed = false;
+            old.story.shipOreFromDay = 3;
+            old.story.fuel = 0;
+            ArenaSaves.WriteRawForTests(SaveMode.Story, 1, JsonUtility.ToJson(old));
+
+            var st = ArenaSaves.Load(SaveMode.Story, 1).story;
+
+            Assert.That((st.fuelTank, st.fuel, st.engineFixed, st.shipOreFromDay), Is.EqualTo((false, 0, false, int.MaxValue)),
+                "no fuel tank below the bay's level 3, and no afternoon bonus before the engine is repaired");
         }
 
         [Test]
@@ -254,7 +296,7 @@ namespace AnomalyArena
         {
             var save = new SaveData();
             var s = save.summary;
-            s.day = 4; s.phase = SavePhase.Night; s.engineFixed = true; s.fuel = 37; s.fuelMax = 100; s.mapFamily = 1;
+            s.day = 4; s.phase = SavePhase.Night; s.engineFixed = true; s.fuelTank = true; s.fuel = 37; s.fuelMax = 100; s.mapFamily = 1;
             s.weapons = new[] { WeaponForm.Pistol, WeaponForm.Railgun, WeaponForm.OrbitBlades };
 
             var r = save.run;
@@ -276,6 +318,7 @@ namespace AnomalyArena
             st.hasVoidOreCentre = true; st.voidOreCentre = new Vector3(60f, 0f, 40f);
             st.roomLevels = new[] { 1, 2, 3, 0 }; st.roomDamaged = new[] { false, true, false, false };
             st.durability = 2; st.shieldLevel = 1; st.baseHp = 333.5f; st.baseShield = 40f;
+            st.engineFixed = true; st.fuelTank = true; st.fuel = 37;
             st.newWeaponsBought = 2; st.teamMk = 4; st.shipOreFromDay = 3; st.overloadDamageBuys = 1;
             st.upgradesBought = new[] { 1, 0, 2, 0, 0 }; st.researchBought = new[] { 0, 1, 0 };
             st.statsBoughtStat = new[] { (int)StatId.Damage, (int)StatId.MaxHp };

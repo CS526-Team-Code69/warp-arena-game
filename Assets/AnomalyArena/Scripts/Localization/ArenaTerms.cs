@@ -10,8 +10,8 @@ namespace AnomalyArena
         static readonly string[] AnomalyZh = { "蓄力射击", "反向射击", "飞刃", "链刃", "火力打击", "人体导弹", "吸引", "排斥", "轰击", "集中", "位置交换", "回返", "黏附", "弹跳", "喷流", "野火", "碎冰", "暴雪", "跳电", "蓄电", "毒云", "毒针", "穿甲", "处决", "预热", "熔毁", "齐射", "轰炸", "闭刃", "开刃", "射手", "回旋", "偏折", "汲能", "普通射击", "普通射击" };
         static readonly string[] SkillZh = { "烈焰尾迹", "传染", "冰霜新星", "风暴召唤", "壁垒", "辉光", "吞噬", "闪现", "冲击波", "引力井", "时停", "镜像", "过载", "口袋虚空", "虚空行走", "虚空奇点" };
         static readonly string[] SkillEn = { "Flame Wake", "Contagion", "Frost Nova", "Storm Call", "Bulwark", "Radiance", "Devour", "Blink", "Shockwave", "Gravity Well", "Time Stop", "Mirror Image", "Overcharge", "Pocket Void", "Void Walk", "Singularity" };
-        static readonly string[] StatZh = { "最大生命", "生命回复", "移动速度", "冲刺时长", "伤害", "攻击速度", "击退", "冲击", "拾取范围", "防护", "幸运", "能量上限", "能量汲取", "伤害穿透", "暴击" };
-        static readonly string[] StatEn = { "Max HP", "Regeneration", "Move Speed", "Sprint Duration", "Damage", "Attack Speed", "Knockback", "Impact", "Pickup Range", "Protection", "Luck", "Max Energy", "Energy Siphon", "Damage Penetration", "Crit" };
+        static readonly string[] StatZh = { "最大生命", "生命回复", "移动速度", "冲刺时长", "伤害", "攻击速度", "击退", "冲击", "拾取范围", "防护", "幸运", "充能上限", "充能汲取", "伤害穿透", "暴击" };
+        static readonly string[] StatEn = { "Max HP", "Regeneration", "Move Speed", "Sprint Duration", "Damage", "Attack Speed", "Knockback", "Impact", "Pickup Range", "Protection", "Luck", "Max Charge", "Charge Siphon", "Damage Penetration", "Crit" };
 
         public static string WeaponForm(AnomalyArena.WeaponForm form) => ArenaText.Pair(FormZh[(int)form], FormEn[(int)form]);
         public static string WeaponAnomaly(AnomalyArena.WeaponForm form, int variant) => ArenaText.Pair(AnomalyZh[(int)form * 2 + (variant == 0 ? 0 : 1)], WeaponRoster.AnomalyName(form, variant));
@@ -139,7 +139,7 @@ namespace AnomalyArena
                 ElementKind.Earth => ArenaText.Pair($"命中时把伤害的 {P(r.earthShare)}% 变成你的护盾。", $"Hits give you Shield equal to {P(r.earthShare)}% of their damage."),
                 ElementKind.Light => ArenaText.Pair($"命中时按伤害的 {P(r.lightShare)}% 给你回血；对虚空敌人造成的伤害 ×{N(r.lightAgainstVoid)}。",
                     $"Hits heal you for {P(r.lightShare)}% of their damage and deal ×{N(r.lightAgainstVoid)} damage to Void enemies."),
-                ElementKind.Void => ArenaText.Pair($"命中时按伤害的 {P(r.voidShare)}% 给你回能量。", $"Hits restore Energy equal to {P(r.voidShare)}% of their damage."),
+                ElementKind.Void => ArenaText.Pair($"命中时按伤害的 {P(r.voidShare)}% 给你回充能。", $"Hits restore Charge equal to {P(r.voidShare)}% of their damage."),
                 _ => ""
             };
         }

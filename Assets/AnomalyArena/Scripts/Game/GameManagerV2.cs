@@ -10,6 +10,8 @@ namespace AnomalyArena
         public RunWeapons runWeapons;
         public RunProgression progression;
         public SkillLoadout skills;
+        /// <summary>The open mode's starting weapons, card by card: the rocket launcher, the rifle, the knife.</summary>
+        public static WeaponForm LoadoutForm(int index) => index == 0 ? WeaponForm.RocketLauncher : index == 1 ? WeaponForm.Rifle : WeaponForm.Knife;
         public OrbPool orbs;
         public float buildTimeLeft;
         [Min(0f), Tooltip("武器与技能选择限时；0代表不限时，不自动处理卡牌。")]
@@ -68,7 +70,7 @@ namespace AnomalyArena
             player.DamageTaken+=(info,amount)=>RunAnalytics.PlayerDamaged(this,info,amount);
             player.DamageTaken+=OnPlayerDamagedForNotice; // the player's own weapon cost them HP: its slot flashes and a notice names it
             progression.StatChanged+=(_,__)=>ApplyStats();
-            progression.LevelGained+=level=>hud?.Banner(ArenaText.Pair("升到 "+level+" 级", "LEVEL "+level),ArenaText.Pair($"最大生命 +{progression.LastLevelHpGain:0.#}，最大能量 +{progression.LastLevelEnergyGain:0.#}。", $"Max HP +{progression.LastLevelHpGain:0.#}, Max Energy +{progression.LastLevelEnergyGain:0.#}."));
+            progression.LevelGained+=level=>hud?.Banner(ArenaText.Pair("升到 "+level+" 级", "LEVEL "+level),ArenaText.Pair($"最大生命 +{progression.LastLevelHpGain:0.#}，充能上限 +{progression.LastLevelEnergyGain:0.#}。", $"Max HP +{progression.LastLevelHpGain:0.#}, Max Charge +{progression.LastLevelEnergyGain:0.#}."));
             runWeapons.Revealed+=w=>hud?.Toast(w.Label,ElementCombat.ColorFor(w.element));
             skills.CastRefused+=(_,reason)=>hud?.Toast(reason,Color.yellow);
             skills.CastSucceeded+=(id,_,__,___)=>NoteSkillCast(id);
@@ -592,7 +594,7 @@ namespace AnomalyArena
                     supplyChoiceOpened=true;SupplyDropReady=false;SetPhase(pendingSupplyChoice);pendingSupplyChoice=ArenaUiState.Title;break;
                 case ArenaUiCommand.ToggleArt:if(RunPhase==ArenaUiState.Title)ToggleArt();break;
                 case ArenaUiCommand.ChooseLoadout:
-                    if(RunPhase!=ArenaUiState.Loadout||index<0||index>2)return;runWeapons.GiveStarting(index==0?WeaponForm.RocketLauncher:index==1?WeaponForm.Rifle:WeaponForm.Knife);NotifyCardPicked(ArenaUiState.Loadout,index,CardRarity.Common);ShowWeaponIntro(runWeapons.Hand[0],CampaignRunning?(System.Action)campaign.AfterLoadout:()=>{State=GameState.Playing;BeginWaveDrafts();OpenRunBegins();SetPhase(ArenaUiState.WaveIntro);waves.StartWaves();V2Audio.Instance?.PlayWave();RunAnalytics.RunStarted(this);});break;
+                    if(RunPhase!=ArenaUiState.Loadout||index<0||index>2)return;runWeapons.GiveStarting(LoadoutForm(index));NotifyCardPicked(ArenaUiState.Loadout,index,CardRarity.Common);ShowWeaponIntro(runWeapons.Hand[0],CampaignRunning?(System.Action)campaign.AfterLoadout:()=>{State=GameState.Playing;BeginWaveDrafts();OpenRunBegins();SetPhase(ArenaUiState.WaveIntro);waves.StartWaves();V2Audio.Instance?.PlayWave();RunAnalytics.RunStarted(this);});break;
                 case ArenaUiCommand.TakeArmory:
                     if(RunPhase!=ArenaUiState.Armory||index<0||index>=runWeapons.Offers.Length||runWeapons.Offers[index]==null)return;var offered=runWeapons.Offers[index];var offeredRarity=ArenaRarity.ForWeapon(offered);string taken=offered.FormName+(offered.upgradeOf!=null?" "+offered.MkLabel:"");if(runWeapons.TakeOffer(index)){RunAnalytics.SupplyResolved(this,offered.upgradeOf!=null?RunAnalytics.SupplyMerge:RunAnalytics.SupplyTakeFree,offered);buildSummary+=ArenaText.Pair("\n军械库：", "\nArmory: ")+taken;NotifyCardPicked(ArenaUiState.Armory,index,offeredRarity);ShowWeaponIntro(offered.upgradeOf??offered,OpenDraft);}else{pendingOffer=index;SetPhase(ArenaUiState.ReplaceWeapon);}break;
                 case ArenaUiCommand.SkipArmory:if(RunPhase==ArenaUiState.Armory){RunAnalytics.SupplyResolved(this,RunAnalytics.SupplySkip);OpenDraft();}break;
@@ -770,10 +772,10 @@ namespace AnomalyArena
         void WriteSkillSlot(ArenaUiSlot view,SkillSlot skill)
         {
             // The greater void skills have no level: their slot shows only the energy cost.
-            view.title=skill.Name;view.detail=skill.Empty?ArenaText.Pair("空槽", "Empty"):skill.Definition.greaterVoid?ArenaText.Pair($"{skill.Cost:0} 能量", $"{skill.Cost:0} Energy"):ArenaText.Pair($"等级 {skill.Level} · {skill.Cost:0} 能量", $"Lv {skill.Level} · {skill.Cost:0} Energy");view.cooldown01=skill.CooldownLeft/Mathf.Max(.01f,skill.Cooldown);view.elementIndex=skill.Empty?-1:ElementIndex(skill.Definition.element);view.skillIndex=skill.Empty?-1:(int)skill.Id;view.formIndex=-1;view.active=false;view.available=!skill.Empty&&skill.CooldownLeft<=0&&progression.Energy>=skill.Cost;
+            view.title=skill.Name;view.detail=skill.Empty?ArenaText.Pair("空槽", "Empty"):skill.Definition.greaterVoid?ArenaText.Pair($"{skill.Cost:0} 充能", $"{skill.Cost:0} Charge"):ArenaText.Pair($"等级 {skill.Level} · {skill.Cost:0} 充能", $"Lv {skill.Level} · {skill.Cost:0} Charge");view.cooldown01=skill.CooldownLeft/Mathf.Max(.01f,skill.Cooldown);view.elementIndex=skill.Empty?-1:ElementIndex(skill.Definition.element);view.skillIndex=skill.Empty?-1:(int)skill.Id;view.formIndex=-1;view.active=false;view.available=!skill.Empty&&skill.CooldownLeft<=0&&progression.Energy>=skill.Cost;
             view.rarity=ArenaRarity.ForSkill(skill.Definition,skill.Level);if(!skill.Empty)view.detail=ArenaTerms.Rarity(view.rarity)+" · "+view.detail;
             // Blink level 3 carries two charges (document 8.4).
-            if(!skill.Empty&&skill.Id==SkillId.Blink&&skills.BlinkChargesMax>1){view.detail+=ArenaText.Pair($" · 充能 {skills.BlinkCharges}/{skills.BlinkChargesMax}",$" · Charges {skills.BlinkCharges}/{skills.BlinkChargesMax}");view.available=skills.BlinkCharges>0&&progression.Energy>=skill.Cost;}
+            if(!skill.Empty&&skill.Id==SkillId.Blink&&skills.BlinkChargesMax>1){view.detail+=ArenaText.Pair($" · 次数 {skills.BlinkCharges}/{skills.BlinkChargesMax}",$" · Uses {skills.BlinkCharges}/{skills.BlinkChargesMax}");view.available=skills.BlinkCharges>0&&progression.Energy>=skill.Cost;}
             // A skill cannot be cast again while its own effect lasts, so its slot shows as not ready meanwhile.
             if(!skill.Empty&&skills.EffectActive(skill.Id))view.available=false;
         }

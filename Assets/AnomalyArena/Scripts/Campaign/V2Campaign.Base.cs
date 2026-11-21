@@ -7,11 +7,12 @@ namespace AnomalyArena
     public enum CampaignUpgrade { Stat, Skill, Infusion, Tame, Twist }
 
     /// <summary>
-    /// The base (V2 doc section 5): HP that grows with the durability level, a shield from central control that refills each night, four
-    /// sides that each stand for one room (D7-A: central control can break too; a broken central control is repaired by hand, the
-    /// other rooms through it), the rooms' levels and the ship's repair state. Raiders (since 2026-11-06 every monster of a day wave) walk
-    /// to the base and strike its nearest side, unless the player comes close; only those attacks hurt it, never an element or a status
-    /// (the doc: the base has no attributes).
+    /// The base and the ship: the base's HP, whose cap the fortification raises a level at a time and which mends rules.nightSelfRepair
+    /// of itself as each afternoon begins; no shield, and no room is built, broken or repaired (each side keeps its room's mark on the
+    /// model). The ship's three parts, the engine, the hull and the fuel tank, are each bought once in any order, and its fuel is counted
+    /// in dark matter (V2Campaign.Redesign.cs sells them). Raiders (every monster of a day wave) walk to the base and strike its nearest
+    /// side, unless the player comes close; only those attacks hurt it, never an element or a status (the doc: the base has no
+    /// attributes).
     /// </summary>
     public sealed partial class V2Campaign
     {
@@ -27,31 +28,38 @@ namespace AnomalyArena
         public const float ShipHalfLength = 7f, ShipHalfWidth = 3f;
         public Vector3 DoorPoint => BaseCentre + Vector3.back * (BaseHalf + 1.4f);
 
+        /// <summary>The level every room stands at. Nothing is built any more, so the parts written for the four rooms (V2Campaign.Works,
+        /// the old base page) find all of them open, and none breaks; what opens on which day is FeatureOpen.</summary>
+        const int OpenRoomLevel = 3;
         readonly RoomState[] rooms = { new(), new(), new(), new() };
+        /// <summary>A room's state for the old base page: every room at OpenRoomLevel, never broken.</summary>
         public RoomState Room(CampaignRoom room) => rooms[(int)room];
+        /// <summary>The base's fortification level, 1 to MaxDurability: its max HP is the rules' BaseHpAt of it.</summary>
         public int Durability { get; private set; } = 1;
-        public int ShieldLevel { get; private set; }
         public float BaseHp { get; private set; }
-        public float BaseShield { get; private set; }
-        // Since 2026-11-10 the base's levels and shield follow the V2 doc's base table (CampaignRules.Rooms.cs).
         public float BaseMaxHp => rules.BaseHpAt(Durability);
-        public float BaseMaxShield => BaseMaxHp * rules.ShieldCapShare(ShieldLevel);
-        /// <summary>The base's max HP at a level, and the highest base and shield levels (for the base panel's texts).</summary>
+        /// <summary>The base's max HP at a level, and the highest level (for the base pages' texts).</summary>
         public float BaseMaxHpAt(int level) => rules.BaseHpAt(level);
         public int MaxDurability => rules.MaxBaseLevel;
-        public int MaxShieldLevel => rules.MaxShieldLevel;
-        readonly float[] sideDamageToday = new float[4];
+        // The base has no shield: these stay 0 for the old base page, the day dial and the sounds that still read them.
+        public int ShieldLevel => 0;
+        public float BaseShield => 0f;
+        public float BaseMaxShield => 0f;
+        public int MaxShieldLevel => 0;
         readonly float[] sideFlash = new float[4];
-        bool engineFixed, armorFixed;
+        // The ship's three parts, each bought once (armorFixed is the hull, which the old pages call the armor), and its fuel: dark matter
+        // poured in, 0 to FuelTop.
+        bool engineFixed, armorFixed, fuelTankFitted;
         int fuel;
         public bool EngineFixed => engineFixed;
+        /// <summary>The hull is repaired (the same as HullFixed).</summary>
         public bool ArmorFixed => armorFixed;
+        /// <summary>The fuel: dark matter poured in, 0 to FuelTop.</summary>
         public int Fuel => fuel;
-        /// <summary>Fuel units that fill the tank and the dark matter one takes: since 2026-11-10 a full tank is 100 dark matter (CampaignRules.fuelTankDark).</summary>
-        public int FuelUnits => rules.FuelUnitsFull;
-        public int DarkPerFuel => rules.DarkPerFuel;
-        public bool FuelFull => fuel >= FuelUnits;
-        float shieldTopUpAt;
+        /// <summary>The fuel's scale for the old pages: it counts dark matter, so a full tank is FuelTop of it, one dark matter a point.</summary>
+        public int FuelUnits => FuelTop;
+        public int DarkPerFuel => 1;
+        public bool FuelFull => fuel >= FuelTop;
 
         Transform worldRoot, baseRoot, shipRoot;
         Renderer[] baseRenderers;
@@ -114,15 +122,13 @@ namespace AnomalyArena
 
         void ResetBase()
         {
-            foreach (var room in rooms) { room.level = 0; room.damaged = false; }
-            rooms[(int)CampaignRoom.Control].level = 1; // the base deployed itself with its central control (the V2 doc's story)
-            Durability = 1; ShieldLevel = 0; BaseHp = rules.BaseHpAt(1); BaseShield = 0f;
-            System.Array.Clear(sideDamageToday, 0, 4);
-            engineFixed = armorFixed = false; fuel = 0; shieldTopUpAt = 0f;
+            foreach (var room in rooms) { room.level = OpenRoomLevel; room.damaged = false; }
+            Durability = 1; BaseHp = rules.BaseHpAt(1);
+            engineFixed = armorFixed = fuelTankFitted = false; fuel = 0;
             newWeaponsBought = 0;
             System.Array.Clear(upgradesBought, 0, upgradesBought.Length);
             raidSpots.Clear();
-            ResetRooms(); // the rooms' own effects, the shared weapon Mk and the study's purchases (V2Campaign.Rooms.cs)
+            ResetRooms(); // the ship's effects, the shared weapon Mk and the workshop's purchases (V2Campaign.Rooms.cs)
         }
 
         // ───── World objects ─────
@@ -413,12 +419,12 @@ namespace AnomalyArena
             if (damagedSides[side]) damagedSides[side].SetActive(on);
         }
 
-        /// <summary>Whitebox: the engine lit once repaired, the armor (the repaired ship's wings) once fixed, the fuel tank filling from
-        /// dark to the table's colour; the fuel tank shown is the one the ending lights.</summary>
+        /// <summary>Whitebox: the engine lit once repaired, the hull (the repaired ship's wings) once fixed, the fuel tank grey until it is
+        /// fitted and then filling from dark to the table's colour; the fuel tank shown is the one the ending lights.</summary>
         void PaintShipWhitebox(float fill)
         {
             Color engine = engineFixed ? Whitebox.Colour("control") : BrokenPartGrey;
-            Color tank = Color.Lerp(EmptyTankColour, Whitebox.Colour("core"), fill);
+            Color tank = fuelTankFitted ? Color.Lerp(EmptyTankColour, Whitebox.Colour("core"), fill) : BrokenPartGrey;
             foreach (var look in new[] { wreckEngine, wreckFuel, shipWhitebox })
             {
                 if (!look) continue;
@@ -683,13 +689,13 @@ namespace AnomalyArena
                 if (shipWreckWalls) shipWreckWalls.SetActive(!armorFixed);
                 ApplyMapWalls();
             }
-            float f = rules ? fuel / (float)FuelUnits : 0f;
+            float f = rules ? Mathf.Clamp01(fuel / (float)FuelTop) : 0f;
             if (wreckWhitebox) { PaintShipWhitebox(f); return; }
-            // The base page's colours for the same three parts (V5BaseShip): orange until repaired and teal once done; the fuel fills from
-            // a dark amber toward gold and turns teal when the tank is full.
+            // The rocket page's colours for the same three parts: orange until repaired or fitted and teal once done; a fitted tank fills
+            // from a dark amber toward gold and turns teal when the fuel is full.
             SetStatusColour(engineBlock, engineFixed ? V5TitleKit.Teal : V5TitleKit.Orange);
             SetStatusColour(armorPlates, armorFixed ? V5TitleKit.Teal : V5TitleKit.Orange);
-            SetStatusColour(fuelTank, f >= 1f ? V5TitleKit.Teal : Color.Lerp(FuelEmpty, V5TitleKit.Gold, f));
+            SetStatusColour(fuelTank, !fuelTankFitted ? V5TitleKit.Orange : f >= 1f ? V5TitleKit.Teal : Color.Lerp(FuelEmpty, V5TitleKit.Gold, f));
         }
 
         static readonly Color FuelEmpty = new(.25f, .19f, .08f);
@@ -767,33 +773,20 @@ namespace AnomalyArena
         {
             int side = raidSpots.TryGetValue(enemy, out var known) ? known.side : 2;
             Vector3 at = raidSpots.TryGetValue(enemy, out known) ? known.spot - SideNormal[side] * .4f + Vector3.up : BaseCentre;
-            // Ship Launch Bay level 2 (the repaired armor's energy shield): raids hurt the base less.
+            // The repaired hull: raids hurt the base less.
             DamageBase(side, damage * rules.raidDamage * RaidDamageFactor, at);
         }
 
-        /// <summary>A hit on one side of the base: the shield takes it first, then the HP; the side's room breaks once that side has
-        /// taken sideBreakShare of the max HP today. HP at zero loses the run.</summary>
+        /// <summary>A hit on one side of the base: all of it comes off the HP (the base has no shield, and no room breaks). HP at zero loses
+        /// the run.</summary>
         public void DamageBase(int side, float amount, Vector3 at)
         {
             if (!Running || BaseDestroyed || amount <= 0f) return;
-            float toShield = Mathf.Min(BaseShield, amount);
-            BaseShield -= toShield;
-            float toHp = amount - toShield;
-            BaseHp -= toHp;
-            CampaignEvents.RaiseBaseDamaged(amount, toHp, SideRoom[side]);
+            BaseHp -= amount;
+            CampaignEvents.RaiseBaseDamaged(amount, amount, SideRoom[side]);
             sideFlash[side] = 1f;
-            gm.hud?.DamageNumber(at, amount, toHp > 0f ? new Color(1f, .55f, .2f) : new Color(.5f, .9f, 1f), false);
-            Fx.Pop(at, toHp > 0f ? new Color(1f, .5f, .2f) : new Color(.5f, .9f, 1f), .9f);
-            if (toHp > 0f)
-            {
-                sideDamageToday[side] += toHp;
-                var room = rooms[(int)SideRoom[side]];
-                if (!room.damaged && room.level > 0 && sideDamageToday[side] >= BaseMaxHp * rules.sideBreakShare)
-                {
-                    room.damaged = true;
-                    SayRoomOffline(SideRoom[side]);
-                }
-            }
+            gm.hud?.DamageNumber(at, amount, new Color(1f, .55f, .2f), false);
+            Fx.Pop(at, new Color(1f, .5f, .2f), .9f);
             if (BaseHp <= 0f)
             {
                 BaseHp = 0f; BaseDestroyed = true;
@@ -802,66 +795,34 @@ namespace AnomalyArena
             }
         }
 
-        /// <summary>Dusk: the base repairs part of its hull by itself; with central control working the shield refills; side damage
-        /// counts from zero again tomorrow.</summary>
-        void NightlyBaseUpkeep()
-        {
-            BaseHp = Mathf.Min(BaseMaxHp, BaseHp + BaseMaxHp * rules.nightSelfRepair);
-            if (ShieldLevel > 0 && !rooms[(int)CampaignRoom.Control].damaged) { BaseShield = BaseMaxShield; Say(Line.S06); }
-            System.Array.Clear(sideDamageToday, 0, 4);
-        }
+        /// <summary>As each afternoon begins (BeginDusk): the base mends rules.nightSelfRepair of its max HP by itself, never past the max.</summary>
+        void NightlyBaseUpkeep() => BaseHp = Mathf.Min(BaseMaxHp, BaseHp + BaseMaxHp * rules.nightSelfRepair);
 
-        // ───── Purchases (the base panel calls these) ─────
+        // ───── Purchases ─────
+        // The old base page and the editor's run check still call these room members. Nothing is built, broken or repaired any more, so
+        // no room has a next level, none needs a repair, and central control always works.
 
-        public bool ControlWorks => !rooms[(int)CampaignRoom.Control].damaged;
+        public bool ControlWorks => true;
+        public CampaignCost? NextLevelCost(CampaignRoom room) => null;
+        public bool TryUpgradeRoom(CampaignRoom room) => false;
+        public int RepairCost(CampaignRoom room) => 0;
+        public bool TryRepairRoom(CampaignRoom room) => false;
 
-        /// <summary>The price of a room's next level (since 2026-11-10 the V2 doc's table: CampaignRules.RoomLevelPrice), or null at the top.</summary>
-        public CampaignCost? NextLevelCost(CampaignRoom room) => rules.RoomLevelPrice(room, rooms[(int)room].level + 1);
-
-        /// <summary>Build (level 0 to 1) or upgrade a room. Needs central control working and the room intact.</summary>
-        public bool TryUpgradeRoom(CampaignRoom room)
-        {
-            var cost = NextLevelCost(room);
-            if (cost == null || !ControlWorks || rooms[(int)room].damaged || !TrySpend(cost.Value)) return false;
-            rooms[(int)room].level++;
-            OnRoomLevelBought(room);
-            Bought("room_upgrade", $"{room} level {rooms[(int)room].level}", room, cost.Value);
-            ui.Flash(ArenaText.Pair($"{RoomName(room)}升到了 {rooms[(int)room].level} 级", $"{RoomName(room)} upgraded to level {rooms[(int)room].level}"));
-            return true;
-        }
-
-        /// <summary>Since 2026-11-10 every repair of a broken room costs the same (CampaignRules.roomRepairAlloy), central control too.</summary>
-        public int RepairCost(CampaignRoom room) => rules.roomRepairAlloy;
-
-        /// <summary>Repair a broken room: central control by hand, every other room only through a working central control (D7-A).</summary>
-        public bool TryRepairRoom(CampaignRoom room)
-        {
-            var state = rooms[(int)room];
-            if (!state.damaged || room != CampaignRoom.Control && !ControlWorks) return false;
-            var repair = new CampaignCost(RepairCost(room));
-            if (!TrySpend(repair)) return false;
-            state.damaged = false;
-            Bought("repair", room.ToString(), room, repair);
-            Say(Line.S05);
-            return true;
-        }
-
-        /// <summary>The player's next level at the Armament Bay (since 2026-11-06 bought with currency; it gives what an XP level gives in
-        /// the classic run: max HP and max energy). Since 2026-11-10 these are the five armor levels (CampaignRules.armorAlloy): armor
-        /// level n is the player's level n + 1. Null at the top.</summary>
+        /// <summary>The player's next armor level in the workshop: what an XP level gives in the classic run, max HP and max charge. These are
+        /// the five armor levels (CampaignRules.armorAlloy): armor level n is the player's level n + 1. Null at the top.</summary>
         public CampaignCost? PlayerLevelCost => gm && gm.progression && !gm.progression.AtMaxLevel ? rules.ArmorPrice(ArmorLevel) : null;
         /// <summary>Armor levels bought (0 to CampaignRules.MaxArmorLevel).</summary>
         public int ArmorLevel => gm && gm.progression ? Mathf.Max(0, gm.progression.Level - 1) : 0;
 
-        /// <summary>Armament Bay level 1: the armor upgrade, one player level (max HP and max energy), at once.</summary>
+        /// <summary>The workshop's armor, from Day 0: one player level (max HP and max charge), at once.</summary>
         public bool TryBuyPlayerLevel()
         {
             var cost = PlayerLevelCost;
             if (cost == null || !PlayerLevelsForSale || !TrySpend(cost.Value)) return false;
             gm.progression.BuyLevel();
             Bought("player_level", $"level {gm.progression.Level}, armor {ArmorLevel}", CampaignRoom.Armament, cost.Value);
-            ui.Flash(ArenaText.Pair($"装甲升到 {ArmorLevel} 级：最大生命 +{Mathf.RoundToInt(gm.progression.LastLevelHpGain)}、最大能量 +{Mathf.RoundToInt(gm.progression.LastLevelEnergyGain)}",
-                $"Armor upgraded to level {ArmorLevel}: max HP +{Mathf.RoundToInt(gm.progression.LastLevelHpGain)}, max energy +{Mathf.RoundToInt(gm.progression.LastLevelEnergyGain)}"));
+            ui.Flash(ArenaText.Pair($"护甲升到 {ArmorLevel} 级：生命上限 +{Mathf.RoundToInt(gm.progression.LastLevelHpGain)}、充能上限 +{Mathf.RoundToInt(gm.progression.LastLevelEnergyGain)}",
+                $"Armor upgraded to level {ArmorLevel}: max HP +{Mathf.RoundToInt(gm.progression.LastLevelHpGain)}, max charge +{Mathf.RoundToInt(gm.progression.LastLevelEnergyGain)}"));
             return true;
         }
 
@@ -871,8 +832,11 @@ namespace AnomalyArena
         int newWeaponsBought;
         readonly int[] upgradesBought = new int[5];
 
-        public bool WeaponDamageForSale => Running && Works(CampaignRoom.Armament, 1);
-        public bool NewWeaponForSale => Running && Works(CampaignRoom.Armament, 2);
+        /// <summary>The weapon Mk is sold in the workshop from Day 0.</summary>
+        public bool WeaponDamageForSale => Running;
+        /// <summary>New weapons come only from the weapon crates: the base sells none (TryBuyNewWeapon, TryBuyWeaponForm and the rocket
+        /// launcher refuse).</summary>
+        public bool NewWeaponForSale => false;
         /// <summary>The next Mk's price (since 2026-11-10 CampaignRules.weaponMkAlloy, after the shared Mk or, with sharedWeaponMk off, the
         /// Mk of the weapon that would rise); a price no alloy pays at the top Mk.</summary>
         public CampaignCost WeaponDamageCost => rules.MkPrice(NextMkFrom) ?? new CampaignCost(int.MaxValue);
@@ -903,13 +867,16 @@ namespace AnomalyArena
         }
 
         public static CampaignRoom UpgradeRoom(CampaignUpgrade kind) => kind is CampaignUpgrade.Tame or CampaignUpgrade.Twist ? CampaignRoom.Armament : CampaignRoom.Energy;
-        public static int UpgradeLevel(CampaignUpgrade kind) => kind switch
+        /// <summary>The workshop feature a kind of upgrade belongs to: it is for sale from that feature's day.</summary>
+        public static StudyFeature UpgradeFeature(CampaignUpgrade kind) => kind switch
         {
-            CampaignUpgrade.Stat => 1,
-            CampaignUpgrade.Skill or CampaignUpgrade.Tame => 2,
-            _ => 3 // Infusion (Energy Lab 3), Twist (Armament Bay 3)
+            CampaignUpgrade.Stat => StudyFeature.Body,
+            CampaignUpgrade.Skill => StudyFeature.Skills,
+            CampaignUpgrade.Tame => StudyFeature.Tame,
+            CampaignUpgrade.Infusion => StudyFeature.Infuse,
+            _ => StudyFeature.Twist
         };
-        public bool UpgradeForSale(CampaignUpgrade kind) => Running && Works(UpgradeRoom(kind), UpgradeLevel(kind));
+        public bool UpgradeForSale(CampaignUpgrade kind) => Running && FeatureOpen(UpgradeFeature(kind));
         public CampaignCost UpgradeCost(CampaignUpgrade kind)
         {
             int bought = upgradesBought[(int)kind];
@@ -931,17 +898,17 @@ namespace AnomalyArena
             _ => ArenaText.Pair("武器变招", "Twist a weapon")
         };
 
-        /// <summary>Armament Bay level 1: the next weapon Mk (since 2026-11-10 bought with CampaignRules.weaponMkAlloy). With the shared Mk
-        /// (CampaignRules.sharedWeaponMk, the rule chosen on 2026-11-10) it is the bay's level for every anomaly weapon, held now or taken
-        /// later, so it can be bought before any is held; with it off the weapon in hand rises, or else the first other anomaly weapon held.
-        /// The starting pistol never takes a Mk. Alloy buys up to Mk 10; Mk 11 is the void alloy's (SetTeamMk).</summary>
+        /// <summary>The workshop's next weapon Mk (CampaignRules.weaponMkAlloy), from Day 0. With the shared Mk (CampaignRules.sharedWeaponMk)
+        /// it is one level for every anomaly weapon, held now or taken later, so it can be bought before any is held; with it off the
+        /// weapon in hand rises, or else the first other anomaly weapon held. The starting pistol never takes a Mk. Alloy buys up to Mk 10;
+        /// Mk 11 is the void alloy's (SetTeamMk).</summary>
         public bool TryBuyWeaponDamage()
         {
             if (!WeaponDamageForSale || !gm || !gm.runWeapons) return false;
             var target = rules.sharedWeaponMk ? null : MkTarget;
             if (!rules.sharedWeaponMk && target == null)
             {
-                ui.Flash(ArenaText.Pair("小手枪不能升级型号。先在武装区买一把异常武器。", "The pistol can't be upgraded. Buy an anomaly weapon at the Armament Bay first."));
+                ui.Flash(ArenaText.Pair("小手枪不能升级型号。先从武器箱拿一把异常武器。", "The pistol can't be upgraded. Take an anomaly weapon from a weapon crate first."));
                 return false;
             }
             int before = NextMkFrom;
@@ -962,9 +929,9 @@ namespace AnomalyArena
             return true;
         }
 
-        /// <summary>Armament Bay level 2: research a new weapon, always an anomaly weapon. It goes straight into a free hand or auto slot; a
-        /// hand weapon with both hands taken replaces the starting pistol (since 2026-11-06). With nowhere to put it, or no weapon left that
-        /// fits, nothing is spent. Once bought, its weapon card shows; closing it returns to the base panel.</summary>
+        /// <summary>A random new anomaly weapon. New weapons come only from the weapon crates now, so this refuses (NewWeaponForSale is
+        /// false); it stays for a later use. It would go straight into a free hand or auto slot, a hand weapon with both hands taken in
+        /// place of the starting pistol; with nowhere to put it, or no weapon left that fits, nothing is spent.</summary>
         public bool TryBuyNewWeapon()
         {
             var weapons = gm ? gm.runWeapons : null;
@@ -1077,7 +1044,7 @@ namespace AnomalyArena
 
         // ----- The rocket launcher (since 2026-11-06 the run starts with the pistol alone; the rocket launcher, an anomaly weapon, is bought) -----
 
-        public bool RocketForSale => Running && Works(CampaignRoom.Armament, 2) && gm && gm.runWeapons && !gm.runWeapons.OwnsForm(WeaponForm.RocketLauncher);
+        public bool RocketForSale => NewWeaponForSale && gm && gm.runWeapons && !gm.runWeapons.OwnsForm(WeaponForm.RocketLauncher);
         public CampaignCost RocketCost => rules.rocketLauncherCost;
         /// <summary>The hand the rocket launcher goes into: a free hand first; with both hands holding weapons, the starting pistol's (as a
         /// researched hand weapon takes it, TryBuyNewWeapon), else the one not in use (switch weapons first to keep it).</summary>
@@ -1133,104 +1100,29 @@ namespace AnomalyArena
         void Refund(CampaignCost cost) { alloy += cost.alloy; energy += cost.energy; dark += cost.dark; }
 
         // Kept only so Editor/V2CampaignCheck.cs (its Shop step) still compiles; delete these three with its calls once it uses
-        // TryBuyWeaponDamage, TryBuyNewWeapon and TryBuyUpgrade.
+        // TryBuyWeaponDamage and TryBuyUpgrade.
         public int ResearchQueued => 0;
         public bool TryBuyWeaponResearch() => TryBuyWeaponDamage();
         public bool TryBuyCardPick(CampaignRoom room) => TryBuyUpgrade(room == CampaignRoom.Energy ? CampaignUpgrade.Stat : CampaignUpgrade.Tame);
 
-        /// <summary>The base's next level (since 2026-11-10 CampaignRules.baseLevelAlloy), or null at the top.</summary>
-        public CampaignCost? DurabilityCost => rules.BaseLevelPrice(Durability);
-        public bool TryUpgradeDurability()
-        {
-            var cost = DurabilityCost;
-            if (cost == null || !ControlWorks || !TrySpend(cost.Value)) return false;
-            float share = BaseHp / BaseMaxHp;
-            Durability++;
-            Bought("room_upgrade", $"durability {Durability}", CampaignRoom.Control, cost.Value);
-            BaseHp = Mathf.Max(BaseHp, share * BaseMaxHp);
-            BaseShield = Mathf.Min(BaseShield, BaseMaxShield);
-            return true;
-        }
+        // The old base page and the editor's run check still call these by their old names. They do what the new members do
+        // (V2Campaign.Redesign.cs), or nothing where the thing is gone (the shield, the paid hull repair).
+        public CampaignCost? DurabilityCost => FortifyPrice;
+        public bool TryUpgradeDurability() => TryFortify();
+        public CampaignCost? ShieldCost => null;
+        public bool TryUpgradeShield() => false;
+        public int HullRepairCost => 0;
+        public bool TryRepairHull() => false;
+        public bool CanRepairEngine => !engineFixed;
+        public bool CanRepairArmor => !armorFixed;
+        /// <summary>The old page's fuel row: it fits the fuel tank first, then pours in the dark matter held.</summary>
+        public bool CanSynthesiseFuel => fuelTankFitted ? CanAddFuel : !FuelFull;
+        public bool TryRepairEngine() => TryBuyShipPart(ShipPartKind.Engine);
+        public bool TryRepairArmor() => TryBuyShipPart(ShipPartKind.Hull);
+        public bool TrySynthesiseFuel() => fuelTankFitted ? TryAddFuel() : TryBuyShipPart(ShipPartKind.Tank);
 
-        /// <summary>The shield's next level (since 2026-11-10 three levels, CampaignRules.shieldEnergy), or null at the top.</summary>
-        public CampaignCost? ShieldCost => rules.ShieldPrice(ShieldLevel);
-        public bool TryUpgradeShield()
-        {
-            var cost = ShieldCost;
-            if (cost == null || !ControlWorks || !TrySpend(cost.Value)) return false;
-            ShieldLevel++;
-            Bought("shield", $"level {ShieldLevel}", CampaignRoom.Control, cost.Value);
-            BaseShield = BaseMaxShield; // a new shield level comes charged
-            return true;
-        }
-
-        public int HullRepairCost => rules.HullRepairCost(1f - BaseHp / BaseMaxHp, Durability);
-        public bool TryRepairHull()
-        {
-            if (BaseHp >= BaseMaxHp - .5f || !ControlWorks) return false;
-            var hull = new CampaignCost(HullRepairCost);
-            if (!TrySpend(hull)) return false;
-            BaseHp = BaseMaxHp;
-            Bought("repair", "hull", CampaignRoom.Control, hull);
-            CampaignAudio.Play(CampaignSfx.RoomRepair);
-            return true;
-        }
-
-        bool ShipWorks(int level) => rooms[(int)CampaignRoom.Ship].level >= level && !rooms[(int)CampaignRoom.Ship].damaged;
-        public bool CanRepairEngine => !engineFixed && ShipWorks(1);
-        public bool CanRepairArmor => !armorFixed && ShipWorks(2);
-        public bool CanSynthesiseFuel => !FuelFull && ShipWorks(3);
-
-        public bool TryRepairEngine()
-        {
-            if (!CanRepairEngine || !TrySpend(rules.engineRepair)) return false;
-            engineFixed = true; RefreshShip(); Say(Line.S08);
-            Bought("ship_part", "engine", CampaignRoom.Ship, rules.engineRepair);
-            return true;
-        }
-
-        public bool TryRepairArmor()
-        {
-            if (!CanRepairArmor || !TrySpend(rules.armorRepair)) return false;
-            armorFixed = true; RefreshShip(); Say(Line.S09);
-            Bought("ship_part", "armor", CampaignRoom.Ship, rules.armorRepair);
-            return true;
-        }
-
-        /// <summary>Synthesises as many fuel units as the dark matter held pays for, up to a full tank, in one press. Each unit still
-        /// costs DarkPerFuel from the rules.</summary>
-        public bool TrySynthesiseFuel()
-        {
-            if (!CanSynthesiseFuel) return false;
-            int units = Mathf.Min(FuelUnits - fuel, Dark / DarkPerFuel);
-            if (units <= 0) return false;
-            var cost = new CampaignCost(0, 0, units * DarkPerFuel);
-            if (!TrySpend(cost)) return false;
-            fuel += units; RefreshShip();
-            Bought("fuel", $"{fuel}/{FuelUnits}", CampaignRoom.Ship, cost);
-            return true;
-        }
-
-        public bool CanIgnite => FuelFull && engineFixed && armorFixed;
-
-        public bool TryCraftLamp()
-        {
-            if (!LampsCraftable || !TrySpend(new CampaignCost(rules.lampCost))) return false;
-            lampStock++;
-            Bought("lamp", $"stock {lampStock}", CampaignRoom.Ship, new CampaignCost(rules.lampCost));
-            return true;
-        }
-
-        public bool CanTopUpShield => ShieldLevel > 0 && BaseShield < BaseMaxShield - .5f && Time.time >= shieldTopUpAt && ControlWorks;
-        public bool TryTopUpShield()
-        {
-            if (!CanTopUpShield || !TrySpend(new CampaignCost(0, rules.ShieldTopUpCost(Day)))) return false;
-            BaseShield = Mathf.Min(BaseMaxShield, BaseShield + BaseMaxShield * rules.shieldTopUpShare);
-            shieldTopUpAt = Time.time + rules.shieldTopUpCooldown;
-            Bought("shield", "top_up", CampaignRoom.Control, new CampaignCost(0, rules.ShieldTopUpCost(Day)));
-            Fx.Ring(BaseCentre, BaseHalf + 2f, new Color(.5f, .9f, 1f), .5f);
-            return true;
-        }
+        /// <summary>The ship can ignite, on any day: the engine and the hull are repaired, the fuel tank is fitted and the fuel is full.</summary>
+        public bool CanIgnite => engineFixed && armorFixed && fuelTankFitted && FuelFull;
 
         public static string RoomName(CampaignRoom room) => room switch
         {
@@ -1240,32 +1132,9 @@ namespace AnomalyArena
             _ => ArenaText.Pair("飞船发射区", "Ship Launch Bay")
         };
 
-        // ───── Day interaction at the base door ─────
+        // ───── The base door by day ─────
 
-        void TickDayInteraction(float dt)
-        {
-            var p = gm.player;
-            if (!p || !p.IsAlive) { prompt = ""; return; }
-            bool atDoor = Query.Flat(p.Position - DoorPoint).magnitude < 3.2f;
-            if (atDoor && ShieldLevel > 0)
-            {
-                int price = rules.ShieldTopUpCost(Day);
-                string blocked = ShieldTopUpBlocked;
-                prompt = blocked ?? ArenaText.Pair($"按 {ArenaKeys.InteractKey} 紧急补充护盾（消耗 {price} 异星能量）", $"Press {ArenaKeys.InteractKey} for an emergency shield top-up ({price} alien energy)");
-                if (EPressed && !TryTopUpShield())
-                {
-                    // TrySpend makes no sound: the door gives the one refusal sound itself.
-                    if (!V5UiSound.Play(V5UiSound.Ui.Denied)) CampaignAudio.Play(CampaignSfx.UpgradeDenied);
-                    ui.Flash(blocked ?? ArenaText.Pair($"异星能量不够，补充一次护盾要 {price}", $"Not enough alien energy: a top-up costs {price}"));
-                }
-            }
-            else prompt = "";
-        }
-
-        /// <summary>Why the door cannot top up the shield now, as its prompt says it; null when it can (CanTopUpShield).</summary>
-        string ShieldTopUpBlocked => CanTopUpShield ? null
-            : !ControlWorks ? ArenaText.Pair("总控区损坏了，修好后才能补充护盾", "Central Control is broken; repair it to top up the shield")
-            : BaseShield >= BaseMaxShield - .5f ? ArenaText.Pair("基地护盾是满的", "The base shield is full")
-            : ArenaText.Pair("护盾补充还在冷却", "The shield top-up is still cooling down");
+        /// <summary>In the morning the base door offers nothing: the base is entered in the afternoon and at night (TickBaseDoor).</summary>
+        void TickDayInteraction(float dt) => prompt = "";
     }
 }

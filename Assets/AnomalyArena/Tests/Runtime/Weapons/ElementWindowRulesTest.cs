@@ -707,7 +707,7 @@ namespace AnomalyArena
             Assert.That(en[3], Does.Contain(P(r.lightningVulnerabilityPerStack)).And.Contain("twitch").And.Contain($"for {N(r.controlImmunity)} s"));
             Assert.That(zh[4], Does.Contain(P(r.earthShare)).And.Contain("护盾"), "Earth: a share as Shield");
             Assert.That(zh[5], Does.Contain(P(r.lightShare)).And.Contain("回血"), "Light: a share as healing");
-            Assert.That(zh[6], Does.Contain(P(r.voidShare)).And.Contain("能量"), "Void: a share as Energy");
+            Assert.That(zh[6], Does.Contain(P(r.voidShare)).And.Contain("充能"), "Void: a share as charge");
             Assert.That(zh[7], Does.Contain("被点燃").And.Contain($"每秒烧 {fenceBurn} 点"), "Wildfire fence: the enemy burns a fixed amount a second");
             Assert.That(en[7], Does.Contain($"burns for {fenceBurn} per second"));
             Assert.That(overflow, Is.Empty, "every Infusion card fits its body box");

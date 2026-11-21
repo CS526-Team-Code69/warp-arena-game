@@ -424,6 +424,46 @@ namespace AnomalyArena
             Assert.That(actual, Is.EqualTo(StatLineMode.Replace));
         }
 
+        // ───── The morning's crowd by day ─────
+
+        // The wave table's concurrent target for the wave each day fights (waves 2, 4, 6 and 14 of the table), and the monsters at once
+        // that the story's morning puts on the map: WaveManager rounds the target times the day's factor up.
+        [TestCase(1, 12, 8)]
+        [TestCase(2, 16, 14)]
+        [TestCase(3, 20, 20)]
+        [TestCase(7, 34, 34)]
+        public void MorningCrowdOn_Day_ScalesTheWaveTablesTargetFor8Then14ThenTheTablesOwn(int day, int tableTarget, int expected)
+        {
+            var sut = CreateRules();
+
+            int actual = Mathf.CeilToInt(tableTarget * sut.MorningCrowdOn(day));
+
+            Assert.That(actual, Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void MorningCrowdOn_DayPastTheTable_TakesItsLastEntryTimesMorningCrowd()
+        {
+            var sut = CreateRules();
+            sut.morningCrowd = 1.5f;
+            sut.morningCrowdByDay = new[] { .5f, .8f };
+
+            Assert.That(sut.MorningCrowdOn(1), Is.EqualTo(.75f).Within(1e-5f), "day 1: 1.5 x 0.5");
+            Assert.That(sut.MorningCrowdOn(2), Is.EqualTo(1.2f).Within(1e-5f), "day 2: 1.5 x 0.8");
+            Assert.That(sut.MorningCrowdOn(9), Is.EqualTo(1.2f).Within(1e-5f), "past the table: its last entry");
+        }
+
+        [Test]
+        public void MorningCrowdOn_EmptyTableOrDayZero_IsMorningCrowdAlone()
+        {
+            var sut = CreateRules();
+            sut.morningCrowd = 1.25f;
+
+            Assert.That(sut.MorningCrowdOn(0), Is.EqualTo(1.25f).Within(1e-5f), "Day 0 fights no morning: the plain factor");
+            sut.morningCrowdByDay = new float[0];
+            Assert.That(sut.MorningCrowdOn(2), Is.EqualTo(1.25f).Within(1e-5f), "an empty table changes nothing");
+        }
+
         // ───── Day 0's gifts ─────
 
         [Test]

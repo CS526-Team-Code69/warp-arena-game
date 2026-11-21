@@ -632,7 +632,7 @@ namespace AnomalyArena
         /// there is one), and the energy the same way once it is unlocked. Where the plate ends, in mock-up pixels.</summary>
         float LayVitals(bool art)
         {
-            LayCaption(vitalsCaption, "VITALS", "生命与能量", LeftX, Top, LeftW);
+            LayCaption(vitalsCaption, "VITALS", "生命与充能", LeftX, Top, LeftW);
             bool energy = sheet.energyShown;
             float plateTop = Top + CaptionH + CaptionGap, plateH = energy ? 180f : 116f, faceSize = energy ? 128f : 86f;
             V5TitleKit.Place(vitals.Rect, P(LeftX), P(plateTop), P(LeftW), P(plateH));
@@ -680,7 +680,7 @@ namespace AnomalyArena
             if (energy)
             {
                 y += lifeBlock + BlockGap;
-                SetText(energyWord, ArenaText.Pair("能量", "Energy"));
+                SetText(energyWord, ArenaText.Pair("充能", "Charge"));
                 V5TitleKit.Place(energyWord.rectTransform, P(left), P(y), P(width), P(LabelRowH));
                 SetText(energyValue, $"{Mathf.CeilToInt(sheet.energy)}<size={F(15f)}><color=#{Hex(V5TitleKit.Ink3)}> / {Mathf.CeilToInt(sheet.maxEnergy)}</color></size>");
                 V5TitleKit.Place(energyValue.rectTransform, P(left), P(y), P(width), P(LabelRowH));
@@ -887,7 +887,7 @@ namespace AnomalyArena
             LayAbility(row, top, art, art && skill.art ? skill.art : skill.flat, skill.key, skill.name, ArenaRarity.InkFor(skill.rarity),
                 CharacterSheet.SkillLevel(skill), skill.greaterVoid ? V5HudKit.Violet : skill.level <= 1 ? V5BattleKit.TierOne : V5TitleKit.Steel,
                 skill.greaterVoid ? Color.white : V5BattleKit.TierInk,
-                ArenaText.Pair($"<color=#{Hex(V5HudKit.VioletHi)}>{skill.cost:0} 能量</color>  ·  冷却 {skill.cooldown:0.#} 秒",
+                ArenaText.Pair($"<color=#{Hex(V5HudKit.VioletHi)}>{skill.cost:0} 充能</color>  ·  冷却 {skill.cooldown:0.#} 秒",
                     $"<color=#{Hex(V5HudKit.VioletHi)}>{skill.cost:0} energy</color>  ·  {skill.cooldown:0.#} s cooldown"));
 
         // The void dash: the void's icon and mark, what one dash costs, and Space at the row's right end.

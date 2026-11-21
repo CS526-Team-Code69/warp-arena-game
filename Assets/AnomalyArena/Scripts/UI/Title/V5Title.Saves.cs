@@ -39,8 +39,9 @@ namespace AnomalyArena
             public readonly Image[] pips = new Image[MaxPips];
             public readonly Image[] weaponPictures = new Image[4];
             public readonly Text[] weaponNames = new Text[4];
-            public readonly MedalView[] parts = new MedalView[3];
-            public readonly Text[] partTexts = new Text[3];
+            // The ship's engine, hull and fuel tank, and the fuel before its bar (a story save); hidden for an open-mode save.
+            public readonly MedalView[] parts = new MedalView[ShipRow.Length];
+            public readonly Text[] partTexts = new Text[ShipRow.Length];
             public Image fuelTrack;
             public readonly Image[] fuelCells = new Image[10];
             public Image mapHex, mapPicture;
@@ -297,11 +298,10 @@ namespace AnomalyArena
                 view.weaponPictures[w].preserveAspect = true;
                 view.weaponNames[w] = V5TitleKit.Label(view.full, "WeaponName" + (w + 1), 10, V5TitleKit.Ink2, TextAnchor.MiddleLeft);
             }
-            string[] partNames = { "Engine", "Armor", "Fuel" };
-            for (int k = 0; k < 3; k++)
+            for (int k = 0; k < ShipRow.Length; k++)
             {
-                view.parts[k] = Medal(view.full, partNames[k], 18f);
-                view.partTexts[k] = V5TitleKit.Label(view.full, partNames[k] + "Words", 10, V5TitleKit.Ink2, TextAnchor.MiddleLeft);
+                view.parts[k] = Medal(view.full, ShipRow[k], 18f);
+                view.partTexts[k] = V5TitleKit.Label(view.full, ShipRow[k] + "Words", 10, V5TitleKit.Ink2, TextAnchor.MiddleLeft);
             }
             view.fuelTrack = V5TitleKit.Picture(view.full, "FuelBar", V5TitleKit.Piece("bar-track"), Color.white, V5TitleKit.PieceDensity);
             for (int c = 0; c < 10; c++) view.fuelCells[c] = V5TitleKit.Picture(view.fuelTrack.transform, "Cell" + (c + 1), V5TitleKit.Piece("bar-fill"), V5TitleKit.Gold, V5TitleKit.PieceDensity);
@@ -472,33 +472,35 @@ namespace AnomalyArena
             Show(view.mapHex, false);
             Show(view.mapText, false);
             var icons = CampaignIcons;
-            Sprite[] sprites = { icons ? icons.engine : null, icons ? icons.armor : null, icons ? icons.fuel : null };
+            Sprite[] sprites = { icons ? icons.engine : null, icons ? icons.armor : null, icons ? icons.fuel : null, icons ? icons.dark : null };
             string[] words =
             {
-                ArenaText.Pair("引擎", "Engine") + " " + Repaired(save.engineFixed),
-                ArenaText.Pair("装甲", "Armor") + " " + Repaired(save.armorFixed),
+                ArenaText.Pair("引擎", "Engine") + " " + Repaired(save.engineFixed, false),
+                ArenaText.Pair("船体", "Hull") + " " + Repaired(save.armorFixed, false),
+                ArenaText.Pair("燃料舱", "Fuel tank") + " " + Repaired(save.fuelTank, true),
                 ArenaText.Pair("燃料", "Fuel"),
             };
+            int last = words.Length - 1;
             const float medal = 18f, near = 4.5f, apart = 10.5f;
             int size = 10;
             float bar = 75f;
             for (int attempt = 0; attempt < 8; attempt++)
             {
                 float total = 0f;
-                for (int k = 0; k < 3; k++)
+                for (int k = 0; k <= last; k++)
                 {
                     view.partTexts[k].fontSize = size;
                     view.partTexts[k].text = words[k];
                     total += medal + near + view.partTexts[k].preferredWidth;
                 }
-                total += 2f * apart + near + bar;
+                total += last * apart + near + bar;
                 if (total <= width) break;
                 if (bar > 40f) bar = Mathf.Max(40f, bar - (total - width));
                 else if (size > 8) size--;
                 else break;
             }
             float x = 0f;
-            for (int k = 0; k < 3; k++)
+            for (int k = 0; k <= last; k++)
             {
                 var part = view.parts[k];
                 Show(part.root, true);
@@ -509,7 +511,7 @@ namespace AnomalyArena
                 Show(text, true);
                 float w = text.preferredWidth;
                 V5TitleKit.Place(text.rectTransform, x, view.rc, w + 1f, medal);
-                x += w + (k < 2 ? apart : near);
+                x += w + (k < last ? apart : near);
             }
             bool on = Art.Enabled;
             Show(view.fuelTrack, true);
@@ -526,11 +528,16 @@ namespace AnomalyArena
             }
         }
 
-        static string Repaired(bool done) => done ? "<b><color=#3BD3C0>✓</color></b>" : "<b><color=#FF9B5E>" + ArenaText.Pair("待修复", "Needs repair") + "</color></b>";
+        /// <summary>A part of the ship on a story save: a check once done, an orange cross while it is still to repair (the engine, the hull)
+        /// or to fit (the tank); marks rather than words, so the four parts and the fuel bar fit the row in both languages.</summary>
+        static string Repaired(bool done, bool fitted) => done ? "<b><color=#3BD3C0>✓</color></b>" : "<b><color=#FF9B5E>×</color></b>";
+
+        /// <summary>The names of a story save's ship row: the engine, the hull, the fuel tank and the fuel (its bar follows).</summary>
+        static readonly string[] ShipRow = { "Engine", "Hull", "Tank", "Fuel" };
 
         void LayOpenParts(SlotView view, SaveSummary save, float width)
         {
-            for (int k = 0; k < 3; k++)
+            for (int k = 0; k < ShipRow.Length; k++)
             {
                 Show(view.parts[k].root, false);
                 Show(view.partTexts[k], false);

@@ -13,7 +13,7 @@ namespace AnomalyArena
 {
     /// <summary>The title's save windows (V5Title) on made-up summaries, with the calls to ArenaSaves noted instead of made. 继续游戏: tabs
     /// for the two modes, the most recent save chosen; a story save shows its day, the part of the day, seven day marks, the weapons, the
-    /// engine, the armor and the fuel; an open-mode save its wave out of 15 (the last mark the Tyrant's) and its map; an empty slot cannot be
+    /// engine, the hull, the fuel tank and the fuel; an open-mode save its wave out of 15 (the last mark the Tyrant's) and its map; an empty slot cannot be
     /// chosen; a won run cannot be continued; deleting asks twice. 新游戏: the mode first, then the slot; an empty slot is bound and the
     /// story starts as the saved Start does; a filled one is overwritten only after one more question (the story's deleted, then bound,
     /// at once; the open mode's once a map starts the run: OpenModeMapSelectTest). The story
@@ -42,9 +42,10 @@ namespace AnomalyArena
             Time.timeScale = 1f;
         }
 
+        /// <summary>A story save; fuel is in dark matter out of a full tank's 100, and a save with fuel has its fuel tank fitted.</summary>
         static SaveSummary Story(int slot, int day, SavePhase phase, long at, bool engine, bool armor, int fuel, params WeaponForm[] weapons) => new()
         {
-            mode = SaveMode.Story, slot = slot, empty = false, day = day, phase = phase, engineFixed = engine, armorFixed = armor, fuel = fuel, fuelMax = 10,
+            mode = SaveMode.Story, slot = slot, empty = false, day = day, phase = phase, engineFixed = engine, armorFixed = armor, fuelTank = fuel > 0, fuel = fuel, fuelMax = 100,
             weapons = weapons, savedAtUnixSeconds = at,
         };
 
@@ -60,7 +61,7 @@ namespace AnomalyArena
             open = new[] { Open(0, 9, 0, 100, WeaponForm.Rifle, WeaponForm.ScatterCannon, WeaponForm.Minigun), Open(1, 13, 1, 150, WeaponForm.Knife), new SaveSummary { mode = SaveMode.Open, slot = 2 } };
             return new[]
             {
-                Story(0, 5, SavePhase.Night, 200, true, true, 6, WeaponForm.RocketLauncher, WeaponForm.CryoCannon, WeaponForm.OrbitBlades),
+                Story(0, 5, SavePhase.Night, 200, true, true, 60, WeaponForm.RocketLauncher, WeaponForm.CryoCannon, WeaponForm.OrbitBlades),
                 Story(1, 2, SavePhase.Afternoon, 50, true, false, 0, WeaponForm.Pistol, WeaponForm.Flamethrower),
                 new SaveSummary { mode = SaveMode.Story, slot = 2 },
             };
@@ -91,7 +92,10 @@ namespace AnomalyArena
             Assert.That(ActiveChildren(Continue + "Slot1/Save", "WeaponName"), Is.EqualTo(3), "its three weapons by name");
             Assert.That(Words(Continue + "Slot1/Save/WeaponName1").text, Is.EqualTo(ArenaTerms.WeaponForm(WeaponForm.RocketLauncher)), "in the order held");
             Assert.That(Words(Continue + "Slot1/Save/EngineWords").text, Does.Contain("✓"), "the engine mended");
-            Assert.That(Words(Continue + "Slot2/Save/ArmorWords").text, Does.Contain(ArenaText.Pair("待修复", "Needs repair")), "the second save's armor still broken");
+            Assert.That(Words(Continue + "Slot1/Save/HullWords").text, Does.Contain(ArenaText.Pair("船体", "Hull")).And.Contain("✓"), "the hull mended");
+            Assert.That(Words(Continue + "Slot1/Save/TankWords").text, Does.Contain(ArenaText.Pair("燃料舱", "Fuel tank")).And.Contain("✓"), "the fuel tank fitted");
+            Assert.That(Words(Continue + "Slot2/Save/HullWords").text, Does.Contain(ArenaText.Pair("船体", "Hull")).And.Contain("×"), "the second save's hull still broken");
+            Assert.That(Words(Continue + "Slot2/Save/TankWords").text, Does.Contain(ArenaText.Pair("燃料舱", "Fuel tank")).And.Contain("×"), "and its fuel tank not fitted yet");
             Assert.That(ActiveChildren(Continue + "Slot1/Save/FuelBar", "Cell"), Is.EqualTo(6), "six cells of fuel out of ten");
             Assert.That(Words(Continue + "Slot3/Empty/Title").text, Is.EqualTo(ArenaText.Pair("空存档", "Empty slot")), "the empty slot says so");
             Assert.That(Words("Window/Foot/Go/Label").text, Is.EqualTo(ArenaText.Pair("继续游戏", "Continue")), "the foot continues");
@@ -138,7 +142,7 @@ namespace AnomalyArena
         public async Task Continue_AWonRun_ShowsItsMark_AndIsNotContinued()
         {
             await ReadyScene();
-            var won = Story(0, 7, SavePhase.Night, 300, true, true, 10, WeaponForm.Railgun);
+            var won = Story(0, 7, SavePhase.Night, 300, true, true, 100, WeaponForm.Railgun);
             won.cleared = true;
             Use(new[] { won, new SaveSummary { mode = SaveMode.Story, slot = 1 }, new SaveSummary { mode = SaveMode.Story, slot = 2 } }, EmptySlots(SaveMode.Open));
             V5Title.ReloadForTests();
@@ -230,7 +234,7 @@ namespace AnomalyArena
         public async Task NewGame_AFilledSlot_AsksOnce_ThenIsDeletedBoundAndStarted()
         {
             await ReadyScene();
-            var full = new[] { Story(0, 3, SavePhase.Morning, 30, false, false, 0), Story(1, 6, SavePhase.Night, 60, true, true, 8), Story(2, 1, SavePhase.Afternoon, 10, false, false, 0) };
+            var full = new[] { Story(0, 3, SavePhase.Morning, 30, false, false, 0), Story(1, 6, SavePhase.Night, 60, true, true, 80), Story(2, 1, SavePhase.Afternoon, 10, false, false, 0) };
             Use(full, EmptySlots(SaveMode.Open));
             V5Title.ReloadForTests();
             await Settle();

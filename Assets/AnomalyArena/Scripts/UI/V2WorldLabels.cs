@@ -6,7 +6,9 @@ namespace AnomalyArena
 {
     /// <summary>Fixed scene-authored label pool. Cloaked Shades do not reveal themselves through a health bar. A monster kind the player meets
     /// for the first time is named over its bar for that morning or wave, and its first body on the screen brings a one-sentence notice;
-    /// the notices of this queue (Notice) show one at a time.</summary>
+    /// the notices of this queue (Notice) show one at a time. In the story mode the nodes that can be mined within
+    /// V2Campaign.NodeNameReach of the player carry their names over them ("合金矿", "暗物质", "虚空合金") in their resource's colour, in
+    /// labels made at first use in the enemy names' style.</summary>
     public class V2WorldLabels : MonoBehaviour
     {
         [Serializable]
@@ -106,6 +108,8 @@ namespace AnomalyArena
         static readonly HashSet<EnemyKind> introduced = new();
         static readonly List<QueuedNotice> notices = new();
         static float noticeWait;
+        // The open mode's banner on the black hole's first swallowed monster has been queued in this run (HoleFirstFed).
+        static bool holeFedNoticed;
         static V2WorldLabels active;
         // The run these belong to: a new run reloads the scene and so has a new GameManager (FollowRun).
         static GameManager run;
@@ -137,7 +141,32 @@ namespace AnomalyArena
             notices.Clear();
             noticeWait = 0f;
             LastShown = "";
+            holeFedNoticed = false;
         }
+
+        /// <summary>The open mode's count over a black hole that is being fed: the same words as the story's (已吞噬 3/40, FED 3/40). The
+        /// English Alpha keeps its bare count.</summary>
+        public static string OpenHoleCount(int fed, int goal) =>
+            BuildEdition.IsAlpha ? $"{fed} / {goal}" : ArenaText.Pair($"已吞噬 {fed}/{goal}", $"FED {fed}/{goal}");
+
+        const float HoleFedSeconds = 6f;
+
+        /// <summary>The open mode's black hole swallowed a monster the player brought (WorldMap): the first time in a run, a banner says
+        /// what feeding it does. True when this call queued it; false once it has been queued in this run and on the English Alpha.</summary>
+        public static bool HoleFirstFed()
+        {
+            if (!V5HudKit.On) return false;
+            FollowRun();
+            if (holeFedNoticed) return false;
+            holeFedNoticed = true;
+            Notice(HoleFedNotice, HoleFedSeconds, true);
+            return true;
+        }
+
+        /// <summary>The banner's title and line after the open mode's black hole swallows its first monster.</summary>
+        public static string HoleFedNotice() =>
+            ArenaText.Pair("黑洞吞掉了一只怪物", "The black hole swallowed a monster") + "\n" +
+            ArenaText.Pair("把怪引进去喂满它，会打开虚空试炼。", "Lure more in to fill it and open the Void Trial.");
 
         /// <summary>A body of a kind the collection had never met was set up (Enemy.Configure). On the whole game's pages the kind is named
         /// over its bars for the stretch of play it was met in (the story's morning, the open mode's wave), with the art on as in whitebox,
@@ -364,6 +393,7 @@ namespace AnomalyArena
                 }
                 if (view.root.gameObject.activeSelf != show) view.root.gameObject.SetActive(show);
             }
+            PlaceNodeNames(gm);
             int edges = 0;
             placedEdges.Clear();
             var world = WorldMap.Active;
@@ -382,7 +412,7 @@ namespace AnomalyArena
                     bool canEnter = world.CanEnterPortal(gm.player, hole);
                     string text = campaign ? CampaignHoleText(world, hole, canEnter)
                         : hole.Phase == HolePhase.Portal ? (canEnter ? PortalEnterText() : ArenaText.Text("ui.hole.portal")) + "\n" + ArenaText.Text("ui.hole.remaining", hole.WavesLeft)
-                        : world.CanFeed && hole.Phase == HolePhase.Active ? $"{hole.Feeds} / {hole.feedsToOpen}" : "";
+                        : world.CanFeed && hole.Phase == HolePhase.Active ? OpenHoleCount(hole.Feeds, hole.feedsToOpen) : "";
                     if (label.text != text) label.text = text;
                     // The campaign's gate is smaller than the hole it was: its label sits lower, clear of the base bar at the screen's top
                     // while the player stands on it (the classic run keeps its height).
@@ -623,6 +653,80 @@ namespace AnomalyArena
             int i = (int)kind;
             if (i < 0 || i >= kindNames.Length) return "";
             return kindNames[i] ??= ArenaText.Text("enemy." + kind);
+        }
+
+        // ───── The names over the story's nodes near the player ─────
+
+        const int NodeNameCount = 6;
+        // How far over the top of a node's view its name stands (world units, along the camera's up), and the names' smallest size.
+        const float NodeNameLift = .55f;
+        const int NodeNameSize = 17;
+        UnityEngine.UI.Text[] nodeNames;
+        readonly List<(V2Campaign.NodeKind kind, Vector3 top)> nodesNear = new();
+
+        /// <summary>Each frame: the story's nodes within reach of the player (V2Campaign.NodesNear, nearest first) carry their names over
+        /// them; the labels left over hide.</summary>
+        void PlaceNodeNames(GameManager gm)
+        {
+            int shown = 0;
+            var campaign = V2Campaign.Active;
+            if (campaign && gm.player && gm.player.IsAlive && !(WorldMap.Active && WorldMap.Active.TrialActive))
+            {
+                campaign.NodesNear(gm.player.Position, V2Campaign.NodeNameReach, nodesNear);
+                if (nodesNear.Count > 0 && nodeNames == null) BuildNodeNames();
+                var font = NameFont;
+                foreach (var (kind, top) in nodesNear)
+                {
+                    if (shown >= NodeNameCount) break;
+                    var label = nodeNames[shown];
+                    if (!PlaceWorld(label.rectTransform, top + gm.cam.transform.up * NodeNameLift, gm.cam)) continue;
+                    if (font && label.font != font) label.font = font;
+                    string text = V2Campaign.NodeName(kind);
+                    if (label.text != text) label.text = text;
+                    var colour = NodeNameColour(kind);
+                    if (label.color != colour) label.color = colour;
+                    if (!label.gameObject.activeSelf) label.gameObject.SetActive(true);
+                    shown++;
+                }
+            }
+            if (nodeNames == null) return;
+            for (int i = shown; i < nodeNames.Length; i++)
+                if (nodeNames[i].gameObject.activeSelf) nodeNames[i].gameObject.SetActive(false);
+        }
+
+        /// <summary>A node's name in its resource's colour: alloy's copper, dark matter's violet, void alloy in the void's light violet.</summary>
+        static Color NodeNameColour(V2Campaign.NodeKind kind) => kind switch
+        {
+            V2Campaign.NodeKind.Ore => ResourceColours.Alloy,
+            V2Campaign.NodeKind.Dark => ResourceColours.Dark,
+            _ => V5HudKit.VioletHi
+        };
+
+        /// <summary>The enemy names' font (the game's, which writes Chinese), else the text tables'.</summary>
+        Font NameFont => enemyLabels.Length > 0 && enemyLabels[0].name && enemyLabels[0].name.font ? enemyLabels[0].name.font : ArenaText.Font;
+
+        /// <summary>The name labels, made the first time a node is near: beside the enemy labels, bold, centred, with the names' dark edge.</summary>
+        void BuildNodeNames()
+        {
+            var template = enemyLabels.Length > 0 ? enemyLabels[0].name : null;
+            var parent = enemyLabels.Length > 0 && enemyLabels[0].root ? enemyLabels[0].root.parent : transform;
+            nodeNames = new UnityEngine.UI.Text[NodeNameCount];
+            for (int i = 0; i < nodeNames.Length; i++)
+            {
+                var label = new GameObject("NodeName" + i, typeof(RectTransform), typeof(UnityEngine.UI.Text)).GetComponent<UnityEngine.UI.Text>();
+                label.rectTransform.SetParent(parent, false);
+                label.rectTransform.sizeDelta = new Vector2(240f, 32f);
+                label.font = NameFont ? NameFont : Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+                label.fontSize = Mathf.Max(NodeNameSize, template ? template.fontSize + 2 : NodeNameSize);
+                label.fontStyle = FontStyle.Bold;
+                label.alignment = TextAnchor.MiddleCenter;
+                label.horizontalOverflow = HorizontalWrapMode.Overflow;
+                label.verticalOverflow = VerticalWrapMode.Overflow;
+                label.raycastTarget = false;
+                AddNameShadow(label);
+                label.gameObject.SetActive(false);
+                nodeNames[i] = label;
+            }
         }
 
         /// <summary>A dark edge so the small name stays legible on bright ground.</summary>

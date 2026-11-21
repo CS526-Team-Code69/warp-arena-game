@@ -1,10 +1,10 @@
 namespace AnomalyArena
 {
     /// <summary>
-    /// When the guided tour of the base page runs (V2CampaignUi.BaseTour.cs): once a run, on the arrival at the end of Day 0, as soon as
-    /// the base system has finished saying B01. While it is still talking the page takes no click (V2CampaignUi.HoldBaseForTour), so the
-    /// Control tab's orange row, the hull's next level, cannot spend the alloy the tour builds the Armament Bay with before the tour
-    /// begins. Only on the fifth pass's page (V5HudKit.On).
+    /// When the guided tour of the base runs (V2CampaignUi.BaseTour.cs): once a run, on the arrival at the end of Day 0, as soon as the
+    /// base system has finished talking. While it is still talking the page takes no click (V2CampaignUi.HoldBaseForTour), so a purchase
+    /// cannot spend the alloy and the alien energy the tour's two steps are paid with (a skill and the weapon Mk) before the tour begins.
+    /// Only on the fifth pass's pages (V5HudKit.On).
     /// </summary>
     public sealed partial class V2Campaign
     {

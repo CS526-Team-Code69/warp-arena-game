@@ -3,29 +3,24 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-    /// <summary>The guided base tour on Day 0's arrival, the rules that need no scene: its steps in order, what each says, when each is
-    /// done, which are left out, and where its text plate stands beside the highlighted part; and the same for the guide to a first
-    /// purchase on a later visit (BuyGuide).</summary>
+    /// <summary>The guided base tour on Day 0's arrival, the rules that need no scene: its four steps in order (a skill, the weapon Mk, the
+    /// rocket page, the way out), what each says, when each is done, which are left out, and where its text plate stands beside the
+    /// highlighted part; Day 1's one-step guide to the rocket page; and that what Day 0 gives pays for the tour's two purchases.</summary>
     [TestFixture]
     public class BaseTourTest
     {
-        /// <summary>The page as the arrival opens it: Central Control's tab, both rooms unbuilt and paid for exactly, the study window shut.</summary>
+        /// <summary>The workshop as the arrival opens it: a skill and the weapon Mk both paid for, nothing bought yet, the base page open.</summary>
         static BaseTourState Arrival() => new()
         {
-            tab = CampaignRoom.Control,
-            armamentBuildable = true,
-            energyBuildable = true,
+            skillBuyable = true,
+            mkBuyable = true,
             baseOpen = true
         };
 
         [Test]
-        public void After_WalksTheStepsInTheirOrder()
+        public void After_WalksTheFourStepsInTheirOrder()
         {
-            var expected = new[]
-            {
-                BaseTourStep.Control, BaseTourStep.ArmamentZone, BaseTourStep.BuildArmament, BaseTourStep.OpenStudy, BaseTourStep.CloseStudy,
-                BaseTourStep.EnergyZone, BaseTourStep.BuildEnergy, BaseTourStep.ShipZone, BaseTourStep.Leave, BaseTourStep.Done
-            };
+            var expected = new[] { BaseTourStep.Skill, BaseTourStep.WeaponMk, BaseTourStep.Rocket, BaseTourStep.Leave, BaseTourStep.Done };
             var step = BaseTourStep.None;
             foreach (var next in expected)
             {
@@ -38,7 +33,7 @@ namespace AnomalyArena
         [Test]
         public void Words_EveryStepShownSaysSomethingInBothLanguages_AndNothingOutsideTheTour()
         {
-            for (var step = BaseTourStep.Control; step < BaseTourStep.Done; step++)
+            for (var step = BaseTourStep.Skill; step < BaseTourStep.Done; step++)
             {
                 var (chinese, english) = BaseTour.Words(step);
                 Assert.That(chinese, Is.Not.Empty, step.ToString());
@@ -48,95 +43,64 @@ namespace AnomalyArena
             Assert.That(BaseTour.Words(BaseTourStep.Done).english, Is.Empty);
         }
 
-        [Test]
-        public void FirstToRun_OnArrival_IsCentralControl()
+        [TestCase(BaseTourStep.Skill, "先学一个技能。明天上午的第一仗就能用上。")]
+        [TestCase(BaseTourStep.WeaponMk, "合金用来升级武器型号，所有异常武器一起变强。")]
+        [TestCase(BaseTourStep.Rocket, "回家要做的事都在这里：修好三个部件，加满燃料，就能点火。")]
+        [TestCase(BaseTourStep.Leave, "准备好了就出发。夜里记得放矿灯。")]
+        public void Words_EachStep_IsItsOneSentence(BaseTourStep step, string expected)
         {
-            Assert.That(BaseTour.FirstToRun(BaseTourStep.None, Arrival()), Is.EqualTo(BaseTourStep.Control));
+            var (chinese, _) = BaseTour.Words(step);
+
+            Assert.That(chinese, Is.EqualTo(expected));
         }
 
         [Test]
-        public void Passed_CentralControl_TakesTheClickOnItsZone_WithItsTabStillShown()
+        public void FirstToRun_OnArrival_IsTheSkill()
         {
-            var s = Arrival();
-            Assert.That(BaseTour.Passed(BaseTourStep.Control, s), Is.False, "its tab shows from the start: only the click passes it");
-            s.controlClicked = true;
-            Assert.That(BaseTour.Passed(BaseTourStep.Control, s), Is.True);
-            s.tab = CampaignRoom.Armament;
-            Assert.That(BaseTour.Passed(BaseTourStep.Control, s), Is.False);
+            Assert.That(BaseTour.FirstToRun(BaseTourStep.None, Arrival()), Is.EqualTo(BaseTourStep.Skill));
         }
 
         [Test]
-        public void Passed_EachLaterStep_OnceWhatItAsksForHasHappened()
+        public void Passed_EachStep_OnceWhatItAsksForHasHappened()
         {
             var s = Arrival();
-            s.tab = CampaignRoom.Armament;
-            Assert.That(BaseTour.Passed(BaseTourStep.ArmamentZone, s), Is.True, "the Armament Bay's tab");
-            Assert.That(BaseTour.Passed(BaseTourStep.BuildArmament, s), Is.False);
-            s.armamentLevel = 1;
-            Assert.That(BaseTour.Passed(BaseTourStep.BuildArmament, s), Is.True, "the bay built");
-            Assert.That(BaseTour.Passed(BaseTourStep.OpenStudy, s), Is.False);
-            s.studyOpen = true;
-            Assert.That(BaseTour.Passed(BaseTourStep.OpenStudy, s), Is.True, "the study window open");
-            Assert.That(BaseTour.Passed(BaseTourStep.CloseStudy, s), Is.False);
-            s.studyOpen = false;
-            Assert.That(BaseTour.Passed(BaseTourStep.CloseStudy, s), Is.True, "the study window shut again");
-            s.tab = CampaignRoom.Energy;
-            Assert.That(BaseTour.Passed(BaseTourStep.EnergyZone, s), Is.True, "the Energy Lab's tab");
-            Assert.That(BaseTour.Passed(BaseTourStep.BuildEnergy, s), Is.False);
-            s.energyLevel = 1;
-            Assert.That(BaseTour.Passed(BaseTourStep.BuildEnergy, s), Is.True, "the lab built");
-            Assert.That(BaseTour.Passed(BaseTourStep.ShipZone, s), Is.False);
-            s.tab = CampaignRoom.Ship;
-            Assert.That(BaseTour.Passed(BaseTourStep.ShipZone, s), Is.True, "the launch bay's tab");
+            Assert.That(BaseTour.Passed(BaseTourStep.Skill, s), Is.False);
+            s.skillLearned = true;
+            Assert.That(BaseTour.Passed(BaseTourStep.Skill, s), Is.True, "a skill learned");
+            Assert.That(BaseTour.Passed(BaseTourStep.WeaponMk, s), Is.False);
+            s.mkRaised = true;
+            Assert.That(BaseTour.Passed(BaseTourStep.WeaponMk, s), Is.True, "the weapon Mk raised");
+            Assert.That(BaseTour.Passed(BaseTourStep.Rocket, s), Is.False);
+            s.rocketShown = true;
+            Assert.That(BaseTour.Passed(BaseTourStep.Rocket, s), Is.True, "the rocket page shown");
             Assert.That(BaseTour.Passed(BaseTourStep.Leave, s), Is.False);
             s.baseOpen = false;
-            Assert.That(BaseTour.Passed(BaseTourStep.Leave, s), Is.True, "the base page left");
+            Assert.That(BaseTour.Passed(BaseTourStep.Leave, s), Is.True, "the base left");
         }
 
         [Test]
-        public void FirstToRun_AnArmamentBayThatCannotBeBuilt_LeavesOutItsBuildAndItsStudy()
+        public void FirstToRun_ASkillThatCannotBeLearned_GoesOnToTheWeaponMk()
         {
-            // The alloy went on the hull first: the Armament Bay's build and both of its study steps are left out.
             var s = Arrival();
-            s.tab = CampaignRoom.Armament;
-            s.armamentBuildable = false;
-            Assert.That(BaseTour.FirstToRun(BaseTourStep.BuildArmament, s), Is.EqualTo(BaseTourStep.EnergyZone));
+            s.skillBuyable = false;
+            Assert.That(BaseTour.FirstToRun(BaseTourStep.Skill, s), Is.EqualTo(BaseTourStep.WeaponMk));
         }
 
         [Test]
-        public void FirstToRun_AnArmamentBayBuiltAlready_IsNotBuiltAgain_ButItsStudyIsShown()
+        public void FirstToRun_AWeaponMkThatCannotBeRaised_GoesOnToTheRocketPage()
         {
             var s = Arrival();
-            s.tab = CampaignRoom.Armament;
-            s.armamentLevel = 1;
-            s.armamentBuildable = false;
-            Assert.That(BaseTour.FirstToRun(BaseTourStep.BuildArmament, s), Is.EqualTo(BaseTourStep.OpenStudy));
+            s.skillLearned = true;
+            s.mkBuyable = false;
+            Assert.That(BaseTour.FirstToRun(BaseTour.After(BaseTourStep.Skill), s), Is.EqualTo(BaseTourStep.Rocket));
         }
 
         [Test]
-        public void FirstToRun_TheStudyWindowShut_LeavesOutItsClosing()
+        public void FirstToRun_TheRocketPageShownAlready_GoesOnToTheWayOut()
         {
             var s = Arrival();
-            s.tab = CampaignRoom.Armament;
-            s.armamentLevel = 1;
-            Assert.That(BaseTour.FirstToRun(BaseTourStep.CloseStudy, s), Is.EqualTo(BaseTourStep.EnergyZone));
-        }
-
-        [Test]
-        public void FirstToRun_AnEnergyLabThatCannotBeBuilt_GoesOnToTheLaunchBay()
-        {
-            var s = Arrival();
-            s.tab = CampaignRoom.Energy;
-            s.energyBuildable = false;
-            Assert.That(BaseTour.FirstToRun(BaseTourStep.BuildEnergy, s), Is.EqualTo(BaseTourStep.ShipZone));
-        }
-
-        [Test]
-        public void FirstToRun_AZoneWhoseTabShowsAlready_IsNotAskedFor()
-        {
-            var s = Arrival();
-            s.tab = CampaignRoom.Ship;
-            Assert.That(BaseTour.FirstToRun(BaseTourStep.ShipZone, s), Is.EqualTo(BaseTourStep.Leave));
+            s.rocketShown = true;
+            Assert.That(BaseTour.FirstToRun(BaseTourStep.Rocket, s), Is.EqualTo(BaseTourStep.Leave));
         }
 
         [Test]
@@ -146,6 +110,25 @@ namespace AnomalyArena
             s.baseOpen = false;
             Assert.That(BaseTour.FirstToRun(BaseTourStep.Leave, s), Is.EqualTo(BaseTourStep.Done));
             Assert.That(BaseTour.FirstToRun(BaseTourStep.Done, s), Is.EqualTo(BaseTourStep.Done));
+        }
+
+        // ───── What Day 0 gives pays for the tour ─────
+
+        [Test]
+        public void DayZero_GivesWhatTheTourSkillAndWeaponMkCost()
+        {
+#if UNITY_EDITOR
+            var rules = UnityEditor.AssetDatabase.LoadAssetAtPath<CampaignRules>("Assets/AnomalyArena/Data/Campaign/V2CampaignRules.asset");
+            Assert.That(rules, Is.Not.Null, "the story's rules");
+            var mk = rules.MkPrice(1);
+            Assert.That(mk.HasValue, Is.True, "Mk 1 can be raised");
+            Assert.That((rules.RarityEnergy(CardRarity.Common), mk.Value.alloy), Is.EqualTo((5, 5)), "a first skill costs 5 alien energy and Mk 2 five alloy");
+            Assert.That(rules.dayZeroEnergy, Is.GreaterThanOrEqualTo(rules.RarityEnergy(CardRarity.Common)), "Day 0's alien energy pays for a skill");
+            Assert.That(rules.dayZeroAlloy, Is.GreaterThanOrEqualTo(mk.Value.alloy), "Day 0's alloy pays for Mk 2");
+            Assert.That(rules.OpenDay(V2Campaign.StudyFeature.Skills), Is.Zero, "the skills are open on Day 0");
+#else
+            Assert.Ignore("reads the rules asset in the editor");
+#endif
         }
 
         // The plate on the 1600 x 900 reference screen: 18 from the ring, 16 inside the screen's edges, 300 to 560 wide.
@@ -177,7 +160,7 @@ namespace AnomalyArena
         [Test]
         public void Plate_BesideAButtonInACorner_IsKeptInsideTheScreen()
         {
-            // The study window's close button at the top right: the plate stands left of it and is pushed down inside the top edge.
+            // The rocket page's button at the top right: the plate stands left of it and is pushed down inside the top edge.
             var hole = Rect.MinMaxRect(1410f, 790f, 1595f, 895f);
             var side = BaseTour.PlateSide(Area, hole, MinWidth, Gap, Margin);
             var place = BaseTour.PlatePlace(side, Area, hole, new Vector2(560f, 220f), Gap, Margin);
@@ -208,95 +191,49 @@ namespace AnomalyArena
             Assert.That(BaseTour.PlateWidth(TourPlateSide.Left, Area, Rect.MinMaxRect(250f, 0f, 260f, 10f), MinWidth, MaxWidth, Gap, Margin), Is.EqualTo(MinWidth));
         }
 
-        // ───── The guide to a first purchase on a later visit ─────
+        // ───── Day 1's guide to the rocket page ─────
 
-        /// <summary>A visit's page as it opens: Central Control's tab, the study window shut, nothing bought yet.</summary>
-        static BuyGuideState Visit(BuyGuideAim aim, CampaignRoom room) => new()
+        [TestCase(0, BuyGuideAim.None, TestName = "BuyGuideAim_Day0_IsNothing")]
+        [TestCase(1, BuyGuideAim.Lamp, TestName = "BuyGuideAim_Day1_IsTheRocketPage")]
+        [TestCase(2, BuyGuideAim.None, TestName = "BuyGuideAim_Day2_IsNothing")]
+        public void BuyGuideAim_IsTheRocketPageOnDay1Only(int day, BuyGuideAim expected)
         {
-            aim = aim,
-            room = room,
-            tab = CampaignRoom.Control,
-            baseOpen = true
-        };
-
-        [TestCase(0, 0, 3, true, true, BuyGuideAim.None, TestName = "BuyGuideAim_Day0_IsNothing")]
-        [TestCase(1, 0, 3, true, true, BuyGuideAim.Lamp, TestName = "BuyGuideAim_FewerLampsThanTheDaysAndOneBuyable_IsALamp")]
-        [TestCase(1, 3, 3, true, true, BuyGuideAim.Study, TestName = "BuyGuideAim_EnoughLamps_IsAStudyItem")]
-        [TestCase(1, 0, 3, false, true, BuyGuideAim.Study, TestName = "BuyGuideAim_NoLampBuyable_IsAStudyItem")]
-        [TestCase(2, 0, 3, false, false, BuyGuideAim.None, TestName = "BuyGuideAim_NothingBuyable_IsNothing")]
-        public void BuyGuideAim_FollowsTheLampsAndTheStock(int day, int lampStock, int lampsWanted, bool lampBuyable, bool studyBuyable, BuyGuideAim expected)
-        {
-            Assert.That(BuyGuide.Aim(day, lampStock, lampsWanted, lampBuyable, studyBuyable), Is.EqualTo(expected));
+            Assert.That(BuyGuide.Aim(day, 0, 3, true, true), Is.EqualTo(expected));
+            Assert.That(BuyGuide.Aim(day, 3, 3, false, false), Is.EqualTo(expected), "whatever the lamps and the stock");
         }
 
         [Test]
-        public void BuyGuide_ToALamp_ShowsTheLaunchBayThenItsLampRow_AndEndsOnThePurchase()
+        public void BuyGuide_OnTheWorkshop_PointsAtTheRocketButton_AndEndsOnTheRocketPage()
         {
-            var s = Visit(BuyGuideAim.Lamp, CampaignRoom.Ship);
-            Assert.That(BuyGuide.FirstToRun(BuyGuideStep.None, s), Is.EqualTo(BuyGuideStep.Zone));
-            s.tab = CampaignRoom.Ship;
-            Assert.That(BuyGuide.FirstToRun(BuyGuide.After(BuyGuideStep.Zone), s), Is.EqualTo(BuyGuideStep.Lamp));
-            s.bought = true;
-            Assert.That(BuyGuide.Passed(BuyGuideStep.Lamp, s), Is.True, "the lamp made");
-            Assert.That(BuyGuide.FirstToRun(BuyGuide.After(BuyGuideStep.Lamp), s), Is.EqualTo(BuyGuideStep.Done), "the study's steps are left out");
+            var s = new BuyGuideState { baseOpen = true };
+            Assert.That(BuyGuide.FirstToRun(BuyGuideStep.None, s), Is.EqualTo(BuyGuideStep.Rocket));
+            s.rocketShown = true;
+            Assert.That(BuyGuide.Passed(BuyGuideStep.Rocket, s), Is.True, "the rocket page opened");
+            Assert.That(BuyGuide.FirstToRun(BuyGuide.After(BuyGuideStep.Rocket), s), Is.EqualTo(BuyGuideStep.Done));
         }
 
         [Test]
-        public void BuyGuide_ToAStudyItem_ShowsTheRoomThenItsStudyButtonThenTheBuyButton()
+        public void BuyGuide_TheRocketPageShownAlready_NeedsNoGuide()
         {
-            var s = Visit(BuyGuideAim.Study, CampaignRoom.Energy);
-            Assert.That(BuyGuide.FirstToRun(BuyGuideStep.None, s), Is.EqualTo(BuyGuideStep.Zone));
-            s.tab = CampaignRoom.Energy;
-            Assert.That(BuyGuide.FirstToRun(BuyGuide.After(BuyGuideStep.Zone), s), Is.EqualTo(BuyGuideStep.OpenStudy), "the lamp row is left out");
-            s.studyOpen = true;
-            Assert.That(BuyGuide.FirstToRun(BuyGuide.After(BuyGuideStep.OpenStudy), s), Is.EqualTo(BuyGuideStep.Buy));
-            s.bought = true;
-            Assert.That(BuyGuide.FirstToRun(BuyGuide.After(BuyGuideStep.Buy), s), Is.EqualTo(BuyGuideStep.Done));
-        }
-
-        [Test]
-        public void BuyGuide_TheRoomsTabShownAlready_IsNotAskedFor()
-        {
-            var s = Visit(BuyGuideAim.Study, CampaignRoom.Armament);
-            s.tab = CampaignRoom.Armament;
-            Assert.That(BuyGuide.FirstToRun(BuyGuideStep.None, s), Is.EqualTo(BuyGuideStep.OpenStudy));
+            var s = new BuyGuideState { baseOpen = true, rocketShown = true };
+            Assert.That(BuyGuide.FirstToRun(BuyGuideStep.None, s), Is.EqualTo(BuyGuideStep.Done));
         }
 
         [Test]
         public void BuyGuide_TheBasePageClosed_EndsIt()
         {
-            var s = Visit(BuyGuideAim.Lamp, CampaignRoom.Ship);
-            s.baseOpen = false;
-            Assert.That(BuyGuide.FirstToRun(BuyGuideStep.Lamp, s), Is.EqualTo(BuyGuideStep.Done));
+            var s = new BuyGuideState { baseOpen = false };
+            Assert.That(BuyGuide.FirstToRun(BuyGuideStep.Rocket, s), Is.EqualTo(BuyGuideStep.Done));
         }
 
         [Test]
-        public void BuyGuideWords_EveryStepItCanShowSaysSomethingInBothLanguages_AndNothingOutsideIt()
+        public void BuyGuideWords_ItsStepIsItsOneSentence_AndNothingOutsideIt()
         {
-            var shown = new[]
-            {
-                (BuyGuideStep.Zone, BuyGuideAim.Lamp, CampaignRoom.Ship), (BuyGuideStep.Lamp, BuyGuideAim.Lamp, CampaignRoom.Ship),
-                (BuyGuideStep.Zone, BuyGuideAim.Study, CampaignRoom.Armament), (BuyGuideStep.Zone, BuyGuideAim.Study, CampaignRoom.Energy),
-                (BuyGuideStep.OpenStudy, BuyGuideAim.Study, CampaignRoom.Armament), (BuyGuideStep.OpenStudy, BuyGuideAim.Study, CampaignRoom.Energy),
-                (BuyGuideStep.Buy, BuyGuideAim.Study, CampaignRoom.Armament)
-            };
-            foreach (var (step, aim, room) in shown)
-            {
-                var (chinese, english) = BuyGuide.Words(step, aim, room);
-                Assert.That(chinese, Is.Not.Empty, $"{step} {aim} {room}");
-                Assert.That(english, Is.Not.Empty, $"{step} {aim} {room}");
-            }
-            Assert.That(BuyGuide.Words(BuyGuideStep.None, BuyGuideAim.Lamp, CampaignRoom.Ship).chinese, Is.Empty);
-            Assert.That(BuyGuide.Words(BuyGuideStep.Done, BuyGuideAim.Study, CampaignRoom.Armament).english, Is.Empty);
-        }
-
-        [Test]
-        public void BuyGuideWords_TheEnergyLabsItemsAreBoughtWithAlienEnergy_TheArmamentBaysWithAlloy()
-        {
-            Assert.That(BuyGuide.Words(BuyGuideStep.OpenStudy, BuyGuideAim.Study, CampaignRoom.Energy).chinese, Does.Contain("异星能量"));
-            Assert.That(BuyGuide.Words(BuyGuideStep.OpenStudy, BuyGuideAim.Study, CampaignRoom.Energy).english, Does.Contain("alien energy"));
-            Assert.That(BuyGuide.Words(BuyGuideStep.OpenStudy, BuyGuideAim.Study, CampaignRoom.Armament).chinese, Does.Contain("合金"));
-            Assert.That(BuyGuide.Words(BuyGuideStep.OpenStudy, BuyGuideAim.Study, CampaignRoom.Armament).english, Does.Contain("alloy"));
+            var (chinese, english) = BuyGuide.Words(BuyGuideStep.Rocket);
+            Assert.That(chinese, Is.EqualTo("夜里要用的矿灯在火箭这边造。"));
+            Assert.That(english, Is.Not.Empty);
+            Assert.That(BuyGuide.Words(BuyGuideStep.None).chinese, Is.Empty);
+            Assert.That(BuyGuide.Words(BuyGuideStep.Done).english, Is.Empty);
         }
     }
 }

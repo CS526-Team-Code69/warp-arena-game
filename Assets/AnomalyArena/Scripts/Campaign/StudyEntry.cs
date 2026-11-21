@@ -4,16 +4,17 @@ using UnityEngine;
 
 namespace AnomalyArena
 {
-    /// <summary>The rooms the base's study window groups its entries by. Void shows once the hidden boss is beaten.</summary>
+    /// <summary>The workshop's columns its entries belong to: Armament the weapon column (alloy), Energy the energy research (alien
+    /// energy), Void the void tabs, which show once the hidden boss is beaten.</summary>
     public enum StudyRoom { Armament, Energy, Void }
 
     /// <summary>What a tile of the study window can be: not unlocked yet (drawn as a question mark), buyable, too dear right now, or owned / at its top.</summary>
     public enum StudyState { Locked, Available, Unaffordable, Owned }
 
     /// <summary>
-    /// One tile of the base's study window (2026-11-10): something a room lets the player learn or raise, with its rarity colour and
-    /// its numbers before and after. The parts of V2Campaign that own a kind of purchase fill these; the window only draws them and
-    /// calls buy. All texts arrive localized (ArenaText.Pair).
+    /// One item of the workshop (V2Campaign.BuildStudy): something the player can learn or raise, with its rarity colour and its
+    /// numbers before and after. The parts of V2Campaign that own a kind of purchase fill these; a page only draws them and calls buy.
+    /// All texts arrive localized (ArenaText.Pair).
     /// </summary>
     public sealed class StudyEntry
     {
@@ -27,6 +28,12 @@ namespace AnomalyArena
         public string title;
         /// <summary>The number as it is and as it will be after buying; both empty when the entry has no number to show.</summary>
         public string now, after;
+        /// <summary>One short line for a card's face, what buying it changes where now and after do not say it: the weapon Mk's damage
+        /// on every anomaly weapon, armor's max HP, the rarities a research level opens. Empty for the other items.</summary>
+        public string effect = "";
+        /// <summary>For an item about a weapon in hand (Tame, Twist, a hand weapon's infusion): its hand, 0 or 1 (RunWeapons.Hand); -1
+        /// for every other item.</summary>
+        public int hand = -1;
         /// <summary>The full description for the detail pane.</summary>
         public string detail;
         /// <summary>The price with its currency, ready to show.</summary>
@@ -54,8 +61,10 @@ namespace AnomalyArena
         /// hidden boss is beaten. The void currencies' part implements it.</summary>
         partial void AfternoonVoidOre();
 
-        /// <summary>Room effects one part sets and another reads (2026-11-10), so the two can be written apart. The rooms' part sets them
-        /// when a ship level is bought; the ore and the night's lamps read them. 1 means no effect.</summary>
+        /// <summary>Effects one part sets and another reads, so the two can be written apart. V2Campaign.Rooms.cs (ApplyShipEffects) sets
+        /// them; the afternoon's ore and the night's lamps read them. afternoonOreScale multiplies the afternoon ore's alloy: the rules'
+        /// alloyIncomeScale, times 1 + shipOreBonus from the day after the engine is repaired. lampRadiusScale widens the lamps' light
+        /// once the hull is repaired. 1 means no effect.</summary>
         internal float afternoonOreScale = 1f, lampRadiusScale = 1f;
     }
 }

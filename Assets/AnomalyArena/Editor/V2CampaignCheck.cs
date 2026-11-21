@@ -7,8 +7,9 @@
 // then takes the base door's "into the night"; a weapon bought at the base shows its weapon card, which the check closes before it shops on.
 // Since 2026-11-10 Day 0 is the forced spotlight tutorial (the steps whose input the check cannot give are passed by the tutorial's own
 // debug call; ore, crates, the fight and the pickups are done as a player would), every afternoon has a weapon crate, the black hole is
-// a timed damage check (failed once on purpose, passed the day after, then the void trial and its gift), and the base's purchases go
-// through the study window's own entries.
+// a timed damage check (failed once on purpose, passed the day after, then the void trial and its gift). The base's purchases go
+// through the two pages' interface (V2Campaign.Redesign.cs): the workshop's entries (BuildStudy), the fortification, the ship's three
+// parts, the fuel and the lamps; the base tour and the captures of the base press the pages' own buttons (V2CampaignUi.DebugPressBase).
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -25,12 +26,12 @@ public static class V2CampaignCheck
     static string logPath;
     static int step, day, diedAtNight = -1;
     // One night's base visit may shop in several turns (a bought weapon's card closes in between): what it bought so far, and on which day.
-    static int shopDay = -1, grantDay = -1, boughtResearch, boughtNewWeapons, boughtUpgrades;
+    static int shopDay = -1, grantDay = -1, boughtUpgrades;
     static float wait, startedAt, stepSince, lastAct, nightSince;
-    static bool ended, shotTaken, raidShot, shipTabOpened, sideBroken, darkNodeShot, nightDeathDone, deathWalletCheck, readyConfirm, readyNoted, holeNoted;
+    static bool ended, shotTaken, raidShot, rocketShown, sideBroken, darkNodeShot, nightDeathDone, deathWalletCheck, readyConfirm, readyNoted, holeNoted;
     static readonly Dictionary<Enemy, float> raiderSince = new();
-    // Since 2026-11-10: the black hole's check (the day it is failed on purpose; passed on a later day), the study window's captures
-    // and what one visit bought through its entries.
+    // The black hole's check (the day it is failed on purpose; passed on a later day), the captures of the two pages and what one visit
+    // bought through the workshop's entries.
     static int holeFailDay = -1, studyStage, voidStudyStage;
     static bool holeFailNoted, holePassNoted, giftNoted, holeFeedNoted;
     static float holeAngle, holdSince;
@@ -46,7 +47,7 @@ public static class V2CampaignCheck
     // Measure (since 2026-11-10): the waves keep their real length and a reference player kills (the day's reference DPS, the monster
     // nearest the base first), so each day's line tells how the day's numbers came out in play.
     static bool measure;
-    static float damageBank, lastGameTime, dayStartedAt, baseAtDawn, shieldAtDawn;
+    static float damageBank, lastGameTime, dayStartedAt, baseAtDawn;
     static int energyAtDawn, elitesKilled;
     static readonly Dictionary<EnemyKind, int> killedByKind = new();
     static readonly Dictionary<EnemyKind, float> hpByKind = new();
@@ -67,8 +68,8 @@ public static class V2CampaignCheck
         logPath = Path.Combine(Folder, "driver-log.txt");
         File.WriteAllText(logPath, "");
         step = 0; day = 0; wait = 0f; ended = false; shots.Clear(); raiderSince.Clear(); raidShot = false; lastStage = CampaignStage.Off; campaign = null;
-        shipTabOpened = sideBroken = darkNodeShot = nightDeathDone = deathWalletCheck = holeNoted = false; diedAtNight = -1;
-        shopDay = grantDay = -1; boughtResearch = boughtNewWeapons = boughtUpgrades = 0;
+        rocketShown = sideBroken = darkNodeShot = nightDeathDone = deathWalletCheck = holeNoted = false; diedAtNight = -1;
+        shopDay = grantDay = -1; boughtUpgrades = 0;
         holeFailDay = -1; studyStage = voidStudyStage = 0; holeFailNoted = holePassNoted = giftNoted = holeFeedNoted = false; holeAngle = 0f; holdKey = null; studyBought.Clear();
         tourShot = 0;
         holeMissDay = -1;
@@ -102,11 +103,11 @@ public static class V2CampaignCheck
     // The day a black hole was not met although the check stood where it shows (noted once that day, with what the cutscene asks).
     static int holeMissDay = -1;
 
-    /// <summary>The base tour's first steps, each shot once its box has been up a while, then done as a player would: Central
-    /// Control's zone clicked (its tab shows already, so only the click passes the step), the Armament Bay's tab shown, the bay built.
-    /// The capture is written at the end of the frame, so each step's action waits for the next frame after its shot. True once done,
-    /// or when a step does not come in time (noted). The times count from the start of the arrival story, whose voiced lines run about
-    /// 17 s before the base opens; the tour then waits for the base's welcome line (about 9 s) before its first step.</summary>
+    /// <summary>The base tour's four steps, each shot once its box has been up a while, then done as a player would through the page's
+    /// own buttons: a skill learned from the first skill card the stock pays for, the weapon Mk raised, the rocket page opened from its
+    /// button; the last step (the way out) is shot and left to the check's own way out. The capture is written at the end of the frame,
+    /// so each step's action waits for the next frame after its shot. True once done, or when a step does not come in time (noted). The
+    /// times count from the start of the arrival story, whose voiced lines run about 17 s before the base opens.</summary>
     static bool TourShots()
     {
         var ui = campaign.Ui;
@@ -114,35 +115,35 @@ public static class V2CampaignCheck
         switch (tourShot)
         {
             case 0:
-                if (now == BaseTourStep.Control && Held("tour-control", 2f)) { Shot("06t1-tour-control"); tourShot = 1; }
+                if (now == BaseTourStep.Skill && Held("tour-skill", 2f)) { Shot("06t1-tour-skill"); tourShot = 1; }
                 else if (InStep > 50f) { Note($"PROBLEM: the base tour's first step never showed (step {now})"); tourShot = 9; }
                 return false;
             case 1:
-                var control = ui.transform.Find("BasePanel/Page5/ZoneControl");
-                var button = control ? control.GetComponentInChildren<UnityEngine.UI.Button>(true) : null;
-                if (button) button.onClick.Invoke();
-                else Note("PROBLEM: no button on BasePanel/Page5/ZoneControl for the tour's first step");
+                string skill = ui.DebugBaseParts().Find(id => id.StartsWith("c.card.skill.", StringComparison.Ordinal));
+                if (skill != null && ui.DebugPressBase(skill)) Note($"base tour: learned {skill.Substring("c.card.skill.".Length)} -> wallet {Wallet}");
+                else Note($"PROBLEM: no skill to learn on the workshop for the tour's first step (parts: {string.Join(", ", ui.DebugBaseParts())})");
                 tourShot = 2;
                 return false;
             case 2:
-                if (now == BaseTourStep.ArmamentZone && Held("tour-armament", 2f)) { Shot("06t2-tour-armament"); tourShot = 3; }
-                else if (InStep > 65f) { Note($"PROBLEM: the tour's Armament Bay step never showed (step {now})"); tourShot = 9; }
+                if (now == BaseTourStep.WeaponMk && Held("tour-mk", 2f)) { Shot("06t2-tour-mk"); tourShot = 3; }
+                else if (InStep > 65f) { Note($"PROBLEM: the tour's weapon Mk step never showed (step {now})"); tourShot = 9; }
                 return false;
             case 3:
-                ui.ShowTab(CampaignRoom.Armament);
+                if (ui.DebugPressBase("c.mk")) Note($"base tour: weapon Mk {campaign.TeamMk} -> wallet {Wallet}");
+                else Note("PROBLEM: the weapon Mk's button did not press for the tour's second step");
                 tourShot = 4;
                 return false;
             case 4:
-                if (now == BaseTourStep.BuildArmament && Held("tour-build", 2f)) { Shot("06t3-tour-build"); tourShot = 5; }
-                else if (InStep > 80f) { Note($"PROBLEM: the tour's build step never showed (step {now})"); tourShot = 9; }
+                if (now == BaseTourStep.Rocket && Held("tour-rocket", 2f)) { Shot("06t3-tour-rocket"); tourShot = 5; }
+                else if (InStep > 80f) { Note($"PROBLEM: the tour's rocket step never showed (step {now})"); tourShot = 9; }
                 return false;
             case 5:
-                campaign.TryUpgradeRoom(CampaignRoom.Armament);
+                if (!ui.DebugPressBase("h.switch")) Note("PROBLEM: the button to the rocket page did not press for the tour's third step");
                 tourShot = 6;
                 return false;
             case 6:
-                if (now == BaseTourStep.OpenStudy && Held("tour-study", 2f)) { Shot("06t4-tour-study"); Note("base tour: four steps shot"); tourShot = 9; }
-                else if (InStep > 95f) { Note($"PROBLEM: the tour's study step never showed (step {now})"); tourShot = 9; }
+                if (now == BaseTourStep.Leave && Held("tour-leave", 2f)) { Shot("06t4-tour-leave"); Note($"base tour: four steps shot, page {ui.BaseScreenShown}"); tourShot = 9; }
+                else if (InStep > 95f) { Note($"PROBLEM: the tour's last step never showed (step {now})"); tourShot = 9; }
                 return false;
             default:
                 return true;
@@ -194,7 +195,7 @@ public static class V2CampaignCheck
 
     static void Watch(GameManager gm)
     {
-        if (campaign.Stage != lastStage) { Note($"stage {lastStage} -> {campaign.Stage} (day {campaign.Day}, phase {gm.RunPhase}, wallet {Wallet}, base {campaign.BaseHp:0}/{campaign.BaseMaxHp:0}, shield {campaign.BaseShield:0})"); lastStage = campaign.Stage; }
+        if (campaign.Stage != lastStage) { Note($"stage {lastStage} -> {campaign.Stage} (day {campaign.Day}, phase {gm.RunPhase}, wallet {Wallet}, base {campaign.BaseHp:0}/{campaign.BaseMaxHp:0}, {campaign.HomeStepsLeft} steps from home)"); lastStage = campaign.Stage; }
         if (gm.RunPhase != lastPhase) { lastPhase = gm.RunPhase; }
         // Since 2026-11-06 the ore trail leads to the black hole: note the day it is first met (its cutscene, then the side quest's line),
         // with its shards on the ground and its hum (above 0 within rules.holeHumReach of the hole, louder the nearer).
@@ -223,26 +224,22 @@ public static class V2CampaignCheck
         }
     }
 
-    /// <summary>Base visit purchases in the ledger's order; repairs first. True when a bought weapon's card opened over the base panel
-    /// (since 2026-11-06): the caller closes it and calls again, and the visit shops on where it stopped.</summary>
+    /// <summary>A base visit's purchases through the two pages' interface: the ship's parts first (they take the check home on the last
+    /// day), the fuel, the base's fortification, then what the workshop sells through its own entries (BuildStudy; the final overload is
+    /// one of its tabs from its day), at most twice the same entry and twelve a visit; lamps last. True when a weapon's card opened over the
+    /// base: the caller closes it and calls again, and the visit shops on where it stopped.</summary>
     static bool Shop()
     {
         var c = campaign;
-        if (shopDay != c.Day) { shopDay = c.Day; boughtResearch = boughtNewWeapons = boughtUpgrades = 0; studyBought.Clear(); }
-        foreach (CampaignRoom room in Enum.GetValues(typeof(CampaignRoom))) if (c.Room(room).damaged && c.TryRepairRoom(room)) Note($"repaired {room}");
+        if (shopDay != c.Day) { shopDay = c.Day; boughtUpgrades = 0; studyBought.Clear(); }
         bool any = true; int guard = 0;
         while (any && guard++ < 40)
         {
             any = false;
-            foreach (var room in new[] { CampaignRoom.Armament, CampaignRoom.Energy, CampaignRoom.Ship })
-                if (c.NextLevelCost(room) != null && c.TryUpgradeRoom(room)) { Note($"bought {room} level {c.Room(room).level} -> wallet {Wallet}"); any = true; }
-            if (c.TryRepairEngine()) { Note("repaired the engine"); any = true; }
-            if (c.TryRepairArmor()) { Note("repaired the armor"); any = true; }
-            if (c.TrySynthesiseFuel()) { Note($"fuel {c.Fuel}/{c.FuelUnits}"); any = true; }
-            if (c.TryUpgradeDurability()) { Note($"durability {c.Durability} (base max {c.BaseMaxHp:0})"); any = true; }
-            if (c.TryUpgradeShield()) { Note($"shield level {c.ShieldLevel} (cap {c.BaseMaxShield:0})"); any = true; }
-            // Since 2026-11-10 the Armament Bay, the Energy Lab and (once the Nash Prophet is beaten) the Void room sell item by item in the
-            // study window: the check buys what the window offers through its own entries, at most twice the same entry a visit.
+            foreach (var part in c.ShipParts())
+                if (!part.done && part.affordable && c.TryBuyShipPart(part.kind)) { Note($"ship part {part.kind} -> wallet {Wallet}, {c.HomeStepsLeft} steps from home"); any = true; }
+            if (c.CanAddFuel && c.TryAddFuel()) { Note($"fuel {c.Fuel}/{c.FuelTop} -> wallet {Wallet}"); any = true; }
+            if (c.TryFortify()) { Note($"fortified to level {c.FortifyLevel} (base max {c.BaseMaxHp:0}) -> wallet {Wallet}"); any = true; }
             while (boughtUpgrades < 12)
             {
                 StudyEntry pick = null;
@@ -260,12 +257,9 @@ public static class V2CampaignCheck
                 boughtUpgrades++; any = true;
                 if (WeaponCardOpen) return true;
             }
-            if (c.OverloadOpen)
-                foreach (bool shield in new[] { true, false })
-                    if (c.TryBuyOverload(shield, !shield)) { Note($"overload {(shield ? "shield" : "damage")}: shield buys {c.OverloadShieldBuys}, damage buys {c.OverloadDamageBuys} -> wallet {Wallet}"); any = true; }
         }
+        if (c.OverloadOpen) Note($"overload: shield buys {c.OverloadShieldBuys}, damage buys {c.OverloadDamageBuys}");
         while (c.LampStock < 3 && c.TryCraftLamp()) Note("crafted a lamp");
-        if (c.BaseHp < c.BaseMaxHp - 1f && c.TryRepairHull()) Note("repaired the hull");
         return false;
     }
 
@@ -386,14 +380,15 @@ public static class V2CampaignCheck
                 if (campaign.Stage == CampaignStage.Story) { if (InStep > 2f) Shot("05-arrival"); return; }
                 if (campaign.Stage != CampaignStage.Base) { if (InStep > 25f) End("no base visit after the tutorial"); return; }
                 Shot("06-base-first");
-                // The base tour of Day 0's arrival: its first steps are shot, then the check makes its own purchases as before.
+                // The base tour of Day 0's arrival: its four steps are shot and done through the page's buttons (a skill, the weapon Mk,
+                // the rocket page); the check then leaves as the last step asks.
                 if (!TourShots()) return;
                 if (InStep < 3f) return;
-                Note($"first visit wallet {Wallet}: armament {campaign.TryUpgradeRoom(CampaignRoom.Armament)}, energy lab {campaign.TryUpgradeRoom(CampaignRoom.Energy)} -> {Wallet}; level {gm.progression.Level}, xp {gm.progression.Xp:0.0}/{gm.progression.XpRequired}");
+                Note($"first visit after the tour: wallet {Wallet}, team Mk {campaign.TeamMk}, skills {gm.skills.OwnedCount}, page {campaign.Ui.BaseScreenShown}; level {gm.progression.Level}, xp {gm.progression.Xp:0.0}/{gm.progression.XpRequired}");
                 Go(5, 1f);
                 return;
             case 5:
-                Shot("07-base-built");
+                Shot("07-base-after-tour");
                 if (campaign.Ui.BaseOpen) { campaign.LeaveBase(); return; }
                 if (campaign.Stage == CampaignStage.Story)
                 {
@@ -444,17 +439,17 @@ public static class V2CampaignCheck
                     return;
                 }
                 if (!campaign.Ui.BaseOpen) { if (InStep > 30f) End("the base panel did not come back after a weapon card"); return; }
-                // The first night's visit shows the ship tab once: its picture is the ship itself, drawn live (D1-C).
-                if (campaign.Day == 1 && !shipTabOpened)
+                // The first night's visit shows the rocket page once: its picture is the ship itself, drawn live, with its parts' pins.
+                if (campaign.Day == 1 && !rocketShown)
                 {
-                    shipTabOpened = true;
-                    campaign.Ui.ShowTab(CampaignRoom.Ship);
+                    rocketShown = true;
+                    campaign.RequestBaseScreen(V2Campaign.BaseScreen.Rocket);
                     wait = Time.realtimeSinceStartup + 1.2f;
                     return;
                 }
-                if (campaign.Day == 1 && shipTabOpened && !shots.Contains("12s-night1-ship-live-view"))
+                if (campaign.Day == 1 && rocketShown && !shots.Contains("12s-night1-ship-live-view"))
                 {
-                    Note($"ship tab: live view {(campaign.ShipViewTexture ? "drawn" : "missing")}");
+                    Note($"rocket page: shown {campaign.Ui.BaseScreenShown}, live view {(campaign.ShipViewTexture ? "drawn" : "missing")}, parts {string.Join(", ", campaign.Ui.DebugBaseParts())}");
                     Shot("12s-night1-ship-live-view");
                     wait = Time.realtimeSinceStartup + .6f;
                     return;
@@ -466,7 +461,7 @@ public static class V2CampaignCheck
                     campaign.DebugGrant(400, 400, 60);
                     Note($"DEBUG GRANT at the base on night {campaign.Day}: +400 alloy +400 energy +60 dark matter, so the check reaches the ending on day {lastDay}");
                 }
-                if (StudyCaptures()) return; // the study window is shown once per room (and once for the Void room), then closed
+                if (StudyCaptures()) return; // the workshop and the rocket page are shown once (and the workshop's void tab), then the workshop again
                 if (Shop()) return; // a weapon card opened: closed on a later tick, then this visit shops on
                 Shot($"11-base-night{campaign.Day}");
                 if (campaign.Day >= campaign.rules.days && campaign.CanIgnite) { Note("ignition ready on the last night"); campaign.Ignite(); Go(20); return; }
@@ -497,7 +492,7 @@ public static class V2CampaignCheck
             case 9: // day
                 // A death on the last night wakes the player into the ignition at dawn: the Tyrant comes next, not a day.
                 if (campaign.Stage == CampaignStage.FinalBoss) { Note($"the ignition began at dawn after the last night (day {campaign.Day}): on to the Tyrant"); Go(20); return; }
-                if (campaign.Stage == CampaignStage.Dusk) { EndMeasuredDay(gm); Note($"day {day} over: base {campaign.BaseHp:0}/{campaign.BaseMaxHp:0}, broken {string.Join(",", BrokenRooms())}, wallet {Wallet}, level {gm.progression.Level}, kills {gm.waves.Kills}; afternoon: ore nodes {campaign.NodesLeft(V2Campaign.NodeKind.Ore)}, crates {campaign.CratesOnMap}, void alloy nodes {campaign.NodesLeft(V2Campaign.NodeKind.VoidAlloy)}"); Go(10, 1f); return; }
+                if (campaign.Stage == CampaignStage.Dusk) { EndMeasuredDay(gm); Note($"day {day} over: base {campaign.BaseHp:0}/{campaign.BaseMaxHp:0}, wallet {Wallet}, level {gm.progression.Level}, kills {gm.waves.Kills}; afternoon: ore nodes {campaign.NodesLeft(V2Campaign.NodeKind.Ore)}, crates {campaign.CratesOnMap}, void alloy nodes {campaign.NodesLeft(V2Campaign.NodeKind.VoidAlloy)}"); Go(10, 1f); return; }
                 if (gm.State != GameState.Playing) { End($"run ended in the day: {gm.State}, base destroyed {campaign.BaseDestroyed}"); return; }
                 gm.player.Heal(gm.player.maxHp);
                 if (gm.RunPhase == ArenaUiState.LevelUp && act) { Note($"mid-day pick: {string.Join(" | ", Array.ConvertAll(gm.progression.CurrentCards, c => c.Kind + ":" + c.Title))}"); Cmd(gm, ArenaUiCommand.ChooseCard, 0); return; }
@@ -528,13 +523,13 @@ public static class V2CampaignCheck
                     e.Kill(gm.player);
                 }
                 if (!raidShot && raiderSince.Count > 0 && day <= 2) { raidShot = true; Teleport(gm, V2Campaign.BaseCentre + new Vector3(-9f, 0f, -9f)); Shot($"13-day{day}-raid"); }
-                // Day 2 breaks the east side once on purpose (D3-A): only that side takes the damaged texture and burn marks; the dawn
-                // shop repairs it through central control.
-                if (day == 2 && !sideBroken && InStep > 2f && campaign.Room(CampaignRoom.Armament).level > 0)
+                // Day 2 hits the east side once on purpose (D3-A): only that side takes the damaged texture and burn marks; the base mends
+                // a share of its max HP on its own each day.
+                if (day == 2 && !sideBroken && InStep > 2f)
                 {
                     sideBroken = true;
                     campaign.DamageBase(1, campaign.BaseMaxHp * .3f, V2Campaign.BaseCentre + Vector3.right * (V2Campaign.BaseHalf + .5f) + Vector3.up);
-                    Note($"east side hit for 30% on purpose: armament broken {campaign.Room(CampaignRoom.Armament).damaged}, model cut into sides {campaign.SidesSplit}, " +
+                    Note($"east side hit for 30% on purpose: base {campaign.BaseHp:0}/{campaign.BaseMaxHp:0}, model cut into sides {campaign.SidesSplit}, " +
                          $"damaged sides N {campaign.SideShowsDamage(0)} E {campaign.SideShowsDamage(1)} S {campaign.SideShowsDamage(2)} W {campaign.SideShowsDamage(3)}, burn marks E {campaign.ScorchCount(1)}");
                     Teleport(gm, V2Campaign.BaseCentre + new Vector3(10f, 0f, -6f));
                     wait = Time.realtimeSinceStartup + 1f;
@@ -773,32 +768,36 @@ public static class V2CampaignCheck
         return true;
     }
 
-    /// <summary>The study window shown once on its Armament and Energy tabs (once both rooms are built), and once on its Void tab after the
-    /// Nash Prophet is beaten, each captured, then closed. True while it is busy.</summary>
+    /// <summary>The workshop (on its skills tab) and the rocket page shown once each and captured, and the workshop's void tab once after
+    /// the Nash Prophet is beaten; the visit then goes on on the workshop. True while it is busy.</summary>
     static bool StudyCaptures()
     {
         var c = campaign;
+        var ui = c.Ui;
         float now = Time.realtimeSinceStartup;
-        if (studyStage < 4 && c.Room(CampaignRoom.Armament).level >= 1 && c.Room(CampaignRoom.Energy).level >= 1)
+        if (studyStage < 4)
         {
             switch (studyStage)
             {
-                case 0: c.Ui.OpenStudy("arm.upgrade"); studyStage = 1; wait = now + 1f; return true;
-                case 1: Shot("11s-study-armament"); studyStage = 2; wait = now + .5f; return true;
-                case 2: c.Ui.OpenStudy("eng.body"); studyStage = 3; wait = now + 1f; return true;
-                default: Shot("11s-study-energy"); studyStage = 4; wait = now + .5f; return true;
+                case 0: c.RequestBaseScreen(V2Campaign.BaseScreen.Workshop); ui.ShowResearchTab("eng.skill"); studyStage = 1; wait = now + 1f; return true;
+                case 1: Shot("11s-workshop"); studyStage = 2; wait = now + .5f; return true;
+                case 2: c.RequestBaseScreen(V2Campaign.BaseScreen.Rocket); studyStage = 3; wait = now + 1f; return true;
+                default: Shot("11s-rocket"); studyStage = 4; wait = now + .5f; return true;
             }
         }
-        if (studyStage == 4) { studyStage = 5; c.Ui.CloseStudy(); Note($"study window: {c.BuildStudy().Count} tabs, closed again (base panel open {c.Ui.BaseOpen})"); }
+        if (studyStage == 4)
+        {
+            studyStage = 5;
+            c.RequestBaseScreen(V2Campaign.BaseScreen.Workshop);
+            Note($"workshop: {c.BuildStudy().Count} tabs, page {ui.BaseScreenShown}, parts {string.Join(", ", ui.DebugBaseParts())}");
+        }
         if (voidStudyStage < 2 && c.ProphetBeaten)
         {
-            string key = null;
-            foreach (var tab in c.BuildStudy()) if (tab.key.StartsWith("void.")) { key = tab.key; break; }
-            if (key == null) { voidStudyStage = 3; Note("PROBLEM: the study window has no Void tab after the Nash Prophet was beaten"); return false; }
-            if (voidStudyStage == 0) { c.Ui.OpenStudy(key); voidStudyStage = 1; wait = now + 1f; return true; }
-            Shot("11v-study-void"); voidStudyStage = 2; wait = now + .5f; return true;
+            if (!c.BuildStudy().Exists(tab => tab.key.StartsWith("void.", StringComparison.Ordinal))) { voidStudyStage = 3; Note("PROBLEM: the workshop has no void tab after the Nash Prophet was beaten"); return false; }
+            if (voidStudyStage == 0) { c.RequestBaseScreen(V2Campaign.BaseScreen.Workshop); ui.ShowResearchTab("void"); voidStudyStage = 1; wait = now + 1f; return true; }
+            Shot("11v-workshop-void"); voidStudyStage = 2; wait = now + .5f; return true;
         }
-        if (voidStudyStage == 2) { voidStudyStage = 3; c.Ui.CloseStudy(); }
+        if (voidStudyStage == 2) { voidStudyStage = 3; ui.ShowResearchTab("eng.skill"); }
         return false;
     }
 
@@ -809,7 +808,7 @@ public static class V2CampaignCheck
         if (!measure) return;
         damageBank = 0f; elitesKilled = 0; killedByKind.Clear(); hpByKind.Clear();
         lastGameTime = Time.time; dayStartedAt = Time.time;
-        baseAtDawn = campaign.BaseHp; shieldAtDawn = campaign.BaseShield; energyAtDawn = campaign.EarnedEnergy;
+        baseAtDawn = campaign.BaseHp; energyAtDawn = campaign.EarnedEnergy;
         Teleport(gm, campaign.DoorPoint + new Vector3(0f, 0f, -3f));
     }
 
@@ -852,18 +851,12 @@ public static class V2CampaignCheck
         var kinds = new List<string>();
         int kills = 0;
         foreach (var pair in killedByKind) { kinds.Add($"{pair.Key} x{pair.Value} (hp {hpByKind[pair.Key]:0})"); kills += pair.Value; }
-        float lost = baseAtDawn - campaign.BaseHp, shieldLost = shieldAtDawn - campaign.BaseShield;
+        float lost = baseAtDawn - campaign.BaseHp;
         Note($"MEASURE day {day}: morning {Time.time - dayStartedAt:0} s of game time, reference dps {campaign.rules.DayReferenceDps(day):0}, kills {kills} (elites {elitesKilled}): {string.Join(", ", kinds)}; "
-             + $"base lost {lost:0} hp of {campaign.BaseMaxHp:0} ({(campaign.BaseMaxHp > 0f ? lost / campaign.BaseMaxHp * 100f : 0f):0}%) and {shieldLost:0} shield; "
+             + $"base lost {lost:0} hp of {campaign.BaseMaxHp:0} ({(campaign.BaseMaxHp > 0f ? lost / campaign.BaseMaxHp * 100f : 0f):0}%); "
              + $"energy earned today {campaign.EarnedEnergy - energyAtDawn} (table {campaign.rules.DayKillEnergy(day)}), player energy {gm.progression.Energy:0}/{gm.progression.Stats.maxEnergy:0}");
     }
 
-    static List<string> BrokenRooms()
-    {
-        var list = new List<string>();
-        foreach (CampaignRoom room in Enum.GetValues(typeof(CampaignRoom))) if (campaign.Room(room).damaged) list.Add(room.ToString());
-        return list;
-    }
 }
 
 }

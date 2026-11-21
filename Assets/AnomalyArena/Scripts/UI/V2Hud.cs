@@ -913,8 +913,8 @@ namespace AnomalyArena
                     // V2 day campaign: the game has no cards any more, so its text names none. The fifth pass's screens say it in one line
                     // (their cards show the unknown attack and trait as "???").
                     SetBody(screen.body, V5HudKit.On
-                        ? (s.hideXp ? ArenaText.Pair("选一种你熟悉的外形，它的攻击方式和特性要拿到手才揭晓。需要手动瞄准，记得利用地形。", "Pick a form you know; its attack and trait are revealed once you take it. Aim by hand, and make use of the terrain.")
-                            : ArenaText.Pair("选一种你熟悉的武器外形，它的攻击方式和特性要拿到手才揭晓。需要手动瞄准，记得利用地形。", "Pick a weapon form you know; its attack and trait are revealed once you take it. Aim by hand, and make use of the terrain."))
+                        ? (s.hideXp ? ArenaText.Pair("选一种你熟悉的外形：它会是卡上写的两种打法之一，特性要拿到手才揭晓。需要手动瞄准，记得利用地形。", "Pick a form you know: it attacks in one of the two ways its card names, and its trait is revealed once you take it. Aim by hand, and make use of the terrain.")
+                            : ArenaText.Pair("选一种你熟悉的武器外形：它会是卡上写的两种打法之一，特性要拿到手才揭晓。需要手动瞄准，记得利用地形。", "Pick a weapon form you know: it attacks in one of the two ways its card names, and its trait is revealed once you take it. Aim by hand, and make use of the terrain."))
                         : s.hideXp
                         ? ArenaText.Pair("选一种你熟悉的外形。拿到之前，你不知道它是哪种攻击方式和特性；选中的那一刻，游戏会暂停并显示这件武器的说明。\n需要手动瞄准，记得利用地形。", "Pick a form you know. Its attack and trait stay hidden until you take it; the moment you choose, the game pauses and shows what the weapon does.\nAim by hand, and make use of the terrain.")
                         : ArenaText.Pair("选一种你熟悉的武器外形。它的攻击方式和特性要拿到手才知道：选中的那一刻，游戏会暂停并弹出它的武器卡。\n需要手动瞄准，记得利用地形。", "Pick a weapon form you know. Its attack and trait stay hidden until you take it: the moment you choose, the game pauses and its weapon card appears.\nAim by hand, and use the terrain."));

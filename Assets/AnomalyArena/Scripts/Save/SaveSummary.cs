@@ -25,7 +25,8 @@ namespace AnomalyArena
         /// <summary>The day the saved phase belongs to (1 and up; past the last day while the run is in overtime).</summary>
         public int day;
         public SavePhase phase;
-        public bool engineFixed, armorFixed;
+        /// <summary>The ship's engine, its hull (armorFixed) and its fuel tank; the fuel and a full tank's, in dark matter.</summary>
+        public bool engineFixed, armorFixed, fuelTank;
         public int fuel, fuelMax;
 
         // open mode

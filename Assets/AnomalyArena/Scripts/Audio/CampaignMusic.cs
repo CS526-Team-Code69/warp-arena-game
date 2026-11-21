@@ -162,7 +162,13 @@ namespace AnomalyArena
             var game = GameManager.Instance;
             if (!game) return Track.None;
             var phase = game.RunPhase;
-            if (phase == ArenaUiState.Title) { campaignOver = false; nightTime = false; duskTime = false; return Track.Title; }
+            if (phase == ArenaUiState.Title)
+            {
+                campaignOver = false; nightTime = false; duskTime = false;
+                // A continue from the result page reloads the scene and takes over within a frame or two: what plays meanwhile goes on,
+                // rather than starting the title's track only to cut it off again.
+                return ArenaSaves.ContinueWaiting ? current : Track.Title;
+            }
             var campaign = V2Campaign.Active;
             if (campaign && campaign.Running && game.CampaignRunning)
             {

@@ -8,9 +8,8 @@ namespace AnomalyArena
 {
     /// <summary>
     /// The V2 campaign's own screen layer, built at run time like the tutorial pages (no scene change): currencies, the base bar and the
-    /// objective over the HUD; subtitles; the black title card, the memory CG and the white-out; and the base panel (D1-C: a 2D
-    /// panel, one tab per room with its picture; the ship tab shows the ship's state). A room's next level never says what it unlocks
-    /// (V2 doc: the new feature is seen only once unlocked).
+    /// objective over the HUD; subtitles; the black title card, the memory CG and the white-out; and the base panel (V2CampaignUi.BasePage.cs:
+    /// on the fifth pass the workshop and the rocket page, V5BasePage.cs; on the English Alpha the old page, one tab per room).
     /// </summary>
     public sealed partial class V2CampaignUi : MonoBehaviour
     {
@@ -77,6 +76,12 @@ namespace AnomalyArena
         // The subtitle (2026-11-10: larger, no plate): its width, its bottom edge over the slots and the mining bar, its bottom edge in
         // the strip the base panel keeps free, the two sizes and the gap between the line and the speaker over it.
         const float SubtitleWidth = 1240f, SubtitleBottom = 250f, BaseSubtitleBottom = 104f, SubtitleSpeakerGap = 8f;
+
+        /// <summary>The subtitle's foot over an open base panel: BaseSubtitleBottom over the page's own foot. The fifth pass's page is a
+        /// 16:9 frame in the middle of the canvas, so on a taller screen it stands higher than the canvas's foot by half the difference;
+        /// measured from the page the subtitle keeps to the strip between its columns and its ways out. The old panel fills the canvas.</summary>
+        float BaseSubtitleOver() => BaseSubtitleBottom
+            + (V5HudKit.On && b5Page && b5Page.gameObject.activeInHierarchy ? Mathf.Max(0f, (root.rect.height - b5Page.rect.height) * .5f) : 0f);
         const int SubtitleLineSize = 32, SubtitleSpeakerSize = 22;
         // How far the goal panels stand below their place now (0 without a banner over them).
         float goalDrop;
@@ -645,7 +650,11 @@ namespace AnomalyArena
             cgHeldCopy = null;
         }
 
-        void OnDestroy() => ReleaseHeldCopy();
+        void OnDestroy()
+        {
+            ReleaseHeldCopy();
+            if (campaign) campaign.BaseScreenRequested -= OnBaseScreenRequested;
+        }
 
         /// <summary>The title's Start opens the V2 campaign. Since 2026-11-06 there is no button for the classic 15-wave run (it stays
         /// in the project, not on the title); the tests still start it with ArenaUiCommand.Start.</summary>
@@ -678,7 +687,7 @@ namespace AnomalyArena
                 if (cgScreen.gameObject.activeSelf) CgSkipped = true;
                 else if (baseScreen.gameObject.activeSelf && !BaseTourRunning && campaign.Stage == CampaignStage.Base && !campaign.BaseAtDawn && campaign.NightTimeLeft(out _)) campaign.LeaveBase();
             }
-            campaign.ShowShipView(BaseOpen && tab == CampaignRoom.Ship);
+            campaign.ShowShipView(ShipViewWanted); // the ship's live picture draws only while the rocket page (the old page's ship tab) shows
             float now = Time.unscaledTime;
             if (titleCard.gameObject.activeSelf)
             {
@@ -695,7 +704,7 @@ namespace AnomalyArena
             bool subtitleShown = now <= subtitleUntil && !(gm && gm.RunPhase == ArenaUiState.WeaponIntro) && !storySubtitleInBanner;
             if (subtitleRoot.gameObject.activeSelf != subtitleShown) subtitleRoot.gameObject.SetActive(subtitleShown);
             // Over the base panel the subtitle stands in the strip the panel keeps free for it, above its ways out.
-            subtitleRoot.anchoredPosition = new Vector2(0f, baseScreen.gameObject.activeSelf ? BaseSubtitleBottom : SubtitlePlayBottom);
+            subtitleRoot.anchoredPosition = new Vector2(0f, baseScreen.gameObject.activeSelf ? BaseSubtitleOver() : SubtitlePlayBottom);
             flashBack.gameObject.SetActive(now < flashUntil && !string.IsNullOrEmpty(flashText.text));
             if (flashBack.gameObject.activeSelf) PlaceFlash(); // the goal panels may grow or step down while the line shows
             if (whiteOutLength > 0f)

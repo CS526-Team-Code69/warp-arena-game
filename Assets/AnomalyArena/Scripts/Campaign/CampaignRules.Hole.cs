@@ -74,7 +74,7 @@ namespace AnomalyArena
         public int voidArmorCost = 20;
 
         [Header("Mined each day (since 2026-11-10)")]
-        [Tooltip("Alloy in each afternoon's ore, days 1, 2, 3 ...; later days use the last entry. Shared evenly by the day's ore nodes (the remainder goes to the nodes nearest the black hole) and multiplied by the ship's ore bonus.")]
+        [Tooltip("Alloy in each afternoon's ore, days 1, 2, 3 ...; later days use the last entry. Shared evenly by the day's ore nodes (the remainder goes to the nodes nearest the black hole) and multiplied by alloyIncomeScale and, from the day after the engine is repaired, by 1 + shipOreBonus.")]
         public int[] afternoonAlloy = { 20, 30, 45, 70, 105, 160, 240 };
         [Tooltip("Days 1, 2, 3 ...: the mining lamps each afternoon's extra alloy pays for (lampCost each), added to afternoonAlloy after the ship's ore bonus; later days use the last entry. From day 1 on lamps are crafted (dailyFreeLamps), so this rises with the nights.")]
         public int[] dayLampsToCraft = { 3, 3, 4, 4, 5, 5, 6 };

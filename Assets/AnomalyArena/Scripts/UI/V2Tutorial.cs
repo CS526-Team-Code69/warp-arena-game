@@ -52,6 +52,13 @@ namespace AnomalyArena
             return page >= 0 && page < pages.Length ? pages[page].title : "";
         }
 
+        /// <summary>The line of one of the story mode's pages (0 is the background, 1 to 6 how to play).</summary>
+        public static string StoryPageLine(int page)
+        {
+            var pages = StoryPages();
+            return page >= 0 && page < pages.Length ? pages[page].line : "";
+        }
+
         /// <summary>The story's planned days (the title's save windows mark them).</summary>
         public static int StoryDays => PlannedDays;
 
@@ -84,13 +91,13 @@ namespace AnomalyArena
                     () => new MoveSprintDemo()),
                 AimPage(),
                 (ArenaText.Pair("换武器和技能", "SWAP & SKILLS"),
-                    ArenaText.Pair($"按右键在两只手的武器之间切换。在基地的能量研究区学会技能后，按 {ArenaKeys.SkillKeys} 释放。", $"Right click switches between your hand weapons. Skills learned at the base's Energy Lab are cast with {ArenaKeys.SkillKeysWith(", ")}."),
+                    ArenaText.Pair($"按右键在两只手的武器之间切换。在基地门口的整备页学会技能后，按 {ArenaKeys.SkillKeys} 释放。", $"Right click switches between your hand weapons. Skills learned in the workshop at the base door are cast with {ArenaKeys.SkillKeysWith(", ")}."),
                     () => new SkillDemo()),
                 (ArenaText.Pair("采集资源", "GATHER"),
                     ArenaText.Pair($"下午按住 {ArenaKeys.InteractKey} 采合金矿，按 {ArenaKeys.InteractKey} 打开路上的武器箱；夜里先按 {ArenaKeys.LampKey} 放矿灯，再在灯光里按住 {ArenaKeys.InteractKey} 采暗物质。", $"In the afternoon, hold {ArenaKeys.InteractKey} to mine alloy ore; {ArenaKeys.InteractKey} opens crates. At night, {ArenaKeys.LampKey} sets a lamp; hold {ArenaKeys.InteractKey} in its light to mine dark matter."),
                     () => new GatherDemo()),
                 (ArenaText.Pair("基地和升级", "BASE & UPGRADES"),
-                    ArenaText.Pair($"下午或夜里在基地门口按 {ArenaKeys.InteractKey} 进去，可以建造各区、在研习窗口买升级、修飞船，买下立刻生效。", $"Afternoon or night, press {ArenaKeys.InteractKey} at the base door to build rooms, study upgrades or repair the ship; it all works at once."),
+                    ArenaText.Pair($"下午或夜里在基地门口按 {ArenaKeys.InteractKey} 进整备页，升级武器、学技能；在飞船旁按 {ArenaKeys.InteractKey} 修飞船、造矿灯。买下立刻生效。", $"Afternoon or night, press {ArenaKeys.InteractKey} at the base door to upgrade weapons and learn skills in the workshop; press {ArenaKeys.InteractKey} beside the ship to repair it and craft lamps. It all works at once."),
                     () => new BaseDemo()),
                 PausePage(),
             };
@@ -876,7 +883,7 @@ namespace AnomalyArena
                 (status, statusFade) = Group(new Vector2(255f, 30f));
                 Label(ArenaText.Pair("飞船", "SHIP"), 15, Faint, new Vector2(0f, 58f), 200f, status);
                 (engineMark, engineDone) = Row(status, ArenaText.Pair("引擎", "ENGINE"), 26f);
-                (armorMark, armorDone) = Row(status, ArenaText.Pair("装甲", "ARMOR"), -6f);
+                (armorMark, armorDone) = Row(status, ArenaText.Pair("船体", "HULL"), -6f);
                 Part(status, circle, FuelColour, Vector2.one * 16f, new Vector2(-90f, -38f));
                 Label(ArenaText.Pair("燃料", "FUEL"), 16, Soft, new Vector2(-20f, -38f), 110f, status, TextAnchor.MiddleLeft);
                 Part(status, null, new Color(1f, 1f, 1f, .08f), new Vector2(110f, 10f), new Vector2(50f, -38f));
@@ -1171,67 +1178,91 @@ namespace AnomalyArena
             }
         }
 
-        /// <summary>The base. In the afternoon or at night the player walks to its door and E opens its panel; one room after another sells
-        /// something, and each purchase takes effect at once. In the morning E at the same door tops up the base's shield.</summary>
+        /// <summary>The base's two pages. In the afternoon or at night the player walks to the base door and E opens the workshop, where
+        /// the weapon Mk, armor and skills are bought; then beside the ship E opens the rocket page, where the ship is repaired, fuelled and
+        /// lamps are made. Each purchase takes effect at once.</summary>
         sealed class BaseDemo : Demo
         {
-            static readonly Vector2 Centre = new(-250f, 10f), Approach = new(-250f, -135f), Door = new(-250f, -74f), SheetAt = new(130f, -2f);
-            // In the order of the base panel's tabs.
-            static readonly CampaignRoom[] Rooms = { CampaignRoom.Control, CampaignRoom.Armament, CampaignRoom.Energy, CampaignRoom.Ship };
-            // Seconds: the purchases start at Buying, one room every Each; the morning starts at Morning; the loop starts again at Length.
-            const float Buying = 1.9f, Each = .95f, Morning = 6f, Length = 9f;
+            static readonly Vector2 Centre = new(-250f, -35f), Approach = new(-250f, -145f), Door = new(-250f, -112f), Corner = new(-340f, -112f),
+                ShipAt = new(-250f, 52f), ShipSide = new(-340f, 52f), SheetAt = new(130f, -2f);
+            // Seconds: the workshop opens at WorkshopOpen and sells from WorkshopBuying, one row every Each; the walk to the ship starts at
+            // Walk; the rocket page opens at RocketOpen and sells from RocketBuying; the loop starts again at Length.
+            const float WorkshopOpen = 1.3f, WorkshopBuying = 1.9f, Walk = 5f, RocketOpen = 6.9f, RocketBuying = 7.5f, Each = .95f, Length = 11f;
+            const int RowCount = 3;
             const float RowTop = 58f, RowStep = 42f;
-            Image overlay, player, shield, cursor, cursorDot;
-            Image[] rows;
-            RectTransform sheet;
-            CanvasGroup fade;
-            Text flash;
-            Text[] phases, captions;
-            Key e;
+
+            sealed class ShopPage
+            {
+                public RectTransform rect;
+                public CanvasGroup fade;
+                public Image[] rows;
+                public Text flash;
+            }
+
+            Image player, cursor, cursorDot;
+            ShopPage workshop, rocket;
+            Text[] captions;
+            Key doorKey, shipKey;
 
             protected override void Build()
             {
-                overlay = Bar(Color.clear, new Vector2(WindowW, WindowH), Vector2.zero);
-                shield = Ring(Color.clear, 160f, Centre);
-                // The base as the whitebox shows it: each side in its room's colour (V2Campaign.SideRoom), the door on the south side.
-                Bar(new Color(.36f, .42f, .5f), new Vector2(120f, 120f), Centre);
+                // The base as the whitebox shows it: each side in its room's colour (V2Campaign.SideRoom), the door on the south side; the
+                // ship to its north.
+                Bar(new Color(.36f, .42f, .5f), new Vector2(100f, 100f), Centre);
                 for (int side = 0; side < 4; side++)
                 {
                     var normal = new Vector2(V2Campaign.SideNormal[side].x, V2Campaign.SideNormal[side].z);
-                    Bar(V2Campaign.RoomColour(V2Campaign.SideRoom[side]), side % 2 == 0 ? new Vector2(120f, 6f) : new Vector2(6f, 120f), Centre + normal * 63f);
+                    Bar(V2Campaign.RoomColour(V2Campaign.SideRoom[side]), side % 2 == 0 ? new Vector2(100f, 6f) : new Vector2(6f, 100f), Centre + normal * 53f);
                 }
-                Bar(new Color(.15f, .85f, 1f), new Vector2(34f, 14f), Centre + new Vector2(0f, -60f));
-                Label(ArenaText.Pair("基地", "BASE"), 16, Soft, Centre, 100f);
+                Bar(new Color(.15f, .85f, 1f), new Vector2(30f, 12f), Centre + new Vector2(0f, -50f));
+                Label(ArenaText.Pair("基地", "BASE"), 16, Soft, Centre, 90f);
+                Bar(new Color(.42f, .47f, .55f), new Vector2(120f, 28f), ShipAt);
+                Label(ArenaText.Pair("飞船", "SHIP"), 13, Soft, ShipAt, 110f);
                 player = Dot(Player, 30f, Approach);
-                e = Cap(ArenaKeys.InteractKey, new Vector2(-335f, -100f));
-                Label(ArenaText.Pair("在门口按", "at the door"), 14, Faint, new Vector2(-335f, -146f), 110f);
-                phases = new[] { Caption(ArenaText.Pair("下午或夜里", "AFTERNOON OR NIGHT"), 20, Soft, 128f), Caption(ArenaText.Pair("上午", "MORNING"), 20, Soft, 128f) };
+                doorKey = Cap(ArenaKeys.InteractKey, new Vector2(-165f, Door.y));
+                shipKey = Cap(ArenaKeys.InteractKey, new Vector2(-165f, ShipAt.y));
+                Caption(ArenaText.Pair("下午或夜里", "AFTERNOON OR NIGHT"), 20, Soft, 128f);
                 captions = new[]
                 {
-                    Caption(ArenaText.Pair($"在门口按 {ArenaKeys.InteractKey} 进入基地", $"Press {ArenaKeys.InteractKey} at the door to enter the base"), 14, Faint, 102f),
-                    Caption(ArenaText.Pair($"护盾解锁后，在门口按 {ArenaKeys.InteractKey} 花异星能量补充护盾", $"Once the shield is unlocked, press {ArenaKeys.InteractKey} at the door to top it up with alien energy"), 14, Faint, 102f),
+                    Caption(ArenaText.Pair($"在基地门口按 {ArenaKeys.InteractKey} 进整备页", $"{ArenaKeys.InteractKey} at the door opens the workshop"), 14, Faint, 102f),
+                    Caption(ArenaText.Pair($"在飞船旁按 {ArenaKeys.InteractKey} 进火箭页", $"{ArenaKeys.InteractKey} by the ship opens the rocket"), 14, Faint, 102f),
                 };
 
-                (sheet, fade) = Sheet(new Vector2(480f, 290f), SheetAt);
-                Label(ArenaText.Pair("基地", "BASE"), 18, Soft, new Vector2(0f, 118f), 300f, sheet);
-                Label(ArenaText.Pair("用异星能量、合金和暗物质购买", "Paid with alien energy, alloy and dark matter"), 12, Faint, new Vector2(0f, 94f), 440f, sheet);
-                // What each room sells, in short (the base panel's room texts).
-                string[] sells =
-                {
-                    ArenaText.Pair("基地耐久和护盾", "base hull and shield"),
-                    ArenaText.Pair("装甲、增强武器、异常武器", "armor, weapon boosts, anomaly weapons"),
-                    ArenaText.Pair("体质、技能、武器附魔", "body, skills, infusions"),
-                    ArenaText.Pair("修飞船、用暗物质合成燃料、矿灯", "ship repairs, fuel from dark matter, lamps"),
-                };
-                rows = new Image[Rooms.Length];
-                for (int i = 0; i < Rooms.Length; i++)
+                // The two pages, each with three of what it sells (the pages' own cards, in short).
+                Color weapons = V2Campaign.RoomColour(CampaignRoom.Armament), energy = V2Campaign.RoomColour(CampaignRoom.Energy),
+                    ship = V2Campaign.RoomColour(CampaignRoom.Ship);
+                workshop = MakePage(ArenaText.Pair("整备", "WORKSHOP"), ArenaText.Pair("用合金升级武器，用异星能量学技能", "Alloy upgrades weapons; alien energy learns skills"),
+                    new[]
+                    {
+                        (weapons, ArenaText.Pair("武器型号", "Weapon Mk"), ArenaText.Pair("所有异常武器一起变强", "every anomaly weapon gets stronger")),
+                        (weapons, ArenaText.Pair("护甲", "Armor"), ArenaText.Pair("生命上限更高", "more max HP")),
+                        (energy, ArenaText.Pair("技能", "Skills"), ArenaText.Pair("学会后按技能键释放", "cast with the skill keys")),
+                    });
+                rocket = MakePage(ArenaText.Pair("火箭", "ROCKET"), ArenaText.Pair("修好三个部件、加满燃料就能点火回家", "Repair three parts and fill the tank to fly home"),
+                    new[]
+                    {
+                        (ship, ArenaText.Pair("修飞船", "Repairs"), ArenaText.Pair("引擎、船体、燃料舱", "engine, hull, fuel tank")),
+                        (ship, ArenaText.Pair("加注", "Refuel"), ArenaText.Pair("把暗物质加进燃料", "dark matter into the fuel")),
+                        (ship, ArenaText.Pair("矿灯", "Lamps"), ArenaText.Pair("夜里放下，在灯光里采暗物质", "set at night to mine dark matter")),
+                    });
+                cursor = Ring(Soft, 24f, SheetAt);
+                cursorDot = Dot(Soft, 6f, SheetAt);
+            }
+
+            ShopPage MakePage(string title, string subtitle, (Color colour, string name, string sold)[] rowTexts)
+            {
+                var (rect, fade) = Sheet(new Vector2(480f, 290f), SheetAt);
+                var made = new ShopPage { rect = rect, fade = fade, rows = new Image[rowTexts.Length] };
+                Label(title, 18, Soft, new Vector2(0f, 118f), 300f, rect);
+                Label(subtitle, 12, Faint, new Vector2(0f, 94f), 440f, rect);
+                for (int i = 0; i < rowTexts.Length; i++)
                 {
                     float y = RowTop - i * RowStep;
-                    rows[i] = RowPlate(sheet, new Vector2(452f, 34f), new Vector2(0f, y));
-                    Part(sheet, circle, V2Campaign.RoomColour(Rooms[i]), Vector2.one * 14f, new Vector2(-206f, y));
-                    Label(V2Campaign.RoomName(Rooms[i]), 14, Soft, new Vector2(-122f, y), 140f, sheet, TextAnchor.MiddleLeft);
-                    // One line per row: in bold the two longest English texts come close to the box, so a wider one shrinks rather than wraps.
-                    var sold = Label(sells[i], 13, Faint, new Vector2(78f, y), 290f, sheet, TextAnchor.MiddleLeft);
+                    made.rows[i] = RowPlate(rect, new Vector2(452f, 34f), new Vector2(0f, y));
+                    Part(rect, circle, rowTexts[i].colour, Vector2.one * 14f, new Vector2(-206f, y));
+                    Label(rowTexts[i].name, 14, Soft, new Vector2(-122f, y), 140f, rect, TextAnchor.MiddleLeft);
+                    // One line per row: a longer text shrinks rather than wraps.
+                    var sold = Label(rowTexts[i].sold, 13, Faint, new Vector2(78f, y), 290f, rect, TextAnchor.MiddleLeft);
                     if (fifth)
                     {
                         // Best fit would take a Chinese run for one word (pitfall T-015): the size is picked by the width instead.
@@ -1246,43 +1277,52 @@ namespace AnomalyArena
                         sold.resizeTextMaxSize = 13;
                     }
                 }
-                flash = Label(ArenaText.Pair("买下立刻生效", "Takes effect at once"), 15, Bullet, new Vector2(0f, -112f), 300f, sheet);
-                cursor = Ring(Soft, 24f, SheetAt);
-                cursorDot = Dot(Soft, 6f, SheetAt);
+                made.flash = Label(ArenaText.Pair("买下立刻生效", "Takes effect at once"), 15, Bullet, new Vector2(0f, -100f), 300f, rect);
+                return made;
             }
 
             public override void Tick(float time)
             {
                 float t = Loop(time, Length);
-                bool morning = t >= Morning;
-                for (int i = 0; i < phases.Length; i++) phases[i].enabled = captions[i].enabled = (i == 1) == morning;
+                bool atShip = t >= Walk;
+                captions[0].enabled = !atShip;
+                captions[1].enabled = atShip;
                 float end = 1f - Ease(Length - .3f, Length, t);
-                // The afternoon and the night are dimmer than the morning.
-                overlay.color = new Color(.01f, .02f, .06f, .35f * (1f - Ease(Morning - .3f, Morning, t)));
-                player.rectTransform.anchoredPosition = Vector2.Lerp(Approach, Door, Ease(.15f, 1f, t));
+                // To the base door, then round the base's west side to the ship.
+                Vector2 at = t < Walk ? Vector2.Lerp(Approach, Door, Ease(.15f, 1f, t))
+                    : t < Walk + .8f ? Vector2.Lerp(Door, Corner, Ease(Walk, Walk + .8f, t))
+                    : Vector2.Lerp(Corner, ShipSide, Ease(Walk + .8f, Walk + 1.6f, t));
+                player.rectTransform.anchoredPosition = at;
                 player.color = new Color(Player.r, Player.g, Player.b, Ease(0f, .15f, t) * end);
-                e.Light(t is > 1.05f and < 1.3f || t is > 6.6f and < 6.85f);
+                doorKey.Light(t is > 1.05f and < 1.3f);
+                shipKey.Light(t is > RocketOpen - .25f and < RocketOpen);
 
-                // The panel: one room after another sells something, and it takes effect at once.
-                float closing = Buying + Rooms.Length * Each;
-                float shown = Ease(1.3f, 1.55f, t) * (1f - Ease(closing, closing + .25f, t));
-                fade.alpha = shown;
-                int row = Mathf.FloorToInt((t - Buying) / Each);
-                float local = t - Buying - row * Each;
-                bool buying = row >= 0 && row < Rooms.Length;
-                for (int i = 0; i < rows.Length; i++) ChooseRow(rows[i], buying && i == row && local < .8f);
-                flash.color = new Color(Bullet.r, Bullet.g, Bullet.b, buying && local is > .3f and < .85f ? 1f : 0f);
-                // The pointer glides to each room's row and clicks it.
-                Vector2 point = row < 0 ? RowPoint(0) : row >= Rooms.Length ? RowPoint(Rooms.Length - 1)
-                    : Vector2.Lerp(RowPoint(Mathf.Max(0, row - 1)), RowPoint(row), Ease(0f, .25f, local));
-                cursor.rectTransform.anchoredPosition = cursorDot.rectTransform.anchoredPosition = point;
-                cursor.rectTransform.localScale = Vector3.one * (buying && local is > .25f and < .4f ? .75f : 1f);
+                // Each page: one row after another is bought, and it takes effect at once; the pointer follows the page that is open.
+                float workshopShown = RunPage(workshop, t, WorkshopOpen, WorkshopBuying, out var workshopPoint, out bool workshopClick);
+                float rocketShown = RunPage(rocket, t, RocketOpen, RocketBuying, out var rocketPoint, out bool rocketClick);
+                bool onRocket = rocketShown > workshopShown;
+                float shown = Mathf.Max(workshopShown, rocketShown);
+                cursor.rectTransform.anchoredPosition = cursorDot.rectTransform.anchoredPosition = onRocket ? rocketPoint : workshopPoint;
+                cursor.rectTransform.localScale = Vector3.one * ((onRocket ? rocketClick : workshopClick) ? .75f : 1f);
                 cursor.color = cursorDot.color = new Color(Soft.r, Soft.g, Soft.b, shown);
+            }
 
-                // Morning: E at the door tops up the shield, which rings the base.
-                float ring = Ease(6.7f, 7f, t) * (1f - Ease(8.3f, 8.6f, t));
-                shield.color = new Color(.5f, .9f, 1f, .85f * ring);
-                shield.rectTransform.sizeDelta = Vector2.one * Mathf.Lerp(130f, 160f, ring) * (1f + .03f * Mathf.Sin(time * 6f));
+            /// <summary>One page's moment in the loop: how much it shows, where the pointer is on it and whether it clicks now.</summary>
+            static float RunPage(ShopPage page, float t, float open, float buying, out Vector2 point, out bool click)
+            {
+                float closing = buying + RowCount * Each;
+                float shown = Ease(open, open + .25f, t) * (1f - Ease(closing, closing + .25f, t));
+                page.fade.alpha = shown;
+                int row = Mathf.FloorToInt((t - buying) / Each);
+                float local = t - buying - row * Each;
+                bool bought = row >= 0 && row < RowCount;
+                for (int i = 0; i < page.rows.Length; i++) ChooseRow(page.rows[i], bought && i == row && local < .8f);
+                page.flash.color = new Color(Bullet.r, Bullet.g, Bullet.b, bought && local is > .3f and < .85f ? 1f : 0f);
+                // The pointer glides to each row and clicks it.
+                point = row < 0 ? RowPoint(0) : row >= RowCount ? RowPoint(RowCount - 1)
+                    : Vector2.Lerp(RowPoint(Mathf.Max(0, row - 1)), RowPoint(row), Ease(0f, .25f, local));
+                click = bought && local is > .25f and < .4f;
+                return shown;
             }
 
             // At the row's right end, past the end of the longest text it sells.

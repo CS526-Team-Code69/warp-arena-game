@@ -4,22 +4,22 @@ using UnityEngine;
 namespace AnomalyArena
 {
     /// <summary>
-    /// The rooms' levels at work (V2 doc section E, 2026-11-10): what a level gives besides what it unlocks, the weapon Mk the Armament
-    /// Bay shares among every anomaly weapon, the Energy Lab's three research lines and what they sell item by item (each bought outright
-    /// and in effect at once: no draw), and the last day's overload for the Tyrant's fight. Numbers: CampaignRules.Rooms.cs.
-    /// A room's passive effect lasts while the room works (built to that level and not broken), like what it unlocks.
-    /// The other parts of the game read these through static hooks set at the start of a run (RunWeapons, SkillLoadout, ElementStatus,
-    /// PlayerController); each hook gives the neutral value outside a running campaign, so the open mode's 15 waves are untouched.
+    /// What the workshop sells, at work (numbers: CampaignRules.Rooms.cs): the weapon Mk shared by every anomaly weapon, the energy
+    /// research's three lines and what they sell item by item (each bought outright and in effect at once: no draw), Tame and Twist per
+    /// hand weapon, and the overload for the Tyrant's fight. Nothing is built: skills, Tame, infusion and Twist open on their days
+    /// (FeatureOpen, V2Campaign.Redesign.cs). The ship's three parts give their effects here too (ApplyShipEffects, the hooks).
+    /// The other parts of the game read these through static hooks set at the start of a run (RunWeapons, SkillLoadout, ElementStatus);
+    /// each hook gives the neutral value outside a running campaign, so the open mode's 15 waves are untouched.
     /// </summary>
     public sealed partial class V2Campaign
     {
-        /// <summary>The Energy Lab's three research lines, opened by its levels 1, 2 and 3.</summary>
+        /// <summary>The energy research's three lines: the body, skills and infusion.</summary>
         public enum ResearchLine { Body, Skills, Infusion }
 
         int teamMk = 1;
-        // The first day whose afternoon gets the Ship Launch Bay's extra alloy: the day after its level 1 was built.
+        // The first day whose afternoon gets the repaired engine's extra alloy: the day after it was repaired.
         int shipOreFromDay = int.MaxValue;
-        // Research tiers bought past tier 1, per line.
+        // Research levels bought past level 1, per line.
         readonly int[] researchBought = new int[3];
         // Body items bought: each stat at each rarity once.
         readonly HashSet<(StatId stat, CardRarity rarity)> statsBought = new();
@@ -34,32 +34,33 @@ namespace AnomalyArena
             statsBought.Clear();
             overloadShieldBuys = overloadDamageBuys = 0;
             overloadShieldGiven = false;
-            afternoonOreScale = lampRadiusScale = 1f;
+            ApplyShipEffects();
             InstallRoomHooks();
         }
 
-        /// <summary>This campaign is the one running: the hooks give its rooms' values, otherwise the neutral ones.</summary>
+        /// <summary>This campaign is the one running: the hooks give its values, otherwise the neutral ones.</summary>
         bool RoomsLive => this && Running && Active == this && rules;
 
-        bool RoomAt(CampaignRoom room, int level) => rooms[(int)room].level >= level;
+        // ───── What the ship's parts give ─────
 
-        // ───── What the levels give besides their unlocks ─────
+        /// <summary>The repaired hull: the share of a raid strike the base still takes.</summary>
+        float RaidDamageFactor => armorFixed ? 1f - rules.shipBaseDamageCut : 1f;
 
-        void OnRoomLevelBought(CampaignRoom room)
+        /// <summary>The effects other parts read (StudyEntry.cs): afternoonOreScale for the afternoon's ore (alloyIncomeScale, with the
+        /// repaired engine's bonus from the day after its repair) and lampRadiusScale for the night's lamps (the repaired hull). Every
+        /// frame of a run (TickRooms), and at once on a new run, a part bought and a continued save.</summary>
+        void ApplyShipEffects()
         {
-            // Ship Launch Bay level 1 (the engine's survey radar): more alloy each afternoon, from the next day on.
-            if (room == CampaignRoom.Ship && rooms[(int)room].level == 1) shipOreFromDay = Day + 1;
+            if (!rules) { afternoonOreScale = lampRadiusScale = 1f; return; }
+            afternoonOreScale = rules.AfternoonAlloyScale(engineFixed && Day >= shipOreFromDay);
+            lampRadiusScale = armorFixed ? 1f + rules.shipLampRadiusBonus : 1f;
         }
 
-        /// <summary>Ship Launch Bay level 2: the share of a raid strike the base still takes.</summary>
-        float RaidDamageFactor => ShipWorks(2) ? 1f - rules.shipBaseDamageCut : 1f;
-
-        /// <summary>Every frame of a run (TickBaseVisuals): the effects other parts read (StudyEntry.cs: afternoonOreScale for the afternoon's
-        /// ore, lampRadiusScale for the night's lamps), the held weapons' Mk labels, and the overload's shield when the Tyrant's fight begins.</summary>
+        /// <summary>Every frame of a run (TickBaseVisuals): the ship's effects, the held weapons' Mk labels, and the overload's shield when
+        /// the Tyrant's fight begins.</summary>
         void TickRooms()
         {
-            afternoonOreScale = ShipWorks(1) && Day >= shipOreFromDay ? 1f + rules.shipOreBonus : 1f;
-            lampRadiusScale = ShipWorks(2) ? 1f + rules.shipLampRadiusBonus : 1f;
+            ApplyShipEffects();
             SyncWeaponMk();
             if (Stage == CampaignStage.FinalBoss && !overloadShieldGiven) GiveOverloadShield();
         }
@@ -71,43 +72,41 @@ namespace AnomalyArena
             RunWeapons.MkDamageRule = w => !RoomsLive ? 0f : w != null && w.IsAnomalous ? rules.MkDamage(EffectiveMk(w)) : 1f;
             RunWeapons.NewWeaponMk = () => !RoomsLive ? 0 : rules.sharedWeaponMk ? teamMk : 1;
             RunWeapons.DamageBonus = () => RoomsLive ? FinalDamageScale : 1f;
-            SkillLoadout.CooldownScale = () => RoomsLive && ShipWorks(3) ? 1f - rules.shipSkillCooldownCut : 1f;
-            SkillLoadout.CostScale = () => RoomsLive && ShipWorks(3) ? 1f - rules.shipSkillCostCut : 1f;
+            // The fitted fuel tank: shorter skill cooldowns and lower charge costs.
+            SkillLoadout.CooldownScale = () => RoomsLive && fuelTankFitted ? 1f - rules.shipSkillCooldownCut : 1f;
+            SkillLoadout.CostScale = () => RoomsLive && fuelTankFitted ? 1f - rules.shipSkillCostCut : 1f;
             SkillLoadout.DamageScale = () => RoomsLive ? SkillDayScale * FinalDamageScale : 1f;
             ElementStatus.ExtraPenetration = (target, source) =>
                 RoomsLive && target is Enemy { IsBoss: true } && source && gm && source == gm.player ? rules.MkPenetration(PenetrationMk) : 0f;
             ElementStatus.StatusDamageFloor = source => RoomsLive && source && gm && source == gm.player ? InfusionFloorNow : 0f;
-            PlayerController.HitShare = (player, amount) => RoomsLive ? GuardPlayer(player, amount) : amount;
+            // The base has no shield to take a share of the player's hits.
+            PlayerController.HitShare = null;
         }
 
-        /// <summary>Energy Lab level 2: skill damage grows with the days.</summary>
-        float SkillDayScale => Works(CampaignRoom.Energy, 2) ? rules.SkillDamageScale(Day) : 1f;
-        /// <summary>Energy Lab level 3: the least a burn or poison of the player's deals a second (since 2026-11-10 the day's
-        /// infusionFloorByDay x infusion tier, tyrantInfusionFloor x tier in the Tyrant's fight).</summary>
-        float InfusionFloorNow => Works(CampaignRoom.Energy, 3) ? rules.InfusionFloor(Day, ResearchTier(ResearchLine.Infusion), TyrantFight) : 0f;
+        /// <summary>Once skills are open: skill damage grows with the days.</summary>
+        float SkillDayScale => FeatureOpen(StudyFeature.Skills) ? rules.SkillDamageScale(Day) : 1f;
+        /// <summary>Once infusion is open: the least a burn or poison of the player's deals a second (the day's infusionFloorByDay x the
+        /// infusion research level, tyrantInfusionFloor x the level in the Tyrant's fight).</summary>
+        float InfusionFloorNow => FeatureOpen(StudyFeature.Infuse) && CarriesInfusedWeapon() ? rules.InfusionFloor(Day, ResearchTier(ResearchLine.Infusion), TyrantFight) : 0f;
+
+        /// <summary>Whether a weapon the player carries (in a hand or an auto slot) was infused at the base: the infusion floor needs one,
+        /// so it comes with the infusion line rather than with the day alone. A built-in element does not count.</summary>
+        bool CarriesInfusedWeapon()
+        {
+            var weapons = gm ? gm.runWeapons : null;
+            if (!weapons) return false;
+            foreach (var w in weapons.Hand) if (Infused(w)) return true;
+            foreach (var w in weapons.Auto) if (Infused(w)) return true;
+            return false;
+            static bool Infused(RunWeapon w) => w != null && !w.builtInElement && (w.axes & UpgradeAxis.Infusion) != 0;
+        }
         /// <summary>The overload's extra damage, in the Tyrant's fight only.</summary>
         float FinalDamageScale => Stage == CampaignStage.FinalBoss ? 1f + rules.overloadDamageShare * overloadDamageBuys : 1f;
 
-        /// <summary>Central Control's shield guards a player near the base: while it has shield left, it takes shieldGuardShare of each hit
-        /// on a player within shieldGuardRadius cells of the base's walls. Returns what is left for the player.</summary>
-        float GuardPlayer(PlayerController player, float amount)
-        {
-            if (!player || amount <= 0f || ShieldLevel <= 0 || BaseShield <= 0f || BaseDestroyed) return amount;
-            Vector3 d = Query.Flat(player.Position - BaseCentre);
-            float outX = Mathf.Max(0f, Mathf.Abs(d.x) - BaseHalf), outZ = Mathf.Max(0f, Mathf.Abs(d.z) - BaseHalf);
-            if (outX * outX + outZ * outZ > rules.shieldGuardRadius * rules.shieldGuardRadius) return amount;
-            float taken = rules.ShieldGuardTakes(amount, BaseShield);
-            if (taken <= 0f) return amount;
-            BaseShield -= taken;
-            // The shield's hit where it caught the blow (CampaignAudio plays the break itself when this emptied it).
-            if (BaseShield > .01f) CampaignAudio.PlayAt(CampaignSfx.ShieldHit, player.Position);
-            return amount - taken;
-        }
-
         // ───── The shared weapon Mk ─────
 
-        /// <summary>The Armament Bay's weapon Mk, shared by every anomaly weapon held now or taken later (CampaignRules.sharedWeaponMk on,
-        /// the rule since 2026-11-10). 1 to CampaignRules.MaxWeaponMk; alloy buys up to Mk 10 (TryBuyWeaponDamage).</summary>
+        /// <summary>The weapon Mk shared by every anomaly weapon held now or taken later (CampaignRules.sharedWeaponMk on). 1 to
+        /// CampaignRules.MaxWeaponMk; alloy buys up to Mk 10 (TryBuyWeaponDamage).</summary>
         public int TeamMk => teamMk;
 
         /// <summary>Sets the shared Mk (clamped to 1 .. CampaignRules.MaxWeaponMk, so 11 is the void Mk) and brings every anomaly weapon held to
@@ -142,7 +141,7 @@ namespace AnomalyArena
         int PenetrationMk => rules.sharedWeaponMk ? teamMk : gm && gm.runWeapons && gm.runWeapons.Active is { IsAnomalous: true } w ? w.mk : 1;
 
         /// <summary>The shared Mk on every anomaly weapon held, so a weapon's label and card show the Mk it fights at (a weapon taken from a
-        /// crate or bought arrives at it through RunWeapons.NewWeaponMk; this keeps the held ones in step).</summary>
+        /// crate arrives at it through RunWeapons.NewWeaponMk; this keeps the held ones in step).</summary>
         void SyncWeaponMk()
         {
             if (!rules || !rules.sharedWeaponMk || !gm || !gm.runWeapons) return;
@@ -150,12 +149,20 @@ namespace AnomalyArena
             foreach (var w in gm.runWeapons.Auto) if (w is { IsAnomalous: true }) w.mk = teamMk;
         }
 
-        // ───── Energy Lab research ─────
+        // ───── Energy research ─────
 
-        /// <summary>A research line's tier: 0 until its Energy Lab level works, then 1 plus the tiers bought.</summary>
-        public int ResearchTier(ResearchLine line) => Works(CampaignRoom.Energy, (int)line + 1) ? 1 + researchBought[(int)line] : 0;
-        /// <summary>The tier a line has reached, broken room or not (what the study window shows).</summary>
-        int ResearchTierShown(ResearchLine line) => RoomAt(CampaignRoom.Energy, (int)line + 1) ? 1 + researchBought[(int)line] : 0;
+        /// <summary>The workshop feature a research line belongs to.</summary>
+        static StudyFeature LineFeature(ResearchLine line) => line switch
+        {
+            ResearchLine.Body => StudyFeature.Body,
+            ResearchLine.Skills => StudyFeature.Skills,
+            _ => StudyFeature.Infuse
+        };
+
+        /// <summary>A research line's level: 0 until it opens (OpensOnDay), then 1 plus the levels bought.</summary>
+        public int ResearchTier(ResearchLine line) => FeatureOpen(LineFeature(line)) ? 1 + researchBought[(int)line] : 0;
+        /// <summary>The level a line shows (the same as ResearchTier: nothing at the base breaks any more).</summary>
+        int ResearchTierShown(ResearchLine line) => ResearchTier(line);
 
         public bool TryBuyResearchTier(ResearchLine line)
         {
@@ -163,8 +170,8 @@ namespace AnomalyArena
             var price = tier > 0 ? rules.ResearchPrice(tier) : null;
             if (price == null || !TrySpend(price.Value)) return false;
             researchBought[(int)line]++;
-            Bought("research_tier", $"{line} tier {tier + 1}", CampaignRoom.Energy, price.Value);
-            ui.Flash(ArenaText.Pair($"{ResearchName(line)}升到了 {tier + 1} 阶，更稀有的项目已解锁", $"{ResearchName(line)} is now tier {tier + 1}. Rarer items are unlocked."));
+            Bought("research_tier", $"{line} level {tier + 1}", CampaignRoom.Energy, price.Value);
+            ui.Flash(ArenaText.Pair($"{ResearchName(line)}升到了 {tier + 1} 级，开放了更稀有的项目", $"{ResearchName(line)} is now level {tier + 1}. Rarer items are open."));
             return true;
         }
 
@@ -184,13 +191,14 @@ namespace AnomalyArena
             return null;
         }
 
-        /// <summary>One body item: a stat at a rarity, each pair once; the rarity needs its body research tier. With stat lines (the rule
-        /// since 2026-11-10, CampaignRules.statLineMode) only the line's next step sells and replaces the one below (V2Campaign.Days.cs).</summary>
+        /// <summary>One body item: a stat at a rarity, each pair once; the rarity needs its body research level. The body research sells
+        /// no max HP and no max charge (CampaignRules.bodyLeftOut): those come with armor. With stat lines (CampaignRules.statLineMode)
+        /// only the line's next step sells and replaces the one below (V2Campaign.Days.cs).</summary>
         public bool TryBuyStat(StatId stat, CardRarity rarity)
         {
             if (rules.statLineMode == StatLineMode.Replace) return TryBuyStatLine(stat, rarity);
             var row = StatRow(stat);
-            if (row == null || !Works(CampaignRoom.Energy, 1) || rules.RarityTier(rarity) > ResearchTier(ResearchLine.Body)
+            if (row == null || !rules.BodySells(stat) || !FeatureOpen(StudyFeature.Body) || rules.RarityTier(rarity) > ResearchTier(ResearchLine.Body)
                 || statsBought.Contains((stat, rarity)) || gm.progression.Stats.AtCap(stat)) return false;
             var price = new CampaignCost(0, rules.RarityEnergy(rarity));
             if (!TrySpend(price)) return false;
@@ -215,13 +223,13 @@ namespace AnomalyArena
             return 1;
         }
 
-        /// <summary>One skill item: a new skill at level 1 (its category needs its skill research tier and a free skill slot), or the next
-        /// level of one learned (the level's rarity needs its tier).</summary>
+        /// <summary>One skill item, once skills are open: a new skill at level 1 (its category needs its skill research level and a free
+        /// skill slot), or the next level of one learned (the level's rarity needs its research level).</summary>
         public bool TryBuySkill(SkillId id)
         {
             var skills = gm ? gm.skills : null;
             var definition = skills && skills.Catalog ? skills.Catalog.Find(id) : null;
-            if (!definition || definition.greaterVoid || !Works(CampaignRoom.Energy, 2)) return false;
+            if (!definition || definition.greaterVoid || !FeatureOpen(StudyFeature.Skills)) return false;
             int next = NextSkillLevel(id, out bool learned);
             int tier = ResearchTier(ResearchLine.Skills);
             var rarity = ArenaRarity.ForSkill(definition, next);
@@ -244,12 +252,13 @@ namespace AnomalyArena
             return null;
         }
 
-        /// <summary>One infusion item: an element on one held anomaly weapon without a built-in element (it replaces the element it has).</summary>
+        /// <summary>One infusion item, once infusion is open: an element on one held anomaly weapon without a built-in element (it replaces
+        /// the element it has).</summary>
         public bool TryInfuse(RunWeapon weapon, ElementKind element)
         {
             var weapons = gm ? gm.runWeapons : null;
             var rarity = InfusionRarity(element);
-            if (!weapons || weapon == null || rarity == null || !Works(CampaignRoom.Energy, 3) || !weapons.Holds(weapon) || !weapon.IsAnomalous
+            if (!weapons || weapon == null || rarity == null || !FeatureOpen(StudyFeature.Infuse) || !weapons.Holds(weapon) || !weapon.IsAnomalous
                 || weapon.builtInElement || weapons.ElementOf(weapon) == element || rules.RarityTier(rarity.Value) > ResearchTier(ResearchLine.Infusion)) return false;
             var price = new CampaignCost(0, rules.RarityEnergy(rarity.Value));
             if (!TrySpend(price)) return false;
@@ -259,14 +268,15 @@ namespace AnomalyArena
             return true;
         }
 
-        // ───── Armament Bay: Tame, Twist, new weapons ─────
+        // ───── Tame, Twist; new weapons ─────
 
-        /// <summary>Tame (Armament Bay level 2) or Twist (level 3) on one held anomaly hand weapon, once each, at a fixed price per weapon.
-        /// The weapon must have shown its anomaly (fired once), as before for these upgrades.</summary>
+        /// <summary>Tame (from CampaignRules.tameOpenDay) or Twist (from twistOpenDay) on one held anomaly hand weapon, once each, at a fixed
+        /// price per weapon. The weapon must have shown its anomaly (fired once), as before for these upgrades.</summary>
         public bool TryTameOrTwist(RunWeapon weapon, UpgradeAxis axis)
         {
             var weapons = gm ? gm.runWeapons : null;
-            if (axis is not (UpgradeAxis.Tame or UpgradeAxis.Twist) || !weapons || weapon == null || !Works(CampaignRoom.Armament, axis == UpgradeAxis.Tame ? 2 : 3)
+            if (axis is not (UpgradeAxis.Tame or UpgradeAxis.Twist) || !weapons || weapon == null
+                || !FeatureOpen(axis == UpgradeAxis.Tame ? StudyFeature.Tame : StudyFeature.Twist)
                 || System.Array.IndexOf(weapons.Hand, weapon) < 0 || !weapon.IsAnomalous || !weapon.revealed || weapon.Has(axis)) return false;
             var price = new CampaignCost(axis == UpgradeAxis.Tame ? rules.tameAlloy : rules.twistAlloy);
             if (!TrySpend(price)) return false;
@@ -276,7 +286,7 @@ namespace AnomalyArena
             return true;
         }
 
-        /// <summary>The 1-based wave whose weapons the Armament Bay can research now (as its random research used: the day's wave + 1).</summary>
+        /// <summary>The 1-based wave whose weapons can come now (as the random research used: the day's wave + 1).</summary>
         int ResearchWave => gm && gm.waves ? gm.waves.WaveIndex + 2 : 1;
 
         /// <summary>Where a new weapon of this form would go: a free hand or auto slot, or for a hand weapon the starting pistol's hand when
@@ -290,8 +300,8 @@ namespace AnomalyArena
             return free >= 0 ? free : PistolHandIfFull(weapons);
         }
 
-        /// <summary>One new weapon of a chosen form (Armament Bay level 2, the research price that rises with each weapon bought). The rocket
-        /// launcher keeps its own price and place (TryBuyRocketLauncher). It arrives at the shared Mk and shows its weapon card.</summary>
+        /// <summary>One new weapon of a chosen form. New weapons come only from the weapon crates now, so this refuses (NewWeaponForSale is
+        /// false); it stays for a later use. It would arrive at the shared Mk and show its weapon card.</summary>
         public bool TryBuyWeaponForm(WeaponForm form)
         {
             if (form == WeaponForm.RocketLauncher) return TryBuyRocketLauncher();
@@ -315,11 +325,11 @@ namespace AnomalyArena
             return true;
         }
 
-        // ───── The final overload (Central Control, last day) ─────
+        // ───── The final overload (the workshop, from overloadDay) ─────
 
-        /// <summary>From CampaignRules.overloadDay with Central Control working, leftover alloy or alien energy turns into the Final
-        /// Battle's opening shield or its extra damage.</summary>
-        public bool OverloadOpen => Running && Day >= rules.overloadDay && ControlWorks && Stage == CampaignStage.Base;
+        /// <summary>From CampaignRules.overloadDay, during a base visit, leftover alloy or alien energy turns into the Final Battle's opening
+        /// shield or its extra damage.</summary>
+        public bool OverloadOpen => Running && Day >= rules.overloadDay && Stage == CampaignStage.Base;
         public int OverloadShieldBuys => overloadShieldBuys;
         public int OverloadDamageBuys => overloadDamageBuys;
 

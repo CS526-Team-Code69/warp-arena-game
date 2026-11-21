@@ -8,9 +8,12 @@ namespace AnomalyArena
     /// morning's kills there; those are dark doubles of the monsters that were killed. A shadow that notices the player comes for them a
     /// little faster than the player walks, so only a sprint opens the distance. Light burns shadows: one inside a lamp's light or the
     /// base's loses itself second by second, fades and leaves by the nearest edge, and once it has taken rules.shadowLightSeconds of light
-    /// in all (it does not heal during the night) it dissolves. So they wait at a light's edge. Once a crowd of them
-    /// (rules.overrunShadows) waits at one lamp they go in together, attack and wear the lamp down while it burns them: a crowd that
-    /// wears it out first puts it out, and a lamp whose crowd burned away or left shines again. The base's light is never put out.
+    /// in all (it does not heal during the night) it dissolves. So they wait at a light's edge. A lamp's ring turns from its warm colour
+    /// toward violet with each shadow that gathers at it (CampaignRules.LampCrowdShare), and the goal panel's note names them once
+    /// rules.lampCrowdNotice gather at the player's lamp (V2Campaign.Night.cs). Once a crowd of them (rules.overrunShadows) waits at one
+    /// lamp it shows itself for rules.lampCrowdWarning seconds, then they go in together, attack and wear the lamp down while it burns
+    /// them: a crowd that wears it out first puts it out, and a lamp whose crowd burned away or left shines again. The base's light is
+    /// never put out.
     /// Weapons and skills work at night and pass through shadows: only light hurts one.
     /// The tutorial night's shadows hunt wherever the player goes, a little slower than a walk, and touch for a share of a normal hit
     /// (rules.tutorialShadowHitScale), so the first night shows that a touch hurts; they never join a crowd at a lamp, and light burns
@@ -52,8 +55,6 @@ namespace AnomalyArena
         // A tutorial night shadow hunts at this share of the player's walk, so walking away always gets a new player back to the light
         // (the night's lamp step lets the player walk: SpotlightTutorial.Allowed).
         const float TutorialChaseShare = .9f;
-        // A crowd at a lamp shows itself this long before it goes in: the ring turns violet and the lamp flickers.
-        const float CrowdWarning = 1.5f;
         // A shadow this far inside a light's edge burns; one held on the edge itself (KeptOutOf) does not.
         const float BurnInset = .05f;
         // A burning shadow's body: its alpha when the light first touches it and when it is all but gone, and its colour, from near black
@@ -284,7 +285,10 @@ namespace AnomalyArena
                     // The crowd's low drone with its whispers (CampaignAudio plays it at most every few seconds).
                     CampaignAudio.PlayAt(CampaignSfx.ZoneOverrunWarning, lamp.position);
                 }
-                else if (Time.time - lamp.crowdSince >= CrowdWarning) Smother(lamp);
+                // A crowd shows itself for rules.lampCrowdWarning seconds (the ring violet, the lamp flickering), then goes in.
+                else if (Time.time - lamp.crowdSince >= rules.lampCrowdWarning) Smother(lamp);
+                // The ring turns toward violet as the shadows gather and back as they thin (drawn again only when their number changed).
+                if (lamp.drawnCrowd != crowd) DrawLampEdge(lamp);
             }
 
             // What shelters the player now: the base's light, or a lamp no crowd has gone into.
@@ -575,6 +579,16 @@ namespace AnomalyArena
         }
 
         public void DebugPlacePlayer(Vector3 at) => PlacePlayer(at);
+
+        /// <summary>Lamp index's crowd (the shadows at its edge or inside it) and whether a crowd has gone into it; false when there is no
+        /// such lamp.</summary>
+        public bool DebugLampState(int index, out int crowd, out bool goneIn)
+        {
+            bool there = index >= 0 && index < lamps.Count;
+            crowd = there ? lamps[index].crowd : 0;
+            goneIn = there && lamps[index].smothered;
+            return there;
+        }
         public void DebugPlaceLamp(Vector3 at) { if (Stage == CampaignStage.Night) PlaceLamp(Query.Flat(at)); }
 
         /// <summary>Raises one plain shadow at a point and gives back a probe that reads it: whether it is still there, where it stands and

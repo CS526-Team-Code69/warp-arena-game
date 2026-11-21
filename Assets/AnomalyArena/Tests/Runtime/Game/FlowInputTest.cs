@@ -12,7 +12,8 @@ namespace AnomalyArena
 {
     /// <summary>Flow and input, in the saved arena, with keys pressed on a real keyboard device. Space and
     /// Enter do nothing anywhere, not even on a selected button, except close the weapon card, the one text that names them (document 2.2,
-    /// 10-27); E enters the Void Trial only while standing on the
+    /// 10-27), and Enter's retry on a lost run's result page, whose button names it (ResultScreenTest, SaveStoryTest); E enters the Void
+    /// Trial only while standing on the
     /// open portal and free to act; entering clears every status and empties the shield; back from a trial won mid-wave, the battlefield
     /// and the player hold still while the player absorbs the void's power, then the wave resumes with the extra pick, and Tab cannot walk
     /// away from the greater reward in between; a player sliding from a knockback cannot cast skills until the slide ends. Every test that

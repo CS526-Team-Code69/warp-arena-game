@@ -86,7 +86,7 @@ MonoBehaviour:
   baseHp: 300
   baseHpGrowth: 1.5
   shieldShare: 0.15
-  nightSelfRepair: 0.3
+  nightSelfRepair: 0.25
   sideBreakShare: 0.25
   raiderAggroRadius: 7
   nightOreNodes: 0

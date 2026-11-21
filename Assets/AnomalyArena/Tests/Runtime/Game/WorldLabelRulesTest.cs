@@ -56,6 +56,25 @@ namespace AnomalyArena
             Assert.That(V2WorldLabels.FirstSightNotice(EnemyKind.Tyrant), Is.Empty);
         }
 
+        [Test]
+        public void HoleFirstFed_QueuesItsBannerOnceARun_AndAgainAfterTheRunIsForgotten()
+        {
+            Assume.That(V5HudKit.On, Is.True, "the whole game's pages (the English Alpha shows no such banner)");
+            V2WorldLabels.ForgetFirstSights();
+            try
+            {
+                Assert.That(V2WorldLabels.HoleFirstFed(), Is.True, "the first monster the hole swallows brings the banner");
+                Assert.That(V2WorldLabels.HoleFirstFed(), Is.False, "the second does not");
+                Assert.That(V2WorldLabels.HoleFirstFed(), Is.False, "nor any later one");
+                V2WorldLabels.ForgetFirstSights();
+                Assert.That(V2WorldLabels.HoleFirstFed(), Is.True, "a new run (its labels forgotten) has it again");
+            }
+            finally
+            {
+                V2WorldLabels.ForgetFirstSights();
+            }
+        }
+
         [TestCase(true, ExpectedResult = true, TestName = "Whitebox names every enemy, on every page")]
         [TestCase(false, ExpectedResult = false, TestName = "The art keeps names to specials, elites and bosses")]
         public bool OrdinaryNamesShown_InWhiteboxOnly(bool whitebox) => V2WorldLabels.OrdinaryNamesShown(whitebox);

@@ -7,7 +7,8 @@ namespace AnomalyArena
 {
     /// <summary>
     /// Run flow beside GameManagerV2.cs. The keyboard answers only to the keys the game shows: Space, Enter and keypad
-    /// Enter close the weapon card, which names them (document 2.2, 10-27), and the UI has no submit action, so every other step is a
+    /// Enter close the weapon card, which names them (document 2.2, 10-27), Enter and keypad Enter retry a lost run from its last save
+    /// on the result page, whose orange button names Enter (RetryFromSave), and the UI has no submit action, so every other step is a
     /// click or a key printed on screen. Space is also the void dash once the void trial is won, and the battle HUD's key hints then show
     /// it (VoidDashUnlocked). A Void Trial won mid-wave hands the wave back after a short freeze in which the player absorbs
     /// the void's power (document 12.5).
@@ -27,8 +28,8 @@ namespace AnomalyArena
             (Key.Space, KeyCode.Space), (Key.Enter, KeyCode.Return), (Key.NumpadEnter, KeyCode.KeypadEnter),
         };
 
-        /// <summary>The keys the menus answer to (tests check that Space and Enter close the weapon card and do nothing else on a screen,
-        /// and that Space dashes only once the dash is unlocked).</summary>
+        /// <summary>The keys the menus answer to (tests check that Space and Enter close the weapon card and do nothing else on a screen
+        /// but the result page's retry, and that Space dashes only once the dash is unlocked).</summary>
         public static IEnumerable<KeyCode> ShownKeyCodes
         {
             get { foreach (var (_, code) in ShownKeys) yield return code; }
@@ -53,7 +54,7 @@ namespace AnomalyArena
 
         /// <summary>What a key does in the current phase, the path the keyboard takes (open to tests). A key the game does not show
         /// does nothing in any phase, the black-hole cutscene included; Space, Enter and keypad Enter close the weapon card, and outside
-        /// it Space is the void dash once it is unlocked (TryVoidDash).</summary>
+        /// it Space is the void dash once it is unlocked (TryVoidDash) and Enter retries a lost run on its result page (RetryFromSave).</summary>
         public void PressKey(KeyCode key)
         {
             switch (key)
@@ -65,6 +66,8 @@ namespace AnomalyArena
                     if (RunPhase == ArenaUiState.WeaponIntro) ExecuteUiCommand(ArenaUiCommand.DismissWeaponIntro);
                     // Outside the card Space is the void dash: the press that closes the card is not also a dash.
                     else if (key == KeyCode.Space) TryVoidDash();
+                    // Enter on a lost run's result page goes on from the run's last save, as the page's orange button shows.
+                    else if (RunPhase == ArenaUiState.Result) RetryFromSave();
                     break;
                 case KeyCode.Escape:
                     if (RunPhase == ArenaUiState.Paused) ExecuteUiCommand(ArenaUiCommand.Resume);

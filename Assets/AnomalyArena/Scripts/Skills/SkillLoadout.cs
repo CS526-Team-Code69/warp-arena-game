@@ -276,7 +276,7 @@ namespace AnomalyArena
             level = definition.greaterVoid ? 1 : Mathf.Clamp(level, 1, MaxLevel);
             string title = ArenaTerms.Skill(definition.id) + (level > 1 ? ArenaText.Pair($" · 等级 {level}", $" · Level {level}") : "");
             return new(DraftCardKind.Skill, title,
-                definition.Description(level) + ArenaText.Pair($"\n消耗 {definition.cost:0} 能量", $"\n{definition.cost:0} Energy"),
+                definition.Description(level) + ArenaText.Pair($"\n消耗 {definition.cost:0} 充能", $"\n{definition.cost:0} Charge"),
                 replacement => Learn(definition.id, replacement, level), full, definition.id,
                 ArenaRarity.ForSkill(definition, level), () => SlotOf(definition.id) < 0 && (OwnedCount >= 3) == full);
         }
@@ -319,7 +319,7 @@ namespace AnomalyArena
                 if (!target) return Refuse(index, ArenaText.Pair("附近没有血量够低的敌人", "No enemy nearby is weak enough"));
             }
             // Cost and Cooldown carry the campaign's room factors (SkillSlot), which are 1 elsewhere.
-            if (!progression || !progression.TrySpendEnergy(slot.Cost)) return Refuse(index, ArenaText.Pair("能量不足", "Not enough energy"));
+            if (!progression || !progression.TrySpendEnergy(slot.Cost)) return Refuse(index, ArenaText.Pair("充能不足", "Not enough charge"));
             if (def.id == SkillId.Blink) SpendBlinkCharge(slot.Cooldown);
             else slot.CooldownLeft = slot.Cooldown;
             Vector3 visualPoint = target ? target.Position : pointTarget ? point : origin;

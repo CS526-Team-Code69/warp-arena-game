@@ -41,7 +41,8 @@ namespace AnomalyArena
         public bool CharacterVoidMk(RunWeapon weapon) => RoomsLive && weapon != null && weapon.IsAnomalous && EffectiveMk(weapon) > rules.voidMkFrom;
 
         /// <summary>The study's purchases this run, one line for each kind bought: the shared weapon Mk, the armor, each research line's
-        /// tier, each body stat's step, the final overload and the void armor. A kind not bought yet makes no line.</summary>
+        /// level, each body stat's step, the final overload and the void armor. A kind not bought yet makes no line: a research line shows
+        /// once a level past its first is bought, with the level the workshop's research tile shows.</summary>
         public void CharacterUpgrades(List<CharacterEntry> into)
         {
             if (into == null || !Running || !rules || !gm) return;
@@ -70,8 +71,8 @@ namespace AnomalyArena
                 into.Add(new CharacterEntry
                 {
                     id = "study.armor",
-                    title = ArenaText.Pair("装甲", "Armor"),
-                    detail = ArenaText.Pair($"每级最大生命 +{hpStep:0}、最大能量 +{energyStep:0}", $"Each level: max HP +{hpStep:0}, max energy +{energyStep:0}"),
+                    title = ArenaText.Pair("护甲", "Armor"),
+                    detail = ArenaText.Pair($"每级生命上限 +{hpStep:0}、充能上限 +{energyStep:0}", $"Each level: max HP +{hpStep:0}, max charge +{energyStep:0}"),
                     value = ArenaText.Pair($"{armor} 级", $"Lv {armor}"),
                     rarity = StudyLadder(Mathf.Min(armor, rules.MaxArmorLevel), rules.MaxArmorLevel),
                     art = art ? art.armor : null, flat = WhiteboxIcons.ForStudy("armor"),
@@ -80,15 +81,16 @@ namespace AnomalyArena
 
             foreach (var line in new[] { ResearchLine.Body, ResearchLine.Skills, ResearchLine.Infusion })
             {
+                // A line is at level 1 the day it opens, with nothing bought: that makes no line here.
                 int tier = ResearchTierShown(line);
-                if (tier <= 0) continue;
+                if (tier <= 1) continue;
                 into.Add(new CharacterEntry
                 {
                     id = "study.research." + line,
                     title = ResearchName(line),
-                    detail = tier >= rules.MaxResearchTier ? ArenaText.Pair("已到最高阶", "At its top tier")
-                        : ArenaText.Pair($"一共 {rules.MaxResearchTier} 阶", $"{rules.MaxResearchTier} tiers in all"),
-                    value = ArenaText.Pair($"{tier} 阶", $"Tier {tier}"),
+                    detail = tier >= rules.MaxResearchTier ? ArenaText.Pair("已到最高级", "At its top level")
+                        : ArenaText.Pair($"一共 {rules.MaxResearchTier} 级", $"{rules.MaxResearchTier} levels in all"),
+                    value = ArenaText.Pair($"{tier} 级", $"Level {tier}"),
                     rarity = StudyLadder(tier, rules.MaxResearchTier),
                     art = art ? art.energyLab : null, flat = WhiteboxIcons.ForStudy("tier." + line),
                 });
@@ -150,8 +152,8 @@ namespace AnomalyArena
                 into.Add(new CharacterEntry
                 {
                     id = "study.voidArmor",
-                    title = ArenaText.Pair("虚空装甲附魔", "Void armor enchant"),
-                    detail = ArenaText.Pair($"能量每秒恢复 {rules.voidArmorEnergyRegen:0.#}", $"Energy regenerates {rules.voidArmorEnergyRegen:0.#} a second"),
+                    title = ArenaText.Pair("虚空护甲附魔", "Void armor enchant"),
+                    detail = ArenaText.Pair($"充能每秒恢复 {rules.voidArmorEnergyRegen:0.#}", $"Charge regenerates {rules.voidArmorEnergyRegen:0.#} a second"),
                     value = "",
                     rarity = CardRarity.Void,
                     art = art ? art.armor : null, flat = WhiteboxIcons.ForStudy("void.armor"),

@@ -20,7 +20,7 @@ namespace AnomalyArena
             StatId.ElementPenetration => ArenaText.Pair($"伤害穿透 +{Value * 100f:0}%：打免疫某种属性的目标时，这一比例的属性伤害仍会生效，但状态依旧叠不上", $"Damage Penetration +{Value * 100f:0}%: this share of an element's damage still hits targets immune to it, though its statuses never land"),
             StatId.MaxHp => ArenaText.Pair($"最大生命 +{Value:0.##}，拿到时同时回复等量的生命", $"Max HP +{Value:0.##}, and you heal the same amount when you take it"),
             StatId.MoveSpeed => ArenaText.Pair($"移动速度 +{Value * 100f:0}%", $"Move Speed +{Value * 100f:0}%"),
-            StatId.MaxEnergy => ArenaText.Pair($"能量上限 +{Value:0.##}", $"Max Energy +{Value:0.##}"),
+            StatId.MaxEnergy => ArenaText.Pair($"充能上限 +{Value:0.##}", $"Max Charge +{Value:0.##}"),
             StatId.Knockback => $"{Title} +{Value * 100f:0}%",
             _ => $"{Title} +{Value:0.##}"
         };
@@ -40,7 +40,7 @@ namespace AnomalyArena
             StatBonus.Regeneration => ArenaText.Pair($"每 5 秒回复 {BonusValue:0.#} 点生命", $"Heal {BonusValue:0.#} HP every 5 s"),
             StatBonus.Stamina => ArenaText.Pair($"冲刺时间延长 {BonusValue:0.##} 秒", $"Sprint lasts {BonusValue:0.##} s longer"),
             StatBonus.Impact => ArenaText.Pair($"撞墙伤害 +{BonusValue:0}（随游戏进度成长）", $"Wall slam damage +{BonusValue:0} (grows as the game goes on)"),
-            StatBonus.EnergySiphon => ArenaText.Pair($"每有一个敌人死亡，回复 {BonusValue:0.#} 点能量", $"Every enemy death restores {BonusValue:0.#} Energy"),
+            StatBonus.EnergySiphon => ArenaText.Pair($"每有一个敌人死亡，回复 {BonusValue:0.#} 点充能", $"Every enemy death restores {BonusValue:0.#} Charge"),
             _ => ""
         };
     }

@@ -107,18 +107,18 @@ namespace AnomalyArena
         };
 
         /// <summary>A lesson's line: the story page's, shortened, naming the keys as they are now.</summary>
-        static string LessonLine(int lesson) => lesson switch
+        public static string LessonLine(int lesson) => lesson switch
         {
             0 => ArenaText.Pair($"移动时按住 {ArenaKeys.SprintKey} 冲刺；体力用光后，要等它回满才能再冲刺。",
                 $"Hold {ArenaKeys.SprintKey} while moving to sprint. Once stamina runs out, wait for a full bar before sprinting again."),
             1 => ArenaText.Pair("用鼠标瞄准，按左键使用手上的武器；按住时是蓄力还是连射，取决于武器。",
                 "Aim with the mouse; left click uses the weapon in your hand. Holding the button charges or keeps firing, depending on the weapon."),
-            2 => ArenaText.Pair("右键在两只手的武器之间切换；在基地的能量研究区学会技能后，按技能键释放。",
-                "Right click switches between your hand weapons; skills learned at the base's Energy Lab are cast with the skill keys."),
+            2 => ArenaText.Pair("右键在两只手的武器之间切换；在基地的整备页学会技能后，按技能键释放。",
+                "Right click switches between your hand weapons; skills learned in the base's workshop are cast with the skill keys."),
             3 => ArenaText.Pair($"下午按住 {ArenaKeys.InteractKey} 采合金矿；夜里先按 {ArenaKeys.LampKey} 放矿灯，再在灯光里采暗物质。",
                 $"In the afternoon, hold {ArenaKeys.InteractKey} to mine alloy ore; at night, press {ArenaKeys.LampKey} to set down a lamp and mine dark matter in its light."),
-            4 => ArenaText.Pair($"下午或夜里在基地门口按 {ArenaKeys.InteractKey} 进去，就能建造各区、研习升级和修理飞船。",
-                $"In the afternoon or at night, press {ArenaKeys.InteractKey} at the base door to go in and build, study or repair the ship."),
+            4 => ArenaText.Pair($"下午或夜里在基地门口按 {ArenaKeys.InteractKey} 进整备页升级武器、学技能，在飞船旁按 {ArenaKeys.InteractKey} 修飞船、造矿灯。",
+                $"In the afternoon or at night, press {ArenaKeys.InteractKey} at the base door to upgrade weapons and learn skills in the workshop; beside the ship, {ArenaKeys.InteractKey} repairs it and crafts lamps."),
             _ => ArenaText.Pair("按 Esc 暂停，在暂停页可以查看按键、重看教学、重新开局或返回标题。",
                 "Press Esc to pause. From there you can check the keys, see the tutorial again, restart or quit to the title."),
         };

@@ -8,18 +8,37 @@ namespace AnomalyArena
     /// both modes keep (the player's progression, skills, weapons, HP and stamina, the waves fought and the map laid); story or open holds
     /// the mode's own part, and the other part stays at its defaults. A save is the state just before a phase (story) or a wave (open
     /// mode) begins, so continuing it goes through that entry again. version says how the fields are meant: a build does not read a save
-    /// of a later version than its own.
+    /// of a later version than its own, and brings an earlier one up to its own as it reads it (Upgrade).
+    /// Version 2: the story's base has no rooms and no shield, the ship is three parts bought once each, and the fuel counts dark matter.
     /// </summary>
     [Serializable]
     public sealed class SaveData
     {
-        public const int CurrentVersion = 1;
+        public const int CurrentVersion = 2;
 
         public int version = CurrentVersion;
         public SaveSummary summary = new();
         public RunSave run = new();
         public StorySave story = new();
         public OpenSave open = new();
+
+        /// <summary>Brings a save of an earlier version up to this build's meaning of its fields (ArenaSaves.Load calls it as it reads a
+        /// slot): a version 1 story part is converted (StorySave.FromVersion1) and its summary's fuel with it. An open-mode save has nothing
+        /// to convert.</summary>
+        public void Upgrade()
+        {
+            if (version < 2)
+            {
+                story?.FromVersion1();
+                if (summary is { mode: SaveMode.Story } && story != null)
+                {
+                    summary.fuel = Mathf.Max(0, summary.fuel) * StorySave.DarkPerOldFuelUnit;
+                    summary.fuelMax = Mathf.Max(0, summary.fuelMax) * StorySave.DarkPerOldFuelUnit;
+                    summary.fuelTank = story.fuelTank;
+                }
+            }
+            version = CurrentVersion;
+        }
     }
 
     /// <summary>What a run of either mode keeps.</summary>
@@ -131,14 +150,16 @@ namespace AnomalyArena
         public bool hasVoidOreCentre;
         public Vector3 voidOreCentre;
 
-        // the base, its rooms in CampaignRoom order
+        // the base: durability is its fortification level. Version 1 only (read to convert it, never written since): the rooms in
+        // CampaignRoom order, which were built, broken and repaired, and the base's shield.
         public int[] roomLevels = new int[4];
         public bool[] roomDamaged = new bool[4];
         public int durability = 1, shieldLevel;
         public float baseHp, baseShield;
 
-        // the ship
-        public bool engineFixed, armorFixed;
+        // the ship: the engine, the hull (armorFixed: the old name of the hull) and the fuel tank, and the fuel in dark matter (0 to
+        // CampaignRules.fuelTankDark; version 1 counted it in units of DarkPerOldFuelUnit)
+        public bool engineFixed, armorFixed, fuelTank;
         public int fuel;
 
         // what was bought
@@ -179,6 +200,25 @@ namespace AnomalyArena
         public int[] killCount = Array.Empty<int>();
         public int[] kindRegion = Array.Empty<int>();
         public int[] kindKill = Array.Empty<int>();
+
+        /// <summary>Version 1's fuel: units of this much dark matter, ten of them to a full tank.</summary>
+        public const int DarkPerOldFuelUnit = 10, OldFuelUnits = 10;
+        /// <summary>The Ship Launch Bay's level from which version 1 synthesised fuel, the level that stands for the fitted fuel tank now.</summary>
+        const int OldTankBayLevel = 3;
+
+        /// <summary>A version 1 story part in version 2's terms: the room levels and the shield are dropped; the fuel tank counts as fitted
+        /// where the Ship Launch Bay had reached level 3; the fuel's units become dark matter (x10); the engine and the armor (now the hull)
+        /// stay repaired and the durability level is the fortification level; the engine's afternoon bonus waits for the engine.</summary>
+        public void FromVersion1()
+        {
+            int ship = (int)CampaignRoom.Ship;
+            fuelTank = roomLevels != null && roomLevels.Length > ship && roomLevels[ship] >= OldTankBayLevel;
+            fuel = Mathf.Clamp(fuel, 0, OldFuelUnits) * DarkPerOldFuelUnit;
+            durability = Mathf.Max(1, durability);
+            shieldLevel = 0;
+            baseShield = 0f;
+            if (!engineFixed) shipOreFromDay = int.MaxValue;
+        }
     }
 
     /// <summary>The open mode's own part of a save: the map's black holes (the map itself is RunSave.mapIndex).</summary>

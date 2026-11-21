@@ -344,11 +344,11 @@ namespace AnomalyArena
             switch (kind)
             {
                 case Kind.Hand:
-                    // The buttons follow the weapon: the left one uses the slot in hand, the right one swaps to the other, and an empty
+                    // The buttons follow the weapon: the left one fires the slot in hand, the right one swaps to the other, and an empty
                     // slot that is not in hand has nothing to swap to (V2SlotFeedback's saved key line says the same).
                     cap = value.active ? ArenaText.Pair("左键", "LMB") : !empty ? ArenaText.Pair("右键", "RMB") : "";
                     dark = !value.active;
-                    word = ArenaText.Pair($"手持 {index + 1}", $"Hand {index + 1}");
+                    word = HandKeyWord(index, value.active, empty);
                     break;
                 case Kind.Auto:
                     cap = ArenaText.Pair("自动", "AUTO");
@@ -372,6 +372,13 @@ namespace AnomalyArena
             float left = Pad * Css + (showCap ? key.Rect.sizeDelta.x + KeyGap * Css : 0f);
             V5TitleKit.Place(keyWord.rectTransform, left, KeyTop * Css, Mathf.Max(1f, V5BattleKit.Width(keyWord) + 2f), KeyH * Css);
         }
+
+        /// <summary>The word after a hand slot's keycap: what its button does, fire for the hand in use and swap for the other; an empty
+        /// slot keeps its place's name.</summary>
+        public static string HandKeyWord(int index, bool inUse, bool empty) =>
+            empty ? ArenaText.Pair($"手持 {index + 1}", $"Hand {index + 1}")
+            : inUse ? ArenaText.Pair("开火", "Fire")
+            : ArenaText.Pair("换手", "Swap");
 
         /// <summary>The hand in use says so at the bottom-right corner (left of the element's medal); V2SlotFeedback makes and shows the
         /// line (its tag), this places and colours it. Its width in canvas units, 0 while not in use.</summary>

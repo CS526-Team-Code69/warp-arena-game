@@ -33,10 +33,14 @@ namespace AnomalyArena
         /// <summary>The goal marker's colour: orange (go there) in the fifth pass, the old cyan otherwise.</summary>
         static Color MarkerColour => V5HudKit.On ? V5TitleKit.Orange : Accent;
 
-        /// <summary>The mining bar's fill: steel for alloy and violet for dark matter in the fifth pass, the old colours otherwise.</summary>
-        static Color MineAlloyColour => V5HudKit.On ? V5TitleKit.Steel : AlloyBar;
-
-        static Color MineDarkColour => V5HudKit.On ? V5HudKit.Violet : DarkBar;
+        /// <summary>The mining bar's fill by the node mined: alloy's copper, dark matter's violet, the void's violet for void alloy, each a
+        /// little darker than the resource's own colour so the words over it stay readable.</summary>
+        static Color MineColour(V2Campaign.NodeKind kind) => kind switch
+        {
+            V2Campaign.NodeKind.Dark => Color.Lerp(ResourceColours.Dark, Color.black, .2f),
+            V2Campaign.NodeKind.VoidAlloy => V5HudKit.Violet,
+            _ => Color.Lerp(ResourceColours.Alloy, Color.black, .2f)
+        };
 
         void BuildStoryHud()
         {
@@ -119,7 +123,7 @@ namespace AnomalyArena
             foreach (var bar in markerArrow.GetComponentsInChildren<Image>(true)) bar.color = V5TitleKit.Orange;
             markerText.color = V5TitleKit.Ink;
             markerText.fontSize = V5StoryKit.FontSize(19f);
-            // The mining bar: the mock-up's dark track with a hairline (its fill: MineAlloyColour, MineDarkColour), raised clear of the subtitle.
+            // The mining bar: the mock-up's dark track with a hairline (its fill: MineColour), raised clear of the subtitle.
             mineBar.anchoredPosition = new Vector2(0f, StoryMineBarY);
             if (mineBar.TryGetComponent<Image>(out var track)) track.color = V5HudKit.Track;
             if (mineBar.TryGetComponent<UnityEngine.UI.Outline>(out var rim))

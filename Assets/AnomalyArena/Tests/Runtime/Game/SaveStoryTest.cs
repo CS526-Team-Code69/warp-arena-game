@@ -13,7 +13,9 @@ namespace AnomalyArena
     /// morning as Day 0's night ends, its afternoon as the morning's wave is over; the summary shows the day, the phase, the ship and the
     /// weapons. A new game in a filled slot deletes it first and then binds it. A won run's slot is marked cleared, and Continue does
     /// nothing for it; a lost run's slot keeps its last save. Continuing an afternoon save brings the run back as it was when that
-    /// afternoon began: the day, the phase, the currencies, the base, the ship, the player's level, weapons and skills, on the same map.
+    /// afternoon began: the day, the phase, the currencies, the base's fortification, the ship's parts and fuel, the player's level,
+    /// weapons and skills, on the same map. A fall in day 1's morning is retried from the result page with Enter: the scene loads again
+    /// and the run goes on from that morning in the same slot, with no result page, pause or stopped clock left over.
     /// Day 0's walk is skipped with the campaign's own calls for checks (its night begun and ended at once), and the mornings last a few
     /// seconds (a copy of the rules); the saves are kept in memory.</summary>
     [TestFixture]
@@ -63,12 +65,12 @@ namespace AnomalyArena
             var morning = ArenaSaves.List(SaveMode.Story)[Slot];
             Assert.That((morning.empty, morning.cleared, morning.day, morning.phase), Is.EqualTo((false, false, 1, SavePhase.Morning)), "day 1's morning is saved as it begins");
             Assert.That(morning.weapons, Is.EqualTo(new[] { WeaponForm.Pistol }), "with the pistol and nothing of the old run");
-            Assert.That((morning.engineFixed, morning.armorFixed, morning.fuel, morning.fuelMax), Is.EqualTo((false, false, 0, campaign.FuelUnits)), "the ship as it is");
+            Assert.That((morning.engineFixed, morning.armorFixed, morning.fuelTank, morning.fuel, morning.fuelMax), Is.EqualTo((false, false, false, 0, campaign.FuelTop)), "the ship as it is");
             Assert.That(morning.mapFamily, Is.EqualTo(ArenaSaves.MapFamily(WorldMap.Active.biome)), "the map laid");
             Assert.That(ArenaSaves.Load(SaveMode.Story, Slot).story.day, Is.Zero, "taken as Day 0's night ends, before the day is counted up");
 
             campaign.DebugGrant(5000, 5000, 5000);
-            Assume.That(campaign.TryUpgradeRoom(CampaignRoom.Ship) && campaign.TryRepairEngine(), Is.True, "the Ship Launch Bay is built and the engine repaired");
+            Assume.That(campaign.TryBuyShipPart(V2Campaign.ShipPartKind.Engine), Is.True, "the engine is repaired");
             game.runWeapons.GiveToAuto(0, WeaponForm.OrbitBlades);
             await FinishTheMorning(game, campaign);
 
@@ -103,10 +105,12 @@ namespace AnomalyArena
             var campaign = await StartStory(game, true);
             BeginDay1(game, campaign);
 
-            // A run worth bringing back: currencies, two rooms, the engine, an armor level, two more weapons, a skill, a higher Mk.
-            campaign.DebugGrant(5000, 5000, 5000);
-            Assume.That(campaign.TryUpgradeRoom(CampaignRoom.Ship) && campaign.TryRepairEngine(), Is.True, "the Ship Launch Bay is built and the engine repaired");
-            Assume.That(campaign.TryUpgradeRoom(CampaignRoom.Armament) && campaign.TryBuyPlayerLevel(), Is.True, "the Armament Bay is built and an armor level bought");
+            // A run worth bringing back: currencies, the engine, the fuel tank and some fuel, a fortification level, an armor level, two
+            // more weapons, a skill, a higher Mk.
+            campaign.DebugGrant(5000, 5000, 37);
+            Assume.That(campaign.TryBuyShipPart(V2Campaign.ShipPartKind.Engine) && campaign.TryBuyShipPart(V2Campaign.ShipPartKind.Tank) && campaign.TryAddFuel(), Is.True,
+                "the engine is repaired, the fuel tank fitted and the dark matter held poured in");
+            Assume.That(campaign.TryFortify() && campaign.TryBuyPlayerLevel(), Is.True, "the base is fortified a level and an armor level bought");
             game.runWeapons.GiveToHand(1, WeaponForm.Rifle);
             game.runWeapons.GiveToAuto(0, WeaponForm.OrbitBlades);
             Assume.That(game.skills.Learn(SkillId.Blink, -1, 2), Is.True, "Blink is learned at level 2");
@@ -128,9 +132,8 @@ namespace AnomalyArena
 
             Assert.That((after.day, after.stage), Is.EqualTo((before.day, before.stage)), "the day and the phase");
             Assert.That(after.currencies, Is.EqualTo(before.currencies), "the currencies and what was earned");
-            Assert.That(after.rooms, Is.EqualTo(before.rooms), "the rooms");
-            Assert.That(after.baseState, Is.EqualTo(before.baseState), "the base's level, shield and HP");
-            Assert.That(after.ship, Is.EqualTo(before.ship), "the ship");
+            Assert.That(after.baseState, Is.EqualTo(before.baseState), "the base's fortification level and HP");
+            Assert.That(after.ship, Is.EqualTo(before.ship), "the ship's parts and its fuel");
             Assert.That((after.lamps, after.teamMk, after.level, after.maxHp), Is.EqualTo((before.lamps, before.teamMk, before.level, before.maxHp)), "the lamps, the Mk and the armor level");
             Assert.That(after.hp, Is.EqualTo(before.hp).Within(.5f), "the player's HP");
             Assert.That(after.weapons, Is.EqualTo(before.weapons), "the weapons in their slots");
@@ -161,7 +164,74 @@ namespace AnomalyArena
             Assert.That(ArenaSaves.CanContinue(SaveMode.Story, Slot), Is.True, "and it can be continued from there");
         }
 
+        [Test, LoadScene(Scene), Category("Integration"), Timeout(150000)]
+        public async Task AFallInDay1sMorning_RetriedFromTheResultPage_GoesOnFromThatMorningInTheSameSlot()
+        {
+            ArenaSaves.Bind(SaveMode.Story, Slot);
+            var game = await ReadyScene();
+            var campaign = await StartStory(game, false);
+            BeginDay1(game, campaign);
+            var saved = ArenaSaves.List(SaveMode.Story)[Slot];
+            Assume.That((saved.empty, saved.day, saved.phase), Is.EqualTo((false, 1, SavePhase.Morning)), "day 1's morning is saved");
+            int seed = campaign.MapSeed, map = WorldMap.Active.BiomeIndex;
+
+            Fall(game);
+            await Until(() => game.State == GameState.Lost && game.RunPhase == ArenaUiState.Result && V5ResultScreen.IsShown, 8f, "the lost run's result page");
+            await Seconds(.1f);
+            var retry = game.RetrySave;
+            Assert.That(retry, Is.Not.Null, "the page has a save to retry");
+            Assert.That((retry.mode, retry.slot, retry.day, retry.phase, retry.cleared), Is.EqualTo((SaveMode.Story, Slot, 1, SavePhase.Morning, false)),
+                "the slot's last save: day 1's morning");
+            var label = V5ResultScreen.PageObject.GetComponentsInChildren<UnityEngine.UI.Text>(true).FirstOrDefault(t => t.name == "RetryLabel");
+            Assert.That(label, Is.Not.Null, "the page has the retry's words");
+            Assert.That((label.gameObject.activeInHierarchy, label.text), Is.EqualTo((true, ArenaText.Pair("从第 1 天上午重来", "Retry day 1 morning"))), "its button names that morning");
+            var kept = ArenaSaves.List(SaveMode.Story)[Slot];
+            Assert.That((kept.cleared, kept.savedAtUnixSeconds), Is.EqualTo((false, saved.savedAtUnixSeconds)), "the lost run's slot is kept as it was, not marked");
+
+            // Enter, the key the button shows; the page's input lock lets it through after a moment.
+            await PressUntil(game, KeyCode.Return, () => ArenaSaves.ContinueWaiting, 5f);
+            var next = await NextScene(game, 25f);
+            var resumed = next.GetComponent<V2Campaign>();
+            await Until(() =>
+            {
+                if (next.RunPhase == ArenaUiState.Cutscene && WorldMap.Active) WorldMap.Active.SkipHoleIntro();
+                return resumed.Running && resumed.Stage == CampaignStage.Day && next.CanPlayerMove;
+            }, 15f, "the retried run plays day 1's morning");
+
+            Assert.That((resumed.Day, resumed.MapSeed, WorldMap.Active.BiomeIndex), Is.EqualTo((1, seed, map)), "day 1 again, on the same map and terrain");
+            Assert.That((next.State, next.player.IsAlive), Is.EqualTo((GameState.Playing, true)), "a live run again");
+            Assert.That(Time.timeScale, Is.EqualTo(1f), "the clock runs: nothing is left paused or frozen");
+            Assert.That(V5ResultScreen.IsShown, Is.False, "no result page is left over");
+            var leftover = GameObject.Find(V5ResultScreen.RootName);
+            Assert.That(leftover == null || !leftover.activeInHierarchy, Is.True, "nor its canvas");
+            var again = ArenaSaves.List(SaveMode.Story)[Slot];
+            Assert.That((again.empty, again.cleared, again.day, again.phase), Is.EqualTo((false, false, 1, SavePhase.Morning)), "the slot holds day 1's morning, written again on the way");
+            Assert.That(ArenaSaves.List(SaveMode.Story).Where(s => s.slot != Slot).Select(s => s.empty), Is.All.True, "the other story slots stay empty");
+
+            // The retried run writes into the same slot: when it falls too, its page retries that slot again.
+            Fall(next);
+            await Until(() => next.State == GameState.Lost, 5f, "the retried run is lost");
+            Assert.That(next.RetrySave, Is.Not.Null, "the retried run was bound to a slot");
+            Assert.That((next.RetrySave.mode, next.RetrySave.slot), Is.EqualTo((SaveMode.Story, Slot)), "the same one");
+        }
+
         // ───── Helpers ─────
+
+        /// <summary>Wall damage is no attack, so the protection does not hold it back: the player falls and, past Day 0, the run is lost.</summary>
+        static void Fall(GameManager game) =>
+            Assume.That(game.player.ReceiveDamage(new DamageInfo { amount = 99999f, source = DamageSource.Wall }), Is.True, "the player falls");
+
+        /// <summary>The key pressed as the keyboard presses it (GameManager.PressKey), every frame until done.</summary>
+        static async Task PressUntil(GameManager game, KeyCode key, Func<bool> done, float timeout)
+        {
+            float deadline = Time.realtimeSinceStartup + timeout;
+            while (!done())
+            {
+                if (Time.realtimeSinceStartup > deadline) Assert.Fail($"{key} did nothing in {game.RunPhase}.");
+                game.PressKey(key);
+                await Awaitable.NextFrameAsync();
+            }
+        }
 
         /// <summary>What a continue must bring back, read from a running campaign.</summary>
         sealed class StoryState
@@ -169,7 +239,7 @@ namespace AnomalyArena
             public int day, lamps, teamMk, level, seed, map;
             public CampaignStage stage;
             public float hp, maxHp;
-            public int[] currencies, rooms, ship;
+            public int[] currencies, ship;
             public float[] baseState;
             public string[] weapons, skills;
             public Vector3 hole;
@@ -179,9 +249,8 @@ namespace AnomalyArena
                 day = campaign.Day,
                 stage = campaign.Stage,
                 currencies = new[] { campaign.Alloy, campaign.Energy, campaign.Dark, campaign.EarnedAlloy, campaign.EarnedEnergy, campaign.EarnedDark },
-                rooms = Enum.GetValues(typeof(CampaignRoom)).Cast<CampaignRoom>().SelectMany(r => new[] { campaign.Room(r).level, campaign.Room(r).damaged ? 1 : 0 }).ToArray(),
-                baseState = new[] { campaign.Durability, campaign.ShieldLevel, Mathf.Round(campaign.BaseHp * 10f), Mathf.Round(campaign.BaseShield * 10f) },
-                ship = new[] { campaign.EngineFixed ? 1 : 0, campaign.ArmorFixed ? 1 : 0, campaign.Fuel },
+                baseState = new[] { campaign.FortifyLevel, Mathf.Round(campaign.BaseHp * 10f) },
+                ship = new[] { campaign.EngineFixed ? 1 : 0, campaign.HullFixed ? 1 : 0, campaign.FuelTankFitted ? 1 : 0, campaign.Fuel },
                 lamps = campaign.LampStock,
                 teamMk = campaign.TeamMk,
                 level = game.progression.Level,

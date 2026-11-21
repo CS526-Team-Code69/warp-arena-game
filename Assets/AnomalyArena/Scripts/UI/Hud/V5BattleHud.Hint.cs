@@ -140,7 +140,9 @@ namespace AnomalyArena
         void PlaceHintPlate()
         {
             bool bossShown = hud.bossRoot && hud.bossRoot.activeSelf;
-            float top = bossShown ? BossTop + BossH + HintStackGap : HintTop;
+            // In the story the way home stands under the day plate (V5StoryDay.cs) where the hint would: the hint goes under it.
+            float top = bossShown ? BossTop + BossH + HintStackGap
+                : V2CampaignUi.StoryHomeShown ? Mathf.Max(HintTop, V2CampaignUi.StoryHomeBottomPx + HintStackGap) : HintTop;
             hintPlate.anchoredPosition = new Vector2(0f, -top * Css);
             bannerTop = hintPlate.gameObject.activeSelf ? Mathf.Max(BannerTop, top + HintH * hintPlate.localScale.y + HintStackGap) : BannerTop;
         }

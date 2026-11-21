@@ -172,7 +172,7 @@ namespace AnomalyArena
                 var shader = Shader.Find("Universal Render Pipeline/Unlit");
                 cached = shader ? new Material(shader) { name = kind + " shard" } : new Material(gm.litMaterial) { name = kind + " shard" };
             }
-            Color tint = kind == PickupKind.Energy ? new Color(.78f, .45f, 1f) : new Color(.65f, .8f, 1f);
+            Color tint = kind == PickupKind.Energy ? ResourceColours.Energy : ResourceColours.Alloy;
             if (sprite)
             {
                 cached.mainTexture = sprite.texture;

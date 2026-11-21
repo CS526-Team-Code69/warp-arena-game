@@ -190,6 +190,58 @@ namespace AnomalyArena
             Assert.That(OnField(waves) + Slots(waves, "batchSpawnsRemaining"), Is.EqualTo(population), "and the field stays at its population");
         }
 
+        // ───── How far from the player a wave is born ─────
+
+        [Test, LoadScene(Scene), Timeout(30000)]
+        public async Task SpawnRing_OpenModeFirstWave_IsBornAtLeastFirstWaveSpawnMinOut_AndTheSecondWaveAtNearbySpawnMin()
+        {
+            var waves = await ReadyWaves();
+            Assume.That(WaveManager.SpawnPointOverride, Is.Null, "the open mode: no story moves the births to the rim");
+            Assume.That(waves.firstWaveSpawnMin, Is.GreaterThan(waves.nearbySpawnMin).And.LessThan(waves.nearbySpawnMax), "the first wave's ring is a narrower one");
+            var grunt = waves.DefinitionOf(EnemyKind.Grunt);
+
+            BeginWave(waves, 0);
+            Assert.That(waves.RingSpawnMinimum(grunt), Is.EqualTo(waves.firstWaveSpawnMin), "the first wave's ring starts at firstWaveSpawnMin");
+            var first = Distances(waves, grunt);
+            Assert.That(first, Is.Not.Empty, "the first wave finds birth points");
+            Assert.That(first, Has.All.GreaterThanOrEqualTo(waves.firstWaveSpawnMin - .01f), "every first-wave birth is at least firstWaveSpawnMin from the player");
+
+            BeginWave(waves, 1);
+            Assert.That(waves.RingSpawnMinimum(grunt), Is.EqualTo(waves.nearbySpawnMin), "the second wave keeps the usual ring");
+            var second = Distances(waves, grunt);
+            Assert.That(second, Is.Not.Empty, "the second wave finds birth points");
+            Assert.That(second, Has.All.InRange(waves.nearbySpawnMin - .01f, waves.nearbySpawnMax + .01f),
+                "every second-wave birth stays on the usual ring");
+        }
+
+        [Test, LoadScene(Scene), Timeout(30000)]
+        public async Task SpawnRing_FirstWaveSpawnMinZero_LeavesTheFirstWaveOnTheUsualRing()
+        {
+            var waves = await ReadyWaves();
+            Assume.That(WaveManager.SpawnPointOverride, Is.Null, "the open mode");
+            float saved = waves.firstWaveSpawnMin;
+            try
+            {
+                waves.firstWaveSpawnMin = 0f;
+                BeginWave(waves, 0);
+                Assert.That(waves.RingSpawnMinimum(waves.DefinitionOf(EnemyKind.Grunt)), Is.EqualTo(waves.nearbySpawnMin), "0 turns the first wave's ring off");
+            }
+            finally
+            {
+                waves.firstWaveSpawnMin = saved;
+            }
+        }
+
+        /// <summary>The distances from the player of up to 24 birth points the wave picks now.</summary>
+        static List<float> Distances(WaveManager waves, EnemyDefinition data)
+        {
+            var distances = new List<float>();
+            var player = GameManager.Instance.player;
+            for (int i = 0; i < 24; i++)
+                if (waves.TryFindV2SpawnPoint(data, out var point)) distances.Add(Query.Flat(point - player.Position).magnitude);
+            return distances;
+        }
+
         // ───── Helpers ─────
 
         /// <summary>Lands batch slots as warnings on the field. RefillPopulation counts a warning as a body, and nothing ticks them here

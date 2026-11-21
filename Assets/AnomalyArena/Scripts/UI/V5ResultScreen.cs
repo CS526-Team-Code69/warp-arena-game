@@ -9,8 +9,10 @@ namespace AnomalyArena
     /// screen, which stays underneath for its key (R goes back to the title, GameManagerFlow) and for the checks that read it. A 1920 x 1080
     /// page shrunk to fit the screen, in the character screen's family: the page's abyss; the hull-plate banner with the result
     /// ("探索者陨落", "基地被摧毁" or "即将重返地球") and where the run ended (the story's day, the open mode's wave and level); under it a
-    /// window plate with what ended the run in plain words and what to know about it, a rule, the run's numbers, and one button back to
-    /// the title. It shows while the run is in its result phase and goes with it, and it follows the art switch as the other pages do.
+    /// window plate with what ended the run in plain words and what to know about it, a rule, the run's numbers, and the button back to
+    /// the title (R). A lost run whose slot holds a save to go on from (GameManager.RetrySave) also gets the orange retry from that save
+    /// (Enter), named by the save's day and part of the day or by its wave (RetryWords); the way back to the title is then a plain plate
+    /// right of it. It shows while the run is in its result phase and goes with it, and it follows the art switch as the other pages do.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class V5ResultScreen : MonoBehaviour
@@ -29,6 +31,8 @@ namespace AnomalyArena
         const float WindowW = 1040f, WindowCut = 16f, StackGap = 20f, Side = 72f, Top = 52f;
         const float CausePx = 32f, NotePx = 21f, StatsPx = 22f, LineGap = 12f, RuleGap = 26f, RuleH = 2f;
         const float GoW = 420f, GoH = 74f, GoGap = 34f, GoFoot = 44f, GoPx = 24f, KeyGap = 14f;
+        // Beside the retry the way back is narrower; a button's word shrinks down to MinGoPx to keep GoPad free at both ends.
+        const float BackW = 340f, PairGap = 24f, GoPad = 22f, MinGoPx = 16f;
 
         // The page's abyss with the art on, and the flat backing in whitebox (the character screen's).
         static readonly Color Abyss = V5TitleKit.Rgb(7, 10, 20), FlatBack = new(.01f, .02f, .05f, 1f);
@@ -45,9 +49,9 @@ namespace AnomalyArena
         Image back, banner, rule;
         RawImage backdrop;
         V5HudPlate window;
-        Text title, where, cause, note, stats, goLabel;
-        V5Plate go;
-        V5HudKey goKey;
+        Text title, where, cause, note, stats, goLabel, retryLabel;
+        V5Plate go, retry;
+        V5HudKey goKey, retryKey;
         bool shown, shownArt;
         Font shownFont;
         string shownWords;
@@ -91,8 +95,9 @@ namespace AnomalyArena
 
             if (!shown) Show();
             FitPage();
-            string words = s.resultTitle + "\n" + s.resultWhere + "\n" + s.resultCause + "\n" + s.resultStats;
-            if (words != shownWords || V5TitleKit.Font != shownFont || Art.Enabled != shownArt) Lay(s, words);
+            string retryWords = RetryWords(gm.RetrySave);
+            string words = s.resultTitle + "\n" + s.resultWhere + "\n" + s.resultCause + "\n" + s.resultStats + "\n" + retryWords;
+            if (words != shownWords || V5TitleKit.Font != shownFont || Art.Enabled != shownArt) Lay(s, words, retryWords);
         }
 
         void Show()
@@ -115,6 +120,27 @@ namespace AnomalyArena
         {
             var gm = GameManager.Instance;
             if (gm && gm.RunPhase == ArenaUiState.Result) gm.ExecuteUiCommand(ArenaUiCommand.Restart);
+        }
+
+        static void ClickRetry()
+        {
+            var gm = GameManager.Instance;
+            if (gm) gm.RetryFromSave();
+        }
+
+        /// <summary>The retry's words for a save: the story's day and part of the day ("从第 1 天上午重来", "Retry day 1 morning"), the
+        /// final battle, or the open mode's wave ("从第 3 波重来", "Retry wave 3"); empty for no save.</summary>
+        public static string RetryWords(SaveSummary save)
+        {
+            if (save == null) return "";
+            if (save.mode == SaveMode.Open) return ArenaText.Pair($"从第 {save.wave} 波重来", $"Retry wave {save.wave}");
+            return save.phase switch
+            {
+                SavePhase.Morning => ArenaText.Pair($"从第 {save.day} 天上午重来", $"Retry day {save.day} morning"),
+                SavePhase.Afternoon => ArenaText.Pair($"从第 {save.day} 天下午重来", $"Retry day {save.day} afternoon"),
+                SavePhase.Tyrant => ArenaText.Pair("从最终决战重来", "Retry the final battle"),
+                _ => ArenaText.Pair($"从第 {save.day} 天夜晚重来", $"Retry day {save.day} night"),
+            };
         }
 
         // ───── Building ─────
@@ -156,6 +182,12 @@ namespace AnomalyArena
             go.Button.navigation = new Navigation { mode = Navigation.Mode.None };
             goLabel = V5StoryKit.Label(go.transform, "Label", GoPx, V5TitleKit.Dark, TextAnchor.MiddleLeft, true);
             goKey = V5HudKit.Key(go.transform, "Key", "R", true, Css);
+            // The retry from the lost run's last save: the orange button with Enter on its key, left of the way back (Lay).
+            retry = V5Plate.Make(window.transform, "Retry", V5Plate.Look.Go, 10f * Css / V5TitleKit.Css, ClickRetry);
+            retry.Button.navigation = new Navigation { mode = Navigation.Mode.None };
+            retryLabel = V5StoryKit.Label(retry.transform, "RetryLabel", GoPx, V5TitleKit.Dark, TextAnchor.MiddleLeft, true);
+            retryKey = V5HudKit.Key(retry.transform, "RetryKey", "", true, Css);
+            retry.gameObject.SetActive(false);
             canvasRoot.SetActive(false);
         }
 
@@ -170,16 +202,20 @@ namespace AnomalyArena
 
         // ───── Laying out ─────
 
-        void Lay(ArenaUiSnapshot s, string words)
+        void Lay(ArenaUiSnapshot s, string words, string retryWords)
         {
             shownWords = words;
             shownFont = V5TitleKit.Font;
             shownArt = Art.Enabled;
-            foreach (var label in new[] { title, where, cause, note, stats, goLabel })
+            foreach (var label in new[] { title, where, cause, note, stats, goLabel, retryLabel })
                 if (label && shownFont) label.font = shownFont;
             back.color = shownArt ? Abyss : FlatBack;
             backdrop.enabled = shownArt;
-            goLabel.color = shownArt ? V5TitleKit.Dark : Color.white;
+            // The orange button's word is dark on the art's orange and white on the flat button; the plain plate's is light in both.
+            bool hasRetry = retryWords.Length > 0;
+            Color goInk = shownArt ? V5TitleKit.Dark : Color.white;
+            retryLabel.color = goInk;
+            goLabel.color = hasRetry ? shownArt ? V5TitleKit.Ink : Color.white : goInk;
 
             // What ended the run on its first line, what to know about it after; a run that was won has no cause.
             string causeWords = s.resultCause ?? "", noteWords = "";
@@ -197,6 +233,8 @@ namespace AnomalyArena
             SetText(stats, s.resultStats);
             SetText(goLabel, ArenaText.Pair("回到标题", "Back to Title"));
             goKey.SetText("R");
+            SetText(retryLabel, retryWords);
+            retryKey.SetText(ArenaText.Pair("回车", "Enter"));
 
             // The window grows with its lines: the cause and its note, the rule, the numbers, the button.
             float inner = P(WindowW - 2f * Side), y = P(Top);
@@ -215,8 +253,25 @@ namespace AnomalyArena
 
             y += PlaceParagraph(stats, y, inner);
             y += P(GoGap);
-            go.Place(P((WindowW - GoW) * .5f), y, P(GoW), P(GoH));
-            LayGo();
+            // Alone, the way back to the title is the orange button in the middle; with a retry it is a plain plate right of the retry,
+            // its key a light cap.
+            Shown(retry, hasRetry);
+            go.SetLook(hasRetry ? V5Plate.Look.Plate : V5Plate.Look.Go);
+            goKey.SetDark(!hasRetry);
+            if (hasRetry)
+            {
+                float left = (WindowW - GoW - PairGap - BackW) * .5f;
+                retry.Place(P(left), y, P(GoW), P(GoH));
+                go.Place(P(left + GoW + PairGap), y, P(BackW), P(GoH));
+                LayButton(retryLabel, retryKey, GoW);
+                LayButton(goLabel, goKey, BackW);
+            }
+            else
+            {
+                go.Place(P((WindowW - GoW) * .5f), y, P(GoW), P(GoH));
+                LayButton(goLabel, goKey, GoW);
+            }
+
             float windowH = y + P(GoH) + P(GoFoot);
 
             // The banner and the window, centred on the page together.
@@ -265,13 +320,22 @@ namespace AnomalyArena
             PlaceLeft(where, left + titleW + gap, whereW, height);
         }
 
-        /// <summary>The button's word and its key, centred on it.</summary>
-        void LayGo()
+        /// <summary>A button's word and its key, centred on a button widthPx mock-up pixels wide; a word too long for it shrinks down to
+        /// MinGoPx.</summary>
+        static void LayButton(Text label, V5HudKey key, float widthPx)
         {
-            float labelW = V5StoryKit.WidthOf(goLabel, goLabel.text), keyW = goKey.Rect.sizeDelta.x, gap = P(KeyGap);
-            float left = (P(GoW) - labelW - gap - keyW) * .5f;
-            PlaceLeft(goLabel, left, labelW, P(GoH));
-            var rect = goKey.Rect;
+            float width = P(widthPx), keyW = key.Rect.sizeDelta.x, gap = P(KeyGap), room = width - 2f * P(GoPad) - gap - keyW;
+            label.fontSize = F(GoPx);
+            float labelW = V5StoryKit.WidthOf(label, label.text);
+            while (labelW > room && label.fontSize > F(MinGoPx))
+            {
+                label.fontSize--;
+                labelW = V5StoryKit.WidthOf(label, label.text);
+            }
+
+            float left = (width - labelW - gap - keyW) * .5f;
+            PlaceLeft(label, left, labelW, P(GoH));
+            var rect = key.Rect;
             rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0f, .5f);
             rect.anchoredPosition = new Vector2(left + labelW + gap, 0f);
         }

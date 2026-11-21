@@ -163,6 +163,10 @@ namespace AnomalyArena
         [Header("Player-near batch spawning")]
         [Tooltip("普通出生环内半径；不改变每关属性成长。")] public float nearbySpawnMin = 8f;
         [Tooltip("出生点离玩家的最大距离；旧远处固定点不参与。")] public float nearbySpawnMax = 18f;
+        [Tooltip("开放模式第 1 波出生点离玩家的最小格数，0 为关闭，要小于 nearbySpawnMax。只管开放模式第 1 波的出生，剧情模式和之后各波不变。")]
+        public float firstWaveSpawnMin = 14f;
+        [Tooltip("开放模式第 1 波：预警点复查时，允许比 firstWaveSpawnMin 近多少格（预警那 1 秒里玩家能走的距离），0 为不放宽。复查的下限不会低于原来的 nearbySpawnMin。")]
+        public float firstWaveRecheckSlack = 6f;
         [Tooltip("找不到屏外点时，镜头内出生必须保持的安全距离。")] public float visibleSpawnSafety = 10f;
         [Tooltip("一次出生点搜索的随机候选上限。")] public int spawnPointCandidates = 80;
         [Tooltip("合法点或保存对象池暂不足时，重试预告的间隔。")] public float batchSpawnRetry = .1f;
@@ -1225,7 +1229,7 @@ namespace AnomalyArena
         /// </summary>
         public bool TryFindV2SpawnPoint(EnemyDefinition data, out Vector3 point)
         {
-            float minimum = Mathf.Max(nearbySpawnMin, data.kind == EnemyKind.Shade ? 12f : 1f);
+            float minimum = RingSpawnMinimum(data);
             float maximum = Mathf.Max(minimum + .5f, nearbySpawnMax);
             int perSector = Mathf.Clamp(spawnPointCandidates / 8, 2, 20);
             bool stomper = data.kind == EnemyKind.Stomper;
@@ -1258,6 +1262,20 @@ namespace AnomalyArena
             point = best;
             return true;
         }
+        /// <summary>The ring's inner edge round the player for a new birth of this kind: nearbySpawnMin (12 for a Shade), and in the open
+        /// mode's first wave at least firstWaveSpawnMin, kept under nearbySpawnMax so the ring stays open.</summary>
+        public float RingSpawnMinimum(EnemyDefinition data)
+        {
+            float minimum = Mathf.Max(nearbySpawnMin, data && data.kind == EnemyKind.Shade ? 12f : 1f);
+            if (FirstWaveFar) minimum = Mathf.Max(minimum, Mathf.Min(firstWaveSpawnMin, nearbySpawnMax - .5f));
+            return minimum;
+        }
+
+        /// <summary>The open mode's first wave: its births keep firstWaveSpawnMin from the player. The story (SpawnPointOverride), its Day 0
+        /// teaching monsters, the void trial and the final boss fight are left as they are.</summary>
+        bool FirstWaveFar => firstWaveSpawnMin > 0f && WaveIndex == 0 && SpawnPointOverride == null && !campaignSpawn && !trialSuspended
+                             && Phase != WavePhase.FinalBoss;
+
         int CrowdAround(Vector3 point, float radius)
         {
             int count = 0;
@@ -1270,6 +1288,9 @@ namespace AnomalyArena
         {
             float distance = Query.Flat(point - GM.player.Position).magnitude;
             float minimum = Mathf.Max(nearbySpawnMin, data.kind == EnemyKind.Shade ? 12f : GM.player.Radius + data.radius + 1f);
+            // The open mode's first wave: a warning marker chosen firstWaveSpawnMin away is checked again every frame while the player may
+            // walk towards it, so the check allows firstWaveRecheckSlack less than that, and never less than the usual minimum.
+            if (FirstWaveFar) minimum = Mathf.Max(minimum, Mathf.Min(firstWaveSpawnMin - firstWaveRecheckSlack, nearbySpawnMax - .5f));
             if (distance < minimum || distance > Mathf.Max(minimum + .5f, nearbySpawnMax)) return false;
             if (!WorldMap.Active || !WorldMap.Active.IsWalkable(point, data.radius)) return false;
             if (!OffscreenSpawn(point) && distance < Mathf.Max(minimum, visibleSpawnSafety)) return false;

@@ -6,13 +6,15 @@ using UnityEngine.UI;
 namespace AnomalyArena
 {
     /// <summary>
-    /// The base page (2026-11-10: the whole screen, larger and with more room between its parts; before, a smaller panel in the middle
-    /// with every explanation on its first tab). Top: where and when, and the three currencies with their icons. Left: one tab per room
-    /// with its icon and its state. Middle: the room's picture (its whitebox blocks with the art off), its name, and the few lines that
-    /// matter now; what explains one room stands with that room (a warning while it is broken). Right: what can be done there, one
-    /// button each, its price drawn with the currencies' icons. Bottom: a strip kept free
-    /// for the subtitle (V2CampaignUi.BaseSubtitleBottom), and the ways out. A room's next level never says what it unlocks (V2 doc: a
-    /// new feature is seen only once unlocked); what a room sells is in the study window.
+    /// The base panel: the full-screen backing every base visit opens, and the page the English Alpha was graded with. On every page but
+    /// that Alpha (V5HudKit.On) the fifth pass's two pages are drawn over it instead, the workshop and the rocket page (V5BasePage.cs,
+    /// V5WorkshopPage.cs, V5RocketPage.cs): the visit opens on the page the campaign asks for (V2Campaign.BaseScreenNow) and the two
+    /// switch on its request (BaseScreenRequested); the old page below stays built and hidden. The old page itself: top, where and when
+    /// and the three currencies with their icons; left, one tab per room with its icon and its state; middle, the room's picture (its
+    /// whitebox blocks with the art off), its name and the few lines that matter now; right, what can be done there, one button each, its
+    /// price drawn with the currencies' icons; bottom, a strip kept free for the subtitle (V2CampaignUi.BaseSubtitleBottom), and the ways
+    /// out (V2Campaign.BaseExits). It buys through the same interface as the new pages: the base's fortification at Central Control, the
+    /// ship's three parts, the fuel and the lamps at the launch bay, the workshop's items in the study window.
     /// </summary>
     public sealed partial class V2CampaignUi
     {
@@ -63,34 +65,53 @@ namespace AnomalyArena
             actionColumn.pivot = new Vector2(1f, 1f);
             leaveRow = MakeRect("Leave", basePage, new Vector2(0f, 0f), new Vector2(1f, 0f), Vector2.zero, new Vector2(0f, LeaveHeight));
             leaveRow.pivot = new Vector2(.5f, 0f);
-            if (V5HudKit.On) BuildBase5(); // the fifth pass's page over this one, which stays built and hidden (V5BasePage.cs)
+            if (V5HudKit.On)
+            {
+                // The fifth pass's two pages over this one, which stays built and hidden (V5BasePage.cs); they switch on the campaign's request.
+                BuildBase5();
+                campaign.BaseScreenRequested += OnBaseScreenRequested;
+            }
             baseScreen.gameObject.SetActive(false);
         }
 
+        /// <summary>Opens the base panel (V2Campaign.OpenBase): on the fifth pass, on the page the campaign asks for (the workshop from
+        /// the base door and on Day 0's arrival, the rocket page from the ship).</summary>
         public void ShowBase()
         {
             ApplyFont();
             panelVersion = -1;
             tab = CampaignRoom.Control;
+            if (b5Built) OpenBase5(campaign.BaseScreenNow);
             baseScreen.gameObject.SetActive(true);
             RefreshBasePanel(true);
         }
 
-        public void HideBase() { baseScreen.gameObject.SetActive(false); }
+        public void HideBase()
+        {
+            baseScreen.gameObject.SetActive(false);
+            if (b5Built) CloseBase5();
+        }
 
-        /// <summary>Shows the base page again on the tab it had (after a bought weapon's card was closed).</summary>
+        /// <summary>Shows the base page again on the tab (the page) it had (after a weapon's card was closed).</summary>
         public void ResumeBase()
         {
             ApplyFont();
             panelVersion = -1;
+            if (b5Built) b5OpenedAt = Time.unscaledTime;
             baseScreen.gameObject.SetActive(true);
             RefreshBasePanel(true);
         }
 
-        /// <summary>Opens one room's tab of the open base page, as its tab button does (also for automated checks).</summary>
+        /// <summary>Opens one room's tab of the open base page, as its tab button does (also for automated checks). On the fifth pass's
+        /// pages the launch bay is the rocket page and every other room the workshop.</summary>
         public void ShowTab(CampaignRoom room)
         {
             if (!BaseOpen) return;
+            if (b5Built)
+            {
+                campaign.RequestBaseScreen(room == CampaignRoom.Ship ? V2Campaign.BaseScreen.Rocket : V2Campaign.BaseScreen.Workshop);
+                return;
+            }
             tab = room;
             RefreshBasePanel(true);
         }
@@ -115,10 +136,15 @@ namespace AnomalyArena
 
         void RefreshBasePanel(bool rebuild)
         {
+            // The fifth pass draws its two pages instead (V5BasePage.cs); the old page is not drawn under them.
+            if (b5Built)
+            {
+                RefreshBase5(rebuild);
+                return;
+            }
             var c = campaign;
             var r = c.rules;
             baseHeading.text = c.BaseAfterTutorial ? ArenaText.Pair("基地 · 第 0 天", "BASE · DAY 0")
-                : c.BaseAtDawn ? ArenaText.Pair($"基地 · 第 {c.Day} 晚过后，天亮了", $"BASE · DAWN AFTER NIGHT {c.Day}")
                 : c.BaseFromDusk ? ArenaText.Pair($"基地 · 第 {c.Day} 天下午", $"BASE · DAY {c.Day}, AFTERNOON")
                 : ArenaText.Pair($"基地 · 第 {c.Day} 天夜晚", $"BASE · DAY {c.Day}, NIGHT");
             RefreshCurrencyStrip(baseStrip);
@@ -131,65 +157,54 @@ namespace AnomalyArena
             for (int i = 0; i < 4; i++)
             {
                 var room = (CampaignRoom)i;
-                var state = c.Room(room);
-                string level = room == CampaignRoom.Control ? ArenaText.Pair($"耐久 {c.Durability} · 护盾 {c.ShieldLevel}", $"Hull {c.Durability} · Shield {c.ShieldLevel}")
-                    : state.level <= 0 ? ArenaText.Pair("未建造", "Not built") : ArenaText.Pair($"{state.level} / 3 级", $"Level {state.level} / 3");
-                if (state.damaged) level += ArenaText.Pair(" · <color=#ff7a5a>损坏</color>", " · <color=#ff7a5a>BROKEN</color>");
-                AddRoomTab(i, room, V2Campaign.RoomName(room), level);
+                string state = room switch
+                {
+                    CampaignRoom.Control => ArenaText.Pair($"加固 {c.FortifyLevel} / {c.FortifyTop} 级", $"Fortified {c.FortifyLevel} / {c.FortifyTop}"),
+                    CampaignRoom.Ship => ArenaText.Pair($"回家还差 {c.HomeStepsLeft} 步", $"{c.HomeStepsLeft} steps from home"),
+                    _ => ArenaText.Pair("可以研习", "Ready to study")
+                };
+                AddRoomTab(i, room, V2Campaign.RoomName(room), state);
             }
 
             // Picture, name, the lines that matter.
             ShowRoomPicture(Picture(tab));
             ShowRoomBlocks(tab, !Art.Enabled && !roomPicture.texture);
-            var current = c.Room(tab);
-            roomTitle.text = V2Campaign.RoomName(tab) + (current.damaged ? ArenaText.Pair("（损坏）", " (BROKEN)") : "");
-            roomTitle.color = current.damaged ? Warn : Accent;
+            roomTitle.text = V2Campaign.RoomName(tab);
+            roomTitle.color = Accent;
             roomBody.text = RoomText(tab);
 
             // Actions: a title each, and the price with the currencies' icons.
             foreach (var go in actionButtons) Destroy(go);
             actionButtons.Clear();
             var actions = new List<(string label, CampaignCost? cost, Func<bool> act, string fail, bool enabled)>();
-            if (current.damaged)
-                actions.Add((tab == CampaignRoom.Control ? ArenaText.Pair("修复总控区", "Repair Central Control") : ArenaText.Pair("修复这个区", "Repair this room"),
-                    new CampaignCost(c.RepairCost(tab)), () => c.TryRepairRoom(tab),
-                    tab != CampaignRoom.Control && !c.ControlWorks ? ArenaText.Pair("先修复总控区", "Repair Central Control first") : ArenaText.Pair("合金不够", "Not enough alloy"), true));
             switch (tab)
             {
                 case CampaignRoom.Control:
-                    if (c.DurabilityCost is { } dc)
-                        actions.Add((ArenaText.Pair($"耐久升到 {c.Durability + 1} 级（基地生命 {Mathf.RoundToInt(c.BaseMaxHpAt(c.Durability + 1))}）", $"Raise hull to level {c.Durability + 1} (base HP {Mathf.RoundToInt(c.BaseMaxHpAt(c.Durability + 1))})"),
-                            dc, c.TryUpgradeDurability, Why(dc), c.ControlWorks));
-                    if (c.ShieldCost is { } sc)
-                        actions.Add((c.ShieldLevel == 0 ? ArenaText.Pair("解锁基地护盾", "Unlock the base shield") : ArenaText.Pair($"护盾升到 {c.ShieldLevel + 1} 级", $"Raise shield to level {c.ShieldLevel + 1}"),
-                            sc, c.TryUpgradeShield, Why(sc), c.ControlWorks));
-                    if (c.BaseHp < c.BaseMaxHp - .5f)
-                        actions.Add((ArenaText.Pair("把耐久修满", "Fully repair the hull"), new CampaignCost(c.HullRepairCost), c.TryRepairHull,
-                            ArenaText.Pair("合金不够，或者总控区已损坏", "Not enough alloy, or Central Control is broken"), c.ControlWorks));
+                    if (c.FortifyPrice is { } fp)
+                        actions.Add((ArenaText.Pair($"基地加固到 {c.FortifyLevel + 1} 级（基地生命 {c.FortifyHpNext:0}）", $"Fortify the base to level {c.FortifyLevel + 1} (base HP {c.FortifyHpNext:0})"),
+                            fp, c.TryFortify, Why(fp), true));
                     // The last day's overload is bought in the study window (V2CampaignUi.Study.cs), which says what it does.
                     if (c.OverloadOpen) actions.Add((ArenaText.Pair("决战过载", "Final overload"), null, () => { OpenStudy("ctl.overload"); return true; }, "", true));
                     break;
                 case CampaignRoom.Ship:
-                    if (c.NextLevelCost(tab) is { } shipCost) actions.Add((UpgradeLabel(tab), shipCost, () => c.TryUpgradeRoom(tab), UpgradeFail(tab, shipCost), c.ControlWorks && !current.damaged));
-                    if (!c.EngineFixed)
-                        actions.Add((ArenaText.Pair("修复引擎", "Repair the engine"), r.engineRepair, c.TryRepairEngine,
-                            current.level < 1 ? ArenaText.Pair("飞船发射区 1 级才能修引擎", "Needs the Ship Launch Bay at level 1") : Why(r.engineRepair), c.CanRepairEngine));
-                    if (!c.ArmorFixed)
-                        actions.Add((ArenaText.Pair("修复装甲", "Repair the armor"), r.armorRepair, c.TryRepairArmor,
-                            current.level < 2 ? ArenaText.Pair("飞船发射区 2 级才能修装甲", "Needs the Ship Launch Bay at level 2") : Why(r.armorRepair), c.CanRepairArmor));
-                    if (!c.FuelFull)
-                        actions.Add((ArenaText.Pair($"合成反物质燃料（{c.Fuel}/{c.FuelUnits}）", $"Synthesize antimatter fuel ({c.Fuel}/{c.FuelUnits})"), new CampaignCost(0, 0, c.DarkPerFuel), c.TrySynthesiseFuel,
-                            current.level < 3 ? ArenaText.Pair("飞船发射区 3 级才能合成燃料", "Needs the Ship Launch Bay at level 3") : ArenaText.Pair("暗物质不够", "Not enough dark matter"), c.CanSynthesiseFuel));
-                    actions.Add((ArenaText.Pair($"制造矿灯（现有 {c.LampStock} 盏）", $"Craft a mining lamp (you have {c.LampStock})"), new CampaignCost(r.lampCost), c.TryCraftLamp,
-                        current.damaged ? ArenaText.Pair("飞船发射区已损坏", "The Ship Launch Bay is broken") : ArenaText.Pair("合金不够", "Not enough alloy"), c.LampsCraftable));
+                    foreach (var part in c.ShipParts())
+                    {
+                        if (part.done) continue;
+                        var kind = part.kind;
+                        string label = ArenaText.IsChinese ? part.verb + part.name : $"{part.verb} the {part.name.ToLowerInvariant()}";
+                        actions.Add((label, part.price, () => c.TryBuyShipPart(kind), Why(part.price), true));
+                    }
+                    if (c.FuelTankFitted && !c.FuelFull)
+                        actions.Add((ArenaText.Pair($"加注燃料（{c.Fuel}/{c.FuelTop}）", $"Refuel ({c.Fuel}/{c.FuelTop})"), null, c.TryAddFuel,
+                            ArenaText.Pair("没有暗物质可加", "No dark matter to pour in"), c.CanAddFuel));
+                    actions.Add((ArenaText.Pair($"制造矿灯（现有 {c.LampStock} 盏）", $"Craft a mining lamp (you have {c.LampStock})"), c.LampPrice, c.TryCraftLamp,
+                        Why(c.LampPrice), c.LampsCraftable));
                     if (c.CanIgnite) actions.Add((ArenaText.Pair("启动点火程序", "Start the ignition sequence"), null, () => { c.Ignite(); return true; }, "", true));
                     break;
                 default:
-                    if (c.NextLevelCost(tab) is { } cost) actions.Add((UpgradeLabel(tab), cost, () => c.TryUpgradeRoom(tab), UpgradeFail(tab, cost), c.ControlWorks && !current.damaged));
-                    // What the Armament Bay and the Energy Lab sell is bought in the study window (V2CampaignUi.Study.cs), which shows
-                    // every item with its rarity and numbers; the button names none of them (they show once unlocked).
-                    if (current.level >= 1)
-                        actions.Add((ArenaText.Pair("研习", "Study"), null, () => { OpenStudy(tab == CampaignRoom.Armament ? "arm.upgrade" : "eng.body"); return true; }, "", true));
+                    // What the weapons and the energy research sell is bought in the study window (V2CampaignUi.Study.cs), which shows
+                    // every item with its rarity and numbers.
+                    actions.Add((ArenaText.Pair("研习", "Study"), null, () => { OpenStudy(tab == CampaignRoom.Armament ? "arm.upgrade" : "eng.body"); return true; }, "", true));
                     break;
             }
             for (int i = 0; i < actions.Count; i++)
@@ -198,31 +213,12 @@ namespace AnomalyArena
                 actionButtons.Add(AddAction(i, actions.Count, label, price, act, fail, enabled));
             }
 
-            // The ways out.
+            // The ways out: the campaign's (V2Campaign.BaseExits), each with its line in brackets.
             foreach (Transform child in leaveRow) Destroy(child.gameObject);
             var leaves = new List<(string label, Action act)>();
-            if (c.NightTimeLeft(out float seconds))
-            {
-                // Since 2026-11-06 the afternoon and the night have no clock (open-ended evenings): these buttons are the only way on. An
-                // afternoon visit goes back out, into the night, or skips the night; a night visit goes back out or waits for dawn.
-                string left = c.EveningsOpenEnded ? "" : ArenaText.Pair($"（还剩 {Mathf.CeilToInt(seconds)} 秒）", $" ({Mathf.CeilToInt(seconds)} s left)");
-                string dawn = c.Day >= r.days ? (c.CanIgnite ? ArenaText.Pair("（随后点火返航）", " (then the ignition starts)") : ArenaText.Pair($"（飞船还走不了，进入第 {c.Day + 1} 天）", $" (the ship can't leave yet; day {c.Day + 1} begins)"))
-                    : ArenaText.Pair($"（进入第 {c.Day + 1} 天）", $" (day {c.Day + 1} begins)");
-                if (c.BaseFromDusk)
-                {
-                    leaves.Add((ArenaText.Pair($"出门，继续下午{left}", $"Head back out into the afternoon{left}"), c.LeaveBase));
-                    leaves.Add((ArenaText.Pair("入夜", "Into the night"), c.EnterNight));
-                    leaves.Add((ArenaText.Pair("跳过夜晚，等待天亮", "Skip the night, wait for dawn") + dawn, c.WaitForDawn));
-                }
-                else
-                {
-                    leaves.Add((ArenaText.Pair($"出门，继续今晚{left}", $"Head back out into the night{left}"), c.LeaveBase));
-                    leaves.Add((ArenaText.Pair("等待天亮", "Wait for dawn") + dawn, c.WaitForDawn));
-                }
-            }
-            else if (c.Day == 0 && !c.BaseAtDawn) leaves.Add((ArenaText.Pair("出发（夜幕降临）", "Head out (night falls)"), c.LeaveBase));
-            else if (c.Day >= r.days && c.CanIgnite) leaves.Add((ArenaText.Pair("启动点火程序", "Start the ignition sequence"), c.Ignite));
-            else leaves.Add((c.Day >= r.days ? ArenaText.Pair($"飞船还走不了 · 开始第 {c.Day + 1} 天", $"Ship can't leave yet · start day {c.Day + 1}") : ArenaText.Pair($"出发：开始第 {c.Day + 1} 天", $"Head out: start day {c.Day + 1}"), c.LeaveBase));
+            foreach (var exit in c.BaseExits())
+                leaves.Add((string.IsNullOrEmpty(exit.note) ? exit.label : exit.label + ArenaText.Pair($"（{exit.note}）", $" ({exit.note})"), exit.go));
+            if (leaves.Count == 0) leaves.Add((ArenaText.Pair("出发", "Head out"), c.LeaveBase));
             for (int i = 0; i < leaves.Count; i++)
             {
                 var (label, act) = leaves[i];
@@ -232,8 +228,6 @@ namespace AnomalyArena
                 var text = b.GetComponentInChildren<Text>();
                 text.resizeTextMinSize = 14; text.resizeTextMaxSize = 24;
             }
-            // The fifth pass draws its page from the same lists, so its buttons do what these do (V5BasePage.cs).
-            if (V5HudKit.On) RefreshBase5(actions, leaves);
         }
 
         // ───── The page's parts ─────
@@ -403,27 +397,13 @@ namespace AnomalyArena
 
         int Hash(V2Campaign c)
         {
-            int h = (int)tab * 7919 + c.Alloy * 31 + c.Energy * 131 + c.Dark * 521 + c.Durability * 3 + c.ShieldLevel * 5 + c.Fuel * 17 + c.LampStock * 23 + (c.EngineFixed ? 1 : 0) + (c.ArmorFixed ? 2 : 0);
-            for (int i = 0; i < 4; i++) h = h * 13 + c.Room((CampaignRoom)i).level * 2 + (c.Room((CampaignRoom)i).damaged ? 1 : 0);
+            int h = (int)tab * 7919 + c.Alloy * 31 + c.Energy * 131 + c.Dark * 521 + c.FortifyLevel * 3 + c.PurchaseCount * 5 + c.Fuel * 17 + c.LampStock * 23 + c.HomeStepsLeft;
             h = h * 7 + Mathf.CeilToInt(c.BaseHp) + (c.NightTimeLeft(out float s) ? (float.IsInfinity(s) ? 1 : Mathf.CeilToInt(s) * 1009) : 0);
-            // The weapons held change the Armament Bay's buttons (the pistol, a free hand, the rocket's place).
-            h = h * 3 + (c.HoldsAnomalyWeapon ? 1 : 0) + (c.NewWeaponReplacesPistol ? 2 : 0);
-            if (gm && gm.runWeapons) foreach (var w in gm.runWeapons.Hand) h = h * 5 + (w == null ? 0 : 1 + (int)w.form);
             // The art switch changes the tabs' icons and the room's picture, the language every text.
             h = h * 2 + (Art.Enabled ? 1 : 0);
             h = h * 2 + (ArenaText.IsChinese ? 1 : 0);
             return h;
         }
-
-        string UpgradeLabel(CampaignRoom room)
-        {
-            int next = campaign.Room(room).level + 1;
-            return next == 1 ? ArenaText.Pair($"建造{V2Campaign.RoomName(room)}", $"Build the {V2Campaign.RoomName(room)}")
-                : ArenaText.Pair($"升到 {next} 级", $"Upgrade to level {next}");
-        }
-
-        string UpgradeFail(CampaignRoom room, CampaignCost cost) => !campaign.ControlWorks ? ArenaText.Pair("总控区已损坏，先把它修好", "Central Control is broken. Repair it first.")
-            : campaign.Room(room).damaged ? ArenaText.Pair("先修复这个区", "Repair this room first") : Why(cost);
 
         string Why(CampaignCost cost)
         {
@@ -456,7 +436,7 @@ namespace AnomalyArena
                 CampaignRoom.Control => art.roomControl,
                 CampaignRoom.Armament => LevelPicture(art.roomArmamentLevels, level, art.roomArmament),
                 CampaignRoom.Energy => LevelPicture(art.roomEnergyLevels, level, art.roomEnergy),
-                _ => campaign.ArmorFixed && art.shipIntactPicture ? art.shipIntactPicture : art.shipWreckPicture
+                _ => campaign.HullFixed && art.shipIntactPicture ? art.shipIntactPicture : art.shipWreckPicture
             };
         }
 
@@ -467,49 +447,35 @@ namespace AnomalyArena
             return levels != null && i >= 0 && i < levels.Length && levels[i] ? levels[i] : first;
         }
 
-        /// <summary>The few lines that matter in a room now. A level not reached reads "？？？": the V2 doc keeps it unknown until unlocked.</summary>
+        /// <summary>The few lines that matter in a room now: Central Control the base's life and fortification, the launch bay the ship's
+        /// three parts and the fuel, the two workshop rooms what their study window sells.</summary>
         string RoomText(CampaignRoom room)
         {
             var c = campaign;
             var r = c.rules;
             string Done(bool on) => on ? "<color=#7dff9a>●</color> " : "<color=#58606c>○</color> ";
-            string Level(int level, bool reached, string what, bool done = true) => reached
-                ? Done(done) + ArenaText.Pair($"{level} 级：{what}", $"Level {level}: {what}")
-                : Done(false) + ArenaText.Pair($"{level} 级：？？？", $"Level {level}: ? ? ?");
             string Small(string text, Color colour) => $"<size=18><color=#{ColorUtility.ToHtmlStringRGB(colour)}>{text}</color></size>";
-            int lv = c.Room(room).level;
             var lines = new List<string>();
             switch (room)
             {
                 case CampaignRoom.Control:
-                    lines.Add(ArenaText.Pair($"基地生命 {Mathf.CeilToInt(c.BaseHp)} / {Mathf.CeilToInt(c.BaseMaxHp)}　·　耐久 {c.Durability} / {c.MaxDurability} 级", $"Base HP {Mathf.CeilToInt(c.BaseHp)} / {Mathf.CeilToInt(c.BaseMaxHp)}   ·   hull level {c.Durability} / {c.MaxDurability}"));
-                    lines.Add(c.ShieldLevel > 0
-                        ? ArenaText.Pair($"护盾 {Mathf.CeilToInt(c.BaseShield)} / {Mathf.CeilToInt(c.BaseMaxShield)}　·　{c.ShieldLevel} / {c.MaxShieldLevel} 级　·　每晚回满", $"Shield {Mathf.CeilToInt(c.BaseShield)} / {Mathf.CeilToInt(c.BaseMaxShield)}   ·   level {c.ShieldLevel} / {c.MaxShieldLevel}   ·   refills each night")
-                        : ArenaText.Pair("护盾：未解锁", "Shield: locked"));
-                    // What only matters in a state is said in that state.
-                    if (c.Room(room).damaged) lines.Add(Small(ArenaText.Pair("总控区损坏了。先在这里把它修好：在那之前，其他三个区不能建造、升级或修复，基地护盾在夜里也不会回满。", "Central Control is broken. Repair it here first: until then, the other three rooms can't be built, upgraded or repaired, and the base shield won't refill at night."), Warn));
-                    else if (c.BaseHp < c.BaseMaxHp - .5f) lines.Add(Small(ArenaText.Pair($"基地每晚会自动修复最大生命的 {r.nightSelfRepair * 100f:0}%。", $"Each night the base repairs {r.nightSelfRepair * 100f:0}% of its max HP on its own."), Faint));
+                    lines.Add(ArenaText.Pair($"基地生命 {Mathf.CeilToInt(c.BaseHp)} / {Mathf.CeilToInt(c.BaseMaxHp)}　·　加固 {c.FortifyLevel} / {c.FortifyTop} 级",
+                        $"Base HP {Mathf.CeilToInt(c.BaseHp)} / {Mathf.CeilToInt(c.BaseMaxHp)}   ·   fortified {c.FortifyLevel} / {c.FortifyTop}"));
+                    if (r) lines.Add(Small(ArenaText.Pair($"基地每天会自动回复最大生命的 {r.nightSelfRepair * 100f:0}%。", $"Each day the base repairs {r.nightSelfRepair * 100f:0}% of its max HP on its own."), Faint));
                     break;
                 case CampaignRoom.Armament:
-                    lines.Add(Level(1, lv >= 1, ArenaText.Pair("装甲和武器型号升级", "armor and weapon Mk upgrades")));
-                    lines.Add(Level(2, lv >= 2, ArenaText.Pair("新武器和驯化", "new weapons and taming")));
-                    lines.Add(Level(3, lv >= 3, ArenaText.Pair("武器变招", "weapon twists")));
-                    if (lv >= 1) lines.Add(Small(ArenaText.Pair($"装甲 {c.ArmorLevel} 级　·　武器 Mk {c.TeamMk}", $"Armor level {c.ArmorLevel}   ·   weapons Mk {c.TeamMk}"), Faint));
+                    lines.Add(ArenaText.Pair($"武器型号 Mk {c.TeamMk}　·　护甲 {c.ArmorLevel} 级", $"Weapon Mk {c.TeamMk}   ·   armor level {c.ArmorLevel}"));
+                    lines.Add(Small(ArenaText.Pair("型号、护甲、驯化和变招在「研习」里购买。", "The weapon Mk, armor, Tame and Twist are bought under Study."), Faint));
                     break;
                 case CampaignRoom.Energy:
-                    lines.Add(Level(1, lv >= 1, ArenaText.Pair("体质研究", "body research")));
-                    lines.Add(Level(2, lv >= 2, ArenaText.Pair("技能研究", "skill research")));
-                    lines.Add(Level(3, lv >= 3, ArenaText.Pair("附魔研究", "infusion research")));
+                    lines.Add(Small(ArenaText.Pair("体质、技能和附魔在「研习」里研究。", "The body, skills and infusion are researched under Study."), Faint));
                     break;
                 default:
-                    lines.Add(Level(1, lv >= 1, ArenaText.Pair("修复飞船引擎", "repair the ship's engine"), c.EngineFixed));
-                    lines.Add(Level(2, lv >= 2, ArenaText.Pair("修复飞船装甲", "repair the ship's armor"), c.ArmorFixed));
-                    lines.Add(Level(3, lv >= 3, ArenaText.Pair($"合成反物质燃料 {c.Fuel} / {c.FuelUnits}", $"synthesize antimatter fuel {c.Fuel} / {c.FuelUnits}"), c.FuelFull));
-                    // Two sentences, one line each: the text breaks lines only at spaces, so one long Chinese line broke after the number.
-                    lines.Add(Small(ArenaText.Pair($"矿灯每盏 {r.lampCost} 合金。夜里放下矿灯，就能在它的光里采矿；用不完的会留到下一晚。",
+                    foreach (var part in c.ShipParts()) lines.Add(Done(part.done) + part.name + (part.done ? "" : ArenaText.Pair($"　合金 {part.price.alloy}", $"   {part.price.alloy} alloy")));
+                    lines.Add(Done(c.FuelFull) + ArenaText.Pair($"燃料 {c.Fuel} / {c.FuelTop}", $"Fuel {c.Fuel} / {c.FuelTop}"));
+                    if (r) lines.Add(Small(ArenaText.Pair($"矿灯每盏 {r.lampCost} 合金。夜里放下矿灯，就能在它的光里采矿；用不完的会留到下一晚。",
                         $"Mining lamps cost {r.lampCost} alloy each. Set one down at night to mine in its light; unused lamps carry over to the next night."), Faint));
-                    lines.Add(Small(ArenaText.Pair("修好引擎和装甲、加满燃料，就能点火返航。",
-                        "Repair the engine and the armor and fill the tank, and the ship can head home."), Faint));
+                    lines.Add(Small(ArenaText.Pair("修好三个部件、加满燃料，就能点火返航。", "Repair the three parts and fill the fuel, and the ship can head home."), Faint));
                     break;
             }
             return string.Join("\n", lines);

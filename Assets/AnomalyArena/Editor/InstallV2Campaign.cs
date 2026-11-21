@@ -90,6 +90,15 @@ namespace AnomalyArena.EditorTools
             ["EnergyShard"] = new Color(.9f, .35f, 1.2f), ["VoidPlatform"] = new Color(.8f, .2f, 1.25f),
         };
         static readonly Dictionary<string, string> Reuses = new() { ["DarkMatterNode"] = "OreAlloy", ["BaseDamaged"] = "Base" };
+        // The resource looks tuned by hand in the project after the install: the copper alloy ore, the dark matter node on the void
+        // crystal's mesh with its textures, the matte roadside crystals, the teal energy shard and the three recoloured currency icons.
+        // A reinstall keeps these as they are in the project instead of copying the old sources from work/ and rebuilding their
+        // materials and prefabs, which would bring the old looks back (and Reuses would put the node back on the alloy ore's mesh).
+        static readonly HashSet<string> TunedModels = new() { "OreAlloy", "DarkMatterNode", "VoidCrystal", "EnergyShard" };
+        static readonly HashSet<string> TunedIcons = new() { "energy", "alloy", "dark" };
+        static bool KeepTuned(string model) => TunedModels.Contains(model) && File.Exists(Project + ArtRoot + "Prefabs/" + model + ".prefab");
+        static bool KeepTunedIcon(string icon) => TunedIcons.Contains(icon) && File.Exists(Project + ArtRoot + "Icons/" + icon + ".png");
+        static GameObject TunedPrefab(string model) => KeepTuned(model) ? AssetDatabase.LoadAssetAtPath<GameObject>(ArtRoot + "Prefabs/" + model + ".prefab") : null;
 
         // The parts of a voice manifest (each of VoiceSources + manifest.json) the installer reads (JsonUtility skips the rest).
         [System.Serializable] class VoiceManifest { public VoiceLine[] lines; }
@@ -166,10 +175,11 @@ namespace AnomalyArena.EditorTools
             // 1. Copy the prepared files into the project (this edition only).
             if (copy)
             {
-                foreach (var icon in Icons) CopyIn(IconSource + icon + ".png", ArtRoot + "Icons/" + icon + ".png");
+                foreach (var icon in Icons) if (!KeepTunedIcon(icon)) CopyIn(IconSource + icon + ".png", ArtRoot + "Icons/" + icon + ".png");
                 foreach (var pair in Pictures) CopyIn(PictureSource + pair.Value, ArtRoot + "Pictures/" + pair.Key + ".png");
                 foreach (var model in models)
                 {
+                    if (KeepTuned(model)) { Log($"{model}: kept as tuned in the project"); continue; }
                     string from = ModelSource + model + "/";
                     if (!Directory.Exists(from)) { Log($"{model}: no prepared folder ({from})"); continue; }
                     Directory.CreateDirectory(Project + ArtRoot + "Models/" + model);
@@ -217,6 +227,7 @@ namespace AnomalyArena.EditorTools
             int materials = 0;
             foreach (var model in models)
             {
+                if (TunedPrefab(model) is { } tuned) { prefabs[model] = tuned; continue; }
                 string dir = ArtRoot + "Models/" + model + "/";
                 if (!AssetDatabase.IsValidFolder(dir.TrimEnd('/'))) { Problem($"{model}: no folder {dir}; whitebox stand-in"); continue; }
                 string fbx = FindFile(dir, ".fbx");
@@ -453,6 +464,7 @@ namespace AnomalyArena.EditorTools
             if (Directory.Exists(ModelSource))
                 foreach (var model in Props1119)
                 {
+                    if (KeepTuned(model)) { Log($"{model}: kept as tuned in the project"); continue; }
                     string from = ModelSource + model + "/";
                     if (!Directory.Exists(from)) { Log($"{model}: no prepared folder ({from})"); continue; }
                     Directory.CreateDirectory(Project + ArtRoot + "Models/" + model);
@@ -467,6 +479,7 @@ namespace AnomalyArena.EditorTools
             var prefabs = new Dictionary<string, GameObject>();
             foreach (var model in Props1119)
             {
+                if (TunedPrefab(model) is { } tuned) { prefabs[model] = tuned; continue; }
                 string dir = ArtRoot + "Models/" + model + "/";
                 if (!AssetDatabase.IsValidFolder(dir.TrimEnd('/'))) { Problem($"{model}: no folder {dir}"); continue; }
                 string fbx = FindFile(dir, ".fbx");
