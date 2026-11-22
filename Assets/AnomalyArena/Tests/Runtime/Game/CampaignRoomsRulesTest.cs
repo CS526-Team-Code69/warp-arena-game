@@ -58,8 +58,8 @@ namespace AnomalyArena
             Assert.That(actual, Is.Zero);
         }
 
-        [TestCase(false, .85f)]
-        [TestCase(true, .85f * 1.3f)]
+        [TestCase(false, 1f)]
+        [TestCase(true, 1.3f)]
         public void AfternoonAlloyScale_WithOrWithoutTheEngine_IsTheIncomeScaleTimesItsBonus(bool engine, float expected)
         {
             var sut = CreateRules();
@@ -69,10 +69,10 @@ namespace AnomalyArena
             Assert.That(actual, Is.EqualTo(expected).Within(.0001f));
         }
 
-        [TestCase(1, false, 17)]
-        [TestCase(1, true, 22)]
-        [TestCase(3, false, 38)]
-        [TestCase(7, true, 265)]
+        [TestCase(1, false, 20)]
+        [TestCase(1, true, 26)]
+        [TestCase(3, false, 45)]
+        [TestCase(7, true, 312)]
         public void AfternoonAlloyTotal_WithTheIncomeScale_IsTheTableScaledAndRounded(int day, bool engine, int expected)
         {
             var sut = CreateRules();

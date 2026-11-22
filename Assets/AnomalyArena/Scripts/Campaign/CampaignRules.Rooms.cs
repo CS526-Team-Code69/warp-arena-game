@@ -35,8 +35,8 @@ namespace AnomalyArena
         public int twistOpenDay = 4;
 
         [Header("Alloy income")]
-        [Min(0f), Tooltip("Multiplies the alloy of each afternoon's ore (afternoonAlloy, with the engine's bonus once it is repaired). It does not multiply Day 0's alloy (dayZeroAlloy), nor the part of the afternoon's ore that pays for its mining lamps (dayLampsToCraft x lampCost), nor the scattered nodes' fixed scatterYield.")]
-        public float alloyIncomeScale = .85f;
+        [Min(0f), Tooltip("Multiplies the alloy of each afternoon's ore (afternoonAlloy, with the engine's bonus once it is repaired); 1 keeps the table's numbers. It does not multiply Day 0's alloy (dayZeroAlloy) nor the part of the afternoon's ore that pays for its mining lamps (dayLampsToCraft x lampCost); the scattered nodes take their share of the same total.")]
+        public float alloyIncomeScale = 1f;
 
         [Header("Base fortification and armor")]
         [Tooltip("The base's max HP at fortification levels 1 to 7 (the V2 doc's base table). A run starts at level 1.")]

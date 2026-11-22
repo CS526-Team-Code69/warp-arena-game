@@ -1013,11 +1013,12 @@ namespace AnomalyArena
             static readonly Vector2 At = new(-70f, -10f), Fallen = new(150f, -10f), Ore = new(40f, -10f), Lamp = new(0f, 26f), Glow = new(0f, 4f);
             // The night's cluster: the first node is mined; the other two lie in the light, clear of the progress bar over the first.
             static readonly Vector2[] Dark = { new(40f, -10f), new(108f, -4f), new(92f, -50f) };
-            // The game's own tints: the energy shards, the ore's crystal, the dark matter's crystal, a lamp's light; and a lighter violet
-            // for the dark matter's text, which the dark crystal colour would hide at night.
-            static readonly Color EnergyColour = new(.78f, .45f, 1f), AlloyColour = new(.6f, .75f, .9f), DarkColour = new(.55f, .15f, .85f);
-            static readonly Color LampColour = new(1f, .9f, .6f), DarkText = new(.85f, .6f, 1f);
-            // Since 2026-11-10 the whitebox drops energy as cyan pyramids (the table's "energy" look); the art keeps its violet shards.
+            // The currencies' own colours, as the wallet, the mining bar and the names over the nodes show them (ResourceColours: alloy
+            // copper, alien energy teal-green, dark matter a light violet for its words and bar, which the dark crystal colour would hide
+            // at night); the dark matter crystal's deeper violet and a lamp's light.
+            static readonly Color EnergyColour = ResourceColours.Energy, AlloyColour = ResourceColours.Alloy, DarkColour = new(.55f, .15f, .85f);
+            static readonly Color LampColour = new(1f, .9f, .6f), DarkText = ResourceColours.Dark;
+            // The whitebox drops energy as cyan pyramids (the table's "energy" look); the illustrated shards are teal-green.
             // Read when the page opens, so the page follows the art switch.
             static Color EnergyTint => Art.Enabled ? EnergyColour : Whitebox.Colour("energy");
             // Seconds: the afternoon starts at Afternoon, the night at Night, and the loop starts again at Length.
