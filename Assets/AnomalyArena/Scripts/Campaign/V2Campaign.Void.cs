@@ -92,39 +92,31 @@ namespace AnomalyArena
             WatchVoidHits();
         }
 
-        // ───── The void alloy round where the hole stood ─────
+        // ───── The void alloy across the map ─────
 
-        /// <summary>Each afternoon once the Prophet is beaten (BeginDusk): the day's void alloy, rules.voidOreNodes x rules.voidOreYield,
-        /// shared by nodes on the spots where the sealed void ore lay on the line from the base to the hole (V2Campaign.Guide.cs
-        /// PathOreSpots, the same spots from the map's seed). A hole too near the base for that line keeps the older placement:
-        /// rules.voidOreNodes nodes of rules.voidOreYield round where it stood, within rules.voidOreReach cells. Like the day's ore, what
-        /// is not mined is gone at dawn.</summary>
+        /// <summary>Each afternoon from Day 1 (BeginDusk), after the day's ore: while the Prophet stands, rules.voidOreNodes sealed pieces
+        /// of void ore lie at random across the map (PlaceSealedMapOre, V2Campaign.Guide.cs); once it is beaten, rules.voidOreNodes nodes
+        /// of rules.voidOreYield void alloy lie at random across the map instead, on open ground as the day's ore does (TryNodePoint),
+        /// not on the hole's line. Like the day's ore, what is not mined is gone at dawn.</summary>
         partial void AfternoonVoidOre()
         {
-            if (!prophetBeaten || voidOreCentre is not Vector3 centre || rules.voidOreNodes <= 0) return;
-            var open = new List<Vector3>();
-            foreach (var spot in PathOreSpots(WorldMap.Active, centre))
+            if (!rules || rules.voidOreNodes <= 0 || Day < 1) return;
+            if (!prophetBeaten)
             {
-                Vector3 at = OreSpotOk(spot, 1f) ? spot : FindOpen(spot, 1f, 4f);
-                if (OreSpotOk(at, 1f)) open.Add(at);
-            }
-            if (open.Count > 0)
-            {
-                var shares = CampaignRules.Split(rules.voidOreNodes * Mathf.Max(1, rules.voidOreYield), open.Count);
-                for (int i = 0; i < open.Count; i++) if (shares[i] > 0) AddNode(NodeKind.VoidAlloy, open[i], shares[i]);
+                PlaceSealedMapOre();
                 return;
             }
-            float turn = Random.value * 360f, reach = Mathf.Max(2f, rules.voidOreReach);
+            ClearSealedMapOre();
             for (int i = 0; i < rules.voidOreNodes; i++)
-                for (int attempt = 0; attempt < 12; attempt++)
-                {
-                    float a = (turn + 360f * i / rules.voidOreNodes + attempt * 23f) * Mathf.Deg2Rad;
-                    Vector3 at = centre + new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * Random.Range(reach * .4f, reach);
-                    if (!OreSpotOk(at, 1f)) at = FindOpen(at, 1f, 4f);
-                    if (!OreSpotOk(at, 1f)) continue;
-                    AddNode(NodeKind.VoidAlloy, at, rules.voidOreYield);
-                    break;
-                }
+                if (TryNodePoint(out var at)) AddNode(NodeKind.VoidAlloy, at, Mathf.Max(1, rules.voidOreYield));
+        }
+
+        /// <summary>For automated checks: where the nodes of a kind still to be mined lie.</summary>
+        public List<Vector3> NodePositions(NodeKind kind)
+        {
+            var list = new List<Vector3>();
+            foreach (var node in nodes) if (!node.mined && !node.hidden && node.kind == kind) list.Add(node.position);
+            return list;
         }
 
         /// <summary>A void alloy node mined (CompleteMining).</summary>

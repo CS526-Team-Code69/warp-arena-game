@@ -199,7 +199,7 @@ namespace AnomalyArena
                             ArenaText.Pair("没有暗物质可加", "No dark matter to pour in"), c.CanAddFuel));
                     actions.Add((ArenaText.Pair($"制造矿灯（现有 {c.LampStock} 盏）", $"Craft a mining lamp (you have {c.LampStock})"), c.LampPrice, c.TryCraftLamp,
                         Why(c.LampPrice), c.LampsCraftable));
-                    if (c.CanIgnite) actions.Add((ArenaText.Pair("启动点火程序", "Start the ignition sequence"), null, () => { c.Ignite(); return true; }, "", true));
+                    if (c.CanIgnite) actions.Add((ArenaText.Pair("启动点火程序", "Start the ignition sequence"), null, () => { c.AskIgnite(); return true; }, "", true));
                     break;
                 default:
                     // What the weapons and the energy research sell is bought in the study window (V2CampaignUi.Study.cs), which shows

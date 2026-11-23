@@ -108,6 +108,8 @@ namespace AnomalyArena
                 float reachY = Mathf.Max(30f, direction.y > 0f ? centre.y - topInset * unit : centre.y - bottomInset * unit);
                 float distance = Mathf.Min(reachX / Mathf.Max(.0001f, Mathf.Abs(direction.x)), reachY / Mathf.Max(.0001f, Mathf.Abs(direction.y)));
                 Vector2 screen = centre + direction * distance;
+                // In the story the goal plate fills the top left: a marker that would lie on it stands where its line meets the plate's edge.
+                screen = V2EdgeRoom.ClearOfGoal(centre, screen, view.root.rect.size * (.5f * unit), 8f * unit);
                 RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, screen, null, out var local);
                 view.root.position = canvasRect.TransformPoint(local);
                 if (view.arrow)

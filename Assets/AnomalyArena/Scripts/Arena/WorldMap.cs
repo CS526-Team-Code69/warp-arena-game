@@ -453,6 +453,8 @@ namespace AnomalyArena
         {
             // The build phase pulls and swallows with the panel open as well (GameManager.BuildTimeFlows), exactly as while walking.
             if (!GM || (!GM.IsCombatActive && !GM.CanPlayerMove && !GM.BuildTimeFlows) || !GM.player) return;
+            // A player who is up again (a caught fall, a retry) no longer lies in a hole of their own.
+            if (GM.player.IsAlive) PlayerInOwnVoid = false;
             characters.Clear();
             characters.Add(GM.player);
             foreach (var enemy in GM.waves.Alive) if (enemy && enemy.gameObject.activeInHierarchy) characters.Add(enemy);
@@ -515,7 +517,23 @@ namespace AnomalyArena
         {
             if (combatant is Enemy enemy && enemy.IsAlive && !enemy.SuppressRewards && !enemy.IsTrialSummon && GM.progression && GM.waves)
                 GM.progression.GainXp(GM.waves.ExperienceFor(enemy));
+            if (combatant == GM.player) PlayerInOwnVoid = OwnHoleHolds(combatant);
             combatant.OnEnterFallZone(Vector3.zero);
+        }
+
+        /// <summary>The player is down because a hole they opened themselves (their Pocket Void) swallowed them; false again once they are
+        /// up. The result screen then names that hole, whose pull is slower than a walk, instead of the map's black hole.</summary>
+        public bool PlayerInOwnVoid { get; private set; }
+
+        /// <summary>A temporary hole that body opened holds it now.</summary>
+        bool OwnHoleHolds(Combatant body)
+        {
+            for (int i = 0; i < TemporaryHoleCount; i++)
+            {
+                var hole = TemporaryHoleAt(i);
+                if (hole && hole.gameObject.activeSelf && hole.Owner == body && hole.Contains(body.Position, body)) return true;
+            }
+            return false;
         }
 
         static BossTuning BossNumbers => GM && GM.waves && GM.waves.bosses != null ? GM.waves.bosses : BossTuning.Defaults;
@@ -777,8 +795,11 @@ namespace AnomalyArena
             CloseCampaignHoleAfterTrial(); // V2 day campaign: its hole closes also while it is put away for the night
         }
         public void ClosePortals() { foreach (var hole in holes) if (hole.Phase == HolePhase.Portal || hole.Phase == HolePhase.Collapsing) hole.Close(); }
+        /// <summary>Takes the temporary holes, walls and mirror images off the map; the paths are rebuilt only when one of them was
+        /// out (a wave's end rebuilds them in OnWaveEnded in any case).</summary>
         public void ClearTemporaryObjects()
         {
+            bool changed = TemporaryObjectOut();
             ClearSavedDeathEffects();
             if(temporaryHole)temporaryHole.gameObject.SetActive(false);
             if(trialTemporaryHole)trialTemporaryHole.gameObject.SetActive(false);
@@ -787,7 +808,17 @@ namespace AnomalyArena
             HideBossHoles();
             foreach(var wall in temporaryWalls)if(wall){wall.BattlefieldFrozen=false;wall.gameObject.SetActive(false);}
             if(decoy)decoy.gameObject.SetActive(false);if(trialDecoy)trialDecoy.gameObject.SetActive(false);
-            if(Grid!=null)HoleChanged();
+            if(Grid!=null&&changed)HoleChanged();
+        }
+        bool TemporaryObjectOut()
+        {
+            static bool Out(Component thing) => thing && thing.gameObject.activeSelf;
+            if (Out(temporaryHole) || Out(trialTemporaryHole) || Out(decoy) || Out(trialDecoy)) return true;
+            if (extraTemporaryHoles != null) foreach (var hole in extraTemporaryHoles) if (Out(hole)) return true;
+            if (trialExtraTemporaryHoles != null) foreach (var hole in trialExtraTemporaryHoles) if (Out(hole)) return true;
+            if (bossHoles != null) foreach (var hole in bossHoles) if (Out(hole)) return true;
+            if (temporaryWalls != null) foreach (var wall in temporaryWalls) if (Out(wall)) return true;
+            return false;
         }
         void ClearSavedDeathEffects()
         {

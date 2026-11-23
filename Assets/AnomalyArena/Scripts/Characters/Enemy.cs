@@ -941,7 +941,7 @@ namespace AnomalyArena
                         supportTimer = 4f;
                     }
 
-                    HoldBehindAllies(player, distance, dt);
+                    StandGuard(dt); // Enemy.Guard.cs: beside one monster, on the player's side of it
                     return true;
                 case EnemyKind.Chanter:
                     // Never attacks. The aura is always on (see Chanted); the chant is the readable rhythm.
@@ -1440,7 +1440,8 @@ namespace AnomalyArena
             ReceiveDamage(new DamageInfo { amount = maxHp * Boss.summonFallHpShare, source = DamageSource.Wall, kind = HitKind.Slam });
         }
 
-        /// <summary>Support positioning (Warden, Chanter): flee a close player, otherwise stand five units behind the nearest non-support ally.</summary>
+        /// <summary>The Chanter's positioning: flee a close player, otherwise stand five units behind the nearest ally that is no support kind.
+        /// The Warden stands guard beside one monster instead (Enemy.Guard.cs).</summary>
         void HoldBehindAllies(PlayerController player, float distance, float dt)
         {
             Enemy nearestGroup = null;
@@ -1760,7 +1761,11 @@ namespace AnomalyArena
             if (WorldMap.Active.TrialActive) return WorldMap.Active.KeepOnTrialGround(Position, v, dt, radius); // never off into the void
             if (!IsBoss) v *= Quicksand.SpeedFactor(Position);
             Vector3 taken = WorldMap.Active.WalkStep(Position, v, dt, radius, FollowingIntoGravity);
-            if (chasing) NoteWalk(v, taken, dt);
+            if (chasing)
+            {
+                NoteWalk(v, taken, dt);
+                NoteProgress(v, taken, dt);
+            }
             return taken;
         }
 

@@ -1073,7 +1073,7 @@ namespace AnomalyArena
                     list.Add((ArenaKeys.CharacterKey, ArenaText.Pair("打开角色面板，查看生命、武器、技能和加成", "Open the character screen: your health, weapons, skills and bonuses"), ""));
                 list.Add(rows[i]);
                 if (i == SprintRow && dash)
-                    list.Add(("Space", ArenaText.Pair("虚空冲刺：朝光标方向冲出一段距离", "Void Dash: dash toward the cursor"), ""));
+                    list.Add((ArenaText.Pair("空格", "Space"), ArenaText.Pair("虚空冲刺：朝光标方向冲出一段距离", "Void Dash: dash toward the cursor"), ""));
             }
             return list.ToArray();
         }

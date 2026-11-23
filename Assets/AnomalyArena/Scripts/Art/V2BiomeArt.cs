@@ -35,6 +35,8 @@ namespace AnomalyArena
         {
             if (!world || !ground || !surface || styles == null) return;
             selected = world.biome; illustrated = Art.Enabled; trial = world.TrialActive; campaignMap = world.CampaignMapApplied; initialized = true;
+            // The map's boundary: a low wall round the map and the dark past it (it follows the map, the art switch and the trial itself).
+            MapBoundaryArt.Attach(world, ground);
             Style active = null;
             foreach (var style in styles)
             {

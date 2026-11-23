@@ -341,8 +341,21 @@ namespace AnomalyArena
         }
 
         /// <summary>The base panel's "wait for dawn", at night (and from the afternoon, skipping the night): the rest of the evening passes at
-        /// once and the next day begins (EndNight). Since 2026-11-06 this is the only way on from the night besides falling in the dark.</summary>
+        /// once and the next day begins (EndNight). Since 2026-11-06 this is the only way on from the night besides falling in the dark.
+        /// A dawn that starts the ignition asks first (V2Campaign.IgniteAsk.cs); the answer that waits leaves the visit open.</summary>
         public void WaitForDawn()
+        {
+            if (!OutdoorVisit) return;
+            if (DawnIgnites)
+            {
+                AskIgnition(BringDawn, null);
+                return;
+            }
+            BringDawn();
+        }
+
+        /// <summary>The visit closes and the dawn comes at once (EndNight).</summary>
+        void BringDawn()
         {
             if (!OutdoorVisit) return;
             ui.HideBase();

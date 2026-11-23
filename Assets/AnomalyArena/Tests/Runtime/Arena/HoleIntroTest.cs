@@ -37,10 +37,11 @@ namespace AnomalyArena
             Assume.That(hole, Is.Not.Null, "the arena has an active fixed hole");
             if (game.RunPhase != ArenaUiState.Cutscene)
             {
-                // Stand just outside the gravity ring so the hole is on screen.
+                // Stand just outside the gravity ring, a cell from its edge, so the hole's centre is on screen: a wide ring (11 cells)
+                // near a corner of the map leaves the centre past the picture's edge from three cells further out.
                 Vector3 away = Query.Flat(game.player.Position - hole.Centre);
                 away = away.sqrMagnitude > .01f ? away.normalized : Vector3.forward;
-                Vector3 spot = hole.Centre + away * (hole.GravityRadius + 3f);
+                Vector3 spot = hole.Centre + away * (hole.GravityRadius + 1f);
                 game.player.GetComponent<Rigidbody>().position = spot;
                 game.player.transform.position = spot;
                 Physics.SyncTransforms();

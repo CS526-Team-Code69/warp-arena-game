@@ -14,6 +14,8 @@ namespace AnomalyArena
     /// black hole's place come back from the saved map and seed; ore, crate offers and the monsters' affixes are rolled again. The last
     /// save is the final battle's, taken when the failed ignition's cutscene is over (IgnitionSequence): continuing it starts the Tyrant's
     /// fight again at the base door in daylight, without the cutscene. Nothing is saved once that fight has begun.
+    /// The afternoon's save is also kept beside the slot's latest one (ArenaSaves.Store): a run lost the morning after can go back to
+    /// it from its result page (GameManager.RetryFromAfternoon).
     /// </summary>
     public sealed partial class V2Campaign
     {
@@ -77,7 +79,9 @@ namespace AnomalyArena
             // The base and the ship (the rooms and the shield are gone: their fields stay at their defaults).
             s.durability = Durability;
             s.baseHp = BaseHp;
-            s.baseLostLastMorning = lastMorningLoss;
+            // An afternoon is saved before it counts what its morning took (BeginDusk), so its save counts that here: the afternoon it
+            // continues into knows its morning's loss as the first one did.
+            s.baseLostLastMorning = dawnBaseHp >= 0f ? Mathf.Max(0f, dawnBaseHp - BaseHp) : lastMorningLoss;
             s.engineFixed = engineFixed;
             s.armorFixed = armorFixed;
             s.fuelTank = fuelTankFitted;

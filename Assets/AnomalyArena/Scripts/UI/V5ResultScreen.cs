@@ -12,7 +12,10 @@ namespace AnomalyArena
     /// window plate with what ended the run in plain words and what to know about it, a rule, the run's numbers, and the button back to
     /// the title (R). A lost run whose slot holds a save to go on from (GameManager.RetrySave) also gets the orange retry from that save
     /// (Enter), named by the save's day and part of the day or by its wave (RetryWords); the way back to the title is then a plain plate
-    /// right of it. It shows while the run is in its result phase and goes with it, and it follows the art switch as the other pages do.
+    /// right of it. A story morning lost with the afternoon before it still in its slot (GameManager.RetryAfternoon) gets a second
+    /// plate right of the retry, back to that afternoon (Tab, AfternoonWords), a line under the two saying what going back is for
+    /// (AfternoonHint), and the way back to the title on a row of its own under them. It shows while the run is in its result phase
+    /// and goes with it, and it follows the art switch as the other pages do.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class V5ResultScreen : MonoBehaviour
@@ -33,6 +36,8 @@ namespace AnomalyArena
         const float GoW = 420f, GoH = 74f, GoGap = 34f, GoFoot = 44f, GoPx = 24f, KeyGap = 14f;
         // Beside the retry the way back is narrower; a button's word shrinks down to MinGoPx to keep GoPad free at both ends.
         const float BackW = 340f, PairGap = 24f, GoPad = 22f, MinGoPx = 16f;
+        // With the afternoon before beside the retry: the line under the two, and the way back to the title on its own row under it.
+        const float HintPx = 19f, HintGap = 16f, RowGap = 22f;
 
         // The page's abyss with the art on, and the flat backing in whitebox (the character screen's).
         static readonly Color Abyss = V5TitleKit.Rgb(7, 10, 20), FlatBack = new(.01f, .02f, .05f, 1f);
@@ -49,9 +54,9 @@ namespace AnomalyArena
         Image back, banner, rule;
         RawImage backdrop;
         V5HudPlate window;
-        Text title, where, cause, note, stats, goLabel, retryLabel;
-        V5Plate go, retry;
-        V5HudKey goKey, retryKey;
+        Text title, where, cause, note, stats, goLabel, retryLabel, afternoonLabel, afternoonHint;
+        V5Plate go, retry, afternoon;
+        V5HudKey goKey, retryKey, afternoonKey;
         bool shown, shownArt;
         Font shownFont;
         string shownWords;
@@ -96,8 +101,11 @@ namespace AnomalyArena
             if (!shown) Show();
             FitPage();
             string retryWords = RetryWords(gm.RetrySave);
-            string words = s.resultTitle + "\n" + s.resultWhere + "\n" + s.resultCause + "\n" + s.resultStats + "\n" + retryWords;
-            if (words != shownWords || V5TitleKit.Font != shownFont || Art.Enabled != shownArt) Lay(s, words, retryWords);
+            // The afternoon before a lost morning stands beside the retry, never without it.
+            var before = retryWords.Length > 0 ? gm.RetryAfternoon : null;
+            string words = s.resultTitle + "\n" + s.resultWhere + "\n" + s.resultCause + "\n" + s.resultStats + "\n" + retryWords
+                           + "\n" + AfternoonWords(before) + "\n" + AfternoonHint(before);
+            if (words != shownWords || V5TitleKit.Font != shownFont || Art.Enabled != shownArt) Lay(s, words, retryWords, before);
         }
 
         void Show()
@@ -128,6 +136,12 @@ namespace AnomalyArena
             if (gm) gm.RetryFromSave();
         }
 
+        static void ClickAfternoon()
+        {
+            var gm = GameManager.Instance;
+            if (gm) gm.RetryFromAfternoon();
+        }
+
         /// <summary>The retry's words for a save: the story's day and part of the day ("从第 1 天上午重来", "Retry day 1 morning"), the
         /// final battle, or the open mode's wave ("从第 3 波重来", "Retry wave 3"); empty for no save.</summary>
         public static string RetryWords(SaveSummary save)
@@ -142,6 +156,17 @@ namespace AnomalyArena
                 _ => ArenaText.Pair($"从第 {save.day} 天夜晚重来", $"Retry day {save.day} night"),
             };
         }
+
+        /// <summary>The words of the way back to the afternoon before a lost morning ("回到第 6 天下午", "Back to day 6 afternoon"); empty
+        /// for none.</summary>
+        public static string AfternoonWords(SaveSummary afternoon) =>
+            afternoon == null ? "" : ArenaText.Pair($"回到第 {afternoon.day} 天下午", $"Back to day {afternoon.day} afternoon");
+
+        /// <summary>What going back to that afternoon is for, the line under the two retries: the base can be fortified and the weapons
+        /// and the armor upgraded there before the lost morning comes again; empty for none.</summary>
+        public static string AfternoonHint(SaveSummary afternoon) => afternoon == null ? ""
+            : ArenaText.Pair($"下午可以先加固基地、升级武器和护甲，再迎战第 {afternoon.day + 1} 天上午的怪物。",
+                $"In the afternoon you can fortify the base and upgrade before day {afternoon.day + 1}'s morning.");
 
         // ───── Building ─────
 
@@ -188,6 +213,15 @@ namespace AnomalyArena
             retryLabel = V5StoryKit.Label(retry.transform, "RetryLabel", GoPx, V5TitleKit.Dark, TextAnchor.MiddleLeft, true);
             retryKey = V5HudKit.Key(retry.transform, "RetryKey", "", true, Css);
             retry.gameObject.SetActive(false);
+            // The way back to the afternoon before a lost morning: a plain plate with Tab on its key, right of the retry, and the line
+            // under the two (Lay).
+            afternoon = V5Plate.Make(window.transform, "RetryAfternoon", V5Plate.Look.Plate, 10f * Css / V5TitleKit.Css, ClickAfternoon);
+            afternoon.Button.navigation = new Navigation { mode = Navigation.Mode.None };
+            afternoonLabel = V5StoryKit.Label(afternoon.transform, "AfternoonLabel", GoPx, V5TitleKit.Ink, TextAnchor.MiddleLeft, true);
+            afternoonKey = V5HudKit.Key(afternoon.transform, "AfternoonKey", "Tab", false, Css);
+            afternoon.gameObject.SetActive(false);
+            afternoonHint = Paragraph(window.transform, "AfternoonHint", HintPx, V5TitleKit.Ink2, false);
+            afternoonHint.gameObject.SetActive(false);
             canvasRoot.SetActive(false);
         }
 
@@ -202,12 +236,12 @@ namespace AnomalyArena
 
         // ───── Laying out ─────
 
-        void Lay(ArenaUiSnapshot s, string words, string retryWords)
+        void Lay(ArenaUiSnapshot s, string words, string retryWords, SaveSummary before)
         {
             shownWords = words;
             shownFont = V5TitleKit.Font;
             shownArt = Art.Enabled;
-            foreach (var label in new[] { title, where, cause, note, stats, goLabel, retryLabel })
+            foreach (var label in new[] { title, where, cause, note, stats, goLabel, retryLabel, afternoonLabel, afternoonHint })
                 if (label && shownFont) label.font = shownFont;
             back.color = shownArt ? Abyss : FlatBack;
             backdrop.enabled = shownArt;
@@ -216,6 +250,7 @@ namespace AnomalyArena
             Color goInk = shownArt ? V5TitleKit.Dark : Color.white;
             retryLabel.color = goInk;
             goLabel.color = hasRetry ? shownArt ? V5TitleKit.Ink : Color.white : goInk;
+            afternoonLabel.color = shownArt ? V5TitleKit.Ink : Color.white;
 
             // What ended the run on its first line, what to know about it after; a run that was won has no cause.
             string causeWords = s.resultCause ?? "", noteWords = "";
@@ -235,6 +270,9 @@ namespace AnomalyArena
             goKey.SetText("R");
             SetText(retryLabel, retryWords);
             retryKey.SetText(ArenaText.Pair("回车", "Enter"));
+            SetText(afternoonLabel, AfternoonWords(before));
+            afternoonKey.SetText("Tab");
+            SetText(afternoonHint, AfternoonHint(before));
 
             // The window grows with its lines: the cause and its note, the rule, the numbers, the button.
             float inner = P(WindowW - 2f * Side), y = P(Top);
@@ -255,10 +293,28 @@ namespace AnomalyArena
             y += P(GoGap);
             // Alone, the way back to the title is the orange button in the middle; with a retry it is a plain plate right of the retry,
             // its key a light cap.
+            bool hasAfternoon = hasRetry && before != null;
             Shown(retry, hasRetry);
+            Shown(afternoon, hasAfternoon);
+            Shown(afternoonHint, hasAfternoon);
             go.SetLook(hasRetry ? V5Plate.Look.Plate : V5Plate.Look.Go);
             goKey.SetDark(!hasRetry);
-            if (hasRetry)
+            if (hasAfternoon)
+            {
+                // The two ways to retry side by side and as wide as each other, what going back is for under them, and the way back to
+                // the title on a row of its own.
+                float left = (WindowW - GoW - PairGap - GoW) * .5f;
+                retry.Place(P(left), y, P(GoW), P(GoH));
+                afternoon.Place(P(left + GoW + PairGap), y, P(GoW), P(GoH));
+                LayButton(retryLabel, retryKey, GoW);
+                LayButton(afternoonLabel, afternoonKey, GoW);
+                y += P(GoH) + P(HintGap);
+                y += PlaceParagraph(afternoonHint, y, inner);
+                y += P(RowGap);
+                go.Place(P((WindowW - BackW) * .5f), y, P(BackW), P(GoH));
+                LayButton(goLabel, goKey, BackW);
+            }
+            else if (hasRetry)
             {
                 float left = (WindowW - GoW - PairGap - BackW) * .5f;
                 retry.Place(P(left), y, P(GoW), P(GoH));

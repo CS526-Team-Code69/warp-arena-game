@@ -418,6 +418,7 @@ namespace AnomalyArena
                     // while the player stands on it (the classic run keeps its height).
                     float lift = campaign && hole.Phase == HolePhase.Portal ? 2.2f : hole.size * .5f + 1f;
                     bool visible = PlaceWorld(label.rectTransform, hole.Centre + gm.cam.transform.up * lift, gm.cam);
+                    if (visible && text.Length > 0) StepBelowPlates(label);
                     label.gameObject.SetActive(visible && text.Length > 0);
                     if (!campaign && Offscreen(hole.Centre, gm.cam) && edges < edgeLabels.Length)
                     {
@@ -655,6 +656,24 @@ namespace AnomalyArena
             return kindNames[i] ??= ArenaText.Text("enemy." + kind);
         }
 
+        /// <summary>The black hole's label steps down below a notice plate that would lie over it, so its count stays readable: the HUD's
+        /// banner or one-line notice (a monster met for the first time) or the story's flash (the black hole's first sight).</summary>
+        void StepBelowPlates(UnityEngine.UI.Text label)
+        {
+            var rect = label.rectTransform;
+            float unit = canvasRect.lossyScale.x > 0f ? canvasRect.lossyScale.x : 1f;
+            Vector2 at = RectTransformUtility.WorldToScreenPoint(null, rect.position);
+            float w = Mathf.Max(60f, label.preferredWidth) * unit, h = Mathf.Max(20f, label.preferredHeight) * unit;
+            var area = new Rect(at.x - w * rect.pivot.x, at.y - h * rect.pivot.y, w, h);
+            float bottom = float.MaxValue;
+            if (V5BattleHud.PlateOver(area, out float banner)) bottom = banner;
+            if (V2CampaignUi.FlashOver(area, out float flash)) bottom = Mathf.Min(bottom, flash);
+            if (bottom == float.MaxValue) return;
+            at.y += bottom - area.yMax - 6f * unit;
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, at, null, out var local);
+            rect.position = canvasRect.TransformPoint(local);
+        }
+
         // ───── The names over the story's nodes near the player ─────
 
         const int NodeNameCount = 6;
@@ -663,12 +682,27 @@ namespace AnomalyArena
         const int NodeNameSize = 17;
         UnityEngine.UI.Text[] nodeNames;
         readonly List<(V2Campaign.NodeKind kind, Vector3 top)> nodesNear = new();
+        // The names shown, in screen pixels, and the frame they were placed in (the goal marker stands above them: V2CampaignUi).
+        static readonly List<Rect> nodeNameBoxes = new();
+        static int nodeNameFrame = -10;
+
+        /// <summary>A node's name shown now overlaps area (screen pixels): top is the highest top edge of those it overlaps.</summary>
+        public static bool NodeNameUnder(Rect area, out float top)
+        {
+            top = float.MinValue;
+            if (Time.frameCount - nodeNameFrame > 2) return false;
+            foreach (var box in nodeNameBoxes)
+                if (box.Overlaps(area)) top = Mathf.Max(top, box.yMax);
+            return top > float.MinValue;
+        }
 
         /// <summary>Each frame: the story's nodes within reach of the player (V2Campaign.NodesNear, nearest first) carry their names over
         /// them; the labels left over hide.</summary>
         void PlaceNodeNames(GameManager gm)
         {
             int shown = 0;
+            nodeNameBoxes.Clear();
+            nodeNameFrame = Time.frameCount;
             var campaign = V2Campaign.Active;
             if (campaign && gm.player && gm.player.IsAlive && !(WorldMap.Active && WorldMap.Active.TrialActive))
             {
@@ -686,6 +720,10 @@ namespace AnomalyArena
                     var colour = NodeNameColour(kind);
                     if (label.color != colour) label.color = colour;
                     if (!label.gameObject.activeSelf) label.gameObject.SetActive(true);
+                    float unit = canvasRect.lossyScale.x > 0f ? canvasRect.lossyScale.x : 1f;
+                    Vector2 middle = RectTransformUtility.WorldToScreenPoint(null, label.rectTransform.position);
+                    Vector2 half = new Vector2(label.preferredWidth, label.preferredHeight) * (.5f * unit);
+                    nodeNameBoxes.Add(new Rect(middle - half, half * 2f));
                     shown++;
                 }
             }
@@ -774,6 +812,8 @@ namespace AnomalyArena
             var area = new Rect(110f * unit, (edgeBottomInset + half) * unit, Mathf.Max(1f, Screen.width - 220f * unit),
                 Mathf.Max(1f, Screen.height - (edgeBottomInset + edgeTopInset + 2f * half) * unit));
             Vector2 at = EdgePoint(FacingScreenPoint(cam, world), area, out bool onSide);
+            // In the story the goal plate fills the top left: a notice that would lie on it stands where its line meets the plate's edge.
+            at = V2EdgeRoom.ClearOfGoal(area.center, at, new Vector2(Mathf.Max(80f, label.preferredWidth) * .5f * unit, half * unit), 8f * unit);
             string arrow = onSide ? at.x < area.center.x ? "◀ " : "▶ " : at.y < area.center.y ? "▼ " : "▲ ";
             int fifth = fifthEdges != null ? Array.IndexOf(edgeLabels, label) : -1;
             if (fifth >= 0) edgeWays[fifth] = onSide ? new Vector2(at.x < area.center.x ? -1f : 1f, 0f) : new Vector2(0f, at.y < area.center.y ? -1f : 1f);

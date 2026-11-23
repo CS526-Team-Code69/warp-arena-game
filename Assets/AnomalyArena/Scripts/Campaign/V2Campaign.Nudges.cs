@@ -14,7 +14,7 @@ namespace AnomalyArena
     /// </summary>
     public sealed partial class V2Campaign
     {
-        const float FortifyHurtShare = .25f, MorningLossShare = .25f;
+        const float FortifyHurtShare = .25f, MorningLossShare = .2f;
 
         // The base's HP as the day's first wave began, and what the last morning took from it (saved with the run).
         float dawnBaseHp = -1f, lastMorningLoss;
@@ -62,10 +62,10 @@ namespace AnomalyArena
             var sentences = new System.Collections.Generic.List<string>();
             if (goalNamesLamps)
                 sentences.Add(ArenaText.Pair($"夜里要靠矿灯才能采暗物质：回基地，在火箭页造矿灯，每盏 {rules.lampCost} 合金（现有 {lampStock} 盏）。",
-                    $"At night you need mining lamps to mine dark matter: make them at the base on the rocket page, {rules.lampCost} alloy each (you have {lampStock})."));
+                    $"Mining dark matter at night takes lamps: make them on the rocket page, {rules.lampCost} alloy each (you have {lampStock})."));
             if (goalNamesFortify && FortifyPrice is CampaignCost price)
                 sentences.Add(ArenaText.Pair($"基地可以加固：在整备页顶部花 {price.alloy} 合金，基地生命上限 {FortifyHpNow:0} → {FortifyHpNext:0}。",
-                    $"The base can be fortified: at the top of the workshop page, {price.alloy} alloy raises its max HP {FortifyHpNow:0} → {FortifyHpNext:0}."));
+                    $"The base can be fortified at the workshop page's top: {price.alloy} alloy for max HP {FortifyHpNow:0} → {FortifyHpNext:0}."));
             if (sentences.Count == 0) return goal;
             string gap = ArenaText.Pair("", " ");
             bool ended = goal.EndsWith("。") || goal.EndsWith(".");

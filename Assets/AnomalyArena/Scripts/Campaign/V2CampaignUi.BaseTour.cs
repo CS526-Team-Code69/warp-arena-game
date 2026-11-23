@@ -147,7 +147,7 @@ namespace AnomalyArena
             if (tourShown) return;
             var step = tourStep;
             // One sentence a step: the plate has no second line.
-            view.Show(() => TourTarget(step), BaseTour.Text(step), "", campaign.rules ? campaign.rules.spotlightDim : .75f);
+            view.Show(() => TourTarget(step), BaseTour.Text(step), "", campaign.rules ? campaign.rules.spotlightDim : .75f, TourParts);
             tourShown = true;
         }
 
@@ -216,7 +216,7 @@ namespace AnomalyArena
             tourMissing = 0f;
             if (tourShown) return;
             var step = guideStep;
-            view.Show(() => GuideTarget(step), BuyGuide.Text(step), "", campaign.rules ? campaign.rules.spotlightDim : .75f);
+            view.Show(() => GuideTarget(step), BuyGuide.Text(step), "", campaign.rules ? campaign.rules.spotlightDim : .75f, TourParts);
             tourShown = true;
         }
 

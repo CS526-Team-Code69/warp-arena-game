@@ -10,26 +10,33 @@ namespace AnomalyArena
     /// WarpArena.Save.Story.1 to WarpArena.Save.Open.3); on a desktop player and in the editor, as one JSON file each in
     /// persistentDataPath/saves/ (story-1.json to open-3.json), a folder a store's cloud sync can follow as it is. While the tests keep the
     /// settings in memory (ArenaPrefs.UseMemoryForTests, on for their whole run) the saves are kept in memory too, so no test reads a
-    /// player's saves or writes over them. A read or write that fails is logged and taken as no save; it never stops the run.
+    /// player's saves or writes over them. A read or write that fails is logged and taken as no save; it never stops the run. A story
+    /// slot has a second entry beside its latest save, the afternoon it also keeps (Afternoon), under its own key and in its own file.
     /// </summary>
     static class SaveStore
     {
-        public static string Key(SaveMode mode, int slot) => $"WarpArena.Save.{mode}.{slot + 1}";
-        public static string FileName(SaveMode mode, int slot) => $"{(mode == SaveMode.Story ? "story" : "open")}-{slot + 1}.json";
+        /// <summary>A slot's second entry: the story's last afternoon save, kept beside the latest one (ArenaSaves.AfternoonBefore). Its
+        /// key ends in .afternoon (WarpArena.Save.Story.1.afternoon) and its file in -afternoon (story-1-afternoon.json).</summary>
+        public const string Afternoon = "afternoon";
+
+        /// <summary>An entry's key and its file's name: the slot's latest save with no part, else the part named.</summary>
+        public static string Key(SaveMode mode, int slot, string part = null) => $"WarpArena.Save.{mode}.{slot + 1}{(string.IsNullOrEmpty(part) ? "" : "." + part)}";
+        public static string FileName(SaveMode mode, int slot, string part = null) =>
+            $"{(mode == SaveMode.Story ? "story" : "open")}-{slot + 1}{(string.IsNullOrEmpty(part) ? "" : "-" + part)}.json";
         public static string Folder => Path.Combine(Application.persistentDataPath, "saves");
 
-        /// <summary>The slot's text, or null when it holds none.</summary>
-        public static string Read(SaveMode mode, int slot)
+        /// <summary>The text of one of the slot's entries (its latest save, or the part named), or null when it holds none.</summary>
+        public static string Read(SaveMode mode, int slot, string part = null)
         {
 #if UNITY_INCLUDE_TESTS
             var memory = TestMemory;
-            if (memory != null) return memory.TryGetValue(Key(mode, slot), out var kept) ? kept : null;
+            if (memory != null) return memory.TryGetValue(Key(mode, slot, part), out var kept) ? kept : null;
 #endif
 #if UNITY_WEBGL && !UNITY_EDITOR
-            string text = ArenaPrefs.GetString(Key(mode, slot), "");
+            string text = ArenaPrefs.GetString(Key(mode, slot, part), "");
             return string.IsNullOrEmpty(text) ? null : text;
 #else
-            string path = Path.Combine(Folder, FileName(mode, slot));
+            string path = Path.Combine(Folder, FileName(mode, slot, part));
             try { return File.Exists(path) ? File.ReadAllText(path) : null; }
             catch (Exception e)
             {
@@ -39,23 +46,24 @@ namespace AnomalyArena
 #endif
         }
 
-        /// <summary>Keeps the text in the slot in place of what it held; false when it could not be written.</summary>
-        public static bool Write(SaveMode mode, int slot, string text)
+        /// <summary>Keeps the text in one of the slot's entries (its latest save, or the part named) in place of what it held; false when
+        /// it could not be written.</summary>
+        public static bool Write(SaveMode mode, int slot, string text, string part = null)
         {
 #if UNITY_INCLUDE_TESTS
             var memory = TestMemory;
             if (memory != null)
             {
-                memory[Key(mode, slot)] = text;
+                memory[Key(mode, slot, part)] = text;
                 return true;
             }
 #endif
 #if UNITY_WEBGL && !UNITY_EDITOR
-            ArenaPrefs.SetString(Key(mode, slot), text);
+            ArenaPrefs.SetString(Key(mode, slot, part), text);
             ArenaPrefs.Save();
             return true;
 #else
-            string path = Path.Combine(Folder, FileName(mode, slot)), temporary = path + ".tmp";
+            string path = Path.Combine(Folder, FileName(mode, slot, part)), temporary = path + ".tmp";
             try
             {
                 Directory.CreateDirectory(Folder);
@@ -81,21 +89,22 @@ namespace AnomalyArena
 #endif
         }
 
-        public static void Delete(SaveMode mode, int slot)
+        /// <summary>Removes one of the slot's entries (its latest save, or the part named).</summary>
+        public static void Delete(SaveMode mode, int slot, string part = null)
         {
 #if UNITY_INCLUDE_TESTS
             var memory = TestMemory;
             if (memory != null)
             {
-                memory.Remove(Key(mode, slot));
+                memory.Remove(Key(mode, slot, part));
                 return;
             }
 #endif
 #if UNITY_WEBGL && !UNITY_EDITOR
-            ArenaPrefs.Delete(Key(mode, slot));
+            ArenaPrefs.Delete(Key(mode, slot, part));
             ArenaPrefs.Save();
 #else
-            string path = Path.Combine(Folder, FileName(mode, slot));
+            string path = Path.Combine(Folder, FileName(mode, slot, part));
             try
             {
                 if (File.Exists(path)) File.Delete(path);
@@ -128,8 +137,9 @@ namespace AnomalyArena
         /// <summary>Tests only: the memory store is emptied.</summary>
         public static void ClearMemoryForTests() => TestMemory?.Clear();
 
-        /// <summary>Tests only: whether the memory store holds an entry for the slot at all (a deleted slot leaves none behind).</summary>
-        public static bool HasEntryForTests(SaveMode mode, int slot) => TestMemory?.ContainsKey(Key(mode, slot)) ?? false;
+        /// <summary>Tests only: whether the memory store holds an entry for the slot at all (a deleted slot leaves none behind), its
+        /// latest save or the part named.</summary>
+        public static bool HasEntryForTests(SaveMode mode, int slot, string part = null) => TestMemory?.ContainsKey(Key(mode, slot, part)) ?? false;
 #endif
     }
 }

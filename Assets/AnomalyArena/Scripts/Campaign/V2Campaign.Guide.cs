@@ -37,14 +37,19 @@ namespace AnomalyArena
         // Sealed void ore on the same line: a few pieces of the void alloy's ore (larger than the shards, glowing violet), from
         // PathOreStart cells out to PathOreEndGap cells short of the hole's centre, about PathOreGap cells apart and up to PathOreSide
         // cells to either side. They cannot be mined until the Nash Prophet is beaten; standing within PathOreNear cells of one says what
-        // opens them, at most once every SealedOreRepeat seconds. Once the Prophet is beaten the afternoon's void alloy grows on the same
-        // spots (AfternoonVoidOre, V2Campaign.Void.cs). The spots come from the map's seed, so they are the same before and after.
+        // opens them, at most once every SealedOreRepeat seconds. The line's spots come from the map's seed. Away from the line each
+        // afternoon lays rules.voidOreNodes more sealed pieces at random across the map, like the day's ore (PlaceSealedMapOre, from
+        // AfternoonVoidOre). Once the Prophet is beaten every sealed piece goes, and each afternoon's void alloy lies across the map
+        // instead (V2Campaign.Void.cs).
         const float PathOreStart = 26f, PathOreGap = 12f, PathOreEndGap = 12f, PathOreSide = 1.6f, PathOreClearance = 1.1f, PathOreNear = 3.2f,
             SealedOreRepeat = 25f;
         const int PathOreMin = 3, PathOreMax = 7;
 
         Transform holeGuide, pathOre;
         readonly List<Vector3> sealedOre = new();
+        // Today's sealed void ore across the map, and the object that holds its pieces (outside the hole's guide).
+        readonly List<Vector3> sealedMapOre = new();
+        Transform mapOre;
         float sealedOreSaidAt = -999f;
         GameObject guideShards;
         Mesh guideMesh;
@@ -62,6 +67,8 @@ namespace AnomalyArena
         /// <summary>For automated checks: where the sealed void ore lies (empty once the hole is gone), and whether it shows now.</summary>
         public IReadOnlyList<Vector3> SealedOre => sealedOre;
         public bool SealedOreShown => pathOre && pathOre.gameObject.activeSelf;
+        /// <summary>For automated checks: where today's sealed void ore across the map lies (empty once the Prophet is beaten).</summary>
+        public IReadOnlyList<Vector3> SealedMapOre => sealedMapOre;
 
         /// <summary>SetupCampaignMap, once the campaign's map and its black hole are in place: the shards (hidden until the hole shows)
         /// and the hum's source (silent).</summary>
@@ -105,6 +112,7 @@ namespace AnomalyArena
             if (guideMaterial) Destroy(guideMaterial);
             holeGuide = null; pathOre = null; guideShards = null; guideMesh = null; guideMaterial = null; holeHum = null;
             sealedOre.Clear();
+            ClearSealedMapOre();
             humLevel = 0f; humPaused = false; shardCount = 0;
         }
 
@@ -118,16 +126,17 @@ namespace AnomalyArena
             // its hum go with it for good. Until then the shards stay with the hole; the hum is silent from the win on (TickHoleHum).
             if (!hole || hole.Phase == HolePhase.Gone) { ClearHoleGuide(); return; }
             // The Prophet beaten: the seal is broken and the sealed pieces go; the afternoon's void alloy takes their spots from then on.
-            if (prophetBeaten && sealedOre.Count > 0)
+            if (prophetBeaten && (sealedOre.Count > 0 || sealedMapOre.Count > 0))
             {
                 if (pathOre) Destroy(pathOre.gameObject);
                 pathOre = null;
                 sealedOre.Clear();
+                ClearSealedMapOre();
             }
             bool shown = !map.CampaignHoleHidden;
             if (guideShards && guideShards.activeSelf != shown) guideShards.SetActive(shown);
             if (pathOre && pathOre.gameObject.activeSelf != shown) pathOre.gameObject.SetActive(shown);
-            if (shown) TickSealedOreHint();
+            TickSealedOreHint(shown);
             if (shown && guideMaterial) guideMaterial.SetFloat("_Intensity", guideGlow * (1f + ShardBreath * Mathf.Sin(Time.time * ShardBreathSpeed)));
             TickHoleHum(map, hole, shown);
         }
@@ -320,39 +329,76 @@ namespace AnomalyArena
             pathOre = new GameObject("Sealed void ore").transform;
             pathOre.SetParent(holeGuide, false);
             var rng = new System.Random(MapSeed * 59 + 3);
-            var prefab = art && Art.Enabled ? art.oreNodePrefab : null;
-            foreach (var at in sealedOre)
-            {
-                var root = new GameObject("SealedVoidOre").transform;
-                root.SetParent(pathOre, false);
-                root.position = at;
-                root.rotation = Quaternion.Euler(0f, Unit(rng) * 360f, 0f);
-                if (prefab)
-                {
-                    var model = Instantiate(prefab, root);
-                    StripColliders(model);
-                    FitFootprint(model.transform, 1.8f);
-                    PaintVoidAlloy(model);
-                }
-                else Whitebox.Build("voidalloy", root);
-            }
+            foreach (var at in sealedOre) BuildSealedPiece(pathOre, at, rng);
             pathOre.gameObject.SetActive(false);
         }
 
-        /// <summary>By day and in the afternoon, standing by a piece of sealed void ore says what it is and what opens it, at most once every
-        /// SealedOreRepeat seconds. Nothing once the Prophet is beaten (the ore is mined as void alloy from then on).</summary>
-        void TickSealedOreHint()
+        /// <summary>One piece of sealed void ore: the void alloy's ore model (or the whitebox's void alloy) at a point, turned at random,
+        /// with no collider and nothing to mine.</summary>
+        void BuildSealedPiece(Transform parent, Vector3 at, System.Random rng)
         {
-            if (prophetBeaten || sealedOre.Count == 0 || !ui || !gm || !gm.player) return;
+            var prefab = art && Art.Enabled ? art.oreNodePrefab : null;
+            var root = new GameObject("SealedVoidOre").transform;
+            root.SetParent(parent, false);
+            root.position = at;
+            root.rotation = Quaternion.Euler(0f, Unit(rng) * 360f, 0f);
+            if (prefab)
+            {
+                var model = Instantiate(prefab, root);
+                StripColliders(model);
+                FitFootprint(model.transform, 1.8f);
+                PaintVoidAlloy(model);
+            }
+            else Whitebox.Build("voidalloy", root);
+        }
+
+        /// <summary>AfternoonVoidOre while the Nash Prophet stands, from Day 1: yesterday's sealed pieces across the map go and
+        /// rules.voidOreNodes new ones lie at random on open ground, as the day's ore does (TryNodePoint), so void alloy is seen all over
+        /// the map before it can be mined.</summary>
+        void PlaceSealedMapOre()
+        {
+            ClearSealedMapOre();
+            if (prophetBeaten || !rules || rules.voidOreNodes <= 0) return;
+            for (int i = 0; i < rules.voidOreNodes; i++)
+                if (TryNodePoint(out var at)) sealedMapOre.Add(at);
+            if (sealedMapOre.Count == 0) return;
+            mapOre = new GameObject("Sealed void ore (map)").transform;
+            var rng = new System.Random(MapSeed * 61 + Day * 7 + 5);
+            foreach (var at in sealedMapOre) BuildSealedPiece(mapOre, at, rng);
+        }
+
+        /// <summary>The sealed pieces across the map go (a new afternoon's, the Prophet beaten, the guide cleared).</summary>
+        void ClearSealedMapOre()
+        {
+            if (mapOre) Destroy(mapOre.gameObject);
+            mapOre = null;
+            sealedMapOre.Clear();
+        }
+
+        /// <summary>By day and in the afternoon, standing by a piece of sealed void ore says what it is and what opens it, at most once every
+        /// SealedOreRepeat seconds: a piece on the hole's line (while the line shows) also says to follow the pieces to the hole, a piece
+        /// elsewhere on the map only that it cannot be mined yet. Nothing once the Prophet is beaten (void alloy is mined from then on).</summary>
+        void TickSealedOreHint(bool lineShown)
+        {
+            if (prophetBeaten || sealedOre.Count == 0 && sealedMapOre.Count == 0 || !ui || !gm || !gm.player) return;
             if (Stage is not (CampaignStage.Day or CampaignStage.Lull or CampaignStage.Dusk)) return;
             if (Time.unscaledTime < sealedOreSaidAt + SealedOreRepeat) return;
             Vector3 pp = gm.player.Position;
-            foreach (var at in sealedOre)
+            if (lineShown)
+                foreach (var at in sealedOre)
+                {
+                    if (Query.Flat(pp - at).sqrMagnitude > PathOreNear * PathOreNear) continue;
+                    sealedOreSaidAt = Time.unscaledTime;
+                    ui.Flash(ArenaText.Pair("虚空封住的矿石：只有虚空之力才能开采。顺着它们走就能找到黑洞，虚空之力在黑洞的另一边。",
+                        "Ore sealed by the void: only the void's power can mine it. Follow it to the black hole; that power lies beyond."), 5f);
+                    return;
+                }
+            foreach (var at in sealedMapOre)
             {
                 if (Query.Flat(pp - at).sqrMagnitude > PathOreNear * PathOreNear) continue;
                 sealedOreSaidAt = Time.unscaledTime;
-                ui.Flash(ArenaText.Pair("虚空封住的矿石：只有虚空之力才能开采。顺着它们走就能找到黑洞，虚空之力在黑洞的另一边。",
-                    "Ore sealed by the void: only the void's power can mine it. Follow it to the black hole; that power lies beyond."), 5f);
+                ui.Flash(ArenaText.Pair("虚空合金矿：现在还没法开采，要先获得虚空之力。虚空之力在黑洞的另一边。",
+                    "Void alloy ore: you cannot mine it yet. You need the void's power first, and it lies beyond the black hole."), 5f);
                 return;
             }
         }

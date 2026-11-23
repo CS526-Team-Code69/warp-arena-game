@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -40,6 +41,16 @@ namespace AnomalyArena
         Rect box, slideFrom, slideTo, clickable;
         bool placed, found, passed;
         float dimAlpha, shownFor, plateAlpha, passClock = -1f, slideClock = -1f;
+        // The page's parts the plate keeps off (Show's keepClear, TourPlateRoom), asked again every PlanSeconds and whenever the box, the
+        // screen or the words change, and the plate's place they gave.
+        Action<List<Rect>, List<Rect>> keepClear;
+        readonly List<Rect> clearBusy = new(), clearButtons = new();
+        Rect planAround, planPlate;
+        Vector2 planSize;
+        string planText;
+        float planAt = -10f;
+        int planSignature;
+        const float PlanSeconds = .25f;
 
         /// <summary>The green flash and the plate's fade are still playing (the next step waits for them).</summary>
         public bool Busy => passClock >= 0f && passClock < V2Spotlight.FlashSeconds + PlateFadeSeconds;
@@ -90,9 +101,12 @@ namespace AnomalyArena
 
         /// <summary>Puts the box on the part that at returns, asked every frame (its box in canvas units from the screen's bottom-left
         /// corner, or null while it is not on the screen), with the plate saying text and, smaller under it, hintText; the rest of the
-        /// screen dims by dimness. A box already shown slides over to the new part; otherwise everything fades in.</summary>
-        public void Show(Func<Rect?> at, string text, string hintText, float dimness)
+        /// screen dims by dimness. A box already shown slides over to the new part; otherwise everything fades in. keepClear, when given,
+        /// lists the page's parts (their words and icons, then their buttons) that the plate keeps off.</summary>
+        public void Show(Func<Rect?> at, string text, string hintText, float dimness, Action<List<Rect>, List<Rect>> keepClear = null)
         {
+            this.keepClear = keepClear;
+            planAt = -10f;
             bool moving = target != null && placed;
             target = at;
             dimAlpha = Mathf.Clamp01(dimness);
@@ -230,6 +244,11 @@ namespace AnomalyArena
         {
             tipGroup.alpha = plateAlpha;
             if (plateAlpha <= 0f) return;
+            if (keepClear != null)
+            {
+                PlacePlateClear(size, around);
+                return;
+            }
             var side = BaseTour.PlateSide(size, around, PlateMinWidth, PlateGap, ScreenMargin);
             float width = BaseTour.PlateWidth(side, size, around, PlateMinWidth, PlateMaxWidth, PlateGap, ScreenMargin);
             float inner = width - PlatePadX * 2f;
@@ -240,6 +259,58 @@ namespace AnomalyArena
             Place(tip, BaseTour.PlatePlace(side, size, around, new Vector2(width, height), PlateGap, ScreenMargin));
             body.rectTransform.anchoredPosition = new Vector2(PlatePadX, -PlatePadY);
             hint.rectTransform.anchoredPosition = new Vector2(PlatePadX, -(PlatePadY + bodyHeight + LineGap));
+        }
+
+        /// <summary>The plate where it covers the least of the page's parts (TourPlateRoom), its words laid out at its width.</summary>
+        void PlacePlateClear(Vector2 size, Rect around)
+        {
+            bool moved = planText != body.text || planSize != size || !Near(planAround, around);
+            if (moved || Time.unscaledTime - planAt >= PlanSeconds)
+            {
+                clearBusy.Clear();
+                clearButtons.Clear();
+                keepClear(clearBusy, clearButtons);
+                planAt = Time.unscaledTime;
+                // The page's parts are asked every PlanSeconds; the plate is placed again only when they, the box or the words changed.
+                int signature = Signature(clearBusy) * 31 + Signature(clearButtons);
+                if (moved || signature != planSignature)
+                {
+                    planSignature = signature;
+                    bool hinted = hint.gameObject.activeSelf;
+                    float oneLine = Mathf.Ceil(Mathf.Max(body.preferredWidth, hinted ? hint.preferredWidth : 0f)) + PlatePadX * 2f + 2f;
+                    planPlate = TourPlateRoom.Place(size, around, width => PlateHeight(width, hinted), oneLine, clearBusy, clearButtons,
+                        PlateMinWidth, PlateMaxWidth, PlateGap, ScreenMargin);
+                    planText = body.text;
+                    planSize = size;
+                    planAround = around;
+                }
+            }
+            float inner = planPlate.width - PlatePadX * 2f;
+            float bodyHeight = Fit(body, inner);
+            if (hint.gameObject.activeSelf) Fit(hint, inner);
+            Place(tip, planPlate);
+            body.rectTransform.anchoredPosition = new Vector2(PlatePadX, -PlatePadY);
+            hint.rectTransform.anchoredPosition = new Vector2(PlatePadX, -(PlatePadY + bodyHeight + LineGap));
+        }
+
+        /// <summary>How tall the plate is at this width, its two lines laid out there.</summary>
+        float PlateHeight(float width, bool hinted)
+        {
+            float inner = width - PlatePadX * 2f;
+            return PlatePadY * 2f + Fit(body, inner) + (hinted ? LineGap + Fit(hint, inner) : 0f);
+        }
+
+        static bool Near(Rect a, Rect b) => (a.min - b.min).sqrMagnitude < .25f && (a.max - b.max).sqrMagnitude < .25f;
+
+        /// <summary>A number that changes when any of the parts moves by a unit or more, or one comes or goes.</summary>
+        static int Signature(List<Rect> parts)
+        {
+            unchecked
+            {
+                int h = parts.Count;
+                foreach (var r in parts) h = h * 31 + Mathf.RoundToInt(r.x) * 7 + Mathf.RoundToInt(r.y) * 13 + Mathf.RoundToInt(r.width) * 17 + Mathf.RoundToInt(r.height);
+                return h;
+            }
         }
 
         /// <summary>Gives a label this width and returns how tall its text is there, the label made that tall.</summary>

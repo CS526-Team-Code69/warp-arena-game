@@ -859,6 +859,7 @@ namespace AnomalyArena
                 markerArrow.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(edge.y, edge.x) * Mathf.Rad2Deg);
                 icon = clamped - edge * 46f;
             }
+            if (!offScreen) icon = AboveNodeName(icon, scale);
             markerIcon.rectTransform.anchoredPosition = icon;
             markerPulse.rectTransform.anchoredPosition = icon;
             markerText.rectTransform.anchoredPosition = icon + new Vector2(0f, -38f);

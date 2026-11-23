@@ -448,7 +448,7 @@ namespace AnomalyArena
         EnemyKind? defeatEnemy;
         DamageSource defeatSource;
         RunWeapon defeatWeapon;
-        bool defeatBase;
+        bool defeatBase, defeatOwnVoid;
 
         /// <summary>Keeps what ended a lost run at the moment it ends, in RunAnalytics' causes (the same the run_end row sends).</summary>
         void NoteDefeat(ArenaUiState phase)
@@ -459,17 +459,19 @@ namespace AnomalyArena
             defeatCause=RunAnalytics.DefeatCause(phase,player.DeathCause,defeatSource,by&&by==player,defeatEnemy,known&&enemy.Elite).cause;
             defeatWeapon=lastHurtSelf?lastHurtWeapon:null;
             defeatBase=CampaignRunning&&campaign.BaseDestroyed;
+            defeatOwnVoid=defeatCause=="black_hole"&&WorldMap.Active&&WorldMap.Active.PlayerInOwnVoid;
         }
 
         /// <summary>The result screen's first line for a lost run, in both modes: what ended it and, where the player can learn from it,
         /// how to keep clear of it. Empty for a won run and for a cause the game cannot name.</summary>
         public string ResultCauseLine()=>State==GameState.Lost
-            ?ResultCauseLine(defeatCause,defeatEnemy,defeatSource,defeatWeapon?.form,defeatWeapon?.variant??0,defeatSource==DamageSource.Wall,defeatBase):"";
+            ?ResultCauseLine(defeatCause,defeatEnemy,defeatSource,defeatWeapon?.form,defeatWeapon?.variant??0,defeatSource==DamageSource.Wall,defeatBase,defeatOwnVoid):"";
 
         /// <summary>The line for one cause, by RunAnalytics.DefeatCause's names: the base, the Void Trial, the black hole, the player's own
         /// weapon (a wall slam it started included), a wall slam an enemy started, an enemy's burn or poison, the Tyrant King, any other
-        /// enemy (with the collection's note on it).</summary>
-        public static string ResultCauseLine(string cause,EnemyKind? enemy,DamageSource source,WeaponForm? weapon,int variant,bool wall,bool baseDestroyed)
+        /// enemy (with the collection's note on it). ownVoid: the black hole that took the player was their own Pocket Void, whose pull is
+        /// slower than a walk.</summary>
+        public static string ResultCauseLine(string cause,EnemyKind? enemy,DamageSource source,WeaponForm? weapon,int variant,bool wall,bool baseDestroyed,bool ownVoid=false)
         {
             // The cause on the first line and what to know about it on the next: one long line left its last mark alone on a line.
             const string gap="\n";
@@ -477,6 +479,9 @@ namespace AnomalyArena
             switch(cause)
             {
                 case "void_trial":return ArenaText.Pair("你倒在了虚空试炼里。","You fell in the Void Trial.");
+                case "black_hole" when ownVoid:
+                    return ArenaText.Pair($"你掉进了自己开的口袋虚空。{gap}它的引力比走路慢，被拉住时朝外走就能脱身；别把它开在自己脚边。",
+                        $"Your own Pocket Void swallowed you.{gap}Its pull is slower than your walk, so walk outward when it catches you, and don't open it at your feet.");
                 case "black_hole":
                 {
                     string key=ArenaKeys.SprintKey;

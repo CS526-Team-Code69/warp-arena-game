@@ -32,7 +32,8 @@ namespace AnomalyArena
         public static bool IsSpecial(EnemyKind kind) => kind is EnemyKind.Rammer or EnemyKind.Bloater or EnemyKind.Spire
             or EnemyKind.Stomper or EnemyKind.Shade or EnemyKind.Chanter;
 
-        /// <summary>Never attacks; stays behind the nearest ally, away from the player.</summary>
+        /// <summary>Never attacks. The Chanter stays behind the nearest ally, away from the player; the Warden stands guard beside one
+        /// monster, on the player's side of it (Enemy.Guard.cs).</summary>
         public static bool IsSupport(EnemyKind kind) => kind is EnemyKind.Warden or EnemyKind.Chanter;
 
         public static bool IsBoss(EnemyKind kind) => kind is EnemyKind.Hollow or EnemyKind.Tyrant;

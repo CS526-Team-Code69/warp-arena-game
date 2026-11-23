@@ -13,7 +13,7 @@ namespace AnomalyArena
     /// four steps (the three parts and the fuel, its count over a full tank on a violet bar, with the button that pours the dark matter
     /// held into it), the big ignition button (grey until all four are done) and the line under it; below, the mining lamps: how many,
     /// their price and the button that makes one. Everything is read and bought through V2Campaign.Redesign.cs (ShipParts,
-    /// TryBuyShipPart, TryAddFuel, CanIgnite and Ignite, LampPrice and TryCraftLamp).
+    /// TryBuyShipPart, TryAddFuel, CanIgnite and AskIgnite, LampPrice and TryCraftLamp).
     /// </summary>
     public sealed partial class V2CampaignUi
     {
@@ -102,7 +102,7 @@ namespace AnomalyArena
             r5Fire = B5Button(r5Home, "Ignite", V5Plate.Look.Plate, () => B5Act(() =>
             {
                 if (!campaign.CanIgnite) return false;
-                campaign.Ignite();
+                campaign.AskIgnite(); // the question first: after the ignition there is no way back (V2Campaign.IgniteAsk.cs)
                 return true;
             }));
             r5FireLabel = V5StoryKit.Label(r5Fire.transform, "Label", 28f, V5TitleKit.Ink, TextAnchor.MiddleCenter, true);

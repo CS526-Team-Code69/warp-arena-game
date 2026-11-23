@@ -15,6 +15,9 @@ namespace AnomalyArena
     /// marked cleared (SaveSummary.cleared, MarkCleared), which cannot be continued. A
     /// new game in a filled slot empties it first (Delete), then binds it. Each slot holds one SaveData, kept as JSON by SaveStore (the
     /// browser's storage on the web, a file on a desktop and in the editor, memory in the tests).
+    /// A story slot keeps one save more: its last afternoon's, written a second time beside the latest one (Store). The saves that
+    /// follow replace only the latest, so a run lost the morning after can go back to that afternoon from its result page
+    /// (AfternoonBefore, ContinueFromAfternoon), where the base can still be fortified. The title lists and continues the latest only.
     /// </summary>
     public static class ArenaSaves
     {
@@ -152,19 +155,24 @@ namespace AnomalyArena
             return save != null && ValidSlot(slot);
         }
 
-        /// <summary>Empties the slot.</summary>
+        /// <summary>Empties the slot, the afternoon kept beside its latest save with it.</summary>
         public static void Delete(SaveMode mode, int slot)
         {
             if (!ValidSlot(slot)) return;
             SaveStore.Delete(mode, slot);
+            SaveStore.Delete(mode, slot, SaveStore.Afternoon);
             Changed?.Invoke();
         }
 
         /// <summary>The slot's save, or null when it holds none, or one this build cannot read (broken text, a later version).</summary>
-        public static SaveData Load(SaveMode mode, int slot)
+        public static SaveData Load(SaveMode mode, int slot) => LoadEntry(mode, slot, null);
+
+        /// <summary>One of the slot's entries, read as Load reads the latest save: the latest (no part) or the afternoon kept beside it
+        /// (SaveStore.Afternoon).</summary>
+        static SaveData LoadEntry(SaveMode mode, int slot, string part)
         {
             if (!ValidSlot(slot)) return null;
-            string text = SaveStore.Read(mode, slot);
+            string text = SaveStore.Read(mode, slot, part);
             if (string.IsNullOrEmpty(text)) return null;
             try
             {
@@ -184,7 +192,8 @@ namespace AnomalyArena
         }
 
         /// <summary>Writes the save into the slot in place of what it held; its summary takes the slot's mode and number and the time now,
-        /// and Changed follows. False when it could not be written (logged; the run goes on without it) or saves are off on this page.</summary>
+        /// and Changed follows. False when it could not be written (logged; the run goes on without it) or saves are off on this page.
+        /// The story's save of an afternoon's start is written a second time, as the afternoon the slot keeps beside its latest save.</summary>
         public static bool Store(SaveMode mode, int slot, SaveData save)
         {
             if (!Enabled || !ValidSlot(slot) || save == null) return false;
@@ -194,7 +203,12 @@ namespace AnomalyArena
             save.summary.slot = slot;
             save.summary.empty = false;
             save.summary.savedAtUnixSeconds = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            bool written = SaveStore.Write(mode, slot, JsonUtility.ToJson(save));
+            string text = JsonUtility.ToJson(save);
+            bool written = SaveStore.Write(mode, slot, text);
+            // The night's and the morning's saves that follow replace only the latest save: a run lost the morning after still has
+            // this afternoon to go back to (AfternoonBefore). A won run's marked save is no afternoon to go back to.
+            if (written && mode == SaveMode.Story && save.summary.phase == SavePhase.Afternoon && !save.summary.cleared)
+                SaveStore.Write(mode, slot, text, SaveStore.Afternoon);
             if (written) Changed?.Invoke();
             return written;
         }
@@ -208,7 +222,64 @@ namespace AnomalyArena
             var save = Load(mode, slot) ?? new SaveData();
             finished?.Invoke(save.summary);
             save.summary.cleared = true;
-            return Store(mode, slot, save);
+            if (!Store(mode, slot, save)) return false;
+            SaveStore.Delete(mode, slot, SaveStore.Afternoon); // a won run goes back to nothing
+            return true;
+        }
+
+        // ───── The afternoon before a lost morning ─────
+
+        /// <summary>The afternoon a run lost in the morning can go back to: the summary of the afternoon the slot keeps beside its latest
+        /// save, its mode and slot number filled in. Only for a story slot whose latest save is a morning's, and only the afternoon of the
+        /// day before on the same map and terrain, so one left by another day or another run is never offered; else null. Day 1's morning
+        /// has none (Day 0 writes no save), the final battle goes back to none, and a slot written before the afternoon was kept has none
+        /// until its next afternoon begins.</summary>
+        public static SaveSummary AfternoonBefore(SaveMode mode, int slot)
+        {
+            var save = AfternoonSaveBefore(mode, slot);
+            if (save == null) return null;
+            var summary = save.summary;
+            summary.mode = mode;
+            summary.slot = slot;
+            summary.empty = false;
+            summary.weapons ??= Array.Empty<WeaponForm>();
+            return summary;
+        }
+
+        static SaveData AfternoonSaveBefore(SaveMode mode, int slot)
+        {
+            if (!Enabled || mode != SaveMode.Story) return null;
+            var latest = Load(mode, slot);
+            if (latest == null || latest.summary.cleared || latest.summary.phase != SavePhase.Morning) return null;
+            var before = LoadEntry(mode, slot, SaveStore.Afternoon);
+            if (before == null || before.summary.cleared || before.summary.phase != SavePhase.Afternoon) return null;
+            bool dayBefore = before.summary.day == latest.summary.day - 1;
+            bool sameRun = before.story.mapSeed == latest.story.mapSeed && before.run.mapIndex == latest.run.mapIndex;
+            return dayBefore && sameRun ? before : null;
+        }
+
+        /// <summary>Goes back to the afternoon before the slot's lost morning (AfternoonBefore): that afternoon's save takes the latest
+        /// save's place in the slot, so the slot shows it and the title's Continue loads it from now on, and the run continues from it
+        /// as Continue continues a save. Asked from a lost run's result page (GameManager.RetryFromAfternoon); with no such afternoon,
+        /// or where no save can be continued, nothing starts and the slot stays as it is. The caller plays the click's sound.</summary>
+        public static void ContinueFromAfternoon(SaveMode mode, int slot)
+        {
+            if (!Enabled || !ValidSlot(slot) || pendingSave != null) return;
+            var game = GameManager.Instance;
+            if (!game || !game.CanContinueSave)
+            {
+                Debug.LogWarning("[Saves] a save is continued from the title or a lost run's result page only");
+                return;
+            }
+            var before = AfternoonSaveBefore(mode, slot);
+            if (before == null)
+            {
+                Debug.LogWarning($"[Saves] {mode} slot {slot + 1} keeps no afternoon to go back to");
+                return;
+            }
+            if (!Store(mode, slot, before)) return;
+            Debug.Log($"[Saves] {mode} slot {slot + 1}: back to day {before.summary.day}'s afternoon");
+            Continue(mode, slot);
         }
 
         // ───── What the summaries show ─────
@@ -254,6 +325,11 @@ namespace AnomalyArena
         /// <summary>Tests only: the slot's stored text as it is (null when the store holds no entry for it), and whether it holds one.</summary>
         public static string ReadRawForTests(SaveMode mode, int slot) => SaveStore.InMemoryForTests ? SaveStore.Read(mode, slot) : null;
         public static bool HasEntryForTests(SaveMode mode, int slot) => SaveStore.HasEntryForTests(mode, slot);
+
+        /// <summary>Tests only: whether the memory store holds the afternoon the slot keeps beside its latest save, and that afternoon's
+        /// save as it was written (null when there is none).</summary>
+        public static bool HasAfternoonForTests(SaveMode mode, int slot) => SaveStore.HasEntryForTests(mode, slot, SaveStore.Afternoon);
+        public static SaveData LoadAfternoonForTests(SaveMode mode, int slot) => SaveStore.InMemoryForTests ? LoadEntry(mode, slot, SaveStore.Afternoon) : null;
 
         /// <summary>Tests only: puts this text into the slot as it is (broken or foreign text included); nothing while saves are real.</summary>
         public static void WriteRawForTests(SaveMode mode, int slot, string text)

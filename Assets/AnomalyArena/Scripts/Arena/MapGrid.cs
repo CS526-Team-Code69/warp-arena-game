@@ -92,18 +92,9 @@ namespace AnomalyArena
 
         public void Rebuild(WorldMap map)
         {
-            // V2 day campaign (since 2026-11-06): its larger map with many terrain walls stamps each wall once (StampBlocked) instead of
-            // testing every wall at every cell; the cells come out the same. The classic maps keep the loop.
-            if (map.CampaignMapApplied) StampBlocked(map);
-            else
-                for (int i = 0; i < gravity.Length; i++)
-                {
-                    Vector3 point = Centre(i);
-                    bool hole = map.IsHole(point);
-                    slim.blocked[i] = hole || !map.Contains(point, slim.reach) || map.IsWall(point, slim.reach);
-                    wide.blocked[i] = hole || !map.Contains(point, wide.reach) || map.IsWall(point, wide.reach);
-                    gravity[i] = map.GetPull(point).sqrMagnitude > 0.01f;
-                }
+            // Every map stamps each wall once (StampBlocked) instead of testing every wall at every cell; the cells come out the same.
+            // The per-cell test cost a classic map about a tenth of a second for each rebuild, and a wave's end rebuilds.
+            StampBlocked(map);
             MarkOpen(slim);
             MarkOpen(wide);
         }
@@ -130,7 +121,7 @@ namespace AnomalyArena
             }
         }
 
-        /// <summary>The V2 campaign's Rebuild: the same blocked and gravity cells as the per-cell loop (WorldMap.Contains and IsWall with
+        /// <summary>Rebuild's stamping: the same blocked and gravity cells as a per-cell test (WorldMap.Contains and IsWall with
         /// the layer's reach, whose rect test includes the edges and whose temporary walls test their collider's bounds at the wall's
         /// height, IsHole and GetPull), with each wall visiting only the cells round it.</summary>
         void StampBlocked(WorldMap map)

@@ -8,7 +8,8 @@ namespace AnomalyArena
     /// <summary>
     /// Run flow beside GameManagerV2.cs. The keyboard answers only to the keys the game shows: Space, Enter and keypad
     /// Enter close the weapon card, which names them (document 2.2, 10-27), Enter and keypad Enter retry a lost run from its last save
-    /// on the result page, whose orange button names Enter (RetryFromSave), and the UI has no submit action, so every other step is a
+    /// on the result page, whose orange button names Enter (RetryFromSave), Tab goes back to the afternoon before a lost morning there,
+    /// on the plate that names it (RetryFromAfternoon), and the UI has no submit action, so every other step is a
     /// click or a key printed on screen. Space is also the void dash once the void trial is won, and the battle HUD's key hints then show
     /// it (VoidDashUnlocked). A Void Trial won mid-wave hands the wave back after a short freeze in which the player absorbs
     /// the void's power (document 12.5).
@@ -83,6 +84,8 @@ namespace AnomalyArena
                 case KeyCode.Tab:
                     // Puts the build panel away (walk the empty arena, step onto a portal) and brings it back.
                     if (CanToggleBuildWalk) ExecuteUiCommand(ArenaUiCommand.ToggleBuildWalk);
+                    // On a lost morning's result page Tab goes back to the afternoon before, as the plate that names it shows.
+                    else if (RunPhase == ArenaUiState.Result) RetryFromAfternoon();
                     break;
                 case KeyCode.R:
                     if (RunPhase == ArenaUiState.Result) ExecuteUiCommand(ArenaUiCommand.Restart);

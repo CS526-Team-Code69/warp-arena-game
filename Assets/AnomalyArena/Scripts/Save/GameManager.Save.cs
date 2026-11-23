@@ -12,7 +12,8 @@ namespace AnomalyArena
     /// pinned (ArenaSaves.Continue, ReloadForSave); the scene that loads takes it on its title (StartPendingContinue) and starts the run
     /// there, without the title, the supply crate, the starting weapon or the first-time pages. When a run ends its slot keeps its last
     /// save; a won run's is marked cleared (RunEndedForSaves). A lost run's result page can go on from that save at once (RetrySave,
-    /// RetryFromSave): the same continue as the title's, taken from the result phase.
+    /// RetryFromSave): the same continue as the title's, taken from the result phase. A story run lost in a morning can also go back
+    /// to the afternoon before it, which its slot keeps beside the latest save (RetryAfternoon, RetryFromAfternoon).
     /// </summary>
     public partial class GameManager
     {
@@ -51,6 +52,29 @@ namespace AnomalyArena
             if (!CanRetryFromSave || !MenuInputReady || Time.unscaledTime - menuCommandAt < .15f || ArenaSaves.ContinuePending(out _)) return false;
             menuCommandAt = Time.unscaledTime;
             ArenaSaves.Continue(RetrySave.mode, RetrySave.slot);
+            if (!ArenaSaves.ContinuePending(out _)) return false;
+            retryStarted = true;
+            V5UiSound.Play(V5UiSound.Ui.Start);
+            return true;
+        }
+
+        /// <summary>The afternoon a lost morning can also be retried from on its result page: the summary of the afternoon the run's slot
+        /// keeps beside its latest save (ArenaSaves.AfternoonBefore), read as the run ended. Null unless the story was lost in a morning
+        /// from day 2 on with that afternoon still in its slot: day 1 has no afternoon before it, the final battle goes back to none,
+        /// and the open mode keeps none.</summary>
+        public SaveSummary RetryAfternoon { get; private set; }
+
+        /// <summary>The result page offers the way back to the afternoon before, beside the retry.</summary>
+        public bool CanRetryFromAfternoon => RetryAfternoon != null && CanRetryFromSave;
+
+        /// <summary>The result page's way back to the afternoon before the lost morning (its second plate, Tab): that afternoon becomes the
+        /// slot's latest save and the run goes on from it (ArenaSaves.ContinueFromAfternoon), so the base can be fortified and the night
+        /// and the morning played again. It waits for the same input lock as the retry. False when nothing started.</summary>
+        public bool RetryFromAfternoon()
+        {
+            if (!CanRetryFromAfternoon || !MenuInputReady || Time.unscaledTime - menuCommandAt < .15f || ArenaSaves.ContinuePending(out _)) return false;
+            menuCommandAt = Time.unscaledTime;
+            ArenaSaves.ContinueFromAfternoon(RetryAfternoon.mode, RetryAfternoon.slot);
             if (!ArenaSaves.ContinuePending(out _)) return false;
             retryStarted = true;
             V5UiSound.Play(V5UiSound.Ui.Start);
@@ -107,12 +131,14 @@ namespace AnomalyArena
         }
 
         /// <summary>The run ended: its slot keeps its last save. A lost run's save stays as it is, and its summary is kept for the result
-        /// page's retry when it can be continued (RetrySave). A won run's save is marked cleared, its summary showing the run as it
+        /// page's retry when it can be continued (RetrySave), with the afternoon before a lost morning when the slot keeps it
+        /// (RetryAfternoon). A won run's save is marked cleared, its summary showing the run as it
         /// finished (the story's day and ship, the open mode's last wave, the weapons held). The run writes no more. A failure here is
         /// logged and never stops the result screen that follows.</summary>
         void RunEndedForSaves()
         {
             RetrySave = null;
+            RetryAfternoon = null;
             if (RunSaveSlot < 0) return;
             var mode = RunSaveMode;
             int slot = RunSaveSlot;
@@ -122,6 +148,7 @@ namespace AnomalyArena
                 try
                 {
                     RetrySave = ArenaSaves.Continuable(mode, slot);
+                    RetryAfternoon = RetrySave != null ? ArenaSaves.AfternoonBefore(mode, slot) : null;
                 }
                 catch (Exception e)
                 {

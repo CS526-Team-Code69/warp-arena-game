@@ -31,9 +31,6 @@ namespace AnomalyArena
         // taken as LampReach. DockClear is kept between the dock and what stands at the bottom right; the dock is never narrower than
         // DockHalfLeast on either side of the middle.
         const float StoryDockHalfWidth = 590f, LampReach = 340f, DockClear = 12f, DockHalfLeast = 200f;
-        // In the story the markers along the top keep below the goal plate at the top left, which reaches about 235 canvas units down
-        // with a goal, a prompt, a note and the side quest.
-        const float StoryGoalClear = 250f;
         // The boss plate under the top centre's plate (which ends 104 down), the banner under it.
         const float BossTop = 116f, BossW = 560f, BossH = 64f, BannerTop = 196f, BannerW = 820f, BannerH = 152f, NoticeH = 36f;
         const float HintsRight = 26f, HintsBottom = 26f, HintKeyGap = 8f, HintItemGap = 26f;
@@ -321,8 +318,9 @@ namespace AnomalyArena
 
         /// <summary>The screen-edge markers keep clear of the dock and the charge bar over it; while the story runs, also of its lamp box at the
         /// bottom right (the story layer's, up to about 124 units from the foot of this canvas), which the markers on the right edge
-        /// would reach, and of the goal plate at the top left (the markers along the top keep below it; the open mode keeps its own top
-        /// inset). Written at every draw: each of the two sets its own top inset when it wakes, which can come after this.</summary>
+        /// would reach. Along the top both modes keep the same inset; in the story a marker that would lie on the goal plate at the top
+        /// left steps out of its way alone (V2EdgeRoom), so the others stand at the top edge where their directions lead. Written at
+        /// every draw: each of the two sets its own top inset when it wakes, which can come after this.</summary>
         void PlaceEdgeFloor(bool story)
         {
             float floor = Mathf.Max((dockTop + 44f) * Css, story ? Mathf.Max(StoryLampClear, StorySubtitleClear) : 0f);
@@ -335,12 +333,12 @@ namespace AnomalyArena
             if (directions)
             {
                 directions.bottomInset = floor;
-                directions.topInset = story ? Mathf.Max(V2EnemyDirections.FifthTopInset, StoryGoalClear) : V2EnemyDirections.FifthTopInset;
+                directions.topInset = V2EnemyDirections.FifthTopInset;
             }
             if (worldLabels)
             {
                 worldLabels.edgeBottomInset = floor;
-                worldLabels.edgeTopInset = story ? Mathf.Max(V2WorldLabels.FifthTopInset, StoryGoalClear) : V2WorldLabels.FifthTopInset;
+                worldLabels.edgeTopInset = V2WorldLabels.FifthTopInset;
             }
         }
 
@@ -418,6 +416,8 @@ namespace AnomalyArena
             pauseWord.text = ArenaText.Pair("暂停", "Pause");
             V5BattleKit.Sync(dashWord);
             dashWord.text = ArenaText.Pair("虚空冲刺", "Void Dash");
+            // The cap names the key as the sentences of the language shown do ("按空格朝光标方向虚空冲刺").
+            dashKey.SetText(ArenaText.Pair("空格", "Space"));
             characterKey.SetText(ArenaKeys.CharacterKey);
             V5BattleKit.Sync(characterWord);
             characterWord.text = ArenaText.Pair("角色", "Character");

@@ -607,6 +607,8 @@ public static class V2CampaignCheck
                 return;
             case 11: // night
                 Shot($"15-night{day}");
+                // A fall in the dark on a night whose dawn starts the ignition asks before that dawn: the check answers that it ignites.
+                if (campaign.Ui.ConfirmOpen) { Note("the ignition's question after a fall in the dark: answered yes"); campaign.Ui.DebugAnswerConfirm(true); return; }
                 if (!gm.player.IsAlive && diedAtNight != day && !deathWalletCheck)
                 {
                     diedAtNight = day;

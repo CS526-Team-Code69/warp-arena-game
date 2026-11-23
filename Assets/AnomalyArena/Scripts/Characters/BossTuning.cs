@@ -101,7 +101,7 @@ namespace AnomalyArena
         [Min(0f), Tooltip("Phase 2: cells the pulse pushes the player (2026-10-27: 5.2). 5.2 on the 12-cell platform spares about the whole close range (6.5 cells out); only the outer part of its circle, about 1.5 cells wide, throws the player off. Above about 5.2 the outer end of the close range throws off too.")] public float nashPhase2PulsePush = 5.2f;
         [Min(0f), Tooltip("Phase 3: cells the pulse pushes the player (2026-10-26). 7 on the 12-cell platform spares only a band a little over two player bodies wide (about 2.3 cells) outside its body, up to about 4.6 cells out; hit farther out, anywhere in its circle, the player goes off. Above about 7.3 that band gets narrower than two player bodies.")] public float nashPhase3PulsePush = 7f;
         [Min(0f), Tooltip("Wind-up of the gravity pull.")] public float nashPullWindup = .8f;
-        [Min(0f), Tooltip("Seconds the gravity pull draws the player toward the middle. It deals no damage itself; the pillars do the killing.")] public float nashPullSeconds = 2.5f;
+        [Min(0f), Tooltip("Seconds the gravity pull draws the player toward the middle. It does no damage of its own, but it can drag the player off a floating platform into the void, and that fall loses the trial; on the main platform it drags the player into the pillars.")] public float nashPullSeconds = 2.5f;
         [Min(0f), Tooltip("Cells per second the pull draws the player in, phases 1-2. Keep it under the player's walking speed (6) so walking out against it works.")] public float nashPullSpeed = 3.5f;
         [Min(0f), Tooltip("Cells per second the pull draws the player in, phase 3.")] public float nashPhase3PullSpeed = 5f;
 

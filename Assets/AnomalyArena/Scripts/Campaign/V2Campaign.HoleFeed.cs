@@ -90,7 +90,7 @@ namespace AnomalyArena
 
         /// <summary>The side quest's line while the hole is fed: the count, and how to do it.</summary>
         string FeedQuestLine() => ArenaText.Pair($"把怪物引进黑洞（{holeFed}/{HoleFeedGoal}）：走进它的引力圈，追着你的怪物会跟进来，被它吞掉。",
-            $"Lure monsters into the black hole ({holeFed}/{HoleFeedGoal}): step into its pull, and the monsters chasing you follow you in and get swallowed.");
+            $"Lure monsters into the black hole ({holeFed}/{HoleFeedGoal}): step into its pull, and those chasing you follow and get swallowed.");
 
         /// <summary>The hole's world label while it is fed. Written again only when the count changes.</summary>
         string FeedLabel()

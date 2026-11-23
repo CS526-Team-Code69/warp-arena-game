@@ -381,15 +381,15 @@ namespace AnomalyArena
             if (!holeSeen)
                 return shown && Stage is CampaignStage.Lull or CampaignStage.Dusk
                     ? WithThreat(ArenaText.Pair("矿脉的尽头有一个黑洞，沿着地上的矿石走过去就能找到它。",
-                        "A black hole waits at the end of the ore trail. Follow the ore on the ground to find it."), PullThreat())
+                        "A black hole waits at the end of the ore trail; follow the ore to find it."), PullThreat())
                     : null;
             // The open portal needs no instruction: the line only says it is open; standing on it shows the E (V2WorldLabels).
             bool portal = hole.Phase != HolePhase.Active;
             string text = portal ? ArenaText.Pair("虚空传送门已经打开。", "The void portal is open.")
                 : !HoleAwake ? FeedQuestLine()
-                : holeFailedToday ? ArenaText.Pair("今天没能击破黑洞，它已经退去，明天再来。", "You didn't break the black hole today. It has withdrawn; come back tomorrow.")
+                : holeFailedToday ? ArenaText.Pair("今天没能击破黑洞，它已经退去，明天再来。", "The black hole withdrew unbroken today; come back tomorrow.")
                 : ArenaText.Pair($"击破黑洞：从第一次打中它开始计时，{Mathf.RoundToInt(rules.holeCheckSeconds)} 秒内打出足够的伤害。",
-                    $"Break the black hole: from your first hit, you have {Mathf.RoundToInt(rules.holeCheckSeconds)} seconds to deal enough damage.");
+                    $"Break the black hole: deal enough damage within {Mathf.RoundToInt(rules.holeCheckSeconds)} s of your first hit.");
             if (!shown)
                 return holeFailedToday ? text
                     : text + (portal ? ArenaText.Pair("（夜里会消失）", " (gone at night)") : ArenaText.Pair("（黑洞到了夜里会消失）", " (the black hole is gone at night)"));
@@ -405,7 +405,7 @@ namespace AnomalyArena
         /// <summary>What a fall costs at this time of day: in the afternoon the campaign wakes the player at the base (CatchesPlayerDeath);
         /// in the morning the run ends.</summary>
         string FallOutcome() => Stage == CampaignStage.Dusk
-            ? ArenaText.Pair("你会被送回基地", "you wake up back at the base")
+            ? ArenaText.Pair("你会被送回基地", "you wake at the base")
             : ArenaText.Pair("这一局就此结束", "the run ends");
 
         /// <summary>The pull's threat: rules.holePullFactor keeps it a little faster than a walk, so only a sprint gets out.</summary>
@@ -413,13 +413,13 @@ namespace AnomalyArena
         {
             string key = ArenaKeys.Name(GameAction.Sprint);
             return ArenaText.Pair($"小心：它的引力比走路快，被拉住时按 {key} 冲刺才能逃开；掉进去会立刻倒下，{FallOutcome()}。",
-                $"Careful: its pull is faster than you walk, so sprint ({key}) to break free. Falling in drops you at once, and {FallOutcome()}.");
+                $"Careful: it pulls faster than you walk; sprint ({key}) to escape. Falling in drops you at once, and {FallOutcome()}.");
         }
 
         /// <summary>The awake hole's answer: a void pillar warns with a circle for rules.holePillarWarning seconds, and a standing one kills
         /// a player whose centre is inside it (Enemy.HoleEcho.cs).</summary>
         string PillarThreat() => ArenaText.Pair($"小心：它会还手。地上出现圆圈时马上走开，光柱落下时还站在里面会立刻倒下，{FallOutcome()}。",
-            $"Careful: it strikes back. When a circle appears on the ground, leave it at once: the pillar that falls there drops you on the spot, and {FallOutcome()}.");
+            $"Careful: it strikes back. Leave a circle on the ground at once: the pillar that falls there drops you on the spot, and {FallOutcome()}.");
 
         /// <summary>The hole's world label (V2WorldLabels reads BlackHole.campaignLabel): while the check runs, the damage dealt against
         /// the damage asked for and the seconds left, as numbers beside the bar of blocks over it; while it is fed, its count; nothing

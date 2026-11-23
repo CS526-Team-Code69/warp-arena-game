@@ -62,7 +62,7 @@ namespace AnomalyArena
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(90000)]
-        public async Task AfternoonGoal_NamesTheFortification_WhenTheLastMorningCostAQuarterOfTheBase_EvenAtFullHp()
+        public async Task AfternoonGoal_NamesTheFortification_WhenTheLastMorningCostAFifthOfTheBase_EvenAtFullHp()
         {
             await Awaitable.NextFrameAsync();
             await Until(() => GameManager.Instance && ArenaText.Ready, 12f, "scene and localization");
@@ -86,16 +86,16 @@ namespace AnomalyArena
             string fortify = ArenaText.Pair("基地可以加固", "can be fortified");
             Assert.That(campaign.FortifyWanted, Is.False, "fortified once, at full HP and with no morning's loss, it is not pointed at");
 
-            campaign.DebugMorningLoss(campaign.BaseMaxHp * .3f);
+            campaign.DebugMorningLoss(campaign.BaseMaxHp * .25f);
             await Awaitable.NextFrameAsync();
             await Awaitable.NextFrameAsync();
-            Assert.That(campaign.FortifyWanted, Is.True, "a morning that took 30% of the max HP points at it, though the repair filled the base");
+            Assert.That(campaign.FortifyWanted, Is.True, "a morning that took 25% of the max HP points at it, though the repair filled the base");
             Assert.That(campaign.ObjectiveText, Does.Contain(fortify), "and the afternoon's goal names it");
 
-            campaign.DebugMorningLoss(campaign.BaseMaxHp * .2f);
+            campaign.DebugMorningLoss(campaign.BaseMaxHp * .15f);
             await Awaitable.NextFrameAsync();
             await Awaitable.NextFrameAsync();
-            Assert.That(campaign.FortifyWanted, Is.False, "a morning that took 20% does not");
+            Assert.That(campaign.FortifyWanted, Is.False, "a morning that took 15% does not");
             Assert.That(campaign.ObjectiveText, Does.Not.Contain(fortify), "and the goal no longer names it");
         }
 

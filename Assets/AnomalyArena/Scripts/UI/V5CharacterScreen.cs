@@ -892,7 +892,7 @@ namespace AnomalyArena
 
         // The void dash: the void's icon and mark, what one dash costs, and Space at the row's right end.
         void LayDash(SkillRow row, CharacterDash dash, float top, bool art) =>
-            LayAbility(row, top, art, art && dash.art ? dash.art : dash.flat, CharacterDash.Key, dash.name, ArenaRarity.InkFor(CardRarity.Void),
+            LayAbility(row, top, art, art && dash.art ? dash.art : dash.flat, ArenaText.Pair("空格", CharacterDash.Key), dash.name, ArenaRarity.InkFor(CardRarity.Void),
                 ArenaText.Pair("虚空", "VOID"), V5HudKit.Violet, Color.white, dash.Detail);
 
         /// <summary>A row of the skills column: the icon in its octagon, the name, a chip and the detail beside it, and the key at the right

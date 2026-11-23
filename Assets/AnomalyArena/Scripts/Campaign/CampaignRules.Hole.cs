@@ -56,11 +56,11 @@ namespace AnomalyArena
         public int voidEnergyReward = 100;
         [Min(0), Tooltip("Void alloy the won void trial gives in the campaign.")]
         public int voidAlloyReward = 30;
-        [Min(0), Tooltip("Void alloy nodes that grow each afternoon round where the black hole stood, once the Nash Prophet is beaten.")]
+        [Min(0), Tooltip("Void ore each afternoon from Day 1, at random on open ground across the map like the day's ore: sealed pieces that cannot be mined while the Nash Prophet stands, nodes of void alloy once it is beaten.")]
         public int voidOreNodes = 4;
         [Min(1), Tooltip("Void alloy from one of those nodes.")]
         public int voidOreYield = 5;
-        [Min(2f), Tooltip("Cells from where the black hole stood within which its void alloy grows.")]
+        [Min(2f), Tooltip("No longer read: the void alloy lies across the map (V2Campaign.Void.cs AfternoonVoidOre).")]
         public float voidOreReach = 8f;
         [Min(0), Tooltip("Void energy to learn one void skill (Pocket Void, Void Walk or Singularity; they have no levels).")]
         public int voidSkillCost = 100;

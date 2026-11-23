@@ -17,6 +17,19 @@ namespace AnomalyArena
         const float WalkRefusedLimit = 2.5f;
         float walkRefused, noWay;
 
+        EnemyUnstickFade unstickFade;
+
+        /// <summary>The body is fading out to be set down elsewhere, or fading in where it was set down.</summary>
+        public bool UnstickFading => unstickFade && unstickFade.Active;
+
+        /// <summary>EnemyUnstickFade, half way: the body is out of sight, so it is moved to where it is set down.</summary>
+        internal void MoveForSetDown(Vector3 ground)
+        {
+            if (!rb.isKinematic) rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
+            rb.position = ground;
+            transform.position = ground;
+        }
+
         /// <summary>How many times this body has been set down on open ground since it was born (for checks).</summary>
         public int SetDownCount { get; private set; }
 
@@ -101,16 +114,17 @@ namespace AnomalyArena
             return Quaternion.Euler(0f, SidestepDegrees * sidestepSide, 0f) * direction;
         }
 
+        /// <summary>A body whose walk stays refused is set down on the nearest open ground on its way, out of sight: it fades out where
+        /// it stands and in where it is set down (EnemyUnstickFade), holding still meanwhile; nothing starts while a fade runs.</summary>
         void SetDownOnOpenGround()
         {
+            if (UnstickFading) return;
             var world = WorldMap.Active;
             bool raiding = Raider && !raidAggro && RaidSpot != null;
             if (!world || !world.OpenGroundOnPath(Position, radius, raiding, FollowingIntoGravity, out var ground)) return;
             Vector3 from = Position;
             ground.y = from.y;
-            if (!rb.isKinematic) rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
-            rb.position = ground;
-            transform.position = ground;
+            unstickFade = EnemyUnstickFade.Begin(this, ground);
             SetDownCount++;
             Debug.Log($"[Unstick] {(definition ? definition.kind.ToString() : name)} could not walk on at ({from.x:0.0}, {from.z:0.0}); set down at ({ground.x:0.0}, {ground.z:0.0})");
         }

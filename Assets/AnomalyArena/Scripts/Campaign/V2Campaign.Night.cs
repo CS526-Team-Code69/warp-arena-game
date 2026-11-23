@@ -253,7 +253,7 @@ namespace AnomalyArena
                 : ArenaText.Pair("合金矿采完了，可以回基地入夜", "The alloy ore is mined out. Head back to the base for nightfall");
             // The crate's sentence stands after a full stop, so the goal plate shows it as the body under the goal (V5StoryGoal).
             goalNamesCrate = AfternoonCrateOnMap;
-            if (goalNamesCrate) goal += ArenaText.Pair("。矿脉上还有一个武器箱。", ". A weapon crate lies on the ore trail.");
+            if (goalNamesCrate) goal += ArenaText.Pair("。矿脉上还有一个武器箱。", ". A weapon crate is on the ore trail.");
             goal = WithAfternoonNudges(goal); // the night's lamps and the base's fortification, while wanted (V2Campaign.Nudges.cs)
             Objective(goal, next);
         }
@@ -458,7 +458,7 @@ namespace AnomalyArena
         string NightHint()
         {
             if (Stage == CampaignStage.Dusk)
-                return EveningsOpenEnded ? ArenaText.Pair("下午不会自己结束，想入夜时就回基地。", "The afternoon won't end on its own. Go back to the base when you're ready for the night.")
+                return EveningsOpenEnded ? ArenaText.Pair("下午不会自己结束，想入夜时就回基地。", "No time limit: go back to base for the night.")
                     : ArenaText.Pair($"今天采到：合金 +{nightAlloy}", $"Mined today: alloy +{nightAlloy}");
             // Shadows gathering at the lamp the player stands in come first: how many of a crowd are there, and what a full crowd does.
             string crowd = LampCrowdNote();
@@ -922,6 +922,7 @@ namespace AnomalyArena
             foreach (var node in nodes) if (Query.Flat(node.position - at).sqrMagnitude < NodeSpacing * NodeSpacing) return false;
             // Nor on the sealed void ore of the hole's line (V2Campaign.Guide.cs).
             foreach (var sealedAt in sealedOre) if (Query.Flat(sealedAt - at).sqrMagnitude < NodeSpacing * NodeSpacing) return false;
+            foreach (var sealedAt in sealedMapOre) if (Query.Flat(sealedAt - at).sqrMagnitude < NodeSpacing * NodeSpacing) return false;
             return true;
         }
 
@@ -1262,6 +1263,7 @@ namespace AnomalyArena
                 yield break;
             }
             if (Stage is CampaignStage.Dusk) Stage = CampaignStage.Night; // EndNight takes it from the night
+            if (AskBeforeDawnIgnites()) yield break; // a dawn that starts the ignition asks first (V2Campaign.IgniteAsk.cs)
             EndNight(false);
         }
 
