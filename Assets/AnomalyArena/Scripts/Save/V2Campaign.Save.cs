@@ -77,6 +77,7 @@ namespace AnomalyArena
             // The base and the ship (the rooms and the shield are gone: their fields stay at their defaults).
             s.durability = Durability;
             s.baseHp = BaseHp;
+            s.baseLostLastMorning = lastMorningLoss;
             s.engineFixed = engineFixed;
             s.armorFixed = armorFixed;
             s.fuelTank = fuelTankFitted;
@@ -236,6 +237,8 @@ namespace AnomalyArena
             // them, all open.
             Durability = Mathf.Clamp(s.durability, 1, MaxDurability);
             BaseHp = Mathf.Clamp(s.baseHp, 1f, BaseMaxHp);
+            lastMorningLoss = Mathf.Max(0f, s.baseLostLastMorning);
+            dawnBaseHp = -1f;
             engineFixed = s.engineFixed;
             armorFixed = s.armorFixed;
             fuelTankFitted = s.fuelTank;

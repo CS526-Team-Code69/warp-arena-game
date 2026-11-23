@@ -342,6 +342,8 @@ namespace AnomalyArena
         }
 
         const float FlashRise = 150f, FlashHeight = 64f, FlashGap = 12f, FlashMargin = 14f, FlashBrush = 14f;
+        // Over the base's page: the room kept clear on either side of the flash in the page's foot, and the least room it takes.
+        const float FlashFootGap = 16f, FlashFootMin = 320f;
 
         /// <summary>The flash's plate fits its line (a long one wraps inside 1100) and stands in the middle of the screen. A plate wide
         /// enough to reach the goal panels at the top left while they stand at its height would lie over the goal's lines, as a night
@@ -351,6 +353,16 @@ namespace AnomalyArena
         {
             var plate = flashBack.rectTransform;
             float width = Mathf.Clamp(flashText.preferredWidth + 48f, 320f, 1100f), x = 0f;
+            // Over the base's page the middle of the screen is the page's own columns (the weapon Mk's button, the first cards): the
+            // line stands in the free room along the page's foot instead, between the keys and the ways out, and wraps inside it.
+            if (B5FootRoom(out float footLeft, out float footRight, out float footMiddle) && footRight - footLeft - 2f * FlashFootGap >= FlashFootMin)
+            {
+                width = Mathf.Min(width, footRight - footLeft - 2f * FlashFootGap);
+                plate.sizeDelta = new Vector2(width, FlashHeight);
+                plate.sizeDelta = new Vector2(width, Mathf.Max(FlashHeight, flashText.preferredHeight + 12f));
+                plate.anchoredPosition = new Vector2((footLeft + footRight) * .5f, footMiddle);
+                return;
+            }
             float panels = hud.gameObject.activeInHierarchy ? PanelsHeight() : 0f;
             if (panels > 0f)
             {

@@ -22,6 +22,10 @@ namespace AnomalyArena
         // player stands in it), within LureSpreadDegrees of the player's bearing, the first one this long after the player came near.
         // A pack leaves once the player is LureLeash cells further from the hole than the afternoon's fight reaches.
         const float LureNearest = 9f, LureFarthest = 14f, LureFirstDelay = 1.5f, LureSpreadDegrees = 55f, LureLeash = 12f;
+        // A pack is born at least LureMapMargin cells inside the map's sides: a point past them turns round the hole in steps of
+        // LureSweepDegrees, to either side of the player's bearing, until it lies on the map.
+        const float LureMapMargin = 2f, LureSweepDegrees = 15f;
+        const int LureSweepSteps = 9;
         static readonly Color HoleWakeColour = new(.64f, .3f, 1f);
 
         struct Lured { public Enemy body; public int version; }
@@ -123,14 +127,25 @@ namespace AnomalyArena
             if (!gm.waves) return;
             Vector3 toPlayer = Query.Flat(p.Position - hole.Centre);
             float playerBearing = Mathf.Atan2(toPlayer.x, toPlayer.z) * Mathf.Rad2Deg;
+            var map = WorldMap.Active;
             for (int i = 0; i < count; i++)
             {
                 // Behind the player, a little to either side: they come for the player, and into the hole's pull only if led there.
-                float bearing = (playerBearing + Random.Range(-LureSpreadDegrees, LureSpreadDegrees)) * Mathf.Deg2Rad;
                 float reach = Mathf.Max(toPlayer.magnitude, hole.GravityRadius) + Random.Range(LureNearest, LureFarthest);
-                Vector3 at = hole.Centre + new Vector3(Mathf.Sin(bearing), 0f, Mathf.Cos(bearing)) * reach;
+                Vector3 at = LurePoint(hole, playerBearing + Random.Range(-LureSpreadDegrees, LureSpreadDegrees), reach);
+                // The hole stands in a corner of the map, so behind a player on its far side lies ground past the map's side. A pack
+                // born there stands outside the map's wall for good and, counted alive, keeps the next packs from coming. Such a
+                // point turns round the hole to the nearest bearing, to either side, whose point lies on the map.
+                for (int step = 1; step <= LureSweepSteps && map && !map.Contains(at, LureMapMargin); step++)
+                {
+                    float turn = (LureSpreadDegrees + LureSweepDegrees * step) * (Random.value < .5f ? 1f : -1f);
+                    Vector3 one = LurePoint(hole, playerBearing + turn, reach), other = LurePoint(hole, playerBearing - turn, reach);
+                    if (map.Contains(one, LureMapMargin)) at = one;
+                    else if (map.Contains(other, LureMapMargin)) at = other;
+                }
+                if (map && !map.Contains(at, LureMapMargin)) at = map.ClampPoint(at, LureMapMargin);
                 at = FindOpen(at, .6f, 8f);
-                if (hole.InGravity(at)) continue;
+                if (hole.InGravity(at) || map && !map.Contains(at, .6f)) continue;
                 var body = gm.waves.SpawnCampaign(EnemyKind.Grunt, at);
                 if (!body) continue;
                 body.SuppressRewards = true;
@@ -138,6 +153,13 @@ namespace AnomalyArena
                 lured.Add(new Lured { body = body, version = body.SpawnVersion });
                 Fx.Pop(at + Vector3.up * .6f, HoleWakeColour, .5f);
             }
+        }
+
+        /// <summary>The point reach cells from the hole on a bearing (degrees, 0 toward +z, turning toward +x).</summary>
+        static Vector3 LurePoint(BlackHole hole, float bearingDegrees, float reach)
+        {
+            float bearing = bearingDegrees * Mathf.Deg2Rad;
+            return hole.Centre + new Vector3(Mathf.Sin(bearing), 0f, Mathf.Cos(bearing)) * reach;
         }
 
         void PruneLured()

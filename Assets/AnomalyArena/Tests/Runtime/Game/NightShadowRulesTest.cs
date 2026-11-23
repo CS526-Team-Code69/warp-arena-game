@@ -43,20 +43,31 @@ namespace AnomalyArena
         public int KillShadows_MoreKillsRaiseMoreShadows_UpToTheRegionsCap(int kills) => rules.KillShadows(kills);
 
         [Test]
-        public void ShadowChaseSpeed_IsALittleFasterThanTheWalk_AndSlowerThanTheSprint()
+        public void ShadowChaseSpeed_IsALittleSlowerThanTheWalk()
         {
-            const float walk = 6f, sprint = walk * 2f;
+            const float walk = 6f;
 
             float chase = rules.ShadowChaseSpeed(walk);
 
-            Assert.That(chase, Is.GreaterThan(walk), "a walking player is caught");
-            Assert.That(chase, Is.LessThan(walk * 1.3f), "but only a little faster");
-            Assert.That(chase, Is.LessThan(sprint), "and a sprint opens the distance");
+            Assert.That(chase, Is.LessThan(walk), "a walking player is never caught from behind");
+            Assert.That(chase, Is.GreaterThan(walk * .75f), "but a player who stands still is soon reached");
+        }
+
+        [TestCase(6f, TestName = "Against the usual walk")]
+        [TestCase(1f, TestName = "Against a very slow player")]
+        public void ShadowRoamSpeed_IsNeverAboveTheHuntOrTheWalk(float walk)
+        {
+            Assert.That(rules.ShadowRoamSpeed(walk), Is.LessThanOrEqualTo(rules.ShadowChaseSpeed(walk)), "roaming is no faster than hunting");
+            Assert.That(rules.ShadowRoamSpeed(walk), Is.LessThan(walk), "and no shadow moves faster than the player walks");
         }
 
         [Test]
-        public void ShadowChaseSpeed_AgainstAVerySlowPlayer_IsNeverSlowerThanRoaming() =>
-            Assert.That(rules.ShadowChaseSpeed(1f), Is.EqualTo(rules.shadowSpeed));
+        public void ShadowChaseSpeed_AFactorAboveOne_IsHeldToTheWalk()
+        {
+            rules.shadowChaseFactor = 1.5f;
+
+            Assert.That(rules.ShadowChaseSpeed(6f), Is.LessThanOrEqualTo(6f), "a share above 1 set by hand still cannot outrun the walk");
+        }
 
         [TestCase(4, ExpectedResult = false, TestName = "Four shadows at a lamp wait at its edge")]
         [TestCase(5, ExpectedResult = true, TestName = "Five are a crowd and go in")]

@@ -31,6 +31,8 @@ namespace AnomalyArena
         /// <summary>How far shake, kick and punch have moved the camera this frame.</summary>
         public Vector3 Transient { get; private set; }
         public float smoothTime = 0.12f;
+        [Tooltip("How far from the picture's middle the followed body may stand where the view stops at the map's side, as shares of half the picture's width (X) and height (Y). The view follows past the map's side as far as it takes to keep the body inside.")]
+        public Vector2 followFrame = new Vector2(.5f, .4f);
         [Min(0f), Tooltip("How fast a camera push springs back (per second).")] public float kickReturn = 14f;
         [Min(0f), Tooltip("Largest push, so stacked kicks never throw the view.")] public float kickLimit = .6f;
 
@@ -50,6 +52,8 @@ namespace AnomalyArena
         };
 
         Vector3 follow, velocity, kick;
+        // The view's four ground corners from the follow point, as LateUpdate's rays found them: bottom left, bottom right, top left, top right.
+        readonly Vector2[] footprint = new Vector2[4];
         float amplitude, punch;
         bool started;
         // Cutscene focus: the view glides to a point and closes in (offset scaled), then glides back; all on unscaled time.
@@ -133,6 +137,27 @@ namespace AnomalyArena
             moveYaw = chosen.yaw;
         }
 
+        /// <summary>The view kept inside the map can leave the followed body at the picture's rim, under the plates, or past the rim:
+        /// the box round the view's ground footprint is what stays inside the map, and with the view turned (yaw 45) that box is much
+        /// wider than the footprint, so the view stops well short of every side while the body walks on. The body stays inside the
+        /// picture's middle (followFrame): where the stop would put it further out, the view follows past the map's side as far as
+        /// that takes. The floor reaches past the map's sides further than the view ever does.</summary>
+        Vector3 KeepInFrame(Vector3 want, Vector3 body)
+        {
+            Vector2 centre = (footprint[0] + footprint[1] + footprint[2] + footprint[3]) * .25f;
+            Vector2 halfRight = (footprint[1] + footprint[3] - footprint[0] - footprint[2]) * .25f;
+            Vector2 halfUp = (footprint[2] + footprint[3] - footprint[0] - footprint[1]) * .25f;
+            float right2 = halfRight.sqrMagnitude, up2 = halfUp.sqrMagnitude;
+            if (right2 < 1e-4f || up2 < 1e-4f) return want;
+            // Where the body would stand in the picture with the view at want: -1..1 across it and up it.
+            Vector2 offset = new Vector2(body.x - want.x, body.z - want.z) - centre;
+            float across = Vector2.Dot(offset, halfRight) / right2, up = Vector2.Dot(offset, halfUp) / up2;
+            float overAcross = across - Mathf.Clamp(across, -followFrame.x, followFrame.x), overUp = up - Mathf.Clamp(up, -followFrame.y, followFrame.y);
+            if (overAcross == 0f && overUp == 0f) return want;
+            Vector2 shift = halfRight * overAcross + halfUp * overUp;
+            return new Vector3(want.x + shift.x, want.y, want.z + shift.y);
+        }
+
         void LateUpdate()
         {
             if (!target || !camera) return;
@@ -146,16 +171,20 @@ namespace AnomalyArena
                 // The ground footprint comes from the actual camera rays, not a guessed zoom constant.
                 var plane = new Plane(Vector3.up, Vector3.zero);
                 Vector2 min = new Vector2(float.PositiveInfinity, float.PositiveInfinity), max = -min;
+                int corners = 0;
                 for (int y = 0; y < 2; y++) for (int x = 0; x < 2; x++)
                 {
                     Ray ray = camera.ViewportPointToRay(new Vector3(x, y, 0));
                     if (!plane.Raycast(ray, out float t)) continue;
                     Vector3 point = ray.GetPoint(t) - transform.position;
+                    footprint[y * 2 + x] = new Vector2(point.x + baseOffset.x, point.z + baseOffset.z);
+                    corners++;
                     min = Vector2.Min(min, new Vector2(point.x + baseOffset.x, point.z + baseOffset.z));
                     max = Vector2.Max(max, new Vector2(point.x + baseOffset.x, point.z + baseOffset.z));
                 }
                 want.x = Mathf.Clamp(want.x, bounds.min.x - min.x, bounds.max.x - max.x);
                 want.z = Mathf.Clamp(want.z, bounds.min.z - min.y, bounds.max.z - max.y);
+                if (corners == 4) want = KeepInFrame(want, target.position);
             }
             focusWeight = Mathf.MoveTowards(focusWeight, focusTarget, Time.unscaledDeltaTime / focusSeconds);
             float eased = focusWeight * focusWeight * (3f - 2f * focusWeight);

@@ -154,8 +154,10 @@ namespace AnomalyArena
             Vector3 sp = cam.WorldToScreenPoint(lastTarget);
             Vector3 edge = cam.WorldToScreenPoint(lastTarget + cam.transform.right * worldRadius);
             Vector2 c = new(sp.x * scale, sp.y * scale);
-            // Behind the camera: mirrored, as the goal's marker does, so the circle stays off the far side of the screen.
-            if (sp.z < 0f) c = new Vector2(area.width - c.x, area.height - c.y);
+            // Behind the camera: mirrored, as the goal's marker does, so the circle stays off the far side of the screen. Only a
+            // perspective camera shows such a point mirrored; an orthographic one keeps its side (ground far toward the bottom of a
+            // tilted view lies behind the camera's plane).
+            if (sp.z < 0f && !cam.orthographic) c = new Vector2(area.width - c.x, area.height - c.y);
             float r = Mathf.Max(MinRadius, new Vector2(edge.x - sp.x, edge.y - sp.y).magnitude * scale);
             float half = r / HoleEdge;
 

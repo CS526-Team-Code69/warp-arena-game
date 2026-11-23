@@ -168,6 +168,7 @@ namespace AnomalyArena
         void ConfigureTyrant(EnemyDefinition data)
         {
             BossSummon = false;
+            devourTold = false;
             tyrantStage = TyrantStage.Idle;
             tyrantRecover = scepterWait = 0f;
             sweepClock = sweepAngle = sweepReach = 0f;
@@ -844,6 +845,7 @@ namespace AnomalyArena
 
             Fx.Ring(Position, AstralReach, AstralColour);
             V5WeaponAudio.At(V5Sfx.AstralDevour, Position);
+            TellDevourOnce();
         }
     }
 }

@@ -247,14 +247,15 @@ namespace AnomalyArena
         public bool IsWalkable(Vector3 point, float radius = 0.5f, bool allowGravity = false) => Contains(point, radius) && !IsWall(point, radius) && !IsHole(point) && (allowGravity || GetPull(point).sqrMagnitude < 0.01f);
         /// <param name="followIntoGravity">Enemy.FollowingIntoGravity (document 9.4): a fast kind while what the enemies chase stands in a
         /// gravity ring. Then a path to a target inside a ring may cross into it; otherwise it ends at the nearest ground outside.</param>
-        public Vector3 GetChaseDirection(Vector3 position, Vector3 target, bool followIntoGravity)
+        /// <param name="radius">The walking body's radius: a wide body is sent along ground it fits (MapGrid's wide fields).</param>
+        public Vector3 GetChaseDirection(Vector3 position, Vector3 target, bool followIntoGravity, float radius = MapGrid.SlimReach)
         {
             if (TrialActive) return Query.Flat(target - position).normalized;
             Vector3 pull = GetPull(position);
             if (pull.sqrMagnitude > 0.01f && GetPull(target).sqrMagnitude < 0.01f)
                 return -pull.normalized; // A displaced enemy chooses the shortest escape from the zone.
             bool allow = followIntoGravity && GetPull(target).sqrMagnitude > 0.01f;
-            return Grid.Direction(position, target, allow);
+            return Grid.Direction(position, target, allow, radius);
         }
         public void HoleChanged()
         {
@@ -272,7 +273,7 @@ namespace AnomalyArena
             if (rects != null) extraWalls.AddRange(rects);
             HoleChanged();
         }
-        public Vector3 GetRaidDirection(Vector3 position, Vector3 spot) => Grid.RaidDirection(position, spot);
+        public Vector3 GetRaidDirection(Vector3 position, Vector3 spot, float radius = MapGrid.SlimReach) => Grid.RaidDirection(position, spot, radius);
 
         void Update()
         {

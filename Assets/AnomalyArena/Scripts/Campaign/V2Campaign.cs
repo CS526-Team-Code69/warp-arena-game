@@ -284,6 +284,7 @@ namespace AnomalyArena
             if (Stage == CampaignStage.Build)
             {
                 Day++; WaveOfDay = 0; Stage = CampaignStage.Day;
+                NoteDawnBase(); // what this morning takes is kept for the afternoon's fortify reminder (V2Campaign.Nudges.cs)
                 if (Day > rules.days) Overtime = true;
                 CampaignEvents.RaiseDayStarted(Day, Overtime);
                 regionKills.Clear(); regionKindKills.Clear();
@@ -369,6 +370,7 @@ namespace AnomalyArena
         public void OnTyrantDefeated(Vector3 at)
         {
             Stage = CampaignStage.Core;
+            EndFinalFight();
             SpawnCore(at);
             Say(Line.E00);
         }

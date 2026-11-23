@@ -345,6 +345,7 @@ namespace AnomalyArena
             if (scale > 0f && !Mathf.Approximately(b5Page.localScale.x, scale)) b5Page.localScale = new Vector3(scale, scale, 1f);
             if (b5Art != Art.Enabled || b5Chinese != ArenaText.IsChinese || b5Font != V5TitleKit.Font) RefreshBase5(true);
             if (b5Screen == V2Campaign.BaseScreen.Rocket) TickRocket5();
+            TickNudges5(); // the lamp and fortify buttons breathe while wanted (V2CampaignUi.Nudges.cs)
             PlaceB5Tip();
             TickBase5Keys();
         }
@@ -1132,6 +1133,42 @@ namespace AnomalyArena
 
         /// <summary>For automated checks: the base's page shown, or null while the base is closed (or on the English Alpha's old page).</summary>
         public V2Campaign.BaseScreen? BaseScreenShown => b5Built && BaseOpen ? b5Screen : null;
+
+        static readonly Vector3[] b5FootCorners = new Vector3[4];
+
+        /// <summary>The free room along the page's foot while the page shows, between the keys' plate and the ways out: its left and
+        /// right edges and the foot's middle height, in the screen layer's units measured from the layer's middle (where the flash is
+        /// anchored). False while the page is not shown.</summary>
+        bool B5FootRoom(out float left, out float right, out float middle)
+        {
+            left = right = middle = 0f;
+            if (!b5Built || !BaseOpen || !b5Hints || !b5Hints.gameObject.activeInHierarchy) return false;
+            Vector2 centre = root.rect.center;
+            b5Hints.Rect.GetWorldCorners(b5FootCorners);
+            Vector3 low = root.InverseTransformPoint(b5FootCorners[0]), high = root.InverseTransformPoint(b5FootCorners[2]);
+            left = high.x - centre.x;
+            middle = (low.y + high.y) * .5f - centre.y;
+            right = root.rect.xMax - centre.x;
+            foreach (var way in b5Ways)
+            {
+                if (!way.plate || !way.plate.gameObject.activeInHierarchy) continue;
+                ((RectTransform)way.plate.transform).GetWorldCorners(b5FootCorners);
+                right = Mathf.Min(right, root.InverseTransformPoint(b5FootCorners[0]).x - centre.x);
+            }
+            return right > left;
+        }
+
+        /// <summary>For automated checks: the flash's plate in screen pixels while it shows.</summary>
+        public Rect? DebugFlashRect() => FlashOnScreen();
+
+        /// <summary>For automated checks: a part of the base's page in screen pixels (by its id, as DebugBaseParts lists them).</summary>
+        public Rect? DebugBasePartRect(string id)
+        {
+            var focus = b5Focus.Find(f => f.id == id);
+            if (focus == null || !focus.rect) return null;
+            focus.rect.GetWorldCorners(b5FootCorners);
+            return Rect.MinMaxRect(b5FootCorners[0].x, b5FootCorners[0].y, b5FootCorners[2].x, b5FootCorners[2].y);
+        }
 
         /// <summary>For automated checks: the ids of the parts of the base's page the keys can focus now ("h.switch", "c.mk", "c.card.skill.Blink",
         /// "c.part.Engine", "f.go" ...).</summary>

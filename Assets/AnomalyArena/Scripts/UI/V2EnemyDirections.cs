@@ -53,6 +53,25 @@ namespace AnomalyArena
             horizontalInset = FifthSideInset;
             topInset = FifthTopInset;
         }
+        /// <summary>
+        /// Whether a point of the world lies off the camera's picture, and then the way to it on the screen from the screen's middle (in
+        /// pixels). An orthographic camera's picture does not depend on depth, so a point behind the camera's plane (on a tilted view,
+        /// ground far toward the bottom of the screen) keeps its side; only a perspective camera shows such a point mirrored, and only
+        /// there is it turned back.
+        /// </summary>
+        public static bool OffScreenDirection(Camera camera, Vector3 world, out Vector2 direction)
+        {
+            Vector3 viewport = camera.WorldToViewportPoint(world);
+            direction = new Vector2((viewport.x - .5f) * Screen.width, (viewport.y - .5f) * Screen.height);
+            if (viewport.z > 0f && viewport.x >= 0f && viewport.x <= 1f && viewport.y >= 0f && viewport.y <= 1f) return false;
+            if (viewport.z <= 0f && !camera.orthographic) direction = -direction;
+            if (direction.sqrMagnitude < .0001f) direction = Vector2.up;
+            return true;
+        }
+
+        /// <summary>The marker (0 to 7, 45 degrees each, 0 pointing right and turning anticlockwise) a screen direction falls to.</summary>
+        public static int Bin(Vector2 direction) => (Mathf.RoundToInt(Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg / 45f) + 8) % 8;
+
         void OnDisable() => HideAll();
         void HideAll()
         {
@@ -71,13 +90,8 @@ namespace AnomalyArena
             foreach (var enemy in waves.Alive)
             {
                 if (!enemy || !enemy.IsAlive || !enemy.gameObject.activeInHierarchy) continue;
-                Vector3 viewport = cameraSource.WorldToViewportPoint(enemy.Position);
-                if (viewport.z > 0f && viewport.x >= 0f && viewport.x <= 1f && viewport.y >= 0f && viewport.y <= 1f) continue;
-                Vector2 direction = new((viewport.x - .5f) * Screen.width, (viewport.y - .5f) * Screen.height);
-                if (viewport.z <= 0f) direction = -direction;
-                if (direction.sqrMagnitude < .0001f) direction = Vector2.up;
-                float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
-                int bin = (Mathf.RoundToInt(angle / 45f) + 8) % 8;
+                if (!OffScreenDirection(cameraSource, enemy.Position, out var direction)) continue;
+                int bin = Bin(direction);
                 counts[bin]++; sums[bin] += direction.normalized;
             }
             if (indicators == null) return;

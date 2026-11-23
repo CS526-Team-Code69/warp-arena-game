@@ -760,17 +760,31 @@ namespace AnomalyArena
             float gridBottom = tiered ? B5Floor - W5TierH - W5GridGapY : B5Floor, gridH = gridBottom - W5GridTop;
             int n = shown?.entries.Count ?? 0, rows = (n + 1) / 2;
             float h = rows > 0 ? Mathf.Clamp((gridH - (rows - 1) * W5GridGapY) / rows, W5CardMinH, W5CardMaxH) : 0f;
-            float contentH = rows * h + Mathf.Max(0, rows - 1) * W5GridGapY;
-            bool scroll = contentH > gridH + .5f;
-            float cardW = (W5ColW - W5GridGapX - (scroll ? W5ScrollW : 0f)) * .5f;
-            B5Rect(w5Viewport, W5RightX, W5GridTop, W5ColW, gridH);
-            w5Content.sizeDelta = new Vector2(0f, Bp(contentH));
-            w5Scroll.vertical = scroll;
-            if (!scroll) w5Content.anchoredPosition = Vector2.zero;
-            for (int i = 0; i < n; i++)
+            float contentH, cardW;
+            bool scroll;
+            int focusBefore = b5Focus.Count;
+            // On the shortest cards "now → after" shares its row with the price and has only the room left of the coins. A long line
+            // (the void room's) does not fit there even at its smallest letters and ran on under the price: such a tab is laid once
+            // more with cards tall enough for the line to stand on its own row above the price.
+            for (int pass = 0; ; pass++)
             {
-                var card = W5CardAt(i);
-                LayCard5(c, art, card, shown.entries[i], (i % 2) * (cardW + W5GridGapX), (i / 2) * (h + W5GridGapY), cardW, h, shown.key);
+                contentH = rows * h + Mathf.Max(0, rows - 1) * W5GridGapY;
+                scroll = contentH > gridH + .5f;
+                cardW = (W5ColW - W5GridGapX - (scroll ? W5ScrollW : 0f)) * .5f;
+                B5Rect(w5Viewport, W5RightX, W5GridTop, W5ColW, gridH);
+                w5Content.sizeDelta = new Vector2(0f, Bp(contentH));
+                w5Scroll.vertical = scroll;
+                if (!scroll) w5Content.anchoredPosition = Vector2.zero;
+                bool spills = false;
+                for (int i = 0; i < n; i++)
+                {
+                    var card = W5CardAt(i);
+                    spills |= LayCard5(c, art, card, shown.entries[i], (i % 2) * (cardW + W5GridGapX), (i / 2) * (h + W5GridGapY), cardW, h, shown.key);
+                }
+                if (!spills || pass > 0 || h >= W5CardRoomyH) break;
+                h = W5CardRoomyH;
+                // The first laying's parts for the keys are entered again by the second.
+                b5Focus.RemoveRange(focusBefore, b5Focus.Count - focusBefore);
             }
             for (int i = n; i < w5Cards.Count; i++)
             {
@@ -848,7 +862,8 @@ namespace AnomalyArena
         /// <summary>One research card: its plate (teal once owned) with the rarity's bar on the left, its medal ringed in the rarity's
         /// colour, its name, "now → after", and at the bottom right its price and button (grey while it cannot be bought), or what it has
         /// once owned.</summary>
-        void LayCard5(V2Campaign c, bool art, W5Card card, StudyEntry entry, float left, float top, float w, float h, string tabKey)
+        /// True when the card's "now → after" line shares its row with the price and does not fit in the room left of it.
+        bool LayCard5(V2Campaign c, bool art, W5Card card, StudyEntry entry, float left, float top, float w, float h, string tabKey)
         {
             card.entry = entry;
             SetShown(card.plate, true);
@@ -867,7 +882,9 @@ namespace AnomalyArena
             float x = 28f + m + 20f, titleTop = medalTop + 2f, valueTop = titleTop + 36f, right = w - 18f;
             StoryText(card.title, entry.title);
             B5Rect(card.title.rectTransform, x, titleTop, right - x, 32f);
-            V5TitleKit.FitWidth(card.title, V5StoryKit.FontSize(25f), V5StoryKit.FontSize(16f));
+            // Down to 11: the void room's enchant cards name the weapon, its anomaly and its Mk, and in English are wider than the box at 16
+            // (the longest, the rocket launcher's second anomaly at Mk 10, needs 11).
+            V5TitleKit.FitWidth(card.title, V5StoryKit.FontSize(25f), V5StoryKit.FontSize(11f));
 
             SetShown(card.button, !owned && entry.buy != null);
             SetShown(card.done, owned);
@@ -889,9 +906,9 @@ namespace AnomalyArena
                 int n = B5PriceOf(entry);
                 float cw = B5CoinsWidth(card.coins, n, 32f, art), coinsLeft = w - 18f - bw - 16f - cw;
                 B5LayCoins(card.coins, n, coinsLeft, buttonTop + 23f, 32f, art, entry.state == StudyState.Unaffordable && W5PriceHeld(c, entry));
-                // On a short card the price row would meet "now → after" (the coins' tops 7 under the button's top, the line's letters
-                // about 30 under its box's top): the line ends before the price.
-                if (buttonTop + 7f < valueTop + 30f) valueRight = coinsLeft - 12f;
+                // On a card too short for two rows the price row would meet "now → after" (the button's top above the foot of the
+                // line's box, 34 under its top, with W5LineGap of air): the line ends before the price.
+                if (buttonTop < valueTop + 34f + W5LineGap) valueRight = coinsLeft - 12f;
                 B5AddFocus("c.card." + entry.id, card.button);
             }
             else B5HideCoins(card.coins);
@@ -900,6 +917,77 @@ namespace AnomalyArena
             StoryText(card.value, B5NowAfter(entry.now, entry.after, gain));
             B5Rect(card.value.rectTransform, x, valueTop, Mathf.Max(40f, valueRight - x), 34f);
             V5TitleKit.FitWidth(card.value, V5StoryKit.FontSize(27f), V5StoryKit.FontSize(15f));
+            return valueRight < right && card.value.preferredWidth > card.value.rectTransform.rect.width + 1f;
+        }
+
+        // The air kept between the foot of a card's "now → after" line and the top of its button, and the least height at which the
+        // line stands on its own row, clear above the price and its button (the button's top lies 62 above the card's foot; LayCard5
+        // gives the line the card's whole width from 162 up).
+        const float W5LineGap = 6f;
+        const float W5CardRoomyH = 164f;
+
+        static readonly Vector3[] w5LineCorners = new Vector3[4];
+
+        /// <summary>For automated checks: every research card shown with a price, by its entry's id: where the letters of its
+        /// "now → after" line stand and where its price (coins and numbers) stands, in screen pixels.</summary>
+        public List<(string id, Rect letters, Rect price)> DebugResearchCardLines()
+        {
+            var lines = new List<(string, Rect, Rect)>();
+            foreach (var card in w5Cards)
+            {
+                if (card.entry == null || !card.plate || !card.plate.gameObject.activeInHierarchy || !card.value || card.coins == null) continue;
+                bool priced = false;
+                float left = float.MaxValue, bottom = float.MaxValue, rightEdge = float.MinValue, top = float.MinValue;
+                for (int k = 0; k < card.coins.holes.Length; k++)
+                {
+                    foreach (var part in new RectTransform[] { card.coins.holes[k] ? card.coins.holes[k].rectTransform : null, card.coins.amounts[k] ? card.coins.amounts[k].rectTransform : null })
+                    {
+                        if (!part || !part.gameObject.activeInHierarchy) continue;
+                        part.GetWorldCorners(w5LineCorners);
+                        priced = true;
+                        left = Mathf.Min(left, w5LineCorners[0].x); bottom = Mathf.Min(bottom, w5LineCorners[0].y);
+                        rightEdge = Mathf.Max(rightEdge, w5LineCorners[2].x); top = Mathf.Max(top, w5LineCorners[2].y);
+                    }
+                }
+                if (!priced) continue;
+                var value = card.value.rectTransform;
+                value.GetWorldCorners(w5LineCorners);
+                float boxWidth = w5LineCorners[2].x - w5LineCorners[0].x, scale = value.rect.width > 0f ? boxWidth / value.rect.width : 1f;
+                var letters = Rect.MinMaxRect(w5LineCorners[0].x, w5LineCorners[0].y, w5LineCorners[0].x + card.value.preferredWidth * scale, w5LineCorners[2].y);
+                lines.Add((card.entry.id ?? "", letters, Rect.MinMaxRect(left, bottom, rightEdge, top)));
+            }
+            return lines;
+        }
+
+        /// <summary>For automated checks: every research card shown with its button, by its entry's id: where the letters of its
+        /// "now → after" line stand and where the button stands, in screen pixels.</summary>
+        public List<(string id, Rect letters, Rect button)> DebugResearchCardButtons()
+        {
+            var lines = new List<(string, Rect, Rect)>();
+            foreach (var card in w5Cards)
+            {
+                if (card.entry == null || !card.plate || !card.plate.gameObject.activeInHierarchy || !card.value || !card.button || !card.button.gameObject.activeInHierarchy) continue;
+                var value = card.value.rectTransform;
+                value.GetWorldCorners(w5LineCorners);
+                float boxWidth = w5LineCorners[2].x - w5LineCorners[0].x, scale = value.rect.width > 0f ? boxWidth / value.rect.width : 1f;
+                var letters = Rect.MinMaxRect(w5LineCorners[0].x, w5LineCorners[0].y, w5LineCorners[0].x + card.value.preferredWidth * scale, w5LineCorners[2].y);
+                card.button.Rect.GetWorldCorners(w5LineCorners);
+                lines.Add((card.entry.id ?? "", letters, Rect.MinMaxRect(w5LineCorners[0].x, w5LineCorners[0].y, w5LineCorners[2].x, w5LineCorners[2].y)));
+            }
+            return lines;
+        }
+
+        /// <summary>For automated checks: every research card shown, by its entry's id: how wide its title's letters are at the size
+        /// they are drawn in, and how wide the title's box is (the same units).</summary>
+        public List<(string id, float letters, float box)> DebugResearchCardTitles()
+        {
+            var titles = new List<(string, float, float)>();
+            foreach (var card in w5Cards)
+            {
+                if (card.entry == null || !card.plate || !card.plate.gameObject.activeInHierarchy || !card.title) continue;
+                titles.Add((card.entry.id ?? "", card.title.preferredWidth, card.title.rectTransform.rect.width));
+            }
+            return titles;
         }
 
         /// <summary>The stock pays for an entry that cannot be bought (so its price is grey, not red: it waits for something else).</summary>

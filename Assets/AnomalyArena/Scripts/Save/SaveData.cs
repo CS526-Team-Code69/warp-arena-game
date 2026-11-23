@@ -156,6 +156,8 @@ namespace AnomalyArena
         public bool[] roomDamaged = new bool[4];
         public int durability = 1, shieldLevel;
         public float baseHp, baseShield;
+        // what the last morning took from the base's HP (the afternoon's fortify reminder; 0 in saves written before it)
+        public float baseLostLastMorning;
 
         // the ship: the engine, the hull (armorFixed: the old name of the hull) and the fuel tank, and the fuel in dark matter (0 to
         // CampaignRules.fuelTankDark; version 1 counted it in units of DarkPerOldFuelUnit)

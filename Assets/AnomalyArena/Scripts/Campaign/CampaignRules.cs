@@ -93,7 +93,7 @@ namespace AnomalyArena
         [Min(0), Tooltip("Shadows on the tutorial night (Day 0): they hunt wherever the player goes, a little slower than a walk.")] public int tutorialShadows = 4;
         [Range(0f, 1f), Tooltip("A tutorial night shadow's touch as a share of a normal one (shadowHitShare): it hurts, so the first night shows what a touch does, but only a little.")] public float tutorialShadowHitScale = .33f;
         [Min(0f), Tooltip("A shadow's speed while it only roams.")] public float shadowSpeed = 3.4f;
-        [Min(.1f), Tooltip("A hunting shadow's speed as a share of the player's walking speed: above 1, so only a sprint opens the distance.")] public float shadowChaseFactor = 1.12f;
+        [Range(.1f, 1f), Tooltip("A hunting shadow's speed as a share of the player's walking speed. At most 1: no shadow moves faster than the player walks, so a walk takes the player away from a hunt and dark matter can be mined while the shadows are still coming.")] public float shadowChaseFactor = .9f;
         [Min(0f), Tooltip("Cells within which a shadow notices the player and comes: to the edge of the light the player stands in, or all the way in the dark.")] public float shadowSense = 26f;
         [Min(1f), Tooltip("Cells from the place a shadow rose at within which it hunts: a player farther from that place is left alone, and a shadow on the hunt turns back. It keeps the danger in and beside the regions where the kills fell, so the regions far from them can still be mined.")] public float shadowTerritory = 16f;
         [Min(0f), Tooltip("Cells past a lamp's edge within which a shadow counts toward the crowd at that lamp.")] public float lampGatherBand = 3.5f;
@@ -114,8 +114,10 @@ namespace AnomalyArena
         public int AmbientShadows(int day) => Mathf.Max(0, Mathf.RoundToInt(ambientShadows + ambientShadowsPerDay * Mathf.Max(0, day - 1)));
         /// <summary>Shadows this many kills raise in their region.</summary>
         public int KillShadows(int kills) => Mathf.Clamp(Mathf.FloorToInt(kills / Mathf.Max(1f, killsPerShadow)), 0, maxShadowsPerRegion);
-        /// <summary>A hunting shadow's speed against a player who walks at this speed: a little faster, never slower than it roams.</summary>
-        public float ShadowChaseSpeed(float playerWalkSpeed) => Mathf.Max(shadowSpeed, playerWalkSpeed * shadowChaseFactor);
+        /// <summary>A hunting shadow's speed against a player who walks at this speed: a share of the walk, never above it.</summary>
+        public float ShadowChaseSpeed(float playerWalkSpeed) => Mathf.Max(0f, playerWalkSpeed) * Mathf.Clamp(shadowChaseFactor, .1f, 1f);
+        /// <summary>A roaming shadow's speed: its own, but never above a hunting one, so no shadow outruns a walking player.</summary>
+        public float ShadowRoamSpeed(float playerWalkSpeed) => Mathf.Min(shadowSpeed, ShadowChaseSpeed(playerWalkSpeed));
         /// <summary>This many shadows at one lamp are a crowd: they go into its light.</summary>
         public bool Crowd(int shadows) => shadows >= overrunShadows;
         /// <summary>How far a lamp's ring has turned from its warm colour toward violet: the shadows gathered there as a share of a crowd.</summary>

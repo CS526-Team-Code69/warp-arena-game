@@ -316,6 +316,7 @@ namespace AnomalyArena
             corpseSeconds = 0;
             Raider = false;
             raidAggro = raidWindup = false;
+            ResetWalkWatch();
             corpseVelocity = Vector3.zero;
             float bodyScale = mini ? MiniScale : 1f;
             var capsule = GetComponent<CapsuleCollider>();
@@ -569,10 +570,11 @@ namespace AnomalyArena
             }
 
             Vector3 direction = WorldMap.Active
-                ? WorldMap.Active.GetChaseDirection(Position, WorldMap.Active.EnemyTarget, FollowingIntoGravity)
+                ? WorldMap.Active.GetChaseDirection(Position, WorldMap.Active.EnemyTarget, FollowingIntoGravity, radius)
                 : facing;
             Vector3 v = edge > triggerRange ? direction * moveSpeed : Vector3.zero;
             v = KeepOffEdges(v, dt);
+            NoteWay(edge > triggerRange && direction.sqrMagnitude < .0001f, dt);
             rb.linearVelocity = new Vector3(v.x, rb.linearVelocity.y, v.z);
         }
 
@@ -587,7 +589,7 @@ namespace AnomalyArena
             Vector3 spot = WorldMap.Active.EnemyTarget;
             if (Query.Flat(spot - Position).magnitude > radius + 1f)
             {
-                Vector3 direction = WorldMap.Active.GetChaseDirection(Position, spot, FollowingIntoGravity);
+                Vector3 direction = WorldMap.Active.GetChaseDirection(Position, spot, FollowingIntoGravity, radius);
                 if (direction.sqrMagnitude > 0.0001f) facing = Query.Flat(direction).normalized;
                 Vector3 v = KeepOffEdges(direction * moveSpeed, dt);
                 rb.linearVelocity = new Vector3(v.x, rb.linearVelocity.y, v.z);
@@ -613,20 +615,29 @@ namespace AnomalyArena
         }
 
         /// <summary>
-        /// Whether this raider stands against the base wall its stand point faces: within reach of the wall, on the stand point's side and
-        /// in front of the wall rather than past its corner. The base is a square round RaidCentre and the stand point lies a body and a
-        /// little out from its side (V2Campaign.RaidSpotFor), so the side and its width follow from the point. Lets a raider whose own
-        /// point is held by other raiders strike from where it stands at the wall instead of pushing at them for ever.
+        /// Whether this raider stands at the base, within reach of its wall: in front of a wall or off a corner, no farther out than
+        /// a body, the stand-off and a little. normal is the wall it then strikes: the one its stand point faces while it stands in
+        /// front of that wall, otherwise the wall of the side it stands off (it was sent round, it chased the player to another side,
+        /// or other raiders keep it at a corner), so it strikes from where it stands instead of pushing through the base or at the
+        /// others for ever. The base is a square round RaidCentre and the stand point lies a body and a little out from its side
+        /// (V2Campaign.RaidSpotFor), so the square and its sides follow from the point.
         /// </summary>
         bool AgainstRaidWall(Vector3 spot, out Vector3 normal)
         {
-            Vector3 outward = Query.Flat(spot - RaidCentre);
-            normal = Mathf.Abs(outward.x) > Mathf.Abs(outward.z) ? new Vector3(Mathf.Sign(outward.x), 0f, 0f) : new Vector3(0f, 0f, Mathf.Sign(outward.z));
+            Vector3 outward = Query.Flat(spot - RaidCentre), own = Query.Flat(Position - RaidCentre);
+            normal = RaidSide(outward);
+            // The base's half width with the stand-off: a raider's centre stands a body out from this square.
+            float front = Vector3.Dot(outward, normal) - radius, reach = radius + .6f;
+            float dx = Mathf.Max(0f, Mathf.Abs(own.x) - front), dz = Mathf.Max(0f, Mathf.Abs(own.z) - front);
+            if (dx * dx + dz * dz > reach * reach) return false;
             Vector3 along = new Vector3(normal.z, 0f, normal.x);
-            float standOut = Vector3.Dot(outward, normal), depth = Vector3.Dot(Query.Flat(Position - RaidCentre), normal);
-            return depth <= standOut + .6f && depth >= standOut - radius - .5f
-                   && Mathf.Abs(Vector3.Dot(Query.Flat(Position - RaidCentre), along)) <= standOut - radius;
+            if (Vector3.Dot(own, normal) <= 0f || Mathf.Abs(Vector3.Dot(own, along)) > front) normal = RaidSide(own);
+            return true;
         }
+
+        /// <summary>The outward normal of the base side a point (given from the base's centre) lies off.</summary>
+        static Vector3 RaidSide(Vector3 outward) =>
+            Mathf.Abs(outward.x) > Mathf.Abs(outward.z) ? new Vector3(Mathf.Sign(outward.x), 0f, 0f) : new Vector3(0f, 0f, Mathf.Sign(outward.z));
 
         /// <summary>V2 day campaign raid: walk to the stand point next to the base (around walls by the raid flow field), wind up as for
         /// a normal strike and hit the base. The player only matters within RaidAggroRadius (RaidTurnsOnPlayer). Every walking kind raids
@@ -677,7 +688,8 @@ namespace AnomalyArena
                 }
                 return;
             }
-            Vector3 direction = WorldMap.Active ? WorldMap.Active.GetRaidDirection(Position, spot) : to / Mathf.Max(.01f, dist);
+            Vector3 direction = WorldMap.Active ? WorldMap.Active.GetRaidDirection(Position, spot, radius) : to / Mathf.Max(.01f, dist);
+            direction = RoundBodies(direction, dt);
             if (direction.sqrMagnitude > .0001f) facing = Query.Flat(direction).normalized;
             Vector3 v = KeepOffEdges(direction * moveSpeed, dt);
             rb.linearVelocity = new Vector3(v.x, rb.linearVelocity.y, v.z);
@@ -893,10 +905,14 @@ namespace AnomalyArena
             switch (definition.kind)
             {
                 case EnemyKind.Spitter:
-                    MoveTowards(player.Position, distance < definition.rangedNear ? -1f : distance > definition.rangedFar ? 1f : 0f, dt);
-                    if (cooldown <= 0f && !Query.WallBetween(Query.AtCastHeight(Position),
-                            Query.AtCastHeight(player.Position), out _)) BeginWindup(windupTime, definition.rangedFar);
+                {
+                    // With a wall between it and the player it cannot spit: it closes in round the wall until it sees the player, in its
+                    // range band as well (there it would stand for ever, neither moving nor firing), and only then keeps its range.
+                    bool walled = Query.WallBetween(Query.AtCastHeight(Position), Query.AtCastHeight(player.Position), out _);
+                    MoveTowards(player.Position, walled || distance > definition.rangedFar ? 1f : distance < definition.rangedNear ? -1f : 0f, dt);
+                    if (cooldown <= 0f && !walled) BeginWindup(windupTime, definition.rangedFar);
                     return true;
+                }
                 case EnemyKind.Warden:
                     supportTimer -= dt;
                     if (supportTimer <= 0f)
@@ -1454,9 +1470,9 @@ namespace AnomalyArena
         void MoveAt(Vector3 point, float speed, float dt)
         {
             Vector3 direction = WorldMap.Active
-                ? WorldMap.Active.GetChaseDirection(Position, point, FollowingIntoGravity)
+                ? WorldMap.Active.GetChaseDirection(Position, point, FollowingIntoGravity, radius)
                 : Query.Flat(point - Position).normalized;
-            Vector3 v = KeepOffEdges(direction * speed, dt);
+            Vector3 v = KeepOffEdges(direction * speed, dt, speed > 0f);
             rb.linearVelocity = new Vector3(v.x, rb.linearVelocity.y, v.z);
         }
 
@@ -1732,15 +1748,20 @@ namespace AnomalyArena
 
         /// <summary>
         /// When walking on its own it never walks off into a gap; it only falls when knocked back or thrown.
-        /// If the next step would leave the platform (less than a body from the edge), it first tries moving along x only or z only (sliding along the edge), and stops if neither works.
+        /// If the next step would leave open ground (a wall's margin, the map's edge, a hole or a gravity ring), it moves along x only or
+        /// z only instead (sliding along the wall), and stops only if neither works; a body already in a wall's margin may take any step
+        /// that leads no deeper into it (WorldMap.WalkStep). A walk toward its goal that stays refused is noted (chasing; a retreat from
+        /// the player is not): after a while the body is set down on open ground (Enemy.Unstick.cs).
         /// Dunes quicksand slows this own walking first (system doc 12.1); bosses ignore it as they ignore black-hole pull.
         /// </summary>
-        Vector3 KeepOffEdges(Vector3 v, float dt)
+        Vector3 KeepOffEdges(Vector3 v, float dt, bool chasing = true)
         {
             if (!WorldMap.Active) return v;
             if (WorldMap.Active.TrialActive) return WorldMap.Active.KeepOnTrialGround(Position, v, dt, radius); // never off into the void
             if (!IsBoss) v *= Quicksand.SpeedFactor(Position);
-            return WorldMap.Active.IsWalkable(Position + v * dt, radius, FollowingIntoGravity) ? v : Vector3.zero;
+            Vector3 taken = WorldMap.Active.WalkStep(Position, v, dt, radius, FollowingIntoGravity);
+            if (chasing) NoteWalk(v, taken, dt);
+            return taken;
         }
 
         /// <summary>Shatter ice: a slide never carries this enemy into a black hole or a gravity ring it would not walk into,
@@ -1749,7 +1770,7 @@ namespace AnomalyArena
         {
             if (!WorldMap.Active) return v;
             if (WorldMap.Active.TrialActive) return WorldMap.Active.KeepOnTrialGround(Position, v, dt, radius);
-            return WorldMap.Active.IsWalkable(Position + v * dt, radius, FollowingIntoGravity) ? v : Vector3.zero;
+            return WorldMap.Active.WalkStep(Position, v, dt, radius, FollowingIntoGravity, false);
         }
 
         /// <summary>Shatter ice: a Rammer's charge and a Bloater's rush are attack moves with a set reach, not walks, so they keep their full

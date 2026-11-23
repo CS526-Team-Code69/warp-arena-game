@@ -339,8 +339,8 @@ namespace AnomalyArena
         }
 
         /// <summary>
-        /// Pulls a rim point inside the map and then toward its centre, a cell at a time, until the body stands on walkable ground: a
-        /// body born where its own walking is refused never moves (Enemy.KeepOffEdges refuses every step that is not walkable). With
+        /// Pulls a rim point inside the map and then toward its centre, a cell at a time, until the body stands on walkable ground, so
+        /// it is born clear of every wall's margin and walks from its first step (Enemy.KeepOffEdges). With
         /// clearOfOthers the point must also keep clear of other warnings and living enemies. False when no such ground is within
         /// RimSettleCells cells.
         /// </summary>
@@ -455,11 +455,29 @@ namespace AnomalyArena
             TrySpawnFinalBoss();
         }
 
+        /// <summary>
+        /// Switches the saved Tyrant on at a point. Its transform is moved while the object is still off, as the pooled monsters are
+        /// placed: its body is interpolated, and a transform moved after the object is on is written back from where the body was saved
+        /// in the scene, the map's middle, which in the story is inside the base (it then stood on the base's roof for the whole final
+        /// battle, out of every shot's reach). A boss already on is moved body and transform together.
+        /// </summary>
+        internal static void SetDown(Enemy boss, Vector3 at)
+        {
+            if (!boss.gameObject.activeSelf)
+            {
+                boss.transform.position = at;
+                boss.gameObject.SetActive(true);
+                return;
+            }
+
+            boss.transform.position = at;
+            if (boss.TryGetComponent(out Rigidbody body)) body.position = at;
+        }
+
         void TrySpawnFinalBoss()
         {
             if (!TryFindV2SpawnPoint(tyrant.definition, out var position)) { spawnTimer = 0.5f; return; }
-            tyrant.gameObject.SetActive(true);
-            tyrant.transform.position = position;
+            SetDown(tyrant, position);
             tyrant.Configure(tyrant.definition, waveSet ? Mathf.Max(1f,waveSet.finalBossHpFactor) : 1f, false);
             var board = ElementStatus.For(tyrant);
             foreach (var element in TyrantImmunities) board?.SetImmunity(element, 1f);
@@ -1088,8 +1106,7 @@ namespace AnomalyArena
         public Enemy SpawnLabTyrant(Vector3 at)
         {
             if (!tyrant || tyrant.IsAlive) return tyrant;
-            tyrant.gameObject.SetActive(true);
-            tyrant.transform.position = new Vector3(at.x, 0f, at.z);
+            SetDown(tyrant, new Vector3(at.x, 0f, at.z));
             tyrant.Configure(tyrant.definition, waveSet ? Mathf.Max(1f, waveSet.finalBossHpFactor) : 1f, false);
             var board = ElementStatus.For(tyrant);
             foreach (var element in TyrantImmunities) board?.SetImmunity(element, 1f);

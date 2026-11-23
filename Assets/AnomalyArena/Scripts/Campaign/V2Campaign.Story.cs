@@ -239,9 +239,11 @@ namespace AnomalyArena
 
         // ───── Day 0 (its walk and its night are taught in V2Campaign.Tutorial.cs) ─────
 
-        void Objective(string text, Vector3? marker) { ObjectivePoint = marker; ui.SetObjective(text, marker); }
+        void Objective(string text, Vector3? marker) { ObjectivePoint = marker; ObjectiveText = text ?? ""; ui.SetObjective(text, marker); }
         /// <summary>Where the current objective points (null: nowhere in particular); the HUD marker and automated checks read it.</summary>
         public Vector3? ObjectivePoint { get; private set; }
+        /// <summary>The current objective's words as given to the goal plate (automated checks read it).</summary>
+        public string ObjectiveText { get; private set; } = "";
 
         IEnumerator Arrival()
         {

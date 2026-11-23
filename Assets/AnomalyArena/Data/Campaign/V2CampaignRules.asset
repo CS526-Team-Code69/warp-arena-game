@@ -70,7 +70,7 @@ MonoBehaviour:
   tutorialShadows: 4
   tutorialShadowHitScale: 0.33
   shadowSpeed: 3.4
-  shadowChaseFactor: 1.12
+  shadowChaseFactor: 0.9
   shadowSense: 26
   shadowTerritory: 16
   lampGatherBand: 3.5

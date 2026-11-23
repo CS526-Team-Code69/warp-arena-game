@@ -219,8 +219,11 @@ namespace AnomalyArena
             // V2 day campaign (since 2026-11-10): the win pays the void currencies, so the banner names them instead of the classic
             // run's absorbed power (no enemy is on the map to look for either).
             if (CampaignRunning && campaign.rules)
-                hud?.Banner(ArenaText.Pair("虚空的馈赠", "THE GIFT OF THE VOID"),
-                    ArenaText.Pair($"虚空能量 +{campaign.rules.voidEnergyReward}，虚空合金 +{campaign.rules.voidAlloyReward}。回基地打开研习，在「虚空」分类里用它们购买。",
+                // Where the void room is: the Void tab of Energy research on the Workshop page; the Alpha edition's base page calls it Study.
+                hud?.Banner(ArenaText.Pair("虚空的馈赠", "THE GIFT OF THE VOID"), V5HudKit.On
+                    ? ArenaText.Pair($"虚空能量 +{campaign.rules.voidEnergyReward}，虚空合金 +{campaign.rules.voidAlloyReward}。回基地打开整备页，在能量研究的「虚空」分类里用它们购买。",
+                        $"Void energy +{campaign.rules.voidEnergyReward}, void alloy +{campaign.rules.voidAlloyReward}. At the base, spend them on the Workshop page: Energy research, Void tab.")
+                    : ArenaText.Pair($"虚空能量 +{campaign.rules.voidEnergyReward}，虚空合金 +{campaign.rules.voidAlloyReward}。回基地打开研习，在「虚空」分类里用它们购买。",
                         $"Void energy +{campaign.rules.voidEnergyReward}, void alloy +{campaign.rules.voidAlloyReward}. Spend them in the Study window's Void tabs at the base."));
             else
                 hud?.Banner(ArenaText.Pair("吸收虚空之力", "ABSORBING THE VOID"),

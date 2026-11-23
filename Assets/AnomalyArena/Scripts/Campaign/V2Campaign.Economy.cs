@@ -257,8 +257,26 @@ namespace AnomalyArena
             V3WorldAudio.Instance?.Play(ArenaWorldCue.PortalOpen, at);
         }
 
+        // Seconds no attack lands on the player once the Tyrant has fallen, renewed each frame until the core is taken.
+        const float CoreGrace = .5f;
+
+        /// <summary>The Tyrant has fallen and the fight is over (OnTyrantDefeated): what is left of the crowd it called leaves without a
+        /// kill or a drop, a knock or a throw under way stops, and the burn or poison on the player is dropped with the rest of the
+        /// fight's state. A fall on the way to the core would lose a run already won, and its retry is the whole final battle.</summary>
+        void EndFinalFight()
+        {
+            DismissStragglers();
+            var p = gm ? gm.player : null;
+            if (!p || !p.IsAlive) return;
+            p.ClearWaveState();
+            p.ProtectFor(CoreGrace);
+        }
+
         void TickCore(float dt)
         {
+            // What the Tyrant's red crosses still bring after its fall leaves as the rest did, and no attack lands on the player.
+            if (gm.waves && gm.waves.LivingCount > 0) DismissStragglers();
+            if (gm.player && gm.player.IsAlive) gm.player.ProtectFor(CoreGrace);
             TickPickups(dt);
             var p = gm.player;
             if (core == null || !p) return;

@@ -159,6 +159,7 @@ namespace AnomalyArena
             CampaignEvents.RaisePhase("dusk", Day);
             afternoonCombat = false;
             gm.CampaignSetPhase(ArenaUiState.Night);
+            NoteMorningLoss(); // before the repair, which would hide it
             NightlyBaseUpkeep();
             lampStock += rules.dailyFreeLamps; // from day 1 on lamps are crafted, from the alloy the afternoon's ore carries for them
             nightAlloy = nightDark = 0; knockedOut = false;
@@ -253,6 +254,7 @@ namespace AnomalyArena
             // The crate's sentence stands after a full stop, so the goal plate shows it as the body under the goal (V5StoryGoal).
             goalNamesCrate = AfternoonCrateOnMap;
             if (goalNamesCrate) goal += ArenaText.Pair("。矿脉上还有一个武器箱。", ". A weapon crate lies on the ore trail.");
+            goal = WithAfternoonNudges(goal); // the night's lamps and the base's fortification, while wanted (V2Campaign.Nudges.cs)
             Objective(goal, next);
         }
 
@@ -277,7 +279,7 @@ namespace AnomalyArena
             TickPickups(dt);
             TickMining(dt, true);
             TickLampPlacement();
-            if (goalNamesCrate != AfternoonCrateOnMap) AfternoonObjective(); // the day's crate was opened or left
+            if (goalNamesCrate != AfternoonCrateOnMap || AfternoonNudgesChanged) AfternoonObjective(); // the crate opened or left, lamps made, base fortified
             if (TickBaseDoor() || TickShipDoor()) return; // in the base the afternoon waits
             if (!EveningsOpenEnded && stageClock >= stageLength) BeginNight();
         }
@@ -918,6 +920,8 @@ namespace AnomalyArena
             var map = WorldMap.Active;
             if (map && (!map.IsWalkable(at, radius) || Quicksand.SpeedFactor(at) < .99f)) return false;
             foreach (var node in nodes) if (Query.Flat(node.position - at).sqrMagnitude < NodeSpacing * NodeSpacing) return false;
+            // Nor on the sealed void ore of the hole's line (V2Campaign.Guide.cs).
+            foreach (var sealedAt in sealedOre) if (Query.Flat(sealedAt - at).sqrMagnitude < NodeSpacing * NodeSpacing) return false;
             return true;
         }
 

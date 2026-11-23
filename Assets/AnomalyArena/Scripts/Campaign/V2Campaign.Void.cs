@@ -6,8 +6,8 @@ namespace AnomalyArena
     /// <summary>
     /// The void currencies (2026-11-10, the implementation spec's section D). Beating the Nash Prophet in the void trial behind the black
     /// hole's gate gives the gift of the void: rules.voidEnergyReward void energy and rules.voidAlloyReward void alloy (instead of the
-    /// classic run's extra level and greater void pick), and from the next afternoon on rules.voidOreNodes nodes of void alloy grow
-    /// each afternoon round where the hole stood (AfternoonVoidOre). Both currencies show on screen from the first one gained. The gift
+    /// classic run's extra level and greater void pick), and from the next afternoon on the day's void alloy (rules.voidOreNodes x
+    /// rules.voidOreYield) grows each afternoon on the spots of the sealed void ore that lay on the line to the hole (AfternoonVoidOre). Both currencies show on screen from the first one gained. The gift
     /// also brings the void dash (GameManager.VoidDashUnlocked reads ProphetBeaten).
     /// They buy, in the study window's Void room (CollectVoidStudy; the window itself is another part's): a void skill for
     /// rules.voidSkillCost void energy (Pocket Void, Void Walk or Singularity, no levels); a weapon's void enchant (its hits restore
@@ -74,6 +74,17 @@ namespace AnomalyArena
         /// <summary>For automated checks: void currency as if earned.</summary>
         public void DebugGrantVoid(int energyAmount, int alloyAmount) => GainVoid(energyAmount, alloyAmount);
 
+        /// <summary>For automated checks: the gift of the void as the trial's win gives it (the hole itself stays until it is put away), and
+        /// an afternoon's void alloy as BeginDusk grows it.</summary>
+        public void DebugBeatProphet()
+        {
+            var map = WorldMap.Active;
+            var hole = map ? map.CampaignHole : null;
+            OnProphetBeaten(hole ? hole.Centre : trailTarget ?? BaseCentre);
+        }
+
+        public void DebugAfternoonVoidOre() => AfternoonVoidOre();
+
         /// <summary>Every frame while the campaign's map is in place (TickHoleQuest): the wallet on screen and the enchanted weapons' watch.</summary>
         void TickVoid()
         {
@@ -83,11 +94,26 @@ namespace AnomalyArena
 
         // ───── The void alloy round where the hole stood ─────
 
-        /// <summary>Each afternoon once the Prophet is beaten (BeginDusk): rules.voidOreNodes nodes of rules.voidOreYield void alloy round
-        /// where the black hole stood, on open ground within rules.voidOreReach cells. Like the day's ore, what is not mined is gone at dawn.</summary>
+        /// <summary>Each afternoon once the Prophet is beaten (BeginDusk): the day's void alloy, rules.voidOreNodes x rules.voidOreYield,
+        /// shared by nodes on the spots where the sealed void ore lay on the line from the base to the hole (V2Campaign.Guide.cs
+        /// PathOreSpots, the same spots from the map's seed). A hole too near the base for that line keeps the older placement:
+        /// rules.voidOreNodes nodes of rules.voidOreYield round where it stood, within rules.voidOreReach cells. Like the day's ore, what
+        /// is not mined is gone at dawn.</summary>
         partial void AfternoonVoidOre()
         {
             if (!prophetBeaten || voidOreCentre is not Vector3 centre || rules.voidOreNodes <= 0) return;
+            var open = new List<Vector3>();
+            foreach (var spot in PathOreSpots(WorldMap.Active, centre))
+            {
+                Vector3 at = OreSpotOk(spot, 1f) ? spot : FindOpen(spot, 1f, 4f);
+                if (OreSpotOk(at, 1f)) open.Add(at);
+            }
+            if (open.Count > 0)
+            {
+                var shares = CampaignRules.Split(rules.voidOreNodes * Mathf.Max(1, rules.voidOreYield), open.Count);
+                for (int i = 0; i < open.Count; i++) if (shares[i] > 0) AddNode(NodeKind.VoidAlloy, open[i], shares[i]);
+                return;
+            }
             float turn = Random.value * 360f, reach = Mathf.Max(2f, rules.voidOreReach);
             for (int i = 0; i < rules.voidOreNodes; i++)
                 for (int attempt = 0; attempt < 12; attempt++)

@@ -319,7 +319,7 @@ namespace AnomalyArena
                         s.wander = s.home + new Vector3(Random.Range(-8f, 8f), 0f, Random.Range(-8f, 8f));
                     }
                     target = s.wander;
-                    speed = rules.shadowSpeed;
+                    speed = rules.ShadowRoamSpeed(p.moveSpeed);
                 }
                 else if (sheltered)
                 {
