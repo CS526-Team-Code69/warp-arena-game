@@ -66,6 +66,19 @@ namespace AnomalyArena
         [Header("Each day's monster damage")]
         [Tooltip("Days 1, 2, 3 ...: every monster's attack damage is its definition's times this (an elite's x1.5 on top, WaveManager.enemyDamageScale over all), in place of the classic wave's damage growth; a day past the table takes its last entry and day 0 takes day 1's. It eases in as p(d) = p1 + (p7 - p1) x ((d - 1) / 6)^2 with p1 = .6 and p7 = 1.25, so the first days hurt little while the build and the controls are still new, and the last day hits as the definitions say. The Tyrant's fight keeps the classic factors; an empty table keeps them every day.")]
         public float[] dayEnemyDamage = { .6f, .62f, .67f, .76f, .89f, 1.05f, 1.25f };
+        [Range(0f, 1f), Tooltip("Since 2026-11-24: how far the player's starting max HP follows the monsters' damage by day. 1: on day d it is the starting max HP x dayEnemyDamage(d) / dayEnemyDamage(1), so a monster of one kind takes as many hits to bring the player down on every day (25, 26, 28, 32, 37, 44, 52 with the table above); armor's max HP comes on top. 0: no growth.")]
+        public float playerHpFollowsMonsters = 1f;
+
+        /// <summary>The max HP day d adds to a starting max HP of startingHp (since 2026-11-24): startingHp x (dayEnemyDamage(d) /
+        /// dayEnemyDamage(1) - 1) x playerHpFollowsMonsters, rounded to whole HP; nothing on day 0 and day 1, and a day past the table
+        /// keeps its last entry.</summary>
+        public float DayMaxHpBonus(int day, float startingHp)
+        {
+            if (day <= 1 || startingHp <= 0f || dayEnemyDamage == null || dayEnemyDamage.Length == 0) return 0f;
+            float first = Mathf.Max(.01f, dayEnemyDamage[0]);
+            float now = dayEnemyDamage[Mathf.Min(day, dayEnemyDamage.Length) - 1];
+            return Mathf.Max(0f, Mathf.Round(startingHp * (now / first - 1f) * Mathf.Clamp01(playerHpFollowsMonsters)));
+        }
 
         [Header("The two bosses in the campaign (since 2026-11-10)")]
         [Min(1f), Tooltip("The Nash Prophet's HP in the void trial, whatever the day; it has no shield. The black hole's check asks for holeCheckProphetShare of it.")]

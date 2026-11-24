@@ -13,8 +13,9 @@ namespace AnomalyArena
     /// other stragglers. The afternoon is a fight meanwhile.
     /// A monster follows the player into the hole's pull and is drawn in, so the way to feed the hole is to stand in its pull oneself.
     /// For that the campaign's hole pulls only a little faster than the player walks (rules.holePullFactor): a walk loses ground slowly
-    /// and a sprint gets out. With rules.holeFeedGoal swallowed the hole wakes for the rest of the run: it can be attacked, by the timed
-    /// check of V2Campaign.Hole.cs. A goal of 0 skips the feeding.
+    /// and a sprint gets out. With rules.holeFeedGoal swallowed the hole opens its portal at once (since 2026-11-24); with
+    /// rules.holeCheckAfterFeed on it wakes instead for the rest of the run and is broken by the timed check of V2Campaign.Hole.cs. A goal
+    /// of 0 skips the feeding.
     /// </summary>
     public sealed partial class V2Campaign
     {
@@ -83,14 +84,31 @@ namespace AnomalyArena
             holeAwake = true;
             DismissLured();
             labelPercent = labelSeconds = -1;
+            if (!rules.holeCheckAfterFeed) { OpenFedHole(hole); return; }
             ui.Flash(ArenaText.Pair("黑洞醒了！现在可以攻击它，但它也会还手。", "The black hole is awake! You can attack it now, but it will strike back."), 3.5f);
             Fx.Ring(hole.Centre, hole.GravityRadius, HoleWakeColour, .8f);
             V3WorldAudio.Instance?.Play(ArenaWorldCue.BossInhale, hole.Centre);
         }
 
+        /// <summary>The fed hole collapses at once into the hidden gate the timed check would open (rules.holeCheckAfterFeed off, since
+        /// 2026-11-24); the gate stays open until the player goes through. Analytics record it as the hole's check passed.</summary>
+        void OpenFedHole(BlackHole hole)
+        {
+            if (!hole || hole.Phase != HolePhase.Active) return;
+            hole.campaignLabel = "";
+            hole.OpenGate(gm && gm.waves ? gm.waves.WaveIndex + 1 : 0);
+            CampaignEvents.RaiseMilestone(CampaignEvents.MilestoneHoleCheck, CampaignEvents.HoleCheckPassed, 1f, Day);
+            if (ui) ui.Flash(ArenaText.Pair("黑洞吞够了，变成了一座传送门。", "The black hole has had its fill and has become a portal."), 3f);
+            Fx.Ring(hole.Centre, hole.GravityRadius, HoleWakeColour, .8f);
+            V3WorldAudio.Instance?.Play(ArenaWorldCue.PortalOpen, hole.Centre);
+        }
+
         /// <summary>The side quest's line while the hole is fed: the count, and how to do it.</summary>
-        string FeedQuestLine() => ArenaText.Pair($"把怪物引进黑洞（{holeFed}/{HoleFeedGoal}）：走进它的引力圈，追着你的怪物会跟进来，被它吞掉。",
-            $"Lure monsters into the black hole ({holeFed}/{HoleFeedGoal}): step into its pull, and those chasing you follow and get swallowed.");
+        string FeedQuestLine() => rules && rules.holeCheckAfterFeed
+            ? ArenaText.Pair($"把怪物引进黑洞（{holeFed}/{HoleFeedGoal}）：走进它的引力圈，追着你的怪物会跟进来，被它吞掉。",
+                $"Lure monsters into the black hole ({holeFed}/{HoleFeedGoal}): step into its pull, and those chasing you follow and get swallowed.")
+            : ArenaText.Pair($"把 {HoleFeedGoal} 个怪物引进黑洞，就能打开传送门（{holeFed}/{HoleFeedGoal}）：走进它的引力圈，追着你的怪物会跟进来，被它吞掉。",
+                $"Lure {HoleFeedGoal} monsters into the black hole to open a portal ({holeFed}/{HoleFeedGoal}): step into its pull, and those chasing you follow and get swallowed.");
 
         /// <summary>The hole's world label while it is fed. Written again only when the count changes.</summary>
         string FeedLabel()

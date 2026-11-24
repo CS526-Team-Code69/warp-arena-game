@@ -34,7 +34,7 @@ namespace AnomalyArena
             campaign.DebugBeginAfternoon(1);
             Assume.That(campaign.Stage, Is.EqualTo(CampaignStage.Dusk), "the afternoon has begun");
             await Awaitable.NextFrameAsync();
-            int wanted = CampaignRules.ByDay(campaign.rules.dayLampsToCraft, 1);
+            int wanted = campaign.rules.NightLampsOn(1);
             Assume.That(campaign.LampsCraftable, Is.True, "the rocket can make lamps on Day 1");
             Assume.That(campaign.LampStock, Is.LessThan(wanted), "the stock starts short of the day's lamps");
 
@@ -59,6 +59,49 @@ namespace AnomalyArena
             await Awaitable.NextFrameAsync();
             Assert.That(campaign.FortifyWanted, Is.False, "fortified once and unhurt, it is not pointed at again");
             Assert.That(campaign.ObjectiveText, Does.Not.Contain(fortify), "and the goal no longer names it");
+        }
+
+        /// <summary>Since 2026-11-24 the base gives rules.dailyFreeLamps at each dusk, and lamps go down only after dark: the lamp key
+        /// sets none down in the afternoon and one at night.</summary>
+        [Test, LoadScene(Scene), Category("Integration"), Timeout(90000)]
+        public async Task Lamps_TheBaseGivesSomeAtDusk_AndTheyGoDownOnlyAfterDark()
+        {
+            await Awaitable.NextFrameAsync();
+            await Until(() => GameManager.Instance && ArenaText.Ready, 12f, "scene and localization");
+            var game = GameManager.Instance;
+            Assume.That(game.TryGetComponent(out V2Campaign campaign) && campaign.isActiveAndEnabled && campaign.rules, Is.True, "the scene has the V2 campaign");
+            Assume.That(campaign.rules.dailyFreeLamps, Is.GreaterThan(0), "the rules give lamps each day");
+
+            float deadline = Time.realtimeSinceStartup + 5f;
+            while (!game.CampaignRunning)
+            {
+                if (Time.realtimeSinceStartup > deadline) Assert.Fail($"StartCampaign timed out in {game.RunPhase}");
+                game.ExecuteUiCommand(ArenaUiCommand.StartCampaign, -1);
+                await Awaitable.NextFrameAsync();
+            }
+            await Until(() => campaign.Stage == CampaignStage.Tutorial && game.State == GameState.Playing, 15f, "Day 0's walk begins");
+
+            int before = campaign.LampStock;
+            campaign.DebugBeginAfternoon(1);
+            Assume.That(campaign.Stage, Is.EqualTo(CampaignStage.Dusk), "the afternoon has begun");
+            Assert.That(campaign.LampStock, Is.EqualTo(before + campaign.rules.dailyFreeLamps), "the base gives its lamps at dusk");
+            await Awaitable.NextFrameAsync();
+
+            int stock = campaign.LampStock;
+            campaign.debugPressF = true;
+            for (int i = 0; i < 5; i++) await Awaitable.NextFrameAsync();
+            Assert.That(campaign.debugPressF, Is.False, "the afternoon read the lamp key");
+            Assert.That(campaign.LampStock, Is.EqualTo(stock), "and set no lamp down");
+
+            campaign.DebugBeginNight(1, Array.Empty<Vector3>(), Array.Empty<int>(), Array.Empty<EnemyKind>(), 2);
+            Assume.That(campaign.Stage, Is.EqualTo(CampaignStage.Night), "the night has begun");
+            float pressing = Time.realtimeSinceStartup + 5f;
+            while (campaign.LampStock == 2 && Time.realtimeSinceStartup < pressing)
+            {
+                campaign.debugPressF = true;
+                await Awaitable.NextFrameAsync();
+            }
+            Assert.That(campaign.LampStock, Is.EqualTo(1), "at night the lamp key sets one down");
         }
 
         [Test, LoadScene(Scene), Category("Integration"), Timeout(90000)]

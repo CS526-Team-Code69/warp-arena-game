@@ -72,9 +72,13 @@ namespace AnomalyArena
         /// <summary>Cells the player must get beyond RaidAggroRadius before a raider that turned on the player goes back to the base, so a
         /// raider near the line does not flip between the two every frame.</summary>
         public const float RaidAggroRelease = 2f;
+        /// <summary>V2 day campaign (since 2026-11-24): seconds a raider the player hits keeps coming for the player from any distance;
+        /// each hit starts the time again. 0: a hit does not turn it.</summary>
+        public static float RaidProvokeSeconds;
         /// <summary>V2 day campaign: this raider is fighting the player (RaidAggroRadius) instead of raiding the base.</summary>
         public bool RaidTurnedOnPlayer => raidAggro;
         bool raidAggro, raidWindup;
+        float raidProvokedUntil = -1f;
         public bool Cloaked => definition && definition.kind == EnemyKind.Shade && revealTimer <= 0f;
 
         float spawnVisible,
@@ -316,6 +320,7 @@ namespace AnomalyArena
             corpseSeconds = 0;
             Raider = false;
             raidAggro = raidWindup = false;
+            raidProvokedUntil = -1f;
             ResetWalkWatch();
             corpseVelocity = Vector3.zero;
             float bodyScale = mini ? MiniScale : 1f;
@@ -437,6 +442,9 @@ namespace AnomalyArena
             if (TurnedAwayByWard()) return false; // the Nash Prophet takes no damage while a summon lives (Enemy.Prophet.cs)
             if (TurnedAwayByPhaseShift()) return false; // nor does a boss while it changes phase (Enemy.PhaseShift.cs)
             bool accepted = base.ReceiveDamage(info);
+            // V2 day campaign (since 2026-11-24): a raider the player hits turns on the player for RaidProvokeSeconds, from any distance.
+            if (accepted && Raider && RaidProvokeSeconds > 0f && info.dealer != null && info.dealer.Owner is PlayerController)
+                raidProvokedUntil = Time.time + RaidProvokeSeconds;
             // Execute Twist: any accepted damage may leave a marked enemy under the line; checked only after the hit has fully
             // resolved, so its stacks never land on a dead body.
             if (accepted && IsAlive && GM && GM.runWeapons) GM.runWeapons.CheckExecuteMark(this);
@@ -604,12 +612,15 @@ namespace AnomalyArena
         /// V2 day campaign: whether this raider fights the player now instead of raiding. It turns on a player within RaidAggroRadius and
         /// goes back to the base once the player is past RaidAggroRadius + RaidAggroRelease. A strike, charge or rush already under way
         /// finishes on the target it was aimed at before the raider turns, and a player out of sight (Void Walk) sends it back to the base.
+        /// Since 2026-11-24 a raider the player hits also comes for the player from any distance until RaidProvokeSeconds after the hit.
         /// </summary>
         bool RaidTurnsOnPlayer(PlayerController player)
         {
             bool wanted = false;
-            if (RaidAggroRadius > 0f && !(WorldMap.Active && WorldMap.Active.PlayerHidden))
+            bool hidden = WorldMap.Active && WorldMap.Active.PlayerHidden;
+            if (RaidAggroRadius > 0f && !hidden)
                 wanted = Query.Flat(player.Position - Position).magnitude <= RaidAggroRadius + (raidAggro ? RaidAggroRelease : 0f);
+            if (!wanted && !hidden && Time.time < raidProvokedUntil) wanted = true;
             if (wanted != raidAggro && !windup && !charging && !rushing) raidAggro = wanted;
             return raidAggro;
         }

@@ -58,7 +58,7 @@ MonoBehaviour:
   baseLightRadius: 15
   playerGlowRadius: 2.4
   freeLampsPerNight: 3
-  dailyFreeLamps: 0
+  dailyFreeLamps: 2
   lampHp: 4
   regions: {x: 6, y: 4}
   killsPerShadow: 4
@@ -79,6 +79,7 @@ MonoBehaviour:
   nightDeathLoss: 1
   nightDeathSeconds: 2.8
   holeFeedGoal: 10
+  holeCheckAfterFeed: 0
   holePullFactor: 1.1
   holeLurePack: 4
   holeLureInterval: 5
@@ -89,6 +90,8 @@ MonoBehaviour:
   nightSelfRepair: 0.25
   sideBreakShare: 0.25
   raiderAggroRadius: 7
+  raiderProvokeSeconds: 6
+  playerHpFollowsMonsters: 1
   nightOreNodes: 0
   trailNodes: 10
   trailReach: 36
@@ -286,10 +289,10 @@ MonoBehaviour:
   miniDropChance: 0.2
   dropPity: 3
   dayLampsToCraft:
+  - 1
+  - 1
+  - 2
+  - 2
   - 3
   - 3
   - 4
-  - 4
-  - 5
-  - 5
-  - 6

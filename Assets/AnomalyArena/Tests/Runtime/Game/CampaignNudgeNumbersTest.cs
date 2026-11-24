@@ -32,11 +32,11 @@ namespace AnomalyArena
 
             // A day whose lamps are at least two more than the stock, so one more made leaves the stock short still.
             int day = 1;
-            while (day < campaign.rules.days && CampaignRules.ByDay(campaign.rules.dayLampsToCraft, day) < campaign.LampStock + 2) day++;
+            while (day < campaign.rules.days && campaign.rules.NightLampsOn(day) < campaign.LampStock + campaign.rules.dailyFreeLamps + 2) day++;
             campaign.DebugBeginAfternoon(day);
             Assume.That(campaign.Stage, Is.EqualTo(CampaignStage.Dusk), "the afternoon has begun");
             await Awaitable.NextFrameAsync();
-            int wanted = CampaignRules.ByDay(campaign.rules.dayLampsToCraft, day), stock = campaign.LampStock;
+            int wanted = campaign.rules.NightLampsOn(day), stock = campaign.LampStock;
             Assume.That(campaign.LampsCraftable, Is.True, "the rocket can make lamps");
             Assume.That(stock + 2, Is.LessThanOrEqualTo(wanted), $"day {day} wants two lamps more than the stock holds");
 

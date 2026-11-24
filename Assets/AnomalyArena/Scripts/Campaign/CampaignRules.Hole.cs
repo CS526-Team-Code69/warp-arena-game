@@ -12,6 +12,8 @@ namespace AnomalyArena
     public sealed partial class CampaignRules
     {
         [Header("Black hole: timed damage check (since 2026-11-10)")]
+        [Tooltip("Off (since 2026-11-24): the black hole opens its portal as soon as it has swallowed holeFeedGoal monsters, with no damage check. On: once fed it wakes instead and has to be broken by the timed damage check below.")]
+        public bool holeCheckAfterFeed;
         [Min(1f), Tooltip("Seconds from the first hit on the black hole in which its damage must reach the requirement. Not reached: the side quest fails for the day and the hole comes back the next morning, its damage from zero.")]
         public float holeCheckSeconds = 45f;
         [Min(0f), Tooltip("Damage the black hole must take within holeCheckSeconds to collapse into the hidden gate. 0 = holeCheckProphetShare of the Nash Prophet's HP as the campaign would give it on that day.")]
@@ -76,8 +78,8 @@ namespace AnomalyArena
         [Header("Mined each day (since 2026-11-10)")]
         [Tooltip("Alloy in each afternoon's ore, days 1, 2, 3 ...; later days use the last entry. Shared evenly by the day's ore nodes (the remainder goes to the nodes nearest the black hole) and multiplied by alloyIncomeScale and, from the day after the engine is repaired, by 1 + shipOreBonus.")]
         public int[] afternoonAlloy = { 20, 30, 45, 70, 105, 160, 240 };
-        [Tooltip("Days 1, 2, 3 ...: the mining lamps each afternoon's extra alloy pays for (lampCost each), added to afternoonAlloy after the ship's ore bonus; later days use the last entry. From day 1 on lamps are crafted (dailyFreeLamps), so this rises with the nights.")]
-        public int[] dayLampsToCraft = { 3, 3, 4, 4, 5, 5, 6 };
+        [Tooltip("Days 1, 2, 3 ...: the mining lamps each afternoon's extra alloy pays for (lampCost each), added to afternoonAlloy after the ship's ore bonus; later days use the last entry. With the base's dailyFreeLamps they make the night's lamps (NightLampsOn: 3, 3, 4, 4, 5, 5, 6 since 2026-11-12), so this rises with the nights.")]
+        public int[] dayLampsToCraft = { 1, 1, 2, 2, 3, 3, 4 };
         [Tooltip("Dark matter in each night's nodes, nights 1, 2, 3 ...; later nights use the last entry. Shared evenly by the night's dark matter nodes (Day 0's tutorial night places its own).")]
         public int[] nightDark = { 10, 12, 15, 18, 28, 36, 45 };
 
@@ -93,6 +95,10 @@ namespace AnomalyArena
         /// the V2 doc's ledger has them, where plain rounding gave 58 and 136.</summary>
         /// <summary>The alloy a day's afternoon adds for its lamps: dayLampsToCraft lamps at lampCost each (none before day 1).</summary>
         public int LampAlloyOn(int day) => day < 1 ? 0 : ByDay(dayLampsToCraft, day) * Mathf.Max(0, lampCost);
+
+        /// <summary>The lamps a night is meant to have from day 1 (since 2026-11-24): those the base gives at dusk (dailyFreeLamps) and those
+        /// the afternoon's extra alloy pays for (dayLampsToCraft). The afternoon's lamp reminder and the buy guide aim at it.</summary>
+        public int NightLampsOn(int day) => day < 1 ? 0 : ByDay(dayLampsToCraft, day) + Mathf.Max(0, dailyFreeLamps);
 
         public static int AfternoonAlloyTotal(int[] table, int day, float scale) =>
             Mathf.Max(0, Mathf.FloorToInt(ByDay(table, day) * Mathf.Max(0f, scale) + .5f + 1e-3f));

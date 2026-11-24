@@ -11,7 +11,9 @@ namespace AnomalyArena
     /// by day or in the afternoon, the classic first-sight cutscene plays (WorldMap.TickHoleIntro: three monsters spiral in).
     /// Then the hole is fed first (V2Campaign.HoleFeed.cs): the side quest reads "lure monsters into the black hole", the campaign keeps
     /// its own count of what the hole swallows (BlackHole.countsFeeds stays off, so the hole never opens by feeding alone), and with
-    /// rules.holeFeedGoal swallowed the hole wakes for the rest of the run. Until then it takes no hits.
+    /// rules.holeFeedGoal swallowed the hole wakes for the rest of the run. Until then it takes no hits. Since 2026-11-24 the fed hole
+    /// opens its gate at once (rules.holeCheckAfterFeed off, OpenFedHole in V2Campaign.HoleFeed.cs); the timed check below runs only with
+    /// the switch on.
     /// The side quest then reads "break the black hole in time". The first hit the player lands on the hole (any weapon, blast or burn
     /// finds it: BlackHoleTarget) starts rules.holeCheckSeconds, in which its damage must reach the day's requirement (by default half the
     /// Nash Prophet's HP, HoleRequirement). From rules.holeCounterDelay on the Prophet answers through the hole with its own moves, void
@@ -150,7 +152,7 @@ namespace AnomalyArena
             // Fed first: the side quest's line says how (V2Campaign.HoleFeed.cs); the flash names what was just seen, and that it takes the
             // player as well.
             if (!HoleAwake) ui.Flash(ArenaText.Pair("黑洞会把靠近它的怪物吞进去，你掉进去也一样。", "The black hole swallows the monsters that come near it, and you as well if you fall in."), 3.5f);
-            else ui.Flash(ArenaText.Pair($"黑洞里有东西。攻击它，从第一次打中开始计时，{Mathf.RoundToInt(rules.holeCheckSeconds)} 秒内打出足够的伤害，就能击破黑洞。",
+            else if (rules.holeCheckAfterFeed) ui.Flash(ArenaText.Pair($"黑洞里有东西。攻击它，从第一次打中开始计时，{Mathf.RoundToInt(rules.holeCheckSeconds)} 秒内打出足够的伤害，就能击破黑洞。",
                 $"Something lies within the black hole. Attack it: once your first hit lands, you have {Mathf.RoundToInt(rules.holeCheckSeconds)} seconds to deal enough damage to break it."), 4.5f);
         }
 
@@ -231,6 +233,8 @@ namespace AnomalyArena
             bool holeOut = shown && hole.Phase == HolePhase.Active && Day > 0;
             // Fed first (V2Campaign.HoleFeed.cs): until it is awake the hole has no check and takes no hits.
             TickHoleFeeding(map, hole, p, holeOut && daylight);
+            // Since 2026-11-24 a fed hole is no fight: it opens its gate at once (so does a hole fed before the rule, from a save).
+            if (!rules.holeCheckAfterFeed && HoleAwake && holeSeen && holeOut && daylight && !map.HoleIntroPlaying) { OpenFedHole(hole); holeOut = false; }
             bool counting = holeOut && HoleAwake && !holeFailedToday && holeCheck.State is HoleCheckState.Idle or HoleCheckState.Running;
             if (holeCheck.State == HoleCheckState.Passed && hole.Phase == HolePhase.Active) PassHoleCheck(map, hole);
             else if (holeCheck.State == HoleCheckState.Running) TickHoleCheck(map, hole, p, holeOut);
@@ -257,6 +261,7 @@ namespace AnomalyArena
         {
             var map = questMap;
             if (!Running || !map || amount <= 0f || info.dealer == null || info.dealer.Owner is not PlayerController) return;
+            if (!rules.holeCheckAfterFeed) return; // since 2026-11-24 the fed hole opens without a damage check
             var hole = map.CampaignHole;
             if (!hole || hole.Phase != HolePhase.Active || holeFailedToday || !HoleAwake) return;
             bool starting = holeCheck.State == HoleCheckState.Idle;
@@ -384,7 +389,7 @@ namespace AnomalyArena
                         "A black hole waits at the end of the ore trail; follow the ore to find it."), PullThreat())
                     : null;
             // The open portal needs no instruction: the line only says it is open; standing on it shows the E (V2WorldLabels).
-            bool portal = hole.Phase != HolePhase.Active;
+            bool portal = hole.Phase != HolePhase.Active || HoleAwake && !rules.holeCheckAfterFeed;
             string text = portal ? ArenaText.Pair("虚空传送门已经打开。", "The void portal is open.")
                 : !HoleAwake ? FeedQuestLine()
                 : holeFailedToday ? ArenaText.Pair("今天没能击破黑洞，它已经退去，明天再来。", "The black hole withdrew unbroken today; come back tomorrow.")

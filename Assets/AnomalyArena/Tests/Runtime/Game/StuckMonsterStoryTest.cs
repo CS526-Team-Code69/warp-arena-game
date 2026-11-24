@@ -91,6 +91,74 @@ namespace AnomalyArena
                 $"the monster lies {Mathf.Atan2(truth.y, truth.x) * Mathf.Rad2Deg:0} degrees from the screen's middle; its marker stands at {Mathf.Atan2(shown.y, shown.x) * Mathf.Rad2Deg:0}");
         }
 
+        /// <summary>Since 2026-11-24 a raider the player hits from beyond raiderAggroRadius comes for the player, and goes back to the base
+        /// once raiderProvokeSeconds have passed with the player still far away.</summary>
+        [Test, LoadScene(Scene), Category("Integration"), Timeout(120000)]
+        public async Task Raider_HitFromAfar_ComesForThePlayer_ThenGoesBackToTheBase()
+        {
+            var (game, campaign) = await StartStory();
+            campaign.DebugBeginNight(0, Array.Empty<Vector3>(), Array.Empty<int>(), Array.Empty<EnemyKind>(), 0);
+            campaign.EndNight(false);
+            await Until(() => campaign.Stage == CampaignStage.Day && game.IsCombatActive, 30f, "day 1's morning");
+            game.player.Invulnerable = true;
+            Assume.That(Enemy.RaidProvokeSeconds, Is.GreaterThan(0f), "the rules turn a raider the player hits");
+
+            // South-east of the base, the raider further east: it walks west to the base, away from nothing it could strike.
+            campaign.DebugPlacePlayer(V2Campaign.FindOpen(V2Campaign.BaseCentre + new Vector3(30f, 0f, -25f), .8f));
+            Vector3 start = V2Campaign.FindOpen(game.player.Position + new Vector3(Enemy.RaidAggroRadius + 14f, 0f, 0f), 1f);
+            var raider = game.waves.SpawnCampaign(EnemyKind.Brute, start);
+            Assume.That(raider && raider.Raider, Is.True, "a raider was set down");
+            Assume.That(Query.Flat(game.player.Position - raider.Position).magnitude, Is.GreaterThan(Enemy.RaidAggroRadius + Enemy.RaidAggroRelease + 2f), "the player is out of its sight");
+            float settle = Time.realtimeSinceStartup + .5f;
+            while (Time.realtimeSinceStartup < settle) await Awaitable.NextFrameAsync();
+            Assert.That(raider.RaidTurnedOnPlayer, Is.False, "left alone, it raids the base");
+
+            // A hit makes the monster flinch, and it thinks again once the flinch is over.
+            float hitAt = Time.time;
+            Assert.That(raider.ReceiveDamage(new DamageInfo { amount = .5f, dealer = game.player, source = DamageSource.Hit }), Is.True, "the hit lands");
+            float turning = Time.realtimeSinceStartup + 3f;
+            while (raider.IsAlive && !raider.RaidTurnedOnPlayer && Time.realtimeSinceStartup < turning) await Awaitable.FixedUpdateAsync();
+            Assume.That(raider.IsAlive, Is.True, "the hit did not kill it");
+            Assert.That(raider.RaidTurnedOnPlayer, Is.True, "hit from afar, it comes for the player");
+
+            // The player goes far to the north: once the time since the hit is up, the raider goes back to the base.
+            campaign.DebugPlacePlayer(V2Campaign.FindOpen(V2Campaign.BaseCentre + new Vector3(30f, 0f, 40f), .8f));
+            Time.timeScale = 3f;
+            while (raider.IsAlive && raider.RaidTurnedOnPlayer && Time.time - hitAt < Enemy.RaidProvokeSeconds + 4f) await Awaitable.NextFrameAsync();
+            float released = Time.time - hitAt;
+            Assert.That(raider.RaidTurnedOnPlayer, Is.False, $"with the player far away {Enemy.RaidProvokeSeconds} s after the hit, it goes back to the base (still chasing {released:0.0} s after it)");
+            Assert.That(released, Is.GreaterThan(Enemy.RaidProvokeSeconds - .5f), $"but not before its time was up (it went back {released:0.0} s after the hit)");
+        }
+
+        /// <summary>Since 2026-11-24 the first morning's goal says what its countdown is, and once the countdown is up the goal says no
+        /// more monsters are coming and counts those left.</summary>
+        [Test, LoadScene(Scene), Category("Integration"), Timeout(120000)]
+        public async Task Morning_OnceItsTimeIsUp_TheGoalAsksForTheMonstersLeft()
+        {
+            var (game, campaign) = await StartStory();
+            float seconds = campaign.rules.morningSeconds;
+            try
+            {
+                campaign.rules.morningSeconds = 6f;
+                campaign.DebugBeginNight(0, Array.Empty<Vector3>(), Array.Empty<int>(), Array.Empty<EnemyKind>(), 0);
+                campaign.EndNight(false);
+                await Until(() => campaign.Stage == CampaignStage.Day && game.IsCombatActive, 30f, "day 1's morning");
+                game.player.Invulnerable = true;
+                Assert.That(campaign.ObjectiveText, Does.Contain(ArenaText.Pair("倒计时结束前", "Until the countdown ends")), "the first morning says what its countdown is");
+
+                var monster = game.waves.SpawnCampaign(EnemyKind.Brute, V2Campaign.FindOpen(V2Campaign.BaseCentre + new Vector3(40f, 0f, 0f), 1f));
+                Assume.That(monster, Is.Not.Null, "a monster stands to be cleared");
+                Time.timeScale = 3f;
+                await Until(() => game.waves.TimeExpired, 40f, "the morning's countdown to run out");
+                await Awaitable.NextFrameAsync();
+                await Awaitable.NextFrameAsync();
+                Assume.That(game.waves.LivingCount, Is.GreaterThan(0), "monsters are left");
+                Assert.That(campaign.ObjectiveText, Does.Contain(ArenaText.Pair("不会再来新的怪物了", "No more monsters are coming")), "once the time is up the goal says no more are coming");
+                Assert.That(campaign.ObjectiveText, Does.Contain(game.waves.LivingCount.ToString()), "and counts those left");
+            }
+            finally { campaign.rules.morningSeconds = seconds; }
+        }
+
         static async Task<(GameManager, V2Campaign)> StartStory()
         {
             await Awaitable.NextFrameAsync();

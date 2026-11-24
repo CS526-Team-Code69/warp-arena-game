@@ -192,7 +192,7 @@ namespace AnomalyArena
             var armorPrice = PlayerLevelCost;
             int armor = ArmorLevel;
             float hpStep = growth ? growth.maxHpPerLevel : 0f, energyStep = growth ? growth.maxEnergyPerLevel : 0f;
-            float hp = progression ? progression.Stats.maxHp : 0f, maxEnergy = progression ? progression.Stats.maxEnergy : 0f;
+            float hp = (progression ? progression.Stats.maxHp : 0f) + DayHpBonus, maxEnergy = progression ? progression.Stats.maxEnergy : 0f;
             var armorItem = StudyItem("armor", StudyRoom.Armament, category, StudyLadder(Mathf.Min(armor + 1, rules.MaxArmorLevel), rules.MaxArmorLevel), art ? art.armor : null,
                 ArenaText.Pair("护甲", "Armor"),
                 ArenaText.Pair($"{armor} 级", $"Level {armor}"),

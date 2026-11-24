@@ -271,6 +271,46 @@ namespace AnomalyArena
             return ArenaText.Pair("守住基地。飞船已经修好，燃料也加满了，回到基地就能点火回家。", "Hold the base. The ship is repaired and fueled: you can start the ignition at the base.");
         }
 
+        // The morning's clear-up (since 2026-11-24): the countdown is the time monsters keep coming; at zero no new ones come and the
+        // morning ends when the ones still alive are gone, while they keep striking the base. Playtesters read the zero as the end of the
+        // morning, so from then on the goal plate says so and counts what is left.
+        int clearGoalShown = -1;
+
+        /// <summary>Each morning frame (TickDay): once the day's last wave has run out of time, the goal asks for the monsters left;
+        /// written again only when their number changes.</summary>
+        void TickMorningClearGoal()
+        {
+            var waves = gm ? gm.waves : null;
+            if (!waves || waves.Phase != WavePhase.WaveActive || !waves.TimeExpired || rules.wavesPerDay - WaveOfDay - 1 > 0) return;
+            int left = waves.LivingCount;
+            if (left <= 0 || left == clearGoalShown) return;
+            clearGoalShown = left;
+            Objective(ArenaText.Pair($"不会再来新的怪物了：清掉剩下的 {left} 个，上午就结束。", $"No more monsters are coming: defeat the {left} left to end the morning."), null);
+        }
+
+        // ───── The player's max HP by day (since 2026-11-24) ─────
+
+        /// <summary>The run's starting max HP (ProgressionRules.startingStats), which the day's growth is reckoned from.</summary>
+        float StartingMaxHp => gm && gm.progression && gm.progression.Rules != null ? gm.progression.Rules.startingStats.maxHp : 0f;
+
+        /// <summary>The max HP this day adds on top of the run's stats (rules.DayMaxHpBonus); GameManager.ApplyStats adds it through
+        /// GameManager.MaxHpBonusRule, so a save needs nothing of its own: the restored day gives it again.</summary>
+        float DayHpBonus => rules ? rules.DayMaxHpBonus(Day, StartingMaxHp) : 0f;
+
+        /// <summary>Dawn: the player's max HP takes the day's growth and the HP is full again; a rise is told as the planet's energy making
+        /// the player stronger.</summary>
+        void RaiseDayHp()
+        {
+            var p = gm ? gm.player : null;
+            if (!p) return;
+            float before = p.maxHp;
+            gm.CampaignRefreshStats();
+            p.Heal(p.maxHp);
+            int from = Mathf.RoundToInt(before), to = Mathf.RoundToInt(p.maxHp);
+            if (to > from && ui)
+                ui.Flash(ArenaText.Pair($"这颗星球的能量让你更强了：生命上限 {from} → {to}", $"The planet's energy has made you stronger: max HP {from} → {to}"), 4f);
+        }
+
         // ───── Day 0's gifts ─────
 
         /// <summary>The alloy of Day 0's ore on the way, the first (0) or the second (1).</summary>

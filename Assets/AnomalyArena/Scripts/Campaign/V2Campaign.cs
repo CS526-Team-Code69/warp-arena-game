@@ -86,6 +86,8 @@ namespace AnomalyArena
             Enemy.RaidSpot = null;
             Enemy.RaidStrike = null;
             Enemy.RaidAggroRadius = 0f;
+            Enemy.RaidProvokeSeconds = 0f;
+            GameManager.MaxHpBonusRule = null;
             WaveManager.SpawnPointOverride = null;
             RunWeapons.AxisAllowed = null;
             RunWeapons.ArmoryRule = null;
@@ -150,6 +152,10 @@ namespace AnomalyArena
             Enemy.RaidStrike = OnRaidStrike;
             // Since 2026-11-06 every day monster raids the base, but one that comes within this radius of the player fights the player.
             Enemy.RaidAggroRadius = rules.raiderAggroRadius;
+            // Since 2026-11-24 one the player hits comes for the player from any distance for a while.
+            Enemy.RaidProvokeSeconds = rules.raiderProvokeSeconds;
+            // Since 2026-11-24 the player's max HP grows by day with the monsters' damage (V2Campaign.Days.cs RaiseDayHp).
+            GameManager.MaxHpBonusRule = () => Running ? DayHpBonus : 0f;
             // ...and the morning's monsters are born on a ring round the base instead of appearing around the player.
             WaveManager.SpawnPointOverride = CampaignSpawnPoint;
             RunWeapons.AxisAllowed = axis => axis switch
@@ -275,6 +281,7 @@ namespace AnomalyArena
         {
             TickPickups(dt);
             TickDayInteraction(dt);
+            TickMorningClearGoal(); // once the countdown is up, the goal counts the monsters left (V2Campaign.Days.cs)
         }
 
         /// <summary>BeginNextV2Wave in a campaign run: the first wave of a new day after the dawn, or the second wave after the lull.</summary>
@@ -289,18 +296,20 @@ namespace AnomalyArena
                 CampaignEvents.RaiseDayStarted(Day, Overtime);
                 regionKills.Clear(); regionKindKills.Clear();
                 BeginDayNumbers(); // the energy bar fills, the day's kill energy is ready (V2Campaign.Days.cs)
+                RaiseDayHp(); // the max HP grows with the monsters' damage, and the HP is full (V2Campaign.Days.cs)
                 ApplyDaylight();
                 Say(Line.S07);
                 // The first morning says how the monsters behave; later mornings say what the way home still needs (MorningGoal,
                 // V2Campaign.Days.cs).
                 Objective(Day <= 1
-                    ? ArenaText.Pair("守住基地。怪物会从四面八方涌向基地，离你近的会先冲着你来", "Hold the base. Monsters close in on it from every side, and any that get near you will come for you first")
+                    ? ArenaText.Pair("守住基地。倒计时结束前，怪物会从四面八方涌向基地，离你近的和被你打中的会先冲着你来", "Hold the base. Until the countdown ends, monsters close in on it from every side; any that get near you, or that you hit, will come for you first")
                     : MorningGoal(), null);
             }
             // The table's wave for today (rules.WaveNumber: since 2026-11-06 day d fights wave 2d, so day 7 is wave 14 before the Tyrant);
             // overtime repeats the last day's wave.
             int index = Mathf.Clamp(rules.WaveNumber(Overtime ? rules.days : Day, WaveOfDay) - 1, 0, waves.WaveCount - 1);
             waves.BeginWaveAt(index);
+            clearGoalShown = -1;
             string affixes = waves.WaveAffixA != ElementKind.None ? $"{ArenaTerms.Element(waves.WaveAffixA)} · {ArenaTerms.Element(waves.WaveAffixB)}" : ArenaText.Pair("守住基地，也保护好自己", "Hold the base and stay alive");
             gm.hud?.Banner(Dot(Overtime ? ArenaText.Pair($"第 {Day} 天（超出预定天数）", $"DAY {Day} (OVERTIME)") : ArenaText.Pair($"第 {Day} 天", $"DAY {Day}"), ArenaText.Pair("上午", "MORNING"), AttackText(WaveOfDay + 1)), affixes);
         }
@@ -624,7 +633,7 @@ namespace AnomalyArena
             if (Time.unscaledTime < buyGuideCheckAt) return;
             buyGuideCheckAt = Time.unscaledTime + 1f;
             bool lampBuyable = LampsCraftable && CanAfford(new CampaignCost(rules.lampCost));
-            var aim = BuyGuide.Aim(Day, lampStock, CampaignRules.ByDay(rules.dayLampsToCraft, Day), lampBuyable, false);
+            var aim = BuyGuide.Aim(Day, lampStock, rules.NightLampsOn(Day), lampBuyable, false);
             if (aim == BuyGuideAim.None) return;
             buyGuideDone = true; // once begun it never comes again, followed or skipped
             ui.StartBuyGuide(aim, CampaignRoom.Ship);

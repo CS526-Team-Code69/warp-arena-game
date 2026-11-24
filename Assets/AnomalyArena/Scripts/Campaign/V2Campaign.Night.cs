@@ -161,7 +161,7 @@ namespace AnomalyArena
             gm.CampaignSetPhase(ArenaUiState.Night);
             NoteMorningLoss(); // before the repair, which would hide it
             NightlyBaseUpkeep();
-            lampStock += rules.dailyFreeLamps; // from day 1 on lamps are crafted, from the alloy the afternoon's ore carries for them
+            lampStock += rules.dailyFreeLamps; // from day 1 the base gives these at each dusk; more are crafted from the alloy the afternoon's ore carries for them
             nightAlloy = nightDark = 0; knockedOut = false;
             BankHaul();
             SpawnAfternoonOre(Day);
@@ -278,7 +278,7 @@ namespace AnomalyArena
             LerpLighting(t);
             TickPickups(dt);
             TickMining(dt, true);
-            TickLampPlacement();
+            RefuseLampByDay(); // since 2026-11-24 lamps go down only after dark
             if (goalNamesCrate != AfternoonCrateOnMap || AfternoonNudgesChanged) AfternoonObjective(); // the crate opened or left, lamps made, base fortified
             if (TickBaseDoor() || TickShipDoor()) return; // in the base the afternoon waits
             if (!EveningsOpenEnded && stageClock >= stageLength) BeginNight();
@@ -508,6 +508,15 @@ namespace AnomalyArena
             if (WorldMap.Active && (WorldMap.Active.IsWall(at, .4f) || !WorldMap.Active.Contains(at, .5f))) at = Query.Flat(p.Position);
             PlaceLamp(at);
             lampStock--;
+        }
+
+        /// <summary>The afternoon (since 2026-11-24): lamps are set down only after dark, so the lamp key says so instead.</summary>
+        void RefuseLampByDay()
+        {
+            if (!FPressed || WorldMap.Active && WorldMap.Active.TrialActive) return;
+            var p = gm.player;
+            if (!p || !p.IsAlive) return;
+            ui.Flash(ArenaText.Pair("天黑以后才能放矿灯。", "Lamps can only be set down after dark."), 2.5f);
         }
 
         /// <summary>A lamp's light radius: rules.lampRadius, larger by the ship's night light (lampRadiusScale, since 2026-11-10). Its light,
@@ -1181,7 +1190,7 @@ namespace AnomalyArena
         /// <summary>A shadow's touch costs a share of the player's max HP; the touch that empties it kills (since 2026-11-06 the night kills:
         /// the player falls, loses tonight's haul and wakes at the base for the next day, see NightDeath). On nights 0 to TouchHintNights
         /// the first touch of the night also says what to do: back into the light, with the sprint key (the tutorial night's shadows are a
-        /// little slower than a walk and never put a light out; the later nights' are faster than a walk).</summary>
+        /// little slower than a walk and never put a light out; since 2026-11-22 no shadow is faster than a walk, rules.shadowChaseFactor).</summary>
         void HitPlayerAtNight(Shadow s)
         {
             var p = gm.player;
@@ -1195,8 +1204,8 @@ namespace AnomalyArena
                 ui.Flash(Day == 0
                     ? ArenaText.Pair($"影子碰到你了。回到灯光里，它们就碰不到你；按住 {key} 冲刺能回得更快。",
                         $"A shadow touched you. Get back into the light and they can't reach you; hold {key} to sprint there faster.")
-                    : ArenaText.Pair($"影子碰到你了。它们比你走得快，按住 {key} 冲刺回到灯光里。",
-                        $"A shadow touched you. They are faster than your walk, so hold {key} and sprint back into the light."), 4.5f);
+                    : ArenaText.Pair($"影子碰到你了。它们比你走得稍慢，回到灯光里就碰不到你；按住 {key} 冲刺能回得更快。",
+                        $"A shadow touched you. They are a little slower than your walk: get back into the light and they can't reach you; hold {key} to sprint there faster."), 4.5f);
             }
             gm.hud?.FlashDamage();
             gm.Shake(.18f);

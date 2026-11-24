@@ -59,6 +59,13 @@ namespace AnomalyArena
         /// <summary>The ending is over: the run is won (the result screen follows at the frame's end).</summary>
         internal void CampaignWin() => finalWaveCleared = true;
 
+        /// <summary>V2 day campaign (since 2026-11-24): max HP the day adds on top of the run's stats (V2Campaign: the starting max HP
+        /// grows with the monsters' damage by day). Null outside the campaign.</summary>
+        public static System.Func<float> MaxHpBonusRule;
+
+        /// <summary>The player's stats pushed again, after the day's max HP bonus changed at dawn.</summary>
+        internal void CampaignRefreshStats() => ApplyStats();
+
         /// <summary>V2 day campaign: dawn starts the next day at once (no build phase since 2026-11-06), the way BeginNextV2Wave starts a
         /// campaign day: full HP and stamina, the last wave's state cleared, a fresh reroll, then the day's first wave.</summary>
         internal void CampaignStartDay()

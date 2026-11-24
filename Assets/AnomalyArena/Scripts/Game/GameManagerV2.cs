@@ -88,7 +88,7 @@ namespace AnomalyArena
             DisableUiSubmit();
             ApplyStats();Time.timeScale=0;
         }
-        void ApplyStats(){var s=progression.Stats;player.maxHp=s.maxHp;player.moveSpeed=s.moveSpeed;player.protectionTime=s.protection;player.stamina.sprintDuration=s.sprintDuration;player.stamina.recoverDuration=s.sprintRecovery;}
+        void ApplyStats(){var s=progression.Stats;player.maxHp=s.maxHp+(MaxHpBonusRule!=null?Mathf.Max(0f,MaxHpBonusRule()):0f);player.moveSpeed=s.moveSpeed;player.protectionTime=s.protection;player.stamina.sprintDuration=s.sprintDuration;player.stamina.recoverDuration=s.sprintRecovery;}
         void LockMenuInput(){phaseOpenedAt=Time.unscaledTime;menuMouseReleased=Mouse.current==null||!Mouse.current.leftButton.isPressed;}
         void SetPhase(ArenaUiState phase)
         {

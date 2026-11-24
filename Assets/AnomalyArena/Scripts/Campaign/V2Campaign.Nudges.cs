@@ -35,9 +35,9 @@ namespace AnomalyArena
         /// <summary>Checks: the last morning took this much from the base.</summary>
         public void DebugMorningLoss(float hp) => lastMorningLoss = Mathf.Max(0f, hp);
 
-        /// <summary>The night's lamps are short: from Day 1, while the ship's room can make them and the stock holds fewer than the day's
-        /// lamps.</summary>
-        public bool LampsWanted => Running && rules && Day >= 1 && LampsCraftable && lampStock < CampaignRules.ByDay(rules.dayLampsToCraft, Day);
+        /// <summary>The night's lamps are short: from Day 1, while the ship's room can make them and the stock holds fewer than the night's
+        /// lamps (rules.NightLampsOn: the base's gift at dusk and those the afternoon's alloy pays for).</summary>
+        public bool LampsWanted => Running && rules && Day >= 1 && LampsCraftable && lampStock < rules.NightLampsOn(Day);
 
         /// <summary>A fortification is worth pointing at: from Day 1 below the top level, until the base is fortified once, while it
         /// has lost more than FortifyHurtShare of its HP, or while the last morning cost it more than MorningLossShare of its max HP.</summary>
@@ -61,8 +61,11 @@ namespace AnomalyArena
             goalFortifyLevel = FortifyLevel;
             var sentences = new System.Collections.Generic.List<string>();
             if (goalNamesLamps)
-                sentences.Add(ArenaText.Pair($"夜里要靠矿灯才能采暗物质：回基地，在火箭页造矿灯，每盏 {rules.lampCost} 合金（现有 {lampStock} 盏）。",
-                    $"Mining dark matter at night takes lamps: make them on the rocket page, {rules.lampCost} alloy each (you have {lampStock})."));
+                sentences.Add(rules.dailyFreeLamps > 0
+                    ? ArenaText.Pair($"夜里要靠矿灯才能采暗物质：基地每天送 {rules.dailyFreeLamps} 盏，不够就回基地，在火箭页造矿灯，每盏 {rules.lampCost} 合金（现有 {lampStock} 盏）。",
+                        $"Mining dark matter at night takes lamps: the base gives you {rules.dailyFreeLamps} a day; make more on the rocket page, {rules.lampCost} alloy each (you have {lampStock}).")
+                    : ArenaText.Pair($"夜里要靠矿灯才能采暗物质：回基地，在火箭页造矿灯，每盏 {rules.lampCost} 合金（现有 {lampStock} 盏）。",
+                        $"Mining dark matter at night takes lamps: make them on the rocket page, {rules.lampCost} alloy each (you have {lampStock})."));
             if (goalNamesFortify && FortifyPrice is CampaignCost price)
                 sentences.Add(ArenaText.Pair($"基地可以加固：在整备页顶部花 {price.alloy} 合金，基地生命上限 {FortifyHpNow:0} → {FortifyHpNext:0}。",
                     $"The base can be fortified at the workshop page's top: {price.alloy} alloy for max HP {FortifyHpNow:0} → {FortifyHpNext:0}."));

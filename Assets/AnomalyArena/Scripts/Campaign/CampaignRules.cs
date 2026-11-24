@@ -79,7 +79,7 @@ namespace AnomalyArena
         [Min(1f), Tooltip("Radius of the base's light at night, in cells: its floodlights light this circle; shadows keep out of it, and one caught inside burns (shadowLightSeconds) until it is out.")] public float baseLightRadius = 15f;
         [Min(0f), Tooltip("The player's own faint glow: shows the feet, neither scares nor burns shadows, does not allow mining.")] public float playerGlowRadius = 2.4f;
         [Min(0), Tooltip("Mining lamps in the base's store for the tutorial night (day 0). From day 1 on the base adds dailyFreeLamps at each dusk and the rest are crafted (lampCost).")] public int freeLampsPerNight = 3;
-        [Min(0), Tooltip("Mining lamps the base adds to its store at each dusk from day 1 on. 0: every later lamp is crafted, from the alloy dayLampsToCraft adds to the afternoon's ore.")] public int dailyFreeLamps = 0;
+        [Min(0), Tooltip("Mining lamps the base adds to its store at each dusk from day 1 on (2 since 2026-11-24, with dayLampsToCraft 2 lower each day, so a night's lamps and the alloy stay as they were). 0: every later lamp is crafted, from the alloy dayLampsToCraft adds to the afternoon's ore.")] public int dailyFreeLamps = 2;
         [Min(1f), Tooltip("How long a lamp lasts once a crowd of shadows has gone into its light: this many seconds against two of them, less against more. The light burns the crowd meanwhile (shadowLightSeconds), so only a crowd that wears the lamp out first puts it out.")] public float lampHp = 4f;
 
         [Header("Night: shadow monsters")]
@@ -147,6 +147,8 @@ namespace AnomalyArena
         [Range(0f, 1f), Tooltip("HP the base mends by itself each day, as the afternoon begins, as a share of its max HP (never past the max). The base has no shield and no paid repair: this and the fortification levels are what keep it standing.")] public float nightSelfRepair = .25f;
         [Min(0f), Tooltip("Every monster of a day wave raids the base (since 2026-11-06; bosses and monsters that cannot walk excepted). A raider within this many cells of the player fights the player instead; 0 = never.")]
         public float raiderAggroRadius = 7f;
+        [Min(0f), Tooltip("Since 2026-11-24: seconds a raider the player hits keeps coming for the player from any distance; each hit starts the time again. Within raiderAggroRadius it fights the player anyway. 0 = a hit does not turn it.")]
+        public float raiderProvokeSeconds = 6f;
 
         // ----- Since 2026-11-06 (values from the economy ledger): the campaign's own large map with terrain, an afternoon and a
         // night without a clock (the player moves on from the base door), a limited mineral budget each day, mineral trails that lead to

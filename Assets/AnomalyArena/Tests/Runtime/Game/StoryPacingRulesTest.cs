@@ -43,7 +43,7 @@ namespace AnomalyArena
         public void LampAlloy_NoneOnDayZero_WholeLampsRisingByDay()
         {
             Assert.That(rules.LampAlloyOn(0), Is.Zero, "day 0's tutorial night has its lamps in the store");
-            Assert.That(rules.dailyFreeLamps, Is.Zero, "no lamp is handed out after the tutorial night");
+            Assert.That(rules.dailyFreeLamps, Is.GreaterThan(0), "since 2026-11-24 the base hands out lamps every day");
             int previous = 0;
             for (int day = 1; day <= 7; day++)
             {
@@ -53,6 +53,9 @@ namespace AnomalyArena
                 previous = alloy;
             }
             Assert.That(rules.LampAlloyOn(7), Is.GreaterThan(rules.LampAlloyOn(1)), "more lamps on the last day than on the first");
+            int[] nights = { 3, 3, 4, 4, 5, 5, 6 };
+            for (int day = 1; day <= 7; day++)
+                Assert.That(rules.NightLampsOn(day), Is.EqualTo(nights[day - 1]), $"day {day}: the gift and the crafted lamps make the night's lamps as before");
         }
 
         [Test]
