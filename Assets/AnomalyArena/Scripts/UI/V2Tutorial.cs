@@ -139,6 +139,16 @@ namespace AnomalyArena
             }
         }
 
+        internal static string StoryHint(int page) => page switch
+        {
+            1 => ArenaText.Pair("早晨倒计时结束后，消灭场上剩余的怪物。", "When the morning timer ends, defeat the remaining monsters."),
+            2 => ArenaText.Pair("被你打中的怪物会转头向你冲来。", "Monsters you hit turn and charge at you."),
+            3 => ArenaText.Pair("把 10 只怪物引进黑洞，传送门就会打开。", "Lure 10 monsters into the black hole to open its portal."),
+            4 => ArenaText.Pair("基地每天送 2 盏矿灯，天黑后才能放置。", "The base gives you 2 lamps each day. Place them only after dark."),
+            5 => ArenaText.Pair("随着怪物伤害提高，你的生命上限也会在清晨增长。", "As monster damage increases, your maximum health rises at dawn."),
+            _ => string.Empty
+        };
+
         static string Footnote() => InCampaign
             ? ArenaText.Pair("左上角写着当前的目标，跟着闪动的标记走就行。其他按键用得到时，屏幕上会提示。", "Your goal is at the top left; follow the pulsing marker. Other keys appear on screen when you need them.")
             : ArenaText.Pair($"波次中的选卡面板可以按 Esc 留到稍后，之后按 {ArenaKeys.CardPickKey} 打开。其他按键用得到时，屏幕上会提示。", $"Esc saves a mid-wave card pick for later, and {ArenaKeys.CardPickKey} opens it again. Other keys appear on screen when you need them.");
@@ -259,8 +269,9 @@ namespace AnomalyArena
             counter.text = $"{index + 1} / {PageCount}";
             bool last = index == PageCount - 1;
             nextLabel.text = last ? ArenaText.Pair("知道了", "GOT IT") : ArenaText.Pair("下一页", "NEXT");
-            footnote.text = Footnote();
-            footnote.gameObject.SetActive(last);
+            string hint = InCampaign ? StoryHint(index) : string.Empty;
+            footnote.text = last ? Footnote() : hint;
+            footnote.gameObject.SetActive(last || hint.Length > 0);
             for (int i = 0; i < dots.Length; i++) dots[i].color = i == index ? Cyan : KeyIdle;
             if (fifth) ShowFifth(index, last);
         }

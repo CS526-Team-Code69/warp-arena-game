@@ -86,7 +86,7 @@ namespace AnomalyArena
                     V5TitleKit.Place(cap.rectTransform, x, 6f, w, 24f * Css);
                     x += w + 5f * Css;
                 }
-                view.line.text = LessonLine(i);
+                view.line.text = (LessonLine(i) + " " + V2Tutorial.StoryHint(i + 1)).TrimEnd();
                 ArenaTextFit.Refit(view.line, 10, 8);
             }
             ShowFoot(FootUse.GoAndOpenMode);
