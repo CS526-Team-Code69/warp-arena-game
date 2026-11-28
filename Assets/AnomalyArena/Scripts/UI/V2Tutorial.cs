@@ -75,31 +75,38 @@ namespace AnomalyArena
             PausePage(),
         };
 
-        /// <summary>The story mode's pages (the V2 day campaign): the background first, then how to play it. Moving and sprinting share a
-        /// page to make room for gathering and the base; the terrain page is left out. No page names a card or Tab: the story mode has no
-        /// card picks and no build phase.</summary>
+        // Follow the first trip from the wreck to base, then the daily cycle, the optional trial and launch.
         static (string title, string line, Func<Demo> demo)[] StoryPages()
         {
-            int days = PlannedDays;
+            var rules = StoryRules;
+            int lamps = rules ? rules.dailyFreeLamps : 2;
+            int feeds = rules ? rules.holeFeedGoal : 10;
+            int days = rules ? Mathf.Max(1, rules.days) : 7;
             return new (string, string, Func<Demo>)[]
             {
                 (ArenaText.Pair("坠落异星", "STRANDED"),
-                    ArenaText.Pair($"你的飞船坠落在一颗陌生的星球上。你有 {days} 天时间修好它、加满燃料，然后离开这里。", $"Your ship has crashed on an alien planet. You have {days} days to repair it, fill its tank and get out of here."),
-                    () => new StrandedDemo(days)),
-                (ArenaText.Pair("移动和冲刺", "MOVE & SPRINT"),
-                    ArenaText.Pair($"用 {ArenaKeys.MoveKeys} 移动，移动时按住 {ArenaKeys.SprintKey} 冲刺。体力用光后，要等它回满才能再冲刺。", $"Use {ArenaKeys.MoveKeys} to move and hold {ArenaKeys.SprintKey} while moving to sprint. Once stamina runs out, wait for a full bar to sprint again."),
+                    ArenaText.Pair($"用 {ArenaKeys.MoveKeys} 朝闪动的标记走。先练习瞄准，再沿路找矿石和武器箱。", $"Move toward the pulsing marker with {ArenaKeys.MoveKeys}. Practice aiming with your pistol, then follow the trail to the ore and weapon crate."),
                     () => new MoveSprintDemo()),
-                AimPage(),
-                (ArenaText.Pair("换武器和技能", "SWAP & SKILLS"),
-                    ArenaText.Pair($"按右键在两只手的武器之间切换。在基地门口的整备页学会技能后，按 {ArenaKeys.SkillKeys} 释放。", $"Right click switches between your hand weapons. Skills learned in the workshop at the base door are cast with {ArenaKeys.SkillKeysWith(", ")}."),
-                    () => new SkillDemo()),
-                (ArenaText.Pair("采集资源", "GATHER"),
-                    ArenaText.Pair($"下午按住 {ArenaKeys.InteractKey} 采合金矿，按 {ArenaKeys.InteractKey} 打开路上的武器箱；夜里先按 {ArenaKeys.LampKey} 放矿灯，再在灯光里按住 {ArenaKeys.InteractKey} 采暗物质。", $"In the afternoon, hold {ArenaKeys.InteractKey} to mine alloy ore; {ArenaKeys.InteractKey} opens crates. At night, {ArenaKeys.LampKey} sets a lamp; hold {ArenaKeys.InteractKey} in its light to mine dark matter."),
-                    () => new GatherDemo()),
-                (ArenaText.Pair("基地和升级", "BASE & UPGRADES"),
-                    ArenaText.Pair($"下午或夜里在基地门口按 {ArenaKeys.InteractKey} 进整备页，升级武器、学技能；在飞船旁按 {ArenaKeys.InteractKey} 修飞船、造矿灯。买下立刻生效。", $"Afternoon or night, press {ArenaKeys.InteractKey} at the base door to upgrade weapons and learn skills in the workshop; press {ArenaKeys.InteractKey} beside the ship to repair it and craft lamps. It all works at once."),
+                (ArenaText.Pair("路上的第一战", "FIRST FIGHT"),
+                    ArenaText.Pair($"按 {ArenaKeys.InteractKey} 开武器箱。鼠标瞄准，左键开火，右键换武器。被打中的怪物会转头冲你来。", $"Open a crate with {ArenaKeys.InteractKey}. Aim with the mouse, fire with left click and swap with right click. Monsters you hit turn and charge you."),
+                    () => new FireDemo()),
+                (ArenaText.Pair("第一次回基地", "BACK AT BASE"),
+                    ArenaText.Pair($"在基地门口按 {ArenaKeys.InteractKey} 进整备页，用合金升级武器，用异星能量学技能。在飞船旁按同一个键修船、造矿灯。", $"Press {ArenaKeys.InteractKey} at the door for the workshop. Spend alloy on weapons and alien energy on skills. Use the same key beside the ship to repair it or craft lamps."),
                     () => new BaseDemo()),
-                PausePage(),
+                (ArenaText.Pair("采矿与入夜", "ORE & LAMPLIGHT"),
+                    ArenaText.Pair($"下午按住 {ArenaKeys.InteractKey} 采合金。矿灯只能在夜里放，按 {ArenaKeys.LampKey} 照亮暗物质再采。从第 1 天起，基地每天送 {lamps} 盏灯。", $"Hold {ArenaKeys.InteractKey} to mine alloy in the afternoon. Place lamps only at night. Press {ArenaKeys.LampKey} to place one and mine dark matter in its light. From day 1 the base supplies {lamps} lamps a day."),
+                    () => new GatherDemo()),
+                (ArenaText.Pair("清晨守基地", "MORNING DEFENSE"),
+                    ArenaText.Pair("上午守住基地。倒计时归零后，清掉剩余的怪物才能进入下午。怪物伤害逐日提高，你的生命上限也会在清晨增长。", "Defend the base through the morning countdown. Clear the survivors to reach afternoon. Your max health rises at dawn as monster damage grows."),
+                    () => new MorningDemo()),
+                (ArenaText.Pair("黑洞与试炼", "THE VOID TRIAL"),
+                    rules && rules.holeCheckAfterFeed
+                        ? ArenaText.Pair($"把 {feeds} 只怪物引进黑洞，再限时击破它，打开试炼传送门。", $"Lure {feeds} monsters into the black hole, then break it within the time limit to open the trial portal.")
+                        : ArenaText.Pair($"把 {feeds} 只怪物引进黑洞就能打开传送门。你可以选择进入试炼，击败先知后获得虚空冲刺。", $"Lure {feeds} monsters into the black hole to open its portal. Enter the optional trial and defeat the Prophet to gain Void Dash."),
+                    () => new PortalDemo(feeds, rules && rules.holeCheckAfterFeed)),
+                (ArenaText.Pair("点火与返航", "IGNITION & ESCAPE"),
+                    ArenaText.Pair("修好引擎和船体，装好燃料舱并加满燃料。准备好再点火迎战暴君，击败它并拾取暗物质核心才能返航。", "Repair the engine and hull, fit the tank and fill it. Ignite when ready to fight the Tyrant. Defeat it and collect its dark matter core to escape."),
+                    () => new LaunchDemo(days)),
             };
         }
 
@@ -130,18 +137,29 @@ namespace AnomalyArena
 
         /// <summary>The story's planned days: the scene's campaign rules (on the title no campaign runs yet, so V2Campaign.Active is empty),
         /// else the seven of the design.</summary>
-        static int PlannedDays
+        static CampaignRules StoryRules
         {
             get
             {
                 var campaign = V2Campaign.Active ? V2Campaign.Active : GameManager.Instance ? GameManager.Instance.GetComponent<V2Campaign>() : null;
-                return campaign && campaign.rules ? Mathf.Max(1, campaign.rules.days) : 7;
+                return campaign ? campaign.rules : null;
             }
         }
 
-        static string Footnote() => InCampaign
-            ? ArenaText.Pair("左上角写着当前的目标，跟着闪动的标记走就行。其他按键用得到时，屏幕上会提示。", "Your goal is at the top left; follow the pulsing marker. Other keys appear on screen when you need them.")
-            : ArenaText.Pair($"波次中的选卡面板可以按 Esc 留到稍后，之后按 {ArenaKeys.CardPickKey} 打开。其他按键用得到时，屏幕上会提示。", $"Esc saves a mid-wave card pick for later, and {ArenaKeys.CardPickKey} opens it again. Other keys appear on screen when you need them.");
+        static int PlannedDays => StoryRules is { } rules ? Mathf.Max(1, rules.days) : 7;
+
+        static string StoryHint(int page) => page switch
+        {
+            0 => ArenaText.Pair($"移动时按住 {ArenaKeys.SprintKey} 冲刺。体力耗尽后，等它回满再冲刺。", $"Hold {ArenaKeys.SprintKey} while moving to sprint. If stamina runs out, let it refill."),
+            1 => ArenaText.Pair("走过怪物掉落的碎片，收集异星能量。", "Walk over the shards dropped by monsters to collect alien energy."),
+            2 => ArenaText.Pair($"学会技能后，在战斗中按 {ArenaKeys.SkillKeys} 施放。", $"Once learned, cast skills in combat with {ArenaKeys.SkillKeysWith(", ")}."),
+            3 => ArenaText.Pair("采完回基地存下物资，选择等待天亮。", "Return to base to bank your haul and choose Wait for Dawn."),
+            4 => ArenaText.Pair("打中冲向基地的怪物，可以把它引向自己。", "Hit a raider to draw it away from the base."),
+            5 => ArenaText.Pair($"黑洞也会吞掉你。按住 {ArenaKeys.SprintKey} 朝外冲，逃出引力圈。", $"The hole can swallow you too. Hold {ArenaKeys.SprintKey} and sprint out of its pull."),
+            _ => ArenaText.Pair($"计划用时 {PlannedDays} 天，超时仍可继续。按 Esc 可暂停或重看教学。", $"Plan for {PlannedDays} days. You can keep playing in overtime. Press Esc to pause or review the guide.")
+        };
+
+        static string Footnote() => ArenaText.Pair($"波次中的选卡面板可以按 Esc 留到稍后，之后按 {ArenaKeys.CardPickKey} 打开。其他按键用得到时，屏幕上会提示。", $"Esc saves a mid-wave card pick for later, and {ArenaKeys.CardPickKey} opens it again. Other keys appear on screen when you need them.");
 
         Font font;
         float heldScale = 1f;
@@ -259,8 +277,8 @@ namespace AnomalyArena
             counter.text = $"{index + 1} / {PageCount}";
             bool last = index == PageCount - 1;
             nextLabel.text = last ? ArenaText.Pair("知道了", "GOT IT") : ArenaText.Pair("下一页", "NEXT");
-            footnote.text = Footnote();
-            footnote.gameObject.SetActive(last);
+            footnote.text = InCampaign ? StoryHint(index) : Footnote();
+            footnote.gameObject.SetActive(InCampaign || last);
             for (int i = 0; i < dots.Length; i++) dots[i].color = i == index ? Cyan : KeyIdle;
             if (fifth) ShowFifth(index, last);
         }
@@ -502,6 +520,82 @@ namespace AnomalyArena
                 Vector2[] corners = { new(40f, -80f), new(40f, 80f), new(240f, 80f), new(240f, -80f) };
                 player.rectTransform.anchoredPosition = Vector2.Lerp(corners[side], corners[(side + 1) % 4], along);
                 w.Light(side == 0); d.Light(side == 1); s.Light(side == 2); a.Light(side == 3);
+            }
+        }
+
+        sealed class PortalDemo : Demo
+        {
+            readonly int goal;
+            readonly bool damageCheck;
+            Image player, monster, portal;
+            Text before, after;
+            static readonly Vector2 Hole = new(90f, 0f);
+
+            public PortalDemo(int goal, bool damageCheck)
+            {
+                this.goal = goal;
+                this.damageCheck = damageCheck;
+            }
+
+            protected override void Build()
+            {
+                Ring(Void, 148f, Hole);
+                portal = Ring(Cyan, 54f, Hole);
+                player = Dot(Player, 26f, Vector2.zero);
+                monster = Dot(Enemy, 32f, Vector2.zero);
+                before = Caption(ArenaText.Pair($"已吞噬 {Mathf.Max(0, goal - 1)}/{goal}   引怪进入引力圈", $"FED {Mathf.Max(0, goal - 1)}/{goal}   ·   LURE THE LAST MONSTER IN"), 18, Soft, 120f);
+                after = Caption(damageCheck ? ArenaText.Pair("黑洞已苏醒，限时击破它", "HOLE AWAKE   ·   ATTACK BEFORE TIME RUNS OUT")
+                    : ArenaText.Pair($"已吞噬 {goal}/{goal}   传送门开启", $"FED {goal}/{goal}   ·   PORTAL OPEN"), 18, Cyan, 120f);
+            }
+
+            public override void Tick(float time)
+            {
+                float t = Loop(time, 5f);
+                Vector2 rim = Hole + new Vector2(-45f, 32f);
+                player.rectTransform.anchoredPosition = Vector2.Lerp(new Vector2(-135f, 40f), rim, Ease(0f, 1.6f, t))
+                    + new Vector2(105f, 72f) * Ease(1.6f, 2.2f, t);
+                monster.rectTransform.anchoredPosition = Vector2.Lerp(new Vector2(-235f, 18f), Hole, Ease(.2f, 2.6f, t));
+                monster.rectTransform.localScale = Vector3.one * (1f - Ease(2.2f, 2.7f, t));
+                before.enabled = t < 2.7f;
+                after.enabled = !before.enabled;
+                portal.color = after.enabled && !damageCheck ? Cyan : Void;
+            }
+        }
+
+        /// <summary>The clock reaches zero while a raider is still alive. Afternoon begins only after the last hit.</summary>
+        sealed class MorningDemo : Demo
+        {
+            static readonly Vector2 Base = new(-210f, 0f), From = new(210f, 0f), PlayerAt = new(-60f, -68f);
+            Image raider, shot;
+            Text countdown, survivors, afternoon;
+            string[] seconds;
+
+            protected override void Build()
+            {
+                Bar(Faint, new Vector2(70f, 54f), Base);
+                Label(ArenaText.Pair("基地", "BASE"), 16, Soft, Base + Vector2.up * 52f);
+                Dot(Player, 30f, PlayerAt);
+                raider = Dot(Enemy, 32f, From);
+                shot = Dot(Bullet, 10f, PlayerAt);
+                countdown = Caption("", 20, Soft, 120f);
+                seconds = new string[4];
+                for (int i = 0; i < seconds.Length; i++)
+                    seconds[i] = ArenaText.Pair($"敌袭倒计时  00:0{i}", $"ATTACK  00:0{i}");
+                survivors = Caption(ArenaText.Pair("剩余怪物  1", "MONSTERS LEFT  1"), 18, Bullet, 84f);
+                afternoon = Caption(ArenaText.Pair("清场完成，进入下午", "AREA CLEAR   ·   AFTERNOON"), 20, Soft, 120f);
+            }
+
+            public override void Tick(float time)
+            {
+                float t = Loop(time, 6.5f);
+                Vector2 at = Vector2.Lerp(From, Base + Vector2.right * 55f, Mathf.Clamp01(t / 4.6f));
+                raider.rectTransform.anchoredPosition = at;
+                raider.enabled = countdown.enabled = t < 4.6f;
+                countdown.text = seconds[Mathf.Clamp(Mathf.CeilToInt(3f - t), 0, 3)];
+                survivors.enabled = t >= 3f && raider.enabled;
+                shot.enabled = t >= 4.2f && raider.enabled;
+                shot.rectTransform.anchoredPosition = Vector2.Lerp(PlayerAt, at, Mathf.InverseLerp(4.2f, 4.6f, t));
+                afternoon.enabled = !raider.enabled;
             }
         }
 
@@ -839,9 +933,8 @@ namespace AnomalyArena
 
         // ───── The story mode's own demos ─────
 
-        /// <summary>The story's background: the ship lies wrecked on the alien ground, smoking, while the days go by; its engine and armor are
-        /// mended and its tank fills, then it rights itself and flies off.</summary>
-        sealed class StrandedDemo : Demo
+        /// <summary>The repaired ship stays grounded through ignition and the Tyrant fight. It lifts off after core pickup.</summary>
+        sealed class LaunchDemo : Demo
         {
             static readonly Vector2 Wreck = new(-150f, -86f), Away = new(560f, 250f);
             // The ship's parts in the whitebox table's colours (since 2026-11-10 the table's: work/whitebox-1110/looks.json, "ship"): the
@@ -852,16 +945,16 @@ namespace AnomalyArena
             const float EngineAt = .28f, ArmorAt = .57f, FuelFrom = .43f;
             // Seconds: the planned days pass until Mended, whatever their number; the ship rights itself until Righted, is out of sight at
             // Gone, and the loop starts again at Length.
-            const float Mended = 3.85f, Righted = 4.3f, Gone = 6.1f, Length = 7.4f;
+            const float Mended = 3.85f, Righted = 7.8f, Gone = 9.6f, Length = 10.9f;
             readonly int days;
             RectTransform ship;
             CanvasGroup shipFade, statusFade;
             Image engine, armor, engineMark, armorMark, fuelFill;
             Image[] smoke, flames;
-            Text dayLabel, escape, engineDone, armorDone;
+            Text dayLabel, escape, engineDone, armorDone, ignition, corePickup;
             string[] dayTexts;
 
-            public StrandedDemo(int days) => this.days = Mathf.Max(1, days);
+            public LaunchDemo(int days) => this.days = Mathf.Max(1, days);
 
             protected override void Build()
             {
@@ -893,6 +986,8 @@ namespace AnomalyArena
                 dayTexts = new string[days];
                 for (int d = 0; d < days; d++) dayTexts[d] = ArenaText.Pair($"第 {d + 1} / {days} 天", $"DAY {d + 1} / {days}");
                 dayLabel = Label(dayTexts[0], 22, Soft, new Vector2(-150f, 118f), 260f);
+                ignition = Caption(ArenaText.Pair("首次点火失败，迎战暴君", "IGNITION FAILED   ·   DEFEAT THE TYRANT"), 18, Bullet, 120f);
+                corePickup = Caption(ArenaText.Pair("拾取暴君掉落的暗物质核心", "COLLECT THE TYRANT'S DARK MATTER CORE"), 18, Cyan, 120f);
                 escape = Label(ArenaText.Pair("逃出异星！", "ESCAPE!"), 24, Bullet, new Vector2(-150f, 118f), 260f);
             }
 
@@ -937,8 +1032,10 @@ namespace AnomalyArena
                     flames[i].rectTransform.localScale = Vector3.one * (.85f + .25f * Mathf.Sin(time * 40f + i * 2f));
                 }
                 statusFade.alpha = Ease(0f, .3f, t) * (1f - Ease(Righted - .3f, Righted, t));
-                dayLabel.enabled = t < Righted;
-                escape.enabled = !dayLabel.enabled;
+                dayLabel.enabled = t < Mended;
+                ignition.enabled = t >= Mended && t < 6f;
+                corePickup.enabled = t >= 6f && t < Righted;
+                escape.enabled = t >= Righted;
                 escape.color = new Color(Bullet.r, Bullet.g, Bullet.b, Ease(Righted, Righted + .3f, t) * (1f - Ease(Length - .5f, Length - .1f, t)));
             }
         }
@@ -1239,7 +1336,7 @@ namespace AnomalyArena
                         (weapons, ArenaText.Pair("护甲", "Armor"), ArenaText.Pair("生命上限更高", "more max HP")),
                         (energy, ArenaText.Pair("技能", "Skills"), ArenaText.Pair("学会后按技能键释放", "cast with the skill keys")),
                     });
-                rocket = MakePage(ArenaText.Pair("火箭", "ROCKET"), ArenaText.Pair("修好三个部件、加满燃料就能点火回家", "Repair three parts and fill the tank to fly home"),
+                rocket = MakePage(ArenaText.Pair("火箭", "ROCKET"), ArenaText.Pair("修好飞船、加满燃料，再点火迎战暴君", "Repair and refuel the ship before facing the Tyrant"),
                     new[]
                     {
                         (ship, ArenaText.Pair("修飞船", "Repairs"), ArenaText.Pair("引擎、船体、燃料舱", "engine, hull, fuel tank")),

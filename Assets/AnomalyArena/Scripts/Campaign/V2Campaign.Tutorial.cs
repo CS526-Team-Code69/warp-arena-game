@@ -200,7 +200,7 @@ namespace AnomalyArena
             Vector3 corner = FindOpen(TutorialCorner, 1.4f);
             tutOre = AddNode(NodeKind.Ore, corner, DayZeroOre(0)); // Day 0's alloy (V2Campaign.Days.cs, since 2026-11-10)
             if (tutOre.view) tutOre.view.localScale *= 1.4f;
-            Approach(TutorialStep.Mine, ArenaText.Pair("去角落里发光的地方看看", "Check out the glow in the corner"), corner);
+            Approach(TutorialStep.Mine, ArenaText.Pair("去标记处采合金。回基地后可以用它升级武器。", "Head to the marked alloy deposit. At base, alloy pays for weapon upgrades."), corner);
             Say(Line.T07);
         }
 
@@ -249,13 +249,13 @@ namespace AnomalyArena
             Vector3 from = PlayerPoint(), way = Query.Flat(DoorPoint - from);
             Vector3 ahead = way.sqrMagnitude > 1f ? way.normalized : Vector3.right;
             SpawnTutorialGrunts(from + ahead * rules.tutorialFightDistance);
-            Objective(ArenaText.Pair($"用刚拿到的武器消灭 {tutGrunts.Count} 只怪物", $"Defeat the {tutGrunts.Count} monsters with your new weapon"), null);
+            Objective(ArenaText.Pair($"用新武器消灭 {tutGrunts.Count} 只怪物。被你打中的怪物会转头冲向你。", $"Defeat the {tutGrunts.Count} monsters with your new weapon. Monsters you hit turn and charge at you."), null);
             Teach(TutorialStep.Fight, PlayerPoint, 9f, MouseKey, ArenaText.Pair("消灭怪物", "Defeat the monsters"));
         }
 
         void TeachCollect()
         {
-            Objective(ArenaText.Pair("走过去，捡起怪物掉落的异星能量", "Walk over the alien energy the monsters dropped to pick it up"), null);
+            Objective(ArenaText.Pair("走过碎片，捡起怪物掉落的异星能量。回基地后可以用它学技能。", "Walk over the shards to collect alien energy. Spend it on skills back at base."), null);
             Teach(TutorialStep.Collect, NearestPickup, 2.6f, ArenaKeys.MoveKeys, ArenaText.Pair("捡起异星能量", "Pick up the alien energy"));
         }
 
@@ -829,7 +829,7 @@ namespace AnomalyArena
             {
                 case TutorialStep.Lamp when !tutForced:
                     if (Apart(PlayerPoint(), tutCluster) >= rules.tutorialTeachReach + 1f) break;
-                    Objective(ArenaText.Pair("在暗物质旁放下一盏矿灯", "Set down a lamp next to the dark matter"), tutCluster);
+                    Objective(ArenaText.Pair($"矿灯只能在夜里放。现在把灯放在暗物质旁；从第 1 天起，基地每天送 {rules.dailyFreeLamps} 盏。", $"You can only place lamps after dark. Set one beside the dark matter. From day 1, the base gives you {rules.dailyFreeLamps} lamps each day."), tutCluster);
                     Teach(TutorialStep.Lamp, () => tutCluster, 4.5f, ArenaKeys.LampKey, ArenaText.Pair("放下矿灯", "Set down a lamp"));
                     // The base explains the lamp here, at the dark matter, once the line said at nightfall is over (a few seconds at most).
                     SayWhenQuiet(Line.N01, () => Stage == CampaignStage.Night && Day == 0 && tutStep == TutorialStep.Lamp && tutForced, 3f);
@@ -862,7 +862,7 @@ namespace AnomalyArena
                 if (tutNightStep < 2) { tutNightStep = 2; TutorialDawnObjective(); }
                 return;
             }
-            Objective(ArenaText.Pair("站在灯光里采集暗物质", "Stand in the lamplight and mine the dark matter"), null);
+            Objective(ArenaText.Pair("站在灯光里采集暗物质。把它带回飞船可以加注燃料。", "Mine dark matter in the lamplight. Bring it back to the ship for fuel."), null);
             Teach(TutorialStep.DarkMatter, () => tutCluster, 4.5f, ArenaKeys.InteractKey, ArenaText.Pair("按住采集", "Hold to mine"));
         }
 
@@ -875,7 +875,7 @@ namespace AnomalyArena
         }
 
         /// <summary>The tutorial night's last goal: back to the base door, then "wait for dawn" in the base panel starts day 1.</summary>
-        void TutorialDawnObjective() => Objective(ArenaText.Pair("回基地，选“等待天亮”开始第 1 天", "Go back to the base and choose \"Wait for dawn\" to start day 1"), DoorPoint);
+        void TutorialDawnObjective() => Objective(ArenaText.Pair("回基地，选“等待天亮”开始第 1 天。随着怪物伤害提高，你的生命上限也会在清晨增长。", "Go back to the base and choose \"Wait for dawn\" to start day 1. As monsters deal more damage each day, your max health rises at dawn."), DoorPoint);
 
         /// <summary>Day 0 is over (CrateLoop sees day 1): a spotlight still up goes and the inputs are all free.</summary>
         void ForgetTutorial()

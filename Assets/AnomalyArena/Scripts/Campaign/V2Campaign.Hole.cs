@@ -151,7 +151,10 @@ namespace AnomalyArena
             holeSeen = true;
             // Fed first: the side quest's line says how (V2Campaign.HoleFeed.cs); the flash names what was just seen, and that it takes the
             // player as well.
-            if (!HoleAwake) ui.Flash(ArenaText.Pair("黑洞会把靠近它的怪物吞进去，你掉进去也一样。", "The black hole swallows the monsters that come near it, and you as well if you fall in."), 3.5f);
+            if (!HoleAwake && !rules.holeCheckAfterFeed)
+                ui.Flash(ArenaText.Pair($"把 {HoleFeedGoal} 只怪物引进黑洞就能打开传送门。小心，黑洞也会吞掉你。",
+                    $"Lure {HoleFeedGoal} monsters into the black hole to open its portal. Keep clear of its center or it will swallow you too."), 5f);
+            else if (!HoleAwake) ui.Flash(ArenaText.Pair("黑洞会把靠近它的怪物吞进去，你掉进去也一样。", "The black hole swallows the monsters that come near it, and you as well if you fall in."), 3.5f);
             else if (rules.holeCheckAfterFeed) ui.Flash(ArenaText.Pair($"黑洞里有东西。攻击它，从第一次打中开始计时，{Mathf.RoundToInt(rules.holeCheckSeconds)} 秒内打出足够的伤害，就能击破黑洞。",
                 $"Something lies within the black hole. Attack it: once your first hit lands, you have {Mathf.RoundToInt(rules.holeCheckSeconds)} seconds to deal enough damage to break it."), 4.5f);
         }

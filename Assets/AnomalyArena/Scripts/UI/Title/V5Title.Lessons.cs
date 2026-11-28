@@ -9,7 +9,7 @@ namespace AnomalyArena
         // keys as they are now (ArenaKeys) and one short line; the go button opens the story pages (V2Tutorial.ShowStory) from the start,
         // and a lesson clicked opens them at its own page. ─────
 
-        const int LessonCount = 6;
+        const int LessonCount = V2Tutorial.PageCount - 1;
         const float LessonGap = 6f, LessonText = 14f * Css + 42f * Css + 16f * Css;
         static readonly Color KeyInk = V5TitleKit.Rgb(26, 29, 36), HexFill = V5TitleKit.Rgb(233, 227, 214);
         // A keycap in whitebox: the flat keycap of the title's key rows, lighter than the lesson's flat plate.
@@ -98,30 +98,15 @@ namespace AnomalyArena
         /// <summary>A lesson's keys as they are now; the mouse's buttons and Esc are fixed.</summary>
         static string[] LessonKeys(int lesson) => lesson switch
         {
-            0 => new[] { ArenaKeys.Name(GameAction.MoveUp), ArenaKeys.Name(GameAction.MoveLeft), ArenaKeys.Name(GameAction.MoveDown), ArenaKeys.Name(GameAction.MoveRight), ArenaKeys.SprintKey },
-            1 => new[] { ArenaText.Pair("左键", "LMB") },
-            2 => new[] { ArenaText.Pair("右键", "RMB"), ArenaKeys.Name(GameAction.Skill1), ArenaKeys.Name(GameAction.Skill2), ArenaKeys.Name(GameAction.Skill3) },
-            3 => new[] { ArenaKeys.InteractKey, ArenaKeys.LampKey },
-            4 => new[] { ArenaKeys.InteractKey },
-            _ => new[] { "Esc" },
+            0 => new[] { ArenaKeys.InteractKey, ArenaText.Pair("左键", "LMB"), ArenaText.Pair("右键", "RMB") },
+            1 => new[] { ArenaKeys.InteractKey, ArenaKeys.Name(GameAction.Skill1) },
+            2 => new[] { ArenaKeys.InteractKey, ArenaKeys.LampKey },
+            3 => new[] { ArenaText.Pair("左键", "LMB") },
+            4 => new[] { ArenaKeys.SprintKey, ArenaKeys.InteractKey },
+            _ => new[] { ArenaKeys.InteractKey },
         };
 
-        /// <summary>A lesson's line: the story page's, shortened, naming the keys as they are now.</summary>
-        public static string LessonLine(int lesson) => lesson switch
-        {
-            0 => ArenaText.Pair($"移动时按住 {ArenaKeys.SprintKey} 冲刺；体力用光后，要等它回满才能再冲刺。",
-                $"Hold {ArenaKeys.SprintKey} while moving to sprint. Once stamina runs out, wait for a full bar before sprinting again."),
-            1 => ArenaText.Pair("用鼠标瞄准，按左键使用手上的武器；按住时是蓄力还是连射，取决于武器。",
-                "Aim with the mouse; left click uses the weapon in your hand. Holding the button charges or keeps firing, depending on the weapon."),
-            2 => ArenaText.Pair("右键在两只手的武器之间切换；在基地的整备页学会技能后，按技能键释放。",
-                "Right click switches between your hand weapons; skills learned in the base's workshop are cast with the skill keys."),
-            3 => ArenaText.Pair($"下午按住 {ArenaKeys.InteractKey} 采合金矿；夜里先按 {ArenaKeys.LampKey} 放矿灯，再在灯光里采暗物质。",
-                $"In the afternoon, hold {ArenaKeys.InteractKey} to mine alloy ore; at night, press {ArenaKeys.LampKey} to set down a lamp and mine dark matter in its light."),
-            4 => ArenaText.Pair($"下午或夜里在基地门口按 {ArenaKeys.InteractKey} 进整备页升级武器、学技能，在飞船旁按 {ArenaKeys.InteractKey} 修飞船、造矿灯。",
-                $"In the afternoon or at night, press {ArenaKeys.InteractKey} at the base door to upgrade weapons and learn skills in the workshop; beside the ship, {ArenaKeys.InteractKey} repairs it and crafts lamps."),
-            _ => ArenaText.Pair("按 Esc 暂停，在暂停页可以查看按键、重看教学、重新开局或返回标题。",
-                "Press Esc to pause. From there you can check the keys, see the tutorial again, restart or quit to the title."),
-        };
+        public static string LessonLine(int lesson) => V2Tutorial.StoryPageLine(lesson + 1);
 
         void OpenTutorial()
         {

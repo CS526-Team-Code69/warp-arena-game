@@ -302,7 +302,7 @@ namespace AnomalyArena
                 // The first morning says how the monsters behave; later mornings say what the way home still needs (MorningGoal,
                 // V2Campaign.Days.cs).
                 Objective(Day <= 1
-                    ? ArenaText.Pair("守住基地。倒计时结束前，怪物会从四面八方涌向基地，离你近的和被你打中的会先冲着你来", "Hold the base. Until the countdown ends, monsters close in on it from every side; any that get near you, or that you hit, will come for you first")
+                    ? ArenaText.Pair("守住基地。倒计时结束前，怪物会从四面八方涌向基地，靠近你或被你打中的怪物会冲向你。时间到后，清掉剩余的怪物。", "Hold the base. Until the countdown ends, monsters attack from all sides. Monsters near you or hit by you will charge you. When time runs out, clear the survivors.")
                     : MorningGoal(), null);
             }
             // The table's wave for today (rules.WaveNumber: since 2026-11-06 day d fights wave 2d, so day 7 is wave 14 before the Tyrant);

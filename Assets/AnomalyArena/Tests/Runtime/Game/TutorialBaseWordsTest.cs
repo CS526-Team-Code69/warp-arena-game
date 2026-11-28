@@ -10,14 +10,12 @@ using Object = UnityEngine.Object;
 
 namespace AnomalyArena
 {
-    /// <summary>The story's tutorial on the base: the skills page, the base page and the title's two lessons on them name the workshop at the
-    /// base door and the ship's own page, and nothing of the old base (its rooms, the study window, the Energy Lab, the shield). The base
-    /// page's moving picture shows the two pages, the workshop and the rocket, and no room's name.</summary>
+    /// <summary>The first visit to base teaches both facilities and their resources in the guide and on the title.</summary>
     [TestFixture]
     public class TutorialBaseWordsTest
     {
         const string Scene = "Assets/AnomalyArena/Scenes/ArenaV2.unity";
-        const int SkillsPage = 3, BasePage = 5;
+        const int BasePage = 2;
         static readonly string[] OldWords = { "建造", "研习", "能量研究区", "各区", "护盾", "build rooms", "study", "Energy Lab", "rooms", "shield" };
 
         [TearDown]
@@ -47,18 +45,14 @@ namespace AnomalyArena
 
             var lines = new[]
             {
-                ("the skills page", V2Tutorial.StoryPageLine(SkillsPage)),
                 ("the base page", V2Tutorial.StoryPageLine(BasePage)),
-                ("the skills lesson", V5Title.LessonLine(SkillsPage - 1)),
                 ("the base lesson", V5Title.LessonLine(BasePage - 1)),
             };
             foreach (var (where, line) in lines)
             {
                 Assert.That(line, Does.Contain(workshop).IgnoreCase, $"{where} names the workshop: \"{line}\"");
                 foreach (var old in OldWords) Assert.That(line, Does.Not.Contain(old).IgnoreCase, $"{where} says nothing of the old base ({old}): \"{line}\"");
-            }
-            foreach (var (where, line) in lines.Where((_, i) => i % 2 == 1))
-            {
+                Assert.That(line, Does.Contain(ArenaText.Pair("技能", "skills")).IgnoreCase);
                 Assert.That(line, Does.Contain(ship).IgnoreCase, $"{where} names the ship's side: \"{line}\"");
                 Assert.That(line, Does.Contain(lamps).IgnoreCase, $"{where} says the lamps are made there: \"{line}\"");
             }
