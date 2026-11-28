@@ -45,7 +45,7 @@ namespace AnomalyArena
 
         [TestCase(BaseTourStep.Skill, "先学一个技能。明天上午的第一仗就能用上。")]
         [TestCase(BaseTourStep.WeaponMk, "合金用来升级武器型号，所有异常武器一起变强。")]
-        [TestCase(BaseTourStep.Rocket, "回家要做的事都在这里：修好三个部件，加满燃料，就能点火。")]
+        [TestCase(BaseTourStep.Rocket, "修好三个部件并加满燃料后才能点火。点火会引来最终决战，先做好准备。")]
         [TestCase(BaseTourStep.Leave, "准备好了就出发。夜里记得放矿灯。")]
         public void Words_EachStep_IsItsOneSentence(BaseTourStep step, string expected)
         {

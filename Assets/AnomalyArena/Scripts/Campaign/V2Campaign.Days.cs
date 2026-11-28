@@ -268,7 +268,7 @@ namespace AnomalyArena
             if (!fuelTankFitted) Add("装上燃料舱", "the fuel tank fitted");
             if (!FuelFull) Add($"燃料 {fuel}/{FuelTop}", $"fuel {fuel}/{FuelTop}");
             if (steps > 0) return ArenaText.Pair($"守住基地。回家还差：{zh}。", $"Hold the base. Still needed to fly home: {en}.");
-            return ArenaText.Pair("守住基地。飞船已经修好，燃料也加满了，回到基地就能点火回家。", "Hold the base. The ship is repaired and fueled: you can start the ignition at the base.");
+            return ArenaText.Pair("守住基地。飞船已经修好，燃料也加满了，准备好决战后，回飞船点火。", "Hold the base. The ship is repaired and fueled. Ignite at the ship when you are ready for the final battle.");
         }
 
         // The morning's clear-up (since 2026-11-24): the countdown is the time monsters keep coming; at zero no new ones come and the
@@ -308,7 +308,7 @@ namespace AnomalyArena
             p.Heal(p.maxHp);
             int from = Mathf.RoundToInt(before), to = Mathf.RoundToInt(p.maxHp);
             if (to > from && ui)
-                ui.Flash(ArenaText.Pair($"这颗星球的能量让你更强了：生命上限 {from} → {to}", $"The planet's energy has made you stronger: max HP {from} → {to}"), 4f);
+                ui.Flash(ArenaText.Pair($"怪物伤害提高，你的生命上限也随之增长：{from} → {to}。生命已回满。", $"Monster damage has risen. Your max HP grew from {from} to {to}, and your health is full."), 4f);
         }
 
         // ───── Day 0's gifts ─────

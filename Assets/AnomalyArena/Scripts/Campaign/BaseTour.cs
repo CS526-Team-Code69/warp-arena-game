@@ -47,7 +47,7 @@ namespace AnomalyArena
         {
             BaseTourStep.Skill => ("先学一个技能。明天上午的第一仗就能用上。", "Learn a skill first. You can use it in tomorrow morning's first fight."),
             BaseTourStep.WeaponMk => ("合金用来升级武器型号，所有异常武器一起变强。", "Alloy upgrades the weapon Mk, and all your anomaly weapons grow stronger together."),
-            BaseTourStep.Rocket => ("回家要做的事都在这里：修好三个部件，加满燃料，就能点火。", "Everything you need to get home is here: repair the three parts, fill the fuel, and you can ignite."),
+            BaseTourStep.Rocket => ("修好三个部件并加满燃料后才能点火。点火会引来最终决战，先做好准备。", "Repair all three parts and fill the tank. Ignition starts the final battle, so finish your preparations first."),
             BaseTourStep.Leave => ("准备好了就出发。夜里记得放矿灯。", "Head out when you're ready. Remember to set down your mining lamps at night."),
             _ => ("", "")
         };

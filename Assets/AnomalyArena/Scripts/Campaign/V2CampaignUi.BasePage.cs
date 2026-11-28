@@ -475,7 +475,7 @@ namespace AnomalyArena
                     lines.Add(Done(c.FuelFull) + ArenaText.Pair($"燃料 {c.Fuel} / {c.FuelTop}", $"Fuel {c.Fuel} / {c.FuelTop}"));
                     if (r) lines.Add(Small(ArenaText.Pair($"矿灯每盏 {r.lampCost} 合金。夜里放下矿灯，就能在它的光里采矿；用不完的会留到下一晚。",
                         $"Mining lamps cost {r.lampCost} alloy each. Set one down at night to mine in its light; unused lamps carry over to the next night."), Faint));
-                    lines.Add(Small(ArenaText.Pair("修好三个部件、加满燃料，就能点火返航。", "Repair the three parts and fill the fuel, and the ship can head home."), Faint));
+                    lines.Add(Small(ArenaText.Pair("修好三个部件、加满燃料，就能点火。点火后将迎来决战。", "Repair all three parts and fill the tank to unlock ignition. Ignition starts the final battle."), Faint));
                     break;
             }
             return string.Join("\n", lines);

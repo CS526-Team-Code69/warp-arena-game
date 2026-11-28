@@ -255,6 +255,18 @@ namespace AnomalyArena
             var lessons = title.Find("Window/Pages/Tutorial");
             Assert.That(lessons.Cast<Transform>().Count(lesson => lesson.gameObject.activeSelf && lesson.name.StartsWith("Lesson")), Is.EqualTo(6),
                 "six lessons: the story's opening page is the story mode's own");
+            string[] topics =
+            {
+                ArenaText.Pair("冲你来", "charge you"), ArenaText.Pair("整备页", "workshop"),
+                ArenaText.Pair("矿灯", "lamp"), ArenaText.Pair("清掉剩余", "Clear the survivors"),
+                ArenaText.Pair("试炼", "trial"), ArenaText.Pair("暗物质核心", "dark matter core")
+            };
+            for (int i = 0; i < topics.Length; i++)
+            {
+                var summary = lessons.Find($"Lesson{i + 1}/Line").GetComponent<UnityEngine.UI.Text>();
+                Assert.That(summary.text, Is.EqualTo(V2Tutorial.StoryPageLine(i + 1)), "each title row previews the page it opens");
+                Assert.That(summary.text, Does.Contain(topics[i]).IgnoreCase);
+            }
             var go = (RectTransform)title.Find("Window/Foot/Go");
             float titleTime = Time.timeScale;
 

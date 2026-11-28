@@ -200,7 +200,7 @@ namespace AnomalyArena
             Vector3 corner = FindOpen(TutorialCorner, 1.4f);
             tutOre = AddNode(NodeKind.Ore, corner, DayZeroOre(0)); // Day 0's alloy (V2Campaign.Days.cs, since 2026-11-10)
             if (tutOre.view) tutOre.view.localScale *= 1.4f;
-            Approach(TutorialStep.Mine, ArenaText.Pair("去角落里发光的地方看看", "Check out the glow in the corner"), corner);
+            Approach(TutorialStep.Mine, ArenaText.Pair("去标记处采合金。回基地后可以用它升级武器。", "Head to the marked alloy deposit. At base, alloy pays for weapon upgrades."), corner);
             Say(Line.T07);
         }
 
@@ -255,7 +255,7 @@ namespace AnomalyArena
 
         void TeachCollect()
         {
-            Objective(ArenaText.Pair("走过去，捡起怪物掉落的异星能量", "Walk over the alien energy the monsters dropped to pick it up"), null);
+            Objective(ArenaText.Pair("走过碎片，捡起怪物掉落的异星能量。回基地后可以用它学技能。", "Walk over the shards to collect alien energy. Spend it on skills back at base."), null);
             Teach(TutorialStep.Collect, NearestPickup, 2.6f, ArenaKeys.MoveKeys, ArenaText.Pair("捡起异星能量", "Pick up the alien energy"));
         }
 
@@ -862,7 +862,7 @@ namespace AnomalyArena
                 if (tutNightStep < 2) { tutNightStep = 2; TutorialDawnObjective(); }
                 return;
             }
-            Objective(ArenaText.Pair("站在灯光里采集暗物质", "Stand in the lamplight and mine the dark matter"), null);
+            Objective(ArenaText.Pair("站在灯光里采集暗物质。把它带回飞船可以加注燃料。", "Mine dark matter in the lamplight. Bring it back to the ship for fuel."), null);
             Teach(TutorialStep.DarkMatter, () => tutCluster, 4.5f, ArenaKeys.InteractKey, ArenaText.Pair("按住采集", "Hold to mine"));
         }
 

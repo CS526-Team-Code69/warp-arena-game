@@ -543,7 +543,7 @@ namespace AnomalyArena
         static string B5HomeLine(V2Campaign c)
         {
             int left = c.HomeStepsLeft;
-            return left <= 0 ? ArenaText.Pair("可以点火回家", "READY TO IGNITE")
+            return left <= 0 ? ArenaText.Pair("可以点火", "READY TO IGNITE")
                 : ArenaText.Pair($"回家还差 {left} 步", left == 1 ? "1 STEP FROM HOME" : $"{left} STEPS FROM HOME");
         }
 
