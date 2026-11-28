@@ -109,15 +109,25 @@ namespace AnomalyArena
         /// <summary>
         /// The nearest ground on the way to the base (raid) or to what the enemies chase where a body of this radius can stand, within
         /// UnstickReachCells: for a body whose own walking has been refused where it stands for too long (Enemy.SetDownOnOpenGround).
-        /// False when there is none.
+        /// False when there is none. clearOfColliders: the body was held up by a wall's collider the map's walls do not cover, so a
+        /// point is also checked against the wall colliders themselves (both wall layers), or the body could be set down in that wall.
         /// </summary>
-        public bool OpenGroundOnPath(Vector3 position, float radius, bool raid, bool allowGravity, out Vector3 ground)
+        public bool OpenGroundOnPath(Vector3 position, float radius, bool raid, bool allowGravity, out Vector3 ground, bool clearOfColliders = false)
         {
             ground = position;
             if (TrialActive || Grid == null) return false;
             float room = radius + .05f;
             return Grid.NearestOnPath(position, radius, raid, allowGravity, UnstickReachCells, UnstickMinMove,
-                centre => IsWalkable(centre, room, allowGravity), out ground);
+                centre => IsWalkable(centre, room, allowGravity) && (!clearOfColliders || !WallColliderAt(centre, room)), out ground);
+        }
+
+        /// <summary>Whether a wall's collider (either wall layer, a Bulwark included) stands within room of the point, from a body's
+        /// feet to above its middle.</summary>
+        static bool WallColliderAt(Vector3 point, float room)
+        {
+            float low = room + .05f, high = Mathf.Max(low, 1.6f);
+            return Physics.CheckCapsule(new Vector3(point.x, low, point.z), new Vector3(point.x, high, point.z), room,
+                GameManager.WallMask | 1 << Combatant.BodyOnlyWallLayer, QueryTriggerInteraction.Ignore);
         }
     }
 }

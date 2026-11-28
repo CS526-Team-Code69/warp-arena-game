@@ -115,18 +115,21 @@ namespace AnomalyArena
         }
 
         /// <summary>A body whose walk stays refused is set down on the nearest open ground on its way, out of sight: it fades out where
-        /// it stands and in where it is set down (EnemyUnstickFade), holding still meanwhile; nothing starts while a fade runs.</summary>
-        void SetDownOnOpenGround()
+        /// it stands and in where it is set down (EnemyUnstickFade), holding still meanwhile; nothing starts while a fade runs.
+        /// heldByWall: what stopped it was a wall's collider the map's walls do not cover (Enemy.NoProgress.cs), so the ground it is set
+        /// down on is checked against the colliders too, and the log line says so.</summary>
+        void SetDownOnOpenGround(bool heldByWall = false)
         {
             if (UnstickFading) return;
             var world = WorldMap.Active;
             bool raiding = Raider && !raidAggro && RaidSpot != null;
-            if (!world || !world.OpenGroundOnPath(Position, radius, raiding, FollowingIntoGravity, out var ground)) return;
+            if (!world || !world.OpenGroundOnPath(Position, radius, raiding, FollowingIntoGravity, out var ground, heldByWall)) return;
             Vector3 from = Position;
             ground.y = from.y;
             unstickFade = EnemyUnstickFade.Begin(this, ground);
             SetDownCount++;
-            Debug.Log($"[Unstick] {(definition ? definition.kind.ToString() : name)} could not walk on at ({from.x:0.0}, {from.z:0.0}); set down at ({ground.x:0.0}, {ground.z:0.0})");
+            Debug.Log($"[Unstick] {(definition ? definition.kind.ToString() : name)} could not walk on at ({from.x:0.0}, {from.z:0.0})" +
+                      $"{(heldByWall ? " (held by a wall the map does not know)" : "")}; set down at ({ground.x:0.0}, {ground.z:0.0})");
         }
     }
 }

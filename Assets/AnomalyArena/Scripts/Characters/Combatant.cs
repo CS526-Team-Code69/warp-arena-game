@@ -578,8 +578,36 @@ namespace AnomalyArena
         void OnCollisionEnter(Collision c) => CheckCollision(c);
         void OnCollisionStay(Collision c) => CheckCollision(c);
 
+        // The walls this body touched in the last physics step: the sum of the flat ways from its centre to their contact points, and
+        // the step it was noted in. A Bulwark is left out: it is meant to hold bodies up and pushes them off by itself.
+        Vector3 wallTouch;
+        float wallTouchAt = float.NegativeInfinity;
+
+        /// <summary>The flat way (not normalised) from this body toward the walls it touched in the last physics step, zero when it
+        /// touched none. Bulwarks (TemporaryWall) do not count. For Enemy.NoProgress: a walk the map allows whole may still be held up by
+        /// a wall the map does not know.</summary>
+        protected Vector3 RecentWallTouch => Time.fixedTime - wallTouchAt <= Time.fixedDeltaTime * 1.5f ? wallTouch : Vector3.zero;
+
+        void NoteWallTouch(Collision c)
+        {
+            int layer = c.gameObject.layer;
+            if (layer != GameManager.WallLayer && layer != BodyOnlyWallLayer) return;
+            if (c.collider.GetComponentInParent<TemporaryWall>()) return;
+            if (Time.fixedTime != wallTouchAt)
+            {
+                wallTouch = Vector3.zero;
+                wallTouchAt = Time.fixedTime;
+            }
+            for (int i = 0; i < c.contactCount; i++)
+            {
+                Vector3 to = Query.Flat(c.GetContact(i).point - rb.position);
+                if (to.sqrMagnitude > 1e-6f) wallTouch += to.normalized;
+            }
+        }
+
         void CheckCollision(Collision c)
         {
+            NoteWallTouch(c);
             // A wall ends the throw first: no crash damage against a wall, only wall damage
             CheckWallHit(c);
             CheckThrowImpact(c);

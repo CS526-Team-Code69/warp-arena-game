@@ -17,12 +17,13 @@ namespace AnomalyArena
         Vector3 anchor;
 
         /// <summary>Notes one step of a walk (at: where the body stands; wanted and taken: the velocities asked and allowed; dt: the
-        /// step's time; now: the clock it is noted on). True once the walk has got nowhere for limit seconds; the count then starts again.</summary>
-        public bool Note(Vector3 at, Vector3 wanted, Vector3 taken, float dt, float now, float limit)
+        /// step's time; now: the clock it is noted on; held: the body pressed against a wall the map does not know, so even a step the
+        /// map allows whole is not taken). True once the walk has got nowhere for limit seconds; the count then starts again.</summary>
+        public bool Note(Vector3 at, Vector3 wanted, Vector3 taken, float dt, float now, float limit, bool held = false)
         {
             at = Query.Flat(at);
             Vector3 want = Query.Flat(wanted);
-            bool whole = (Query.Flat(taken) - want).sqrMagnitude <= 1e-4f * Mathf.Max(want.sqrMagnitude, 1e-4f);
+            bool whole = !held && (Query.Flat(taken) - want).sqrMagnitude <= 1e-4f * Mathf.Max(want.sqrMagnitude, 1e-4f);
             bool resumed = now - notedAt > Gap;
             notedAt = now;
             if (whole || resumed || want.sqrMagnitude <= .01f || (at - anchor).sqrMagnitude >= Reach * Reach)
@@ -49,11 +50,18 @@ namespace AnomalyArena
     /// slide is a step, so the count of a refused walk starts again every time and never reaches its limit. A walk that has got nowhere
     /// for WalkRefusedLimit seconds of its own walking is set down on open ground as a refused one is. Bosses and bodies in a gravity
     /// ring are left alone, as there.
+    /// A step the map allows whole may still be held up by a wall's collider the map's walls do not cover: the body pushes at it, the
+    /// map sees nothing wrong, and the watch would start again every step. A step taken toward a wall the body touched in the last
+    /// physics step (Combatant.RecentWallTouch, at least HeldDot of it into the wall) counts as held, not whole. Other bodies are not
+    /// walls (a queue of monsters is no reason to set one down), and neither is a Bulwark.
     /// </summary>
     public partial class Enemy
     {
         /// <summary>How long a walk may be refused, or get nowhere, before the body is set down on open ground.</summary>
         public static float WalkRefusedSeconds => WalkRefusedLimit;
+
+        /// <summary>How much of a step must point into a wall the body touches for the step to count as held up by it.</summary>
+        const float HeldDot = .3f;
 
         readonly WalkProgressWatch progressWatch = new();
         int progressSetDowns;
@@ -67,9 +75,17 @@ namespace AnomalyArena
                 return;
             }
 
-            if (!progressWatch.Note(Position, wanted, taken, dt, Time.time, WalkRefusedLimit)) return;
-            SetDownOnOpenGround();
+            bool held = HeldByWall(taken);
+            if (!progressWatch.Note(Position, wanted, taken, dt, Time.time, WalkRefusedLimit, held)) return;
+            SetDownOnOpenGround(held);
             progressSetDowns = SetDownCount;
+        }
+
+        /// <summary>Whether this step points into a wall the body touched in the last physics step.</summary>
+        bool HeldByWall(Vector3 taken)
+        {
+            Vector3 touch = RecentWallTouch, step = Query.Flat(taken);
+            return touch.sqrMagnitude > 1e-4f && step.sqrMagnitude > 1e-4f && Vector3.Dot(touch.normalized, step.normalized) >= HeldDot;
         }
     }
 }
